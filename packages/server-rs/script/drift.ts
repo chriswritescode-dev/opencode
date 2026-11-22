@@ -5,6 +5,10 @@ if (!/^[0-9a-f]{40}$/.test(pin)) {
   process.exit(1)
 }
 
+const topResult = Bun.spawnSync(["git", "rev-parse", "--show-toplevel"], { cwd: root })
+if (topResult.exitCode !== 0) failGit(topResult.stderr)
+const top = topResult.stdout.toString().trim()
+
 const known = Bun.spawnSync(["git", "cat-file", "-e", `${pin}^{commit}`], { cwd: root })
 if (known.exitCode !== 0) {
   console.log(`drift: pin ${pin} is not in this clone; ancestry not checked`)
@@ -42,9 +46,14 @@ function run(command: string[], cwd: string) {
   if (proc.exitCode !== 0) process.exit(proc.exitCode ?? 1)
 }
 
+function failGit(stderr: Buffer) {
+  console.error(`drift: git failed: ${stderr.toString().trim()}`)
+  process.exit(1)
+}
+
 async function snapshot() {
-  const top = Bun.spawnSync(["git", "rev-parse", "--show-toplevel"], { cwd: root }).stdout.toString().trim()
   const proc = Bun.spawnSync(["git", "status", "--porcelain", "-z", "--untracked-files=all", "--", "."], { cwd: root })
+  if (proc.exitCode !== 0) failGit(proc.stderr)
   const files = proc.stdout
     .toString()
     .split("\0")

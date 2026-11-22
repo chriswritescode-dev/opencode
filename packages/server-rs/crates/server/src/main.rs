@@ -4,8 +4,8 @@ const VERSION: &str = match option_env!("OPENCODE_VERSION") {
 };
 
 fn main() -> std::process::ExitCode {
-    let args: Vec<String> = std::env::args().skip(1).collect();
-    if args == ["--version"] {
+    let args: Vec<std::ffi::OsString> = std::env::args_os().skip(1).collect();
+    if args == [std::ffi::OsStr::new("--version")] {
         println!("opencode-server v{VERSION}");
         return std::process::ExitCode::SUCCESS;
     }

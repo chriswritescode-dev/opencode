@@ -27,3 +27,13 @@ fn anything_else_prints_usage_and_exits_two() {
         assert_eq!(String::from_utf8_lossy(&output.stderr), "usage: opencode-server --version\n", "{args:?}");
     }
 }
+
+#[cfg(unix)]
+#[test]
+fn a_non_utf8_argument_prints_usage_and_exits_two() {
+    use std::os::unix::ffi::OsStrExt;
+    let arg = std::ffi::OsStr::from_bytes(b"\xff");
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_opencode-server")).arg(arg).output().unwrap();
+    assert_eq!(output.status.code(), Some(2), "{output:?}");
+    assert_eq!(String::from_utf8_lossy(&output.stderr), "usage: opencode-server --version\n");
+}

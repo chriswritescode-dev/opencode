@@ -8,7 +8,7 @@ named in the row needs it.
 
 | Module | First-attempt crate | What it provides | Target crate | Imported by | Check before import |
 | --- | --- | --- | --- | --- | --- |
-| process helpers | `oc-tools` | Spawning and supervising child processes, output capture and timeouts | `shell` | OR-52 | `packages/util/src/cross-spawn-spawner.ts`, `packages/util/src/execute-output.ts`; `opencode-util` already runs process jobs |
+| process helpers | `oc-tools` | Spawning and supervising child processes, output capture and timeouts | `shell` | OR-52 | `packages/util/src/cross-spawn-spawner.ts`, `packages/util/src/execute-output.ts`; `opencode_util::job` only runs a foreground terminal program and waits for it |
 | PTY | `oc-tools` | Pseudo-terminal allocation, resize and teardown | `shell` | OR-52 | the `packages/process-daemon` client protocol and `packages/core/src/pty/protocol.ts` |
 | git | `oc-tools` | Git command wrappers and repository inspection | `vcs` | OR-53 | `packages/core/src/git.ts` |
 | search | `oc-tools` | Ripgrep-backed file and content search | `fs` | OR-51 | `packages/core/src/filesystem/search.ts` |

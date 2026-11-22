@@ -10,6 +10,8 @@ The Rust replacement for the TypeScript OpenCode server process, the `opencode-s
 - This is its own Cargo workspace and never joins cli-rs's, and no root `Cargo.toml` is added.
 - `opencode-local` and `opencode-util`, and `opencode-service` and `opencode-api` as test clients, come from
   `packages/cli-rs` by path and are never edited from here.
+- This workspace has its own `Cargo.lock`, so the cli-rs crates build here against dependency versions that can
+  differ from `packages/cli-rs/Cargo.lock`; update it on its own schedule with `bun run cargo update`.
 
 ## Layout
 
