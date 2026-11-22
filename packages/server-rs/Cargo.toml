@@ -1,0 +1,42 @@
+[workspace]
+members = ["crates/*"]
+resolver = "3"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+publish = false
+
+[workspace.lints.rust]
+unsafe_code = "deny"
+unsafe_op_in_unsafe_fn = "deny"
+unused_must_use = "deny"
+
+[workspace.lints.clippy]
+await_holding_lock = "deny"
+await_holding_refcell_ref = "deny"
+dbg_macro = "deny"
+todo = "warn"
+undocumented_unsafe_blocks = "deny"
+
+[workspace.dependencies]
+opencode-server = { path = "crates/server" }
+opencode-local = { path = "../cli-rs/crates/local" }
+opencode-util = { path = "../cli-rs/crates/util" }
+opencode-service = { path = "../cli-rs/crates/service" }
+tokio = { version = "1.53", features = ["macros", "rt"] }
+
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.release]
+debug = "line-tables-only"
+
+# cli-rs deviation A10-ascii-hosts: the lock takes cli-rs's `idna_adapter = "=1.0.0"` ASCII-only stub through opencode-api.
+[profile.dev.package.idna]
+debug-assertions = false
+
+# Same A10-ascii-hosts stub: `idna` instantiates `idna_adapter`.
+[profile.dev.package.idna_adapter]
+debug-assertions = false
