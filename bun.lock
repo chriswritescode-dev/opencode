@@ -706,6 +706,14 @@
         "fast-check": "catalog:",
       },
     },
+    "packages/server-rs": {
+      "name": "@opencode/server-rs",
+      "devDependencies": {
+        "@tsconfig/bun": "catalog:",
+        "@types/bun": "catalog:",
+        "@typescript/native": "catalog:",
+      },
+    },
     "packages/session-ui": {
       "name": "@opencode/session-ui",
       "version": "2.3.0",
@@ -1916,6 +1924,8 @@
     "@opencode/sdk": ["@opencode/sdk@workspace:packages/sdk"],
 
     "@opencode/server": ["@opencode/server@workspace:packages/server"],
+
+    "@opencode/server-rs": ["@opencode/server-rs@workspace:packages/server-rs"],
 
     "@opencode/session-ui": ["@opencode/session-ui@workspace:packages/session-ui"],
 

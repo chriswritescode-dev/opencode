@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "@opencode/server-rs",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "cargo": "cargo",
+    "check:drift": "bun run script/drift.ts",
+    "check:deny": "cargo deny --workspace --frozen check --hide-inclusion-graph licenses bans sources",
+    "check:advisories": "cargo deny --workspace --locked check --hide-inclusion-graph advisories",
+    "typecheck": "bun check --no-script",
+    "typecheck:tsc": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@tsconfig/bun": "catalog:",
+    "@types/bun": "catalog:",
+    "@typescript/native": "catalog:"
+  }
+}
