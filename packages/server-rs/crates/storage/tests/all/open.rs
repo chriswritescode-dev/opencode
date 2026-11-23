@@ -66,9 +66,9 @@ fn file_database_is_owner_only_and_configured() {
     let (database, report) = open(DatabaseLocation::File(path.clone()), dir.path()).expect("open the database");
 
     assert_eq!(database.location(), &DatabaseLocation::File(path.clone()));
-    assert!(!report.bootstrapped, "no migration bootstrapped the database yet");
-    assert!(report.applied.is_empty(), "no migration was applied yet");
-    assert!(report.warnings.is_empty(), "no migration warned yet");
+    assert!(report.bootstrapped, "the empty file is bootstrapped");
+    assert!(report.applied.is_empty(), "bootstrap records migrations without applying them");
+    assert!(report.warnings.is_empty(), "no migration warned");
 
     #[cfg(unix)]
     assert_eq!(mode(&path), 0o600, "the database file is owner-only");

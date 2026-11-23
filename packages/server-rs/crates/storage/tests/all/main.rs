@@ -1,9 +1,18 @@
 //! The storage crate's integration tests: the database path, the connection and transactions.
 
+mod id;
+mod migration;
 mod open;
 mod transaction;
 
 use std::path::{Path, PathBuf};
+use std::sync::{Mutex, MutexGuard};
+
+static IDENTIFIERS: Mutex<()> = Mutex::new(());
+
+pub(crate) fn lock_identifiers() -> MutexGuard<'static, ()> {
+    IDENTIFIERS.lock().unwrap_or_else(|error| error.into_inner())
+}
 
 struct TempDir {
     path: PathBuf,

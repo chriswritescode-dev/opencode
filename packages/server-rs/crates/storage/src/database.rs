@@ -8,6 +8,7 @@ use std::sync::{Arc, Mutex, OnceLock};
 use rusqlite::{Connection, Transaction, TransactionBehavior};
 
 use crate::StorageError;
+use crate::migration::{MigrationReport, apply};
 use crate::path::DatabaseLocation;
 
 /// One process-wide lock per database file, held from before the file is restricted until `open` returns.
@@ -19,20 +20,9 @@ pub struct Database {
     location: DatabaseLocation,
 }
 
-/// The migrations `open` ran; empty until the migration runner lands.
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
-pub struct MigrationReport {
-    /// Whether the database was created from scratch.
-    pub bootstrapped: bool,
-    /// The migrations applied, in order.
-    pub applied: Vec<&'static str>,
-    /// Non-fatal problems met while migrating.
-    pub warnings: Vec<String>,
-}
-
-/// Opens the connection, restricting a file database to its owner and applying the pragmas. The
-/// report is empty in this phase; Phase 3 runs the migrations here, under the same bootstrap lock.
-pub fn open(location: DatabaseLocation, _data: &Path) -> Result<(Database, MigrationReport), StorageError> {
+/// Opens the connection, restricting a file database to its owner, applying the pragmas and the
+/// migrations, under the same bootstrap lock.
+pub fn open(location: DatabaseLocation, data: &Path) -> Result<(Database, MigrationReport), StorageError> {
     let lock = match &location {
         DatabaseLocation::File(path) => Some(path_lock(path)),
         DatabaseLocation::Memory => None,
@@ -50,7 +40,13 @@ pub fn open(location: DatabaseLocation, _data: &Path) -> Result<(Database, Migra
     connection.pragma_update(None, "busy_timeout", 5000)?;
     connection.pragma_update(None, "cache_size", -64000)?;
     connection.pragma_update(None, "foreign_keys", "ON")?;
-    Ok((Database { connection: Mutex::new(connection), location }, MigrationReport::default()))
+    let database = Database { connection: Mutex::new(connection), location };
+    let legacy_credentials = match database.location() {
+        DatabaseLocation::File(_) => Some(data.join("auth.json")),
+        DatabaseLocation::Memory => None,
+    };
+    let report = apply(&database, legacy_credentials.as_deref())?;
+    Ok((database, report))
 }
 
 fn path_lock(path: &Path) -> Arc<Mutex<()>> {
