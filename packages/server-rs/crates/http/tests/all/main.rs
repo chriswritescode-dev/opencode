@@ -1,6 +1,7 @@
 mod auth;
 mod compression;
 mod cors;
+mod coverage;
 mod info;
 mod pairing;
 mod request_site;

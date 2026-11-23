@@ -65,11 +65,13 @@ pub async fn ensure(files: &Files, env: &ServerEnv) -> Result<String, String> {
             }
             Probe::Missing | Probe::TimedOut => {}
         }
-        if let Some(failure) = pool.reap() {
-            return Err(failure);
-        }
-        if pool.should_recruit(registered) {
-            pool.add(spawn(env)?);
+        if !matches!(probe, Probe::Answered(_)) {
+            if let Some(failure) = pool.reap() {
+                return Err(failure);
+            }
+            if pool.should_recruit(registered) {
+                pool.add(spawn(env)?);
+            }
         }
         if Instant::now() >= deadline {
             break;

@@ -1,3 +1,4 @@
+mod interop;
 mod path_deps;
 mod serve;
 mod service_commands;
