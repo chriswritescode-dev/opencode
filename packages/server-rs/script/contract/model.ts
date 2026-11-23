@@ -421,10 +421,11 @@ export function sseData(schema: Schema.Top) {
   const events = (schema as unknown as { readonly events: Schema.Top }).events.ast
   if (!SchemaAST.isObjects(events)) throw new Error("Invalid SSE data schema")
   const data = events.propertySignatures.find((field) => field.name === "data")!.type
-  const replaceEncoding = Reflect.get(SchemaAST, "replaceEncoding") as (
-    ast: SchemaAST.AST,
-    encoding: undefined,
-  ) => SchemaAST.AST
+  const replaceEncoding = (
+    SchemaAST as unknown as {
+      readonly replaceEncoding: (ast: SchemaAST.AST, encoding: undefined) => SchemaAST.AST
+    }
+  ).replaceEncoding
   return Schema.toEncoded(Schema.make<Schema.Top>(replaceEncoding(data, undefined))).ast
 }
 

@@ -4,6 +4,8 @@ on:
   pull_request:
     paths:
       - packages/server-rs/**
+      - bun.lock
+      - package.json
       - packages/cli-rs/Cargo.toml
       - packages/cli-rs/Cargo.lock
       - packages/cli-rs/rust-toolchain.toml
@@ -17,6 +19,8 @@ on:
     branches: [dev]
     paths:
       - packages/server-rs/**
+      - bun.lock
+      - package.json
       - packages/cli-rs/Cargo.toml
       - packages/cli-rs/Cargo.lock
       - packages/cli-rs/rust-toolchain.toml
@@ -70,3 +74,16 @@ jobs:
         run: cargo install cargo-deny --locked --version "$CARGO_DENY_VERSION"
       - run: cargo fetch --locked
       - run: cargo deny --workspace --frozen check --hide-inclusion-graph licenses bans sources
+
+  drift:
+    name: Drift
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-bun
+      - name: Install Rust
+        run: rustup toolchain install 1.99.1 --profile minimal --component rustfmt --component clippy
+      - run: bun run check:drift
