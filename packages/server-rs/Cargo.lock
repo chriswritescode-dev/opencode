@@ -750,6 +750,7 @@ dependencies = [
  "opencode-contract",
  "opencode-local",
  "opencode-util",
+ "regex-lite",
  "serde_json",
  "tokio",
 ]

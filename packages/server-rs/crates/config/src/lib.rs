@@ -1,8 +1,13 @@
 pub mod discovery;
+pub mod entry;
 pub mod flag;
 pub mod generated;
+pub mod load;
 pub mod normalize;
 pub mod options;
 pub mod parse;
 pub mod paths;
+pub mod policy;
+pub mod seams;
 pub mod variable;
+pub mod wildcard;

@@ -15,8 +15,9 @@ opencode-api-types.workspace = true
 opencode-contract.workspace = true
 opencode-local.workspace = true
 opencode-util.workspace = true
+regex-lite.workspace = true
 serde_json.workspace = true
-tokio = { workspace = true, features = ["sync", "time"] }
+tokio = { workspace = true, features = ["sync", "time", "process", "macros", "rt"] }
 
 [dev-dependencies]
 opencode-util.workspace = true

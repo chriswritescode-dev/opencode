@@ -136,10 +136,14 @@ pub fn discover(options: &ConfigOptions, location: &ConfigLocation, paths: &Glob
 }
 
 pub fn overlay(options: &ConfigOptions, location: &ConfigLocation, paths: &GlobalPaths) -> Option<Root> {
+    overlay_in(&paths.config, options, location)
+}
+
+pub fn overlay_in(config: &Path, options: &ConfigOptions, location: &ConfigLocation) -> Option<Root> {
     if options.global == Some(false) || options.project == Some(false) || location.project_id == "global" {
         return None;
     }
-    let path = joined(&joined(&paths.config, "project"), &location.project_id);
+    let path = joined(&joined(config, "project"), &location.project_id);
     Some(Root { present: path.is_dir(), path })
 }
 

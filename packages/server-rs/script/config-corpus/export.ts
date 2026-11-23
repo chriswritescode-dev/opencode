@@ -1,10 +1,23 @@
 import { ConfigExperimental } from "@opencode/schema/config/experimental"
-import { Document, Info } from "@opencode/schema/config"
+import { Document, Entry, Info } from "@opencode/schema/config"
 import { FlagResolve } from "@opencode/core/flag/resolve"
 import { ConfigNormalize } from "@opencode/core/config/normalize"
 import { ConfigVariable } from "@opencode/core/config/variable"
 import { ConfigDiscovery } from "@opencode/core/config/discovery"
 import { ConfigWatch } from "@opencode/core/config/watch"
+import { Config } from "@opencode/core/config"
+import { ConfigIntegration } from "@opencode/core/config/integration"
+import { ConfigManaged } from "@opencode/core/config/managed"
+import { ConfigPolicy } from "@opencode/schema/config/policy"
+import { App } from "@opencode/core/app"
+import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
+import { makeGlobalNode } from "@opencode/util/effect/app-node"
+import { Credential } from "@opencode/core/credential"
+import { WellKnown } from "@opencode/core/wellknown"
+import { Watcher } from "@opencode/core/filesystem/watcher"
+import { Bus } from "@opencode/core/bus"
+import { ManagedPolicy } from "@opencode/core/managed-policy"
+import { Integration } from "@opencode/schema/integration"
 import { FSUtil } from "@opencode/util/fs-util"
 import { LayerNode } from "@opencode/util/effect/layer-node"
 import { Global } from "@opencode/util/global"
@@ -13,8 +26,9 @@ import { Project } from "@opencode/core/project"
 import { AbsolutePath } from "@opencode/core/schema"
 import { Effect, Layer, Logger, Option, Schema } from "effect"
 import { parse, type ParseError } from "jsonc-parser"
+import os from "node:os"
 import path from "node:path"
-import { chmod, mkdir, realpath, rm, symlink, writeFile } from "node:fs/promises"
+import { chmod, mkdir, mkdtemp, realpath, rm, symlink, writeFile } from "node:fs/promises"
 
 const options = { errors: "all", onExcessProperty: "ignore" } as const
 const decodeInfo = Schema.decodeUnknownOption(Info, options)
@@ -24,6 +38,7 @@ if (area === "flags") exportFlags()
 else if (area === "normalize") exportNormalize()
 else if (area === "substitute") await exportSubstitute()
 else if (area === "discover") await exportDiscover()
+else if (area === "load") await exportLoad()
 else {
   console.error(`corpus: unknown area ${area ?? ""}`)
   process.exit(1)
@@ -1469,4 +1484,701 @@ async function exportDiscover() {
     }
   }
   process.stdout.write(`{\n${lines.join(",\n")}\n}\n`)
+}
+
+type LoadCredential = { key?: string; metadata?: Record<string, unknown> }
+type LoadIntegration = {
+  integrationID: string
+  connection: unknown
+  organization?: string
+  info: ConfigIntegration.Remote
+}
+type LoadWellKnown = {
+  entries?: Array<{ origin: string; integrationID: string; manifest: WellKnown.Manifest }>
+  credentials?: Array<LoadCredential & { integrationID: string }>
+  get?: Record<string, LoadCredential>
+  resolve?: unknown[] | null
+  resolveError?: boolean
+  cached?: unknown[]
+}
+type LoadOptions = {
+  project?: boolean
+  global?: boolean
+  claude?: boolean
+  system?: boolean | string
+  file?: string
+  content?: string
+}
+type LoadCase = {
+  directories?: string[]
+  files?: Record<string, string>
+  options?: LoadOptions
+  location: { directory: string; project_id: string }
+  global: { config: string; home: string }
+  flags?: { channel?: string; overrides?: string | null }
+  integrations?: LoadIntegration[]
+  wellknown?: LoadWellKnown
+  policy?: Array<{ action: ConfigPolicy.Action; resource: string }>
+}
+
+async function exportLoad() {
+  const g = { config: "global", home: "global/home" }
+  const shell = (value: string) => JSON.stringify({ shell: value })
+  const policy = (action: ConfigPolicy.Action, resource: string, effect: "allow" | "deny") => ({
+    action,
+    resource,
+    effect,
+  })
+  const toolPolicy = (resource: string, effect: "allow" | "deny") => policy("tool.use", resource, effect)
+  const integrationPolicy = (resource: string, effect: "allow" | "deny") =>
+    policy("integration.use", resource, effect)
+
+  const cases: Record<string, LoadCase> = {
+    "empty-directories": {
+      directories: ["project"],
+      location: { directory: "project", project_id: "global" },
+      global: g,
+    },
+    "json-and-jsonc-order": {
+      directories: ["project"],
+      files: {
+        "project/opencode.json": JSON.stringify({ $schema: "json" }),
+        "project/opencode.jsonc": JSON.stringify({ $schema: "jsonc" }),
+      },
+      location: { directory: "project", project_id: "global" },
+      global: g,
+    },
+    "system-highest": {
+      directories: ["system", "global", "project"],
+      files: {
+        "system/opencode.json": JSON.stringify({
+          shell: "system",
+          username: "system-user",
+          policies: [toolPolicy("shell:*", "deny")],
+        }),
+        "global/opencode.json": shell("global"),
+        "project/opencode.json": shell("project"),
+      },
+      options: { system: "system" },
+      location: { directory: "project", project_id: "global" },
+      global: g,
+      policy: [{ action: "tool.use", resource: "shell:ls" }],
+    },
+    "system-disabled": {
+      directories: ["system", "global", "project"],
+      files: {
+        "system/opencode.json": JSON.stringify({
+          shell: "system",
+          username: "system-user",
+          policies: [toolPolicy("shell:*", "deny")],
+        }),
+        "global/opencode.json": shell("global"),
+        "project/opencode.json": shell("project"),
+      },
+      options: { system: false },
+      location: { directory: "project", project_id: "global" },
+      global: g,
+    },
+    "explicit-content-priority": {
+      directories: ["global", "project"],
+      files: {
+        "global/opencode.json": shell("global"),
+        "custom.json": shell("explicit"),
+        "project/opencode.json": shell("project"),
+      },
+      options: { file: "custom.json", content: shell("content") },
+      location: { directory: "project", project_id: "global" },
+      global: g,
+    },
+    "global-disabled": {
+      directories: ["global", "global/home/.claude", "global/home/.agents", "project"],
+      files: {
+        "global/opencode.json": shell("global"),
+        "project/opencode.json": shell("project"),
+      },
+      options: { global: false },
+      location: { directory: "project", project_id: "global" },
+      global: g,
+    },
+    "claude-disabled": {
+      directories: [
+        "global",
+        "global/home/.claude",
+        "global/home/.agents",
+        "project",
+        "project/.claude",
+        "project/.agents",
+      ],
+      files: {
+        "global/opencode.json": shell("global"),
+        "project/opencode.json": shell("project"),
+      },
+      options: { claude: false },
+      location: { directory: "project", project_id: "global" },
+      global: g,
+    },
+    "project-disabled": {
+      directories: ["global", "project"],
+      files: {
+        "global/opencode.json": shell("global"),
+        "project/opencode.json": shell("project"),
+      },
+      options: { project: false },
+      location: { directory: "project", project_id: "global" },
+      global: g,
+    },
+    "ancestor-boundary": {
+      directories: [
+        "global",
+        "global/home/.claude",
+        "global/home/.agents",
+        "repo/packages/app",
+        "repo/.agents",
+        "repo/.claude",
+        "repo/.opencode",
+        "repo/packages/app/.agents",
+        "repo/packages/app/.claude",
+        "repo/packages/app/.opencode",
+      ],
+      files: {
+        "opencode.json": JSON.stringify({ $schema: "outside" }),
+        "global/opencode.json": JSON.stringify({ $schema: "global" }),
+        "repo/opencode.json": JSON.stringify({ $schema: "root" }),
+        "repo/packages/opencode.jsonc": JSON.stringify({ $schema: "parent" }),
+        "repo/packages/app/opencode.json": JSON.stringify({ $schema: "directory" }),
+        "repo/.opencode/opencode.json": JSON.stringify({ $schema: "root-dot" }),
+        "repo/packages/app/.opencode/opencode.jsonc": JSON.stringify({ $schema: "directory-dot" }),
+      },
+      location: { directory: "repo/packages/app", project_id: "global" },
+      global: g,
+    },
+    "invalid-file-skipped": {
+      directories: ["project"],
+      files: {
+        "project/opencode.json": JSON.stringify({ $schema: "valid" }),
+        "project/opencode.jsonc": "{ invalid",
+      },
+      location: { directory: "project", project_id: "global" },
+      global: g,
+    },
+    "missing-explicit-file": {
+      directories: ["project"],
+      files: { "project/opencode.json": shell("project") },
+      options: { file: "missing.json" },
+      location: { directory: "project", project_id: "global" },
+      global: g,
+    },
+    "file-substitution": {
+      directories: ["project"],
+      files: {
+        "project/token.txt": `  quoted "token"  \n`,
+        "project/opencode.jsonc": `{
+  // Ignored reference: {file:.}
+  "username": "{file:token.txt}",
+  "mcp": {
+    "servers": {
+      "remote": {
+        "type": "remote",
+        "url": "https://example.com/mcp",
+        "headers": {
+          "X-Token": "{file:token.txt}",
+          "X-Folder": "{file:.}"
+        }
+      }
+    }
+  }
+}`,
+      },
+      location: { directory: "project", project_id: "global" },
+      global: g,
+    },
+    "managed-policies-first": {
+      directories: ["system", "global", "project"],
+      files: {
+        "system/opencode.json": JSON.stringify({
+          shell: "system",
+          username: "system-user",
+          policies: [toolPolicy("shell:*", "deny")],
+        }),
+        "global/opencode.json": shell("global"),
+        "project/opencode.json": shell("project"),
+      },
+      options: { system: "system", content: shell("content") },
+      location: { directory: "project", project_id: "global" },
+      global: g,
+      policy: [
+        { action: "tool.use", resource: "shell:ls" },
+        { action: "tool.use", resource: "shell:rm -rf" },
+      ],
+    },
+    "managed-settings-last": {
+      directories: ["system", "global", "project"],
+      files: {
+        "system/opencode.json": JSON.stringify({ shell: "system", policies: [toolPolicy("shell:*", "deny")] }),
+        "global/opencode.json": shell("global"),
+      },
+      options: { system: "system" },
+      location: { directory: "project", project_id: "global" },
+      global: g,
+      policy: [{ action: "tool.use", resource: "shell:ls" }],
+    },
+    "integration-order": {
+      directories: ["global", "project"],
+      files: {
+        "global/opencode.json": JSON.stringify({ providers: { remote: { name: "global" } } }),
+        "project/opencode.json": JSON.stringify({ providers: { remote: { name: "project" } } }),
+      },
+      location: { directory: "project", project_id: "global" },
+      global: g,
+      integrations: [
+        {
+          integrationID: "opencode",
+          connection: { type: "env", name: "OPENCODE_API_KEY" },
+          info: { providers: { remote: { name: "integration" } } },
+        },
+      ],
+    },
+    "integration-policy-rank": {
+      directories: ["system", "global", "project"],
+      files: {
+        "system/opencode.json": JSON.stringify({ policies: [toolPolicy("shell:rm*", "deny")] }),
+        "global/opencode.json": JSON.stringify({ policies: [toolPolicy("shell:*", "allow")] }),
+        "project/opencode.json": JSON.stringify({ policies: [toolPolicy("shell:*", "allow")] }),
+      },
+      options: { system: "system" },
+      location: { directory: "project", project_id: "global" },
+      global: g,
+      integrations: [
+        {
+          integrationID: "opencode",
+          connection: { type: "env", name: "OPENCODE_API_KEY" },
+          organization: "Acme",
+          info: {
+            policies: [toolPolicy("shell:rm*", "allow"), toolPolicy("shell:*", "deny")],
+          },
+        },
+      ],
+      policy: [
+        { action: "tool.use", resource: "shell:rm -rf" },
+        { action: "tool.use", resource: "shell:ls" },
+      ],
+    },
+    "integration-denied-keeps-policies": {
+      directories: ["system", "global", "project"],
+      files: {
+        "system/opencode.json": JSON.stringify({ policies: [integrationPolicy("*", "deny")] }),
+        "global/opencode.json": shell("global"),
+        "project/opencode.json": shell("project"),
+      },
+      options: { system: "system" },
+      location: { directory: "project", project_id: "global" },
+      global: g,
+      integrations: [
+        {
+          integrationID: "opencode",
+          connection: { type: "env", name: "OPENCODE_API_KEY" },
+          info: {
+            providers: { remote: { name: "integration" } },
+            policies: [toolPolicy("shell:*", "deny")],
+          },
+        },
+      ],
+    },
+    "integration-account-allow": {
+      directories: ["system", "global", "project"],
+      files: {
+        "system/opencode.json": JSON.stringify({
+          policies: [integrationPolicy("*", "deny"), integrationPolicy("opencode#org_allowed", "allow")],
+        }),
+        "global/opencode.json": shell("global"),
+        "project/opencode.json": shell("project"),
+      },
+      options: { system: "system" },
+      location: { directory: "project", project_id: "global" },
+      global: g,
+      integrations: [
+        {
+          integrationID: "opencode",
+          connection: { type: "credential", id: "cred_1", label: "Console", method: "key" },
+          info: { providers: { remote: { name: "integration" } } },
+        },
+      ],
+      wellknown: { get: { cred_1: { metadata: { orgID: "org_allowed" } } } },
+    },
+    "wellknown-loads": {
+      directories: ["global", "project"],
+      files: {
+        "global/opencode.json": shell("global"),
+        "project/opencode.json": shell("project"),
+      },
+      location: { directory: "project", project_id: "global" },
+      global: g,
+      wellknown: {
+        entries: [
+          {
+            origin: "https://example.com",
+            integrationID: "https://example.com",
+            manifest: { auth: { command: ["login"], env: "TOKEN" } },
+          },
+        ],
+        credentials: [{ integrationID: "https://example.com", key: "secret" }],
+        resolve: [{ shell: "{env:TOKEN}" }],
+      },
+    },
+    "wellknown-missing-credential": {
+      directories: ["global", "project"],
+      files: {
+        "global/opencode.json": shell("global"),
+        "project/opencode.json": shell("project"),
+      },
+      location: { directory: "project", project_id: "global" },
+      global: g,
+      wellknown: {
+        entries: [
+          {
+            origin: "https://example.com",
+            integrationID: "https://example.com",
+            manifest: { auth: { command: ["login"], env: "TOKEN" } },
+          },
+        ],
+        resolve: [{ shell: "{env:TOKEN}" }],
+      },
+    },
+    "wellknown-failure-cached": {
+      directories: ["global", "project"],
+      files: {
+        "global/opencode.json": shell("global"),
+        "project/opencode.json": shell("project"),
+      },
+      location: { directory: "project", project_id: "global" },
+      global: g,
+      wellknown: {
+        entries: [
+          {
+            origin: "https://example.com",
+            integrationID: "https://example.com",
+            manifest: { auth: { command: ["login"], env: "TOKEN" } },
+          },
+        ],
+        credentials: [{ integrationID: "https://example.com", key: "secret" }],
+        resolveError: true,
+        cached: [{ shell: "cached" }],
+      },
+    },
+    "wellknown-failure-empty": {
+      directories: ["global", "project"],
+      files: {
+        "global/opencode.json": shell("global"),
+        "project/opencode.json": shell("project"),
+      },
+      location: { directory: "project", project_id: "global" },
+      global: g,
+      wellknown: {
+        entries: [
+          {
+            origin: "https://example.com",
+            integrationID: "https://example.com",
+            manifest: { auth: { command: ["login"], env: "TOKEN" } },
+          },
+        ],
+        credentials: [{ integrationID: "https://example.com", key: "secret" }],
+        resolveError: true,
+        cached: [],
+      },
+    },
+    "wellknown-denied": {
+      directories: ["system", "global", "project"],
+      files: {
+        "system/opencode.json": JSON.stringify({ policies: [integrationPolicy("*", "deny")] }),
+        "global/opencode.json": shell("global"),
+        "project/opencode.json": shell("project"),
+      },
+      options: { system: "system" },
+      location: { directory: "project", project_id: "global" },
+      global: g,
+      wellknown: {
+        entries: [
+          {
+            origin: "https://example.com",
+            integrationID: "https://example.com",
+            manifest: { auth: { command: ["login"], env: "TOKEN" } },
+          },
+        ],
+        credentials: [{ integrationID: "https://example.com", key: "secret" }],
+        resolve: [
+          {
+            providers: { remote: { name: "remote" } },
+            policies: [toolPolicy("shell:*", "deny")],
+          },
+        ],
+      },
+    },
+    "wellknown-invalid-config": {
+      directories: ["global", "project"],
+      files: {
+        "global/opencode.json": shell("global"),
+        "project/opencode.json": shell("project"),
+      },
+      location: { directory: "project", project_id: "global" },
+      global: g,
+      wellknown: {
+        entries: [
+          {
+            origin: "https://example.com",
+            integrationID: "https://example.com",
+            manifest: { auth: { command: ["login"], env: "TOKEN" } },
+          },
+        ],
+        credentials: [{ integrationID: "https://example.com", key: "secret" }],
+        resolve: [null],
+      },
+    },
+    "overlay-on": {
+      directories: ["global", "project", "global/project/p1"],
+      files: {
+        "global/opencode.json": shell("global"),
+        "project/opencode.json": shell("project"),
+        "global/project/p1/opencode.json": shell("overlay"),
+      },
+      location: { directory: "project", project_id: "p1" },
+      global: g,
+      flags: { overrides: "project_overlay" },
+    },
+    "overlay-off": {
+      directories: ["global", "project", "global/project/p1"],
+      files: {
+        "global/opencode.json": shell("global"),
+        "project/opencode.json": shell("project"),
+        "global/project/p1/opencode.json": shell("overlay"),
+      },
+      location: { directory: "project", project_id: "p1" },
+      global: g,
+    },
+    "ignores-legacy-config": {
+      directories: ["project"],
+      files: {
+        "project/config.json": shell("legacy"),
+        "project/opencode.json": shell("project"),
+      },
+      location: { directory: "project", project_id: "global" },
+      global: g,
+    },
+    "rejected-each-stage": {
+      directories: ["system", "global", "project", "project/.opencode"],
+      files: {
+        "system/opencode.json": "{ invalid",
+        "global/opencode.json": JSON.stringify({ $schema: "global" }),
+        "custom.json": "[]",
+        "project/opencode.json": "{ invalid",
+        "project/.opencode/opencode.json": "[]",
+      },
+      options: { system: "system", file: "custom.json", content: "[]" },
+      location: { directory: "project", project_id: "global" },
+      global: g,
+    },
+  }
+
+  const encodeEntry = Schema.encodeSync(Entry)
+  const log = console.log
+  const lines: string[] = []
+
+  for (const name of Object.keys(cases).sort()) {
+    const item = cases[name]!
+    const root = await realpath(await mkdtemp(path.join(os.tmpdir(), "opencode-load-")))
+    const previousFlags = process.env.OPENCODE_FLAGS
+    try {
+      for (const directory of item.directories ?? []) await mkdir(path.join(root, directory), { recursive: true })
+      for (const [file, content] of Object.entries(item.files ?? {})) {
+        const target = path.join(root, file)
+        await mkdir(path.dirname(target), { recursive: true })
+        await writeFile(target, content)
+      }
+
+      const wellknown = item.wellknown ?? {}
+      const credentials = wellknown.credentials ?? []
+      const lookups = wellknown.get ?? {}
+      const entries = wellknown.entries ?? []
+      const credential = (integrationID: string, value: LoadCredential) =>
+        new Credential.Info({
+          id: Credential.ID.create(),
+          integrationID: Integration.ID.make(integrationID),
+          label: "default",
+          value: Credential.Key.make({
+            type: "key",
+            key: value.key ?? "secret",
+            ...(value.metadata ? { metadata: value.metadata } : {}),
+          }),
+        })
+      const credentialNode = makeGlobalNode({
+        service: Credential.Service,
+        layer: Layer.succeed(
+          Credential.Service,
+          Credential.Service.of({
+            refresh: () => Effect.die("unused"),
+            all: () => Effect.succeed([]),
+            list: (integrationID) =>
+              Effect.succeed(
+                credentials
+                  .filter((value) => value.integrationID === integrationID)
+                  .map((value) => credential(value.integrationID, value)),
+              ),
+            get: (id) => {
+              const value = lookups[id]
+              return Effect.succeed(value ? credential("lookup", value) : undefined)
+            },
+            create: () => Effect.die("unused"),
+            activate: () => Effect.die("unused"),
+            update: () => Effect.die("unused"),
+            remove: () => Effect.die("unused"),
+          }),
+        ),
+        deps: [],
+      })
+      const wellknownNode = makeGlobalNode({
+        service: WellKnown.Service,
+        layer: Layer.succeed(
+          WellKnown.Service,
+          WellKnown.Service.of({
+            entries: () => Effect.succeed(entries as readonly WellKnown.Entry[]),
+            snapshot: () => entries as readonly WellKnown.Entry[],
+            refresh: () => Effect.succeed(false),
+            add: () => Effect.die("unused"),
+            remove: () => Effect.die("unused"),
+            resolve: () =>
+              wellknown.resolveError
+                ? Effect.fail(new Error("unavailable"))
+                : Effect.succeed((wellknown.resolve ?? []) as WellKnown.Config[]),
+            cached: () => Effect.succeed((wellknown.cached ?? []) as WellKnown.Config[]),
+            clearCached: () => Effect.void,
+          }),
+        ),
+        deps: [],
+      })
+
+      const globalConfig = path.join(root, item.global.config)
+      const home = path.join(root, item.global.home)
+      const directory = path.join(root, item.location.directory)
+      const options: LoadOptions = { system: false, ...item.options }
+      if (typeof options.system === "string") options.system = path.join(root, options.system)
+      if (typeof options.file === "string") options.file = path.join(root, options.file)
+      const locationLayer = Layer.succeed(
+        Location.Service,
+        Location.Service.of({
+          directory: AbsolutePath.make(directory),
+          workspaceID: undefined,
+          project: {
+            id: Project.ID.make(item.location.project_id),
+            directory: AbsolutePath.make(directory),
+            canonical: AbsolutePath.make(directory),
+          },
+        }),
+      )
+      const flags = { channel: item.flags?.channel ?? "unknown", overrides: item.flags?.overrides ?? null }
+      const watcher = Watcher.testLayer
+      process.env.OPENCODE_FLAGS = flags.overrides ?? ""
+      const built = AppNodeBuilder.build(LayerNode.group([Config.node, Bus.node]), [
+        Config.node.replace(Config.configured(options)),
+        Location.node.replace(locationLayer),
+        Global.node.replace(Global.layerWith({ config: globalConfig, home })),
+        Credential.node.replace(credentialNode),
+        WellKnown.node.replace(wellknownNode),
+        App.node.replace(App.layer({ channel: flags.channel })),
+        Watcher.node.replace(watcher),
+      ])
+      const program = Effect.gen(function* () {
+        const config = yield* Config.Service
+        for (const integration of item.integrations ?? []) {
+          yield* config.integration!(
+            Integration.ID.make(integration.integrationID),
+            ConfigIntegration.make({
+              integrationID: Integration.ID.make(integration.integrationID),
+              connection: integration.connection as ConfigIntegration.Document["connection"],
+              organization: integration.organization,
+              info: integration.info,
+            }),
+          )
+        }
+        const loaded = yield* config.entries()
+        const compatibility = yield* config.compatibility!()
+        return {
+          entries: loaded.map((entry) => ({
+            wire: JSON.parse(JSON.stringify(encodeEntry(entry))),
+            origin: entryOrigin(entry),
+          })),
+          compatibility,
+          statements: ManagedPolicy.statements(loaded).map((statement) => ({
+            action: statement.action,
+            resource: statement.resource,
+            effect: statement.effect,
+            message: statement.message,
+          })),
+          decisions: (item.policy ?? []).map((entry) => ({
+            action: entry.action,
+            resource: entry.resource,
+            effect: ManagedPolicy.decision(ManagedPolicy.statements(loaded), entry.action, entry.resource),
+          })),
+        }
+      })
+      console.log = () => {}
+      const layer = Layer.provide(
+        Layer.mergeAll(built, watcher),
+        Layer.succeed(FlagResolve.Overrides, flags.overrides ?? ""),
+      )
+      const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+      const rel = (value: string) => path.relative(root, value).split(path.sep).join("/")
+      const loaded = result.entries.map((entry) => {
+        const wire = entry.wire as Record<string, unknown>
+        if (typeof wire.path === "string") wire.path = rel(wire.path)
+        return entry.origin ? { ...wire, origin: entry.origin } : wire
+      })
+      lines.push(
+        `${JSON.stringify(name)}:${JSON.stringify({
+          directories: item.directories ?? [],
+          files: item.files ?? {},
+          options: item.options ?? {},
+          location: item.location,
+          global: item.global,
+          flags,
+          integrations: item.integrations ?? [],
+          wellknown: {
+            entries,
+            credentials,
+            get: lookups,
+            resolve: wellknown.resolve ?? null,
+            resolveError: wellknown.resolveError ?? false,
+            cached: wellknown.cached ?? [],
+          },
+          policy: item.policy ?? [],
+          entries: loaded,
+          compatibility: {
+            claude: result.compatibility.claude.map(rel),
+            agents: result.compatibility.agents.map(rel),
+          },
+          statements: result.statements,
+          decisions: result.decisions,
+        })}`,
+      )
+    } finally {
+      console.log = log
+      if (previousFlags === undefined) delete process.env.OPENCODE_FLAGS
+      else process.env.OPENCODE_FLAGS = previousFlags
+      await rm(root, { recursive: true, force: true })
+    }
+  }
+  process.stdout.write(`{\n${lines.join(",\n")}\n}\n`)
+}
+
+function entryOrigin(entry: Entry) {
+  if (entry.type === "directory") return undefined
+  if (entry instanceof ConfigIntegration.WellKnownDocument)
+    return { kind: "wellknown" as const, integrationID: entry.integrationID }
+  if (entry instanceof ConfigIntegration.Document)
+    return {
+      kind: "integration" as const,
+      integrationID: entry.integrationID,
+      connection: entry.connection,
+      ...(entry.organization === undefined ? {} : { organization: entry.organization }),
+    }
+  if (entry instanceof ConfigManaged.Document) return { kind: "managed" as const }
+  return { kind: "file" as const }
 }
