@@ -1,0 +1,127 @@
+//! The shared SQLite connection, its pragmas and transactions.
+
+use std::collections::HashMap;
+use std::fs::{self, OpenOptions};
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex, OnceLock};
+
+use rusqlite::{Connection, Transaction, TransactionBehavior};
+
+use crate::StorageError;
+use crate::path::DatabaseLocation;
+
+/// One process-wide lock per database file, held from before the file is restricted until `open` returns.
+static LOCKS: OnceLock<Mutex<HashMap<PathBuf, Arc<Mutex<()>>>>> = OnceLock::new();
+
+/// A connection shared by the whole process, and the location it was opened from.
+pub struct Database {
+    connection: Mutex<Connection>,
+    location: DatabaseLocation,
+}
+
+/// The migrations `open` ran; empty until the migration runner lands.
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub struct MigrationReport {
+    /// Whether the database was created from scratch.
+    pub bootstrapped: bool,
+    /// The migrations applied, in order.
+    pub applied: Vec<&'static str>,
+    /// Non-fatal problems met while migrating.
+    pub warnings: Vec<String>,
+}
+
+/// Opens the connection, restricting a file database to its owner and applying the pragmas. The
+/// report is empty in this phase; Phase 3 runs the migrations here, under the same bootstrap lock.
+pub fn open(location: DatabaseLocation, _data: &Path) -> Result<(Database, MigrationReport), StorageError> {
+    let lock = match &location {
+        DatabaseLocation::File(path) => Some(path_lock(path)),
+        DatabaseLocation::Memory => None,
+    };
+    let _guard = lock.as_ref().map(|lock| lock.lock().unwrap_or_else(|error| error.into_inner()));
+    if let DatabaseLocation::File(path) = &location {
+        restrict_to_owner(path)?;
+    }
+    let connection = match &location {
+        DatabaseLocation::File(path) => Connection::open(path)?,
+        DatabaseLocation::Memory => Connection::open_in_memory()?,
+    };
+    let _journal_mode: String = connection.query_row("PRAGMA journal_mode = WAL", [], |row| row.get(0))?;
+    connection.pragma_update(None, "synchronous", "NORMAL")?;
+    connection.pragma_update(None, "busy_timeout", 5000)?;
+    connection.pragma_update(None, "cache_size", -64000)?;
+    connection.pragma_update(None, "foreign_keys", "ON")?;
+    Ok((Database { connection: Mutex::new(connection), location }, MigrationReport::default()))
+}
+
+fn path_lock(path: &Path) -> Arc<Mutex<()>> {
+    let locks = LOCKS.get_or_init(|| Mutex::new(HashMap::new()));
+    let mut locks = locks.lock().unwrap_or_else(|error| error.into_inner());
+    locks.entry(path.to_path_buf()).or_default().clone()
+}
+
+/// `restrictToOwner`: SQLite creates new sidecars with the database's mode, but does not tighten
+/// existing ones. Windows relies on the profile directory's inherited ACLs instead.
+#[cfg(unix)]
+fn restrict_to_owner(path: &Path) -> Result<(), StorageError> {
+    use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
+
+    if !path.exists() {
+        OpenOptions::new().append(true).create(true).mode(0o600).open(path)?;
+    }
+    fs::set_permissions(path, fs::Permissions::from_mode(0o600))?;
+    for suffix in ["-wal", "-shm"] {
+        let mut sidecar = path.as_os_str().to_owned();
+        sidecar.push(suffix);
+        match fs::set_permissions(PathBuf::from(sidecar), fs::Permissions::from_mode(0o600)) {
+            Ok(()) => {}
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            Err(error) => return Err(error.into()),
+        }
+    }
+    Ok(())
+}
+
+#[cfg(not(unix))]
+fn restrict_to_owner(_path: &Path) -> Result<(), StorageError> {
+    Ok(())
+}
+
+impl Database {
+    /// The location this connection was opened from.
+    pub fn location(&self) -> &DatabaseLocation {
+        &self.location
+    }
+
+    /// Runs `f` against the connection while holding the lock.
+    pub fn read<T>(&self, f: impl FnOnce(&Connection) -> Result<T, StorageError>) -> Result<T, StorageError> {
+        let connection = self.connection.lock().unwrap_or_else(|error| error.into_inner());
+        f(&connection)
+    }
+
+    /// Runs `f` in a transaction: `Err` from `f` rolls it back, `Ok` commits. An `f` that needs a
+    /// nested scope uses `tx.savepoint()`.
+    pub fn transaction<T, E: From<rusqlite::Error>>(
+        &self,
+        behavior: TransactionBehavior,
+        f: impl FnOnce(&mut Transaction<'_>) -> Result<T, E>,
+    ) -> Result<T, E> {
+        let mut connection = self.connection.lock().unwrap_or_else(|error| error.into_inner());
+        let mut tx = connection.transaction_with_behavior(behavior)?;
+        let value = match f(&mut tx) {
+            Ok(value) => value,
+            Err(error) => {
+                tx.rollback()?;
+                return Err(error);
+            }
+        };
+        match tx.commit() {
+            Ok(()) => Ok(value),
+            Err(error) => {
+                if !connection.is_autocommit() {
+                    let _ = connection.execute_batch("ROLLBACK");
+                }
+                Err(error.into())
+            }
+        }
+    }
+}

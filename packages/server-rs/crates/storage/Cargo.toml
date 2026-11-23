@@ -1,0 +1,24 @@
+[package]
+name = "opencode-storage"
+description = "The SQLite database: its path, the shared connection, pragmas and transactions."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+autotests = false
+
+[lints]
+workspace = true
+
+[dependencies]
+opencode-api-types.workspace = true
+opencode-contract.workspace = true
+opencode-util.workspace = true
+rand.workspace = true
+rusqlite.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+
+[[test]]
+name = "all"
+path = "tests/all/main.rs"
