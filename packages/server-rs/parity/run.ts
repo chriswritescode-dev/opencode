@@ -14,14 +14,14 @@ import { deviationWarnings, explain, loadDeviations, type Deviation } from "./li
 import { runSide } from "./lib/drive"
 import { startModelEndpoint, type ModelEndpoint } from "./lib/model"
 import { normalizeCapture } from "./lib/normalize"
-import { createSandbox, resetSandbox } from "./lib/sandbox"
+import { createSandbox, removeSandbox, resetSandbox } from "./lib/sandbox"
 import type { Scenario } from "./lib/scenario"
 
 const parityRoot = import.meta.dir
 const repositoryRoot = path.resolve(parityRoot, "../../..")
 const scenariosRoot = path.join(parityRoot, "scenarios")
 const deviationsRoot = path.join(parityRoot, "deviations")
-const outputRoot = path.join(parityRoot, "out")
+const outputRoot = process.env.PARITY_OUT_DIR ? path.resolve(process.env.PARITY_OUT_DIR) : path.join(parityRoot, "out")
 const usage =
   "usage: bun run parity/run.ts --candidate <ts|path> [--reference <ts|path>] [--repeat <n>] " +
   "[--deviations <dir>] [scenario...]"
@@ -33,6 +33,8 @@ const referencePaths = [
   "packages/schema/src",
   "packages/ai/src",
   "packages/util/src",
+  "packages/plugin/src",
+  "packages/codemode/src",
 ]
 
 type Options = { reference: string; candidate: string; repeat: number; deviations: string; files: string[] }
@@ -200,13 +202,17 @@ function hasCommit(pin: string) {
 }
 
 function changedFiles(pin: string) {
-  const result = Bun.spawnSync(["git", "diff", "--name-only", pin, "HEAD", "--", ...referencePaths], {
-    cwd: repositoryRoot,
-    stdout: "pipe",
-    stderr: "ignore",
+  return [
+    ["git", "diff", "--name-only", pin, "--", ...referencePaths],
+    ["git", "ls-files", "--others", "--exclude-standard", "--", ...referencePaths],
+  ].flatMap((command) => {
+    const result = Bun.spawnSync(command, { cwd: repositoryRoot, stdout: "pipe", stderr: "ignore" })
+    if (result.exitCode !== 0) return []
+    return result.stdout
+      .toString()
+      .split("\n")
+      .filter((line) => line.length > 0)
   })
-  if (result.exitCode !== 0) return []
-  return result.stdout.toString().split("\n").filter((line) => line.length > 0)
 }
 
 async function scenarioFiles(files: string[]) {
@@ -248,48 +254,60 @@ async function loadScenario(file: string) {
 
 async function captureScenario(scenario: Scenario, options: Options, candidateEnv: Record<string, string>) {
   const box = await createSandbox()
-  const endpoint = await startModelEndpoint()
-  const template = { work: box.work, root: box.root }
-  const replies = scenario.model ?? []
   try {
-    endpoint.load(replies, template)
-    const referenceStarted = Date.now()
-    const referenceRun = await runSide(scenario, options.reference, box, endpoint)
-    requireAllReplies(endpoint)
-    const referenceEnd = Date.now()
-    await resetSandbox(box.root)
-    endpoint.load(replies, template)
-    const candidateStarted = Date.now()
-    const candidateRun = await runSide(scenario, options.candidate, box, endpoint, candidateEnv)
-    requireAllReplies(endpoint)
-    const candidateEnd = Date.now()
-    const referenceCapture = normalizeCapture(referenceRun.capture, {
-      root: box.root,
-      start: referenceStarted,
-      end: referenceEnd,
-    })
-    const candidateCapture = normalizeCapture(candidateRun.capture, {
-      root: box.root,
-      start: candidateStarted,
-      end: candidateEnd,
-    })
-    const differences = compareCaptures(referenceCapture, candidateCapture)
-    return {
-      reference: referenceCapture,
-      candidate: candidateCapture,
-      differences,
-      coverage: { requests: referenceRun.requests, events: referenceRun.capture.events },
-    } satisfies Capture
-  } finally {
+    const endpoint = await startModelEndpoint()
     try {
-      await endpoint.stop()
+      const template = { work: box.work, root: box.root }
+      const replies = scenario.model ?? []
+      endpoint.load(replies, template)
+      const referenceStarted = Date.now()
+      const referenceRun = await withModelFailure(endpoint, runSide(scenario, options.reference, box, endpoint))
+      requireAllReplies(endpoint)
+      const referenceEnd = Date.now()
+      await resetSandbox(box.root)
+      endpoint.load(replies, template)
+      const candidateStarted = Date.now()
+      const candidateRun = await withModelFailure(
+        endpoint,
+        runSide(scenario, options.candidate, box, endpoint, candidateEnv),
+      )
+      requireAllReplies(endpoint)
+      const candidateEnd = Date.now()
+      const referenceCapture = normalizeCapture(referenceRun.capture, {
+        root: box.root,
+        start: referenceStarted,
+        end: referenceEnd,
+      })
+      const candidateCapture = normalizeCapture(candidateRun.capture, {
+        root: box.root,
+        start: candidateStarted,
+        end: candidateEnd,
+      })
+      const differences = compareCaptures(referenceCapture, candidateCapture)
+      return {
+        reference: referenceCapture,
+        candidate: candidateCapture,
+        differences,
+        coverage: { requests: referenceRun.requests, events: referenceRun.capture.events },
+      } satisfies Capture
     } finally {
-      await fs.rm(box.root, { recursive: true, force: true })
+      await endpoint.stop()
     }
+  } finally {
+    await removeSandbox(box.root)
   }
 }
 
+function withModelFailure<T>(endpoint: ModelEndpoint, run: Promise<T>) {
+  return run.catch((error: unknown) => {
+    const failure = endpoint.failures()[0]
+    throw failure === undefined ? error : new Error(`scenario: ${failure}`, { cause: error })
+  })
+}
+
 function requireAllReplies(endpoint: ModelEndpoint) {
+  const failure = endpoint.failures()[0]
+  if (failure !== undefined) throw new Error(`scenario: ${failure}`)
   const unused = endpoint.unused()
   if (unused === 0) return
   throw new Error(`scenario: ${unused} unused model ${unused === 1 ? "reply" : "replies"}`)
@@ -318,4 +336,7 @@ function message(error: unknown) {
   return error instanceof Error ? error.message : String(error)
 }
 
-await main()
+await main().catch((error: unknown) => {
+  console.error(`parity: ${message(error)}`)
+  process.exit(2)
+})

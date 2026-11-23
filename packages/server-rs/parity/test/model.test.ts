@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test"
+import fs from "node:fs/promises"
 import path from "node:path"
 import { startModelEndpoint, type ModelEndpoint } from "../lib/model"
 
@@ -172,6 +173,64 @@ test("rejects an exhausted script and logs unknown routes", async () => {
     ])
     expect(model.unused()).toBe(0)
   })
+})
+
+test("records cassette failures and clears them on load", async () => {
+  await withModel(async (model) => {
+    const missing = `packages/server-rs/parity/out/missing-${crypto.randomUUID()}.json`
+    model.load([{ cassette: missing }], template)
+    const missingResponse = await post(model, "/v1/messages", { model: "claude-parity" })
+    expect(missingResponse.status).toBe(500)
+    expect(model.unused()).toBe(0)
+    const missingFailures = model.failures()
+    expect(missingFailures).toHaveLength(1)
+    expect(missingFailures[0]).toContain("cannot read cassette")
+    expect(missingFailures[0]).toContain(missing)
+    model.load([{ cassette, interaction: 99 }], template)
+    expect(model.failures()).toEqual([])
+    const outOfRange = await post(model, "/v1/messages", { model: "MiniMax-M3" })
+    expect(outOfRange.status).toBe(500)
+    expect(model.unused()).toBe(0)
+    expect(model.failures()).toEqual([`cassette ${cassette} has no interaction 99`])
+    model.load([{ text: "Hello!" }], template)
+    expect(model.failures()).toEqual([])
+  })
+})
+
+test("skips non-http cassette interactions when indexing", async () => {
+  const file = path.join(repository, "packages/server-rs/parity/out", `model-test-${crypto.randomUUID()}.json`)
+  const recorded = {
+    status: 201,
+    headers: { "content-type": "application/json" },
+    body: '{"ok":true}',
+  }
+  await Bun.write(
+    file,
+    JSON.stringify({
+      version: 1,
+      interactions: [
+        { transport: "websocket", messages: [] },
+        {
+          transport: "http",
+          request: { method: "POST", url: "https://example.test/v1/messages", headers: {}, body: "" },
+          response: recorded,
+        },
+      ],
+    }),
+  )
+  try {
+    await withModel(async (model) => {
+      model.load([{ cassette: path.relative(repository, file) }], template)
+      const response = await post(model, "/v1/messages", { model: "claude-parity" })
+      expect(response.status).toBe(recorded.status)
+      expect(response.headers.get("content-type")).toBe(recorded.headers["content-type"])
+      expect(await response.text()).toBe(recorded.body)
+      expect(model.failures()).toEqual([])
+      expect(model.unused()).toBe(0)
+    })
+  } finally {
+    await fs.rm(file, { force: true })
+  }
 })
 
 test("templates {{work}} and {{root}} through nested tool input", async () => {

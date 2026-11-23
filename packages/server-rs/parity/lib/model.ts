@@ -8,18 +8,19 @@ export type ModelEndpoint = {
   load(replies: Reply[], template: { work: string; root: string }): void
   requests(): ModelRequest[]
   unused(): number
+  failures(): string[]
   stop(): Promise<void>
 }
 
 type Template = { work: string; root: string }
-type State = { replies: Reply[]; consumed: number; log: ModelRequest[]; template: Template }
+type State = { replies: Reply[]; consumed: number; log: ModelRequest[]; failures: string[]; template: Template }
 
 const repository = path.resolve(import.meta.dir, "../../../..")
 const placeholder = /\{\{(work|root)\}\}/g
 const routes = new Set(["/v1/chat/completions", "/v1/messages"])
 
 export async function startModelEndpoint(): Promise<ModelEndpoint> {
-  const state: State = { replies: [], consumed: 0, log: [], template: { work: "", root: "" } }
+  const state: State = { replies: [], consumed: 0, log: [], failures: [], template: { work: "", root: "" } }
   const server = Bun.serve({
     hostname: "127.0.0.1",
     port: 0,
@@ -31,10 +32,12 @@ export async function startModelEndpoint(): Promise<ModelEndpoint> {
       state.replies = [...replies]
       state.consumed = 0
       state.log = []
+      state.failures = []
       state.template = template
     },
     requests: () => [...state.log],
     unused: () => state.replies.length - state.consumed,
+    failures: () => [...state.failures],
     stop: async () => {
       await server.stop(true)
     },
@@ -49,17 +52,17 @@ async function respond(request: Request, state: State): Promise<Response> {
   if (state.consumed >= state.replies.length) return error(500, "unscripted model request")
   const reply = state.replies[state.consumed]
   state.consumed += 1
-  return encode(reply, pathname, body, state.template)
+  return encode(reply, pathname, body, state)
 }
 
-async function encode(reply: Reply, pathname: string, body: unknown, template: Template) {
-  if ("cassette" in reply) return replay(reply)
+async function encode(reply: Reply, pathname: string, body: unknown, state: State) {
+  if ("cassette" in reply) return replay(reply, state)
   const anthropic = pathname === "/v1/messages"
   if ("tool" in reply) {
-    const tool = { id: reply.tool.id, name: reply.tool.name, input: templateValue(reply.tool.input, template) }
+    const tool = { id: reply.tool.id, name: reply.tool.name, input: templateValue(reply.tool.input, state.template) }
     return stream(anthropic ? anthropicTool(tool, requestModel(body)) : openaiTool(tool))
   }
-  const text = templateText(reply.text, template)
+  const text = templateText(reply.text, state.template)
   return stream(anthropic ? anthropicText(text, requestModel(body)) : openaiText(text))
 }
 
@@ -188,21 +191,33 @@ async function readBody(request: Request): Promise<unknown> {
   return parsed.ok ? parsed.value : text
 }
 
-async function replay(reply: { cassette: string; interaction?: number }): Promise<Response> {
+async function replay(reply: { cassette: string; interaction?: number }, state: State): Promise<Response> {
   const file = path.join(repository, reply.cassette)
   const loaded = await readCassette(file)
-  if (!loaded.ok) return error(500, loaded.reason)
+  if (!loaded.ok) return failure(state, loaded.reason)
   const index = reply.interaction ?? 0
-  const interaction =
-    isRecord(loaded.value) && Array.isArray(loaded.value.interactions) ? loaded.value.interactions[index] : undefined
+  const interactions =
+    isRecord(loaded.value) && Array.isArray(loaded.value.interactions)
+      ? loaded.value.interactions.filter(isHttpInteraction)
+      : []
+  const interaction = interactions[index]
   if (!isRecord(interaction) || !isRecord(interaction.response))
-    return error(500, `cassette ${reply.cassette} has no interaction ${index}`)
+    return failure(state, `cassette ${reply.cassette} has no interaction ${index}`)
   const response = interaction.response
   const recorded = typeof response.body === "string" ? response.body : ""
   return new Response(response.bodyEncoding === "base64" ? Buffer.from(recorded, "base64") : recorded, {
     status: typeof response.status === "number" ? response.status : 200,
     headers: stringHeaders(response.headers),
   })
+}
+
+function failure(state: State, reason: string) {
+  state.failures.push(reason)
+  return error(500, reason)
+}
+
+function isHttpInteraction(value: unknown) {
+  return isRecord(value) && value.transport === "http"
 }
 
 async function readCassette(file: string): Promise<{ ok: true; value: unknown } | { ok: false; reason: string }> {

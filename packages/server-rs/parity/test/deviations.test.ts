@@ -26,18 +26,24 @@ function ledgerText(accepted: string, block: boolean) {
 }
 
 async function runParity(args: string[], env: Record<string, string> = {}) {
-  const child = Bun.spawn(["bun", runScript, ...args], {
-    cwd: packageRoot,
-    env: { ...process.env, ...env },
-    stdout: "pipe",
-    stderr: "pipe",
-  })
-  const [stdout, stderr, exitCode] = await Promise.all([
-    new Response(child.stdout).text(),
-    new Response(child.stderr).text(),
-    child.exited,
-  ])
-  return { exitCode, output: stdout + stderr }
+  await fs.mkdir("/tmp/opencode", { recursive: true })
+  const outDir = await fs.mkdtemp(path.join("/tmp/opencode", "parity-output-"))
+  try {
+    const child = Bun.spawn(["bun", runScript, ...args], {
+      cwd: packageRoot,
+      env: { ...process.env, ...env, PARITY_OUT_DIR: outDir },
+      stdout: "pipe",
+      stderr: "pipe",
+    })
+    const [stdout, stderr, exitCode] = await Promise.all([
+      new Response(child.stdout).text(),
+      new Response(child.stderr).text(),
+      child.exited,
+    ])
+    return { exitCode, output: stdout + stderr }
+  } finally {
+    await fs.rm(outDir, { recursive: true, force: true })
+  }
 }
 
 test("loads deviations, ignoring the readme and deriving accepted and rules", async () => {

@@ -29,10 +29,39 @@ test("normalizes equal ids to one placeholder and distinct ids apart", () => {
 
 test("normalizes millisecond and ISO-8601 timestamps in the capture window", () => {
   const capture = normalizeCapture(
-    { millis: context.start + 1_000, iso: "2023-11-14T22:13:21.000Z", outside: context.start - 10_000_000 },
+    {
+      millis: context.start + 1_000,
+      digits: String(context.start + 1_000),
+      iso: "2023-11-14T22:13:21.000Z",
+      outside: context.start - 10_000_000,
+    },
     context,
   )
-  expect(capture).toEqual({ millis: "<time>", iso: "<time>", outside: context.start - 10_000_000 })
+  expect(capture).toEqual({
+    millis: "<time>",
+    digits: "<time:digits>",
+    iso: "<time:iso>",
+    outside: context.start - 10_000_000,
+  })
+})
+
+test("keeps an ISO timestamp distinct from a millisecond timestamp", () => {
+  expect(normalizeCapture({ value: "2023-11-14T22:13:21.000Z" }, context)).toEqual({ value: "<time:iso>" })
+  expect(normalizeCapture({ value: context.start + 1_000 }, context)).toEqual({ value: "<time>" })
+})
+
+test("replaces only numeric pids and string hostnames", () => {
+  const capture = normalizeCapture(
+    {
+      running: { pid: 4_242, hostname: "build-box" },
+      stopped: { pid: null, hostname: 7 },
+    },
+    context,
+  )
+  expect(capture).toEqual({
+    running: { pid: "<pid>", hostname: "<hostname>" },
+    stopped: { pid: null, hostname: 7 },
+  })
 })
 
 test("normalizes the sandbox root and loopback hosts", () => {
@@ -69,10 +98,10 @@ test("compares missing array elements", () => {
   expect(differences).toEqual([{ path: "steps/0/body/x/1", reference: 2, candidate: undefined }])
 })
 
-async function runParity(args: string[], env: Record<string, string> = {}) {
+async function runParity(outDir: string, args: string[], env: Record<string, string> = {}) {
   const child = Bun.spawn(["bun", runScript, ...args], {
     cwd: packageRoot,
-    env: { ...process.env, ...env },
+    env: { ...process.env, PARITY_OUT_DIR: outDir, ...env },
     stdout: "pipe",
     stderr: "pipe",
   })
@@ -87,9 +116,11 @@ async function runParity(args: string[], env: Record<string, string> = {}) {
 test(
   "passes identical servers",
   async () => {
-    const result = await runParity(["--reference", fakeServer, "--candidate", fakeServer, infoScenario])
-    expect(result.exitCode).toBe(0)
-    expect(result.output).toContain("PASS info-auth")
+    await withTempDir("parity-out-", async (outDir) => {
+      const result = await runParity(outDir, ["--reference", fakeServer, "--candidate", fakeServer, infoScenario])
+      expect(result.exitCode).toBe(0)
+      expect(result.output).toContain("PASS info-auth")
+    })
   },
   60_000,
 )
@@ -97,11 +128,15 @@ test(
 test(
   "reports a difference in the candidate environment",
   async () => {
-    const result = await runParity(["--reference", fakeServer, "--candidate", fakeServer, infoScenario], {
-      PARITY_CANDIDATE_ENV: JSON.stringify({ FAKE_VERSION: "other" }),
+    await withTempDir("parity-out-", async (outDir) => {
+      const result = await runParity(
+        outDir,
+        ["--reference", fakeServer, "--candidate", fakeServer, infoScenario],
+        { PARITY_CANDIDATE_ENV: JSON.stringify({ FAKE_VERSION: "other" }) },
+      )
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain("steps/0/body/version")
     })
-    expect(result.exitCode).toBe(1)
-    expect(result.output).toContain("steps/0/body/version")
   },
   60_000,
 )
@@ -109,9 +144,11 @@ test(
 test(
   "reports a server that does not start",
   async () => {
-    const result = await runParity(["--reference", fakeServer, "--candidate", exitTwo, infoScenario])
-    expect(result.exitCode).toBe(2)
-    expect(result.output).toContain("did not start")
+    await withTempDir("parity-out-", async (outDir) => {
+      const result = await runParity(outDir, ["--reference", fakeServer, "--candidate", exitTwo, infoScenario])
+      expect(result.exitCode).toBe(2)
+      expect(result.output).toContain("did not start")
+    })
   },
   60_000,
 )
@@ -119,10 +156,14 @@ test(
 test(
   "ignores events that arrive while the warm-up runs",
   async () => {
-    const result = await runParity(["--reference", fakeServer, "--candidate", fakeServer, infoScenario], {
-      PARITY_CANDIDATE_ENV: JSON.stringify({ FAKE_WARM_DELAY: "2500" }),
+    await withTempDir("parity-out-", async (outDir) => {
+      const result = await runParity(
+        outDir,
+        ["--reference", fakeServer, "--candidate", fakeServer, infoScenario],
+        { PARITY_CANDIDATE_ENV: JSON.stringify({ FAKE_WARM_DELAY: "2500" }) },
+      )
+      expect(result.exitCode).toBe(0)
     })
-    expect(result.exitCode).toBe(0)
   },
   60_000,
 )
@@ -130,38 +171,44 @@ test(
 test(
   "passes a WebSocket echo scenario",
   async () => {
-    await withTempRoot(async (root) => {
-      const scenario = path.join(root, "ws-echo-parity.scenario.ts")
-      const scenarioModule = path.join(import.meta.dir, "../lib/scenario")
-      const source = `import { defineScenario } from ${JSON.stringify(scenarioModule)}
+    await withTempDir("parity-out-", async (outDir) => {
+      await withTempRoot(async (root) => {
+        const scenario = path.join(root, "ws-echo-parity.scenario.ts")
+        const scenarioModule = path.join(import.meta.dir, "../lib/scenario")
+        const source = `import { defineScenario } from ${JSON.stringify(scenarioModule)}
 
 export default defineScenario({
   steps: [{ ws: { path: "/echo", send: ["first", "second"], receive: 2 } }],
 })
 `
-      await Bun.write(scenario, source)
-      const result = await runParity(["--reference", fakeServer, "--candidate", fakeServer, scenario])
-      expect(result.exitCode).toBe(0)
-      expect(result.output).toContain("PASS ws-echo-parity")
-      const capture = (await Bun.file(path.join(import.meta.dir, "../out/ws-echo-parity/reference.json")).json()) as {
-        steps: { opened: boolean; frames: string[]; close: { code: number } }[]
-      }
-      expect(capture.steps[0].opened).toBe(true)
-      expect(capture.steps[0].frames).toEqual(["first", "second"])
-      expect(capture.steps[0].close.code).toBe(1000)
+        await Bun.write(scenario, source)
+        const result = await runParity(outDir, ["--reference", fakeServer, "--candidate", fakeServer, scenario])
+        expect(result.exitCode).toBe(0)
+        expect(result.output).toContain("PASS ws-echo-parity")
+        const capture = (await Bun.file(path.join(outDir, "ws-echo-parity/reference.json")).json()) as {
+          steps: { opened: boolean; frames: string[]; close: { code: number } }[]
+        }
+        expect(capture.steps[0].opened).toBe(true)
+        expect(capture.steps[0].frames).toEqual(["first", "second"])
+        expect(capture.steps[0].close.code).toBe(1000)
+      })
     })
   },
   60_000,
 )
 
-async function withTempRoot(run: (root: string) => Promise<void>) {
+async function withTempDir(prefix: string, run: (directory: string) => Promise<void>) {
   await fs.mkdir("/tmp/opencode", { recursive: true })
-  const root = await fs.mkdtemp(path.join("/tmp/opencode", "parity-capture-"))
+  const directory = await fs.mkdtemp(path.join("/tmp/opencode", prefix))
   try {
-    await run(root)
+    await run(directory)
   } finally {
-    await fs.rm(root, { recursive: true, force: true })
+    await fs.rm(directory, { recursive: true, force: true })
   }
+}
+
+async function withTempRoot(run: (root: string) => Promise<void>) {
+  await withTempDir("parity-capture-", run)
 }
 
 test("parses SSE frames and ignores heartbeat comments", () => {
@@ -225,6 +272,44 @@ test("numbers slugs per first appearance", () => {
     second: { slug: "<slug:2>" },
     third: { slug: "<slug:1>" },
   })
+})
+
+test("numbers ids independently of object key order", () => {
+  const first = normalizeCapture(
+    { steps: [{ id: "ses_0123456789abcdefghijklmnop", parentID: "ses_ponmlkjihgfedcba9876543210" }] },
+    context,
+  )
+  const second = normalizeCapture(
+    { steps: [{ parentID: "ses_ponmlkjihgfedcba9876543210", id: "ses_0123456789abcdefghijklmnop" }] },
+    context,
+  )
+  expect(first).toEqual({ steps: [{ id: "<ses:1>", parentID: "<ses:2>" }] })
+  expect(second).toEqual(first)
+})
+
+test("preserves the formatting of JSON strings that round-trip exactly", () => {
+  const value = { createdAt: context.start + 1_000, id: "ses_0123456789abcdefghijklmnop" }
+  const compact = JSON.stringify(value)
+  const pretty = JSON.stringify(value, null, 2) + "\n"
+  const fourSpaces = JSON.stringify(value, null, 4)
+  const normalizedCompact = normalizeCapture(compact, context)
+  const normalizedPretty = normalizeCapture(pretty, context)
+  expect(normalizedCompact).toBe('{"createdAt":"<time>","id":"<ses:1>"}')
+  expect(normalizedPretty).toBe(JSON.stringify({ createdAt: "<time>", id: "<ses:1>" }, null, 2) + "\n")
+  expect(normalizeCapture(fourSpaces, context)).toBe(JSON.stringify({ createdAt: "<time>", id: "<ses:1>" }, null, 4))
+  expect(normalizedCompact).not.toBe(normalizedPretty)
+})
+
+test("normalizes the same pretty JSON with different ids equally", () => {
+  const first = JSON.stringify({ id: "ses_0123456789abcdefghijklmnop" }, null, 2) + "\n"
+  const second = JSON.stringify({ id: "ses_ponmlkjihgfedcba9876543210" }, null, 2) + "\n"
+  expect(normalizeCapture(first, context)).toBe(normalizeCapture(second, context))
+})
+
+test("applies string rules to JSON text that does not round-trip exactly", () => {
+  expect(normalizeCapture('{"id":"ses_0123456789abcdefghijklmnop","value":1.0}', context)).toBe(
+    '{"id":"<ses:1>","value":1.0}',
+  )
 })
 
 test("normalizes base64 JSON cursors and sorts database rows", () => {

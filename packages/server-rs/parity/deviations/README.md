@@ -15,6 +15,7 @@ Each file has these paragraphs, in order:
 - `Rust:` what this package does instead, with the crate and function or file.
 - `Reason:` why the difference exists, and which parity scenario or check covers it.
 - `Accepted:` the owner's name and the date the deviation was accepted.
+- `parity` block: a fenced code block with one rule per line, required once the file is accepted (see [Matches](#matches)).
 
 ## Matches
 

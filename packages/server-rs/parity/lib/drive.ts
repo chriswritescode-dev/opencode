@@ -60,6 +60,7 @@ export async function runSide(
   const cursor: Cursor = { index: 0 }
   let stream: EventStream | undefined
   let warmup: EventStream | undefined
+  let succeeded = false
   try {
     const warmupEvents: unknown[] = []
     warmup = await openEventStream(server.url, side, warmupEvents)
@@ -74,18 +75,21 @@ export async function runSide(
     warmup = undefined
     stream = await openEventStream(server.url, side, events)
     for (const step of scenario.steps) {
-      const captured = await runStep(step, server.url, sandbox, saved, events, cursor, requests)
+      const captured = await runStep(step, server.url, sandbox, saved, events, cursor, requests, stream.state)
       if (captured !== undefined) steps.push(captured)
     }
     await waitForSearchSettled(sandbox.root)
     await settleEvents(events)
     for (const id of sessionIDs(events)) logs[id] = await fetchSessionLog(server.url, id)
+    succeeded = true
   } finally {
-    const closing = Promise.all([stream?.close() ?? Promise.resolve(), warmup?.close() ?? Promise.resolve()])
+    const closing = Promise.allSettled([stream?.close() ?? Promise.resolve(), warmup?.close() ?? Promise.resolve()])
     try {
       await stopServer(server)
     } finally {
-      await closing
+      const closeFailure = (await closing).find((result) => result.status === "rejected")
+      if (succeeded && closeFailure?.status === "rejected")
+        throw closeFailure.reason instanceof Error ? closeFailure.reason : new Error(message(closeFailure.reason))
     }
   }
   const database = await dumpDatabases(sandbox.root)
@@ -103,12 +107,14 @@ export function parseSseFrames(text: string): unknown[] {
         .filter((line) => line.startsWith("data:"))
         .map((line) => line.slice(5).replace(/^ /, ""))
       if (data.length === 0) return []
-      const parsed = parseJSON(data.join("\n"))
-      return parsed.ok ? [parsed.value] : []
+      const raw = data.join("\n")
+      if (raw.length === 0) return []
+      const parsed = parseJSON(raw)
+      return parsed.ok ? [parsed.value] : [{ invalid: raw }]
     })
 }
 
-type EventStream = { close: () => Promise<void> }
+type EventStream = { close: () => Promise<void>; state: StreamState }
 
 async function openEventStream(base: string, side: string, events: unknown[]): Promise<EventStream> {
   const controller = new AbortController()
@@ -139,6 +145,7 @@ async function openEventStream(base: string, side: string, events: unknown[]): P
     throw error
   }
   return {
+    state,
     close: async () => {
       controller.abort()
       await loop
@@ -196,6 +203,7 @@ async function runStep(
   events: unknown[],
   cursor: Cursor,
   requests: RequestRecord[],
+  state: StreamState,
 ): Promise<StepCapture | WsCapture | undefined> {
   if ("files" in step) {
     await writeFiles(sandbox, step.files)
@@ -209,6 +217,7 @@ async function runStep(
       cursor.index,
       step.timeout ?? eventTimeout,
       { sandbox, saved },
+      state,
     )
     return undefined
   }
@@ -243,9 +252,16 @@ async function runHttpStep(
     signal: AbortSignal.timeout(30_000),
   })
   const content = response.headers.get("content-type") ?? ""
-  const parsed = content.includes("json") ? await response.json() : await response.text()
+  const text = await response.text()
+  const parsed = content.includes("json") ? parseBody(text) : text
   if (step.as !== undefined) saved[step.as] = parsed
   return { status: response.status, headers: captureHeaders(response.headers), body: parsed }
+}
+
+function parseBody(text: string): unknown {
+  if (text.length === 0) return text
+  const parsed = parseJSON(text)
+  return parsed.ok ? parsed.value : text
 }
 
 function runWsStep(
@@ -266,6 +282,7 @@ function runWsStep(
   const auth = step.auth ?? "basic"
   if (auth === "basic") headers.authorization = `Basic ${credentials}`
   if (auth === "query") url.searchParams.append("auth_token", credentials)
+  const messages = (step.send ?? []).map((message) => interpolate(message, template))
   return new Promise((resolve) => {
     const frames: string[] = []
     let opened = false
@@ -285,7 +302,7 @@ function runWsStep(
     }, step.timeout ?? 10_000)
     socket.addEventListener("open", () => {
       opened = true
-      for (const message of step.send ?? []) socket.send(interpolate(message, template))
+      for (const message of messages) socket.send(message)
       if (step.receive === 0) socket.close(1000)
     })
     socket.addEventListener("message", (event) => {
@@ -319,6 +336,7 @@ async function waitForEvent(
   cursor: number,
   timeout: number,
   template: Template,
+  state: StreamState,
 ): Promise<number> {
   const match =
     step.match === undefined ? undefined : (templateBody(step.match, template) as Record<string, unknown>)
@@ -326,6 +344,8 @@ async function waitForEvent(
   while (true) {
     const found = findEvent(events, step.type, match, cursor)
     if (found !== undefined) return found + 1
+    if (state.failure !== undefined) throw new Error(`scenario: event stream failed: ${message(state.failure)}`)
+    if (state.ended) throw new Error("scenario: event stream ended")
     if (Date.now() > deadline) throw new Error(`scenario: timed out waiting for event ${step.type}`)
     await Bun.sleep(10)
   }
@@ -375,8 +395,9 @@ async function fetchSessionLog(base: string, sessionID: string): Promise<unknown
     headers: { authorization: `Basic ${credentials}` },
     signal: AbortSignal.timeout(eventTimeout),
   })
-  if (!response.ok) throw new Error(`scenario: session log failed for ${sessionID}: status ${response.status}`)
-  return parseSseFrames(await response.text())
+  const text = await response.text()
+  if (!response.ok) return [{ status: response.status, body: text }]
+  return parseSseFrames(text)
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

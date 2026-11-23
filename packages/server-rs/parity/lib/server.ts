@@ -1,3 +1,4 @@
+import { constants } from "node:os"
 import path from "node:path"
 
 const repo = path.resolve(import.meta.dir, "../../../..")
@@ -11,7 +12,7 @@ process.on("exit", stopAll)
 for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"] as const)
   process.on(signal, () => {
     stopAll()
-    process.exit(130)
+    process.exit(128 + constants.signals[signal])
   })
 
 export type RunningServer = { url: string; process: Bun.Subprocess<"pipe", "pipe", "pipe"> }
@@ -76,7 +77,6 @@ export async function startServer(
 }
 
 export async function stopServer(server: RunningServer): Promise<void> {
-  children.delete(server.process)
   try {
     await server.process.stdin?.end()
   } catch {}

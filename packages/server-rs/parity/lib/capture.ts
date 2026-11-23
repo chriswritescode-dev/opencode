@@ -34,6 +34,7 @@ export async function waitForSearchSettled(root: string): Promise<void> {
     }
     await Bun.sleep(25)
   }
+  throw new Error("scenario: search index did not settle within 30 s")
 }
 
 async function readSearchState(file: string): Promise<SearchState> {
@@ -52,7 +53,8 @@ async function readSearchState(file: string): Promise<SearchState> {
     } finally {
       database.close()
     }
-  } catch {
+  } catch (error) {
+    if (message(error).includes("no such table")) return "absent"
     return "unavailable"
   }
 }
@@ -151,4 +153,8 @@ function hash(bytes: Uint8Array): string {
   const hasher = new Bun.CryptoHasher("sha256")
   hasher.update(bytes)
   return `sha256:${hasher.digest("hex")}`
+}
+
+function message(error: unknown) {
+  return error instanceof Error ? error.message : String(error)
 }

@@ -5,13 +5,18 @@ on:
     paths:
       - packages/server-rs/parity/**
       - packages/server-rs/package.json
+      - packages/server-rs/upstream-pin
       - packages/cli/src/**
       - packages/core/src/**
       - packages/server/src/**
       - packages/protocol/**
       - packages/schema/src/**
       - packages/ai/src/**
+      - packages/ai/test/fixtures/recordings/**
+      - packages/plugin/src/**
+      - packages/codemode/src/**
       - packages/util/src/**
+      - package.json
       - bun.lock
       - .github/workflows/check-server-rs-parity.yml
   push:
@@ -19,13 +24,18 @@ on:
     paths:
       - packages/server-rs/parity/**
       - packages/server-rs/package.json
+      - packages/server-rs/upstream-pin
       - packages/cli/src/**
       - packages/core/src/**
       - packages/server/src/**
       - packages/protocol/**
       - packages/schema/src/**
       - packages/ai/src/**
+      - packages/ai/test/fixtures/recordings/**
+      - packages/plugin/src/**
+      - packages/codemode/src/**
       - packages/util/src/**
+      - package.json
       - bun.lock
       - .github/workflows/check-server-rs-parity.yml
   workflow_dispatch:

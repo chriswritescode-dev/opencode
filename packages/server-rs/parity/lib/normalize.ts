@@ -66,25 +66,26 @@ export const RULES: Rule[] = [
   },
   {
     id: "time",
-    description: "Replace timestamps inside the capture window with `<time>`.",
+    description:
+      "Replace timestamps inside the capture window with `<time>` for numbers, `<time:iso>` for ISO-8601 substrings and `<time:digits>` for digit strings.",
     apply: (value, context) => {
       const windowStart = context.start - TIME_WINDOW
       const windowEnd = context.end + TIME_WINDOW
       if (typeof value === "number") return value >= windowStart && value <= windowEnd ? "<time>" : value
       if (typeof value !== "string") return value
-      const timed = value.replace(ISO_TIME, "<time>")
+      const timed = value.replace(ISO_TIME, "<time:iso>")
       if (timed !== value) return timed
       if (!DIGITS.test(value)) return value
       const parsed = Number(value)
-      return parsed >= windowStart && parsed <= windowEnd ? "<time>" : value
+      return parsed >= windowStart && parsed <= windowEnd ? "<time:digits>" : value
     },
   },
   {
     id: "process",
-    description: "Replace `pid` and `hostname` values with placeholders.",
+    description: "Replace numeric `pid` and string `hostname` values with placeholders.",
     apply: (value, _context, _state, key) => {
-      if (key === "pid") return "<pid>"
-      if (key === "hostname") return "<hostname>"
+      if (key === "pid" && typeof value === "number") return "<pid>"
+      if (key === "hostname" && typeof value === "string") return "<hostname>"
       return value
     },
   },
@@ -127,25 +128,54 @@ const parseJSON = (text: string): { ok: true; value: unknown } | { ok: false } =
 const applyRules = (value: unknown, key: string | undefined, context: NormalizeContext, state: NormalizeState) =>
   RULES.reduce((current, rule) => rule.apply(current, context, state, key), value)
 
+const INDENTATIONS: (string | number | undefined)[] = [undefined, 2, "\t", 4]
+
+const stringifyJSON = (value: unknown, indentation: string | number | undefined) =>
+  indentation === undefined ? JSON.stringify(value) : JSON.stringify(value, null, indentation)
+
+const matchJSONFormatting = (raw: string, value: unknown) => {
+  const text = raw.trimEnd()
+  const suffix = raw.slice(text.length)
+  const formatting = INDENTATIONS.map((indentation) => ({ indentation, text: stringifyJSON(value, indentation) })).find(
+    (candidate) => candidate.text === text,
+  )
+  if (formatting === undefined) return undefined
+  return { indentation: formatting.indentation, suffix }
+}
+
+const normalizeJSONText = (raw: string, context: NormalizeContext, state: NormalizeState) => {
+  const parsed = parseJSON(raw)
+  if (!parsed.ok) return undefined
+  const formatting = matchJSONFormatting(raw, parsed.value)
+  if (formatting === undefined) return undefined
+  const text = stringifyJSON(walk(parsed.value, undefined, context, state), formatting.indentation)
+  if (text === undefined) return undefined
+  return text + formatting.suffix
+}
+
 const walk = (value: unknown, key: string | undefined, context: NormalizeContext, state: NormalizeState): unknown => {
   if (Array.isArray(value)) return value.map((element) => walk(element, undefined, context, state))
   if (isPlainObject(value))
     return Object.fromEntries(
-      Object.entries(value).map(([entryKey, entryValue]) => [
-        String(applyRules(entryKey, undefined, context, state)),
-        walk(entryValue, entryKey, context, state),
-      ]),
+      Object.keys(value)
+        .sort()
+        .map((entryKey) => [
+          String(applyRules(entryKey, undefined, context, state)),
+          walk(value[entryKey], entryKey, context, state),
+        ]),
     )
   if (typeof value === "string" && (value.startsWith("{") || value.startsWith("["))) {
-    const parsed = parseJSON(value)
-    if (parsed.ok) return JSON.stringify(walk(parsed.value, undefined, context, state))
+    const normalized = normalizeJSONText(value, context, state)
+    if (normalized !== undefined) return normalized
   }
   return applyRules(value, key, context, state)
 }
 
 export function normalizeCapture(capture: unknown, context: NormalizeContext): unknown {
   const state: NormalizeState = { ids: new Map(), counts: new Map() }
-  const walked = walk(capture, undefined, context, state)
+  const walked = isPlainObject(capture)
+    ? Object.fromEntries(Object.entries(capture).map(([key, value]) => [key, walk(value, key, context, state)]))
+    : walk(capture, undefined, context, state)
   if (!isPlainObject(walked) || !isPlainObject(walked.database)) return walked
   const database = Object.fromEntries(
     Object.entries(walked.database).map(([name, entry]) => {

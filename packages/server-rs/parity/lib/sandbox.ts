@@ -1,14 +1,25 @@
+import { rmSync } from "node:fs"
 import fs from "node:fs/promises"
 import path from "node:path"
 
 export type Sandbox = { root: string; work: string }
 
+const roots = new Set<string>()
+
+process.on("exit", () => roots.forEach((root) => rmSync(root, { recursive: true, force: true, maxRetries: 3 })))
+
 export async function createSandbox(parent?: string): Promise<Sandbox> {
   const base = parent ?? process.env.PARITY_SANDBOX_DIR ?? path.join("/tmp", "opencode-parity")
   await fs.mkdir(base, { recursive: true })
   const root = await fs.mkdtemp(path.join(base, "opencode-parity-"))
+  roots.add(root)
   await resetSandbox(root)
   return { root, work: path.join(root, "work") }
+}
+
+export async function removeSandbox(root: string): Promise<void> {
+  await fs.rm(root, { recursive: true, force: true })
+  roots.delete(root)
 }
 
 export async function resetSandbox(root: string): Promise<void> {

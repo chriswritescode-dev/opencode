@@ -65,7 +65,7 @@ Templating resolves `{{work}}`, `{{root}}` and `{{<as>.<dotted.path>}}` in paths
 
 `model` scripts the responses of the endpoint described in [Scripted model](#scripted-model). Each entry is a text reply `{ text: "..." }`, one tool call `{ tool: { id, name, input } }`, or a recorded interaction replayed verbatim `{ cassette: "packages/ai/test/fixtures/recordings/.../<name>.json", interaction: 0 }`. Replies are consumed one per request and must all be used.
 
-Run one scenario by passing its file: `bun run parity --candidate ts scenarios/prompt-text.scenario.ts`. Before committing a new scenario, check that it is deterministic with `bun run parity --candidate ts --repeat 20 scenarios/<name>.scenario.ts`; both sides run the same TypeScript server, so a difference there is a harness or capture problem, not a candidate difference.
+Run one scenario by passing its file: `bun run parity --candidate ts parity/scenarios/prompt-text.scenario.ts`. Before committing a new scenario, check that it is deterministic with `bun run parity --candidate ts --repeat 20 parity/scenarios/<name>.scenario.ts`; both sides run the same TypeScript server, so a difference there is a harness or capture problem, not a candidate difference.
 
 Add a deviation only when the difference is intended and the owner has accepted it: create a file under `parity/deviations` whose `Accepted:` line names the owner and date and whose `parity` block lists the rules (see [Deviations](#deviations)). Until then the difference fails the scenario.
 
@@ -74,6 +74,7 @@ Add a deviation only when the difference is intended and the owner has accepted 
 `--candidate` accepts `ts` or the path to an executable that speaks the same stdio process contract as the TypeScript server. The harness starts it as `<candidate> serve --stdio --port 0` with the [sandbox environment](#sandbox-and-environment), so it must:
 
 - accept `serve --stdio --port 0` and serve the HTTP API on an ephemeral port;
+- stream `GET /api/event`; the harness opens the event stream before the first step, so a candidate whose event stream is not OK stops the scenario with exit code `2`;
 - read the password from `OPENCODE_PASSWORD` (`parity` during a run) and accept it through Basic auth and `auth_token`;
 - print one JSON line such as `{"url":"http://127.0.0.1:41234"}` as its first stdout line, before it serves requests;
 - exit when stdin closes; the harness closes stdin to stop it and escalates to `SIGTERM`, then `SIGKILL`, if it does not.
@@ -82,7 +83,7 @@ A relative path is resolved from the current directory. `--reference` accepts th
 
 ## Sandbox and environment
 
-Each side pair gets a fresh random root created with `mkdtemp` under `PARITY_SANDBOX_DIR` (default `/tmp/opencode-parity`). The root contains fixed `home`, `home/.config`, `home/.local/share`, `home/.local/state`, `home/.cache`, `tmp` and `work` directories. The reference runs first, then `resetSandbox` removes the root and recreates those directories before the candidate runs, so neither side sees the other's state. Scenario `files` are written below `work`, the server runs with `work` as its working directory, and requests default to the `work` directory.
+Each side pair gets a fresh random root created with `mkdtemp` under `PARITY_SANDBOX_DIR` (default `/tmp/opencode-parity`). The root contains fixed `home`, `home/.config`, `home/.local/share`, `home/.local/state`, `home/.cache`, `tmp` and `work` directories. The reference runs first, then `resetSandbox` removes the root and recreates those directories before the candidate runs, so neither side sees the other's state. Scenario `files` are written below `work`, the server runs with `work` as its working directory, and requests default to the `work` directory. The `bun-cache` directory next to the sandbox root is kept on purpose: it is the shared transpiler cache and is never captured. `SIGINT`, `SIGTERM` and `SIGHUP` kill the running servers, remove the sandbox root and exit with `128 + <signal>`.
 
 Before the first step, each side opens a throwaway event stream, requests `/api/config`, waits for the session search index to settle, and then waits for that Location load to go quiet before closing the throwaway stream. The pre-warm stops a prompt from racing the index build, which would otherwise leave the SQLite full-text tables and the `session.search` progress row in a layout that depends on timing rather than behavior. Discarding the throwaway frames keeps `events` starting at `server.connected` without load-time noise; the real capture stream opens only after the warm-up has closed.
 
@@ -103,9 +104,13 @@ Every variable is set for both sides:
 - `OPENCODE_FLAGS`: `-full_codemode` keeps optional codemode behavior out of the comparison.
 - `OPENCODE_CONFIG_CONTENT`: inline JSON that disables updates and the title agent, defines the `openai-test` and `anthropic-test` providers and their `openai-test/test-model` default (see [Scripted model](#scripted-model)), and is merged with the scenario's `config`.
 - `BUN_RUNTIME_TRANSPILER_CACHE_PATH`: a shared cache next to the sandbox root, so each run does not transpile from scratch.
-- `PARITY_SANDBOX_DIR`: parent directory for sandbox roots.
+
+The harness also reads these variables from its own environment:
+
+- `PARITY_SANDBOX_DIR`: parent directory for sandbox roots, default `/tmp/opencode-parity`.
+- `PARITY_OUT_DIR`: output directory, default `parity/out`; the tests set it so they never overwrite a real run's output.
 - `PARITY_START_TIMEOUT`: milliseconds to wait for a server's first stdout line, default `60000`.
-- `PARITY_CANDIDATE_ENV`: JSON object of extra string variables applied only to the candidate side.
+- `PARITY_CANDIDATE_ENV`: JSON object of extra string variables applied to the candidate side only.
 
 ## Scripted model
 
@@ -119,7 +124,7 @@ A scenario's `model` is an ordered reply script, consumed one reply per accepted
 
 - `{ "text": "..." }`: a text response.
 - `{ "tool": { "id": "...", "name": "read", "input": { ... } } }`: a single tool call.
-- `{ "cassette": "packages/.../recording.json", "interaction": 0 }`: replays one interaction of an `@opencode/http-recorder` cassette, returning its status, headers and body verbatim. `interaction` defaults to `0`, and a base64-encoded body is decoded before it is returned.
+- `{ "cassette": "packages/.../recording.json", "interaction": 0 }`: replays one interaction of an `@opencode/http-recorder` cassette, returning its status, headers and body verbatim. `interaction` defaults to `0` and indexes only the interactions with `transport: "http"`, and a base64-encoded body is decoded before it is returned.
 
 The endpoint accepts `POST /v1/chat/completions` as OpenAI chat-completions chunks and `POST /v1/messages` as Anthropic Messages frames, and encodes a `text` or `tool` reply for whichever route the server called. Any other request returns 404 and is logged. A request after the script is exhausted returns 500 `{"error":"unscripted model request"}`.
 
@@ -133,25 +138,25 @@ Rules apply to every string, number and object key in a capture.
 
 | id | Replaces | Why |
 | --- | --- | --- |
-| `root` | The sandbox root and its URL-encoded form with `<root>`. | Both sides run in different random roots, and absolute paths appear in URLs and payloads. |
+| `root` | The sandbox root and its URL-encoded form with `<root>`. | Both sides reuse the same root after a reset; the root is random per scenario, and absolute paths appear in URLs and payloads. |
 | `port` | `<host>:<port>` for loopback `127.0.0.1:<port>` and `localhost:<port>`. | Each server binds an ephemeral port that differs between sides. |
 | `id` | Prefixed ids with `<prefix:n>` using first-seen numbering per capture. | Freshly generated session and message ids differ but should play the same role. |
 | `slug` | Session slugs with `<slug:n>`, numbered per first appearance and kept separate from ids. | The server picks a random human-readable slug per session. |
-| `time` | Millisecond numbers near the capture window and ISO-8601 timestamps with `<time>`. | Wall-clock values differ between the reference and candidate runs. |
-| `process` | `pid` and `hostname` values with `<pid>` and `<hostname>`. | Process ids differ per side and hostnames are machine specific. |
+| `time` | Numbers in the capture window with `<time>`, ISO-8601 substrings with `<time:iso>` and all-digit strings in the window with `<time:digits>`. | Wall-clock values differ between the reference and candidate runs, and keeping the three forms distinct makes a type change a difference. |
+| `process` | A numeric `pid` and a string `hostname` with `<pid>` and `<hostname>`. | Process ids differ per side and hostnames are machine specific. |
 | `base64` | Base64 strings that decode to a JSON object or array are decoded, normalised recursively, and re-encoded. | Session-list cursors encode session ids and timestamps. |
 
-Strings that look like JSON objects or arrays are parsed, normalized recursively, and serialized back, so JSON nested inside a string field is compared on its structure rather than its exact ids and times. Object keys are normalised too, so a `logs` map keyed by a raw session id becomes the same `<ses:n>` placeholder as its value.
+Strings that look like JSON objects or arrays are parsed only when the value re-serialises exactly with compact, 2-space, tab or 4-space indentation (trailing whitespace allowed), then normalised and re-serialised with the same formatting; anything else is left as text with the string rules applied, so formatting and number-precision differences remain visible. Object keys below the top level are visited in sorted order, while the top level keeps capture order (`steps`, `events`, `logs`, `model`, `database`, `files`), so id numbering does not depend on key order. Object keys are normalised too, so a `logs` map keyed by a raw session id becomes the same `<ses:n>` placeholder as its value.
 
 ## Captures
 
 A capture is `{ steps, events, logs, model, database, files }`.
 
-- `steps`: one entry per `http` or `ws` step. An `http` entry is `{ status, headers, body }`. `status` is the numeric response status. `headers` contains lower-cased header names sorted alphabetically, dropping `date`, `connection`, `keep-alive`, `content-length`, `transfer-encoding`, `etag` and `last-modified`. `body` is parsed as JSON when the response content type contains `json` and kept as text otherwise, so a 401 error body is captured but never asserted by the scenario itself. A `ws` entry is `{ opened, frames, close }`, where `opened` is whether the socket opened, `frames` holds text frames in arrival order with binary frames encoded as `base64:<data>`, and `close` is `{ code, reason }` or `null`. If the receive count is not reached before the timeout the entry also has `timedOut: true`; a timeout is captured for comparison and is not a scenario error.
-- `events`: every `/api/event` frame collected in arrival order. The stream opens before the first step and closes after the last, so it starts with `server.connected`.
-- `logs`: for each session created in the run, the parsed frames of `GET /api/experimental/session/<id>/log`, keyed by the raw session id.
+- `steps`: one entry per `http` or `ws` step. An `http` entry is `{ status, headers, body }`. `status` is the numeric response status. `headers` contains lower-cased header names sorted alphabetically, dropping `date`, `connection`, `keep-alive`, `content-length`, `transfer-encoding`, `etag` and `last-modified`. `body` is parsed as JSON when the response content type contains `json` and kept as text otherwise, and a JSON-typed body that is empty or invalid is also kept as text, so a 401 error body is captured but never asserted by the scenario itself. A `ws` entry is `{ opened, frames, close }`, where `opened` is whether the socket opened, `frames` holds text frames in arrival order with binary frames encoded as `base64:<data>`, and `close` is `{ code, reason }` or `null`. If the receive count is not reached before the timeout the entry also has `timedOut: true`; a timeout is captured for comparison and is not a scenario error.
+- `events`: every `/api/event` frame collected in arrival order. The stream opens before the first step and closes after the last, so it starts with `server.connected`. A frame whose data is not JSON is kept as `{ "invalid": "<raw>" }`.
+- `logs`: for each session created in the run, the parsed frames of `GET /api/experimental/session/<id>/log`, keyed by the raw session id. A non-OK response is captured as `[{ status, body }]`.
 - `model`: outbound model requests, one `{ method, path, body }` entry per request the scripted endpoint received, holding the pathname only and the parsed JSON body. Both sides are compared.
-- `database`: one entry per SQLite file under the sandbox, keyed by its relative path, captured after the server has exited. Each entry has `schema` (`type`, `name`, `tbl_name`, `sql`, sorted by type then name) and `tables` (one array of row objects per table). Blob values are `hex:<lowercase hex>`, and table rows are sorted by their serialised JSON after normalisation, so insertion order of random ids does not matter.
+- `database`: one entry per SQLite file under the sandbox, keyed by its relative path, captured after the server has exited. Each entry has `schema` (`type`, `name`, `tbl_name`, `sql`, sorted by type then name) and `tables` (one array of row objects per table). Blob values are `hex:<lowercase hex>`, and table rows are sorted by their serialised JSON after normalisation. The sort does not by itself erase insertion order: ids already numbered from `steps`, `events`, `logs` or `model` keep those numbers, while ids that first appear in a database row are numbered in row order before the sort.
 - `files`: every other file under the sandbox as relative path to contents, captured after the server has exited. Valid UTF-8 files store their text and other files store `sha256:<hex>`. Excluded are SQLite files and their `-wal`, `-shm` and `-journal` siblings (captured as `database` instead), `models.json` (written by the harness), and `home/.local/share/opencode/log/**` (log lines carry wall-clock times, run ids and process ids).
 
 Each run writes three files below `parity/out/<scenario>/`: `reference.json` and `candidate.json` hold the normalized captures, and `differences.json` holds the compared paths with their reference and candidate values.
@@ -190,5 +195,8 @@ messages.
 
 - `0`: every scenario matched.
 - `1`: at least one scenario reported a difference that no accepted deviation explains.
-- `2`: a scenario, start, configuration or ledger error, such as a server that did not start, an invalid flag value,
-  scenario configuration such as a model reply left unused, or an accepted deviation file with no `parity` block.
+- `2`: a scenario, start, configuration or ledger error, such as a server that did not start, an invalid flag value, an
+  unreadable cassette or a missing cassette interaction, unused model replies, an event stream that fails or ends while
+  a `waitEvent` waits, a search index that does not settle within 30 s, or an accepted deviation file with no `parity`
+  block. Any unexpected harness error prints `parity: <message>` and exits `2`.
+- `128 + <signal>`: the harness received `SIGINT`, `SIGTERM` or `SIGHUP`.
