@@ -3,4 +3,5 @@ mod errors;
 mod events;
 mod ids;
 mod openapi;
+mod responses;
 mod routes;

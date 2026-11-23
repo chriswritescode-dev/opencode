@@ -103,6 +103,16 @@ pub fn as_object<'a>(value: &'a Value, path: &Path) -> Result<&'a Map<String, Va
     value.as_object().ok_or_else(|| path.at("expected an object"))
 }
 
+pub fn reject_present(object: &Map<String, Value>, key: &str, path: &mut Path) -> Result<(), DecodeError> {
+    if !object.contains_key(key) {
+        return Ok(());
+    }
+    path.push_key(key);
+    let error = path.at("expected an absent field");
+    path.pop();
+    Err(error)
+}
+
 pub fn decode_field<T: Decode>(object: &Map<String, Value>, key: &str, path: &mut Path) -> Result<T, DecodeError> {
     decode_present(object, key, path, |value, path| T::decode(value, path))
 }

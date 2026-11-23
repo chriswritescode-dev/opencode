@@ -51,6 +51,8 @@ export type IdRoot = {
   transform: "trim" | undefined
 }
 
+export type ResponseRoot = { operationId: string; success: Route["success"]; schema: Schema.Top }
+
 type DurableDefinition = Schema.Top & {
   readonly type: string
   readonly durable: { readonly version: number; readonly aggregate: string }
@@ -204,9 +206,16 @@ function eventType(ast: SchemaAST.AST) {
 }
 
 type ReflectOptions = Parameters<typeof HttpApi.reflect>[1]
+type EndpointReflection = Parameters<NonNullable<ReflectOptions["onEndpoint"]>>[0]
 
 function reflect(options: Pick<ReflectOptions, "onEndpoint">) {
   HttpApi.reflect(api, { onGroup() {}, ...options })
+}
+
+function operationIdOf({ endpoint, group }: EndpointReflection) {
+  return Context.getOrElse(endpoint.annotations, OpenApi.Identifier, () =>
+    group.topLevel ? endpoint.identifier : `${group.identifier}.${endpoint.identifier}`,
+  )
 }
 
 export async function contractErrors(): Promise<Array<ContractError>> {
@@ -235,10 +244,9 @@ export async function contractRoutes(): Promise<Array<Route>> {
   const routes: Array<Route> = []
   const operationIds = new Set<string>()
   reflect({
-    onEndpoint({ endpoint, group, middleware, successes, errors }) {
-      const operationId = Context.getOrElse(endpoint.annotations, OpenApi.Identifier, () =>
-        group.topLevel ? endpoint.identifier : `${group.identifier}.${endpoint.identifier}`,
-      )
+    onEndpoint(reflection) {
+      const { endpoint, group, middleware, successes, errors } = reflection
+      const operationId = operationIdOf(reflection)
       if (operationIds.has(operationId)) throw new Error(`contract: duplicate operation id ${operationId}`)
       operationIds.add(operationId)
       const title = Context.getOrElse(group.annotations, OpenApi.Title, () => group.identifier)
@@ -267,6 +275,37 @@ export async function contractRoutes(): Promise<Array<Route>> {
     },
   })
   return routes
+}
+
+export async function contractResponses(events: Awaited<ReturnType<typeof contractEvents>>): Promise<Array<ResponseRoot>> {
+  const routes = await contractRoutes()
+  const kinds = new Map(routes.map((route) => [route.operationId, route.success]))
+  const responses = new Map<string, ResponseRoot>()
+  reflect({
+    onEndpoint(reflection) {
+      const { endpoint } = reflection
+      const operationId = operationIdOf(reflection)
+      const success = kinds.get(operationId)
+      if (success === undefined) throw new Error(`contract: ${operationId} is missing a route`)
+      const first = [...endpoint.success][0]
+      if (first === undefined) throw new Error(`contract: ${operationId} has no success schema`)
+      if (success === "Json" || success === "Data") responses.set(operationId, { operationId, success, schema: first })
+      if (success === "Sse")
+        responses.set(operationId, { operationId, success, schema: sseResponse(first, events) })
+    },
+  })
+  return routes.flatMap((route) => {
+    const response = responses.get(route.operationId)
+    return response === undefined ? [] : [response]
+  })
+}
+
+function sseResponse(schema: Schema.Top, events: Awaited<ReturnType<typeof contractEvents>>) {
+  const data = Schema.make<Schema.Top>(sseData(schema))
+  const identifier = SchemaAST.resolveIdentifier(data.ast)
+  if (identifier === "V2Event") return events.publicUnion
+  if (identifier === "SessionLogItem") return events.sessionLog
+  throw new Error(`contract: SSE payload ${identifier ?? "without an identifier"} has no canonical schema`)
 }
 
 function openApiPath(path: string) {

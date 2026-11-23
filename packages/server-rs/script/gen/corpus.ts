@@ -1,6 +1,6 @@
 import { mkdir } from "node:fs/promises"
 import { Arbitrary, Effect, Schema } from "effect"
-import { contractErrors, contractEvents } from "../contract/model"
+import { contractErrors, contractEvents, contractResponses } from "../contract/model"
 
 const root = new URL("../..", import.meta.url).pathname
 const file = `${root}crates/contract/tests/corpus/schemas.json`
@@ -24,6 +24,7 @@ const numbers = [
 
 const errors = await contractErrors()
 const events = await contractEvents()
+const responses = await contractResponses(events)
 
 const roots: Array<Root> = []
 for (const error of errors) roots.push(await schemaRoot(error.tag, error.schema))
@@ -32,6 +33,7 @@ for (const event of events.public) roots.push(await schemaRoot(event.type, event
 for (const event of events.durable) roots.push(await schemaRoot(event.key, event.schema))
 roots.push(await schemaRoot("SessionLogItem", events.sessionLog))
 for (const id of events.ids) roots.push(await schemaRoot(id.identifier, id.schema))
+for (const response of responses) roots.push(await schemaRoot(`operation:${response.operationId}`, response.schema))
 roots.sort((a, b) => (a.name < b.name ? -1 : 1))
 
 const lines = roots.map(
@@ -74,7 +76,8 @@ async function schemaRoot(name: string, schema: Schema.Top): Promise<Root> {
     }
     if (valid.length === 3) continue
     const decoded = Schema.decodeUnknownSync(codec)(JSON.parse(JSON.stringify(encoded)))
-    const input = JSON.stringify(withoutNullOptionals(encoded, decoded))
+    const input = canonical(codec, encoded, decoded)
+    Schema.decodeUnknownSync(codec)(JSON.parse(input))
     valid.push({ input, expected: input })
   }
   if (valid.length === 0) throw new Error(`corpus: ${name} produced no surrogate-free sample`)
@@ -102,7 +105,7 @@ async function schemaRoot(name: string, schema: Schema.Top): Promise<Root> {
   const excessInput = JSON.stringify(excess)
   const decoded = Schema.decodeUnknownExit(codec)(excess)
   if (decoded._tag === "Success") {
-    const expected = JSON.stringify(withoutNullOptionals(Schema.encodeUnknownSync(codec)(decoded.value), decoded.value))
+    const expected = canonical(codec, Schema.encodeUnknownSync(codec)(decoded.value), decoded.value)
     if (expected !== excessInput) valid.push({ input: excessInput, expected })
   }
 
@@ -159,6 +162,15 @@ function replacement(value: unknown): unknown {
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)
+}
+
+function canonical(codec: JsonCodec, encoded: unknown, decoded: unknown) {
+  const stripped = JSON.stringify(withoutNullOptionals(encoded, decoded))
+  return decodes(codec, stripped) ? stripped : JSON.stringify(encoded)
+}
+
+function decodes(codec: JsonCodec, input: string) {
+  return Schema.decodeUnknownExit(codec)(JSON.parse(input))._tag === "Success"
 }
 
 function withoutNullOptionals(encoded: unknown, decoded: unknown): unknown {

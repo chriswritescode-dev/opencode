@@ -1,7 +1,7 @@
 import { mkdir } from "node:fs/promises"
 import { Schema, SchemaAST, SchemaRepresentation } from "effect"
-import { pascal } from "../../../cli-rs/script/rust/types.ts"
-import { contractErrors, contractEvents, contractRoutes, normalize, type Route } from "../contract/model"
+import { pascal, snake } from "../../../cli-rs/script/rust/types.ts"
+import { contractErrors, contractEvents, contractResponses, contractRoutes, normalize, type Route } from "../contract/model"
 import { StrictTypes } from "../rust/strict"
 import { pin } from "../upstream"
 
@@ -56,10 +56,12 @@ const lines = routes.map(
 
 const errors = await contractErrors()
 const events = await contractEvents()
+const responses = await contractResponses(events)
 
 const publicAsts = events.public.map((event) => Schema.toEncoded(event.schema).ast)
 const durableAsts = events.durable.map((event) => Schema.toEncoded(event.schema).ast)
 const idAsts = events.ids.map((id) => id.wire.ast)
+const responseAsts = responses.map((response) => Schema.toEncoded(response.schema).ast)
 const asts = [
   ...errors.map((error) => Schema.toEncoded(error.schema).ast),
   Schema.toEncoded(Schema.Number).ast,
@@ -68,6 +70,7 @@ const asts = [
   Schema.toEncoded(events.publicUnion).ast,
   Schema.toEncoded(events.sessionLog).ast,
   ...idAsts,
+  ...responseAsts,
 ]
 const typeDocument = SchemaRepresentation.toRepresentations(normalize(asts) as [SchemaAST.AST, ...Array<SchemaAST.AST>])
 const types = new StrictTypes(typeDocument.references)
@@ -85,6 +88,7 @@ const durableRepresentations = representations(durableAsts.length)
 const unionRepresentation = representations(1)[0]!
 const sessionLogRepresentation = representations(1)[0]!
 const idRepresentations = representations(idAsts.length)
+const responseRepresentations = representations(responseAsts.length)
 
 types.section("ids")
 for (const id of events.ids) if (id.transform !== undefined) types.transform(id.identifier, id.transform)
@@ -114,6 +118,37 @@ types.rename("V2Event", "PublicEvent")
 types.type(unionRepresentation, "PublicEvent")
 const sessionLog = types.type(sessionLogRepresentation, "SessionLogItem")
 
+types.section("types")
+const responseRoots = responses.map((response, index) => ({
+  ...response,
+  rustName: types.type(responseRepresentations[index]!, `${pascal(response.operationId)}Response`),
+}))
+
+const responseByName = new Map(responseRoots.map((response) => [response.operationId, response]))
+const moduleNames = new Set<string>()
+const operationModules = routes.map((route, index) => {
+  const name = snake(route.operationId)
+  if (moduleNames.has(name)) throw new Error(`contract: duplicate operation module ${name}`)
+  moduleNames.add(name)
+  const response = responseByName.get(route.operationId)
+  const responseLine =
+    response !== undefined
+      ? `    pub type Response = ${response.rustName};\n`
+      : route.success === "Empty"
+        ? "    pub type Response = ();\n"
+        : route.success === "Binary"
+          ? "    pub type Response = Vec<u8>;\n"
+          : ""
+  return {
+    name,
+    text: `pub mod ${name} {
+    use crate::generated::*;
+    use crate::route::Route;
+    pub const ROUTE: &Route = &ROUTES[${index}];
+${responseLine}}`,
+  }
+})
+
 const used = new Set<string>()
 const variants = roots.map((root) => {
   const base = pascal(root.tag)
@@ -136,6 +171,7 @@ const corpus = [
   ...durableEvents.map((event) => ({ name: event.key, rustName: event.rustName })),
   { name: "SessionLogItem", rustName: sessionLog },
   ...ids.map((id) => ({ name: id.identifier, rustName: id.rustName })),
+  ...responseRoots.map((response) => ({ name: `operation:${response.operationId}`, rustName: response.rustName })),
 ].toSorted((a, b) => (a.name < b.name ? -1 : 1))
 const duplicate = corpus.find((root, index) => index > 0 && corpus[index - 1]?.name === root.name)
 if (duplicate !== undefined) throw new Error(`contract: duplicate corpus root ${duplicate.name}`)
@@ -145,6 +181,7 @@ const idsFile = `${root}crates/contract/src/generated/ids.rs`
 const eventsFile = `${root}crates/contract/src/generated/events.rs`
 const errorsFile = `${root}crates/contract/src/generated/errors.rs`
 const routesFile = `${root}crates/contract/src/generated/routes.rs`
+const operationsFile = `${root}crates/contract/src/generated/operations.rs`
 const modFile = `${root}crates/contract/src/generated/mod.rs`
 await mkdir(`${root}crates/contract/src/generated`, { recursive: true })
 
@@ -191,6 +228,19 @@ ${durableEvents.map((event) => `    (${literal(event.type)}, ${event.version}, $
 await Bun.write(
   routesFile,
   `${header()}\n#![allow(clippy::all, clippy::pedantic)]\nuse crate::route::{BodyKind, Method, Route, Scope, Stability, SuccessKind};\n\npub static ROUTES: [Route; ${routes.length}] = [\n${lines.join("\n")}\n];\n`,
+)
+await Bun.write(
+  operationsFile,
+  `${header()}
+#![allow(clippy::all, clippy::pedantic)]
+use crate::route::Route;
+
+${operationModules.map((module) => module.text).join("\n\n")}
+
+pub static OPERATION_ROUTES: [&Route; ${routes.length}] = [
+${operationModules.map((module) => `    &${module.name}::ROUTE,`).join("\n")}
+];
+`,
 )
 await Bun.write(
   typesFile,
@@ -266,6 +316,7 @@ await Bun.write(
 mod errors;
 mod events;
 mod ids;
+pub mod operations;
 mod routes;
 mod types;
 
@@ -286,7 +337,7 @@ ${corpus.map((root) => `        (${literal(root.name)}, crate::codec::round_trip
 )
 
 const format = Bun.spawnSync(
-  ["rustfmt", "--edition", "2024", modFile, typesFile, idsFile, eventsFile, errorsFile, routesFile],
+  ["rustfmt", "--edition", "2024", modFile, typesFile, idsFile, eventsFile, errorsFile, routesFile, operationsFile],
   {
     stdout: "inherit",
     stderr: "inherit",

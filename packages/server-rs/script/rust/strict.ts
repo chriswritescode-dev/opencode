@@ -61,6 +61,8 @@ export class StrictTypes {
   }
 
   private render(r: R, hint: string): string {
+    const checks = this.filters(checksOf(r))
+    if (checks.length > 0) return this.checked(r, checks, hint)
     this.unchecked(r)
     switch (r._tag) {
       case "Reference":
@@ -108,10 +110,40 @@ export class StrictTypes {
     this.fail(r, `unsupported check ${checks[0]?.representation?.id ?? checks[0]?._tag ?? "check"}`)
   }
 
+  private checked(r: R, checks: ReadonlyArray<Check>, hint: string) {
+    const name = this.name(hint)
+    const inner = this.render(withoutChecks(r), `${hint}Value`)
+    const tag = this.tag(r)
+    const value =
+      tag === "String" || tag === "TemplateLiteral"
+        ? "value.as_str()"
+        : tag === "Arrays"
+          ? "value.as_slice()"
+          : tag === "Number"
+            ? "value"
+            : "*value"
+    const conditions = this.conditions(checks, r, value)
+    this.push(`#[derive(Debug, Clone, PartialEq)]
+pub struct ${name}(pub ${inner});
+
+impl crate::codec::Decode for ${name} {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let value = <${inner} as crate::codec::Decode>::decode(value, path)?;
+${this.guards(conditions, 8)}        Ok(Self(value))
+    }
+}
+
+impl crate::codec::Encode for ${name} {
+    fn encode(&self, out: &mut String) {
+        <${inner} as crate::codec::Encode>::encode(&self.0, out);
+    }
+}`)
+    return name
+  }
+
   private flattenUnion(types: ReadonlyArray<R>): Array<R> {
     return types.flatMap((type) => {
-      if (type._tag !== "Union") return [type]
-      this.unchecked(type)
+      if (type._tag !== "Union" || this.filters(checksOf(type)).length > 0) return [type]
       return this.flattenUnion(type.types)
     })
   }
@@ -153,7 +185,7 @@ export class StrictTypes {
 
   private referenceBody(ref: string, name: string, target: R) {
     const resolved = this.deref(target)
-    if (resolved._tag === "Objects" && resolved.indexSignatures.length === 0) {
+    if (resolved._tag === "Objects" && (resolved.indexSignatures.length === 0 || resolved.propertySignatures.length > 0)) {
       this.objects(resolved, name, name)
       return
     }
@@ -259,12 +291,18 @@ impl crate::codec::Encode for ${name} {
       return `crate::codec::JsonMap<${this.render(index.type, `${hint}Value`)}>`
     }
     if (r.propertySignatures.length === 0) return this.objects(r, this.name(hint), hint)
-    if (r.indexSignatures.length > 0) return this.fail(r, "mixed properties and index signatures")
     return this.objects(r, this.name(hint), hint)
   }
 
   private objects(r: Objects, name: string, hint: string): string {
     this.unchecked(r)
+    if (r.indexSignatures.length > 1) return this.fail(r, "more than one index signature")
+    const index = r.indexSignatures[0]
+    if (index !== undefined) {
+      this.unchecked(index.parameter)
+      if (!["String", "TemplateLiteral"].includes(this.tag(index.parameter)))
+        return this.fail(r, "an index signature with a non-string key")
+    }
     if (r.propertySignatures.length === 0) {
       this.push(`#[derive(Debug, Clone, PartialEq)]
 pub struct ${name};
@@ -287,14 +325,51 @@ impl crate::codec::Encode for ${name} {
     const lines: Array<string> = []
     const decodes: Array<string> = []
     const encodes: Array<string> = []
+    const absent: Array<string> = []
     for (const property of r.propertySignatures) {
       const key = String(property.name)
       const ident = this.ident(key, used)
       const field = this.field(property, `${hint}${pascal(key)}`, ident)
+      if (field === undefined) {
+        absent.push(key)
+        continue
+      }
       lines.push(`    pub ${ident}: ${field.type},`)
       decodes.push(`            ${ident}: ${field.decode},`)
       encodes.push(`        ${field.encode};`)
     }
+    const rest =
+      index === undefined
+        ? undefined
+        : {
+            ident: this.ident("rest", used),
+            type: this.render(index.type, `${hint}Rest`),
+            keys: r.propertySignatures.map((property) => JSON.stringify(String(property.name))).join(" | "),
+          }
+    if (rest !== undefined) {
+      lines.push(`    pub ${rest.ident}: crate::codec::JsonMap<${rest.type}>,`)
+      decodes.push(`            ${rest.ident}: crate::codec::JsonMap(extras),`)
+      encodes.push(`        for (key, value) in &self.${rest.ident}.0 {
+            crate::codec::write_value(out, &mut first, key, value);
+        }`)
+    }
+    const extras =
+      rest === undefined
+        ? ""
+        : `        let mut extras = Vec::new();
+        for (key, item) in object {
+            if matches!(key.as_str(), ${rest.keys}) {
+                continue;
+            }
+            path.push_key(key);
+            let decoded = <${rest.type} as crate::codec::Decode>::decode(item, path);
+            path.pop();
+            extras.push((key.clone(), decoded?));
+        }
+`
+    const rejected = absent
+      .map((key) => `        crate::codec::reject_present(object, ${JSON.stringify(key)}, path)?;\n`)
+      .join("")
     this.push(`#[derive(Debug, Clone, PartialEq)]
 pub struct ${name} {
 ${lines.join("\n")}
@@ -303,7 +378,7 @@ ${lines.join("\n")}
 impl crate::codec::Decode for ${name} {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let object = crate::codec::as_object(value, path)?;
-        Ok(Self {
+${rejected}${extras}        Ok(Self {
 ${decodes.join("\n")}
         })
     }
@@ -328,12 +403,13 @@ ${encodes.join("\n")}
     return ident
   }
 
-  private field(property: SchemaRepresentation.PropertySignature, hint: string, ident: string): Field {
+  private field(property: SchemaRepresentation.PropertySignature, hint: string, ident: string): Field | undefined {
     const key = JSON.stringify(String(property.name))
     if (property.type._tag === "Union") this.unchecked(property.type)
     const members = property.type._tag === "Union" ? this.flattenUnion(property.type.types) : [property.type]
     const present = members.filter((member) => !["Undefined", "Void", "Never"].includes(this.tag(member)))
-    if (present.length === 0) return this.fail(property.type, "a field that is only undefined")
+    if (present.length === 0) return undefined
+    const optional = property.isOptional || members.some((member) => ["Undefined", "Void"].includes(this.tag(member)))
     const nullable = present.some((member) => this.tag(member) === "Null")
     const rest = present.filter((member) => this.tag(member) !== "Null")
     if (rest.length === 0) return this.fail(property.type, "a field that is only null")
@@ -354,7 +430,7 @@ ${encodes.join("\n")}
     const closure = conditions.length > 0 ? this.closure(conditions, inner) : ""
     const checked = closure !== ""
 
-    if (property.isOptional && nullable) {
+    if (optional && nullable) {
       return {
         type: `Option<Option<${inner}>>`,
         decode: checked
@@ -363,7 +439,7 @@ ${encodes.join("\n")}
         encode: `crate::codec::write_optional_nullable(out, &mut first, ${key}, &self.${ident})`,
       }
     }
-    if (property.isOptional) {
+    if (optional) {
       return {
         type: `Option<${inner}>`,
         decode: checked
@@ -391,7 +467,6 @@ ${encodes.join("\n")}
 
   private arrays(r: SchemaRepresentation.Arrays, hint: string): string {
     this.unchecked(r)
-    for (const element of r.elements) this.unchecked(element.type)
     if (r.rest.length === 0 && r.elements.every((element) => !element.isOptional)) {
       if (r.elements.length > 8) return this.fail(r, "a tuple with more than 8 elements")
       const types = r.elements.map((element, index) => this.render(element.type, `${hint}${index}`))
@@ -421,7 +496,6 @@ ${encodes.join("\n")}
     const nullable = present.some((member) => this.tag(member) === "Null")
     const rest = present.filter((member) => this.tag(member) !== "Null")
     if (rest.length === 0) return this.fail(r, "only null members")
-    for (const member of rest) this.unchecked(member)
     const wrap = (type: string) => (nullable ? `Option<${type}>` : type)
     if (rest.length === 1) return wrap(this.render(rest[0]!, hint))
     const resolved = rest.map((member) => this.deref(member))
@@ -595,6 +669,7 @@ impl crate::codec::Encode for ${enumName} {
       .map((entry, index) => ({ entry, index }))
       .toSorted((left, right) => Number("prefix" in left.entry) - Number("prefix" in right.entry))
     const arms = ordered.map(({ entry, index }) => arm(entry, index)).join("\n")
+    const fallback = boolean ? "" : `            _ => Err(path.at(${JSON.stringify(`expected a known ${tag.key}`)})),\n`
     this.push(`#[derive(Debug, Clone, PartialEq)]
 pub enum ${enumName} {
 ${variants.map((variant, index) => `    ${variant}(${types[index]}),`).join("\n")}
@@ -606,8 +681,7 @@ impl crate::codec::Decode for ${enumName} {
 ${read}
         match ${scrutinee} {
 ${arms}
-            _ => Err(path.at(${JSON.stringify(`expected a known ${tag.key}`)})),
-        }
+${fallback}        }
     }
 }
 
