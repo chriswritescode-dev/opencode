@@ -1,12 +1,15 @@
 //! The SQLite database: its path, the shared connection, pragmas and transactions.
 
+pub mod column;
 pub mod database;
 pub mod dump;
 pub mod error;
 pub mod generated;
 pub mod id;
+pub mod kv;
 pub mod migration;
 pub mod path;
+pub mod project;
 
 pub use database::Database;
 pub use error::StorageError;

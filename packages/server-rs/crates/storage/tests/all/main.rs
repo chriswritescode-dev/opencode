@@ -2,8 +2,10 @@
 
 mod corpus;
 mod id;
+mod kv;
 mod migration;
 mod open;
+mod project;
 mod transaction;
 
 use std::path::{Path, PathBuf};
