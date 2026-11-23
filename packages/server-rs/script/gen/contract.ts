@@ -1,7 +1,17 @@
 import { mkdir } from "node:fs/promises"
 import { Schema, SchemaAST, SchemaRepresentation } from "effect"
 import { pascal, snake } from "../../../cli-rs/script/rust/types.ts"
-import { contractErrors, contractEvents, contractResponses, contractRoutes, normalize, type Route } from "../contract/model"
+import {
+  contractErrors,
+  contractEvents,
+  contractRequests,
+  contractResponses,
+  contractRoutes,
+  normalize,
+  type RequestRoot,
+  type Route,
+} from "../contract/model"
+import { applyStringTransforms, decodeSlot } from "../rust/request"
 import { StrictTypes } from "../rust/strict"
 import { pin } from "../upstream"
 
@@ -57,11 +67,17 @@ const lines = routes.map(
 const errors = await contractErrors()
 const events = await contractEvents()
 const responses = await contractResponses(events)
+const requests = await contractRequests()
 
 const publicAsts = events.public.map((event) => Schema.toEncoded(event.schema).ast)
 const durableAsts = events.durable.map((event) => Schema.toEncoded(event.schema).ast)
 const idAsts = events.ids.map((id) => id.wire.ast)
 const responseAsts = responses.map((response) => Schema.toEncoded(response.schema).ast)
+const stringRequests = requests.filter((request) => request.slot !== "body")
+const bodyRequests = requests.filter((request) => request.slot === "body")
+const stringRequestAsts = stringRequests.map((request) => Schema.toType(request.schema).ast)
+const bodyRequestAsts = bodyRequests.map((request) => Schema.toEncoded(request.schema).ast)
+const requestAsts = [...stringRequestAsts, ...bodyRequestAsts]
 const asts = [
   ...errors.map((error) => Schema.toEncoded(error.schema).ast),
   Schema.toEncoded(Schema.Number).ast,
@@ -89,6 +105,10 @@ const unionRepresentation = representations(1)[0]!
 const sessionLogRepresentation = representations(1)[0]!
 const idRepresentations = representations(idAsts.length)
 const responseRepresentations = representations(responseAsts.length)
+
+const requestDocument = SchemaRepresentation.toRepresentations(requestAsts as [SchemaAST.AST, ...Array<SchemaAST.AST>])
+const requestTypes = new StrictTypes(requestDocument.references)
+for (const id of events.ids) if (id.transform !== undefined) requestTypes.transform(id.identifier, id.transform)
 
 types.section("ids")
 for (const id of events.ids) if (id.transform !== undefined) types.transform(id.identifier, id.transform)
@@ -124,6 +144,67 @@ const responseRoots = responses.map((response, index) => ({
   rustName: types.type(responseRepresentations[index]!, `${pascal(response.operationId)}Response`),
 }))
 
+const wireRequestAsts = stringRequests.map((request) => Schema.toEncoded(request.schema).ast)
+const wireRequestDocument = SchemaRepresentation.toRepresentations(
+  wireRequestAsts as [SchemaAST.AST, ...Array<SchemaAST.AST>],
+)
+const typedBodyAsts = bodyRequests.map((request) => Schema.toType(request.schema).ast)
+const typedBodyDocument = SchemaRepresentation.toRepresentations(
+  typedBodyAsts as [SchemaAST.AST, ...Array<SchemaAST.AST>],
+)
+bodyRequests.forEach((_, index) => {
+  applyStringTransforms(
+    typedBodyDocument.representations[index]!,
+    requestDocument.representations[stringRequests.length + index]!,
+    typedBodyDocument.references,
+    requestDocument.references,
+  )
+})
+const stringRequestTypes = stringRequests.map((request, index) => ({
+  request,
+  rustName: requestTypes.type(
+    requestDocument.representations[index]!,
+    `${pascal(request.operationId)}${pascal(request.slot)}`,
+  ),
+  typed: requestDocument.representations[index]!,
+  wire: wireRequestDocument.representations[index]!,
+}))
+const bodyRequestTypes = bodyRequests.map((request, index) => ({
+  request,
+  rustName: requestTypes.type(
+    requestDocument.representations[stringRequests.length + index]!,
+    `${pascal(request.operationId)}Body`,
+  ),
+}))
+
+type Slot =
+  | {
+      kind: "string"
+      rustName: string
+      typed: SchemaRepresentation.Representation
+      wire: SchemaRepresentation.Representation
+    }
+  | { kind: "json"; rustName: string }
+  | { kind: "binary" }
+
+const requestSlots = new Map<string, Map<RequestRoot["slot"], Slot>>()
+const slotFor = (operationId: string) => {
+  const existing = requestSlots.get(operationId)
+  if (existing !== undefined) return existing
+  const created = new Map<RequestRoot["slot"], Slot>()
+  requestSlots.set(operationId, created)
+  return created
+}
+for (const entry of stringRequestTypes)
+  slotFor(entry.request.operationId).set(entry.request.slot, {
+    kind: "string",
+    rustName: entry.rustName,
+    typed: entry.typed,
+    wire: entry.wire,
+  })
+for (const entry of bodyRequestTypes)
+  slotFor(entry.request.operationId).set("body", { kind: "json", rustName: entry.rustName })
+
 const responseByName = new Map(responseRoots.map((response) => [response.operationId, response]))
 const moduleNames = new Set<string>()
 const operationModules = routes.map((route, index) => {
@@ -139,13 +220,80 @@ const operationModules = routes.map((route, index) => {
         : route.success === "Binary"
           ? "    pub type Response = Vec<u8>;\n"
           : ""
+  const slots = requestSlots.get(route.operationId) ?? new Map<RequestRoot["slot"], Slot>()
+  if (slots.has("body") && slots.get("body")!.kind === "json" && route.body !== "Json") {
+    throw new Error(`contract: ${route.operationId} has a JSON body root but route body ${route.body}`)
+  }
+  if (route.body === "Json" && !slots.has("body")) {
+    throw new Error(`contract: ${route.operationId} has a JSON body but no request body root`)
+  }
+  if (route.body === "Binary") slots.set("body", { kind: "binary" })
+  const names: Array<string> = []
+  const aliases: Array<string> = []
+  const functions: Array<string> = []
+  const fields: Array<string> = []
+  const decodes: Array<string> = []
+  for (const slot of ["params", "query", "headers"] as const) {
+    const entry = slots.get(slot)
+    if (entry === undefined) continue
+    if (entry.kind !== "string") throw new Error(`contract: ${route.operationId} ${slot} is not a string slot`)
+    names.push(slot)
+    const qualified = `crate::generated::requests::${entry.rustName}`
+    aliases.push(`    pub type ${pascal(slot)} = ${qualified};`)
+    functions.push(`    pub fn decode_${slot}(raw: &crate::request::RawRequest) -> Result<${pascal(slot)}, crate::codec::DecodeError> {
+${decodeSlot(slot, qualified, entry.typed, entry.wire, {
+  typed: requestDocument.references,
+  wire: wireRequestDocument.references,
+})}
+    }
+
+    pub fn render_${slot}(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_${slot}(raw).map(|value| crate::codec::encode_json(&value))
+    }`)
+    fields.push(`    pub ${slot}: ${pascal(slot)},`)
+    decodes.push(`            ${slot}: decode_${slot}(raw)?,`)
+  }
+  const body = slots.get("body")
+  if (body?.kind === "json") {
+    names.push("body")
+    aliases.push(`    pub type Body = crate::generated::requests::${body.rustName};`)
+    functions.push(`    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }`)
+    fields.push("    pub body: Body,")
+    decodes.push("            body: decode_body(raw)?,")
+  }
+  if (body?.kind === "binary") {
+    functions.push(`    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Vec<u8>, crate::codec::DecodeError> {
+        Ok(raw.body.clone())
+    }`)
+    fields.push("    pub body: Vec<u8>,")
+    decodes.push("            body: decode_body(raw)?,")
+  }
   return {
     name,
+    operationId: route.operationId,
+    slots: names,
     text: `pub mod ${name} {
     use crate::generated::*;
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[${index}];
-${responseLine}}`,
+${responseLine}${aliases.length === 0 ? "" : `${aliases.join("\n")}\n`}
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+${fields.join("\n")}
+    }
+
+${functions.length === 0 ? "" : `${functions.join("\n\n")}\n\n`}    pub fn decode(${fields.length === 0 ? "_raw" : "raw"}: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request {
+${decodes.join("\n")}
+        })
+    }
+}`,
   }
 })
 
@@ -182,6 +330,7 @@ const eventsFile = `${root}crates/contract/src/generated/events.rs`
 const errorsFile = `${root}crates/contract/src/generated/errors.rs`
 const routesFile = `${root}crates/contract/src/generated/routes.rs`
 const operationsFile = `${root}crates/contract/src/generated/operations.rs`
+const requestsFile = `${root}crates/contract/src/generated/requests.rs`
 const modFile = `${root}crates/contract/src/generated/mod.rs`
 await mkdir(`${root}crates/contract/src/generated`, { recursive: true })
 
@@ -240,11 +389,35 @@ ${operationModules.map((module) => module.text).join("\n\n")}
 pub static OPERATION_ROUTES: [&Route; ${routes.length}] = [
 ${operationModules.map((module) => `    &${module.name}::ROUTE,`).join("\n")}
 ];
+
+pub static REQUEST_SLOTS: [crate::request::RequestSlot; ${operationModules.reduce((count, module) => count + module.slots.length, 0)}] = [
+${operationModules
+  .flatMap((module) =>
+    module.slots.map(
+      (slot) => `    crate::request::RequestSlot {
+        operation_id: ${literal(module.operationId)},
+        slot: ${literal(slot)},
+        decode: ${module.name}::render_${slot},
+    },`,
+    ),
+  )
+  .join("\n")}
+];
+
+pub static REQUEST_MANIFEST: [(&str, &[&str]); ${routes.length}] = [
+${operationModules
+  .map((module) => `    (${literal(module.operationId)}, &[${module.slots.map((slot) => literal(slot)).join(", ")}]),`)
+  .join("\n")}
+];
 `,
 )
 await Bun.write(
   typesFile,
   `${header()}\n#![allow(clippy::all, clippy::pedantic)]\n${idImport(typeItems)}use serde_json::Value;\n\n${typeItems}\n`,
+)
+await Bun.write(
+  requestsFile,
+  `${header()}\n#![allow(clippy::all, clippy::pedantic)]\nuse serde_json::Value;\n\n${requestTypes.items().join("\n\n")}\n`,
 )
 await Bun.write(
   idsFile,
@@ -317,6 +490,7 @@ mod errors;
 mod events;
 mod ids;
 pub mod operations;
+pub mod requests;
 mod routes;
 mod types;
 
@@ -337,7 +511,19 @@ ${corpus.map((root) => `        (${literal(root.name)}, crate::codec::round_trip
 )
 
 const format = Bun.spawnSync(
-  ["rustfmt", "--edition", "2024", modFile, typesFile, idsFile, eventsFile, errorsFile, routesFile, operationsFile],
+  [
+    "rustfmt",
+    "--edition",
+    "2024",
+    modFile,
+    typesFile,
+    idsFile,
+    eventsFile,
+    errorsFile,
+    requestsFile,
+    routesFile,
+    operationsFile,
+  ],
   {
     stdout: "inherit",
     stderr: "inherit",
@@ -355,6 +541,9 @@ console.log(
 )
 console.log(`contract: body ${report(["None", "Json", "Binary"], (route) => route.body)}`)
 console.log(`contract: scope ${report(["Global", "Location", "Session", "Form"], (route) => route.scope)}`)
+console.log(
+  `contract: ${requests.length} request roots, ${operationModules.reduce((count, module) => count + module.slots.length, 0)} request slots`,
+)
 console.log(
   `contract: ${errors.length} errors, ${publicEvents.length + durableEvents.length} events, ${ids.length} ids, ${types.items().length + types.items("ids").length + types.items("events").length} types`,
 )

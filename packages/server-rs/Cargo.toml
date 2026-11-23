@@ -30,6 +30,7 @@ opencode-service = { path = "../cli-rs/crates/service" }
 regex-lite = "0.1"
 serde_json = { version = "1", features = ["float_roundtrip", "preserve_order", "raw_value"] }
 tokio = { version = "1.53", features = ["macros", "rt"] }
+url = "2"
 
 [profile.dev]
 debug = "line-tables-only"

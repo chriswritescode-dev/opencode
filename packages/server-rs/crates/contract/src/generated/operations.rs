@@ -7,6 +7,13 @@ pub mod server_info {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[0];
     pub type Response = ServerInfo;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {}
+
+    pub fn decode(_raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request {})
+    }
 }
 
 pub mod server_pair {
@@ -14,6 +21,13 @@ pub mod server_pair {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[1];
     pub type Response = PairingCode;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {}
+
+    pub fn decode(_raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request {})
+    }
 }
 
 pub mod server_connect {
@@ -21,6 +35,35 @@ pub mod server_connect {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[2];
     pub type Response = PairingSession;
+    pub type Params = crate::generated::requests::ServerConnectParams;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "code") {
+            path.push_key("code");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("code".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ServerConnectParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)? })
+    }
 }
 
 pub mod location_get {
@@ -28,6 +71,32 @@ pub mod location_get {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[3];
     pub type Response = LocationPublicInfo;
+    pub type Query = crate::generated::requests::LocationQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub query: Query,
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { query: decode_query(raw)? })
+    }
 }
 
 pub mod location_reload {
@@ -35,6 +104,13 @@ pub mod location_reload {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[4];
     pub type Response = ();
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {}
+
+    pub fn decode(_raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request {})
+    }
 }
 
 pub mod agent_list {
@@ -42,6 +118,32 @@ pub mod agent_list {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[5];
     pub type Response = AgentListResponse;
+    pub type Query = crate::generated::requests::LocationQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub query: Query,
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { query: decode_query(raw)? })
+    }
 }
 
 pub mod agent_get {
@@ -49,6 +151,53 @@ pub mod agent_get {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[6];
     pub type Response = AgentGetResponse;
+    pub type Params = crate::generated::requests::AgentGetParams;
+    pub type Query = crate::generated::requests::LocationQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub query: Query,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "agentID") {
+            path.push_key("agentID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("agentID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::AgentGetParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, query: decode_query(raw)? })
+    }
 }
 
 pub mod plugin_list {
@@ -56,6 +205,32 @@ pub mod plugin_list {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[7];
     pub type Response = PluginListResponse;
+    pub type Query = crate::generated::requests::LocationQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub query: Query,
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { query: decode_query(raw)? })
+    }
 }
 
 pub mod plugin_gui {
@@ -63,6 +238,39 @@ pub mod plugin_gui {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[8];
     pub type Response = PluginGuiResponse;
+    pub type Query = crate::generated::requests::PluginGuiQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub query: Query,
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "id") {
+            path.push_key("id");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("id".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::PluginGuiQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { query: decode_query(raw)? })
+    }
 }
 
 pub mod plugin_check {
@@ -70,6 +278,42 @@ pub mod plugin_check {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[9];
     pub type Response = PluginCheckResponse;
+    pub type Query = crate::generated::requests::LocationQuery;
+    pub type Body = crate::generated::requests::PluginCheckBody;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub query: Query,
+        pub body: Body,
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { query: decode_query(raw)?, body: decode_body(raw)? })
+    }
 }
 
 pub mod plugin_update {
@@ -77,6 +321,42 @@ pub mod plugin_update {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[10];
     pub type Response = ();
+    pub type Query = crate::generated::requests::LocationQuery;
+    pub type Body = crate::generated::requests::PluginUpdateBody;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub query: Query,
+        pub body: Body,
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { query: decode_query(raw)?, body: decode_body(raw)? })
+    }
 }
 
 pub mod session_list {
@@ -84,6 +364,92 @@ pub mod session_list {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[11];
     pub type Response = SessionsResponse;
+    pub type Query = crate::generated::requests::SessionsQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub query: Query,
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "limit") {
+            path.push_key("limit");
+            let text = crate::request::single(values, &path)?;
+            let value = crate::request::number_value(text, &path)?;
+            path.pop();
+            object.insert("limit".to_owned(), value);
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "order") {
+            path.push_key("order");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("order".to_owned(), value);
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "search") {
+            path.push_key("search");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("search".to_owned(), value);
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "parentID") {
+            path.push_key("parentID");
+            let text = crate::request::single(values, &path)?;
+            let value =
+                if text == "null" { serde_json::Value::Null } else { serde_json::Value::String(text.to_owned()) };
+            path.pop();
+            object.insert("parentID".to_owned(), value);
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "archived") {
+            path.push_key("archived");
+            let text = crate::request::single(values, &path)?;
+            let value = crate::request::boolean_value(text, &path)?;
+            path.pop();
+            object.insert("archived".to_owned(), value);
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "directory") {
+            path.push_key("directory");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("directory".to_owned(), value);
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "project") {
+            path.push_key("project");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("project".to_owned(), value);
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "subpath") {
+            path.push_key("subpath");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("subpath".to_owned(), value);
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "cursor") {
+            path.push_key("cursor");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("cursor".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::SessionsQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { query: decode_query(raw)? })
+    }
 }
 
 pub mod session_create {
@@ -91,6 +457,24 @@ pub mod session_create {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[12];
     pub type Response = SessionCreateResponse;
+    pub type Body = crate::generated::requests::SessionCreateBody;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub body: Body,
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { body: decode_body(raw)? })
+    }
 }
 
 pub mod experimental_session_stats {
@@ -98,6 +482,63 @@ pub mod experimental_session_stats {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[13];
     pub type Response = ExperimentalSessionStatsResponse;
+    pub type Query = crate::generated::requests::ExperimentalSessionStatsQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub query: Query,
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "from") {
+            path.push_key("from");
+            let text = crate::request::single(values, &path)?;
+            let value = crate::request::number_value(text, &path)?;
+            path.pop();
+            object.insert("from".to_owned(), value);
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "to") {
+            path.push_key("to");
+            let text = crate::request::single(values, &path)?;
+            let value = crate::request::number_value(text, &path)?;
+            path.pop();
+            object.insert("to".to_owned(), value);
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "project") {
+            path.push_key("project");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("project".to_owned(), value);
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "timezone") {
+            path.push_key("timezone");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("timezone".to_owned(), value);
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "tools") {
+            path.push_key("tools");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("tools".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ExperimentalSessionStatsQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { query: decode_query(raw)? })
+    }
 }
 
 pub mod experimental_session_import {
@@ -105,6 +546,24 @@ pub mod experimental_session_import {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[14];
     pub type Response = ExperimentalSessionImportResponse;
+    pub type Body = crate::generated::requests::ExperimentalSessionImportBody;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub body: Body,
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { body: decode_body(raw)? })
+    }
 }
 
 pub mod experimental_session_export {
@@ -112,6 +571,56 @@ pub mod experimental_session_export {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[15];
     pub type Response = ExperimentalSessionExportResponse;
+    pub type Params = crate::generated::requests::ExperimentalSessionExportParams;
+    pub type Query = crate::generated::requests::ExperimentalSessionExportQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub query: Query,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "sessionID") {
+            path.push_key("sessionID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("sessionID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ExperimentalSessionExportParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "sanitize") {
+            path.push_key("sanitize");
+            let text = crate::request::single(values, &path)?;
+            let value = crate::request::boolean_value(text, &path)?;
+            path.pop();
+            object.insert("sanitize".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ExperimentalSessionExportQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, query: decode_query(raw)? })
+    }
 }
 
 pub mod session_active {
@@ -119,6 +628,13 @@ pub mod session_active {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[16];
     pub type Response = SessionActiveResponse;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {}
+
+    pub fn decode(_raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request {})
+    }
 }
 
 pub mod session_get {
@@ -126,6 +642,35 @@ pub mod session_get {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[17];
     pub type Response = SessionGetResponse;
+    pub type Params = crate::generated::requests::SessionGetParams;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "sessionID") {
+            path.push_key("sessionID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("sessionID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::SessionGetParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)? })
+    }
 }
 
 pub mod session_remove {
@@ -133,6 +678,35 @@ pub mod session_remove {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[18];
     pub type Response = ();
+    pub type Params = crate::generated::requests::SessionRemoveParams;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "sessionID") {
+            path.push_key("sessionID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("sessionID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::SessionRemoveParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)? })
+    }
 }
 
 pub mod session_update {
@@ -140,6 +714,45 @@ pub mod session_update {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[19];
     pub type Response = ();
+    pub type Params = crate::generated::requests::SessionUpdateParams;
+    pub type Body = crate::generated::requests::SessionUpdateBody;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub body: Body,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "sessionID") {
+            path.push_key("sessionID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("sessionID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::SessionUpdateParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, body: decode_body(raw)? })
+    }
 }
 
 pub mod session_fork {
@@ -147,6 +760,45 @@ pub mod session_fork {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[20];
     pub type Response = SessionForkResponse;
+    pub type Params = crate::generated::requests::SessionForkParams;
+    pub type Body = crate::generated::requests::SessionForkBody;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub body: Body,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "sessionID") {
+            path.push_key("sessionID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("sessionID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::SessionForkParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, body: decode_body(raw)? })
+    }
 }
 
 pub mod session_switch_agent {
@@ -154,6 +806,45 @@ pub mod session_switch_agent {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[21];
     pub type Response = ();
+    pub type Params = crate::generated::requests::SessionSwitchAgentParams;
+    pub type Body = crate::generated::requests::SessionSwitchAgentBody;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub body: Body,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "sessionID") {
+            path.push_key("sessionID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("sessionID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::SessionSwitchAgentParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, body: decode_body(raw)? })
+    }
 }
 
 pub mod session_switch_model {
@@ -161,6 +852,45 @@ pub mod session_switch_model {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[22];
     pub type Response = ();
+    pub type Params = crate::generated::requests::SessionSwitchModelParams;
+    pub type Body = crate::generated::requests::SessionSwitchModelBody;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub body: Body,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "sessionID") {
+            path.push_key("sessionID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("sessionID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::SessionSwitchModelParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, body: decode_body(raw)? })
+    }
 }
 
 pub mod session_move {
@@ -168,6 +898,45 @@ pub mod session_move {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[23];
     pub type Response = ();
+    pub type Params = crate::generated::requests::SessionMoveParams;
+    pub type Body = crate::generated::requests::SessionMoveBody;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub body: Body,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "sessionID") {
+            path.push_key("sessionID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("sessionID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::SessionMoveParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, body: decode_body(raw)? })
+    }
 }
 
 pub mod session_prompt {
@@ -175,6 +944,45 @@ pub mod session_prompt {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[24];
     pub type Response = SessionPromptResponse;
+    pub type Params = crate::generated::requests::SessionPromptParams;
+    pub type Body = crate::generated::requests::SessionPromptBody;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub body: Body,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "sessionID") {
+            path.push_key("sessionID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("sessionID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::SessionPromptParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, body: decode_body(raw)? })
+    }
 }
 
 pub mod session_command {
@@ -182,6 +990,45 @@ pub mod session_command {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[25];
     pub type Response = ();
+    pub type Params = crate::generated::requests::SessionCommandParams;
+    pub type Body = crate::generated::requests::SessionCommandBody;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub body: Body,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "sessionID") {
+            path.push_key("sessionID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("sessionID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::SessionCommandParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, body: decode_body(raw)? })
+    }
 }
 
 pub mod experimental_session_skill {
@@ -189,6 +1036,45 @@ pub mod experimental_session_skill {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[26];
     pub type Response = ();
+    pub type Params = crate::generated::requests::ExperimentalSessionSkillParams;
+    pub type Body = crate::generated::requests::ExperimentalSessionSkillBody;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub body: Body,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "sessionID") {
+            path.push_key("sessionID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("sessionID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ExperimentalSessionSkillParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, body: decode_body(raw)? })
+    }
 }
 
 pub mod session_synthetic {
@@ -196,6 +1082,45 @@ pub mod session_synthetic {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[27];
     pub type Response = SessionSyntheticResponse;
+    pub type Params = crate::generated::requests::SessionSyntheticParams;
+    pub type Body = crate::generated::requests::SessionSyntheticBody;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub body: Body,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "sessionID") {
+            path.push_key("sessionID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("sessionID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::SessionSyntheticParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, body: decode_body(raw)? })
+    }
 }
 
 pub mod session_shell {
@@ -203,6 +1128,45 @@ pub mod session_shell {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[28];
     pub type Response = ();
+    pub type Params = crate::generated::requests::SessionShellParams;
+    pub type Body = crate::generated::requests::SessionShellBody;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub body: Body,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "sessionID") {
+            path.push_key("sessionID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("sessionID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::SessionShellParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, body: decode_body(raw)? })
+    }
 }
 
 pub mod session_compact {
@@ -210,6 +1174,45 @@ pub mod session_compact {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[29];
     pub type Response = SessionCompactResponse;
+    pub type Params = crate::generated::requests::SessionCompactParams;
+    pub type Body = crate::generated::requests::SessionCompactBody;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub body: Body,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "sessionID") {
+            path.push_key("sessionID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("sessionID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::SessionCompactParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, body: decode_body(raw)? })
+    }
 }
 
 pub mod experimental_session_wait {
@@ -217,6 +1220,35 @@ pub mod experimental_session_wait {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[30];
     pub type Response = ();
+    pub type Params = crate::generated::requests::ExperimentalSessionWaitParams;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "sessionID") {
+            path.push_key("sessionID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("sessionID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ExperimentalSessionWaitParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)? })
+    }
 }
 
 pub mod session_revert_stage {
@@ -224,6 +1256,45 @@ pub mod session_revert_stage {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[31];
     pub type Response = SessionRevertStageResponse;
+    pub type Params = crate::generated::requests::SessionRevertStageParams;
+    pub type Body = crate::generated::requests::SessionRevertStageBody;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub body: Body,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "sessionID") {
+            path.push_key("sessionID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("sessionID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::SessionRevertStageParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, body: decode_body(raw)? })
+    }
 }
 
 pub mod session_revert_clear {
@@ -231,6 +1302,35 @@ pub mod session_revert_clear {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[32];
     pub type Response = ();
+    pub type Params = crate::generated::requests::SessionRevertClearParams;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "sessionID") {
+            path.push_key("sessionID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("sessionID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::SessionRevertClearParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)? })
+    }
 }
 
 pub mod session_revert_commit {
@@ -238,6 +1338,35 @@ pub mod session_revert_commit {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[33];
     pub type Response = ();
+    pub type Params = crate::generated::requests::SessionRevertCommitParams;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "sessionID") {
+            path.push_key("sessionID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("sessionID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::SessionRevertCommitParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)? })
+    }
 }
 
 pub mod session_context {
@@ -245,6 +1374,35 @@ pub mod session_context {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[34];
     pub type Response = SessionContextResponse;
+    pub type Params = crate::generated::requests::SessionContextParams;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "sessionID") {
+            path.push_key("sessionID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("sessionID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::SessionContextParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)? })
+    }
 }
 
 pub mod session_diff {
@@ -252,6 +1410,70 @@ pub mod session_diff {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[35];
     pub type Response = SessionDiffResponse;
+    pub type Params = crate::generated::requests::SessionDiffParams;
+    pub type Query = crate::generated::requests::SessionDiffQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub query: Query,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "sessionID") {
+            path.push_key("sessionID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("sessionID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::SessionDiffParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "from") {
+            path.push_key("from");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("from".to_owned(), value);
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "to") {
+            path.push_key("to");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("to".to_owned(), value);
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "context") {
+            path.push_key("context");
+            let text = crate::request::single(values, &path)?;
+            let value = crate::request::number_value(text, &path)?;
+            path.pop();
+            object.insert("context".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::SessionDiffQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, query: decode_query(raw)? })
+    }
 }
 
 pub mod session_inbox_list {
@@ -259,6 +1481,35 @@ pub mod session_inbox_list {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[36];
     pub type Response = SessionInboxListResponse;
+    pub type Params = crate::generated::requests::SessionInboxListParams;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "sessionID") {
+            path.push_key("sessionID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("sessionID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::SessionInboxListParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)? })
+    }
 }
 
 pub mod session_inbox_cancel {
@@ -266,6 +1517,42 @@ pub mod session_inbox_cancel {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[37];
     pub type Response = ();
+    pub type Params = crate::generated::requests::SessionInboxCancelParams;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "sessionID") {
+            path.push_key("sessionID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("sessionID".to_owned(), value);
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "inboxID") {
+            path.push_key("inboxID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("inboxID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::SessionInboxCancelParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)? })
+    }
 }
 
 pub mod session_inbox_update {
@@ -273,6 +1560,52 @@ pub mod session_inbox_update {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[38];
     pub type Response = ();
+    pub type Params = crate::generated::requests::SessionInboxUpdateParams;
+    pub type Body = crate::generated::requests::SessionInboxUpdateBody;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub body: Body,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "sessionID") {
+            path.push_key("sessionID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("sessionID".to_owned(), value);
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "inboxID") {
+            path.push_key("inboxID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("inboxID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::SessionInboxUpdateParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, body: decode_body(raw)? })
+    }
 }
 
 pub mod experimental_session_instructions_entry_list {
@@ -280,6 +1613,37 @@ pub mod experimental_session_instructions_entry_list {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[39];
     pub type Response = ExperimentalSessionInstructionsEntryListResponse;
+    pub type Params = crate::generated::requests::ExperimentalSessionInstructionsEntryListParams;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "sessionID") {
+            path.push_key("sessionID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("sessionID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ExperimentalSessionInstructionsEntryListParams as crate::codec::Decode>::decode(
+            &value, &mut path,
+        )
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)? })
+    }
 }
 
 pub mod experimental_session_instructions_entry_put {
@@ -287,6 +1651,54 @@ pub mod experimental_session_instructions_entry_put {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[40];
     pub type Response = ();
+    pub type Params = crate::generated::requests::ExperimentalSessionInstructionsEntryPutParams;
+    pub type Body = crate::generated::requests::ExperimentalSessionInstructionsEntryPutBody;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub body: Body,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "sessionID") {
+            path.push_key("sessionID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("sessionID".to_owned(), value);
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "key") {
+            path.push_key("key");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("key".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ExperimentalSessionInstructionsEntryPutParams as crate::codec::Decode>::decode(
+            &value, &mut path,
+        )
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, body: decode_body(raw)? })
+    }
 }
 
 pub mod experimental_session_instructions_entry_remove {
@@ -294,6 +1706,44 @@ pub mod experimental_session_instructions_entry_remove {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[41];
     pub type Response = ();
+    pub type Params = crate::generated::requests::ExperimentalSessionInstructionsEntryRemoveParams;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "sessionID") {
+            path.push_key("sessionID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("sessionID".to_owned(), value);
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "key") {
+            path.push_key("key");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("key".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ExperimentalSessionInstructionsEntryRemoveParams as crate::codec::Decode>::decode(
+            &value, &mut path,
+        )
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)? })
+    }
 }
 
 pub mod session_generate {
@@ -301,6 +1751,45 @@ pub mod session_generate {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[42];
     pub type Response = SessionGenerateResponse;
+    pub type Params = crate::generated::requests::SessionGenerateParams;
+    pub type Body = crate::generated::requests::SessionGenerateBody;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub body: Body,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "sessionID") {
+            path.push_key("sessionID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("sessionID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::SessionGenerateParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, body: decode_body(raw)? })
+    }
 }
 
 pub mod experimental_session_log {
@@ -308,6 +1797,63 @@ pub mod experimental_session_log {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[43];
     pub type Response = SessionLogItem;
+    pub type Params = crate::generated::requests::ExperimentalSessionLogParams;
+    pub type Query = crate::generated::requests::ExperimentalSessionLogQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub query: Query,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "sessionID") {
+            path.push_key("sessionID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("sessionID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ExperimentalSessionLogParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "after") {
+            path.push_key("after");
+            let text = crate::request::single(values, &path)?;
+            let value = crate::request::number_value(text, &path)?;
+            path.pop();
+            object.insert("after".to_owned(), value);
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "follow") {
+            path.push_key("follow");
+            let text = crate::request::single(values, &path)?;
+            let value = crate::request::boolean_value(text, &path)?;
+            path.pop();
+            object.insert("follow".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ExperimentalSessionLogQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, query: decode_query(raw)? })
+    }
 }
 
 pub mod session_interrupt {
@@ -315,6 +1861,56 @@ pub mod session_interrupt {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[44];
     pub type Response = SessionInterruptResponse;
+    pub type Params = crate::generated::requests::SessionInterruptParams;
+    pub type Query = crate::generated::requests::SessionInterruptQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub query: Query,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "sessionID") {
+            path.push_key("sessionID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("sessionID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::SessionInterruptParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "resume") {
+            path.push_key("resume");
+            let text = crate::request::single(values, &path)?;
+            let value = crate::request::boolean_value(text, &path)?;
+            path.pop();
+            object.insert("resume".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::SessionInterruptQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, query: decode_query(raw)? })
+    }
 }
 
 pub mod session_background {
@@ -322,6 +1918,35 @@ pub mod session_background {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[45];
     pub type Response = ();
+    pub type Params = crate::generated::requests::SessionBackgroundParams;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "sessionID") {
+            path.push_key("sessionID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("sessionID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::SessionBackgroundParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)? })
+    }
 }
 
 pub mod session_message_get {
@@ -329,6 +1954,42 @@ pub mod session_message_get {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[46];
     pub type Response = SessionMessageGetResponse;
+    pub type Params = crate::generated::requests::SessionMessageGetParams;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "sessionID") {
+            path.push_key("sessionID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("sessionID".to_owned(), value);
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "messageID") {
+            path.push_key("messageID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("messageID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::SessionMessageGetParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)? })
+    }
 }
 
 pub mod session_form_list {
@@ -336,6 +1997,35 @@ pub mod session_form_list {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[47];
     pub type Response = SessionFormListResponse;
+    pub type Params = crate::generated::requests::SessionFormListParams;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "sessionID") {
+            path.push_key("sessionID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("sessionID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::SessionFormListParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)? })
+    }
 }
 
 pub mod session_form_create {
@@ -343,6 +2033,45 @@ pub mod session_form_create {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[48];
     pub type Response = SessionFormCreateResponse;
+    pub type Params = crate::generated::requests::SessionFormCreateParams;
+    pub type Body = crate::generated::requests::FormCreatePayload;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub body: Body,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "sessionID") {
+            path.push_key("sessionID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("sessionID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::SessionFormCreateParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, body: decode_body(raw)? })
+    }
 }
 
 pub mod session_form_get {
@@ -350,6 +2079,42 @@ pub mod session_form_get {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[49];
     pub type Response = SessionFormGetResponse;
+    pub type Params = crate::generated::requests::SessionFormGetParams;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "sessionID") {
+            path.push_key("sessionID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("sessionID".to_owned(), value);
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "formID") {
+            path.push_key("formID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("formID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::SessionFormGetParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)? })
+    }
 }
 
 pub mod session_form_cancel {
@@ -357,6 +2122,63 @@ pub mod session_form_cancel {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[50];
     pub type Response = ();
+    pub type Params = crate::generated::requests::SessionFormCancelParams;
+    pub type Query = crate::generated::requests::SessionFormCancelQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub query: Query,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "sessionID") {
+            path.push_key("sessionID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("sessionID".to_owned(), value);
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "formID") {
+            path.push_key("formID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("formID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::SessionFormCancelParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "message") {
+            path.push_key("message");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("message".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::SessionFormCancelQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, query: decode_query(raw)? })
+    }
 }
 
 pub mod session_form_reply {
@@ -364,6 +2186,52 @@ pub mod session_form_reply {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[51];
     pub type Response = ();
+    pub type Params = crate::generated::requests::SessionFormReplyParams;
+    pub type Body = crate::generated::requests::FormReply;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub body: Body,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "sessionID") {
+            path.push_key("sessionID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("sessionID".to_owned(), value);
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "formID") {
+            path.push_key("formID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("formID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::SessionFormReplyParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, body: decode_body(raw)? })
+    }
 }
 
 pub mod session_environment {
@@ -371,6 +2239,45 @@ pub mod session_environment {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[52];
     pub type Response = ();
+    pub type Params = crate::generated::requests::SessionEnvironmentParams;
+    pub type Body = crate::generated::requests::SessionEnvironmentBody;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub body: Body,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "sessionID") {
+            path.push_key("sessionID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("sessionID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::SessionEnvironmentParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, body: decode_body(raw)? })
+    }
 }
 
 pub mod session_view {
@@ -378,6 +2285,45 @@ pub mod session_view {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[53];
     pub type Response = ();
+    pub type Params = crate::generated::requests::SessionViewParams;
+    pub type Body = crate::generated::requests::SessionViewBody;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub body: Body,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "sessionID") {
+            path.push_key("sessionID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("sessionID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::SessionViewParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, body: decode_body(raw)? })
+    }
 }
 
 pub mod session_message_list {
@@ -385,6 +2331,77 @@ pub mod session_message_list {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[54];
     pub type Response = SessionMessagesResponse;
+    pub type Params = crate::generated::requests::SessionMessageListParams;
+    pub type Query = crate::generated::requests::SessionMessagesQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub query: Query,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "sessionID") {
+            path.push_key("sessionID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("sessionID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::SessionMessageListParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "limit") {
+            path.push_key("limit");
+            let text = crate::request::single(values, &path)?;
+            let value = crate::request::number_value(text, &path)?;
+            path.pop();
+            object.insert("limit".to_owned(), value);
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "order") {
+            path.push_key("order");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("order".to_owned(), value);
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "cursor") {
+            path.push_key("cursor");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("cursor".to_owned(), value);
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "type") {
+            path.push_key("type");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("type".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::SessionMessagesQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, query: decode_query(raw)? })
+    }
 }
 
 pub mod model_list {
@@ -392,6 +2409,46 @@ pub mod model_list {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[55];
     pub type Response = ModelListResponse;
+    pub type Query = crate::generated::requests::ModelListQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub query: Query,
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "types") {
+            path.push_key("types");
+            let value = {
+                let mut items = Vec::with_capacity(values.len());
+                for (index, text) in values.iter().enumerate() {
+                    path.push_index(index);
+                    items.push(serde_json::Value::String(text.as_str().to_owned()));
+                    path.pop();
+                }
+                serde_json::Value::Array(items)
+            };
+            path.pop();
+            object.insert("types".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ModelListQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { query: decode_query(raw)? })
+    }
 }
 
 pub mod model_default {
@@ -399,6 +2456,32 @@ pub mod model_default {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[56];
     pub type Response = ModelDefaultResponse;
+    pub type Query = crate::generated::requests::LocationQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub query: Query,
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { query: decode_query(raw)? })
+    }
 }
 
 pub mod experimental_generate_text {
@@ -406,6 +2489,24 @@ pub mod experimental_generate_text {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[57];
     pub type Response = GenerateTextResponse;
+    pub type Body = crate::generated::requests::ExperimentalGenerateTextBody;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub body: Body,
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { body: decode_body(raw)? })
+    }
 }
 
 pub mod experimental_generate_text_legacy {
@@ -413,6 +2514,24 @@ pub mod experimental_generate_text_legacy {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[58];
     pub type Response = GenerateTextResponse;
+    pub type Body = crate::generated::requests::ExperimentalGenerateTextLegacyBody;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub body: Body,
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { body: decode_body(raw)? })
+    }
 }
 
 pub mod experimental_generate_image {
@@ -420,6 +2539,24 @@ pub mod experimental_generate_image {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[59];
     pub type Response = GenerateImageResponse;
+    pub type Body = crate::generated::requests::GenerateImageRequest;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub body: Body,
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { body: decode_body(raw)? })
+    }
 }
 
 pub mod experimental_generate_video_create {
@@ -427,6 +2564,24 @@ pub mod experimental_generate_video_create {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[60];
     pub type Response = GenerateVideoCreateResponse;
+    pub type Body = crate::generated::requests::GenerateVideoRequest;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub body: Body,
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { body: decode_body(raw)? })
+    }
 }
 
 pub mod experimental_generate_video_get {
@@ -434,6 +2589,37 @@ pub mod experimental_generate_video_get {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[61];
     pub type Response = GenerateVideoGetResponse;
+    pub type Params = crate::generated::requests::ExperimentalGenerateVideoGetParams;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "id") {
+            path.push_key("id");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("id".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ExperimentalGenerateVideoGetParams as crate::codec::Decode>::decode(
+            &value, &mut path,
+        )
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)? })
+    }
 }
 
 pub mod experimental_generate_decisions {
@@ -441,6 +2627,24 @@ pub mod experimental_generate_decisions {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[62];
     pub type Response = GenerateDecisionsResponse;
+    pub type Body = crate::generated::requests::GenerateDecisionRequest;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub body: Body,
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { body: decode_body(raw)? })
+    }
 }
 
 pub mod experimental_voice_models {
@@ -448,6 +2652,13 @@ pub mod experimental_voice_models {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[63];
     pub type Response = VoiceModelsResponse;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {}
+
+    pub fn decode(_raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request {})
+    }
 }
 
 pub mod experimental_voice_session {
@@ -455,6 +2666,24 @@ pub mod experimental_voice_session {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[64];
     pub type Response = VoiceSessionResponse;
+    pub type Body = crate::generated::requests::ExperimentalVoiceSessionBody;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub body: Body,
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { body: decode_body(raw)? })
+    }
 }
 
 pub mod provider_list {
@@ -462,6 +2691,32 @@ pub mod provider_list {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[65];
     pub type Response = ProviderListResponse;
+    pub type Query = crate::generated::requests::LocationQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub query: Query,
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { query: decode_query(raw)? })
+    }
 }
 
 pub mod provider_get {
@@ -469,6 +2724,53 @@ pub mod provider_get {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[66];
     pub type Response = ProviderGetResponse;
+    pub type Params = crate::generated::requests::ProviderGetParams;
+    pub type Query = crate::generated::requests::LocationQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub query: Query,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "providerID") {
+            path.push_key("providerID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("providerID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ProviderGetParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, query: decode_query(raw)? })
+    }
 }
 
 pub mod integration_list {
@@ -476,6 +2778,32 @@ pub mod integration_list {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[67];
     pub type Response = IntegrationListResponse;
+    pub type Query = crate::generated::requests::LocationQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub query: Query,
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { query: decode_query(raw)? })
+    }
 }
 
 pub mod integration_get {
@@ -483,6 +2811,53 @@ pub mod integration_get {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[68];
     pub type Response = IntegrationGetResponse;
+    pub type Params = crate::generated::requests::IntegrationGetParams;
+    pub type Query = crate::generated::requests::LocationQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub query: Query,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "integrationID") {
+            path.push_key("integrationID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("integrationID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::IntegrationGetParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, query: decode_query(raw)? })
+    }
 }
 
 pub mod experimental_integration_wellknown_add {
@@ -490,6 +2865,42 @@ pub mod experimental_integration_wellknown_add {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[69];
     pub type Response = ();
+    pub type Query = crate::generated::requests::LocationQuery;
+    pub type Body = crate::generated::requests::ExperimentalIntegrationWellknownAddBody;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub query: Query,
+        pub body: Body,
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { query: decode_query(raw)?, body: decode_body(raw)? })
+    }
 }
 
 pub mod integration_connect_key {
@@ -497,6 +2908,63 @@ pub mod integration_connect_key {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[70];
     pub type Response = ();
+    pub type Params = crate::generated::requests::IntegrationConnectKeyParams;
+    pub type Query = crate::generated::requests::LocationQuery;
+    pub type Body = crate::generated::requests::IntegrationConnectKeyBody;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub query: Query,
+        pub body: Body,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "integrationID") {
+            path.push_key("integrationID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("integrationID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::IntegrationConnectKeyParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, query: decode_query(raw)?, body: decode_body(raw)? })
+    }
 }
 
 pub mod integration_connect_external {
@@ -504,6 +2972,65 @@ pub mod integration_connect_external {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[71];
     pub type Response = ();
+    pub type Params = crate::generated::requests::IntegrationConnectExternalParams;
+    pub type Query = crate::generated::requests::LocationQuery;
+    pub type Body = crate::generated::requests::IntegrationConnectExternalBody;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub query: Query,
+        pub body: Body,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "integrationID") {
+            path.push_key("integrationID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("integrationID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::IntegrationConnectExternalParams as crate::codec::Decode>::decode(
+            &value, &mut path,
+        )
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, query: decode_query(raw)?, body: decode_body(raw)? })
+    }
 }
 
 pub mod integration_oauth_connect {
@@ -511,6 +3038,63 @@ pub mod integration_oauth_connect {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[72];
     pub type Response = IntegrationOauthConnectResponse;
+    pub type Params = crate::generated::requests::IntegrationOauthConnectParams;
+    pub type Query = crate::generated::requests::LocationQuery;
+    pub type Body = crate::generated::requests::IntegrationOauthConnectBody;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub query: Query,
+        pub body: Body,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "integrationID") {
+            path.push_key("integrationID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("integrationID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::IntegrationOauthConnectParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, query: decode_query(raw)?, body: decode_body(raw)? })
+    }
 }
 
 pub mod integration_oauth_status {
@@ -518,6 +3102,60 @@ pub mod integration_oauth_status {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[73];
     pub type Response = IntegrationOauthStatusResponse;
+    pub type Params = crate::generated::requests::IntegrationOauthStatusParams;
+    pub type Query = crate::generated::requests::LocationQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub query: Query,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "integrationID") {
+            path.push_key("integrationID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("integrationID".to_owned(), value);
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "attemptID") {
+            path.push_key("attemptID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("attemptID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::IntegrationOauthStatusParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, query: decode_query(raw)? })
+    }
 }
 
 pub mod integration_oauth_cancel {
@@ -525,6 +3163,60 @@ pub mod integration_oauth_cancel {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[74];
     pub type Response = ();
+    pub type Params = crate::generated::requests::IntegrationOauthCancelParams;
+    pub type Query = crate::generated::requests::LocationQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub query: Query,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "integrationID") {
+            path.push_key("integrationID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("integrationID".to_owned(), value);
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "attemptID") {
+            path.push_key("attemptID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("attemptID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::IntegrationOauthCancelParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, query: decode_query(raw)? })
+    }
 }
 
 pub mod integration_oauth_complete {
@@ -532,6 +3224,70 @@ pub mod integration_oauth_complete {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[75];
     pub type Response = ();
+    pub type Params = crate::generated::requests::IntegrationOauthCompleteParams;
+    pub type Query = crate::generated::requests::LocationQuery;
+    pub type Body = crate::generated::requests::IntegrationOauthCompleteBody;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub query: Query,
+        pub body: Body,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "integrationID") {
+            path.push_key("integrationID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("integrationID".to_owned(), value);
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "attemptID") {
+            path.push_key("attemptID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("attemptID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::IntegrationOauthCompleteParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, query: decode_query(raw)?, body: decode_body(raw)? })
+    }
 }
 
 pub mod integration_command_connect {
@@ -539,6 +3295,63 @@ pub mod integration_command_connect {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[76];
     pub type Response = IntegrationCommandConnectResponse;
+    pub type Params = crate::generated::requests::IntegrationCommandConnectParams;
+    pub type Query = crate::generated::requests::LocationQuery;
+    pub type Body = crate::generated::requests::IntegrationCommandConnectBody;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub query: Query,
+        pub body: Body,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "integrationID") {
+            path.push_key("integrationID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("integrationID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::IntegrationCommandConnectParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, query: decode_query(raw)?, body: decode_body(raw)? })
+    }
 }
 
 pub mod integration_command_status {
@@ -546,6 +3359,60 @@ pub mod integration_command_status {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[77];
     pub type Response = IntegrationCommandStatusResponse;
+    pub type Params = crate::generated::requests::IntegrationCommandStatusParams;
+    pub type Query = crate::generated::requests::LocationQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub query: Query,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "integrationID") {
+            path.push_key("integrationID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("integrationID".to_owned(), value);
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "attemptID") {
+            path.push_key("attemptID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("attemptID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::IntegrationCommandStatusParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, query: decode_query(raw)? })
+    }
 }
 
 pub mod integration_command_cancel {
@@ -553,6 +3420,60 @@ pub mod integration_command_cancel {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[78];
     pub type Response = ();
+    pub type Params = crate::generated::requests::IntegrationCommandCancelParams;
+    pub type Query = crate::generated::requests::LocationQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub query: Query,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "integrationID") {
+            path.push_key("integrationID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("integrationID".to_owned(), value);
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "attemptID") {
+            path.push_key("attemptID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("attemptID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::IntegrationCommandCancelParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, query: decode_query(raw)? })
+    }
 }
 
 pub mod mcp_list {
@@ -560,6 +3481,32 @@ pub mod mcp_list {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[79];
     pub type Response = McpListResponse;
+    pub type Query = crate::generated::requests::LocationQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub query: Query,
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { query: decode_query(raw)? })
+    }
 }
 
 pub mod experimental_mcp_add {
@@ -567,6 +3514,63 @@ pub mod experimental_mcp_add {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[80];
     pub type Response = ();
+    pub type Params = crate::generated::requests::ExperimentalMcpAddParams;
+    pub type Query = crate::generated::requests::LocationQuery;
+    pub type Body = crate::generated::requests::ExperimentalMcpAddBody;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub query: Query,
+        pub body: Body,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "server") {
+            path.push_key("server");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("server".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ExperimentalMcpAddParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, query: decode_query(raw)?, body: decode_body(raw)? })
+    }
 }
 
 pub mod experimental_mcp_remove {
@@ -574,6 +3578,53 @@ pub mod experimental_mcp_remove {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[81];
     pub type Response = ();
+    pub type Params = crate::generated::requests::ExperimentalMcpRemoveParams;
+    pub type Query = crate::generated::requests::LocationQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub query: Query,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "server") {
+            path.push_key("server");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("server".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ExperimentalMcpRemoveParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, query: decode_query(raw)? })
+    }
 }
 
 pub mod experimental_mcp_connect {
@@ -581,6 +3632,53 @@ pub mod experimental_mcp_connect {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[82];
     pub type Response = ();
+    pub type Params = crate::generated::requests::ExperimentalMcpConnectParams;
+    pub type Query = crate::generated::requests::LocationQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub query: Query,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "server") {
+            path.push_key("server");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("server".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ExperimentalMcpConnectParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, query: decode_query(raw)? })
+    }
 }
 
 pub mod experimental_mcp_disconnect {
@@ -588,6 +3686,53 @@ pub mod experimental_mcp_disconnect {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[83];
     pub type Response = ();
+    pub type Params = crate::generated::requests::ExperimentalMcpDisconnectParams;
+    pub type Query = crate::generated::requests::LocationQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub query: Query,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "server") {
+            path.push_key("server");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("server".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ExperimentalMcpDisconnectParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, query: decode_query(raw)? })
+    }
 }
 
 pub mod mcp_resource_catalog {
@@ -595,6 +3740,32 @@ pub mod mcp_resource_catalog {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[84];
     pub type Response = McpResourceCatalogResponse;
+    pub type Query = crate::generated::requests::LocationQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub query: Query,
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { query: decode_query(raw)? })
+    }
 }
 
 pub mod experimental_mcp_client_token {
@@ -602,12 +3773,108 @@ pub mod experimental_mcp_client_token {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[85];
     pub type Response = ExperimentalMcpClientTokenResponse;
+    pub type Query = crate::generated::requests::ExperimentalMcpClientTokenQuery;
+    pub type Headers = crate::generated::requests::ExperimentalMcpClientTokenHeaders;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub query: Query,
+        pub headers: Headers,
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "name") {
+            path.push_key("name");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("name".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ExperimentalMcpClientTokenQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_headers(raw: &crate::request::RawRequest) -> Result<Headers, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.headers);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "x-opencode-ticket") {
+            path.push_key("x-opencode-ticket");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("x-opencode-ticket".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ExperimentalMcpClientTokenHeaders as crate::codec::Decode>::decode(
+            &value, &mut path,
+        )
+    }
+
+    pub fn render_headers(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_headers(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { query: decode_query(raw)?, headers: decode_headers(raw)? })
+    }
 }
 
 pub mod experimental_mcp_client {
     use crate::generated::*;
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[86];
+    pub type Query = crate::generated::requests::ExperimentalMcpClientQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub query: Query,
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "name") {
+            path.push_key("name");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("name".to_owned(), value);
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "ticket") {
+            path.push_key("ticket");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("ticket".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ExperimentalMcpClientQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { query: decode_query(raw)? })
+    }
 }
 
 pub mod credential_list {
@@ -615,6 +3882,13 @@ pub mod credential_list {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[87];
     pub type Response = CredentialListResponse;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {}
+
+    pub fn decode(_raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request {})
+    }
 }
 
 pub mod credential_create {
@@ -622,6 +3896,24 @@ pub mod credential_create {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[88];
     pub type Response = CredentialCreateResponse;
+    pub type Body = crate::generated::requests::CredentialCreateInput;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub body: Body,
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { body: decode_body(raw)? })
+    }
 }
 
 pub mod credential_update {
@@ -629,6 +3921,45 @@ pub mod credential_update {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[89];
     pub type Response = ();
+    pub type Params = crate::generated::requests::CredentialUpdateParams;
+    pub type Body = crate::generated::requests::CredentialUpdateBody;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub body: Body,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "credentialID") {
+            path.push_key("credentialID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("credentialID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::CredentialUpdateParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, body: decode_body(raw)? })
+    }
 }
 
 pub mod credential_remove {
@@ -636,6 +3967,35 @@ pub mod credential_remove {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[90];
     pub type Response = ();
+    pub type Params = crate::generated::requests::CredentialRemoveParams;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "credentialID") {
+            path.push_key("credentialID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("credentialID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::CredentialRemoveParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)? })
+    }
 }
 
 pub mod credential_activate {
@@ -643,6 +4003,35 @@ pub mod credential_activate {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[91];
     pub type Response = ();
+    pub type Params = crate::generated::requests::CredentialActivateParams;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "credentialID") {
+            path.push_key("credentialID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("credentialID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::CredentialActivateParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)? })
+    }
 }
 
 pub mod project_list {
@@ -650,6 +4039,35 @@ pub mod project_list {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[92];
     pub type Response = Vec<Project>;
+    pub type Query = crate::generated::requests::ProjectListQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub query: Query,
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "archived") {
+            path.push_key("archived");
+            let text = crate::request::single(values, &path)?;
+            let value = crate::request::boolean_value(text, &path)?;
+            path.pop();
+            object.insert("archived".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ProjectListQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { query: decode_query(raw)? })
+    }
 }
 
 pub mod project_update {
@@ -657,6 +4075,45 @@ pub mod project_update {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[93];
     pub type Response = Project;
+    pub type Params = crate::generated::requests::ProjectUpdateParams;
+    pub type Body = crate::generated::requests::ProjectUpdateBody;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub body: Body,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "projectID") {
+            path.push_key("projectID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("projectID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ProjectUpdateParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, body: decode_body(raw)? })
+    }
 }
 
 pub mod form_list {
@@ -664,6 +4121,32 @@ pub mod form_list {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[94];
     pub type Response = FormListResponse;
+    pub type Query = crate::generated::requests::LocationQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub query: Query,
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { query: decode_query(raw)? })
+    }
 }
 
 pub mod permission_request_list {
@@ -671,6 +4154,32 @@ pub mod permission_request_list {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[95];
     pub type Response = PermissionRequestListResponse;
+    pub type Query = crate::generated::requests::LocationQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub query: Query,
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { query: decode_query(raw)? })
+    }
 }
 
 pub mod permission_saved_list {
@@ -678,6 +4187,35 @@ pub mod permission_saved_list {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[96];
     pub type Response = PermissionSavedListResponse;
+    pub type Query = crate::generated::requests::PermissionSavedListQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub query: Query,
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "projectID") {
+            path.push_key("projectID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("projectID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::PermissionSavedListQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { query: decode_query(raw)? })
+    }
 }
 
 pub mod permission_saved_update {
@@ -685,6 +4223,45 @@ pub mod permission_saved_update {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[97];
     pub type Response = PermissionSavedUpdateResponse;
+    pub type Params = crate::generated::requests::PermissionSavedUpdateParams;
+    pub type Body = crate::generated::requests::PermissionSavedUpdateBody;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub body: Body,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "id") {
+            path.push_key("id");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("id".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::PermissionSavedUpdateParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, body: decode_body(raw)? })
+    }
 }
 
 pub mod permission_saved_remove {
@@ -692,6 +4269,35 @@ pub mod permission_saved_remove {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[98];
     pub type Response = ();
+    pub type Params = crate::generated::requests::PermissionSavedRemoveParams;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "id") {
+            path.push_key("id");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("id".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::PermissionSavedRemoveParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)? })
+    }
 }
 
 pub mod session_permission_create {
@@ -699,6 +4305,45 @@ pub mod session_permission_create {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[99];
     pub type Response = SessionPermissionCreateResponse;
+    pub type Params = crate::generated::requests::SessionPermissionCreateParams;
+    pub type Body = crate::generated::requests::SessionPermissionCreateBody;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub body: Body,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "sessionID") {
+            path.push_key("sessionID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("sessionID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::SessionPermissionCreateParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, body: decode_body(raw)? })
+    }
 }
 
 pub mod session_permission_list {
@@ -706,6 +4351,35 @@ pub mod session_permission_list {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[100];
     pub type Response = SessionPermissionListResponse;
+    pub type Params = crate::generated::requests::SessionPermissionListParams;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "sessionID") {
+            path.push_key("sessionID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("sessionID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::SessionPermissionListParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)? })
+    }
 }
 
 pub mod session_permission_get {
@@ -713,6 +4387,42 @@ pub mod session_permission_get {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[101];
     pub type Response = SessionPermissionGetResponse;
+    pub type Params = crate::generated::requests::SessionPermissionGetParams;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "sessionID") {
+            path.push_key("sessionID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("sessionID".to_owned(), value);
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "requestID") {
+            path.push_key("requestID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("requestID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::SessionPermissionGetParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)? })
+    }
 }
 
 pub mod session_permission_reply {
@@ -720,6 +4430,52 @@ pub mod session_permission_reply {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[102];
     pub type Response = ();
+    pub type Params = crate::generated::requests::SessionPermissionReplyParams;
+    pub type Body = crate::generated::requests::SessionPermissionReplyBody;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub body: Body,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "sessionID") {
+            path.push_key("sessionID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("sessionID".to_owned(), value);
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "requestID") {
+            path.push_key("requestID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("requestID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::SessionPermissionReplyParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, body: decode_body(raw)? })
+    }
 }
 
 pub mod fs_read {
@@ -727,6 +4483,32 @@ pub mod fs_read {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[103];
     pub type Response = Vec<u8>;
+    pub type Query = crate::generated::requests::LocationQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub query: Query,
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { query: decode_query(raw)? })
+    }
 }
 
 pub mod fs_list {
@@ -734,6 +4516,39 @@ pub mod fs_list {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[104];
     pub type Response = FsListResponse;
+    pub type Query = crate::generated::requests::FsListQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub query: Query,
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "path") {
+            path.push_key("path");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("path".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::FsListQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { query: decode_query(raw)? })
+    }
 }
 
 pub mod fs_find {
@@ -741,6 +4556,53 @@ pub mod fs_find {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[105];
     pub type Response = FsFindResponse;
+    pub type Query = crate::generated::requests::FsFindQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub query: Query,
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "query") {
+            path.push_key("query");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("query".to_owned(), value);
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "type") {
+            path.push_key("type");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("type".to_owned(), value);
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "limit") {
+            path.push_key("limit");
+            let text = crate::request::single(values, &path)?;
+            let value = crate::request::number_value(text, &path)?;
+            path.pop();
+            object.insert("limit".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::FsFindQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { query: decode_query(raw)? })
+    }
 }
 
 pub mod experimental_fs_write {
@@ -748,6 +4610,44 @@ pub mod experimental_fs_write {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[106];
     pub type Response = ExperimentalFsWriteResponse;
+    pub type Query = crate::generated::requests::ExperimentalFsWriteQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub query: Query,
+        pub body: Vec<u8>,
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "path") {
+            path.push_key("path");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("path".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ExperimentalFsWriteQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Vec<u8>, crate::codec::DecodeError> {
+        Ok(raw.body.clone())
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { query: decode_query(raw)?, body: decode_body(raw)? })
+    }
 }
 
 pub mod experimental_fs_watch {
@@ -755,6 +4655,42 @@ pub mod experimental_fs_watch {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[107];
     pub type Response = ();
+    pub type Query = crate::generated::requests::LocationQuery;
+    pub type Body = crate::generated::requests::ExperimentalFsWatchBody;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub query: Query,
+        pub body: Body,
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { query: decode_query(raw)?, body: decode_body(raw)? })
+    }
 }
 
 pub mod experimental_fs_unwatch {
@@ -762,6 +4698,42 @@ pub mod experimental_fs_unwatch {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[108];
     pub type Response = ();
+    pub type Query = crate::generated::requests::LocationQuery;
+    pub type Body = crate::generated::requests::ExperimentalFsUnwatchBody;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub query: Query,
+        pub body: Body,
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { query: decode_query(raw)?, body: decode_body(raw)? })
+    }
 }
 
 pub mod command_list {
@@ -769,6 +4741,32 @@ pub mod command_list {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[109];
     pub type Response = CommandListResponse;
+    pub type Query = crate::generated::requests::LocationQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub query: Query,
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { query: decode_query(raw)? })
+    }
 }
 
 pub mod skill_list {
@@ -776,6 +4774,32 @@ pub mod skill_list {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[110];
     pub type Response = SkillListResponse;
+    pub type Query = crate::generated::requests::LocationQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub query: Query,
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { query: decode_query(raw)? })
+    }
 }
 
 pub mod rpc_call {
@@ -783,6 +4807,70 @@ pub mod rpc_call {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[111];
     pub type Response = RpcOutput;
+    pub type Params = crate::generated::requests::RpcCallParams;
+    pub type Query = crate::generated::requests::LocationQuery;
+    pub type Body = crate::generated::requests::RpcInput;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub query: Query,
+        pub body: Body,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "rpcID") {
+            path.push_key("rpcID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("rpcID".to_owned(), value);
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "method") {
+            path.push_key("method");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("method".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::RpcCallParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, query: decode_query(raw)?, body: decode_body(raw)? })
+    }
 }
 
 pub mod event_subscribe {
@@ -790,6 +4878,42 @@ pub mod event_subscribe {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[112];
     pub type Response = PublicEvent;
+    pub type Query = crate::generated::requests::EventSubscribeQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub query: Query,
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "types") {
+            path.push_key("types");
+            let value = {
+                let mut items = Vec::with_capacity(values.len());
+                for (index, text) in values.iter().enumerate() {
+                    path.push_index(index);
+                    items.push(serde_json::Value::String(text.as_str().to_owned()));
+                    path.pop();
+                }
+                serde_json::Value::Array(items)
+            };
+            path.pop();
+            object.insert("types".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::EventSubscribeQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { query: decode_query(raw)? })
+    }
 }
 
 pub mod pty_list {
@@ -797,6 +4921,32 @@ pub mod pty_list {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[113];
     pub type Response = PtyListResponse;
+    pub type Query = crate::generated::requests::LocationQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub query: Query,
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { query: decode_query(raw)? })
+    }
 }
 
 pub mod pty_create {
@@ -804,6 +4954,42 @@ pub mod pty_create {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[114];
     pub type Response = PtyCreateResponse;
+    pub type Query = crate::generated::requests::LocationQuery;
+    pub type Body = crate::generated::requests::PtyCreateBody;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub query: Query,
+        pub body: Body,
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { query: decode_query(raw)?, body: decode_body(raw)? })
+    }
 }
 
 pub mod pty_get {
@@ -811,6 +4997,53 @@ pub mod pty_get {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[115];
     pub type Response = PtyGetResponse;
+    pub type Params = crate::generated::requests::PtyGetParams;
+    pub type Query = crate::generated::requests::LocationQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub query: Query,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "ptyID") {
+            path.push_key("ptyID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("ptyID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::PtyGetParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, query: decode_query(raw)? })
+    }
 }
 
 pub mod pty_update {
@@ -818,6 +5051,63 @@ pub mod pty_update {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[116];
     pub type Response = PtyUpdateResponse;
+    pub type Params = crate::generated::requests::PtyUpdateParams;
+    pub type Query = crate::generated::requests::LocationQuery;
+    pub type Body = crate::generated::requests::PtyUpdateBody;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub query: Query,
+        pub body: Body,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "ptyID") {
+            path.push_key("ptyID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("ptyID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::PtyUpdateParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, query: decode_query(raw)?, body: decode_body(raw)? })
+    }
 }
 
 pub mod pty_remove {
@@ -825,6 +5115,53 @@ pub mod pty_remove {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[117];
     pub type Response = ();
+    pub type Params = crate::generated::requests::PtyRemoveParams;
+    pub type Query = crate::generated::requests::LocationQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub query: Query,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "ptyID") {
+            path.push_key("ptyID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("ptyID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::PtyRemoveParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, query: decode_query(raw)? })
+    }
 }
 
 pub mod pty_connect_token {
@@ -832,12 +5169,109 @@ pub mod pty_connect_token {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[118];
     pub type Response = PtyConnectTokenResponse;
+    pub type Params = crate::generated::requests::PtyConnectTokenParams;
+    pub type Query = crate::generated::requests::LocationQuery;
+    pub type Headers = crate::generated::requests::PtyConnectTokenHeaders;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub query: Query,
+        pub headers: Headers,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "ptyID") {
+            path.push_key("ptyID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("ptyID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::PtyConnectTokenParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_headers(raw: &crate::request::RawRequest) -> Result<Headers, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.headers);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "x-opencode-ticket") {
+            path.push_key("x-opencode-ticket");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("x-opencode-ticket".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::PtyConnectTokenHeaders as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_headers(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_headers(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, query: decode_query(raw)?, headers: decode_headers(raw)? })
+    }
 }
 
 pub mod pty_connect {
     use crate::generated::*;
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[119];
+    pub type Params = crate::generated::requests::PtyConnectParams;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "ptyID") {
+            path.push_key("ptyID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("ptyID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::PtyConnectParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)? })
+    }
 }
 
 pub mod experimental_persistent_pty_read {
@@ -845,6 +5279,60 @@ pub mod experimental_persistent_pty_read {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[120];
     pub type Response = ExperimentalPersistentPtyReadResponse;
+    pub type Params = crate::generated::requests::ExperimentalPersistentPtyReadParams;
+    pub type Query = crate::generated::requests::ExperimentalPersistentPtyReadQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub query: Query,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "sessionID") {
+            path.push_key("sessionID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("sessionID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ExperimentalPersistentPtyReadParams as crate::codec::Decode>::decode(
+            &value, &mut path,
+        )
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "lines") {
+            path.push_key("lines");
+            let text = crate::request::single(values, &path)?;
+            let value = crate::request::number_value(text, &path)?;
+            path.pop();
+            object.insert("lines".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ExperimentalPersistentPtyReadQuery as crate::codec::Decode>::decode(
+            &value, &mut path,
+        )
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, query: decode_query(raw)? })
+    }
 }
 
 pub mod experimental_persistent_pty_list {
@@ -852,6 +5340,37 @@ pub mod experimental_persistent_pty_list {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[121];
     pub type Response = ExperimentalPersistentPtyListResponse;
+    pub type Params = crate::generated::requests::ExperimentalPersistentPtyListParams;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "sessionID") {
+            path.push_key("sessionID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("sessionID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ExperimentalPersistentPtyListParams as crate::codec::Decode>::decode(
+            &value, &mut path,
+        )
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)? })
+    }
 }
 
 pub mod experimental_persistent_pty_create {
@@ -859,6 +5378,47 @@ pub mod experimental_persistent_pty_create {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[122];
     pub type Response = ExperimentalPersistentPtyCreateResponse;
+    pub type Params = crate::generated::requests::ExperimentalPersistentPtyCreateParams;
+    pub type Body = crate::generated::requests::PersistentPtyCreateInput;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub body: Body,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "sessionID") {
+            path.push_key("sessionID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("sessionID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ExperimentalPersistentPtyCreateParams as crate::codec::Decode>::decode(
+            &value, &mut path,
+        )
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, body: decode_body(raw)? })
+    }
 }
 
 pub mod experimental_persistent_pty_shutdown {
@@ -866,6 +5426,13 @@ pub mod experimental_persistent_pty_shutdown {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[123];
     pub type Response = ();
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {}
+
+    pub fn decode(_raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request {})
+    }
 }
 
 pub mod experimental_persistent_pty_handoff {
@@ -873,6 +5440,13 @@ pub mod experimental_persistent_pty_handoff {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[124];
     pub type Response = ExperimentalPersistentPtyHandoffResponse;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {}
+
+    pub fn decode(_raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request {})
+    }
 }
 
 pub mod experimental_persistent_pty_get {
@@ -880,6 +5454,37 @@ pub mod experimental_persistent_pty_get {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[125];
     pub type Response = ExperimentalPersistentPtyGetResponse;
+    pub type Params = crate::generated::requests::ExperimentalPersistentPtyGetParams;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "ptyID") {
+            path.push_key("ptyID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("ptyID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ExperimentalPersistentPtyGetParams as crate::codec::Decode>::decode(
+            &value, &mut path,
+        )
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)? })
+    }
 }
 
 pub mod experimental_persistent_pty_update {
@@ -887,6 +5492,47 @@ pub mod experimental_persistent_pty_update {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[126];
     pub type Response = ExperimentalPersistentPtyUpdateResponse;
+    pub type Params = crate::generated::requests::ExperimentalPersistentPtyUpdateParams;
+    pub type Body = crate::generated::requests::PersistentPtyUpdateInput;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub body: Body,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "ptyID") {
+            path.push_key("ptyID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("ptyID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ExperimentalPersistentPtyUpdateParams as crate::codec::Decode>::decode(
+            &value, &mut path,
+        )
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, body: decode_body(raw)? })
+    }
 }
 
 pub mod experimental_persistent_pty_remove {
@@ -894,6 +5540,37 @@ pub mod experimental_persistent_pty_remove {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[127];
     pub type Response = ();
+    pub type Params = crate::generated::requests::ExperimentalPersistentPtyRemoveParams;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "ptyID") {
+            path.push_key("ptyID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("ptyID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ExperimentalPersistentPtyRemoveParams as crate::codec::Decode>::decode(
+            &value, &mut path,
+        )
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)? })
+    }
 }
 
 pub mod experimental_persistent_pty_snapshot {
@@ -901,6 +5578,37 @@ pub mod experimental_persistent_pty_snapshot {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[128];
     pub type Response = ExperimentalPersistentPtySnapshotResponse;
+    pub type Params = crate::generated::requests::ExperimentalPersistentPtySnapshotParams;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "ptyID") {
+            path.push_key("ptyID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("ptyID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ExperimentalPersistentPtySnapshotParams as crate::codec::Decode>::decode(
+            &value, &mut path,
+        )
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)? })
+    }
 }
 
 pub mod experimental_persistent_pty_connect_token {
@@ -908,12 +5616,97 @@ pub mod experimental_persistent_pty_connect_token {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[129];
     pub type Response = ExperimentalPersistentPtyConnectTokenResponse;
+    pub type Params = crate::generated::requests::ExperimentalPersistentPtyConnectTokenParams;
+    pub type Headers = crate::generated::requests::ExperimentalPersistentPtyConnectTokenHeaders;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub headers: Headers,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "ptyID") {
+            path.push_key("ptyID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("ptyID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ExperimentalPersistentPtyConnectTokenParams as crate::codec::Decode>::decode(
+            &value, &mut path,
+        )
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_headers(raw: &crate::request::RawRequest) -> Result<Headers, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.headers);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "x-opencode-ticket") {
+            path.push_key("x-opencode-ticket");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("x-opencode-ticket".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ExperimentalPersistentPtyConnectTokenHeaders as crate::codec::Decode>::decode(
+            &value, &mut path,
+        )
+    }
+
+    pub fn render_headers(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_headers(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, headers: decode_headers(raw)? })
+    }
 }
 
 pub mod experimental_persistent_pty_connect {
     use crate::generated::*;
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[130];
+    pub type Params = crate::generated::requests::ExperimentalPersistentPtyConnectParams;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "ptyID") {
+            path.push_key("ptyID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("ptyID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ExperimentalPersistentPtyConnectParams as crate::codec::Decode>::decode(
+            &value, &mut path,
+        )
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)? })
+    }
 }
 
 pub mod experimental_media_get {
@@ -921,6 +5714,35 @@ pub mod experimental_media_get {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[131];
     pub type Response = Vec<u8>;
+    pub type Params = crate::generated::requests::ExperimentalMediaGetParams;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "hash") {
+            path.push_key("hash");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("hash".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ExperimentalMediaGetParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)? })
+    }
 }
 
 pub mod experimental_blob_get {
@@ -928,6 +5750,35 @@ pub mod experimental_blob_get {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[132];
     pub type Response = Vec<u8>;
+    pub type Params = crate::generated::requests::ExperimentalBlobGetParams;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "id") {
+            path.push_key("id");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("id".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ExperimentalBlobGetParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)? })
+    }
 }
 
 pub mod experimental_automation_create {
@@ -935,6 +5786,24 @@ pub mod experimental_automation_create {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[133];
     pub type Response = ExperimentalAutomationCreateResponse;
+    pub type Body = crate::generated::requests::AutomationCreatePayload;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub body: Body,
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { body: decode_body(raw)? })
+    }
 }
 
 pub mod experimental_automation_list {
@@ -942,6 +5811,42 @@ pub mod experimental_automation_list {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[134];
     pub type Response = ExperimentalAutomationListResponse;
+    pub type Query = crate::generated::requests::AutomationListQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub query: Query,
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "sessionID") {
+            path.push_key("sessionID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("sessionID".to_owned(), value);
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "directory") {
+            path.push_key("directory");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("directory".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::AutomationListQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { query: decode_query(raw)? })
+    }
 }
 
 pub mod experimental_automation_get {
@@ -949,6 +5854,35 @@ pub mod experimental_automation_get {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[135];
     pub type Response = ExperimentalAutomationGetResponse;
+    pub type Params = crate::generated::requests::ExperimentalAutomationGetParams;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "automationID") {
+            path.push_key("automationID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("automationID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ExperimentalAutomationGetParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)? })
+    }
 }
 
 pub mod experimental_automation_delete {
@@ -956,6 +5890,37 @@ pub mod experimental_automation_delete {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[136];
     pub type Response = ();
+    pub type Params = crate::generated::requests::ExperimentalAutomationDeleteParams;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "automationID") {
+            path.push_key("automationID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("automationID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ExperimentalAutomationDeleteParams as crate::codec::Decode>::decode(
+            &value, &mut path,
+        )
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)? })
+    }
 }
 
 pub mod experimental_automation_pause {
@@ -963,6 +5928,37 @@ pub mod experimental_automation_pause {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[137];
     pub type Response = ExperimentalAutomationPauseResponse;
+    pub type Params = crate::generated::requests::ExperimentalAutomationPauseParams;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "automationID") {
+            path.push_key("automationID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("automationID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ExperimentalAutomationPauseParams as crate::codec::Decode>::decode(
+            &value, &mut path,
+        )
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)? })
+    }
 }
 
 pub mod experimental_automation_resume {
@@ -970,6 +5966,37 @@ pub mod experimental_automation_resume {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[138];
     pub type Response = ExperimentalAutomationResumeResponse;
+    pub type Params = crate::generated::requests::ExperimentalAutomationResumeParams;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "automationID") {
+            path.push_key("automationID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("automationID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ExperimentalAutomationResumeParams as crate::codec::Decode>::decode(
+            &value, &mut path,
+        )
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)? })
+    }
 }
 
 pub mod experimental_artifacts_providers {
@@ -977,6 +6004,32 @@ pub mod experimental_artifacts_providers {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[139];
     pub type Response = ExperimentalArtifactsProvidersResponse;
+    pub type Query = crate::generated::requests::LocationQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub query: Query,
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { query: decode_query(raw)? })
+    }
 }
 
 pub mod experimental_artifacts_list {
@@ -984,6 +6037,46 @@ pub mod experimental_artifacts_list {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[140];
     pub type Response = ExperimentalArtifactsListResponse;
+    pub type Query = crate::generated::requests::ExperimentalArtifactsListQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub query: Query,
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "sessionID") {
+            path.push_key("sessionID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("sessionID".to_owned(), value);
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "provider") {
+            path.push_key("provider");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("provider".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ExperimentalArtifactsListQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { query: decode_query(raw)? })
+    }
 }
 
 pub mod experimental_artifacts_create {
@@ -991,6 +6084,42 @@ pub mod experimental_artifacts_create {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[141];
     pub type Response = ExperimentalArtifactsCreateResponse;
+    pub type Query = crate::generated::requests::LocationQuery;
+    pub type Body = crate::generated::requests::ArtifactCreateInput;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub query: Query,
+        pub body: Body,
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { query: decode_query(raw)?, body: decode_body(raw)? })
+    }
 }
 
 pub mod experimental_artifacts_get {
@@ -998,6 +6127,53 @@ pub mod experimental_artifacts_get {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[142];
     pub type Response = ExperimentalArtifactsGetResponse;
+    pub type Params = crate::generated::requests::ExperimentalArtifactsGetParams;
+    pub type Query = crate::generated::requests::LocationQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub query: Query,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "artifactID") {
+            path.push_key("artifactID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("artifactID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ExperimentalArtifactsGetParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, query: decode_query(raw)? })
+    }
 }
 
 pub mod experimental_artifacts_update {
@@ -1005,6 +6181,65 @@ pub mod experimental_artifacts_update {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[143];
     pub type Response = ExperimentalArtifactsUpdateResponse;
+    pub type Params = crate::generated::requests::ExperimentalArtifactsUpdateParams;
+    pub type Query = crate::generated::requests::LocationQuery;
+    pub type Body = crate::generated::requests::ArtifactUpdateInput;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub query: Query,
+        pub body: Body,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "artifactID") {
+            path.push_key("artifactID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("artifactID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ExperimentalArtifactsUpdateParams as crate::codec::Decode>::decode(
+            &value, &mut path,
+        )
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, query: decode_query(raw)?, body: decode_body(raw)? })
+    }
 }
 
 pub mod experimental_artifacts_delete {
@@ -1012,6 +6247,55 @@ pub mod experimental_artifacts_delete {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[144];
     pub type Response = ();
+    pub type Params = crate::generated::requests::ExperimentalArtifactsDeleteParams;
+    pub type Query = crate::generated::requests::LocationQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub query: Query,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "artifactID") {
+            path.push_key("artifactID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("artifactID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ExperimentalArtifactsDeleteParams as crate::codec::Decode>::decode(
+            &value, &mut path,
+        )
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, query: decode_query(raw)? })
+    }
 }
 
 pub mod experimental_artifacts_view {
@@ -1019,6 +6303,53 @@ pub mod experimental_artifacts_view {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[145];
     pub type Response = Vec<u8>;
+    pub type Params = crate::generated::requests::ExperimentalArtifactsViewParams;
+    pub type Query = crate::generated::requests::LocationQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub query: Query,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "artifactID") {
+            path.push_key("artifactID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("artifactID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ExperimentalArtifactsViewParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, query: decode_query(raw)? })
+    }
 }
 
 pub mod experimental_job_list {
@@ -1026,6 +6357,56 @@ pub mod experimental_job_list {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[146];
     pub type Response = ExperimentalJobListResponse;
+    pub type Query = crate::generated::requests::JobListQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub query: Query,
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "sessionID") {
+            path.push_key("sessionID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("sessionID".to_owned(), value);
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "kind") {
+            path.push_key("kind");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("kind".to_owned(), value);
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "status") {
+            path.push_key("status");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("status".to_owned(), value);
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "descendants") {
+            path.push_key("descendants");
+            let text = crate::request::single(values, &path)?;
+            let value = crate::request::boolean_value(text, &path)?;
+            path.pop();
+            object.insert("descendants".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::JobListQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { query: decode_query(raw)? })
+    }
 }
 
 pub mod experimental_job_cancel {
@@ -1033,12 +6414,48 @@ pub mod experimental_job_cancel {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[147];
     pub type Response = ();
+    pub type Params = crate::generated::requests::ExperimentalJobCancelParams;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "id") {
+            path.push_key("id");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("id".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ExperimentalJobCancelParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)? })
+    }
 }
 
 pub mod experimental_machine_link {
     use crate::generated::*;
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[148];
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {}
+
+    pub fn decode(_raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request {})
+    }
 }
 
 pub mod experimental_machine_list {
@@ -1046,6 +6463,13 @@ pub mod experimental_machine_list {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[149];
     pub type Response = ExperimentalMachineListResponse;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {}
+
+    pub fn decode(_raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request {})
+    }
 }
 
 pub mod experimental_machine_add {
@@ -1053,6 +6477,24 @@ pub mod experimental_machine_add {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[150];
     pub type Response = ExperimentalMachineAddResponse;
+    pub type Body = crate::generated::requests::MachineAddPayload;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub body: Body,
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { body: decode_body(raw)? })
+    }
 }
 
 pub mod experimental_machine_remove {
@@ -1060,6 +6502,35 @@ pub mod experimental_machine_remove {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[151];
     pub type Response = ();
+    pub type Params = crate::generated::requests::ExperimentalMachineRemoveParams;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "name") {
+            path.push_key("name");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("name".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ExperimentalMachineRemoveParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)? })
+    }
 }
 
 pub mod shell_list {
@@ -1067,6 +6538,32 @@ pub mod shell_list {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[152];
     pub type Response = ShellListResponse;
+    pub type Query = crate::generated::requests::LocationQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub query: Query,
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { query: decode_query(raw)? })
+    }
 }
 
 pub mod shell_create {
@@ -1074,6 +6571,42 @@ pub mod shell_create {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[153];
     pub type Response = ShellCreateResponse;
+    pub type Query = crate::generated::requests::LocationQuery;
+    pub type Body = crate::generated::requests::ShellCreateBody;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub query: Query,
+        pub body: Body,
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { query: decode_query(raw)?, body: decode_body(raw)? })
+    }
 }
 
 pub mod shell_get {
@@ -1081,6 +6614,53 @@ pub mod shell_get {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[154];
     pub type Response = ShellGetResponse;
+    pub type Params = crate::generated::requests::ShellGetParams;
+    pub type Query = crate::generated::requests::LocationQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub query: Query,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "id") {
+            path.push_key("id");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("id".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ShellGetParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, query: decode_query(raw)? })
+    }
 }
 
 pub mod shell_remove {
@@ -1088,6 +6668,53 @@ pub mod shell_remove {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[155];
     pub type Response = ();
+    pub type Params = crate::generated::requests::ShellRemoveParams;
+    pub type Query = crate::generated::requests::LocationQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub query: Query,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "id") {
+            path.push_key("id");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("id".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ShellRemoveParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, query: decode_query(raw)? })
+    }
 }
 
 pub mod shell_output {
@@ -1095,6 +6722,67 @@ pub mod shell_output {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[156];
     pub type Response = ShellOutputResponse;
+    pub type Params = crate::generated::requests::ShellOutputParams;
+    pub type Query = crate::generated::requests::ShellOutputQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub query: Query,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "id") {
+            path.push_key("id");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("id".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ShellOutputParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "cursor") {
+            path.push_key("cursor");
+            let text = crate::request::single(values, &path)?;
+            let value = crate::request::number_value(text, &path)?;
+            path.pop();
+            object.insert("cursor".to_owned(), value);
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "limit") {
+            path.push_key("limit");
+            let text = crate::request::single(values, &path)?;
+            let value = crate::request::number_value(text, &path)?;
+            path.pop();
+            object.insert("limit".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ShellOutputQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, query: decode_query(raw)? })
+    }
 }
 
 pub mod reference_list {
@@ -1102,6 +6790,32 @@ pub mod reference_list {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[157];
     pub type Response = ReferenceListResponse;
+    pub type Query = crate::generated::requests::LocationQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub query: Query,
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { query: decode_query(raw)? })
+    }
 }
 
 pub mod worktree_list {
@@ -1109,6 +6823,35 @@ pub mod worktree_list {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[158];
     pub type Response = WorktreeList;
+    pub type Query = crate::generated::requests::WorktreeListQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub query: Query,
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "projectID") {
+            path.push_key("projectID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("projectID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::WorktreeListQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { query: decode_query(raw)? })
+    }
 }
 
 pub mod worktree_create {
@@ -1116,6 +6859,24 @@ pub mod worktree_create {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[159];
     pub type Response = WorktreeInfo;
+    pub type Body = crate::generated::requests::WorktreeCreateInput;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub body: Body,
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { body: decode_body(raw)? })
+    }
 }
 
 pub mod worktree_remove {
@@ -1123,6 +6884,24 @@ pub mod worktree_remove {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[160];
     pub type Response = ();
+    pub type Body = crate::generated::requests::WorktreeRemoveInput;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub body: Body,
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { body: decode_body(raw)? })
+    }
 }
 
 pub mod worktree_refresh {
@@ -1130,6 +6909,24 @@ pub mod worktree_refresh {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[161];
     pub type Response = ();
+    pub type Body = crate::generated::requests::WorktreeRefreshBody;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub body: Body,
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { body: decode_body(raw)? })
+    }
 }
 
 pub mod vcs_init {
@@ -1137,6 +6934,39 @@ pub mod vcs_init {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[162];
     pub type Response = ();
+    pub type Query = crate::generated::requests::VcsInitQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub query: Query,
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "provider") {
+            path.push_key("provider");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("provider".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::VcsInitQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { query: decode_query(raw)? })
+    }
 }
 
 pub mod vcs_get {
@@ -1144,6 +6974,32 @@ pub mod vcs_get {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[163];
     pub type Response = VcsGetResponse;
+    pub type Query = crate::generated::requests::LocationQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub query: Query,
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { query: decode_query(raw)? })
+    }
 }
 
 pub mod vcs_base {
@@ -1151,6 +7007,32 @@ pub mod vcs_base {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[164];
     pub type Response = VcsBaseResponse;
+    pub type Query = crate::generated::requests::LocationQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub query: Query,
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { query: decode_query(raw)? })
+    }
 }
 
 pub mod vcs_status {
@@ -1158,6 +7040,32 @@ pub mod vcs_status {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[165];
     pub type Response = VcsStatusResponse;
+    pub type Query = crate::generated::requests::LocationQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub query: Query,
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { query: decode_query(raw)? })
+    }
 }
 
 pub mod vcs_branch_list {
@@ -1165,6 +7073,46 @@ pub mod vcs_branch_list {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[166];
     pub type Response = VcsBranchListResponse;
+    pub type Query = crate::generated::requests::VcsBranchListQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub query: Query,
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "search") {
+            path.push_key("search");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("search".to_owned(), value);
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "limit") {
+            path.push_key("limit");
+            let text = crate::request::single(values, &path)?;
+            let value = crate::request::number_value(text, &path)?;
+            path.pop();
+            object.insert("limit".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::VcsBranchListQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { query: decode_query(raw)? })
+    }
 }
 
 pub mod vcs_diff {
@@ -1172,6 +7120,60 @@ pub mod vcs_diff {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[167];
     pub type Response = VcsDiffResponse;
+    pub type Query = crate::generated::requests::VcsDiffQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub query: Query,
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "mode") {
+            path.push_key("mode");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("mode".to_owned(), value);
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "base") {
+            path.push_key("base");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("base".to_owned(), value);
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "context") {
+            path.push_key("context");
+            let text = crate::request::single(values, &path)?;
+            let value = crate::request::number_value(text, &path)?;
+            path.pop();
+            object.insert("context".to_owned(), value);
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "untracked") {
+            path.push_key("untracked");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("untracked".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::VcsDiffQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { query: decode_query(raw)? })
+    }
 }
 
 pub mod debug_heap_dump {
@@ -1179,6 +7181,35 @@ pub mod debug_heap_dump {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[168];
     pub type Response = DebugHeapDumpResponse;
+    pub type Query = crate::generated::requests::DebugHeapDumpQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub query: Query,
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "directory") {
+            path.push_key("directory");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("directory".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::DebugHeapDumpQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { query: decode_query(raw)? })
+    }
 }
 
 pub mod debug_location_list {
@@ -1186,6 +7217,13 @@ pub mod debug_location_list {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[169];
     pub type Response = Vec<LocationPublicRef>;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {}
+
+    pub fn decode(_raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request {})
+    }
 }
 
 pub mod debug_location_evict {
@@ -1193,6 +7231,32 @@ pub mod debug_location_evict {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[170];
     pub type Response = ();
+    pub type Query = crate::generated::requests::LocationQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub query: Query,
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { query: decode_query(raw)? })
+    }
 }
 
 pub mod experimental_migration_v1_status {
@@ -1200,6 +7264,13 @@ pub mod experimental_migration_v1_status {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[171];
     pub type Response = ExperimentalMigrationV1StatusResponse;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {}
+
+    pub fn decode(_raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request {})
+    }
 }
 
 pub mod websearch_providers {
@@ -1207,6 +7278,32 @@ pub mod websearch_providers {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[172];
     pub type Response = WebsearchProvidersResponse;
+    pub type Query = crate::generated::requests::LocationQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub query: Query,
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { query: decode_query(raw)? })
+    }
 }
 
 pub mod websearch_query {
@@ -1214,6 +7311,42 @@ pub mod websearch_query {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[173];
     pub type Response = WebsearchQueryResponse;
+    pub type Query = crate::generated::requests::LocationQuery;
+    pub type Body = crate::generated::requests::WebsearchQueryBody;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub query: Query,
+        pub body: Body,
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { query: decode_query(raw)?, body: decode_body(raw)? })
+    }
 }
 
 pub mod experimental_usage_limits {
@@ -1221,6 +7354,32 @@ pub mod experimental_usage_limits {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[174];
     pub type Response = ExperimentalUsageLimitsResponse;
+    pub type Query = crate::generated::requests::LocationQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub query: Query,
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { query: decode_query(raw)? })
+    }
 }
 
 pub mod config_get {
@@ -1228,6 +7387,32 @@ pub mod config_get {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[175];
     pub type Response = Vec<ConfigEntry>;
+    pub type Query = crate::generated::requests::LocationQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub query: Query,
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { query: decode_query(raw)? })
+    }
 }
 
 pub mod config_shells {
@@ -1235,6 +7420,13 @@ pub mod config_shells {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[176];
     pub type Response = Vec<ConfigShellOption>;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {}
+
+    pub fn decode(_raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request {})
+    }
 }
 
 pub mod experimental_config_update {
@@ -1242,6 +7434,24 @@ pub mod experimental_config_update {
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[177];
     pub type Response = ();
+    pub type Body = crate::generated::requests::ConfigPatch;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub body: Body,
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { body: decode_body(raw)? })
+    }
 }
 
 pub static OPERATION_ROUTES: [&Route; 178] = [
@@ -1423,4 +7633,1123 @@ pub static OPERATION_ROUTES: [&Route; 178] = [
     &config_get::ROUTE,
     &config_shells::ROUTE,
     &experimental_config_update::ROUTE,
+];
+
+pub static REQUEST_SLOTS: [crate::request::RequestSlot; 247] = [
+    crate::request::RequestSlot {
+        operation_id: "server.connect",
+        slot: "params",
+        decode: server_connect::render_params,
+    },
+    crate::request::RequestSlot { operation_id: "location.get", slot: "query", decode: location_get::render_query },
+    crate::request::RequestSlot { operation_id: "agent.list", slot: "query", decode: agent_list::render_query },
+    crate::request::RequestSlot { operation_id: "agent.get", slot: "params", decode: agent_get::render_params },
+    crate::request::RequestSlot { operation_id: "agent.get", slot: "query", decode: agent_get::render_query },
+    crate::request::RequestSlot { operation_id: "plugin.list", slot: "query", decode: plugin_list::render_query },
+    crate::request::RequestSlot { operation_id: "plugin.gui", slot: "query", decode: plugin_gui::render_query },
+    crate::request::RequestSlot { operation_id: "plugin.check", slot: "query", decode: plugin_check::render_query },
+    crate::request::RequestSlot { operation_id: "plugin.check", slot: "body", decode: plugin_check::render_body },
+    crate::request::RequestSlot { operation_id: "plugin.update", slot: "query", decode: plugin_update::render_query },
+    crate::request::RequestSlot { operation_id: "plugin.update", slot: "body", decode: plugin_update::render_body },
+    crate::request::RequestSlot { operation_id: "session.list", slot: "query", decode: session_list::render_query },
+    crate::request::RequestSlot { operation_id: "session.create", slot: "body", decode: session_create::render_body },
+    crate::request::RequestSlot {
+        operation_id: "experimental.session.stats",
+        slot: "query",
+        decode: experimental_session_stats::render_query,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.session.import",
+        slot: "body",
+        decode: experimental_session_import::render_body,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.session.export",
+        slot: "params",
+        decode: experimental_session_export::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.session.export",
+        slot: "query",
+        decode: experimental_session_export::render_query,
+    },
+    crate::request::RequestSlot { operation_id: "session.get", slot: "params", decode: session_get::render_params },
+    crate::request::RequestSlot {
+        operation_id: "session.remove",
+        slot: "params",
+        decode: session_remove::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "session.update",
+        slot: "params",
+        decode: session_update::render_params,
+    },
+    crate::request::RequestSlot { operation_id: "session.update", slot: "body", decode: session_update::render_body },
+    crate::request::RequestSlot { operation_id: "session.fork", slot: "params", decode: session_fork::render_params },
+    crate::request::RequestSlot { operation_id: "session.fork", slot: "body", decode: session_fork::render_body },
+    crate::request::RequestSlot {
+        operation_id: "session.switchAgent",
+        slot: "params",
+        decode: session_switch_agent::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "session.switchAgent",
+        slot: "body",
+        decode: session_switch_agent::render_body,
+    },
+    crate::request::RequestSlot {
+        operation_id: "session.switchModel",
+        slot: "params",
+        decode: session_switch_model::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "session.switchModel",
+        slot: "body",
+        decode: session_switch_model::render_body,
+    },
+    crate::request::RequestSlot { operation_id: "session.move", slot: "params", decode: session_move::render_params },
+    crate::request::RequestSlot { operation_id: "session.move", slot: "body", decode: session_move::render_body },
+    crate::request::RequestSlot {
+        operation_id: "session.prompt",
+        slot: "params",
+        decode: session_prompt::render_params,
+    },
+    crate::request::RequestSlot { operation_id: "session.prompt", slot: "body", decode: session_prompt::render_body },
+    crate::request::RequestSlot {
+        operation_id: "session.command",
+        slot: "params",
+        decode: session_command::render_params,
+    },
+    crate::request::RequestSlot { operation_id: "session.command", slot: "body", decode: session_command::render_body },
+    crate::request::RequestSlot {
+        operation_id: "experimental.session.skill",
+        slot: "params",
+        decode: experimental_session_skill::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.session.skill",
+        slot: "body",
+        decode: experimental_session_skill::render_body,
+    },
+    crate::request::RequestSlot {
+        operation_id: "session.synthetic",
+        slot: "params",
+        decode: session_synthetic::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "session.synthetic",
+        slot: "body",
+        decode: session_synthetic::render_body,
+    },
+    crate::request::RequestSlot { operation_id: "session.shell", slot: "params", decode: session_shell::render_params },
+    crate::request::RequestSlot { operation_id: "session.shell", slot: "body", decode: session_shell::render_body },
+    crate::request::RequestSlot {
+        operation_id: "session.compact",
+        slot: "params",
+        decode: session_compact::render_params,
+    },
+    crate::request::RequestSlot { operation_id: "session.compact", slot: "body", decode: session_compact::render_body },
+    crate::request::RequestSlot {
+        operation_id: "experimental.session.wait",
+        slot: "params",
+        decode: experimental_session_wait::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "session.revert.stage",
+        slot: "params",
+        decode: session_revert_stage::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "session.revert.stage",
+        slot: "body",
+        decode: session_revert_stage::render_body,
+    },
+    crate::request::RequestSlot {
+        operation_id: "session.revert.clear",
+        slot: "params",
+        decode: session_revert_clear::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "session.revert.commit",
+        slot: "params",
+        decode: session_revert_commit::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "session.context",
+        slot: "params",
+        decode: session_context::render_params,
+    },
+    crate::request::RequestSlot { operation_id: "session.diff", slot: "params", decode: session_diff::render_params },
+    crate::request::RequestSlot { operation_id: "session.diff", slot: "query", decode: session_diff::render_query },
+    crate::request::RequestSlot {
+        operation_id: "session.inbox.list",
+        slot: "params",
+        decode: session_inbox_list::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "session.inbox.cancel",
+        slot: "params",
+        decode: session_inbox_cancel::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "session.inbox.update",
+        slot: "params",
+        decode: session_inbox_update::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "session.inbox.update",
+        slot: "body",
+        decode: session_inbox_update::render_body,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.session.instructions.entry.list",
+        slot: "params",
+        decode: experimental_session_instructions_entry_list::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.session.instructions.entry.put",
+        slot: "params",
+        decode: experimental_session_instructions_entry_put::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.session.instructions.entry.put",
+        slot: "body",
+        decode: experimental_session_instructions_entry_put::render_body,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.session.instructions.entry.remove",
+        slot: "params",
+        decode: experimental_session_instructions_entry_remove::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "session.generate",
+        slot: "params",
+        decode: session_generate::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "session.generate",
+        slot: "body",
+        decode: session_generate::render_body,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.session.log",
+        slot: "params",
+        decode: experimental_session_log::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.session.log",
+        slot: "query",
+        decode: experimental_session_log::render_query,
+    },
+    crate::request::RequestSlot {
+        operation_id: "session.interrupt",
+        slot: "params",
+        decode: session_interrupt::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "session.interrupt",
+        slot: "query",
+        decode: session_interrupt::render_query,
+    },
+    crate::request::RequestSlot {
+        operation_id: "session.background",
+        slot: "params",
+        decode: session_background::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "session.message.get",
+        slot: "params",
+        decode: session_message_get::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "session.form.list",
+        slot: "params",
+        decode: session_form_list::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "session.form.create",
+        slot: "params",
+        decode: session_form_create::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "session.form.create",
+        slot: "body",
+        decode: session_form_create::render_body,
+    },
+    crate::request::RequestSlot {
+        operation_id: "session.form.get",
+        slot: "params",
+        decode: session_form_get::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "session.form.cancel",
+        slot: "params",
+        decode: session_form_cancel::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "session.form.cancel",
+        slot: "query",
+        decode: session_form_cancel::render_query,
+    },
+    crate::request::RequestSlot {
+        operation_id: "session.form.reply",
+        slot: "params",
+        decode: session_form_reply::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "session.form.reply",
+        slot: "body",
+        decode: session_form_reply::render_body,
+    },
+    crate::request::RequestSlot {
+        operation_id: "session.environment",
+        slot: "params",
+        decode: session_environment::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "session.environment",
+        slot: "body",
+        decode: session_environment::render_body,
+    },
+    crate::request::RequestSlot { operation_id: "session.view", slot: "params", decode: session_view::render_params },
+    crate::request::RequestSlot { operation_id: "session.view", slot: "body", decode: session_view::render_body },
+    crate::request::RequestSlot {
+        operation_id: "session.message.list",
+        slot: "params",
+        decode: session_message_list::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "session.message.list",
+        slot: "query",
+        decode: session_message_list::render_query,
+    },
+    crate::request::RequestSlot { operation_id: "model.list", slot: "query", decode: model_list::render_query },
+    crate::request::RequestSlot { operation_id: "model.default", slot: "query", decode: model_default::render_query },
+    crate::request::RequestSlot {
+        operation_id: "experimental.generate.text",
+        slot: "body",
+        decode: experimental_generate_text::render_body,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.generate.textLegacy",
+        slot: "body",
+        decode: experimental_generate_text_legacy::render_body,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.generate.image",
+        slot: "body",
+        decode: experimental_generate_image::render_body,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.generate.video.create",
+        slot: "body",
+        decode: experimental_generate_video_create::render_body,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.generate.video.get",
+        slot: "params",
+        decode: experimental_generate_video_get::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.generate.decisions",
+        slot: "body",
+        decode: experimental_generate_decisions::render_body,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.voice.session",
+        slot: "body",
+        decode: experimental_voice_session::render_body,
+    },
+    crate::request::RequestSlot { operation_id: "provider.list", slot: "query", decode: provider_list::render_query },
+    crate::request::RequestSlot { operation_id: "provider.get", slot: "params", decode: provider_get::render_params },
+    crate::request::RequestSlot { operation_id: "provider.get", slot: "query", decode: provider_get::render_query },
+    crate::request::RequestSlot {
+        operation_id: "integration.list",
+        slot: "query",
+        decode: integration_list::render_query,
+    },
+    crate::request::RequestSlot {
+        operation_id: "integration.get",
+        slot: "params",
+        decode: integration_get::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "integration.get",
+        slot: "query",
+        decode: integration_get::render_query,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.integration.wellknown.add",
+        slot: "query",
+        decode: experimental_integration_wellknown_add::render_query,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.integration.wellknown.add",
+        slot: "body",
+        decode: experimental_integration_wellknown_add::render_body,
+    },
+    crate::request::RequestSlot {
+        operation_id: "integration.connect.key",
+        slot: "params",
+        decode: integration_connect_key::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "integration.connect.key",
+        slot: "query",
+        decode: integration_connect_key::render_query,
+    },
+    crate::request::RequestSlot {
+        operation_id: "integration.connect.key",
+        slot: "body",
+        decode: integration_connect_key::render_body,
+    },
+    crate::request::RequestSlot {
+        operation_id: "integration.connect.external",
+        slot: "params",
+        decode: integration_connect_external::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "integration.connect.external",
+        slot: "query",
+        decode: integration_connect_external::render_query,
+    },
+    crate::request::RequestSlot {
+        operation_id: "integration.connect.external",
+        slot: "body",
+        decode: integration_connect_external::render_body,
+    },
+    crate::request::RequestSlot {
+        operation_id: "integration.oauth.connect",
+        slot: "params",
+        decode: integration_oauth_connect::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "integration.oauth.connect",
+        slot: "query",
+        decode: integration_oauth_connect::render_query,
+    },
+    crate::request::RequestSlot {
+        operation_id: "integration.oauth.connect",
+        slot: "body",
+        decode: integration_oauth_connect::render_body,
+    },
+    crate::request::RequestSlot {
+        operation_id: "integration.oauth.status",
+        slot: "params",
+        decode: integration_oauth_status::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "integration.oauth.status",
+        slot: "query",
+        decode: integration_oauth_status::render_query,
+    },
+    crate::request::RequestSlot {
+        operation_id: "integration.oauth.cancel",
+        slot: "params",
+        decode: integration_oauth_cancel::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "integration.oauth.cancel",
+        slot: "query",
+        decode: integration_oauth_cancel::render_query,
+    },
+    crate::request::RequestSlot {
+        operation_id: "integration.oauth.complete",
+        slot: "params",
+        decode: integration_oauth_complete::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "integration.oauth.complete",
+        slot: "query",
+        decode: integration_oauth_complete::render_query,
+    },
+    crate::request::RequestSlot {
+        operation_id: "integration.oauth.complete",
+        slot: "body",
+        decode: integration_oauth_complete::render_body,
+    },
+    crate::request::RequestSlot {
+        operation_id: "integration.command.connect",
+        slot: "params",
+        decode: integration_command_connect::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "integration.command.connect",
+        slot: "query",
+        decode: integration_command_connect::render_query,
+    },
+    crate::request::RequestSlot {
+        operation_id: "integration.command.connect",
+        slot: "body",
+        decode: integration_command_connect::render_body,
+    },
+    crate::request::RequestSlot {
+        operation_id: "integration.command.status",
+        slot: "params",
+        decode: integration_command_status::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "integration.command.status",
+        slot: "query",
+        decode: integration_command_status::render_query,
+    },
+    crate::request::RequestSlot {
+        operation_id: "integration.command.cancel",
+        slot: "params",
+        decode: integration_command_cancel::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "integration.command.cancel",
+        slot: "query",
+        decode: integration_command_cancel::render_query,
+    },
+    crate::request::RequestSlot { operation_id: "mcp.list", slot: "query", decode: mcp_list::render_query },
+    crate::request::RequestSlot {
+        operation_id: "experimental.mcp.add",
+        slot: "params",
+        decode: experimental_mcp_add::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.mcp.add",
+        slot: "query",
+        decode: experimental_mcp_add::render_query,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.mcp.add",
+        slot: "body",
+        decode: experimental_mcp_add::render_body,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.mcp.remove",
+        slot: "params",
+        decode: experimental_mcp_remove::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.mcp.remove",
+        slot: "query",
+        decode: experimental_mcp_remove::render_query,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.mcp.connect",
+        slot: "params",
+        decode: experimental_mcp_connect::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.mcp.connect",
+        slot: "query",
+        decode: experimental_mcp_connect::render_query,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.mcp.disconnect",
+        slot: "params",
+        decode: experimental_mcp_disconnect::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.mcp.disconnect",
+        slot: "query",
+        decode: experimental_mcp_disconnect::render_query,
+    },
+    crate::request::RequestSlot {
+        operation_id: "mcp.resource.catalog",
+        slot: "query",
+        decode: mcp_resource_catalog::render_query,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.mcp.client.token",
+        slot: "query",
+        decode: experimental_mcp_client_token::render_query,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.mcp.client.token",
+        slot: "headers",
+        decode: experimental_mcp_client_token::render_headers,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.mcp.client",
+        slot: "query",
+        decode: experimental_mcp_client::render_query,
+    },
+    crate::request::RequestSlot {
+        operation_id: "credential.create",
+        slot: "body",
+        decode: credential_create::render_body,
+    },
+    crate::request::RequestSlot {
+        operation_id: "credential.update",
+        slot: "params",
+        decode: credential_update::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "credential.update",
+        slot: "body",
+        decode: credential_update::render_body,
+    },
+    crate::request::RequestSlot {
+        operation_id: "credential.remove",
+        slot: "params",
+        decode: credential_remove::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "credential.activate",
+        slot: "params",
+        decode: credential_activate::render_params,
+    },
+    crate::request::RequestSlot { operation_id: "project.list", slot: "query", decode: project_list::render_query },
+    crate::request::RequestSlot {
+        operation_id: "project.update",
+        slot: "params",
+        decode: project_update::render_params,
+    },
+    crate::request::RequestSlot { operation_id: "project.update", slot: "body", decode: project_update::render_body },
+    crate::request::RequestSlot { operation_id: "form.list", slot: "query", decode: form_list::render_query },
+    crate::request::RequestSlot {
+        operation_id: "permission.request.list",
+        slot: "query",
+        decode: permission_request_list::render_query,
+    },
+    crate::request::RequestSlot {
+        operation_id: "permission.saved.list",
+        slot: "query",
+        decode: permission_saved_list::render_query,
+    },
+    crate::request::RequestSlot {
+        operation_id: "permission.saved.update",
+        slot: "params",
+        decode: permission_saved_update::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "permission.saved.update",
+        slot: "body",
+        decode: permission_saved_update::render_body,
+    },
+    crate::request::RequestSlot {
+        operation_id: "permission.saved.remove",
+        slot: "params",
+        decode: permission_saved_remove::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "session.permission.create",
+        slot: "params",
+        decode: session_permission_create::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "session.permission.create",
+        slot: "body",
+        decode: session_permission_create::render_body,
+    },
+    crate::request::RequestSlot {
+        operation_id: "session.permission.list",
+        slot: "params",
+        decode: session_permission_list::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "session.permission.get",
+        slot: "params",
+        decode: session_permission_get::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "session.permission.reply",
+        slot: "params",
+        decode: session_permission_reply::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "session.permission.reply",
+        slot: "body",
+        decode: session_permission_reply::render_body,
+    },
+    crate::request::RequestSlot { operation_id: "fs.read", slot: "query", decode: fs_read::render_query },
+    crate::request::RequestSlot { operation_id: "fs.list", slot: "query", decode: fs_list::render_query },
+    crate::request::RequestSlot { operation_id: "fs.find", slot: "query", decode: fs_find::render_query },
+    crate::request::RequestSlot {
+        operation_id: "experimental.fs.write",
+        slot: "query",
+        decode: experimental_fs_write::render_query,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.fs.watch",
+        slot: "query",
+        decode: experimental_fs_watch::render_query,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.fs.watch",
+        slot: "body",
+        decode: experimental_fs_watch::render_body,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.fs.unwatch",
+        slot: "query",
+        decode: experimental_fs_unwatch::render_query,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.fs.unwatch",
+        slot: "body",
+        decode: experimental_fs_unwatch::render_body,
+    },
+    crate::request::RequestSlot { operation_id: "command.list", slot: "query", decode: command_list::render_query },
+    crate::request::RequestSlot { operation_id: "skill.list", slot: "query", decode: skill_list::render_query },
+    crate::request::RequestSlot { operation_id: "rpc.call", slot: "params", decode: rpc_call::render_params },
+    crate::request::RequestSlot { operation_id: "rpc.call", slot: "query", decode: rpc_call::render_query },
+    crate::request::RequestSlot { operation_id: "rpc.call", slot: "body", decode: rpc_call::render_body },
+    crate::request::RequestSlot {
+        operation_id: "event.subscribe",
+        slot: "query",
+        decode: event_subscribe::render_query,
+    },
+    crate::request::RequestSlot { operation_id: "pty.list", slot: "query", decode: pty_list::render_query },
+    crate::request::RequestSlot { operation_id: "pty.create", slot: "query", decode: pty_create::render_query },
+    crate::request::RequestSlot { operation_id: "pty.create", slot: "body", decode: pty_create::render_body },
+    crate::request::RequestSlot { operation_id: "pty.get", slot: "params", decode: pty_get::render_params },
+    crate::request::RequestSlot { operation_id: "pty.get", slot: "query", decode: pty_get::render_query },
+    crate::request::RequestSlot { operation_id: "pty.update", slot: "params", decode: pty_update::render_params },
+    crate::request::RequestSlot { operation_id: "pty.update", slot: "query", decode: pty_update::render_query },
+    crate::request::RequestSlot { operation_id: "pty.update", slot: "body", decode: pty_update::render_body },
+    crate::request::RequestSlot { operation_id: "pty.remove", slot: "params", decode: pty_remove::render_params },
+    crate::request::RequestSlot { operation_id: "pty.remove", slot: "query", decode: pty_remove::render_query },
+    crate::request::RequestSlot {
+        operation_id: "pty.connect.token",
+        slot: "params",
+        decode: pty_connect_token::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "pty.connect.token",
+        slot: "query",
+        decode: pty_connect_token::render_query,
+    },
+    crate::request::RequestSlot {
+        operation_id: "pty.connect.token",
+        slot: "headers",
+        decode: pty_connect_token::render_headers,
+    },
+    crate::request::RequestSlot { operation_id: "pty.connect", slot: "params", decode: pty_connect::render_params },
+    crate::request::RequestSlot {
+        operation_id: "experimental.persistentPty.read",
+        slot: "params",
+        decode: experimental_persistent_pty_read::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.persistentPty.read",
+        slot: "query",
+        decode: experimental_persistent_pty_read::render_query,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.persistentPty.list",
+        slot: "params",
+        decode: experimental_persistent_pty_list::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.persistentPty.create",
+        slot: "params",
+        decode: experimental_persistent_pty_create::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.persistentPty.create",
+        slot: "body",
+        decode: experimental_persistent_pty_create::render_body,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.persistentPty.get",
+        slot: "params",
+        decode: experimental_persistent_pty_get::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.persistentPty.update",
+        slot: "params",
+        decode: experimental_persistent_pty_update::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.persistentPty.update",
+        slot: "body",
+        decode: experimental_persistent_pty_update::render_body,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.persistentPty.remove",
+        slot: "params",
+        decode: experimental_persistent_pty_remove::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.persistentPty.snapshot",
+        slot: "params",
+        decode: experimental_persistent_pty_snapshot::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.persistentPty.connectToken",
+        slot: "params",
+        decode: experimental_persistent_pty_connect_token::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.persistentPty.connectToken",
+        slot: "headers",
+        decode: experimental_persistent_pty_connect_token::render_headers,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.persistentPty.connect",
+        slot: "params",
+        decode: experimental_persistent_pty_connect::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.media.get",
+        slot: "params",
+        decode: experimental_media_get::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.blob.get",
+        slot: "params",
+        decode: experimental_blob_get::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.automation.create",
+        slot: "body",
+        decode: experimental_automation_create::render_body,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.automation.list",
+        slot: "query",
+        decode: experimental_automation_list::render_query,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.automation.get",
+        slot: "params",
+        decode: experimental_automation_get::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.automation.delete",
+        slot: "params",
+        decode: experimental_automation_delete::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.automation.pause",
+        slot: "params",
+        decode: experimental_automation_pause::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.automation.resume",
+        slot: "params",
+        decode: experimental_automation_resume::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.artifacts.providers",
+        slot: "query",
+        decode: experimental_artifacts_providers::render_query,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.artifacts.list",
+        slot: "query",
+        decode: experimental_artifacts_list::render_query,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.artifacts.create",
+        slot: "query",
+        decode: experimental_artifacts_create::render_query,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.artifacts.create",
+        slot: "body",
+        decode: experimental_artifacts_create::render_body,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.artifacts.get",
+        slot: "params",
+        decode: experimental_artifacts_get::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.artifacts.get",
+        slot: "query",
+        decode: experimental_artifacts_get::render_query,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.artifacts.update",
+        slot: "params",
+        decode: experimental_artifacts_update::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.artifacts.update",
+        slot: "query",
+        decode: experimental_artifacts_update::render_query,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.artifacts.update",
+        slot: "body",
+        decode: experimental_artifacts_update::render_body,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.artifacts.delete",
+        slot: "params",
+        decode: experimental_artifacts_delete::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.artifacts.delete",
+        slot: "query",
+        decode: experimental_artifacts_delete::render_query,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.artifacts.view",
+        slot: "params",
+        decode: experimental_artifacts_view::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.artifacts.view",
+        slot: "query",
+        decode: experimental_artifacts_view::render_query,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.job.list",
+        slot: "query",
+        decode: experimental_job_list::render_query,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.job.cancel",
+        slot: "params",
+        decode: experimental_job_cancel::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.machine.add",
+        slot: "body",
+        decode: experimental_machine_add::render_body,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.machine.remove",
+        slot: "params",
+        decode: experimental_machine_remove::render_params,
+    },
+    crate::request::RequestSlot { operation_id: "shell.list", slot: "query", decode: shell_list::render_query },
+    crate::request::RequestSlot { operation_id: "shell.create", slot: "query", decode: shell_create::render_query },
+    crate::request::RequestSlot { operation_id: "shell.create", slot: "body", decode: shell_create::render_body },
+    crate::request::RequestSlot { operation_id: "shell.get", slot: "params", decode: shell_get::render_params },
+    crate::request::RequestSlot { operation_id: "shell.get", slot: "query", decode: shell_get::render_query },
+    crate::request::RequestSlot { operation_id: "shell.remove", slot: "params", decode: shell_remove::render_params },
+    crate::request::RequestSlot { operation_id: "shell.remove", slot: "query", decode: shell_remove::render_query },
+    crate::request::RequestSlot { operation_id: "shell.output", slot: "params", decode: shell_output::render_params },
+    crate::request::RequestSlot { operation_id: "shell.output", slot: "query", decode: shell_output::render_query },
+    crate::request::RequestSlot { operation_id: "reference.list", slot: "query", decode: reference_list::render_query },
+    crate::request::RequestSlot { operation_id: "worktree.list", slot: "query", decode: worktree_list::render_query },
+    crate::request::RequestSlot { operation_id: "worktree.create", slot: "body", decode: worktree_create::render_body },
+    crate::request::RequestSlot { operation_id: "worktree.remove", slot: "body", decode: worktree_remove::render_body },
+    crate::request::RequestSlot {
+        operation_id: "worktree.refresh",
+        slot: "body",
+        decode: worktree_refresh::render_body,
+    },
+    crate::request::RequestSlot { operation_id: "vcs.init", slot: "query", decode: vcs_init::render_query },
+    crate::request::RequestSlot { operation_id: "vcs.get", slot: "query", decode: vcs_get::render_query },
+    crate::request::RequestSlot { operation_id: "vcs.base", slot: "query", decode: vcs_base::render_query },
+    crate::request::RequestSlot { operation_id: "vcs.status", slot: "query", decode: vcs_status::render_query },
+    crate::request::RequestSlot {
+        operation_id: "vcs.branch.list",
+        slot: "query",
+        decode: vcs_branch_list::render_query,
+    },
+    crate::request::RequestSlot { operation_id: "vcs.diff", slot: "query", decode: vcs_diff::render_query },
+    crate::request::RequestSlot {
+        operation_id: "debug.heapDump",
+        slot: "query",
+        decode: debug_heap_dump::render_query,
+    },
+    crate::request::RequestSlot {
+        operation_id: "debug.location.evict",
+        slot: "query",
+        decode: debug_location_evict::render_query,
+    },
+    crate::request::RequestSlot {
+        operation_id: "websearch.providers",
+        slot: "query",
+        decode: websearch_providers::render_query,
+    },
+    crate::request::RequestSlot {
+        operation_id: "websearch.query",
+        slot: "query",
+        decode: websearch_query::render_query,
+    },
+    crate::request::RequestSlot { operation_id: "websearch.query", slot: "body", decode: websearch_query::render_body },
+    crate::request::RequestSlot {
+        operation_id: "experimental.usage.limits",
+        slot: "query",
+        decode: experimental_usage_limits::render_query,
+    },
+    crate::request::RequestSlot { operation_id: "config.get", slot: "query", decode: config_get::render_query },
+    crate::request::RequestSlot {
+        operation_id: "experimental.config.update",
+        slot: "body",
+        decode: experimental_config_update::render_body,
+    },
+];
+
+pub static REQUEST_MANIFEST: [(&str, &[&str]); 178] = [
+    ("server.info", &[]),
+    ("server.pair", &[]),
+    ("server.connect", &["params"]),
+    ("location.get", &["query"]),
+    ("location.reload", &[]),
+    ("agent.list", &["query"]),
+    ("agent.get", &["params", "query"]),
+    ("plugin.list", &["query"]),
+    ("plugin.gui", &["query"]),
+    ("plugin.check", &["query", "body"]),
+    ("plugin.update", &["query", "body"]),
+    ("session.list", &["query"]),
+    ("session.create", &["body"]),
+    ("experimental.session.stats", &["query"]),
+    ("experimental.session.import", &["body"]),
+    ("experimental.session.export", &["params", "query"]),
+    ("session.active", &[]),
+    ("session.get", &["params"]),
+    ("session.remove", &["params"]),
+    ("session.update", &["params", "body"]),
+    ("session.fork", &["params", "body"]),
+    ("session.switchAgent", &["params", "body"]),
+    ("session.switchModel", &["params", "body"]),
+    ("session.move", &["params", "body"]),
+    ("session.prompt", &["params", "body"]),
+    ("session.command", &["params", "body"]),
+    ("experimental.session.skill", &["params", "body"]),
+    ("session.synthetic", &["params", "body"]),
+    ("session.shell", &["params", "body"]),
+    ("session.compact", &["params", "body"]),
+    ("experimental.session.wait", &["params"]),
+    ("session.revert.stage", &["params", "body"]),
+    ("session.revert.clear", &["params"]),
+    ("session.revert.commit", &["params"]),
+    ("session.context", &["params"]),
+    ("session.diff", &["params", "query"]),
+    ("session.inbox.list", &["params"]),
+    ("session.inbox.cancel", &["params"]),
+    ("session.inbox.update", &["params", "body"]),
+    ("experimental.session.instructions.entry.list", &["params"]),
+    ("experimental.session.instructions.entry.put", &["params", "body"]),
+    ("experimental.session.instructions.entry.remove", &["params"]),
+    ("session.generate", &["params", "body"]),
+    ("experimental.session.log", &["params", "query"]),
+    ("session.interrupt", &["params", "query"]),
+    ("session.background", &["params"]),
+    ("session.message.get", &["params"]),
+    ("session.form.list", &["params"]),
+    ("session.form.create", &["params", "body"]),
+    ("session.form.get", &["params"]),
+    ("session.form.cancel", &["params", "query"]),
+    ("session.form.reply", &["params", "body"]),
+    ("session.environment", &["params", "body"]),
+    ("session.view", &["params", "body"]),
+    ("session.message.list", &["params", "query"]),
+    ("model.list", &["query"]),
+    ("model.default", &["query"]),
+    ("experimental.generate.text", &["body"]),
+    ("experimental.generate.textLegacy", &["body"]),
+    ("experimental.generate.image", &["body"]),
+    ("experimental.generate.video.create", &["body"]),
+    ("experimental.generate.video.get", &["params"]),
+    ("experimental.generate.decisions", &["body"]),
+    ("experimental.voice.models", &[]),
+    ("experimental.voice.session", &["body"]),
+    ("provider.list", &["query"]),
+    ("provider.get", &["params", "query"]),
+    ("integration.list", &["query"]),
+    ("integration.get", &["params", "query"]),
+    ("experimental.integration.wellknown.add", &["query", "body"]),
+    ("integration.connect.key", &["params", "query", "body"]),
+    ("integration.connect.external", &["params", "query", "body"]),
+    ("integration.oauth.connect", &["params", "query", "body"]),
+    ("integration.oauth.status", &["params", "query"]),
+    ("integration.oauth.cancel", &["params", "query"]),
+    ("integration.oauth.complete", &["params", "query", "body"]),
+    ("integration.command.connect", &["params", "query", "body"]),
+    ("integration.command.status", &["params", "query"]),
+    ("integration.command.cancel", &["params", "query"]),
+    ("mcp.list", &["query"]),
+    ("experimental.mcp.add", &["params", "query", "body"]),
+    ("experimental.mcp.remove", &["params", "query"]),
+    ("experimental.mcp.connect", &["params", "query"]),
+    ("experimental.mcp.disconnect", &["params", "query"]),
+    ("mcp.resource.catalog", &["query"]),
+    ("experimental.mcp.client.token", &["query", "headers"]),
+    ("experimental.mcp.client", &["query"]),
+    ("credential.list", &[]),
+    ("credential.create", &["body"]),
+    ("credential.update", &["params", "body"]),
+    ("credential.remove", &["params"]),
+    ("credential.activate", &["params"]),
+    ("project.list", &["query"]),
+    ("project.update", &["params", "body"]),
+    ("form.list", &["query"]),
+    ("permission.request.list", &["query"]),
+    ("permission.saved.list", &["query"]),
+    ("permission.saved.update", &["params", "body"]),
+    ("permission.saved.remove", &["params"]),
+    ("session.permission.create", &["params", "body"]),
+    ("session.permission.list", &["params"]),
+    ("session.permission.get", &["params"]),
+    ("session.permission.reply", &["params", "body"]),
+    ("fs.read", &["query"]),
+    ("fs.list", &["query"]),
+    ("fs.find", &["query"]),
+    ("experimental.fs.write", &["query"]),
+    ("experimental.fs.watch", &["query", "body"]),
+    ("experimental.fs.unwatch", &["query", "body"]),
+    ("command.list", &["query"]),
+    ("skill.list", &["query"]),
+    ("rpc.call", &["params", "query", "body"]),
+    ("event.subscribe", &["query"]),
+    ("pty.list", &["query"]),
+    ("pty.create", &["query", "body"]),
+    ("pty.get", &["params", "query"]),
+    ("pty.update", &["params", "query", "body"]),
+    ("pty.remove", &["params", "query"]),
+    ("pty.connect.token", &["params", "query", "headers"]),
+    ("pty.connect", &["params"]),
+    ("experimental.persistentPty.read", &["params", "query"]),
+    ("experimental.persistentPty.list", &["params"]),
+    ("experimental.persistentPty.create", &["params", "body"]),
+    ("experimental.persistentPty.shutdown", &[]),
+    ("experimental.persistentPty.handoff", &[]),
+    ("experimental.persistentPty.get", &["params"]),
+    ("experimental.persistentPty.update", &["params", "body"]),
+    ("experimental.persistentPty.remove", &["params"]),
+    ("experimental.persistentPty.snapshot", &["params"]),
+    ("experimental.persistentPty.connectToken", &["params", "headers"]),
+    ("experimental.persistentPty.connect", &["params"]),
+    ("experimental.media.get", &["params"]),
+    ("experimental.blob.get", &["params"]),
+    ("experimental.automation.create", &["body"]),
+    ("experimental.automation.list", &["query"]),
+    ("experimental.automation.get", &["params"]),
+    ("experimental.automation.delete", &["params"]),
+    ("experimental.automation.pause", &["params"]),
+    ("experimental.automation.resume", &["params"]),
+    ("experimental.artifacts.providers", &["query"]),
+    ("experimental.artifacts.list", &["query"]),
+    ("experimental.artifacts.create", &["query", "body"]),
+    ("experimental.artifacts.get", &["params", "query"]),
+    ("experimental.artifacts.update", &["params", "query", "body"]),
+    ("experimental.artifacts.delete", &["params", "query"]),
+    ("experimental.artifacts.view", &["params", "query"]),
+    ("experimental.job.list", &["query"]),
+    ("experimental.job.cancel", &["params"]),
+    ("experimental.machine.link", &[]),
+    ("experimental.machine.list", &[]),
+    ("experimental.machine.add", &["body"]),
+    ("experimental.machine.remove", &["params"]),
+    ("shell.list", &["query"]),
+    ("shell.create", &["query", "body"]),
+    ("shell.get", &["params", "query"]),
+    ("shell.remove", &["params", "query"]),
+    ("shell.output", &["params", "query"]),
+    ("reference.list", &["query"]),
+    ("worktree.list", &["query"]),
+    ("worktree.create", &["body"]),
+    ("worktree.remove", &["body"]),
+    ("worktree.refresh", &["body"]),
+    ("vcs.init", &["query"]),
+    ("vcs.get", &["query"]),
+    ("vcs.base", &["query"]),
+    ("vcs.status", &["query"]),
+    ("vcs.branch.list", &["query"]),
+    ("vcs.diff", &["query"]),
+    ("debug.heapDump", &["query"]),
+    ("debug.location.list", &[]),
+    ("debug.location.evict", &["query"]),
+    ("experimental.migration.v1.status", &[]),
+    ("websearch.providers", &["query"]),
+    ("websearch.query", &["query", "body"]),
+    ("experimental.usage.limits", &["query"]),
+    ("config.get", &["query"]),
+    ("config.shells", &[]),
+    ("experimental.config.update", &["body"]),
 ];

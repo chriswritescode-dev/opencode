@@ -185,7 +185,10 @@ impl crate::codec::Encode for ${name} {
 
   private referenceBody(ref: string, name: string, target: R) {
     const resolved = this.deref(target)
-    if (resolved._tag === "Objects" && (resolved.indexSignatures.length === 0 || resolved.propertySignatures.length > 0)) {
+    if (
+      resolved._tag === "Objects" &&
+      (resolved.indexSignatures.length === 0 || resolved.propertySignatures.length > 0)
+    ) {
       this.objects(resolved, name, name)
       return
     }
@@ -231,13 +234,23 @@ impl crate::codec::Encode for ${name} {
 }`)
   }
 
+  private trimmed(r: SchemaRepresentation.String | SchemaRepresentation.TemplateLiteral, hint: string) {
+    const name = this.name(hint)
+    this.newtype(name, r)
+    return name
+  }
+
   private newtype(
     name: string,
     r: SchemaRepresentation.String | SchemaRepresentation.TemplateLiteral,
     transform?: "trim",
   ) {
-    const conditions = this.conditions(r.checks, r, "value.as_str()")
-    if (transform === "trim") {
+    const filters = this.filters(r.checks)
+    const trimmed =
+      transform === "trim" || filters.some((filter) => filter.representation?.id === "effect/schema/isTrimmed")
+    const checks = trimmed ? withoutTrim(r.checks) : r.checks
+    const conditions = this.conditions(checks, r, "value.as_str()")
+    if (trimmed) {
       this.push(`#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ${name}(pub String);
 
@@ -415,10 +428,16 @@ ${encodes.join("\n")}
     if (rest.length === 0) return this.fail(property.type, "a field that is only null")
     const single = rest.length === 1 ? rest[0]! : undefined
     const source = single ?? (property.type as R)
+    const trimmed =
+      single !== undefined &&
+      ["String", "TemplateLiteral"].includes(this.tag(single)) &&
+      this.filters(checksOf(single)).some((filter) => filter.representation?.id === "effect/schema/isTrimmed")
+    const trimName = trimmed ? this.trimmed(single as SchemaRepresentation.String, hint) : undefined
     const inner =
-      single === undefined
+      trimName ??
+      (single === undefined
         ? this.render({ ...(property.type as SchemaRepresentation.Union), types: rest }, hint)
-        : this.render(withoutChecks(single), hint)
+        : this.render(withoutChecks(single), hint))
     const checkedValue = (() => {
       if (single === undefined) return "*value"
       const tag = this.tag(single)
@@ -426,7 +445,7 @@ ${encodes.join("\n")}
       if (tag === "Arrays") return "value.as_slice()"
       return "*value"
     })()
-    const conditions = single === undefined ? [] : this.conditions(checksOf(single), single, checkedValue)
+    const conditions = single === undefined || trimmed ? [] : this.conditions(checksOf(single), single, checkedValue)
     const closure = conditions.length > 0 ? this.closure(conditions, inner) : ""
     const checked = closure !== ""
 
@@ -897,6 +916,24 @@ function checksOf(r: R): ReadonlyArray<Check> {
 function withoutChecks(r: R): R {
   if (!("checks" in r) || r.checks.length === 0) return r
   return { ...r, checks: [] } as R
+}
+
+function withoutTrim(checks: ReadonlyArray<Check>): ReadonlyArray<Check> {
+  const result: Array<Check> = []
+  for (const check of checks) {
+    if (check._tag !== "FilterGroup") {
+      if (check.representation?.id !== "effect/schema/isTrimmed") result.push(check)
+      continue
+    }
+    const nested = withoutTrim(check.checks)
+    if (nested.length === 0) continue
+    if (nested.length === check.checks.length) {
+      result.push(check)
+      continue
+    }
+    result.push({ ...check, checks: nested } as Check)
+  }
+  return result
 }
 
 function uniqueVariants(names: ReadonlyArray<string>) {

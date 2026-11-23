@@ -1,7 +1,9 @@
 mod corpus;
+mod coverage;
 mod errors;
 mod events;
 mod ids;
 mod openapi;
+mod requests;
 mod responses;
 mod routes;

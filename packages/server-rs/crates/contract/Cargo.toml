@@ -14,6 +14,7 @@ workspace = true
 opencode-api-types.workspace = true
 regex-lite.workspace = true
 serde_json.workspace = true
+url.workspace = true
 
 [[test]]
 name = "all"

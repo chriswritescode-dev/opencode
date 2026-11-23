@@ -53,6 +53,10 @@ export type IdRoot = {
 
 export type ResponseRoot = { operationId: string; success: Route["success"]; schema: Schema.Top }
 
+export type RequestSlotName = "params" | "query" | "headers" | "body"
+
+export type RequestRoot = { operationId: string; slot: RequestSlotName; schema: Schema.Top }
+
 type DurableDefinition = Schema.Top & {
   readonly type: string
   readonly durable: { readonly version: number; readonly aggregate: string }
@@ -82,14 +86,16 @@ export async function contractEvents(): Promise<{
     return { type, identifier: SchemaAST.resolveIdentifier(member) ?? type, schema: Schema.make(member) }
   })
 
-  const durable = [...(eventManifest.Durable as ReadonlyMap<string, DurableDefinition>).entries()].map(([key, value]) => ({
-    key,
-    type: value.type,
-    identifier: SchemaAST.resolveIdentifier(value.ast) ?? value.type,
-    version: value.durable.version,
-    aggregate: value.durable.aggregate,
-    schema: value,
-  }))
+  const durable = [...(eventManifest.Durable as ReadonlyMap<string, DurableDefinition>).entries()].map(
+    ([key, value]) => ({
+      key,
+      type: value.type,
+      identifier: SchemaAST.resolveIdentifier(value.ast) ?? value.type,
+      version: value.durable.version,
+      aggregate: value.durable.aggregate,
+      schema: value,
+    }),
+  )
 
   const synced = eventType(eventLog.Synced.ast)
   if (synced === undefined) throw new Error("contract: log.synced has no type tag")
@@ -277,7 +283,9 @@ export async function contractRoutes(): Promise<Array<Route>> {
   return routes
 }
 
-export async function contractResponses(events: Awaited<ReturnType<typeof contractEvents>>): Promise<Array<ResponseRoot>> {
+export async function contractResponses(
+  events: Awaited<ReturnType<typeof contractEvents>>,
+): Promise<Array<ResponseRoot>> {
   const routes = await contractRoutes()
   const kinds = new Map(routes.map((route) => [route.operationId, route.success]))
   const responses = new Map<string, ResponseRoot>()
@@ -290,14 +298,37 @@ export async function contractResponses(events: Awaited<ReturnType<typeof contra
       const first = [...endpoint.success][0]
       if (first === undefined) throw new Error(`contract: ${operationId} has no success schema`)
       if (success === "Json" || success === "Data") responses.set(operationId, { operationId, success, schema: first })
-      if (success === "Sse")
-        responses.set(operationId, { operationId, success, schema: sseResponse(first, events) })
+      if (success === "Sse") responses.set(operationId, { operationId, success, schema: sseResponse(first, events) })
     },
   })
   return routes.flatMap((route) => {
     const response = responses.get(route.operationId)
     return response === undefined ? [] : [response]
   })
+}
+
+export async function contractRequests(): Promise<Array<RequestRoot>> {
+  const roots: Array<RequestRoot> = []
+  reflect({
+    onEndpoint(reflection) {
+      const { endpoint } = reflection
+      const operationId = operationIdOf(reflection)
+      if (endpoint.params !== undefined) roots.push({ operationId, slot: "params", schema: endpoint.params })
+      if (endpoint.query !== undefined)
+        roots.push({ operationId, slot: "query", schema: Schema.toCodecArrayFromSingle(endpoint.query) })
+      if (endpoint.headers !== undefined) roots.push({ operationId, slot: "headers", schema: endpoint.headers })
+      const body = [...endpoint.payload].find(([contentType]) => contentType === "application/json")
+      if (body === undefined) return
+      const [schema] = body[1].schemas
+      if (schema === undefined) throw new Error(`contract: ${operationId} has a JSON payload without a schema`)
+      roots.push({
+        operationId,
+        slot: "body",
+        schema: body[1].schemas.length === 1 ? schema : Schema.Union(body[1].schemas),
+      })
+    },
+  })
+  return roots
 }
 
 function sseResponse(schema: Schema.Top, events: Awaited<ReturnType<typeof contractEvents>>) {

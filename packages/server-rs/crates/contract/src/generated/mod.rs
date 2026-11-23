@@ -4,6 +4,7 @@ mod errors;
 mod events;
 mod ids;
 pub mod operations;
+pub mod requests;
 mod routes;
 mod types;
 

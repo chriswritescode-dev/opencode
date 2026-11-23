@@ -646,6 +646,7 @@ dependencies = [
  "opencode-api-types",
  "regex-lite",
  "serde_json",
+ "url",
 ]
 
 [[package]]

@@ -1,10 +1,20 @@
 import { mkdir } from "node:fs/promises"
 import { Arbitrary, Effect, Schema } from "effect"
-import { contractErrors, contractEvents, contractResponses } from "../contract/model"
+import {
+  contractErrors,
+  contractEvents,
+  contractRequests,
+  contractResponses,
+  type RequestRoot,
+} from "../contract/model"
+import { upstreamTree } from "../upstream"
 
 const root = new URL("../..", import.meta.url).pathname
 const file = `${root}crates/contract/tests/corpus/schemas.json`
 const eventsFile = `${root}crates/contract/tests/corpus/events.json`
+const requestsFile = `${root}crates/contract/tests/corpus/requests.json`
+const tree = await upstreamTree()
+const queryString = await import(`${tree}/node_modules/effect/src/http/FindMyWay/internal/queryString.ts`)
 
 type JsonCodec = Schema.Codec<unknown, unknown>
 type Sample = { input: string; expected: string }
@@ -52,6 +62,30 @@ await Bun.write(
     null,
     2,
   )}\n`,
+)
+
+const requestRoots = await contractRequests()
+const requestCorpus: Record<
+  string,
+  Partial<Record<RequestRoot["slot"], { valid: Array<RequestSample>; invalid: Array<RequestRaw> }>>
+> = {}
+let requestValid = 0
+let requestInvalid = 0
+let requestSkipped = 0
+for (const request of requestRoots) {
+  const corpus = await requestSlotCorpus(request)
+  requestValid += corpus.valid.length
+  requestInvalid += corpus.invalid.length
+  requestSkipped += corpus.skipped
+  const operation = (requestCorpus[request.operationId] ??= {})
+  operation[request.slot] = { valid: corpus.valid, invalid: corpus.invalid }
+}
+const requestLines = Object.keys(requestCorpus)
+  .toSorted()
+  .map((operation) => `${JSON.stringify(operation)}:${JSON.stringify(requestCorpus[operation])}`)
+await Bun.write(requestsFile, `{\n${requestLines.join(",\n")}\n}\n`)
+console.log(
+  `requests: ${requestRoots.length} roots, ${requestValid} valid, ${requestInvalid} invalid, ${requestSkipped} skipped`,
 )
 
 const total = (pick: (item: Root) => number) => roots.reduce((sum, item) => sum + pick(item), 0)
@@ -205,4 +239,169 @@ function hasLoneSurrogate(value: unknown): boolean {
       ([key, item]) => hasLoneSurrogate(key) || hasLoneSurrogate(item),
     )
   return false
+}
+
+type RequestRaw = { params?: Record<string, string>; query?: string; headers?: Record<string, string>; body?: string }
+type RequestSample = { raw: RequestRaw; expected: string }
+type RequestSlotCorpus = { valid: Array<RequestSample>; invalid: Array<RequestRaw>; skipped: number }
+
+async function requestSlotCorpus(request: RequestRoot): Promise<RequestSlotCorpus> {
+  const samples = await Effect.runPromise(
+    Arbitrary.sampleEffect(Arbitrary.schema(request.schema), {
+      seed: `${request.operationId}:${request.slot}`,
+      count: 12,
+      size: 4,
+    }),
+  )
+  const typed = Schema.toCodecJson(Schema.toType(request.schema) as unknown as JsonCodec)
+  const wire =
+    request.slot === "body"
+      ? Schema.toCodecJson(request.schema as unknown as JsonCodec)
+      : (request.schema as unknown as JsonCodec)
+  const valid: Array<RequestSample> = []
+  const seen = new Set<string>()
+  let skipped = 0
+  for (const sample of samples) {
+    const raw = encodeRaw(request.slot, wire, sample)
+    if (raw === undefined) {
+      skipped += 1
+      continue
+    }
+    const key = JSON.stringify(raw)
+    if (seen.has(key)) continue
+    let decoded: unknown
+    try {
+      decoded = decodeRaw(request.slot, request.schema, raw)
+    } catch {
+      skipped += 1
+      continue
+    }
+    let expected: string
+    try {
+      expected =
+        request.slot === "body"
+          ? JSON.stringify(Schema.encodeUnknownSync(wire)(decoded))
+          : JSON.stringify(Schema.encodeUnknownSync(typed)(decoded))
+    } catch {
+      skipped += 1
+      continue
+    }
+    if (hasLoneSurrogate(expected)) {
+      skipped += 1
+      continue
+    }
+    seen.add(key)
+    valid.push({ raw, expected })
+    if (valid.length === 3) break
+  }
+  if (valid.length === 0) throw new Error(`requests: ${request.operationId} ${request.slot} produced no valid sample`)
+  const invalid = invalidSamples(request.slot, request.schema, valid)
+  return { valid, invalid, skipped }
+}
+
+function encodeRaw(slot: RequestRoot["slot"], schema: Schema.Top, sample: unknown): RequestRaw | undefined {
+  let encoded: unknown
+  try {
+    encoded = Schema.encodeUnknownSync(schema as unknown as JsonCodec)(sample)
+  } catch {
+    return undefined
+  }
+  if (slot === "body") {
+    if (hasLoneSurrogate(encoded)) return undefined
+    return { body: JSON.stringify(encoded) }
+  }
+  if (hasLoneSurrogate(encoded)) return undefined
+  if (!isObject(encoded)) return undefined
+  if (slot === "params") {
+    const entries = Object.entries(encoded).filter((entry): entry is [string, string] => typeof entry[1] === "string")
+    if (entries.length === 0) return undefined
+    return { params: Object.fromEntries(entries.map(([key, value]) => [key, encodeURIComponent(value)])) }
+  }
+  if (slot === "headers") {
+    const entries = Object.entries(encoded).filter((entry): entry is [string, string] => typeof entry[1] === "string")
+    return { headers: Object.fromEntries(entries) }
+  }
+  const pairs = Object.entries(encoded).flatMap(([key, value]) => {
+    if (typeof value === "string") return [`${encodeURIComponent(key)}=${encodeURIComponent(value)}`]
+    if (Array.isArray(value))
+      return value
+        .filter((item): item is string => typeof item === "string")
+        .map((item) => `${encodeURIComponent(key)}=${encodeURIComponent(item)}`)
+    return []
+  })
+  return { query: pairs.join("&") }
+}
+
+function decodeRaw(slot: RequestRoot["slot"], schema: Schema.Top, raw: RequestRaw): unknown {
+  if (slot === "body") {
+    const value = JSON.parse(raw.body ?? "")
+    return Schema.decodeUnknownSync(Schema.toCodecJson(schema as unknown as JsonCodec))(value)
+  }
+  if (slot === "query") {
+    const parsed = queryString.parse(raw.query ?? "")
+    return Schema.decodeUnknownSync(schema as unknown as JsonCodec)(parsed)
+  }
+  const record = slot === "params" ? decodeParams(raw.params ?? {}) : (raw.headers ?? {})
+  return Schema.decodeUnknownSync(schema as unknown as JsonCodec)(record)
+}
+
+function decodeParams(params: Record<string, string>) {
+  return Object.fromEntries(Object.entries(params).map(([key, value]) => [key, decodeURIComponent(value)]))
+}
+
+function invalidSamples(slot: RequestRoot["slot"], schema: Schema.Top, valid: Array<RequestSample>): Array<RequestRaw> {
+  const first = valid[0]!
+  const invalid: Array<RequestRaw> = []
+  const seen = new Set(valid.map((sample) => JSON.stringify(sample.raw)))
+  const add = (raw: RequestRaw) => {
+    const key = JSON.stringify(raw)
+    if (seen.has(key)) return
+    seen.add(key)
+    try {
+      decodeRaw(slot, schema, raw)
+    } catch {
+      invalid.push(raw)
+    }
+  }
+  if (slot === "body") {
+    const text = first.raw.body ?? ""
+    add({ body: "{" })
+    const value = JSON.parse(text)
+    if (isObject(value)) {
+      for (const key of Object.keys(value)) {
+        const removed = { ...value }
+        delete removed[key]
+        add({ body: JSON.stringify(removed) })
+      }
+      for (const key of Object.keys(value)) add({ body: JSON.stringify({ ...value, [key]: "!!!invalid!!!" }) })
+    }
+    return invalid
+  }
+  if (slot === "query") {
+    const pairs = (first.raw.query ?? "").split("&").filter((pair) => pair.length > 0)
+    for (const pair of pairs) {
+      add({ query: pairs.filter((candidate) => candidate !== pair).join("&") })
+      add({ query: `${first.raw.query ?? ""}&${pair}` })
+      const separator = pair.indexOf("=")
+      add({
+        query: pairs
+          .map((candidate) => (candidate === pair ? `${pair.slice(0, separator + 1)}!!!` : candidate))
+          .join("&"),
+      })
+    }
+    add({ query: "location=x" })
+    add({ query: `${first.raw.query ?? ""}&location=x` })
+    return invalid
+  }
+  const record = slot === "params" ? (first.raw.params ?? {}) : (first.raw.headers ?? {})
+  for (const key of Object.keys(record)) {
+    const removed = { ...record }
+    delete removed[key]
+    if (slot === "params") add({ params: removed })
+    else add({ headers: removed })
+    const changed = { ...record, [key]: "!!!invalid!!!" }
+    if (slot === "params") add({ params: changed })
+    else add({ headers: changed })
+  }
+  return invalid
 }
