@@ -86,7 +86,9 @@ async fn unimplemented_routes_are_501() {
 }
 
 #[test]
-fn implemented_lists_only_server_info() {
+fn implemented_lists_server_info_pair_and_connect() {
     assert!(opencode_http::app::IMPLEMENTED.contains(&"server.info"));
-    assert_eq!(opencode_http::app::IMPLEMENTED.len(), 1);
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"server.pair"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"server.connect"));
+    assert_eq!(opencode_http::app::IMPLEMENTED.len(), 3);
 }

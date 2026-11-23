@@ -1,8 +1,10 @@
 mod auth;
 mod info;
+mod pairing;
 mod router;
 mod serve;
 mod status;
+mod ticket;
 
 use std::path::PathBuf;
 use std::sync::Arc;

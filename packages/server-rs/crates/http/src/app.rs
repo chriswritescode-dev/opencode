@@ -3,14 +3,16 @@ use std::sync::Arc;
 
 use bytes::Bytes;
 use http::{HeaderValue, Request, StatusCode, header};
-use opencode_contract::generated::{ServerInfo, ServerInfoCapabilities, ServerInfoPaths};
+use opencode_contract::generated::{PairingSession, ServerInfo, ServerInfoCapabilities, ServerInfoPaths};
 
 use crate::auth;
+use crate::pairing::Pairing;
 use crate::response;
 use crate::router;
 use crate::status::{State, Status};
+use crate::ticket::TicketStore;
 
-pub const IMPLEMENTED: &[&str] = &["server.info"];
+pub const IMPLEMENTED: &[&str] = &["server.info", "server.pair", "server.connect"];
 
 pub struct Options {
     pub password: String,
@@ -24,27 +26,33 @@ pub struct Options {
 pub struct App {
     options: Options,
     status: Status,
+    pairing: Pairing,
+    tickets: TicketStore,
 }
 
 impl App {
     pub fn new(options: Options) -> Arc<App> {
-        Arc::new(App { options, status: Status::new() })
+        Arc::new(App { options, status: Status::new(), pairing: Pairing::new(), tickets: TicketStore::new() })
     }
 
     pub fn status(&self) -> &Status {
         &self.status
     }
 
+    pub fn tickets(&self) -> &TicketStore {
+        &self.tickets
+    }
+
     pub async fn handle(&self, request: Request<Bytes>) -> response::Response {
         let state = self.status.current();
         let ready = state == State::Ready;
         if request.method() == http::Method::GET && request.uri().path() == "/api/info" && !ready {
-            if !auth::authorized(&auth::credential(&request), &self.options.password) {
+            if !self.authorized(&request) {
                 return auth::unauthorized(&request, "Authentication required");
             }
             return info(&self.options, state);
         }
-        if !exempt(&request, ready) && !auth::authorized(&auth::credential(&request), &self.options.password) {
+        if !exempt(&request, ready) && !self.authorized(&request) {
             return auth::unauthorized(&request, "Authentication required");
         }
         if !ready {
@@ -60,14 +68,68 @@ impl App {
         let Some(found) = router::find(request.method(), request.uri().path()) else {
             return response::empty(StatusCode::NOT_FOUND);
         };
-        if found.route.operation_id == "server.info" {
-            return server_info(&self.options);
+        match found.route.operation_id {
+            "server.info" => server_info(&self.options),
+            "server.pair" => response::bytes(
+                StatusCode::OK,
+                "application/json",
+                opencode_contract::codec::encode_json(&self.pairing.issue()),
+            ),
+            "server.connect" => self.connect(&request, &found),
+            _ => {
+                let body = serde_json::json!({
+                    "_tag": "UnknownError",
+                    "message": format!("opencode-server does not implement {} yet", found.route.identifier),
+                });
+                response::json(StatusCode::NOT_IMPLEMENTED, &body)
+            }
         }
-        let body = serde_json::json!({
-            "_tag": "UnknownError",
-            "message": format!("opencode-server does not implement {} yet", found.route.identifier),
-        });
-        response::json(StatusCode::NOT_IMPLEMENTED, &body)
+    }
+
+    fn authorized(&self, request: &Request<Bytes>) -> bool {
+        auth::authorized(&auth::credential(request), &self.options.password)
+            || auth::authorized_cookie(request, &self.options.password)
+    }
+
+    fn connect(&self, request: &Request<Bytes>, matched: &router::Match) -> response::Response {
+        let browser = request
+            .headers()
+            .get(header::ACCEPT)
+            .and_then(|value| value.to_str().ok())
+            .is_some_and(|value| value.contains("text/html"));
+        let Some((_, code)) = matched.params.iter().find(|(name, _)| name == "code") else {
+            return response::empty(StatusCode::NOT_FOUND);
+        };
+        if !self.pairing.consume(code) {
+            if browser {
+                return response::bytes(
+                    StatusCode::UNAUTHORIZED,
+                    "text/plain; charset=utf-8",
+                    "This pairing link expired or was already used. Run `opencode pair` to get a new one.",
+                );
+            }
+            return auth::unauthorized(request, "Pairing link expired or already used");
+        }
+        let token = auth::issue_session(&self.options.password, crate::now_ms());
+        if !browser {
+            return response::bytes(
+                StatusCode::OK,
+                "application/json",
+                opencode_contract::codec::encode_json(&PairingSession { token }),
+            );
+        }
+        let host = request.headers().get(header::HOST).and_then(|value| value.to_str().ok());
+        let cookie = format!(
+            "{}={token}; Max-Age={}; Path=/; HttpOnly; SameSite=Lax",
+            auth::session_cookie_name(host),
+            auth::SESSION_TTL_SECONDS,
+        );
+        let mut response = response::empty(StatusCode::FOUND);
+        response.headers_mut().insert(header::LOCATION, HeaderValue::from_static("/"));
+        if let Ok(cookie) = HeaderValue::from_str(&cookie) {
+            response.headers_mut().insert(header::SET_COOKIE, cookie);
+        }
+        response
     }
 }
 

@@ -1,9 +1,11 @@
 use http::StatusCode;
+use opencode_http::auth::{SESSION_TTL_SECONDS, authorized_cookie, issue_session, session_cookie_name, verify_session};
 
 use crate::{UNAUTHORIZED_BODY, app, authorized, basic, encoded, ready_app, request, request_with, text};
 
 const PTY_CONNECT_BODY: &str =
     r#"{"_tag":"UnknownError","message":"opencode-server does not implement pty.connect yet"}"#;
+const UNEXPIRED_NOW_MS: u64 = 4_000_000_000_000;
 
 #[tokio::test]
 async fn basic_credentials_authorize() {
@@ -114,7 +116,128 @@ async fn tickets_do_not_skip_authentication_while_starting() {
 async fn pairing_links_skip_authentication() {
     let app = ready_app();
     let connect = app.handle(request("GET", "/auth/connect/code")).await;
-    assert_eq!(connect.status(), StatusCode::NOT_IMPLEMENTED);
+    assert_eq!(connect.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(text(connect).await, r#"{"_tag":"UnauthorizedError","message":"Pairing link expired or already used"}"#);
     let incomplete = app.handle(request("GET", "/auth/connect/")).await;
     assert_eq!(incomplete.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(text(incomplete).await, UNAUTHORIZED_BODY);
+}
+
+#[test]
+fn session_tokens_round_trip() {
+    let issued = 1_700_000_000_000;
+    let token = issue_session("pw", issued);
+    assert!(verify_session(&token, "pw", issued));
+    assert!(token.starts_with(&format!("{}.", issued / 1_000 + SESSION_TTL_SECONDS)));
+}
+
+#[test]
+fn session_tokens_stop_verifying_after_the_ttl() {
+    let issued = 1_700_000_000_000;
+    let token = issue_session("pw", issued);
+    let expires = (issued / 1_000 + SESSION_TTL_SECONDS) * 1_000;
+    assert!(verify_session(&token, "pw", expires - 1));
+    assert!(!verify_session(&token, "pw", expires));
+    assert!(!verify_session(&token, "pw", expires + 1_000));
+}
+
+#[test]
+fn tampered_signatures_are_rejected() {
+    let issued = 1_700_000_000_000;
+    let token = issue_session("pw", issued);
+    let (expiry, signature) = token.split_once('.').expect("a session token");
+    let mut tampered = signature.to_owned();
+    let first = tampered.remove(0);
+    tampered.insert(0, if first == 'A' { 'B' } else { 'A' });
+    assert!(!verify_session(&format!("{expiry}.{tampered}"), "pw", issued));
+}
+
+#[test]
+fn tokens_with_three_parts_are_rejected() {
+    let issued = 1_700_000_000_000;
+    let token = issue_session("pw", issued);
+    assert!(!verify_session(&format!("{token}.extra"), "pw", issued));
+}
+
+#[test]
+fn non_numeric_expiries_are_rejected() {
+    let issued = 1_700_000_000_000;
+    let token = issue_session("pw", issued);
+    let signature = token.split_once('.').expect("a session token").1;
+    for expiry in ["", "abc", "1.5", "-1", " 1"] {
+        assert!(!verify_session(&format!("{expiry}.{signature}"), "pw", issued));
+    }
+}
+
+#[test]
+fn a_different_password_with_the_same_expiry_is_rejected() {
+    let issued = 1_700_000_000_000;
+    let token = issue_session("pw", issued);
+    assert!(!verify_session(&token, "other", issued));
+}
+
+#[test]
+fn session_cookie_names_follow_the_host() {
+    assert_eq!(session_cookie_name(Some("127.0.0.1:4096")), "opencode_session_4096");
+    assert_eq!(session_cookie_name(Some("localhost")), "opencode_session");
+    assert_eq!(session_cookie_name(Some("localhost:80")), "opencode_session");
+}
+
+#[test]
+fn session_cookies_authorize_without_an_origin() {
+    let token = issue_session("pw", UNEXPIRED_NOW_MS);
+    let cookie = format!("opencode_session_4096={token}");
+    let http_request = request_with("GET", "/api/info", &[("host", "127.0.0.1:4096"), ("cookie", cookie.as_str())]);
+    assert!(authorized_cookie(&http_request, "pw"));
+}
+
+#[test]
+fn session_cookies_authorize_same_origin_requests() {
+    let token = issue_session("pw", UNEXPIRED_NOW_MS);
+    let cookie = format!("opencode_session_4096={token}");
+    let http_request = request_with(
+        "GET",
+        "/api/info",
+        &[("host", "127.0.0.1:4096"), ("origin", "http://127.0.0.1:4096"), ("cookie", cookie.as_str())],
+    );
+    assert!(authorized_cookie(&http_request, "pw"));
+}
+
+#[test]
+fn session_cookies_are_rejected_for_cross_origin_requests() {
+    let token = issue_session("pw", UNEXPIRED_NOW_MS);
+    let cookie = format!("opencode_session_4096={token}");
+    let http_request = request_with(
+        "GET",
+        "/api/info",
+        &[("host", "127.0.0.1:4096"), ("origin", "http://localhost:4096"), ("cookie", cookie.as_str())],
+    );
+    assert!(!authorized_cookie(&http_request, "pw"));
+}
+
+#[test]
+fn empty_session_cookies_do_not_authorize() {
+    assert!(!authorized_cookie(&request("GET", "/api/info"), "pw"));
+    let empty = request_with("GET", "/api/info", &[("host", "localhost"), ("cookie", "opencode_session=")]);
+    assert!(!authorized_cookie(&empty, "pw"));
+}
+
+#[tokio::test]
+async fn session_tokens_authorize_basic_credentials() {
+    let app = ready_app();
+    let token = issue_session("pw", UNEXPIRED_NOW_MS);
+    let credential = format!("Basic {}", encoded("opencode", &token));
+    let http_request = request_with("GET", "/api/info", &[("authorization", credential.as_str())]);
+    let response = app.handle(http_request).await;
+    assert_eq!(response.status(), StatusCode::OK);
+}
+
+#[tokio::test]
+async fn session_cookies_authorize_info_requests() {
+    let app = ready_app();
+    let token = issue_session("pw", UNEXPIRED_NOW_MS);
+    let cookie = format!("opencode_session={token}");
+    let http_request = request_with("GET", "/api/info", &[("host", "localhost"), ("cookie", cookie.as_str())]);
+    let response = app.handle(http_request).await;
+    assert_eq!(response.status(), StatusCode::OK);
 }
