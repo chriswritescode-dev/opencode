@@ -2,8 +2,13 @@ import { ConfigExperimental } from "@opencode/schema/config/experimental"
 import { Document, Info } from "@opencode/schema/config"
 import { FlagResolve } from "@opencode/core/flag/resolve"
 import { ConfigNormalize } from "@opencode/core/config/normalize"
-import { Option, Schema } from "effect"
+import { ConfigVariable } from "@opencode/core/config/variable"
+import { FSUtil } from "@opencode/util/fs-util"
+import { LayerNode } from "@opencode/util/effect/layer-node"
+import { Effect, Logger, Option, Schema } from "effect"
 import { parse, type ParseError } from "jsonc-parser"
+import path from "node:path"
+import { mkdir, rm, writeFile } from "node:fs/promises"
 
 const options = { errors: "all", onExcessProperty: "ignore" } as const
 const decodeInfo = Schema.decodeUnknownOption(Info, options)
@@ -11,6 +16,7 @@ const decodeInfo = Schema.decodeUnknownOption(Info, options)
 const area = process.argv[2]
 if (area === "flags") exportFlags()
 else if (area === "normalize") exportNormalize()
+else if (area === "substitute") await exportSubstitute()
 else {
   console.error(`corpus: unknown area ${area ?? ""}`)
   process.exit(1)
@@ -1027,4 +1033,147 @@ function exportNormalize() {
       },
     }
   }
+}
+
+type SubstituteSource =
+  | {
+      type: "path"
+      path: string
+    }
+  | {
+      type: "virtual"
+      source: string
+      dir: string
+    }
+
+type SubstituteCase = {
+  source: SubstituteSource
+  text: string
+  env: Record<string, string>
+  files: Record<string, string>
+}
+
+async function exportSubstitute() {
+  const root = process.env.OPENCODE_CORPUS_ROOT
+  const home = process.env.HOME
+  if (!root || !home) {
+    console.error("corpus: substitute needs OPENCODE_CORPUS_ROOT and HOME")
+    process.exit(1)
+  }
+
+  const config: SubstituteSource = { type: "path", path: "config/opencode.jsonc" }
+  const cases: Record<string, SubstituteCase> = {
+    "env-empty": {
+      source: config,
+      text: `{"shell":"{env:EMPTY_SHELL}"}`,
+      env: { EMPTY_SHELL: "" },
+      files: {},
+    },
+    "env-set": {
+      source: config,
+      text: `{"shell":"{env:SHELL}"}`,
+      env: { SHELL: "/bin/zsh" },
+      files: {},
+    },
+    "env-unset": {
+      source: config,
+      text: `{"shell":"{env:OPENCODE_RS_SUBSTITUTE_UNSET}"}`,
+      env: {},
+      files: {},
+    },
+    "env-windows-path": {
+      source: config,
+      text: `{"shell":"{env:WIN_PATH}"}`,
+      env: { WIN_PATH: String.raw`C:\Users\me\config` },
+      files: {},
+    },
+    "file-absolute": {
+      source: config,
+      text: `{"token":"{file:{{root}}/shared/absolute.txt}"}`,
+      env: {},
+      files: { "shared/absolute.txt": "absolute\n" },
+    },
+    "file-comment": {
+      source: config,
+      text: `   // {file:secrets/token.txt}
+{"token":"ok"}`,
+      env: {},
+      files: { "config/secrets/token.txt": "commented\n" },
+    },
+    "file-escape": {
+      source: config,
+      text: `{"token":"{file:escape.txt}"}`,
+      env: {},
+      files: { "config/escape.txt": `  quoted "value" and C:\\path\nsecond line\n` },
+    },
+    "file-home": {
+      source: config,
+      text: `{"token":"{file:~/home-secret.txt}"}`,
+      env: {},
+      files: { "home/home-secret.txt": "home-secret\n" },
+    },
+    "file-missing": {
+      source: config,
+      text: `{"token":"{file:missing.txt}"}`,
+      env: {},
+      files: {},
+    },
+    "file-relative": {
+      source: config,
+      text: `{"token":"{file:secrets/token.txt}"}`,
+      env: {},
+      files: { "config/secrets/token.txt": "  secret-value\n" },
+    },
+    "file-trim": {
+      source: config,
+      text: `{"token":"{file:trim.txt}"}`,
+      env: {},
+      files: { "config/trim.txt": `\n\n  trimmed value  \n` },
+    },
+    "virtual-dir": {
+      source: { type: "virtual", source: "virtual.jsonc", dir: "config" },
+      text: `{"token":"{file:virtual.txt}"}`,
+      env: {},
+      files: { "config/virtual.txt": "virtual\n" },
+    },
+  }
+
+  const layer = LayerNode.compile(FSUtil.node)
+  delete process.env.OPENCODE_RS_SUBSTITUTE_UNSET
+  const lines: Array<string> = []
+  for (const name of Object.keys(cases).sort()) {
+    const item = cases[name]!
+    await rm(root, { recursive: true, force: true })
+    await mkdir(root, { recursive: true })
+    for (const [file, content] of Object.entries(item.files)) {
+      const target = path.join(root, file)
+      await mkdir(path.dirname(target), { recursive: true })
+      await writeFile(target, content)
+    }
+
+    const source: SubstituteSource =
+      item.source.type === "path"
+        ? { type: "path", path: path.join(root, item.source.path) }
+        : { type: "virtual", source: item.source.source, dir: path.join(root, item.source.dir) }
+    const references = new Set<string>()
+    const output = await Effect.runPromise(
+      ConfigVariable.substitute({
+        ...source,
+        text: item.text.replaceAll("{{root}}", root),
+        env: item.env,
+        references,
+      }).pipe(Effect.provide(layer), Effect.provide(Logger.layer([]))),
+    )
+    lines.push(
+      `${JSON.stringify(name)}:${JSON.stringify({
+        source: item.source,
+        text: item.text,
+        env: item.env,
+        files: item.files,
+        output,
+        references: [...references].map((ref) => path.relative(root, ref).split(path.sep).join("/")).sort(),
+      })}`,
+    )
+  }
+  process.stdout.write(`{\n${lines.join(",\n")}\n}\n`)
 }

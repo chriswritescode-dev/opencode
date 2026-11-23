@@ -2,7 +2,9 @@ import { mkdir } from "node:fs/promises"
 import { upstreamWorkspace } from "../upstream"
 
 const root = new URL("../..", import.meta.url).pathname
-const areas = ["flags", "normalize"]
+const areas = ["flags", "normalize", "substitute"]
+const corpusRoot = `${root}target/config-corpus`
+const corpusHome = `${corpusRoot}/home`
 const source = `${root}script/config-corpus/export.ts`
 const tree = await upstreamWorkspace()
 
@@ -10,6 +12,7 @@ for (const area of areas) {
   await Bun.write(`${tree}/packages/core/test/opencode-rs-corpus.ts`, Bun.file(source))
   const result = Bun.spawnSync(["bun", "run", "test/opencode-rs-corpus.ts", area], {
     cwd: `${tree}/packages/core`,
+    env: { ...process.env, HOME: corpusHome, USERPROFILE: corpusHome, OPENCODE_CORPUS_ROOT: corpusRoot },
     stdout: "pipe",
     stderr: "inherit",
   })
