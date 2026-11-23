@@ -1,8 +1,7 @@
-use std::collections::BTreeMap;
-
 use super::ids::ProviderId;
 use super::options::{
     CacheHint, CachePolicy, GenerationOptions, HttpOptions, ProviderMetadata, ProviderOptions, RequestTimeout,
+    StringMap,
 };
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -342,7 +341,7 @@ pub struct LlmRequest {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub provider_options: Option<ProviderOptions>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub headers: Option<BTreeMap<String, String>>,
+    pub headers: Option<StringMap>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub timeout: Option<RequestTimeout>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

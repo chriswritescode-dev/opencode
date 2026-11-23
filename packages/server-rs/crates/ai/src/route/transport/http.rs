@@ -55,7 +55,7 @@ pub fn json_request_parts(input: JsonRequestInput, env: &dyn Env) -> Result<Json
     };
     let mut url = endpoint.render(&EndpointInput { request: &request, body: &body })?;
     if let Some(query) = request.http.as_ref().and_then(|http| http.query.as_ref()) {
-        for (key, value) in query {
+        for (key, value) in query.iter() {
             set_query(&mut url, key, value);
         }
     }
@@ -72,8 +72,10 @@ pub fn json_request_parts(input: JsonRequestInput, env: &dyn Env) -> Result<Json
         }
     };
     let mut merged: Vec<(String, String)> = headers.map(|headers| headers(&request)).unwrap_or_default();
-    for (name, value) in request.headers.iter().flatten() {
-        merged = set_header(merged, name, value.clone());
+    if let Some(extra) = &request.headers {
+        for (name, value) in extra.iter() {
+            merged = set_header(merged, name, value);
+        }
     }
     let headers = auth.apply(
         AuthInput { method: "POST".to_string(), url: url.clone(), body: body_text.clone(), headers: merged },

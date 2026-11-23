@@ -1,5 +1,9 @@
 pub mod auth;
+pub mod client;
+pub mod compile;
 pub mod endpoint;
 pub mod executor;
 pub mod framing;
+pub mod model;
+pub mod protocol;
 pub mod transport;

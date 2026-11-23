@@ -289,6 +289,26 @@ impl AiError {
         }
     }
 
+    pub fn attach_http(mut self, http: &HttpContext) -> AiError {
+        let slot = match &mut self.reason {
+            AiErrorReason::InvalidRequest { http, .. }
+            | AiErrorReason::UnsupportedOperation { http, .. }
+            | AiErrorReason::Authentication { http, .. }
+            | AiErrorReason::RateLimit { http, .. }
+            | AiErrorReason::QuotaExceeded { http, .. }
+            | AiErrorReason::ContentPolicy { http, .. }
+            | AiErrorReason::ProviderInternal { http, .. }
+            | AiErrorReason::Transport { http, .. }
+            | AiErrorReason::InvalidProviderOutput { http, .. }
+            | AiErrorReason::UnknownProvider { http, .. }
+            | AiErrorReason::Timeout { http, .. } => http,
+        };
+        if slot.is_none() {
+            *slot = Some(http.clone());
+        }
+        self
+    }
+
     fn http(&self) -> Option<&HttpContext> {
         match &self.reason {
             AiErrorReason::InvalidRequest { http, .. }

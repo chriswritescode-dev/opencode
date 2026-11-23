@@ -3,6 +3,7 @@
 pub mod clock;
 pub mod id;
 pub mod json;
+pub mod prepare;
 pub mod provider_error;
 pub mod route;
 pub mod schema;
