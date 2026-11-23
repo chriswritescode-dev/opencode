@@ -14,6 +14,8 @@
   "devDependencies": {
     "@tsconfig/bun": "catalog:",
     "@types/bun": "catalog:",
-    "@typescript/native": "catalog:"
+    "@typescript/native": "catalog:",
+    "effect": "catalog:",
+    "prettier": "3.6.2"
   }
 }
