@@ -1,5 +1,8 @@
 import { mkdir } from "node:fs/promises"
-import { contractRoutes, type Route } from "../contract/model"
+import { Schema, SchemaAST, SchemaRepresentation } from "effect"
+import { pascal } from "../../../cli-rs/script/rust/types.ts"
+import { contractErrors, contractRoutes, normalize, type Route } from "../contract/model"
+import { StrictTypes } from "../rust/strict"
 import { pin } from "../upstream"
 
 const root = new URL("../..", import.meta.url).pathname
@@ -39,7 +42,7 @@ const lines = routes.map(
         identifier: ${literal(route.identifier)},
         group: ${literal(route.group)},
         tag: ${literal(route.tag)},
-        method: Method::${pascal(route.method)},
+        method: Method::${methodVariant(route.method)},
         path: ${literal(route.path)},
         scope: Scope::${route.scope},
         stability: Stability::${route.stability},
@@ -51,6 +54,32 @@ const lines = routes.map(
     },`,
 )
 
+const errors = await contractErrors()
+const asts = [...errors.map((error) => Schema.toEncoded(error.schema).ast), Schema.toEncoded(Schema.Number).ast]
+const typeDocument = SchemaRepresentation.toRepresentations(normalize(asts) as [SchemaAST.AST, ...Array<SchemaAST.AST>])
+const types = new StrictTypes(typeDocument.references)
+const roots = errors.map((error, index) => ({
+  tag: error.tag,
+  status: error.status,
+  rustName: types.type(typeDocument.representations[index], error.tag),
+}))
+types.type(typeDocument.representations[errors.length], "numbers")
+
+const used = new Set<string>()
+const variants = roots.map((root) => {
+  const base = pascal(root.tag)
+  let variant = base
+  for (let index = 2; used.has(variant); index++) variant = `${base}${index}`
+  used.add(variant)
+  return { ...root, variant }
+})
+const corpus = [
+  ...roots.map((root) => ({ name: root.tag, rustName: root.rustName })),
+  { name: "numbers", rustName: "f64" },
+].toSorted((a, b) => (a.name < b.name ? -1 : 1))
+
+const typesFile = `${root}crates/contract/src/generated/types.rs`
+const errorsFile = `${root}crates/contract/src/generated/errors.rs`
 const routesFile = `${root}crates/contract/src/generated/routes.rs`
 const modFile = `${root}crates/contract/src/generated/mod.rs`
 await mkdir(`${root}crates/contract/src/generated`, { recursive: true })
@@ -58,9 +87,81 @@ await Bun.write(
   routesFile,
   `${header()}\n#![allow(clippy::all, clippy::pedantic)]\nuse crate::route::{BodyKind, Method, Route, Scope, Stability, SuccessKind};\n\npub static ROUTES: [Route; ${routes.length}] = [\n${lines.join("\n")}\n];\n`,
 )
-await Bun.write(modFile, `${header()}\n\nmod routes;\n\npub use routes::ROUTES;\n`)
+await Bun.write(
+  typesFile,
+  `${header()}\n#![allow(clippy::all, clippy::pedantic)]\nuse serde_json::Value;\n\n${types.items.join("\n\n")}\n`,
+)
+await Bun.write(
+  errorsFile,
+  `${header()}
+#![allow(clippy::all, clippy::pedantic)]
+use super::types::*;
+use serde_json::Value;
 
-const format = Bun.spawnSync(["rustfmt", "--edition", "2024", modFile, routesFile], {
+#[derive(Debug, Clone, PartialEq)]
+pub enum ApiError {
+${variants.map((root) => `    ${root.variant}(${root.rustName}),`).join("\n")}
+}
+
+impl ApiError {
+    pub fn tag(&self) -> &'static str {
+        match self {
+${variants.map((root) => `            Self::${root.variant}(_) => ${literal(root.tag)},`).join("\n")}
+        }
+    }
+
+    pub fn status(&self) -> u16 {
+        match self {
+${variants.map((root) => `            Self::${root.variant}(_) => ${root.status},`).join("\n")}
+        }
+    }
+}
+
+impl crate::codec::Decode for ApiError {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        let tag: String = crate::codec::decode_field(object, "_tag", path)?;
+        match tag.as_str() {
+${variants.map((root) => `            ${literal(root.tag)} => <${root.rustName} as crate::codec::Decode>::decode(value, path).map(Self::${root.variant}),`).join("\n")}
+            _ => Err(path.at(format!("unknown error tag {tag}"))),
+        }
+    }
+}
+
+impl crate::codec::Encode for ApiError {
+    fn encode(&self, out: &mut String) {
+        match self {
+${variants.map((root) => `            Self::${root.variant}(value) => crate::codec::Encode::encode(value, out),`).join("\n")}
+        }
+    }
+}
+
+pub fn corpus_roots() -> &'static [(&'static str, fn(&str) -> Result<String, crate::codec::DecodeError>)] {
+    &[
+${corpus.map((root) => `        (${literal(root.name)}, crate::codec::round_trip::<${root.rustName}>),`).join("\n")}
+    ]
+}
+
+pub static ERROR_STATUS: [(&str, u16); ${roots.length}] = [
+${roots.map((root) => `    (${literal(root.tag)}, ${root.status}),`).join("\n")}
+];
+`,
+)
+await Bun.write(
+  modFile,
+  `${header()}
+
+mod errors;
+mod routes;
+mod types;
+
+pub use errors::{ApiError, ERROR_STATUS, corpus_roots};
+pub use routes::ROUTES;
+pub use types::*;
+`,
+)
+
+const format = Bun.spawnSync(["rustfmt", "--edition", "2024", modFile, typesFile, errorsFile, routesFile], {
   stdout: "inherit",
   stderr: "inherit",
 })
@@ -76,6 +177,7 @@ console.log(
 )
 console.log(`contract: body ${report(["None", "Json", "Binary"], (route) => route.body)}`)
 console.log(`contract: scope ${report(["Global", "Location", "Session", "Form"], (route) => route.scope)}`)
+console.log(`contract: ${errors.length} errors, ${types.items.length} types`)
 
 function header() {
   return "// Generated by script/gen/contract.ts from the upstream pin. Do not edit."
@@ -85,6 +187,6 @@ function literal(value: string) {
   return JSON.stringify(value)
 }
 
-function pascal(value: string) {
+function methodVariant(value: string) {
   return `${value[0]?.toUpperCase()}${value.slice(1).toLowerCase()}`
 }

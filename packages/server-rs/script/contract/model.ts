@@ -38,11 +38,40 @@ const scopeKeys = {
   Location: "@opencode/server-rs/Location",
 } as const
 
+export type ContractError = { tag: string; status: number; schema: Schema.Top }
+
+type ReflectOptions = Parameters<typeof HttpApi.reflect>[1]
+
+function reflect(options: Pick<ReflectOptions, "onEndpoint">) {
+  HttpApi.reflect(api, { onGroup() {}, ...options })
+}
+
+export async function contractErrors(): Promise<Array<ContractError>> {
+  const found = new Map<string, ContractError>()
+  reflect({
+    onEndpoint({ errors }) {
+      for (const [status, schemas] of errors) {
+        for (const schema of schemas) {
+          const tag = SchemaAST.resolveIdentifier(schema.ast)
+          if (tag === undefined) throw new Error(`contract: error ${status} has no schema identifier`)
+          const existing = found.get(tag)
+          if (existing !== undefined) {
+            if (existing.status !== status)
+              throw new Error(`contract: ${tag} is declared with status ${existing.status} and ${status}`)
+            continue
+          }
+          found.set(tag, { tag, status, schema })
+        }
+      }
+    },
+  })
+  return [...found.values()].toSorted((a, b) => (a.tag < b.tag ? -1 : 1))
+}
+
 export async function contractRoutes(): Promise<Array<Route>> {
   const routes: Array<Route> = []
   const operationIds = new Set<string>()
-  HttpApi.reflect(api, {
-    onGroup() {},
+  reflect({
     onEndpoint({ endpoint, group, middleware, successes, errors }) {
       const operationId = Context.getOrElse(endpoint.annotations, OpenApi.Identifier, () =>
         group.topLevel ? endpoint.identifier : `${group.identifier}.${endpoint.identifier}`,
