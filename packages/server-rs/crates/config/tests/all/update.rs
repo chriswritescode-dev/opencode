@@ -56,7 +56,7 @@ async fn verify(case: &crate::support::Case) {
     };
     let service = ConfigService::start(options, location, paths, deps).await;
 
-    service.update(&ConfigPatch { shell: case.value["patch"]["shell"].as_str().map(str::to_owned) }).await;
+    service.update(&ConfigPatch { shell: case.value["patch"]["shell"].as_str().map(str::to_owned) }).await.unwrap();
 
     let written = root.join(case.value["file"].as_str().unwrap());
     let text = std::fs::read_to_string(&written).unwrap();

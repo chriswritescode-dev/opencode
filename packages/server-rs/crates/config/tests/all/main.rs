@@ -1,5 +1,6 @@
 mod discover;
 mod flags;
+mod handlers;
 mod load;
 mod normalize;
 mod observer;

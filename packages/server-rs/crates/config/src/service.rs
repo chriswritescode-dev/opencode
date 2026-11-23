@@ -25,6 +25,14 @@ const REFRESH: Duration = Duration::from_secs(10 * 60);
 const UPDATES_CAPACITY: usize = 256;
 const EVENTS_CAPACITY: usize = 16;
 
+#[derive(Debug, thiserror::Error)]
+pub enum ConfigUpdateError {
+    #[error(transparent)]
+    Edit(#[from] opencode_local::jsonc::EditError),
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
+}
+
 pub struct ServiceDeps {
     pub credentials: Arc<dyn CredentialLookup>,
     pub wellknown: Arc<WellKnown>,
@@ -167,7 +175,7 @@ impl ConfigService {
         }
     }
 
-    pub async fn update(&self, patch: &ConfigPatch) {
+    pub async fn update(&self, patch: &ConfigPatch) -> Result<(), ConfigUpdateError> {
         let _guard = self.inner.update_lock.lock().await;
         let directory = {
             let state = self.inner.state.read().expect("the config state lock is never poisoned");
@@ -180,14 +188,14 @@ impl ConfigService {
             .unwrap_or_else(|| directory.join("opencode.jsonc"));
         let text = std::fs::read_to_string(&file).unwrap_or_else(|_| "{}\n".to_owned());
         let value = patch.shell.as_ref().map(|shell| Value::String(shell.clone()));
-        let mut updated = modify(&text, &[Segment::Key("shell".to_owned())], value.as_ref())
-            .expect("editing the global config never fails");
+        let mut updated = modify(&text, &[Segment::Key("shell".to_owned())], value.as_ref())?;
         if !updated.ends_with('\n') {
             updated.push('\n');
         }
-        std::fs::create_dir_all(&directory).expect("the global config directory is writable");
-        std::fs::write(&file, updated).expect("the global config file is writable");
+        std::fs::create_dir_all(&directory)?;
+        std::fs::write(&file, updated)?;
         self.request_reload();
+        Ok(())
     }
 
     pub fn flags(&self) -> Vec<(&'static str, FlagState)> {

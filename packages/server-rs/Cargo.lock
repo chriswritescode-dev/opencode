@@ -754,10 +754,12 @@ dependencies = [
  "opencode-util",
  "regex-lite",
  "reqwest",
+ "rustix",
  "rustls",
  "rustls-platform-verifier",
  "serde",
  "serde_json",
+ "thiserror",
  "tokio",
 ]
 

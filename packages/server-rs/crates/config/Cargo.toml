@@ -19,10 +19,12 @@ opencode-local.workspace = true
 opencode-util.workspace = true
 regex-lite.workspace = true
 reqwest = { workspace = true, features = ["json"] }
+rustix.workspace = true
 rustls.workspace = true
 rustls-platform-verifier.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+thiserror.workspace = true
 tokio = { workspace = true, features = ["sync", "time", "process", "macros", "rt"] }
 
 [dev-dependencies]
