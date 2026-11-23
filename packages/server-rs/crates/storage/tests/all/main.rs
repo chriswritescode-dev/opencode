@@ -1,5 +1,6 @@
 //! The storage crate's integration tests: the database path, the connection and transactions.
 
+mod corpus;
 mod id;
 mod migration;
 mod open;

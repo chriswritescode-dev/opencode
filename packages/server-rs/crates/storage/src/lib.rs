@@ -1,6 +1,7 @@
 //! The SQLite database: its path, the shared connection, pragmas and transactions.
 
 pub mod database;
+pub mod dump;
 pub mod error;
 pub mod generated;
 pub mod id;
