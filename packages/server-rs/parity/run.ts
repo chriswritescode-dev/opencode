@@ -2,6 +2,7 @@ import fs from "node:fs/promises"
 import path from "node:path"
 import { pathToFileURL } from "node:url"
 import { compareCaptures } from "./lib/compare"
+import { deviationWarnings, explain, loadDeviations, type Deviation } from "./lib/deviations"
 import { runSide } from "./lib/drive"
 import { startModelEndpoint, type ModelEndpoint } from "./lib/model"
 import { normalizeCapture } from "./lib/normalize"
@@ -11,9 +12,11 @@ import type { Scenario } from "./lib/scenario"
 const parityRoot = import.meta.dir
 const repositoryRoot = path.resolve(parityRoot, "../../..")
 const scenariosRoot = path.join(parityRoot, "scenarios")
+const deviationsRoot = path.join(parityRoot, "deviations")
 const outputRoot = path.join(parityRoot, "out")
 const usage =
-  "usage: bun run parity/run.ts --candidate <ts|path> [--reference <ts|path>] [--repeat <n>] [scenario...]"
+  "usage: bun run parity/run.ts --candidate <ts|path> [--reference <ts|path>] [--repeat <n>] " +
+  "[--deviations <dir>] [scenario...]"
 const referencePaths = [
   "packages/cli/src",
   "packages/core/src",
@@ -24,11 +27,13 @@ const referencePaths = [
   "packages/util/src",
 ]
 
-type Options = { reference: string; candidate: string; repeat: number; files: string[] }
+type Options = { reference: string; candidate: string; repeat: number; deviations: string; files: string[] }
 type Capture = { reference: unknown; candidate: unknown; differences: ReturnType<typeof compareCaptures> }
 
 async function main() {
   const options = parseArguments(Bun.argv.slice(2))
+  const deviations = await readDeviations(options.deviations)
+  requireParityBlocks(deviations)
   const candidateEnv = readCandidateEnv()
   await warnAboutPin()
   const files = await scenarioFiles(options.files)
@@ -36,6 +41,7 @@ async function main() {
   const scenarios = await loadScenarios(files)
   let differencesFound = false
   let errorFound = false
+  const matched = new Set<string>()
   for (let repetition = 1; repetition <= options.repeat && !errorFound; repetition += 1) {
     let failed = false
     for (const entry of scenarios) {
@@ -49,20 +55,45 @@ async function main() {
         break
       }
       await writeOutputs(entry.name, outcome.capture)
-      if (outcome.capture.differences.length === 0) {
-        console.log(`PASS ${entry.name}`)
+      const { explained, unexplained } = explain(outcome.capture.differences, entry.name, deviations)
+      for (const item of explained) matched.add(item.id)
+      if (unexplained.length === 0) {
+        const summary = [...new Set(explained.map((item) => item.id))].sort().join(", ")
+        console.log(
+          explained.length === 0
+            ? `PASS ${entry.name}`
+            : `PASS ${entry.name} (${explained.length} explained by ${summary})`,
+        )
         continue
       }
       failed = true
       differencesFound = true
-      console.log(`FAIL ${entry.name}: ${outcome.capture.differences.length} difference(s)`)
-      for (const difference of outcome.capture.differences.slice(0, 20))
+      console.log(`FAIL ${entry.name}: ${unexplained.length} difference(s)`)
+      for (const difference of unexplained.slice(0, 20))
         console.log(`  ${difference.path}: ${format(difference.reference)} != ${format(difference.candidate)}`)
     }
     console.log(`run ${repetition}/${options.repeat}`)
     if (failed) break
   }
+  if (options.files.length === 0 && !errorFound)
+    for (const warning of deviationWarnings(deviations, matched)) console.log(warning)
   process.exit(errorFound ? 2 : differencesFound ? 1 : 0)
+}
+
+async function readDeviations(directory: string) {
+  try {
+    return await loadDeviations(directory)
+  } catch (error) {
+    console.error(`parity: cannot read deviations from ${directory}: ${message(error)}`)
+    process.exit(2)
+  }
+}
+
+function requireParityBlocks(deviations: Deviation[]) {
+  const missing = deviations.find((deviation) => deviation.accepted && deviation.rules === undefined)
+  if (missing === undefined) return
+  console.error(`parity: deviation ${missing.id} has no parity block`)
+  process.exit(2)
 }
 
 function parseArguments(argv: string[]): Options {
@@ -70,22 +101,29 @@ function parseArguments(argv: string[]): Options {
   let reference = "ts"
   let candidate: string | undefined
   let repeat = 1
+  let deviations = deviationsRoot
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index]
-    if (argument === "--reference" || argument === "--candidate" || argument === "--repeat") {
+    if (
+      argument === "--reference" ||
+      argument === "--candidate" ||
+      argument === "--repeat" ||
+      argument === "--deviations"
+    ) {
       const value = argv[index + 1]
       if (value === undefined || value.startsWith("--")) usageError(`${argument} requires a value`)
       index += 1
       if (argument === "--reference") reference = value
       if (argument === "--candidate") candidate = value
       if (argument === "--repeat") repeat = parseRepeat(value)
+      if (argument === "--deviations") deviations = value
       continue
     }
     if (argument.startsWith("-")) usageError(`unknown flag ${argument}`)
     files.push(argument)
   }
   if (candidate === undefined) usageError("--candidate is required")
-  return { reference, candidate, repeat, files }
+  return { reference, candidate, repeat, deviations, files }
 }
 
 function parseRepeat(value: string) {

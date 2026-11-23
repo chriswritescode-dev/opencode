@@ -9,10 +9,21 @@ export type HttpStep = {
   as?: string
 }
 
+export type WsStep = {
+  path: string
+  query?: Record<string, string | string[]>
+  send?: string[]
+  receive: number
+  auth?: "basic" | "query" | "none"
+  timeout?: number
+  as?: string
+}
+
 export type WaitEventStep = { type: string; match?: Record<string, unknown> }
 
 export type Step =
   | { http: HttpStep }
+  | { ws: WsStep }
   | { waitEvent: WaitEventStep; timeout?: number }
   | { files: Record<string, string> }
 

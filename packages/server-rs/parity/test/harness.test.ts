@@ -127,6 +127,33 @@ test(
   60_000,
 )
 
+test(
+  "passes a WebSocket echo scenario",
+  async () => {
+    await withTempRoot(async (root) => {
+      const scenario = path.join(root, "ws-echo-parity.scenario.ts")
+      const scenarioModule = path.join(import.meta.dir, "../lib/scenario")
+      const source = `import { defineScenario } from ${JSON.stringify(scenarioModule)}
+
+export default defineScenario({
+  steps: [{ ws: { path: "/echo", send: ["first", "second"], receive: 2 } }],
+})
+`
+      await Bun.write(scenario, source)
+      const result = await runParity(["--reference", fakeServer, "--candidate", fakeServer, scenario])
+      expect(result.exitCode).toBe(0)
+      expect(result.output).toContain("PASS ws-echo-parity")
+      const capture = (await Bun.file(path.join(import.meta.dir, "../out/ws-echo-parity/reference.json")).json()) as {
+        steps: { opened: boolean; frames: string[]; close: { code: number } }[]
+      }
+      expect(capture.steps[0].opened).toBe(true)
+      expect(capture.steps[0].frames).toEqual(["first", "second"])
+      expect(capture.steps[0].close.code).toBe(1000)
+    })
+  },
+  60_000,
+)
+
 async function withTempRoot(run: (root: string) => Promise<void>) {
   await fs.mkdir("/tmp/opencode", { recursive: true })
   const root = await fs.mkdtemp(path.join("/tmp/opencode", "parity-capture-"))

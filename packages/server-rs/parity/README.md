@@ -9,17 +9,24 @@ Runs a scenario against the TypeScript reference server and a candidate server, 
 - `--reference <ts|path>` selects the reference side and defaults to `ts`.
 - `--candidate <ts|path>` is required.
 - `--repeat <n>` repeats every scenario `n` times and defaults to `1`; values must be positive integers. Repetition stops at the first repetition that reports a difference.
+- `--deviations <dir>` selects the deviation ledger and defaults to `packages/server-rs/parity/deviations`; tests use it to supply a temporary ledger.
 - Remaining positional arguments are scenario files. With none, every `parity/scenarios/*.scenario.ts` file runs in sorted order. A scenario name is its path relative to `parity/scenarios` without `.scenario.ts`, falling back to the basename for files outside that directory.
 - Each run writes `parity/out/<scenario>/reference.json`, `candidate.json` and `differences.json`. Each repetition overwrites the previous files.
 - At startup the harness reads `packages/server-rs/upstream-pin`. When that commit exists in the clone and the TypeScript reference differs from it under the pinned source directories, a warning line names the number of changed files.
 
 ## Steps
 
-Each scenario runs its `steps` in order. `http` steps add an entry to `steps`; `waitEvent` and `files` steps do not.
+Each scenario runs its `steps` in order. `http` and `ws` steps add an entry to `steps`; `waitEvent` and `files` steps do not.
 
 - `http`: `method` and `path` are required. `query` values are strings or arrays, and array values repeat the key. `headers` are sent as written and `body` is JSON. `auth` is `basic` (default), `query` or `none`. `location` defaults to `true` and sends `x-opencode-directory: <work>`. `as` saves the parsed response body for later placeholders.
 - `waitEvent`: waits for an event of `type`. `match` is an optional deep-partial match against the event's `data` after templating: every object key must match and arrays compare as a prefix. `timeout` is in milliseconds and defaults to `30000`. The next wait starts after the previously matched event.
 - `files`: writes a `{ path: contents }` map below `work` mid-scenario, unlike the scenario-level `files` written before the server starts.
+- `ws`: `path` is required, and the URL is the server base with the HTTP scheme replaced by `ws` (`wss` for `https`);
+  `query` behaves as it does for `http`, with string or array values and arrays repeating the key. `auth` is `basic`
+  (default), `query` or `none`, as for `http`. After the socket opens, each string in `send` is sent in order. Text
+  frames are collected until `receive` frames have arrived or the socket closes, then the harness closes the socket
+  with code 1000. `timeout` is in milliseconds and defaults to `10000`. `as` saves the capture for later placeholders.
+  Templating (`{{work}}`, `{{root}}`, `{{<as>.<path>}}`) applies to `path`, query values and `send`.
 - Templating: `{{work}}`, `{{root}}` and `{{<as>.<dotted.path>}}` are replaced in paths, query values, header values and the string leaves of request bodies and `match` objects. An unresolved placeholder fails the scenario.
 
 ## Sandbox and environment
@@ -89,7 +96,7 @@ Strings that look like JSON objects or arrays are parsed, normalized recursively
 
 A capture is `{ steps, events, logs, model, database, files }`.
 
-- `steps`: one entry per `http` step, `{ status, headers, body }`. `status` is the numeric response status. `headers` contains lower-cased header names sorted alphabetically, dropping `date`, `connection`, `keep-alive`, `content-length`, `transfer-encoding`, `etag` and `last-modified`. `body` is parsed as JSON when the response content type contains `json` and kept as text otherwise, so a 401 error body is captured but never asserted by the scenario itself.
+- `steps`: one entry per `http` or `ws` step. An `http` entry is `{ status, headers, body }`. `status` is the numeric response status. `headers` contains lower-cased header names sorted alphabetically, dropping `date`, `connection`, `keep-alive`, `content-length`, `transfer-encoding`, `etag` and `last-modified`. `body` is parsed as JSON when the response content type contains `json` and kept as text otherwise, so a 401 error body is captured but never asserted by the scenario itself. A `ws` entry is `{ opened, frames, close }`, where `opened` is whether the socket opened, `frames` holds text frames in arrival order with binary frames encoded as `base64:<data>`, and `close` is `{ code, reason }` or `null`. If the receive count is not reached before the timeout the entry also has `timedOut: true`; a timeout is captured for comparison and is not a scenario error.
 - `events`: every `/api/event` frame collected in arrival order. The stream opens before the first step and closes after the last, so it starts with `server.connected`.
 - `logs`: for each session created in the run, the parsed frames of `GET /api/experimental/session/<id>/log`, keyed by the raw session id.
 - `model`: outbound model requests, one `{ method, path, body }` entry per request the scripted endpoint received, holding the pathname only and the parsed JSON body. Both sides are compared.
@@ -98,8 +105,31 @@ A capture is `{ steps, events, logs, model, database, files }`.
 
 Each run writes three files below `parity/out/<scenario>/`: `reference.json` and `candidate.json` hold the normalized captures, and `differences.json` holds the compared paths with their reference and candidate values.
 
+## Deviations
+
+Every difference from the TypeScript server must be covered by a file in the deviations directory (default
+`packages/server-rs/parity/deviations`, overridable with `--deviations`). A file explains nothing until its
+`Accepted:` line has a non-empty owner and date; a value starting with `pending` in any case is not accepted, so the
+current ledger of `Accepted: pending owner` files explains nothing and only produces warnings.
+
+A scenario passes when every difference matches an accepted deviation. It prints
+`PASS <scenario> (<n> explained by <ids>)`; a difference that matches no accepted deviation still fails the scenario
+as before.
+
+An accepted file must contain a fenced code block with the info string `parity`, one rule per line:
+`<scenario glob> <difference-path glob>`. Globs use `Bun.Glob` semantics, the scenario name is its path under
+`parity/scenarios` without `.scenario.ts`, and the difference path uses the capture paths (`steps/<i>/body/...`,
+`events/<i>/...`, `logs/<name>/...`, `model/<i>/...`, `database/<file>/tables/<table>/...`, `files/<path>`); a `ws`
+step's paths start with `steps/<i>/opened`, `steps/<i>/frames` or `steps/<i>/close`.
+
+An accepted file with no `parity` block fails the run with exit 2. After a full run with no scenario arguments,
+accepted deviations that explained nothing print `warning: deviation <id> matched nothing`, and files without an
+accepted line print `warning: deviation <id> is not accepted`. The file stem is the deviation id shown in these
+messages.
+
 ## Exit codes
 
 - `0`: every scenario matched.
-- `1`: at least one scenario reported a difference.
-- `2`: a scenario, start or configuration error, such as a server that did not start, an invalid flag value, or scenario configuration such as a model reply left unused.
+- `1`: at least one scenario reported a difference that no accepted deviation explains.
+- `2`: a scenario, start, configuration or ledger error, such as a server that did not start, an invalid flag value,
+  scenario configuration such as a model reply left unused, or an accepted deviation file with no `parity` block.

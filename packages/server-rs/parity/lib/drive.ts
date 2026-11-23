@@ -4,7 +4,7 @@ import { dumpDatabases, listFiles, waitForSearchSettled, type DatabaseCapture } 
 import type { ModelEndpoint } from "./model"
 import { resolveSide, startServer, stopServer } from "./server"
 import { sandboxEnv, type Sandbox } from "./sandbox"
-import type { HttpStep, Scenario, Step, WaitEventStep } from "./scenario"
+import type { HttpStep, Scenario, Step, WaitEventStep, WsStep } from "./scenario"
 
 const credentials = Buffer.from("opencode:parity").toString("base64")
 const droppedHeaders = new Set([
@@ -21,9 +21,15 @@ const wholePlaceholder = /^\{\{([^{}]+)\}\}$/
 const eventTimeout = 30_000
 
 export type StepCapture = { status: number; headers: Record<string, string>; body: unknown }
+export type WsCapture = {
+  opened: boolean
+  frames: string[]
+  close: { code: number; reason: string } | null
+  timedOut?: true
+}
 
 export type Capture = {
-  steps: StepCapture[]
+  steps: (StepCapture | WsCapture)[]
   events: unknown[]
   logs: Record<string, unknown[]>
   model: unknown[]
@@ -46,7 +52,7 @@ export async function runSide(
   await writeFiles(sandbox, scenario.files ?? {})
   const server = await startServer(resolveSide(side), env, sandbox.work, side)
   const saved: Record<string, unknown> = {}
-  const steps: StepCapture[] = []
+  const steps: (StepCapture | WsCapture)[] = []
   const events: unknown[] = []
   const logs: Record<string, unknown[]> = {}
   const cursor: Cursor = { index: 0 }
@@ -187,11 +193,12 @@ async function runStep(
   saved: Record<string, unknown>,
   events: unknown[],
   cursor: Cursor,
-): Promise<StepCapture | undefined> {
+): Promise<StepCapture | WsCapture | undefined> {
   if ("files" in step) {
     await writeFiles(sandbox, step.files)
     return undefined
   }
+  if ("ws" in step) return runWsStep(step.ws, base, sandbox, saved)
   if ("waitEvent" in step) {
     cursor.index = await waitForEvent(
       step.waitEvent,
@@ -229,6 +236,59 @@ async function runHttpStep(step: HttpStep, base: string, sandbox: Sandbox, saved
   const parsed = content.includes("json") ? await response.json() : await response.text()
   if (step.as !== undefined) saved[step.as] = parsed
   return { status: response.status, headers: captureHeaders(response.headers), body: parsed }
+}
+
+function runWsStep(
+  step: WsStep,
+  base: string,
+  sandbox: Sandbox,
+  saved: Record<string, unknown>,
+): Promise<WsCapture> {
+  const template = { sandbox, saved }
+  const url = new URL(base + interpolate(step.path, template))
+  for (const [name, values] of Object.entries(step.query ?? {}))
+    for (const value of Array.isArray(values) ? values : [values])
+      url.searchParams.append(name, interpolate(value, template))
+  url.protocol = url.protocol === "https:" ? "wss:" : "ws:"
+  const headers: Record<string, string> = {}
+  const auth = step.auth ?? "basic"
+  if (auth === "basic") headers.authorization = `Basic ${credentials}`
+  if (auth === "query") url.searchParams.append("auth_token", credentials)
+  return new Promise((resolve) => {
+    const frames: string[] = []
+    let opened = false
+    let settled = false
+    const socket = new WebSocket(url, { headers })
+    socket.binaryType = "arraybuffer"
+    const finish = (capture: WsCapture) => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      if (step.as !== undefined) saved[step.as] = capture
+      resolve(capture)
+    }
+    const timer = setTimeout(() => {
+      socket.close(1000)
+      finish({ opened, frames, close: null, timedOut: true })
+    }, step.timeout ?? 10_000)
+    socket.addEventListener("open", () => {
+      opened = true
+      for (const message of step.send ?? []) socket.send(interpolate(message, template))
+      if (step.receive === 0) socket.close(1000)
+    })
+    socket.addEventListener("message", (event) => {
+      if (settled || frames.length >= step.receive) return
+      const data = event.data
+      frames.push(typeof data === "string" ? data : `base64:${Buffer.from(data).toString("base64")}`)
+      if (frames.length >= step.receive) socket.close(1000)
+    })
+    socket.addEventListener("close", (event) => {
+      finish({ opened, frames, close: { code: event.code, reason: event.reason } })
+    })
+    socket.addEventListener("error", () => {
+      if (!opened) finish({ opened: false, frames, close: null })
+    })
+  })
 }
 
 async function writeFiles(sandbox: Sandbox, files: Record<string, string>) {

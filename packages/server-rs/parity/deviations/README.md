@@ -16,6 +16,27 @@ Each file has these paragraphs, in order:
 - `Reason:` why the difference exists, and which parity scenario or check covers it.
 - `Accepted:` the owner's name and the date the deviation was accepted.
 
+## Matches
+
+The file stem is the deviation id that task text calls `<id>`. A non-empty `Accepted:` value is required: a value
+starting with `pending` (any case) is not accepted, and the file then explains nothing. An accepted file must carry a
+fenced `parity` block with one rule per line, or the run exits 2.
+
+Each rule is `<scenario glob> <difference-path glob>`, matched with `Bun.Glob` semantics. The scenario name is its
+path under `parity/scenarios` without `.scenario.ts`. The difference path uses the capture paths
+(`steps/<i>/body/...`, `events/<i>/...`, `logs/<name>/...`, `model/<i>/...`,
+`database/<file>/tables/<table>/...`, `files/<path>`), and a `ws` step's paths start with `steps/<i>/opened`,
+`steps/<i>/frames` or `steps/<i>/close`.
+
+```parity
+info-auth steps/*/body/version
+```
+
+A scenario passes when every difference matches an accepted deviation; the harness prints the matched count and ids
+on `PASS <scenario> (<n> explained by <ids>)`. After a full run with no scenario arguments, accepted deviations that
+explained nothing print `warning: deviation <id> matched nothing`, and files without an accepted line print
+`warning: deviation <id> is not accepted`.
+
 ## Current deviations
 
 - `OR-38-lone-surrogates.md`: the strict round-trip corpus skips samples with unpaired UTF-16 surrogates

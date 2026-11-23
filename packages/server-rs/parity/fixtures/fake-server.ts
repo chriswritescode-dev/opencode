@@ -5,8 +5,12 @@ const subscribers = new Set<ReadableStreamDefaultController<Uint8Array>>()
 const server = Bun.serve({
   hostname: "127.0.0.1",
   port: 0,
-  fetch(request) {
+  fetch(request, server) {
     const url = new URL(request.url)
+    if (request.method === "GET" && url.pathname === "/echo") {
+      if (server.upgrade(request)) return
+      return new Response(null, { status: 400 })
+    }
     if (request.method === "GET" && url.pathname === "/api/info")
       return Response.json({ version: process.env.FAKE_VERSION ?? "fake" })
     if (request.method === "GET" && url.pathname === "/api/event") return eventStream()
@@ -15,6 +19,11 @@ const server = Bun.serve({
       return Response.json({})
     }
     return new Response(null, { status: 404 })
+  },
+  websocket: {
+    message(socket, message) {
+      socket.send(message)
+    },
   },
 })
 
