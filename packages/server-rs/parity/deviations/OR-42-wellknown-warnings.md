@@ -10,5 +10,3 @@ in `load_source` without logging. The config crate has no logger, so neither fai
 
 Reason: diagnostics belong to the logging layer (OR-39). The well-known tests cover the cached-manifest fallback and
 the skipped-unreachable-source behaviour without the log lines.
-
-Accepted: pending owner

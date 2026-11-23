@@ -14,7 +14,8 @@ Each file has these paragraphs, in order:
 - `TypeScript:` what the TypeScript server does, with `path:line` at the pinned commit.
 - `Rust:` what this package does instead, with the crate and function or file.
 - `Reason:` why the difference exists, and which parity scenario or check covers it.
-- `Accepted:` the owner's name and the date the deviation was accepted.
+- `Accepted:` the owner's name and the date the deviation was accepted. Only the owner adds this line, so a
+  deviation that is still pending acceptance has none.
 
 ## Current deviations
 

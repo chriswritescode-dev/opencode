@@ -37,5 +37,8 @@ named in the row needs it.
 ADR-004 excludes the first attempt's hand-written wire types, its table modules, its session crate, and its SDK, TUI
 and CLI.
 
+OR-42 ported config discovery and normalisation from the pinned TypeScript instead of importing the first attempt's
+`oc-config`, because that crate is not visible in this checkout.
+
 Each import re-checks the module against the TypeScript behaviour at the pinned commit, and records any difference as
 a deviation in `../parity/deviations/`.

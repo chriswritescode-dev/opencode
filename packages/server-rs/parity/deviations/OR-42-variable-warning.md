@@ -11,5 +11,3 @@ logger yet. The `file-missing` corpus case covers the empty substitution and the
 
 Reason: the planned `substitute` API takes references and an environment lookup but returns only the substituted text.
 The loader that calls it owns reporting, once the log layer from OR-42 exists.
-
-Accepted: pending owner
