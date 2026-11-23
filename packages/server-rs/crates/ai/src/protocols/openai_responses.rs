@@ -469,38 +469,26 @@ fn is_openai_responses_hosted_tool_item(value: &Value) -> Option<Value> {
     let valid = match object.get("type").and_then(Value::as_str)? {
         "computer_call" => {
             object.get("id").and_then(Value::as_str).is_some()
-                && optional_string(object, "status")
-                && optional_string(object, "call_id")
-                && optional_null_object(object, "action")
+                && shared::optional_string(object, "status")
+                && shared::optional_string(object, "call_id")
+                && shared::optional_null_object(object, "action")
                 && optional_object_array(object, "pending_safety_checks")
         }
         "web_search_preview_call" => {
             object.get("id").and_then(Value::as_str).is_some()
-                && optional_string(object, "status")
-                && optional_null_object(object, "action")
+                && shared::optional_string(object, "status")
+                && shared::optional_null_object(object, "action")
         }
         "image_generation_call" => {
             object.get("id").and_then(Value::as_str).is_some()
-                && optional_string(object, "status")
-                && optional_null_string(object, "result")
+                && shared::optional_string(object, "status")
+                && shared::optional_null_string(object, "result")
                 && optional_literal(object, "output_format", &["png", "jpeg", "webp"])
-                && optional_null_string(object, "revised_prompt")
+                && shared::optional_null_string(object, "revised_prompt")
         }
         _ => false,
     };
     valid.then(|| value.clone())
-}
-
-fn optional_string(object: &Map<String, Value>, key: &str) -> bool {
-    matches!(object.get(key), None | Some(Value::String(_)))
-}
-
-fn optional_null_string(object: &Map<String, Value>, key: &str) -> bool {
-    matches!(object.get(key), None | Some(Value::Null) | Some(Value::String(_)))
-}
-
-fn optional_null_object(object: &Map<String, Value>, key: &str) -> bool {
-    matches!(object.get(key), None | Some(Value::Null) | Some(Value::Object(_)))
 }
 
 fn optional_object_array(object: &Map<String, Value>, key: &str) -> bool {

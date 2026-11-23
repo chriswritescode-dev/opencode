@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use serde_json::{Map, Value, json};
 
-use crate::json::encode_body;
+use crate::json::{canonical, encode_body};
 use crate::protocols::open_responses;
 use crate::protocols::open_responses_channel::Observer;
 use crate::protocols::shared;
@@ -155,23 +155,6 @@ fn checkpoint_value(checkpoint: &ChannelCheckpoint) -> Option<CheckpointValue> {
     let request = value.get("request").and_then(Value::as_object)?;
     let output = value.get("output").and_then(Value::as_array)?;
     Some(CheckpointValue { response_id: response_id.to_string(), request: request.clone(), output: output.clone() })
-}
-
-fn canonical(value: &Value) -> String {
-    match value {
-        Value::Array(items) => format!("[{}]", items.iter().map(canonical).collect::<Vec<String>>().join(",")),
-        Value::Object(object) => {
-            let mut keys = object.keys().collect::<Vec<&String>>();
-            keys.sort();
-            let entries = keys
-                .into_iter()
-                .map(|key| format!("{}:{}", encode_body(&Value::String(key.clone())), canonical(&object[key])))
-                .collect::<Vec<String>>()
-                .join(",");
-            format!("{{{entries}}}")
-        }
-        value => encode_body(value),
-    }
 }
 
 fn invariant(request: &Map<String, Value>) -> Map<String, Value> {

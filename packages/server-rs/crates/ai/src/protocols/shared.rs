@@ -1,13 +1,13 @@
 use std::collections::HashSet;
 
-use serde_json::{Number, Value};
+use serde_json::{Map, Number, Value};
 
 use crate::prepare::tool_updates::flatten_tools;
 use crate::route::model::Model;
 use crate::schema::{
     AiError, AiErrorReason, AssistantMessage, CacheMode, CachePolicy, ContentPart, LlmRequest, MediaAsset, MediaPart,
-    MediaSource, Message, TextPart, ToolCallPart, ToolContent, ToolDefinition, ToolMessage, ToolResultPart,
-    ToolResultValue,
+    MediaSource, Message, ProviderMetadata, TextPart, ToolCallPart, ToolContent, ToolDefinition, ToolMessage,
+    ToolResultPart, ToolResultValue,
 };
 
 pub const OPENAI_PROMPT_CACHE_KEY_MAX_LENGTH: usize = 64;
@@ -53,14 +53,18 @@ pub fn sum_tokens(values: &[Option<u64>]) -> Option<u64> {
     Some(values.iter().map(|value| value.unwrap_or(0)).sum())
 }
 
-pub fn fit_thinking_budget(budget: i64, max_tokens: Option<i64>, minimum: i64) -> i64 {
-    let Some(max_tokens) = max_tokens else {
-        return budget;
+pub fn fit_thinking_budget(budget: &Number, max_tokens: Option<&Number>, minimum: i64) -> Number {
+    let Some(max_tokens) = max_tokens.and_then(Number::as_f64) else {
+        return normalized_number(budget);
     };
-    if budget as f64 <= max_tokens as f64 / 2.0 {
-        return budget;
+    if budget.as_f64().unwrap_or_default() <= max_tokens / 2.0 {
+        return normalized_number(budget);
     }
-    minimum.max((max_tokens as f64 / 2.0).floor() as i64)
+    number_from_f64((minimum as f64).max((max_tokens / 2.0).floor())).unwrap_or_else(|| Number::from(minimum))
+}
+
+fn normalized_number(number: &Number) -> Number {
+    number_from_f64(number.as_f64().unwrap_or_default()).unwrap_or_else(|| number.clone())
 }
 
 pub fn event_error(route: &str, message: impl Into<String>, body: Option<String>) -> AiError {
@@ -360,7 +364,7 @@ fn tool_content_value(item: &ToolContent) -> Value {
     }
 }
 
-fn is_truthy(value: &Value) -> bool {
+pub(crate) fn is_truthy(value: &Value) -> bool {
     match value {
         Value::Null => false,
         Value::Bool(value) => *value,
@@ -370,11 +374,15 @@ fn is_truthy(value: &Value) -> bool {
     }
 }
 
-fn number_from_f64(value: f64) -> Option<Number> {
+pub fn number_from_f64(value: f64) -> Option<Number> {
     if value.fract() == 0.0 && (-9_223_372_036_854_775_808.0..9_223_372_036_854_775_808.0).contains(&value) {
         return Some(Number::from(value as i64));
     }
     Number::from_f64(value)
+}
+
+pub(crate) fn provider_metadata_value<'a>(metadata: Option<&'a ProviderMetadata>, key: &str) -> Option<&'a Value> {
+    metadata?.get(key)
 }
 
 fn source_type(source: &MediaSource) -> &'static str {
@@ -387,12 +395,28 @@ fn source_type(source: &MediaSource) -> &'static str {
 }
 
 fn data_url_payload(value: &str) -> Option<&str> {
-    let (header, data) = value.split_once(',')?;
-    let header = header.to_lowercase();
-    let rest = header.strip_prefix("data:")?;
-    let (media_type, parameters) = rest.split_once(';')?;
-    if media_type.is_empty() || !parameters.split(';').any(|parameter| parameter.trim() == "base64") {
+    let rest = value.get(..5).filter(|prefix| prefix.eq_ignore_ascii_case("data:")).map(|_| &value[5..])?;
+    let media_type_end = rest.find([';', ',']).filter(|end| *end > 0)?;
+    if !rest[media_type_end..].starts_with(';') {
         return None;
     }
-    Some(data)
+    let comma = media_type_end + rest[media_type_end..].find(',')?;
+    let parameters = rest.get(media_type_end..comma)?;
+    let marker = parameters.get(parameters.len().checked_sub(7)?..)?;
+    if !marker.eq_ignore_ascii_case(";base64") {
+        return None;
+    }
+    rest.get(comma + 1..)
+}
+
+pub(crate) fn optional_string(object: &Map<String, Value>, key: &str) -> bool {
+    matches!(object.get(key), None | Some(Value::String(_)))
+}
+
+pub(crate) fn optional_null_string(object: &Map<String, Value>, key: &str) -> bool {
+    matches!(object.get(key), None | Some(Value::Null) | Some(Value::String(_)))
+}
+
+pub(crate) fn optional_null_object(object: &Map<String, Value>, key: &str) -> bool {
+    matches!(object.get(key), None | Some(Value::Null) | Some(Value::Object(_)))
 }

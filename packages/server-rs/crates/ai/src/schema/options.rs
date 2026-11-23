@@ -177,18 +177,33 @@ pub struct HttpOptions {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub query: Option<StringMap>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub body: Option<serde_json::Value>,
+    pub body: Option<serde_json::Map<String, serde_json::Value>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub encoding: Option<RequestEncoding>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tls: Option<ClientTls>,
 }
 
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
 #[serde(untagged)]
 pub enum HttpTimeout {
     Millis(serde_json::Number),
     Disabled(bool),
+}
+
+impl<'de> serde::Deserialize<'de> for HttpTimeout {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let value = <serde_json::Value as serde::Deserialize>::deserialize(deserializer)?;
+        match value {
+            serde_json::Value::Bool(false) => Ok(HttpTimeout::Disabled(false)),
+            serde_json::Value::Number(number) if number.as_f64().is_some_and(|number| number > 0.0) => {
+                Ok(HttpTimeout::Millis(number))
+            }
+            other => Err(serde::de::Error::custom(format!(
+                "expected a positive number of milliseconds or false, got {other}"
+            ))),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, Default)]
@@ -241,23 +256,7 @@ pub fn merge_generation(items: &[Option<&GenerationOptions>]) -> GenerationOptio
 }
 
 pub fn merge_provider_options(items: &[Option<&ProviderOptions>]) -> Option<ProviderOptions> {
-    let defined: Vec<&ProviderOptions> = items.iter().filter_map(|item| *item).collect();
-    if defined.is_empty() {
-        return None;
-    }
-    if defined.len() == 1 {
-        return Some(defined[0].clone());
-    }
-    let mut merged = serde_json::Map::new();
-    for item in defined {
-        let next =
-            crate::json::deep_merge(&serde_json::Value::Object(merged), &serde_json::Value::Object(item.clone()));
-        merged = match next {
-            serde_json::Value::Object(map) => map,
-            _ => serde_json::Map::new(),
-        };
-    }
-    (!merged.is_empty()).then_some(merged)
+    crate::json::merge_records(items.iter().filter_map(|item| *item))
 }
 
 pub fn merge_string_maps(items: &[Option<&StringMap>]) -> Option<StringMap> {
@@ -316,13 +315,7 @@ pub fn merge_timeout(items: &[Option<&RequestTimeout>]) -> Option<RequestTimeout
 pub fn merge_http(items: &[Option<&HttpOptions>]) -> Option<HttpOptions> {
     let query =
         merge_string_maps(&items.iter().map(|item| item.and_then(|item| item.query.as_ref())).collect::<Vec<_>>());
-    let body = items.iter().filter_map(|item| item.and_then(|item| item.body.as_ref())).fold(
-        None,
-        |base: Option<serde_json::Value>, overlay| match base {
-            None => Some(overlay.clone()),
-            Some(base) => Some(crate::json::deep_merge(&base, overlay)),
-        },
-    );
+    let body = crate::json::merge_records(items.iter().filter_map(|item| item.and_then(|item| item.body.as_ref())));
     let encoding = items.iter().filter_map(|item| item.and_then(|item| item.encoding.clone())).next_back();
     let tls = items.iter().filter_map(|item| item.and_then(|item| item.tls.clone())).next_back();
     let options = HttpOptions { query, body, encoding, tls };

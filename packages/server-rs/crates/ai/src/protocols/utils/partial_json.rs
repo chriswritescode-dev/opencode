@@ -2,6 +2,8 @@ use serde_json::{Map, Value};
 
 use super::partial_json_options::{_INFINITY, ALL, ARR, BOOL, INFINITY, NAN, NULL, NUM, OBJ, STR};
 
+const MAX_DEPTH: usize = 1000;
+
 pub fn parse(input: &str) -> Option<Value> {
     parse_with(input, ALL)
 }
@@ -83,18 +85,34 @@ fn has_hex_quad(chars: &[char], start: usize) -> bool {
 }
 
 fn parse_partial(input: &str, allow: u16) -> Option<Value> {
-    Parser { chars: input.chars().collect(), index: 0, allow }.parse_any()
+    let mut parser = Parser { chars: input.chars().collect(), index: 0, allow, depth: 0, too_deep: false };
+    let value = parser.parse_any();
+    if parser.too_deep {
+        return None;
+    }
+    value
 }
 
 struct Parser {
     chars: Vec<char>,
     index: usize,
     allow: u16,
+    depth: usize,
+    too_deep: bool,
 }
 
 impl Parser {
     fn len(&self) -> usize {
         self.chars.len()
+    }
+
+    fn enter(&mut self) -> bool {
+        if self.depth >= MAX_DEPTH {
+            self.too_deep = true;
+            return false;
+        }
+        self.depth += 1;
+        true
     }
 
     fn peek(&self) -> Option<char> {
@@ -193,6 +211,15 @@ impl Parser {
     }
 
     fn parse_obj(&mut self) -> Option<Value> {
+        if !self.enter() {
+            return None;
+        }
+        let value = self.parse_object();
+        self.depth -= 1;
+        value
+    }
+
+    fn parse_object(&mut self) -> Option<Value> {
         let allowed = self.allow & OBJ != 0;
         self.index += 1;
         self.skip_blank();
@@ -221,6 +248,15 @@ impl Parser {
     }
 
     fn parse_arr(&mut self) -> Option<Value> {
+        if !self.enter() {
+            return None;
+        }
+        let value = self.parse_array();
+        self.depth -= 1;
+        value
+    }
+
+    fn parse_array(&mut self) -> Option<Value> {
         let allowed = self.allow & ARR != 0;
         self.index += 1;
         let mut array = Vec::new();

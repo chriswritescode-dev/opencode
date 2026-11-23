@@ -1,5 +1,7 @@
 use std::collections::BTreeMap;
 
+use opencode_api_types::js::encode_component;
+use opencode_util::hash::sha256_hex;
 use serde::Deserialize;
 use serde_json::Value;
 
@@ -222,7 +224,7 @@ fn sign_sigv4_request(
     let signed_headers = signable.keys().map(String::as_str).collect::<Vec<_>>().join(";");
     let canonical_headers =
         signable.iter().map(|(name, value)| format!("{name}:{value}")).collect::<Vec<_>>().join("\n");
-    let canonical_path = encode_rfc3986(&encode_uri_component(&collapse_slashes(url.path())).replace("%2F", "/"));
+    let canonical_path = encode_rfc3986(&encode_component(&collapse_slashes(url.path())).replace("%2F", "/"));
     let canonical_query = canonical_query(&url);
     let canonical_request = format!(
         "{}\n{canonical_path}\n{canonical_query}\n{canonical_headers}\n\n{signed_headers}\n{}",
@@ -260,9 +262,7 @@ fn canonical_query(url: &url::Url) -> String {
     let mut pairs: Vec<(String, String)> = url
         .query_pairs()
         .filter(|(key, _)| !key.is_empty())
-        .map(|(key, value)| {
-            (encode_rfc3986(&encode_uri_component(&key)), encode_rfc3986(&encode_uri_component(&value)))
-        })
+        .map(|(key, value)| (encode_rfc3986(&encode_component(&key)), encode_rfc3986(&encode_component(&value))))
         .collect();
     pairs.sort();
     pairs.iter().map(|(key, value)| format!("{key}={value}")).collect::<Vec<_>>().join("&")
@@ -281,19 +281,6 @@ fn collapse_slashes(value: &str) -> String {
     })
 }
 
-pub(crate) fn encode_uri_component(value: &str) -> String {
-    let mut encoded = String::with_capacity(value.len());
-    for byte in value.bytes() {
-        match byte {
-            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'!' | b'~' | b'*' | b'\'' | b'(' | b')' => {
-                encoded.push(byte as char);
-            }
-            other => encoded.push_str(&format!("%{other:02X}")),
-        }
-    }
-    encoded
-}
-
 fn encode_rfc3986(value: &str) -> String {
     value.replace('!', "%21").replace('\'', "%27").replace('(', "%28").replace(')', "%29").replace('*', "%2A")
 }
@@ -301,10 +288,6 @@ fn encode_rfc3986(value: &str) -> String {
 fn hmac_sha256(key: &[u8], data: &[u8]) -> Vec<u8> {
     let key = ring::hmac::Key::new(ring::hmac::HMAC_SHA256, key);
     ring::hmac::sign(&key, data).as_ref().to_vec()
-}
-
-fn sha256_hex(bytes: &[u8]) -> String {
-    hex(ring::digest::digest(&ring::digest::SHA256, bytes).as_ref())
 }
 
 fn hex(bytes: &[u8]) -> String {

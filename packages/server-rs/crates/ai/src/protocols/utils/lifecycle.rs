@@ -41,7 +41,7 @@ pub fn text_delta(
     text: &str,
     provider_metadata: Option<ProviderMetadata>,
 ) -> State {
-    let state = text_start(state, events, id, provider_metadata.clone());
+    let state = text_start(state, events, id, None);
     events.push(LlmEvent::TextDelta { id: id.to_string(), text: text.to_string(), provider_metadata });
     state
 }

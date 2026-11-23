@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 use std::sync::LazyLock;
 
+use opencode_api_types::js::{is_whitespace, parse_number};
 use regex_lite::Regex;
 use serde_json::Value;
 
@@ -309,14 +310,13 @@ pub fn provider_error_message(body: &str) -> Option<String> {
         .or_else(|| field(&value, "message"))
         .or_else(|| field(&value, "Message"))
         .or_else(|| field(&value, "detail"))
-        .or_else(|| {
-            value
-                .get("errors")
-                .and_then(Value::as_array)
-                .and_then(|errors| errors.first())
-                .and_then(|error| field(error, "message"))
-        })?;
+        .or_else(|| errors_message(&value))?;
     Some(message.to_string())
+}
+
+fn errors_message(value: &Value) -> Option<&str> {
+    let errors = value.get("errors")?.as_array()?;
+    errors.iter().map(|error| field(error, "message")).collect::<Option<Vec<_>>>()?.first().copied()
 }
 
 fn normalize_headers(headers: BTreeMap<String, String>) -> BTreeMap<String, String> {
@@ -324,15 +324,18 @@ fn normalize_headers(headers: BTreeMap<String, String>) -> BTreeMap<String, Stri
 }
 
 fn retry_after_ms(headers: &BTreeMap<String, String>, now_ms: u64) -> Option<u64> {
-    if let Some(value) = headers.get("retry-after-ms") {
-        let millis = js_number(value);
-        if millis.is_finite() {
-            return Some(clamp_retry_after(millis));
-        }
+    if let Some(millis) = headers.get("retry-after-ms").and_then(|value| parse_number(value))
+        && millis.is_finite()
+    {
+        return Some(clamp_retry_after(millis));
     }
     let value = headers.get("retry-after")?;
-    let seconds = js_number(value);
-    if seconds.is_finite() {
+    if value.is_empty() {
+        return None;
+    }
+    if let Some(seconds) = parse_number(value)
+        && seconds.is_finite()
+    {
         return Some(clamp_retry_after(seconds * 1000.0));
     }
     let date = parse_http_date(value)?;
@@ -341,18 +344,6 @@ fn retry_after_ms(headers: &BTreeMap<String, String>, now_ms: u64) -> Option<u64
 
 fn clamp_retry_after(millis: f64) -> u64 {
     millis.ceil().clamp(0.0, MAX_SAFE_INTEGER) as u64
-}
-
-fn js_number(value: &str) -> f64 {
-    let trimmed = value.trim();
-    if trimmed.is_empty() {
-        return 0.0;
-    }
-    match trimmed {
-        "Infinity" | "+Infinity" => f64::INFINITY,
-        "-Infinity" => f64::NEG_INFINITY,
-        _ => trimmed.parse::<f64>().unwrap_or(f64::NAN),
-    }
 }
 
 fn rate_limit_details(headers: &BTreeMap<String, String>, retry_after: Option<u64>) -> Option<HttpRateLimitDetails> {
@@ -407,7 +398,10 @@ fn quota_text(text: &str) -> bool {
     }
     LIMIT_EXHAUSTED.find_iter(text).any(|found| {
         let before = text[..found.start()].to_lowercase();
-        !["rate", "rate-", "rate_", "rate "].iter().any(|prefix| before.ends_with(prefix))
+        let preceded_by_rate = ["rate", "rate-", "rate_"].iter().any(|prefix| before.ends_with(prefix));
+        let preceded_by_rate_and_whitespace =
+            before.strip_suffix(is_whitespace).is_some_and(|prefix| prefix.ends_with("rate"));
+        !preceded_by_rate && !preceded_by_rate_and_whitespace
     })
 }
 
@@ -516,16 +510,16 @@ fn parse_http_date(value: &str) -> Option<i128> {
         let (hour, minute, second) = parse_time(parts[3])?;
         return civil_to_ms(year, month, day, hour, minute, second, 0);
     }
-    if parts.len() == 4 && parts[3].eq_ignore_ascii_case("GMT") {
+    if parts.len() == 3 && parts[2].eq_ignore_ascii_case("GMT") {
         let (day, month, year) = parse_rfc850_date(parts[0])?;
         let (hour, minute, second) = parse_time(parts[1])?;
         return civil_to_ms(year, month, day, hour, minute, second, 0);
     }
     if parts.len() == 5 {
-        let month = month(parts[0])?;
-        let day = parts[1].parse::<u32>().ok()?;
-        let (hour, minute, second) = parse_time(parts[2])?;
-        let year = parts[3].parse::<i32>().ok()?;
+        let month = month(parts[1])?;
+        let day = parts[2].parse::<u32>().ok()?;
+        let (hour, minute, second) = parse_time(parts[3])?;
+        let year = parts[4].parse::<i32>().ok()?;
         return civil_to_ms(year, month, day, hour, minute, second, 0);
     }
     None
@@ -536,7 +530,17 @@ fn parse_rfc850_date(value: &str) -> Option<(u32, u32, i32)> {
     let day = parts.next()?.parse::<u32>().ok()?;
     let month = month(parts.next()?)?;
     let year = parts.next()?.parse::<i32>().ok()?;
-    Some((day, month, if year < 100 { 1900 + year } else { year }))
+    Some((
+        day,
+        month,
+        if year < 50 {
+            2000 + year
+        } else if year < 100 {
+            1900 + year
+        } else {
+            year
+        },
+    ))
 }
 
 fn parse_iso_date(value: &str) -> Option<i128> {

@@ -99,10 +99,9 @@ pub fn close(
                 continue;
             }
         }
-        let Some(appended) = tool_stream::append(tools.clone(), key, STREAM_END) else {
+        let Some(appended) = tool_stream::append(&mut tools, key, STREAM_END) else {
             continue;
         };
-        tools = appended.tools;
         events.extend(appended.events);
     }
     CloseOutcome { tools, events }

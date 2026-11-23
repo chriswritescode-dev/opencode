@@ -1251,12 +1251,10 @@ fn on_output_item_added(state: &mut State, item: &Value) -> Vec<LlmEvent> {
             events
         }
         "function_call" | "custom_tool_call" => {
-            let (Some(call_id), Some(name)) = (
-                field(item, "call_id").filter(|value| !value.is_empty()),
-                field(item, "name").filter(|value| !value.is_empty()),
-            ) else {
+            let Some(call_id) = field(item, "call_id").filter(|value| !value.is_empty()) else {
                 return Vec::new();
             };
+            let name = field(item, "name").unwrap_or_default();
             if state.has_pending_tool(&item_id) {
                 return Vec::new();
             }
@@ -1273,17 +1271,15 @@ fn on_output_item_added(state: &mut State, item: &Value) -> Vec<LlmEvent> {
                 provider_executed: None,
                 provider_metadata: Some(metadata.clone()),
             };
-            let mut tools = tool_stream::start(std::mem::take(&mut state.tools), key, tool);
+            tool_stream::start(&mut state.tools, key, tool);
             let mut opened_events = Vec::new();
             if custom {
                 let raw = raw_input(item);
                 let starts = openai_freeform::stream_start(state.custom.get(name), raw);
-                if let Some(opened) = tool_stream::append(tools.clone(), key, &starts) {
-                    tools = opened.tools;
+                if let Some(opened) = tool_stream::append(&mut state.tools, key, &starts) {
                     opened_events = opened.events;
                 }
             }
-            state.tools = tools;
             state.lifecycle = lifecycle;
             events.push(LlmEvent::ToolInputStart {
                 id: call_id.to_string(),
@@ -1330,13 +1326,12 @@ fn on_function_call_arguments_delta(state: &mut State, event: &Event) -> Result<
         return Ok(Vec::new());
     }
     let missing = format!("{} tool argument delta is missing its tool call", state.name);
-    let result = tool_stream::append_existing(&state.id, std::mem::take(&mut state.tools), key, &delta, &missing)?;
+    let result = tool_stream::append_existing(&state.id, &mut state.tools, key, &delta, &missing)?;
     let mut events = Vec::new();
     if !result.events.is_empty() {
         state.lifecycle = lifecycle::step_start(state.lifecycle.clone(), &mut events);
     }
     events.extend(result.events);
-    state.tools = result.tools;
     Ok(events)
 }
 
@@ -1430,8 +1425,8 @@ fn on_output_item_done(state: &mut State, item: &Value) -> Result<Vec<LlmEvent>,
             closed_events = closed.events;
         }
         if !registered {
-            tools = tool_stream::start(
-                tools,
+            tool_stream::start(
+                &mut tools,
                 key,
                 tool_stream::PendingTool {
                     id: call_id.to_string(),
@@ -1444,10 +1439,10 @@ fn on_output_item_done(state: &mut State, item: &Value) -> Result<Vec<LlmEvent>,
             );
         }
         let mut finished = closed_events;
-        match tool_stream::finish(&state.id, tools, key, input.as_deref()) {
+        match tool_stream::finish(&state.id, &mut tools, key, input.as_deref()) {
             Ok(result) => {
                 finished.extend(result.events);
-                state.tools = result.tools;
+                state.tools = tools;
             }
             Err(error) => {
                 state.tools = tool_stream::empty();
@@ -1559,11 +1554,12 @@ fn on_response_finish(state: &mut State, event: &Event) -> Result<Vec<LlmEvent>,
             .and_then(Value::as_array)
             .map(Vec::as_slice)
             .unwrap_or(&[]);
+        let step_started = state.lifecycle.step_started;
         for (index, item) in output.iter().enumerate() {
             let resolved = resolve_item(state, item, Some(index as i64));
             let kind = field(&resolved, "type").unwrap_or_default();
             let item_id = field(&resolved, "id").unwrap_or_default();
-            if kind == "compaction" && state.lifecycle.step_started && !state.completed_compactions.contains(item_id) {
+            if kind == "compaction" && step_started && !state.completed_compactions.contains(item_id) {
                 return Err(shared::event_error(
                     &state.id,
                     "Cannot recover a compaction checkpoint after output has been emitted",
@@ -1577,8 +1573,9 @@ fn on_response_finish(state: &mut State, event: &Event) -> Result<Vec<LlmEvent>,
             }
             events.extend(on_output_item_done(state, &resolved)?);
         }
-        let pending = tool_stream::finish_all(&state.id, std::mem::take(&mut state.tools))?;
-        state.tools = pending.tools;
+        let mut tools = std::mem::take(&mut state.tools);
+        let pending = tool_stream::finish_all(&state.id, &mut tools)?;
+        state.tools = tools;
         state.has_function_call = state.has_function_call
             || pending
                 .events
@@ -1607,27 +1604,20 @@ fn on_response_finish(state: &mut State, event: &Event) -> Result<Vec<LlmEvent>,
         map_usage(usage, &state.provider_metadata_key, &frames)
     };
     let finish_metadata = {
-        let response_id = response
-            .and_then(|response| response.get("id"))
-            .and_then(Value::as_str)
-            .filter(|value| !value.is_empty())
-            .map(str::to_string);
-        let service_tier = response
-            .and_then(|response| response.get("service_tier"))
-            .and_then(Value::as_str)
-            .filter(|value| !value.is_empty())
-            .map(str::to_string);
-        if response_id.is_none() && service_tier.is_none() {
-            None
-        } else {
+        let response_id = response.and_then(|response| response.get("id"));
+        let service_tier = response.and_then(|response| response.get("service_tier"));
+        let truthy = |value: Option<&Value>| value.and_then(Value::as_str).is_some_and(|value| !value.is_empty());
+        if truthy(response_id) || truthy(service_tier) {
             let mut metadata = Map::new();
-            if let Some(response_id) = response_id {
-                metadata.insert("responseId".to_string(), Value::String(response_id));
+            if let Some(value) = response_id {
+                metadata.insert("responseId".to_string(), value.clone());
             }
-            if let Some(service_tier) = service_tier {
-                metadata.insert("serviceTier".to_string(), Value::String(service_tier));
+            if let Some(value) = service_tier {
+                metadata.insert("serviceTier".to_string(), value.clone());
             }
             Some(provider_metadata(&state.provider_metadata_key, metadata))
+        } else {
+            None
         }
     };
     let reason = FinishReasonDetails { normalized, raw, category, explanation: None };
@@ -1867,39 +1857,27 @@ fn is_hosted_tool_item(value: &Value) -> bool {
         return false;
     };
     let id = object.get("id").and_then(Value::as_str).is_some();
-    let status = optional_string(object, "status");
+    let status = shared::optional_string(object, "status");
     match kind {
-        "web_search_call" => id && status && optional_null_object(object, "action"),
+        "web_search_call" => id && status && shared::optional_null_object(object, "action"),
         "file_search_call" => {
             id && status && optional_string_array(object, "queries") && optional_null_object_array(object, "results")
         }
         "code_interpreter_call" => {
             id && status
-                && optional_null_string(object, "code")
-                && optional_null_string(object, "container_id")
+                && shared::optional_null_string(object, "code")
+                && shared::optional_null_string(object, "container_id")
                 && optional_null_object_array(object, "outputs")
         }
         "mcp_call" => {
             id && status
-                && optional_string(object, "server_label")
-                && optional_string(object, "name")
-                && optional_string(object, "arguments")
-                && optional_null_string(object, "output")
+                && shared::optional_string(object, "server_label")
+                && shared::optional_string(object, "name")
+                && shared::optional_string(object, "arguments")
+                && shared::optional_null_string(object, "output")
         }
         _ => false,
     }
-}
-
-fn optional_string(object: &Map<String, Value>, key: &str) -> bool {
-    matches!(object.get(key), None | Some(Value::String(_)))
-}
-
-fn optional_null_string(object: &Map<String, Value>, key: &str) -> bool {
-    matches!(object.get(key), None | Some(Value::Null) | Some(Value::String(_)))
-}
-
-fn optional_null_object(object: &Map<String, Value>, key: &str) -> bool {
-    matches!(object.get(key), None | Some(Value::Null) | Some(Value::Object(_)))
 }
 
 fn optional_string_array(object: &Map<String, Value>, key: &str) -> bool {

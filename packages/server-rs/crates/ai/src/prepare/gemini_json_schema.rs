@@ -1,3 +1,4 @@
+use opencode_api_types::js::parse_number;
 use serde_json::{Map, Value};
 
 pub const SCHEMA_MAPS: [&str; 6] =
@@ -112,7 +113,7 @@ fn cut_loops(schema: &Value, target: &str, safe: bool) -> Value {
                     return value.clone();
                 }
                 if key == "items" {
-                    let has_items = entries.get("minItems").and_then(Value::as_f64).is_some_and(|min| min > 0.0);
+                    let has_items = entries.get("minItems").is_some_and(|min| js_number(min) > 0.0);
                     return cut_loops(value, target, safe || !has_items);
                 }
                 if key == "properties" && value.is_object() {
@@ -129,5 +130,15 @@ fn cut_loops(schema: &Value, target: &str, safe: bool) -> Value {
             })
         }
         schema => schema.clone(),
+    }
+}
+
+fn js_number(value: &Value) -> f64 {
+    match value {
+        Value::Number(number) => number.as_f64().unwrap_or(f64::NAN),
+        Value::String(text) => parse_number(text).unwrap_or(f64::NAN),
+        Value::Bool(true) => 1.0,
+        Value::Bool(false) | Value::Null => 0.0,
+        _ => f64::NAN,
     }
 }

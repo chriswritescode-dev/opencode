@@ -55,10 +55,10 @@ pub fn json_request_parts(
     let (json_body, body_text) = match request.http.as_ref().and_then(|http| http.body.as_ref()) {
         None => (body.clone(), encode(&body)),
         Some(overlay) => {
-            if !body.is_object() {
+            let Some(overlaid) = body.as_object() else {
                 return Err(invalid_request("http.body can only overlay JSON object request bodies"));
-            }
-            let overlaid = json::deep_merge(&body, overlay);
+            };
+            let overlaid = Value::Object(json::merge_objects(overlaid, overlay));
             let text = json::encode_body(&overlaid);
             (overlaid, text)
         }

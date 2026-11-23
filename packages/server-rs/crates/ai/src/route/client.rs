@@ -117,6 +117,7 @@ async fn advance(stage: Stage) -> Option<(Result<LlmEvent, AiError>, Stage)> {
         Stage::Execute(state) => {
             let ExecuteState { executor, prepared, body, channel, web_socket, resolved, context, include_raw, route } =
                 *state;
+            let executor = executor.with_timeout(resolved.request.timeout.clone());
             let continuation = prepared.clone();
             let HttpPrepared { request, framing, middleware } = prepared;
             let (frames, http, complete) = match (channel, web_socket) {

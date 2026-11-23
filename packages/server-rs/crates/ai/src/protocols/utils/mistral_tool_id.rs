@@ -41,7 +41,9 @@ pub fn normalizer(request: &LlmRequest) -> Box<dyn FnMut(&str) -> String + '_> {
 }
 
 fn seed_hash(value: &str, seed: u32) -> String {
-    let result = value.chars().fold(seed, |result, character| (result ^ character as u32).wrapping_mul(16_777_619));
+    let result = value.chars().fold(seed, |result, character| {
+        (result ^ character.encode_utf16(&mut [0u16; 2])[0] as u32).wrapping_mul(16_777_619)
+    });
     let encoded = base36(result);
     format!("{encoded:0>7}")
 }

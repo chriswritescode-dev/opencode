@@ -150,7 +150,15 @@ pub fn open(request: WebSocketRequest) -> BoxFuture<Result<WebSocketConnection, 
 pub fn message_text(message: Message) -> String {
     match message {
         Message::Text(text) => text,
-        Message::Binary(bytes) => String::from_utf8_lossy(&bytes).into_owned(),
+        Message::Binary(bytes) => decode_binary(&bytes),
+    }
+}
+
+fn decode_binary(bytes: &[u8]) -> String {
+    let text = String::from_utf8_lossy(bytes);
+    match text.strip_prefix('\u{feff}') {
+        Some(rest) => rest.to_string(),
+        None => text.into_owned(),
     }
 }
 
@@ -290,7 +298,12 @@ fn read_stream(
                         };
                         return Some((Err(closed_error(&url, code, body)), None));
                     }
-                    Some(Err(_)) | None => return Some((Err(closed_error(&url, 1006, None)), None)),
+                    Some(Err(tungstenite::Error::Capacity(_))) => {
+                        close_sink(&sink, &closed, 1009, "Message too large").await;
+                        return Some((Err(too_large_error(&url, None)), None));
+                    }
+                    Some(Err(error)) => return Some((Err(receive_error(&url, error)), None)),
+                    None => return Some((Err(closed_error(&url, 1006, None)), None)),
                 };
                 if let Some(error) = oversized_error(&message, &url) {
                     close_sink(&sink, &closed, 1009, "Message too large").await;
@@ -318,20 +331,36 @@ async fn close_sink(sink: &Mutex<SocketSink>, closed: &AtomicBool, code: u16, re
 fn oversized_error(message: &Message, url: &str) -> Option<AiError> {
     let (length, body) = match message {
         Message::Text(text) => (text.len(), text.clone()),
-        Message::Binary(bytes) => (bytes.len(), String::from_utf8_lossy(bytes).into_owned()),
+        Message::Binary(bytes) => (bytes.len(), decode_binary(bytes)),
     };
     if length <= MAX_FRAME_BYTES {
         return None;
     }
-    Some(websocket_error(
+    Some(too_large_error(url, Some(body)))
+}
+
+fn too_large_error(url: &str, body: Option<String>) -> AiError {
+    websocket_error(
         "WebSocket message exceeds the 16 MiB limit".to_string(),
         Some(url.to_string()),
         TransportOperation::Read,
         Some("message-too-large".to_string()),
         Some(TransportPhase::Receive),
         None,
-        Some(body),
-    ))
+        body,
+    )
+}
+
+fn receive_error(url: &str, error: impl std::fmt::Display) -> AiError {
+    websocket_error(
+        format!("WebSocket error: {error}"),
+        Some(url.to_string()),
+        TransportOperation::Read,
+        Some("message".to_string()),
+        Some(TransportPhase::Receive),
+        None,
+        None,
+    )
 }
 
 fn websocket_error(

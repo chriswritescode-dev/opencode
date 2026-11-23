@@ -1,6 +1,6 @@
 use std::collections::BTreeSet;
 
-use opencode_ai::schema::{AiError, LlmEvent, LlmRequest};
+use opencode_ai::schema::{AiError, HttpOptions, HttpTimeout, LlmEvent, LlmRequest, RequestTimeout};
 use serde_json::json;
 
 use crate::corpus::Corpus;
@@ -96,10 +96,27 @@ fn json_helpers() {
     assert_eq!(opencode_ai::json::canonical(&json!({"z": [3, {"b": 1, "a": 2}]})), r#"{"z":[3,{"a":2,"b":1}]}"#);
     assert_eq!(
         opencode_ai::json::deep_merge(&json!({"a": {"b": 1, "c": 2}, "x": 1}), &json!({"a": {"c": 3}, "y": 2})),
-        json!({"a": {"b": 1, "c": 3}, "x": 1, "y": 2})
+        Some(json!({"a": {"b": 1, "c": 3}, "x": 1, "y": 2}))
     );
-    assert_eq!(opencode_ai::json::deep_merge(&json!({"a": 1}), &json!({"a": {"b": 2}})), json!({"a": {"b": 2}}));
+    assert_eq!(opencode_ai::json::deep_merge(&json!({"a": 1}), &json!({"a": {"b": 2}})), Some(json!({"a": {"b": 2}})));
     assert_eq!(opencode_ai::json::encode_body(&json!({"n": 1.5, "i": 2})), r#"{"n":1.5,"i":2}"#);
+}
+
+#[test]
+fn request_timeout_and_http_body_reject_out_of_contract_values() {
+    let decode = |value: serde_json::Value| serde_json::from_value::<RequestTimeout>(value);
+    assert!(matches!(decode(json!(250)), Ok(RequestTimeout::Timeout(HttpTimeout::Millis(_)))));
+    assert!(matches!(decode(json!(false)), Ok(RequestTimeout::Timeout(HttpTimeout::Disabled(false)))));
+    assert!(decode(json!(true)).is_err());
+    assert!(decode(json!(0)).is_err());
+    assert!(decode(json!(-5)).is_err());
+
+    assert_eq!(serde_json::to_value(HttpTimeout::Millis(serde_json::Number::from(250))).unwrap(), json!(250));
+    assert_eq!(serde_json::to_value(HttpTimeout::Disabled(false)).unwrap(), json!(false));
+
+    assert!(serde_json::from_value::<HttpOptions>(json!({ "body": [] })).is_err());
+    assert!(serde_json::from_value::<HttpOptions>(json!({ "body": "text" })).is_err());
+    assert!(serde_json::from_value::<HttpOptions>(json!({ "body": { "a": 1 } })).is_ok());
 }
 
 fn round_trip<T>(value: &serde_json::Value, label: &str) -> T

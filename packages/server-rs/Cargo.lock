@@ -607,7 +607,9 @@ dependencies = [
  "base64",
  "bytes",
  "futures-util",
+ "opencode-api-types",
  "opencode-contract",
+ "opencode-util",
  "percent-encoding",
  "regex-lite",
  "reqwest",
@@ -722,6 +724,7 @@ name = "opencode-util"
 version = "0.1.0"
 dependencies = [
  "libc",
+ "ring",
  "windows-sys 0.61.2",
 ]
 

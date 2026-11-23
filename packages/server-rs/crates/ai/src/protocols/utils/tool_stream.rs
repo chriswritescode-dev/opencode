@@ -2,9 +2,7 @@ use std::collections::BTreeMap;
 
 use serde_json::Value;
 
-use crate::schema::{AiError, AiErrorReason, LlmEvent, ProviderMetadata};
-
-use super::partial_json;
+use crate::schema::{AiError, AiErrorReason, LlmEvent, PartialToolInput, ProviderMetadata};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct PendingTool {
@@ -20,20 +18,16 @@ pub type State = BTreeMap<i64, PendingTool>;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct AppendOutcome {
-    pub tools: State,
-    pub tool: PendingTool,
     pub events: Vec<LlmEvent>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FinishAll {
-    pub tools: State,
     pub events: Vec<LlmEvent>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FinishOutcome {
-    pub tools: State,
     pub events: Vec<LlmEvent>,
 }
 
@@ -49,14 +43,13 @@ pub fn empty() -> State {
     State::new()
 }
 
-pub fn start(mut tools: State, key: i64, tool: PendingTool) -> State {
+pub fn start(tools: &mut State, key: i64, tool: PendingTool) {
     tools.insert(key, tool);
-    tools
 }
 
 pub fn append_existing(
     route: &str,
-    tools: State,
+    tools: &mut State,
     key: i64,
     text: &str,
     missing: &str,
@@ -67,64 +60,71 @@ pub fn append_existing(
     }
 }
 
-pub fn finish(route: &str, tools: State, key: i64, input: Option<&str>) -> Result<FinishOutcome, AiError> {
-    let Some(tool) = tools.get(&key).cloned() else {
-        return Ok(FinishOutcome { tools, events: Vec::new() });
+pub fn finish(route: &str, tools: &mut State, key: i64, input: Option<&str>) -> Result<FinishOutcome, AiError> {
+    let Some(tool) = tools.get(&key) else {
+        return Ok(FinishOutcome { events: Vec::new() });
     };
-    let event = tool_call(route, &tool, input)?;
-    let mut tools = tools;
+    let event = tool_call(route, tool, input)?;
+    let end = input_end(tool);
     tools.remove(&key);
-    Ok(FinishOutcome { tools, events: vec![input_end(&tool), event] })
+    Ok(FinishOutcome { events: vec![end, event] })
 }
 
 pub fn append_or_start(
     route: &str,
-    tools: State,
+    tools: &mut State,
     key: i64,
     delta: AppendDelta<'_>,
     missing: &str,
 ) -> Result<AppendOutcome, AiError> {
-    let current = tools.get(&key).cloned();
-    let id = current.as_ref().map(|tool| tool.id.clone()).or_else(|| delta.id.map(str::to_string));
-    let name = current.as_ref().map(|tool| tool.name.clone()).or_else(|| delta.name.map(str::to_string));
+    let existing = tools.get(&key);
+    let id = existing.map_or(delta.id, |tool| Some(tool.id.as_str()));
+    let name = existing.map_or(delta.name, |tool| Some(tool.name.as_str()));
     let (Some(id), Some(name)) = (id, name) else {
         return Err(invalid_output(route, missing.to_string(), None));
     };
-    let tool = PendingTool {
-        id,
-        name,
-        namespace: current.as_ref().and_then(|tool| tool.namespace.clone()),
-        input: current.as_ref().map_or_else(String::new, |tool| tool.input.clone()) + delta.text,
-        provider_executed: current.as_ref().and_then(|tool| tool.provider_executed),
-        provider_metadata: current.as_ref().and_then(|tool| tool.provider_metadata.clone()).or(delta.provider_metadata),
-    };
-    if let Some(current) = current
-        && delta.text.is_empty()
-        && current.id == tool.id
-        && current.name == tool.name
-    {
-        return Ok(AppendOutcome { tools, tool: current, events: Vec::new() });
+    if existing.is_some() {
+        let current = tools.get_mut(&key).expect("pending tool is present");
+        if delta.text.is_empty() {
+            return Ok(AppendOutcome { events: Vec::new() });
+        }
+        if current.provider_metadata.is_none() {
+            current.provider_metadata = delta.provider_metadata;
+        }
+        current.input.push_str(delta.text);
+        return Ok(append_tool(tools, key, delta.text, false));
     }
-    Ok(append_tool(tools, key, tool, delta.text))
+    tools.insert(
+        key,
+        PendingTool {
+            id: id.to_string(),
+            name: name.to_string(),
+            namespace: None,
+            input: delta.text.to_string(),
+            provider_executed: None,
+            provider_metadata: delta.provider_metadata,
+        },
+    );
+    Ok(append_tool(tools, key, delta.text, true))
 }
 
-pub fn append(tools: State, key: i64, text: &str) -> Option<AppendOutcome> {
-    let current = tools.get(&key)?.clone();
+pub fn append(tools: &mut State, key: i64, text: &str) -> Option<AppendOutcome> {
+    let current = tools.get_mut(&key)?;
     if text.is_empty() {
-        return Some(AppendOutcome { tools, tool: current, events: Vec::new() });
+        return Some(AppendOutcome { events: Vec::new() });
     }
-    let mut tool = current;
-    tool.input.push_str(text);
-    Some(append_tool(tools, key, tool, text))
+    current.input.push_str(text);
+    Some(append_tool(tools, key, text, false))
 }
 
-pub fn finish_all(route: &str, tools: State) -> Result<FinishAll, AiError> {
+pub fn finish_all(route: &str, tools: &mut State) -> Result<FinishAll, AiError> {
     let mut events = Vec::new();
-    for tool in tools.into_values() {
-        events.push(input_end(&tool));
-        events.push(tool_call(route, &tool, None)?);
+    for tool in tools.values() {
+        events.push(input_end(tool));
+        events.push(tool_call(route, tool, None)?);
     }
-    Ok(FinishAll { tools: empty(), events })
+    tools.clear();
+    Ok(FinishAll { events })
 }
 
 fn tool_call(route: &str, tool: &PendingTool, input: Option<&str>) -> Result<LlmEvent, AiError> {
@@ -152,16 +152,16 @@ fn tool_call(route: &str, tool: &PendingTool, input: Option<&str>) -> Result<Llm
     }
 }
 
-fn append_tool(mut tools: State, key: i64, tool: PendingTool, text: &str) -> AppendOutcome {
+fn append_tool(tools: &State, key: i64, text: &str, started: bool) -> AppendOutcome {
+    let tool = tools.get(&key).expect("pending tool is present");
     let mut events = Vec::new();
-    if !tools.contains_key(&key) {
-        events.push(input_start(&tool));
+    if started {
+        events.push(input_start(tool));
     }
     if !text.is_empty() {
-        events.push(input_delta(&tool, text));
+        events.push(input_delta(tool, text));
     }
-    tools.insert(key, tool.clone());
-    AppendOutcome { tools, tool, events }
+    AppendOutcome { events }
 }
 
 fn input_start(tool: &PendingTool) -> LlmEvent {
@@ -184,13 +184,12 @@ fn input_end(tool: &PendingTool) -> LlmEvent {
 }
 
 fn input_delta(tool: &PendingTool, text: &str) -> LlmEvent {
-    let input = partial_json::parse(&tool.input).unwrap_or_else(|| Value::Object(Default::default()));
     LlmEvent::ToolInputDelta {
         id: tool.id.clone(),
         name: tool.name.clone(),
         namespace: tool.namespace.clone(),
         text: text.to_string(),
-        input: Some(input),
+        input: Some(PartialToolInput::raw(tool.input.as_str())),
     }
 }
 

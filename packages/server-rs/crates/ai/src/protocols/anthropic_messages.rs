@@ -666,28 +666,11 @@ fn fit_thinking(thinking: &Option<Thinking>, max_tokens: &Number) -> Option<Thin
     let Some(Thinking::Enabled { budget_tokens, display, block_binding }) = thinking else {
         return thinking.clone();
     };
-    let fitted = match (budget_tokens.as_i64(), max_tokens.as_i64()) {
-        (Some(budget), Some(maximum)) => {
-            Number::from(shared::fit_thinking_budget(budget, Some(maximum), MIN_THINKING_BUDGET))
-        }
-        _ => {
-            let budget = budget_tokens.as_f64().unwrap_or_default();
-            let maximum = max_tokens.as_f64().unwrap_or_default();
-            if budget <= maximum / 2.0 {
-                budget_tokens.clone()
-            } else {
-                number_from_f64((MIN_THINKING_BUDGET as f64).max((maximum / 2.0).floor()))
-            }
-        }
-    };
-    Some(Thinking::Enabled { budget_tokens: fitted, display: display.clone(), block_binding: block_binding.clone() })
-}
-
-fn number_from_f64(value: f64) -> Number {
-    if value.fract() == 0.0 && value >= i64::MIN as f64 && value <= i64::MAX as f64 {
-        return Number::from(value as i64);
-    }
-    Number::from_f64(value).unwrap_or_else(|| Number::from(0))
+    Some(Thinking::Enabled {
+        budget_tokens: shared::fit_thinking_budget(budget_tokens, Some(max_tokens), MIN_THINKING_BUDGET),
+        display: display.clone(),
+        block_binding: block_binding.clone(),
+    })
 }
 
 fn lower_messages(request: &LlmRequest, model: &Model, breakpoints: &mut CacheControl) -> Result<Vec<Value>, AiError> {
@@ -1593,8 +1576,10 @@ fn merge_usage(left: Option<Usage>, right: Option<Usage>, provider_metadata_key:
         .cloned()
         .unwrap_or(empty);
     let mut provider_metadata = ProviderMetadata::new();
-    provider_metadata
-        .insert(provider_metadata_key.to_string(), crate::json::deep_merge(&left_metadata, &right_metadata));
+    provider_metadata.insert(
+        provider_metadata_key.to_string(),
+        crate::json::deep_merge(&left_metadata, &right_metadata).unwrap_or_else(|| Value::Object(Map::new())),
+    );
     Some(Usage {
         context_tokens: right.context_tokens.or(left.context_tokens),
         input_tokens,
@@ -1817,7 +1802,7 @@ impl State {
             if !self.tools.contains_key(&index) {
                 return Ok(Vec::new());
             }
-            let Some(result) = tool_stream::append(self.tools.clone(), index, &text) else {
+            let Some(result) = tool_stream::append(&mut self.tools, index, &text) else {
                 return Err(shared::event_error(
                     ID,
                     "Anthropic Messages tool argument delta is missing its tool call",
@@ -1832,7 +1817,6 @@ impl State {
             };
             events.extend(result.events);
             self.lifecycle = lifecycle;
-            self.tools = result.tools;
             return Ok(events);
         }
         Ok(Vec::new())
@@ -1853,16 +1837,7 @@ impl State {
             }));
             return Ok(events);
         }
-        let result_events = match self.tools.get(&index).cloned() {
-            Some(tool) => {
-                let mut single = tool_stream::State::new();
-                single.insert(index, tool);
-                let finished = tool_stream::finish_all(ID, single)?;
-                self.tools.remove(&index);
-                finished.events
-            }
-            None => Vec::new(),
-        };
+        let result_events = tool_stream::finish(ID, &mut self.tools, index, None)?.events;
         let signature = self.reasoning_signatures.get(&index).cloned();
         let mut events = Vec::new();
         let lifecycle = if result_events.is_empty() {
@@ -1929,7 +1904,7 @@ impl State {
         if !self.compactions.is_empty() {
             return Err(shared::event_error(ID, "Response ended with an incomplete compaction block", None));
         }
-        let finished = tool_stream::finish_all(ID, self.tools.clone())?;
+        let finished = tool_stream::finish_all(ID, &mut self.tools)?;
         let mut events = Vec::new();
         let lifecycle = if finished.events.is_empty() {
             self.lifecycle.clone()
@@ -1953,7 +1928,6 @@ impl State {
             });
         let provider_metadata = self.pending_finish.as_ref().and_then(|pending| pending.provider_metadata.clone());
         self.lifecycle = lifecycle::finish(closed, &mut events, reason, self.usage.clone(), provider_metadata);
-        self.tools = finished.tools;
         Ok(events)
     }
 }

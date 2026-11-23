@@ -3,6 +3,7 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use futures_util::{SinkExt, StreamExt};
+use tokio::io::AsyncWriteExt;
 use tokio::net::{TcpListener, TcpStream};
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::tungstenite::handshake::server::{Request, Response};
@@ -13,7 +14,8 @@ use opencode_ai::route::transport::channel::{
     ChannelCheckpoint, ChannelCreate, ChannelDriver, ChannelExchange, ChannelFallback, ChannelMode, ChannelObservation,
 };
 use opencode_ai::route::transport::websocket::{
-    MAX_FRAME_BYTES, SystemConnector, WebSocketInterceptor, WebSocketRequest, make_direct, open, to_websocket_url,
+    MAX_FRAME_BYTES, SystemConnector, WebSocketInterceptor, WebSocketRequest, make_direct, message_text, open,
+    to_websocket_url,
 };
 use opencode_ai::schema::{AiError, AiErrorReason, Delivery, TransportKind, TransportOperation, TransportPhase};
 
@@ -165,6 +167,54 @@ async fn oversized_message_fails_the_stream_and_closes_with_1009() {
     assert!(within(messages.next()).await.is_none(), "the message stream ends after the failed frame");
     let code = within(server).await.expect("server task");
     assert_eq!(code, Some(1009));
+}
+
+#[tokio::test]
+async fn binary_message_text_strips_a_leading_bom() {
+    let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind");
+    let address = listener.local_addr().expect("local address");
+    let server = tokio::spawn(async move {
+        let mut socket = accept(listener).await;
+        socket.send(Message::Binary(b"\xef\xbb\xbfhello".to_vec().into())).await.expect("send binary frame");
+        let _ = socket.next().await;
+    });
+    let mut connection =
+        open(WebSocketRequest { url: format!("ws://{address}"), headers: Vec::new() }).await.expect("open connection");
+    let mut messages = connection.messages();
+    let message = match within(messages.next()).await {
+        Some(Ok(message)) => message,
+        other => panic!("expected a binary message, got {other:?}"),
+    };
+    assert_eq!(message_text(message), "hello");
+    connection.close().await;
+    within(server).await.expect("server task");
+}
+
+#[tokio::test]
+async fn read_error_reports_a_websocket_error() {
+    let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind");
+    let address = listener.local_addr().expect("local address");
+    let server = tokio::spawn(async move {
+        let mut socket = accept(listener).await;
+        socket.get_mut().write_all(&[0x81, 0x02, 0xc3, 0x28]).await.expect("write invalid text frame");
+        let _ = socket.next().await;
+    });
+    let mut connection =
+        open(WebSocketRequest { url: format!("ws://{address}"), headers: Vec::new() }).await.expect("open connection");
+    let mut messages = connection.messages();
+    let reason = transport_reason(match within(messages.next()).await {
+        Some(Err(error)) => error,
+        other => panic!("expected a read error, got {other:?}"),
+    });
+    assert!(reason.message.starts_with("WebSocket error: "), "unexpected message {:?}", reason.message);
+    assert_eq!(reason.code.as_deref(), Some("message"));
+    assert_eq!(reason.phase, Some(TransportPhase::Receive));
+    assert_eq!(reason.operation, TransportOperation::Read);
+    assert_eq!(reason.transport, TransportKind::WebSocket);
+    assert!(within(messages.next()).await.is_none(), "the message stream ends after the failed read");
+    drop(messages);
+    drop(connection);
+    within(server).await.expect("server task");
 }
 
 #[tokio::test]

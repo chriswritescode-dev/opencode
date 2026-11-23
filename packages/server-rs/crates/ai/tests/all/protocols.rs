@@ -15,7 +15,9 @@ use opencode_ai::route::compile::{StreamOptions, compile};
 use opencode_ai::route::endpoint::PathPart;
 use opencode_ai::route::executor::{BoxFuture, ByteStream, HttpResponse, HttpSender, PreparedHttp, RequestExecutor};
 use opencode_ai::route::model::{Model, ModelDescriptor, ProtocolRegistry, RouteTransport};
-use opencode_ai::schema::{AiError, AiErrorReason, FinishReason, LlmEvent, LlmRequest, StringMap};
+use opencode_ai::schema::{
+    AiError, AiErrorReason, ContentPart, FinishReason, LlmEvent, LlmRequest, ProviderMetadata, ResponseFold, StringMap,
+};
 use serde_json::{Value, json};
 
 #[test]
@@ -66,6 +68,104 @@ fn openai_chat_prepared_bodies_match_corpus() {
         }
     }
     assert_eq!(checked, 15, "openai-chat steps checked");
+}
+
+#[test]
+fn openai_chat_reasoning_details_match_kimi_and_openrouter_dialects() {
+    let delta = |details: Value| json!({ "choices": [{ "delta": { "reasoning_details": details } }] });
+    let finish = || json!({ "choices": [{ "delta": {}, "finish_reason": "stop" }] });
+
+    let merged_summary = openai_chat_reasoning_details(&[
+        delta(json!([{ "type": "summary", "summary": "a", "index": 0, "extra": 1 }])),
+        delta(json!([{ "type": "summary", "summary": "b", "index": 0, "extra": 2 }])),
+        finish(),
+    ]);
+    assert_eq!(merged_summary, vec![json!({ "type": "summary", "summary": "ab", "index": 0 })]);
+
+    let conflicting_summary = openai_chat_reasoning_details(&[
+        delta(json!([{ "type": "summary", "summary": "a", "index": 0 }])),
+        delta(json!([{ "type": "summary", "summary": "b", "index": 1 }])),
+        finish(),
+    ]);
+    assert_eq!(
+        conflicting_summary,
+        vec![
+            json!({ "type": "summary", "summary": "a", "index": 0 }),
+            json!({ "type": "summary", "summary": "b", "index": 1 }),
+        ]
+    );
+
+    let encrypted = openai_chat_reasoning_details(&[
+        delta(json!([
+            { "type": "encrypted", "encrypted": "a", "index": 0, "extra": 1 },
+            { "type": "encrypted", "encrypted": "b", "index": 0, "extra": 2 },
+        ])),
+        finish(),
+    ]);
+    assert_eq!(
+        encrypted,
+        vec![
+            json!({ "type": "encrypted", "encrypted": "a", "index": 0 }),
+            json!({ "type": "encrypted", "encrypted": "b", "index": 0 }),
+        ]
+    );
+
+    let merged_text = openai_chat_reasoning_details(&[
+        delta(json!([{ "type": "reasoning.text", "text": "a", "signature": "sig", "index": 0, "unknown": true }])),
+        delta(json!([{ "type": "reasoning.text", "text": "b", "index": 0, "extra": 2 }])),
+        finish(),
+    ]);
+    assert_eq!(
+        merged_text,
+        vec![json!({
+            "type": "reasoning.text",
+            "text": "ab",
+            "index": 0,
+            "signature": "sig",
+            "unknown": true,
+            "extra": 2,
+        })]
+    );
+}
+
+fn openai_chat_reasoning_details(frames: &[Value]) -> Vec<Value> {
+    let (model, request) = corpus_step("openai-compatible-chat/togetherai-streams-text", 0);
+    let context =
+        ExecutionContext::new(Arc::new(FixedClock::new(0)), Arc::new(SequenceIds::new()), Arc::new(MapEnv::default()));
+    let compiled = compile(&model, request, &StreamOptions::default(), &context).expect("compile request");
+    let provider_metadata_key = compiled
+        .resolved
+        .model
+        .route
+        .provider_metadata_key
+        .clone()
+        .unwrap_or_else(|| compiled.resolved.model.provider.clone());
+    let mut state = compiled.resolved.model.route.protocol.new_state(&compiled.resolved, &context);
+    let mut fold = ResponseFold::new();
+    for frame in frames {
+        for event in state.step(frame.to_string()).expect("stream frame") {
+            fold.push(event);
+        }
+    }
+    for event in state.halt().expect("stream end") {
+        fold.push(event);
+    }
+    let message = fold.finish().message;
+    let reasoning = message
+        .content
+        .iter()
+        .find_map(|part| match part {
+            ContentPart::Reasoning(part) => Some(part),
+            _ => None,
+        })
+        .expect("reasoning part");
+    let details = reasoning
+        .provider_metadata
+        .as_ref()
+        .and_then(|metadata| metadata.get(&provider_metadata_key))
+        .and_then(|value| value.get("reasoningDetails"))
+        .expect("reasoning details metadata");
+    details.as_array().expect("reasoning details array").clone()
 }
 
 #[test]
@@ -145,7 +245,7 @@ fn corpus_step(name: &str, index: usize) -> (Model, LlmRequest) {
 
 fn with_http_body(request: &LlmRequest, body: Value) -> LlmRequest {
     let mut request = request.clone();
-    request.http.get_or_insert_with(Default::default).body = Some(body);
+    request.http.get_or_insert_with(Default::default).body = body.as_object().cloned();
     request
 }
 
@@ -345,4 +445,122 @@ async fn gemini_non_json_frame_reports_the_route_id() {
         },
         other => panic!("expected the stream to fail, got {other:?}"),
     }
+}
+
+async fn open_responses_events(frames: &[Value]) -> Vec<LlmEvent> {
+    let (model, request) = corpus_step("venice-responses/streams-text", 0);
+    let body = frames.iter().map(|frame| format!("data: {frame}\n\n")).collect::<String>();
+    let sender = Arc::new(ContinuationSender {
+        responses: Mutex::new(VecDeque::from([body.into_bytes()])),
+        requests: Mutex::new(Vec::new()),
+    });
+    let clock = Arc::new(FixedClock::new(1_767_323_045_000));
+    let context = ExecutionContext::new(clock.clone(), Arc::new(SequenceIds::new()), Arc::new(MapEnv::default()));
+    let client = LlmClient::new(RequestExecutor::new(sender, None, clock), context);
+    client
+        .stream(&model, request, StreamOptions::default())
+        .collect::<Vec<Result<LlmEvent, AiError>>>()
+        .await
+        .into_iter()
+        .map(|item| item.unwrap_or_else(|error| panic!("stream failed: {error}")))
+        .collect()
+}
+
+fn finish_metadata(events: &[LlmEvent]) -> &ProviderMetadata {
+    events
+        .iter()
+        .find_map(|event| match event {
+            LlmEvent::Finish { provider_metadata: Some(metadata), .. } => Some(metadata),
+            _ => None,
+        })
+        .expect("finish event with provider metadata")
+}
+
+#[tokio::test]
+async fn open_responses_streams_calls_that_omit_the_name() {
+    let events = open_responses_events(&[
+        json!({
+            "type": "response.output_item.added",
+            "output_index": 0,
+            "item": {"type": "function_call", "id": "fc_1", "call_id": "call_1"}
+        }),
+        json!({
+            "type": "response.function_call_arguments.delta",
+            "item_id": "fc_1",
+            "delta": "{\"path\":\"a\"}"
+        }),
+        json!({
+            "type": "response.completed",
+            "response": {
+                "id": "resp_1",
+                "output": [{
+                    "type": "function_call",
+                    "id": "fc_1",
+                    "call_id": "call_1",
+                    "name": "read",
+                    "arguments": "{\"path\":\"a\"}"
+                }]
+            }
+        }),
+    ])
+    .await;
+    match events.iter().find(|event| matches!(event, LlmEvent::ToolInputStart { .. })) {
+        Some(LlmEvent::ToolInputStart { id, name, .. }) => {
+            assert_eq!(id, "call_1");
+            assert_eq!(name, "");
+        }
+        other => panic!("expected a tool input start without a name, got {other:?}"),
+    }
+    assert!(
+        events.iter().any(|event| matches!(event, LlmEvent::ToolInputDelta { text, .. } if text == "{\"path\":\"a\"}")),
+        "the argument delta was routed to the unnamed tool"
+    );
+    match events.iter().find(|event| matches!(event, LlmEvent::ToolCall { .. })) {
+        Some(LlmEvent::ToolCall { id, name, input, .. }) => {
+            assert_eq!(id, "call_1");
+            assert_eq!(name, "");
+            assert_eq!(input, &json!({"path": "a"}));
+        }
+        other => panic!("expected the completed output to finish the tool call, got {other:?}"),
+    }
+}
+
+#[tokio::test]
+async fn open_responses_recovers_every_compaction_from_the_original_step_state() {
+    let events = open_responses_events(&[json!({
+        "type": "response.completed",
+        "response": {
+            "id": "resp_1",
+            "output": [
+                {"type": "compaction", "id": "cmp_1", "encrypted_content": "first"},
+                {"type": "compaction", "id": "cmp_2", "encrypted_content": "second"}
+            ]
+        }
+    })])
+    .await;
+    let recovered = events
+        .iter()
+        .filter_map(|event| match event {
+            LlmEvent::Compaction(part) => part.id.as_deref(),
+            _ => None,
+        })
+        .collect::<Vec<&str>>();
+    assert_eq!(recovered, vec!["cmp_1", "cmp_2"]);
+}
+
+#[tokio::test]
+async fn open_responses_finish_metadata_keeps_explicit_null_and_empty_values() {
+    let events = open_responses_events(&[json!({
+        "type": "response.completed",
+        "response": {"id": "resp_1", "service_tier": null, "output": []}
+    })])
+    .await;
+    assert_eq!(finish_metadata(&events).get("venice"), Some(&json!({"responseId": "resp_1", "serviceTier": null})));
+
+    let events = open_responses_events(&[json!({
+        "type": "response.completed",
+        "response": {"id": "", "service_tier": "default", "output": []}
+    })])
+    .await;
+    assert_eq!(finish_metadata(&events).get("venice"), Some(&json!({"responseId": "", "serviceTier": "default"})));
 }

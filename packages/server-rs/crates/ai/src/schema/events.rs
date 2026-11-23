@@ -1,7 +1,11 @@
+use std::borrow::Cow;
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+
+use crate::protocols::utils::partial_json;
 
 use super::ids::{ContentBlockId, ToolCallId};
 use super::messages::{
@@ -61,6 +65,43 @@ pub struct Usage {
 impl Usage {
     pub fn visible_output_tokens(&self) -> u64 {
         self.output_tokens.unwrap_or(0).saturating_sub(self.reasoning_tokens.unwrap_or(0))
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum PartialToolInput {
+    Raw(Arc<str>),
+    Parsed(Value),
+}
+
+impl PartialToolInput {
+    pub fn raw(text: impl Into<Arc<str>>) -> Self {
+        Self::Raw(text.into())
+    }
+
+    pub fn value(&self) -> Cow<'_, Value> {
+        match self {
+            Self::Parsed(value) => Cow::Borrowed(value),
+            Self::Raw(raw) => Cow::Owned(partial_json::parse(raw).unwrap_or_else(|| Value::Object(Default::default()))),
+        }
+    }
+}
+
+impl PartialEq for PartialToolInput {
+    fn eq(&self, other: &Self) -> bool {
+        *self.value() == *other.value()
+    }
+}
+
+impl Serialize for PartialToolInput {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        self.value().serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for PartialToolInput {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        Value::deserialize(deserializer).map(Self::Parsed)
     }
 }
 
@@ -133,7 +174,7 @@ pub enum LlmEvent {
         namespace: Option<String>,
         text: String,
         #[serde(default, skip_serializing_if = "Option::is_none")]
-        input: Option<Value>,
+        input: Option<PartialToolInput>,
     },
     #[serde(rename_all = "camelCase")]
     ToolInputEnd {

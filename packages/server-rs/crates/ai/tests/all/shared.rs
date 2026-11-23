@@ -1,5 +1,6 @@
-use serde_json::json;
+use serde_json::{Number, json};
 
+use opencode_ai::protocols::shared;
 use opencode_ai::protocols::shared::{
     flatten_tool_request, inline_media, reported_billing, tool_file_media, tool_result_text, wrapped_system_update,
 };
@@ -129,6 +130,78 @@ fn tool_file_media_reads_data_urls_and_plain_base64() {
     assert_eq!(media_type, "image/png");
 
     assert_eq!(tool_file_media(&ToolContent::Text { text: "not a file".to_string() }), None);
+}
+
+#[test]
+fn fit_thinking_budget_matches_typescript() {
+    let cases = [
+        (2048.0, Some(4096.0), 1, "2048"),
+        (2049.0, Some(4096.0), 1, "2048"),
+        (3000.0, Some(4096.0), 1024, "2048"),
+        (100.0, Some(4096.0), 1024, "100"),
+        (100.0, Some(100.0), 1024, "1024"),
+        (0.0, None, 1, "0"),
+        (-1.0, Some(4096.0), 1, "-1"),
+        (2048.5, Some(4096.0), 1, "2048"),
+        (2000.5, Some(4096.0), 1, "2000.5"),
+        (2000.5, None, 1, "2000.5"),
+        (1024.0, Some(2049.0), 1024, "1024"),
+        (1025.0, Some(2049.0), 1024, "1024"),
+        (500.0, Some(1000.5), 1, "500"),
+        (501.0, Some(1000.5), 1, "500"),
+        (10.5, Some(20.0), 1024, "1024"),
+        (4096.0, Some(4096.0), 512, "2048"),
+        (2048.0, Some(4097.0), 1024, "2048"),
+        (1023.9, Some(2048.0), 1024, "1023.9"),
+    ];
+    for (budget, max_tokens, minimum, expected) in cases {
+        let budget = Number::from_f64(budget).expect("finite budget");
+        let max_tokens = max_tokens.map(|value| Number::from_f64(value).expect("finite max tokens"));
+        assert_eq!(
+            shared::fit_thinking_budget(&budget, max_tokens.as_ref(), minimum).to_string(),
+            expected,
+            "budget {budget} max_tokens {max_tokens:?} minimum {minimum}"
+        );
+    }
+}
+
+#[test]
+fn tool_file_media_matches_typescript_data_url_syntax() {
+    let accepted = [
+        ("data:image/png;base64,aGVsbG8=", "aGVsbG8="),
+        ("DATA:IMAGE/PNG;BASE64,aGVsbG8=", "aGVsbG8="),
+        ("data:image/png;charset=utf-8;base64,aGVsbG8=", "aGVsbG8="),
+        ("data:image/png;base64,a,b", "a,b"),
+        ("data:image/png;base64,line1\nline2", "line1\nline2"),
+        ("data:image/png;base64,", ""),
+        ("data:image/png;base64,abc ", "abc "),
+        ("data:image/png;;base64,abc", "abc"),
+    ];
+    for (uri, expected) in accepted {
+        assert_eq!(tool_file_data(uri), expected, "accepted {uri:?}");
+    }
+
+    let rejected = [
+        "data:image/png;notbase64,abc",
+        "data:image/png;base64",
+        "data:;base64,abc",
+        "data:image/png; base64,abc",
+        "data:image/png;base64 ,abc",
+        " data:image/png;base64,abc",
+        "data:image/png;foo=bar,baz;base64,xx",
+    ];
+    for uri in rejected {
+        assert_eq!(tool_file_data(uri), uri, "rejected {uri:?} keeps the raw value");
+    }
+}
+
+fn tool_file_data(uri: &str) -> String {
+    let part = tool_file_media(&ToolContent::File { uri: uri.to_string(), mime: "image/png".to_string(), name: None })
+        .expect("file content");
+    let MediaSource::Base64 { data, .. } = part.media.source else {
+        panic!("expected base64 source for {uri:?}");
+    };
+    data
 }
 
 fn tool_definition(name: &str) -> ToolDefinition {

@@ -3,6 +3,7 @@ use std::sync::LazyLock;
 
 use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
+use opencode_api_types::js::encode_component;
 use regex_lite::Regex;
 use serde_json::{Map, Number, Value};
 
@@ -16,7 +17,6 @@ use crate::protocols::utils::lifecycle;
 use crate::protocols::utils::mistral_tool_id;
 use crate::protocols::utils::tool_stream;
 use crate::provider_error::{ProviderFailure, classify_provider_failure};
-use crate::route::auth::encode_uri_component;
 use crate::route::framing::Definition;
 use crate::route::model::{Model, ResolvedRequest};
 use crate::route::protocol::{Frame, Protocol, ProtocolState};
@@ -174,7 +174,10 @@ fn build_thinking(options: &Options, max_tokens: Option<&Number>, model: &Model)
         Some(Thinking::Enabled { budget_tokens }) => {
             let mut thinking = Map::new();
             thinking.insert("type".to_string(), Value::String("enabled".to_string()));
-            thinking.insert("budget_tokens".to_string(), Value::Number(fit_budget(budget_tokens, max_tokens)));
+            thinking.insert(
+                "budget_tokens".to_string(),
+                Value::Number(shared::fit_thinking_budget(budget_tokens, max_tokens, MIN_THINKING_BUDGET)),
+            );
             Some(Value::Object(thinking))
         }
         Some(Thinking::Adaptive { display }) => {
@@ -191,27 +194,6 @@ fn build_thinking(options: &Options, max_tokens: Option<&Number>, model: &Model)
         }
         None => None,
     }
-}
-
-fn fit_budget(budget: &Number, max_tokens: Option<&Number>) -> Number {
-    if let (Some(budget), Some(maximum)) = (budget.as_i64(), max_tokens.and_then(Number::as_i64)) {
-        return Number::from(shared::fit_thinking_budget(budget, Some(maximum), MIN_THINKING_BUDGET));
-    }
-    let budget = budget.as_f64().unwrap_or_default();
-    let Some(maximum) = max_tokens.and_then(Number::as_f64) else {
-        return number_from_f64(budget);
-    };
-    if budget <= maximum / 2.0 {
-        return number_from_f64(budget);
-    }
-    number_from_f64((MIN_THINKING_BUDGET as f64).max((maximum / 2.0).floor()))
-}
-
-fn number_from_f64(value: f64) -> Number {
-    if value.fract() == 0.0 && value >= i64::MIN as f64 && value <= i64::MAX as f64 {
-        return Number::from(value as i64);
-    }
-    Number::from_f64(value).unwrap_or_else(|| Number::from(0))
 }
 
 fn supports_adaptive_thinking(model: &Model) -> bool {
@@ -242,7 +224,7 @@ fn apply_thinking_binding_default(request: &LlmRequest, model: &Model, thinking:
     Some(Value::Object(thinking))
 }
 
-fn is_thinking_disabled(body: Option<&Value>) -> bool {
+fn is_thinking_disabled(body: Option<&Map<String, Value>>) -> bool {
     body.and_then(|body| body.get("additionalModelRequestFields"))
         .and_then(|fields| fields.get("thinking"))
         .and_then(|thinking| thinking.get("type"))
@@ -250,7 +232,7 @@ fn is_thinking_disabled(body: Option<&Value>) -> bool {
         .is_some_and(|kind| kind == "disabled" || kind == "between_tools")
 }
 
-fn is_high_reasoning_effort(body: Option<&Value>) -> bool {
+fn is_high_reasoning_effort(body: Option<&Map<String, Value>>) -> bool {
     body.and_then(|body| body.get("additionalModelRequestFields"))
         .and_then(|fields| fields.get("reasoningConfig"))
         .and_then(|config| config.get("maxReasoningEffort"))
@@ -823,8 +805,8 @@ impl ProtocolState for State {
             };
             let mut events = Vec::new();
             self.lifecycle = lifecycle::step_start(self.lifecycle.clone(), &mut events);
-            self.tools = tool_stream::start(
-                self.tools.clone(),
+            tool_stream::start(
+                &mut self.tools,
                 index,
                 tool_stream::PendingTool {
                     id: id.to_string(),
@@ -927,7 +909,7 @@ impl ProtocolState for State {
         {
             let index = delta.get("contentBlockIndex").and_then(Value::as_i64).unwrap_or(0);
             let input = tool_use.get("input").and_then(Value::as_str).unwrap_or_default();
-            let Some(outcome) = tool_stream::append(self.tools.clone(), index, input) else {
+            let Some(outcome) = tool_stream::append(&mut self.tools, index, input) else {
                 return Ok(Vec::new());
             };
             let mut events = Vec::new();
@@ -938,13 +920,12 @@ impl ProtocolState for State {
             };
             events.extend(outcome.events);
             self.lifecycle = lifecycle;
-            self.tools = outcome.tools;
             return Ok(events);
         }
 
         if let Some(stop) = object.get("contentBlockStop").and_then(Value::as_object) {
             let index = stop.get("contentBlockIndex").and_then(Value::as_i64).unwrap_or(0);
-            let outcome = tool_stream::finish(ROUTE, self.tools.clone(), index, None)?;
+            let outcome = tool_stream::finish(ROUTE, &mut self.tools, index, None)?;
             let result_events = outcome.events;
             let mut events = Vec::new();
             let lifecycle = if result_events.is_empty() {
@@ -967,7 +948,6 @@ impl ProtocolState for State {
             }
             events.extend(result_events);
             self.lifecycle = lifecycle;
-            self.tools = outcome.tools;
             self.reasoning_signatures.remove(&index);
             self.reasoning_redacted_content.remove(&index);
             return Ok(events);
@@ -1079,7 +1059,7 @@ impl Protocol for BedrockConverse {
 
     fn default_path(&self, model: &Model, body: &Value) -> Option<String> {
         let model_id = body.get("modelId").and_then(Value::as_str).unwrap_or(model.id.as_str());
-        Some(format!("/model/{}/converse-stream", encode_uri_component(model_id)))
+        Some(format!("/model/{}/converse-stream", encode_component(model_id)))
     }
 
     fn framing(&self) -> Definition {

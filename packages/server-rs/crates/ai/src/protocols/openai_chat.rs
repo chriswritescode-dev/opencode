@@ -240,7 +240,7 @@ impl ProtocolState for State {
             });
             let outcome = tool_stream::append_or_start(
                 ADAPTER,
-                std::mem::take(&mut self.tools),
+                &mut self.tools,
                 index,
                 tool_stream::AppendDelta { id: id.as_deref(), name: name.as_deref(), text: &text, provider_metadata },
                 "OpenAI Chat tool call delta is missing id or name",
@@ -249,7 +249,6 @@ impl ProtocolState for State {
                 Ok(outcome) => outcome,
                 Err(error) => return Err(with_event_body(error, &event)),
             };
-            self.tools = outcome.tools;
             if !outcome.events.is_empty() {
                 lifecycle = lifecycle::step_start(lifecycle, &mut events);
             }
@@ -351,9 +350,9 @@ impl ProtocolState for State {
 impl State {
     fn finish_tools(&mut self) -> Result<Vec<LlmEvent>, AiError> {
         let keys = self.custom_calls.iter().copied().collect::<Vec<i64>>();
-        let closed = openai_freeform::close(std::mem::take(&mut self.tools), keys, None);
-        let finished = tool_stream::finish_all(ADAPTER, closed.tools)?;
-        self.tools = finished.tools;
+        let mut closed = openai_freeform::close(std::mem::take(&mut self.tools), keys, None);
+        let finished = tool_stream::finish_all(ADAPTER, &mut closed.tools)?;
+        self.tools = closed.tools;
         let mut events = closed.events;
         events.extend(finished.events);
         Ok(events)
@@ -544,25 +543,35 @@ fn append_reasoning_details(result: &mut Vec<Value>, details: &[Value]) {
 }
 
 fn merge_reasoning_details(previous: &Value, detail: &Value) -> Option<Value> {
-    let previous_type = previous.get("type").and_then(Value::as_str)?;
-    if previous_type != detail.get("type").and_then(Value::as_str)? || conflicting_reasoning_details(previous, detail) {
+    if conflicting_reasoning_details(previous, detail) {
         return None;
     }
-    let key = match previous_type {
-        "reasoning.text" => "text",
-        "reasoning.summary" | "summary" => "summary",
-        _ => return None,
-    };
+    let previous_type = previous.get("type").and_then(Value::as_str)?;
+    if previous_type != detail.get("type").and_then(Value::as_str)? {
+        return None;
+    }
     let mut merged = previous.as_object()?.clone();
     for (field, value) in detail.as_object()? {
         merged.insert(field.clone(), value.clone());
     }
-    merged.insert(
-        key.to_string(),
-        Value::String(format!("{}{}", string_field(previous, key), string_field(detail, key))),
-    );
-    for (field, value) in merge_detail_identity(previous, detail) {
-        merged.insert(field, value);
+    match previous_type {
+        "reasoning.text" | "reasoning.summary" => {
+            let key = if previous_type == "reasoning.text" { "text" } else { "summary" };
+            merged.insert(
+                key.to_string(),
+                Value::String(format!("{}{}", string_field(previous, key), string_field(detail, key))),
+            );
+            for (field, value) in merge_detail_identity(previous, detail) {
+                merged.insert(field, value);
+            }
+        }
+        "summary" => {
+            merged.insert(
+                "summary".to_string(),
+                Value::String(format!("{}{}", string_field(previous, "summary"), string_field(detail, "summary"))),
+            );
+        }
+        _ => return None,
     }
     Some(Value::Object(merged))
 }
@@ -578,10 +587,10 @@ fn merge_detail_identity(previous: &Value, current: &Value) -> Map<String, Value
 }
 
 fn merge_detail_value(previous: Option<&Value>, current: Option<&Value>) -> Option<Value> {
-    if let Some(value) = previous.filter(|value| is_truthy(value)) {
+    if let Some(value) = previous.filter(|value| shared::is_truthy(value)) {
         return Some(value.clone());
     }
-    if let Some(value) = current.filter(|value| is_truthy(value)) {
+    if let Some(value) = current.filter(|value| shared::is_truthy(value)) {
         return Some(value.clone());
     }
     previous.or(current).cloned()
@@ -989,7 +998,7 @@ fn lower_assistant_message(message: &AssistantMessage, lowering: &mut Lowering<'
     let details = reasoning_details(&reasoning, &lowering.provider_metadata_key);
     let observed_field = reasoning.iter().find_map(|part| reasoning_field(part, &lowering.provider_metadata_key));
     let fully_structured = reasoning.iter().all(|part| {
-        provider_metadata_value(part.provider_metadata.as_ref(), &lowering.provider_metadata_key)
+        shared::provider_metadata_value(part.provider_metadata.as_ref(), &lowering.provider_metadata_key)
             .and_then(|value| value.get("reasoningDetails"))
             .is_some_and(Value::is_array)
     });
@@ -1271,7 +1280,7 @@ fn lower_tool_call(
     function.insert("arguments".to_string(), Value::String(crate::json::encode_body(&part.input)));
     object.insert("function".to_string(), Value::Object(function));
     if let Some(extra_content) =
-        decode_extra_content(provider_metadata_value(part.provider_metadata.as_ref(), provider_metadata_key))
+        decode_extra_content(shared::provider_metadata_value(part.provider_metadata.as_ref(), provider_metadata_key))
     {
         object.insert("extra_content".to_string(), extra_content);
     }
@@ -1285,7 +1294,7 @@ fn decode_extra_content(metadata: Option<&Value>) -> Option<Value> {
 }
 
 fn reasoning_field(part: &ReasoningPart, provider_metadata_key: &str) -> Option<String> {
-    provider_metadata_value(part.provider_metadata.as_ref(), provider_metadata_key)
+    shared::provider_metadata_value(part.provider_metadata.as_ref(), provider_metadata_key)
         .and_then(|metadata| metadata.get("reasoningField"))
         .and_then(Value::as_str)
         .map(str::to_string)
@@ -1295,7 +1304,7 @@ fn reasoning_details(parts: &[&ReasoningPart], provider_metadata_key: &str) -> O
     let mut observed = Vec::new();
     let mut declared = false;
     for part in parts {
-        let Some(details) = provider_metadata_value(part.provider_metadata.as_ref(), provider_metadata_key)
+        let Some(details) = shared::provider_metadata_value(part.provider_metadata.as_ref(), provider_metadata_key)
             .and_then(|metadata| metadata.get("reasoningDetails"))
         else {
             continue;
@@ -1314,7 +1323,7 @@ fn reasoning_details(parts: &[&ReasoningPart], provider_metadata_key: &str) -> O
 
 fn reasoning_opaque(parts: &[&ReasoningPart], provider_metadata_key: &str) -> Option<String> {
     parts.iter().rev().find_map(|part| {
-        provider_metadata_value(part.provider_metadata.as_ref(), provider_metadata_key)
+        shared::provider_metadata_value(part.provider_metadata.as_ref(), provider_metadata_key)
             .and_then(|metadata| metadata.get("reasoningOpaque"))
             .and_then(Value::as_str)
             .map(str::to_string)
@@ -1349,26 +1358,42 @@ fn known_reasoning_detail(detail: &Value) -> Option<Value> {
         "reasoning.text" => {
             optional_string(object, "text")?;
             openrouter_detail_fields(object)?;
+            Some(detail.clone())
         }
         "reasoning.summary" => {
             optional_string(object, "summary")?;
             openrouter_detail_fields(object)?;
+            Some(detail.clone())
         }
         "reasoning.encrypted" => {
             object.get("data")?.as_str()?;
             openrouter_detail_fields(object)?;
+            Some(detail.clone())
         }
         "summary" => {
-            object.get("summary")?.as_str()?;
+            let summary = object.get("summary")?.as_str()?;
             optional_number(object, "index")?;
+            let mut known = Map::new();
+            known.insert("type".to_string(), Value::String("summary".to_string()));
+            known.insert("summary".to_string(), Value::String(summary.to_string()));
+            if let Some(index) = object.get("index") {
+                known.insert("index".to_string(), index.clone());
+            }
+            Some(Value::Object(known))
         }
         "encrypted" => {
-            object.get("encrypted")?.as_str()?;
+            let encrypted = object.get("encrypted")?.as_str()?;
             optional_number(object, "index")?;
+            let mut known = Map::new();
+            known.insert("type".to_string(), Value::String("encrypted".to_string()));
+            known.insert("encrypted".to_string(), Value::String(encrypted.to_string()));
+            if let Some(index) = object.get("index") {
+                known.insert("index".to_string(), index.clone());
+            }
+            Some(Value::Object(known))
         }
-        _ => return None,
+        _ => None,
     }
-    Some(detail.clone())
 }
 
 fn openrouter_detail_fields(object: &Map<String, Value>) -> Option<()> {
@@ -1440,17 +1465,13 @@ fn has_tool_history(messages: &[Message]) -> bool {
     })
 }
 
-fn provider_metadata_value<'a>(metadata: Option<&'a ProviderMetadata>, key: &str) -> Option<&'a Value> {
-    metadata?.get(key)
-}
-
 fn compatibility_value<'a>(model: &'a Model, key: &str) -> Option<&'a Value> {
     let value = model.compatibility.as_ref()?.get(key)?;
     (!value.is_null()).then_some(value)
 }
 
 fn compatibility_bool(model: &Model, key: &str) -> Option<bool> {
-    compatibility_value(model, key).map(is_truthy)
+    compatibility_value(model, key).map(shared::is_truthy)
 }
 
 fn capability_value<'a>(model: &'a Model, path: &[&str]) -> Option<&'a Value> {
@@ -1462,17 +1483,7 @@ fn capability_value<'a>(model: &'a Model, path: &[&str]) -> Option<&'a Value> {
 }
 
 fn capability_bool(model: &Model, path: &[&str]) -> Option<bool> {
-    capability_value(model, path).map(is_truthy)
-}
-
-fn is_truthy(value: &Value) -> bool {
-    match value {
-        Value::Null => false,
-        Value::Bool(value) => *value,
-        Value::Number(value) => value.as_f64().is_some_and(|value| value != 0.0),
-        Value::String(value) => !value.is_empty(),
-        Value::Array(_) | Value::Object(_) => true,
-    }
+    capability_value(model, path).map(shared::is_truthy)
 }
 
 fn detect_max_tokens_field(provider: &str, base_url: Option<&str>) -> &'static str {

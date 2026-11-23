@@ -86,14 +86,14 @@ fn assert_outcome(
 ) {
     match recorded_error {
         Some(recorded) => {
-            let error = match items.last() {
-                Some(Err(error)) => error,
-                Some(Ok(event)) => panic!(
-                    "{} step {index} {label} error: the last item is {}, not the recorded error",
+            let error = match items.as_slice() {
+                [Err(error)] => error,
+                [] => panic!("{} step {index} {label} error: the stream produced no items", cassette.name),
+                items => panic!(
+                    "{} step {index} {label} error: the stream produced {} items, expected only the recorded error",
                     cassette.name,
-                    event_type(event)
+                    items.len()
                 ),
-                None => panic!("{} step {index} {label} error: the stream produced no items", cassette.name),
             };
             let reason = serde_json::to_value(&error.reason)
                 .unwrap_or_else(|failure| panic!("{} step {index} {label} error.reason: {failure}", cassette.name));
@@ -125,10 +125,6 @@ fn assert_outcome(
             assert_eq!(events, recorded_events, "{} step {index} {label} events", cassette.name);
         }
     }
-}
-
-fn event_type(event: &LlmEvent) -> String {
-    serde_json::to_value(event).ok().and_then(|value| value.get("type").cloned()).unwrap_or_default().to_string()
 }
 
 struct RecordedSender {

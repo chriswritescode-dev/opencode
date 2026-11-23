@@ -495,10 +495,21 @@ const inputs: Array<FailureInput> = [
   failure("Internal server error", { status: 500, responseHeaders: { "x-should-retry": "false" } }),
   failure("rate limit exceeded", { status: 429, responseHeaders: { "retry-after-ms": "2500" } }),
   failure("rate limit exceeded", { status: 429, responseHeaders: { "retry-after": "3" } }),
+  failure("rate limit exceeded", { status: 429, responseHeaders: { "retry-after": "" } }),
+  failure("rate limit exceeded", { status: 429, responseHeaders: { "retry-after": "0x10" } }),
   failure("rate limit exceeded", {
     status: 429,
     responseHeaders: { "retry-after": new Date(FIXED_EPOCH_MS + 5000).toUTCString() },
   }),
+  failure("rate limit exceeded", {
+    status: 429,
+    responseHeaders: { "retry-after": "Friday, 06-Nov-26 08:49:37 GMT" },
+  }),
+  failure("rate limit exceeded", {
+    status: 429,
+    responseHeaders: { "retry-after": "Sunday, 06-Nov-94 08:49:37 GMT" },
+  }),
+  failure("User 10s rate\tlimit exhausted (3 of 3).", { status: 429 }),
   failure("rate limit exceeded", {
     status: 429,
     responseHeaders: {

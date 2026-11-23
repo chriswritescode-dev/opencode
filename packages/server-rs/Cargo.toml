@@ -40,7 +40,7 @@ rustls-platform-verifier = "0.7"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["float_roundtrip", "preserve_order", "raw_value"] }
 thiserror = "2"
-tokio = { version = "1.53", features = ["macros", "rt", "time", "sync", "net", "rt-multi-thread", "test-util"] }
+tokio = { version = "1.53", features = ["macros", "rt", "time", "sync", "net", "rt-multi-thread"] }
 tokio-tungstenite = { version = "0.30", features = ["rustls-tls-native-roots"] }
 url = "2"
 

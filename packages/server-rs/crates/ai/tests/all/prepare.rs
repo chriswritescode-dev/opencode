@@ -1,8 +1,10 @@
 use std::sync::Arc;
 
-use serde_json::{Value, json};
+use futures_util::StreamExt;
+use serde_json::{Map, Value, json};
 
 use opencode_ai::ExecutionContext;
+use opencode_ai::LlmClient;
 use opencode_ai::MapEnv;
 use opencode_ai::clock::FixedClock;
 use opencode_ai::id::SequenceIds;
@@ -10,22 +12,23 @@ use opencode_ai::prepare::tool_schema::moonshot;
 use opencode_ai::prepare::tool_schema::tools;
 use opencode_ai::prepare::tool_updates::{ToolUpdateEncoding, ToolUpdateKind};
 use opencode_ai::prepare::{
-    apply_cache_policy, apply_effort_updates, normalize_tool_history, plan_tool_updates, prepare,
+    apply_cache_policy, apply_effort_updates, gemini_json_schema, normalize_tool_history, plan_tool_updates, prepare,
     resolve_effort_updates, resolve_request_options, strip_effort_updates,
 };
 use opencode_ai::route::auth::Auth;
 use opencode_ai::route::compile::{StreamOptions, compile};
 use opencode_ai::route::endpoint::{Endpoint, PathPart};
+use opencode_ai::route::executor::{BoxFuture, HttpResponse, HttpSender, PreparedHttp, RequestExecutor};
 use opencode_ai::route::framing;
 use opencode_ai::route::framing::Definition;
 use opencode_ai::route::model::{Model, ModelDescriptor, ProtocolRegistry, ResolvedRequest, Route, RouteTransport};
 use opencode_ai::route::protocol::{Frame, Protocol, ProtocolState};
 use opencode_ai::schema::{
-    AiError, CacheHint, CacheHintType, CacheMessages, CacheMode, CachePolicy, CachePolicyObject, CompactionPart,
-    ContentPart, EffortPart, GenerationOptions, HttpOptions, LlmEvent, LlmRequest, Message, ProviderOptions,
-    RequestOptions, SanitizerKind, StringMap, SystemMessage, SystemPart, TextPart, ToolCallPart, ToolChanges,
-    ToolContent, ToolDefinition, ToolEntry, ToolMessage, ToolNamespace, ToolResultPart, ToolResultValue, UserMessage,
-    merge_provider_options,
+    AiError, AiErrorReason, CacheHint, CacheHintType, CacheMessages, CacheMode, CachePolicy, CachePolicyObject,
+    CompactionPart, ContentPart, EffortPart, GenerationOptions, HttpOptions, HttpTimeout, LlmEvent, LlmRequest,
+    Message, ProviderOptions, RequestOptions, RequestTimeout, SanitizerKind, StringMap, SystemMessage, SystemPart,
+    TextPart, ToolCallPart, ToolChanges, ToolContent, ToolDefinition, ToolEntry, ToolMessage, ToolNamespace,
+    ToolResultPart, ToolResultValue, TransportOperation, UserMessage, merge_http, merge_provider_options,
 };
 
 const ALL: [&str; 3] = ["add", "remove", "replace"];
@@ -341,6 +344,10 @@ fn string_map(pairs: &[(&str, &str)]) -> StringMap {
 
 fn provider_options(value: Value) -> ProviderOptions {
     value.as_object().expect("provider options object").clone()
+}
+
+fn json_object(value: Value) -> Map<String, Value> {
+    value.as_object().expect("json object").clone()
 }
 
 fn entry_names(request: &LlmRequest) -> Vec<String> {
@@ -973,6 +980,28 @@ fn tool_schema_projection_matches_typescript() {
     );
 }
 
+#[test]
+fn gemini_json_schema_coerces_min_items_like_javascript() {
+    let normalized_items = |min_items: Option<Value>| {
+        let list = match min_items {
+            Some(min_items) => json!({ "type": "array", "minItems": min_items, "items": { "$ref": "#" } }),
+            None => json!({ "type": "array", "items": { "$ref": "#" } }),
+        };
+        gemini_json_schema::normalize(
+            &json!({ "type": "object", "required": ["list"], "properties": { "list": list } }),
+        )["properties"]["list"]["items"]
+            .clone()
+    };
+
+    for min_items in [json!(1), json!(2.5), json!("1"), json!("  2 "), json!(true)] {
+        assert_eq!(normalized_items(Some(min_items.clone())), json!({}), "minItems {min_items}");
+    }
+    for min_items in [json!(0), json!(""), json!(-1), json!(false), Value::Null, json!("abc"), json!([]), json!({})] {
+        assert_eq!(normalized_items(Some(min_items.clone())), json!({ "$ref": "#" }), "minItems {min_items}");
+    }
+    assert_eq!(normalized_items(None), json!({ "$ref": "#" }));
+}
+
 fn cache_model() -> Model {
     model("anthropic-messages", "claude-sonnet-4-5", protocol())
 }
@@ -1329,7 +1358,7 @@ fn request_option_precedence_matches_typescript() {
         timeout: None,
         http: Some(HttpOptions {
             query: Some(string_map(&[("q", "model"), ("m", "model")])),
-            body: Some(json!({ "nested": { "from": "model" } })),
+            body: Some(json_object(json!({ "nested": { "from": "model" } }))),
             encoding: None,
             tls: None,
         }),
@@ -1347,7 +1376,7 @@ fn request_option_precedence_matches_typescript() {
         headers: Some(string_map(&[("x-shared", "request"), ("x-request", "request")])),
         http: Some(HttpOptions {
             query: Some(string_map(&[("q", "request")])),
-            body: Some(json!({ "nested": { "to": "request" } })),
+            body: Some(json_object(json!({ "nested": { "to": "request" } }))),
             encoding: None,
             tls: None,
         }),
@@ -1371,13 +1400,74 @@ fn request_option_precedence_matches_typescript() {
             headers: Some(string_map(&[("x-shared", "request"), ("x-model", "model"), ("x-request", "request")])),
             http: Some(HttpOptions {
                 query: Some(string_map(&[("q", "request"), ("m", "model")])),
-                body: Some(json!({ "nested": { "from": "model", "to": "request" } })),
+                body: Some(json_object(json!({ "nested": { "from": "model", "to": "request" } }))),
                 encoding: None,
                 tls: None,
             }),
             ..LlmRequest::default()
         }
     );
+}
+
+#[test]
+fn empty_object_merges_drop_keys_like_typescript() {
+    assert_eq!(opencode_ai::json::deep_merge(&json!({}), &json!({})), None);
+    assert_eq!(opencode_ai::json::deep_merge(&json!({ "metadata": {} }), &json!({ "metadata": {} })), Some(json!({})));
+    assert_eq!(
+        opencode_ai::json::deep_merge(&json!({ "keep": 1, "metadata": {} }), &json!({ "metadata": {} })),
+        Some(json!({ "keep": 1 }))
+    );
+    assert_eq!(
+        opencode_ai::json::deep_merge(&json!({ "p": { "a": {} } }), &json!({ "p": { "a": {} } })),
+        Some(json!({ "p": {} }))
+    );
+
+    let first = provider_options(json!({ "openai": {} }));
+    let second = provider_options(json!({ "openai": {} }));
+    assert_eq!(merge_provider_options(&[Some(&first), Some(&second)]), Some(provider_options(json!({}))));
+    assert_eq!(merge_provider_options(&[Some(&first)]), Some(first));
+    let empty = provider_options(json!({}));
+    assert_eq!(merge_provider_options(&[Some(&empty), Some(&empty)]), None);
+
+    let http_body = json_object(json!({ "metadata": {} }));
+    let http_a = HttpOptions { body: Some(http_body.clone()), ..HttpOptions::default() };
+    let http_b = HttpOptions { body: Some(http_body.clone()), ..HttpOptions::default() };
+    assert_eq!(merge_http(&[Some(&http_a), Some(&http_b)]).and_then(|http| http.body), Some(json_object(json!({}))));
+    assert_eq!(merge_http(&[Some(&http_a)]).and_then(|http| http.body), Some(http_body));
+}
+
+struct StalledSender;
+
+impl HttpSender for StalledSender {
+    fn send(&self, _request: PreparedHttp) -> BoxFuture<Result<HttpResponse, AiError>> {
+        Box::pin(std::future::pending())
+    }
+}
+
+#[tokio::test(start_paused = true)]
+async fn client_stream_applies_the_request_timeout() {
+    let test_model = model("test", "test-model", TestProtocol { body: json!({ "hello": "world" }), ..protocol() });
+    let context =
+        ExecutionContext::new(Arc::new(FixedClock::new(0)), Arc::new(SequenceIds::new()), Arc::new(MapEnv::default()));
+    let executor = RequestExecutor::new(Arc::new(StalledSender), None, context.clock.clone());
+    let client = LlmClient::new(executor, context);
+    let request = LlmRequest {
+        timeout: Some(RequestTimeout::Timeout(HttpTimeout::Millis(serde_json::Number::from(100)))),
+        ..LlmRequest::default()
+    };
+    let mut events = client.stream(&test_model, request, StreamOptions::default());
+    let error = match events.next().await {
+        Some(Err(error)) => error,
+        other => panic!("expected a request timeout, got {other:?}"),
+    };
+    match error.reason {
+        AiErrorReason::Transport { message, operation, code, .. } => {
+            assert_eq!(message, "Timed out waiting for response headers");
+            assert_eq!(operation, TransportOperation::Request);
+            assert_eq!(code.as_deref(), Some("Timeout"));
+        }
+        other => panic!("expected a transport timeout, got {other:?}"),
+    }
 }
 
 #[test]

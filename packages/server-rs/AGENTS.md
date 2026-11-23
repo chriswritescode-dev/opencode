@@ -30,7 +30,8 @@ The Rust replacement for the TypeScript OpenCode server process, the `opencode-s
   `packages/ai` at the pin. `script/gen/llm.ts` regenerates its cassette corpus from those pinned TypeScript sources
   into `crates/ai/tests/corpus`, so the corpus is generated and never edited by hand;
   `crates/ai/tests/all/replay.rs` replays it and is the parity check for the LLM layer. New protocols (OR-45) add
-  cassettes to `script/llm/scenarios.ts` and regenerate rather than editing the corpus by hand.
+  cassettes to `script/llm/scenarios.ts` and regenerate rather than editing the corpus by hand; the expected
+  cassette count and groups are fixed in `script/gen/llm.ts` and `replay.rs`, so update both with the scenarios.
 - Generators read the pinned TypeScript sources through `script/upstream.ts`, which materializes
   `target/upstream/<commit>` from `git archive` at the commit in `upstream-pin`; they never read the working tree,
   which can be newer.

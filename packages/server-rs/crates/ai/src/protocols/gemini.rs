@@ -96,12 +96,8 @@ fn routes_legacy_tool_media(model_id: &str) -> bool {
     LEGACY_TOOL_MEDIA.is_match(model_id)
 }
 
-fn provider_metadata_value<'a>(metadata: Option<&'a ProviderMetadata>, key: &str) -> Option<&'a Value> {
-    metadata?.get(key)
-}
-
 fn thought_signature(metadata: Option<&ProviderMetadata>, key: &str) -> Option<String> {
-    provider_metadata_value(metadata, key)?.get("thoughtSignature")?.as_str().map(str::to_string)
+    shared::provider_metadata_value(metadata, key)?.get("thoughtSignature")?.as_str().map(str::to_string)
 }
 
 fn signature_metadata(key: &str, signature: Option<&str>) -> Option<ProviderMetadata> {
@@ -378,37 +374,13 @@ fn lower_tool_config(tool_choice: &ToolChoice) -> Result<Value, AiError> {
     Ok(Value::Object(lowered))
 }
 
-fn fit_budget(budget: &Number, max_tokens: Option<&Number>) -> Number {
-    let Some(max_tokens) = max_tokens else {
-        return budget.clone();
-    };
-    match (budget.as_i64(), max_tokens.as_i64()) {
-        (Some(budget), Some(maximum)) => {
-            Number::from(shared::fit_thinking_budget(budget, Some(maximum), MIN_THINKING_BUDGET))
-        }
-        _ => {
-            let value = budget.as_f64().unwrap_or_default();
-            let maximum = max_tokens.as_f64().unwrap_or_default();
-            if value <= maximum / 2.0 {
-                budget.clone()
-            } else {
-                number_from_f64((MIN_THINKING_BUDGET as f64).max((maximum / 2.0).floor()))
-            }
-        }
-    }
-}
-
-fn number_from_f64(value: f64) -> Number {
-    if value.fract() == 0.0 && value >= i64::MIN as f64 && value <= i64::MAX as f64 {
-        return Number::from(value as i64);
-    }
-    Number::from_f64(value).unwrap_or_else(|| Number::from(0))
-}
-
 fn lower_thinking_config(config: &ThinkingConfigInput, max_tokens: Option<&Number>) -> Value {
     let mut lowered = Map::new();
     if let Some(budget) = &config.thinking_budget {
-        lowered.insert("thinkingBudget".to_string(), Value::Number(fit_budget(budget, max_tokens)));
+        lowered.insert(
+            "thinkingBudget".to_string(),
+            Value::Number(shared::fit_thinking_budget(budget, max_tokens, MIN_THINKING_BUDGET)),
+        );
     }
     if let Some(include_thoughts) = config.include_thoughts {
         lowered.insert("includeThoughts".to_string(), Value::Bool(include_thoughts));
@@ -654,7 +626,7 @@ fn sum_costs(requests: &[GeminiUsage]) -> Option<Number> {
         return None;
     }
     let total = costs.iter().map(|cost| cost.as_f64().unwrap_or_default()).sum::<f64>();
-    Some(number_from_f64(total))
+    Some(shared::number_from_f64(total).unwrap_or_else(|| Number::from(0)))
 }
 
 fn map_continued_usage(requests: &[GeminiUsage], provider_metadata_key: &str) -> Option<Usage> {

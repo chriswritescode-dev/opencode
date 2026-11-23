@@ -11,7 +11,9 @@ autotests = false
 workspace = true
 
 [dependencies]
+opencode-api-types.workspace = true
 opencode-contract.workspace = true
+opencode-util = { workspace = true, features = ["ring"] }
 base64.workspace = true
 bytes.workspace = true
 futures-util.workspace = true
@@ -27,6 +29,9 @@ thiserror.workspace = true
 tokio.workspace = true
 tokio-tungstenite.workspace = true
 url.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }
 
 [[test]]
 name = "all"

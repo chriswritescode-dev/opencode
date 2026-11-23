@@ -1,6 +1,6 @@
 use serde_json::{Map, Value};
 
-use crate::json::deep_merge;
+use crate::json::merge_objects;
 use crate::prepare::{fold_tool_updates, strip_effort_updates};
 use crate::protocols::utils::open_responses_options;
 use crate::protocols::{open_responses, openai_freeform, openai_responses, shared};
@@ -48,9 +48,9 @@ pub fn compact_request(request: &LlmRequest, model: &Model) -> Result<CompactReq
         base.insert("prompt_cache_key".to_string(), value.clone());
     }
     let base = Value::Object(base);
-    let merged = match request.http.as_ref().and_then(|http| http.body.as_ref()) {
-        Some(overlay) => deep_merge(&base, overlay),
-        None => base,
+    let merged = match (base.as_object(), request.http.as_ref().and_then(|http| http.body.as_ref())) {
+        (Some(base), Some(overlay)) => Value::Object(merge_objects(base, overlay)),
+        _ => base,
     };
     let body = project(&merged)?;
     let native = Value::Object(native);

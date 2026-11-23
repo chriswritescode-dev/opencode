@@ -310,7 +310,10 @@ fn http_body_overlay_uses_the_json_encoder_instead_of_the_route_encoder() {
     .expect("request parts");
     assert_eq!(parts.body_text, "sentinel");
     let request = LlmRequest {
-        http: Some(HttpOptions { body: Some(json!({"b": 2})), ..Default::default() }),
+        http: Some(HttpOptions {
+            body: Some(json!({"b": 2}).as_object().cloned().expect("body object")),
+            ..Default::default()
+        }),
         ..LlmRequest::default()
     };
     let parts = json_request_parts(

@@ -1,5 +1,5 @@
 use opencode_ai::protocols::utils::{
-    cache, gemini_generate_content, lifecycle, open_responses_options, partial_json, tool_stream,
+    cache, gemini_generate_content, lifecycle, mistral_tool_id, open_responses_options, partial_json, tool_stream,
 };
 use opencode_ai::schema::{
     AiErrorReason, CacheHint, CacheHintType, FinishReason, FinishReasonDetails, LlmEvent, LlmRequest, MediaAsset,
@@ -18,10 +18,17 @@ fn partial_json_parses_incomplete_documents() {
 }
 
 #[test]
+fn partial_json_rejects_deeply_nested_input() {
+    let deep = "[".repeat(100_000);
+    assert_eq!(partial_json::parse(&deep), None);
+}
+
+#[test]
 fn tool_stream_accumulates_partial_input() {
+    let mut tools = tool_stream::empty();
     let first = tool_stream::append_or_start(
         "test",
-        tool_stream::empty(),
+        &mut tools,
         0,
         tool_stream::AppendDelta {
             id: Some("call_1"),
@@ -39,32 +46,34 @@ fn tool_stream_accumulates_partial_input() {
     ));
     assert!(matches!(
         &first.events[1],
-        LlmEvent::ToolInputDelta { text, input: Some(input), .. } if text == "{\"city" && input == &json!({})
+        LlmEvent::ToolInputDelta { text, input: Some(input), .. }
+            if text == "{\"city" && input.value().as_ref() == &json!({})
     ));
 
     let second = tool_stream::append_or_start(
         "test",
-        first.tools,
+        &mut tools,
         0,
         tool_stream::AppendDelta { id: None, name: None, text: "\":\"Paris\"", provider_metadata: None },
         "missing tool",
     )
     .expect("append extends a tool");
-    assert_eq!(second.tool.input, "{\"city\":\"Paris\"");
+    assert_eq!(tools[&0].input, "{\"city\":\"Paris\"");
     assert_eq!(second.events.len(), 1);
     assert!(matches!(
         &second.events[0],
         LlmEvent::ToolInputDelta { text, input: Some(input), .. }
-            if text == "\":\"Paris\"" && input == &json!({ "city": "Paris" })
+            if text == "\":\"Paris\"" && input.value().as_ref() == &json!({ "city": "Paris" })
     ));
 }
 
 #[test]
 fn tool_stream_finish_all_orders_by_key() {
-    let tools = start_tool(tool_stream::empty(), 1, "second", "{\"b\":2}");
-    let tools = start_tool(tools, 0, "first", "{\"a\":1}");
-    let finished = tool_stream::finish_all("test", tools).expect("valid tool input");
-    assert!(finished.tools.is_empty());
+    let mut tools = tool_stream::empty();
+    start_tool(&mut tools, 1, "second", "{\"b\":2}");
+    start_tool(&mut tools, 0, "first", "{\"a\":1}");
+    let finished = tool_stream::finish_all("test", &mut tools).expect("valid tool input");
+    assert!(tools.is_empty());
     assert_eq!(finished.events.len(), 4);
     assert!(matches!(&finished.events[0], LlmEvent::ToolInputEnd { name, .. } if name == "first"));
     assert!(matches!(
@@ -92,6 +101,31 @@ fn lifecycle_delta_and_finish_emit_in_order() {
     assert!(matches!(&events[3], LlmEvent::TextEnd { id, text: None, .. } if id == "text_1"));
     assert!(matches!(&events[4], LlmEvent::StepFinish { index: 0, .. }));
     assert!(matches!(&events[5], LlmEvent::Finish { .. }));
+}
+
+#[test]
+fn lifecycle_text_delta_omits_metadata_from_text_start() {
+    let metadata = json!({ "test": { "value": 1 } }).as_object().expect("metadata object").clone();
+    let mut events = Vec::new();
+    lifecycle::text_delta(lifecycle::initial(), &mut events, "text_1", "hello", Some(metadata.clone()));
+    assert_eq!(events.len(), 3);
+    assert!(matches!(&events[1], LlmEvent::TextStart { id, provider_metadata: None } if id == "text_1"));
+    match &events[2] {
+        LlmEvent::TextDelta { id, text, provider_metadata } => {
+            assert_eq!(id, "text_1");
+            assert_eq!(text, "hello");
+            assert_eq!(provider_metadata.as_ref(), Some(&metadata));
+        }
+        other => panic!("expected text delta, got {other:?}"),
+    }
+}
+
+#[test]
+fn mistral_tool_id_hashes_first_utf16_unit() {
+    assert_eq!(mistral_tool_id::hash("call_abc"), "121vn79bs");
+    assert_eq!(mistral_tool_id::hash("call_with-hyphen.and_underscore"), "t31vimrep");
+    assert_eq!(mistral_tool_id::hash("call_🎉test"), "iy1i29fdk");
+    assert_eq!(mistral_tool_id::hash("🎉"), "yj07s80ep");
 }
 
 #[test]
@@ -204,7 +238,7 @@ fn media_asset(source: MediaSource) -> MediaAsset {
     MediaAsset { source, info: None, provider_metadata: None }
 }
 
-fn start_tool(tools: tool_stream::State, key: i64, name: &str, text: &str) -> tool_stream::State {
+fn start_tool(tools: &mut tool_stream::State, key: i64, name: &str, text: &str) {
     tool_stream::append_or_start(
         "test",
         tools,
@@ -212,8 +246,7 @@ fn start_tool(tools: tool_stream::State, key: i64, name: &str, text: &str) -> to
         tool_stream::AppendDelta { id: Some(name), name: Some(name), text, provider_metadata: None },
         "missing tool",
     )
-    .expect("tool starts")
-    .tools
+    .expect("tool starts");
 }
 
 fn finish_reason() -> FinishReasonDetails {
