@@ -114,12 +114,16 @@ pub fn challenge(request: &Request<Bytes>) -> bool {
 }
 
 pub fn unauthorized(request: &Request<Bytes>, message: &str) -> crate::response::Response {
-    let body = serde_json::json!({ "_tag": "UnauthorizedError", "message": message });
-    let mut response = crate::response::json(StatusCode::UNAUTHORIZED, &body);
+    let mut response = unauthorized_without_challenge(message);
     if challenge(request) {
         response.headers_mut().insert(header::WWW_AUTHENTICATE, HeaderValue::from_static(REALM));
     }
     response
+}
+
+pub fn unauthorized_without_challenge(message: &str) -> crate::response::Response {
+    let body = serde_json::json!({ "_tag": "UnauthorizedError", "message": message });
+    crate::response::json(StatusCode::UNAUTHORIZED, &body)
 }
 
 fn sign(password: &str, payload: &str) -> String {

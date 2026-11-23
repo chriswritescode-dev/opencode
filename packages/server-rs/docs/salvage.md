@@ -30,6 +30,7 @@ named in the row needs it.
 | wildcard helpers | `oc-schema` | Glob-style pattern matching for permission rules | `session` permissions | OR-50 | `packages/core/src/util/wildcard.ts` |
 | response validator | `oc-contract` | Validates responses against the committed schema | `parity/` | OR-37 | `packages/protocol/src/client.ts` and `packages/protocol/openapi.json` at the pin |
 | git fixtures | `oc-testkit` | Temporary git repositories for tests | `vcs` tests | OR-53 | `packages/core/test/fixture/git.ts` |
+| server scaffold | `oc-server` | Authentication, CORS, event stream and error scaffolding | `http` | OR-39 | no first-attempt code was imported because the first-attempt branches are not visible in this checkout, and OR-39 ported the modules from the pinned TypeScript instead |
 
 ## Not reused
 

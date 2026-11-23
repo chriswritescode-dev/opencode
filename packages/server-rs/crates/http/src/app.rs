@@ -121,11 +121,11 @@ impl App {
             if browser {
                 return response::bytes(
                     StatusCode::UNAUTHORIZED,
-                    "text/plain; charset=utf-8",
+                    "text/plain",
                     "This pairing link expired or was already used. Run `opencode pair` to get a new one.",
                 );
             }
-            return auth::unauthorized(request, "Pairing link expired or already used");
+            return auth::unauthorized_without_challenge("Pairing link expired or already used");
         }
         let token = auth::issue_session(&self.options.password, crate::now_ms());
         if !browser {

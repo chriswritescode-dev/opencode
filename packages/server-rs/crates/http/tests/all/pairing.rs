@@ -152,7 +152,7 @@ async fn pairing_failures_match_the_client_type() {
     let app = ready_app();
     let browser = app.handle(request_with("GET", "/auth/connect/unknown", &[("accept", "text/html")])).await;
     assert_eq!(browser.status(), StatusCode::UNAUTHORIZED);
-    assert_eq!(header(&browser, "content-type"), Some("text/plain; charset=utf-8"));
+    assert_eq!(header(&browser, "content-type"), Some("text/plain"));
     assert_eq!(
         text(browser).await,
         "This pairing link expired or was already used. Run `opencode pair` to get a new one."
@@ -160,10 +160,20 @@ async fn pairing_failures_match_the_client_type() {
 
     let api = app.handle(request("GET", "/auth/connect/unknown")).await;
     assert_eq!(api.status(), StatusCode::UNAUTHORIZED);
-    assert!(api.headers().contains_key("www-authenticate"));
+    assert!(!api.headers().contains_key("www-authenticate"));
     assert_eq!(text(api).await, r#"{"_tag":"UnauthorizedError","message":"Pairing link expired or already used"}"#);
+
+    let json = app.handle(request_with("GET", "/auth/connect/unknown", &[("accept", "application/json")])).await;
+    assert_eq!(json.status(), StatusCode::UNAUTHORIZED);
+    assert!(!json.headers().contains_key("www-authenticate"));
+    assert_eq!(text(json).await, r#"{"_tag":"UnauthorizedError","message":"Pairing link expired or already used"}"#);
 
     let cors = app.handle(request_with("GET", "/auth/connect/unknown", &[("sec-fetch-mode", "cors")])).await;
     assert_eq!(cors.status(), StatusCode::UNAUTHORIZED);
     assert!(!cors.headers().contains_key("www-authenticate"));
+
+    let gate = app.handle(request("GET", "/api/info")).await;
+    assert_eq!(gate.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(header(&gate, "www-authenticate"), Some("Basic realm=\"Secure Area\""));
+    assert_eq!(text(gate).await, UNAUTHORIZED_BODY);
 }

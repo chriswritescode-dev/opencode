@@ -6,5 +6,5 @@
     "noUnusedLocals": true,
     "noUncheckedIndexedAccess": false
   },
-  "include": ["script"]
+  "include": ["script", "test"]
 }
