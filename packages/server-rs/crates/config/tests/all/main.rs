@@ -6,3 +6,4 @@ mod paths;
 mod policy;
 mod substitute;
 mod support;
+mod wellknown;
