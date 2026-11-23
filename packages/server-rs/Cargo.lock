@@ -809,6 +809,7 @@ dependencies = [
  "opencode-http",
  "opencode-local",
  "opencode-service",
+ "opencode-sidecar",
  "opencode-util",
  "rand",
  "rustix",

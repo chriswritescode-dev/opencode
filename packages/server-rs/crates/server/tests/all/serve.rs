@@ -156,6 +156,29 @@ fn the_cors_flag_allows_its_origin() {
     assert_eq!(status.code(), Some(143), "exit status {status:?}");
 }
 
+#[test]
+fn a_served_process_starts_no_sidecar_until_a_call() {
+    if !cfg!(target_os = "linux") {
+        println!("skipped: only Linux exposes /proc/<pid>/task/<pid>/children");
+        return;
+    }
+    let sandbox = Sandbox::new();
+    let mut process = Process::spawn(&sandbox, &["serve", "--port", "0"], &[]);
+    let port = listening_port(&process);
+    let password = printed_password(&process);
+
+    let response = get(port, "/api/info", &[("Authorization", &basic_header(&password))]);
+    assert_eq!(status_code(&response), "200", "response:\n{response}");
+
+    let path = format!("/proc/{pid}/task/{pid}/children", pid = process.pid());
+    let children = std::fs::read_to_string(&path).unwrap_or_else(|error| panic!("read {path}: {error}"));
+    assert!(children.trim().is_empty(), "the server started a child process: {children:?}");
+
+    process.signal(Signal::TERM);
+    let status = process.wait(Duration::from_secs(5));
+    assert_eq!(status.code(), Some(143), "exit status {status:?}");
+}
+
 fn handshake_url(handshake: &str) -> String {
     let value: serde_json::Value = serde_json::from_str(handshake)
         .unwrap_or_else(|error| panic!("first stdout line is not JSON ({error}): {handshake:?}"));

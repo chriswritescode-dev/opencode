@@ -68,7 +68,7 @@ pub(crate) async fn run(args: Serve, mut env: ServerEnv, mut watch: Watch) -> st
     std::fs::create_dir_all(&paths.tmp)?;
     let tmp = std::fs::canonicalize(&paths.tmp)?;
     let address = listener.local_addr()?;
-    let running = serve::start(listener, tmp, password.clone(), serve::machine_hostname(&env), cors).await?;
+    let running = serve::start(listener, tmp, password.clone(), serve::machine_hostname(&env), cors, &env).await?;
     if generated {
         service_config.password(Some(&password))?;
     }

@@ -36,6 +36,9 @@ The Rust replacement for the TypeScript OpenCode server process, the `opencode-s
   dispatch, pairing and tickets.
 - `opencode-server` (`crates/server`) holds the binary's own modules: CLI parsing, the foreground, stdio and service
   serve modes, registration, and the service commands.
+- `opencode-sidecar` (`crates/sidecar`) is Bun discovery, the hardened start, the framed protocol and supervision;
+  `host/` is the sidecar's TypeScript, bundled into `crates/sidecar/host/host.js` by `script/gen/sidecar.ts`, and its
+  protocol types are generated into `host/src/protocol.gen.ts` with `OPENCODE_UPDATE_SIDECAR_PROTOCOL=1`.
 - Generators read the pinned TypeScript sources through `script/upstream.ts`, which materializes
   `target/upstream/<commit>` from `git archive` at the commit in `upstream-pin`; they never read the working tree,
   which can be newer.
@@ -53,6 +56,7 @@ Before merging, the whole package must pass:
 - `bun run check:deny`
 - `bun run check:drift`
 - `bun run test:shell`, which needs `bun install` and a debug build of `opencode-server`
+- `bun run test:host`
 
 `docs/coverage.md` is regenerated with `OPENCODE_UPDATE_COVERAGE=1`.
 
