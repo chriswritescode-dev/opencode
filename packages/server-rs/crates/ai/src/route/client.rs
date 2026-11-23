@@ -8,7 +8,7 @@ use serde_json::Value;
 
 use crate::ExecutionContext;
 use crate::route::compile::{StreamOptions, compile};
-use crate::route::executor::{BoxFuture, Middleware, PreparedHttp, RequestExecutor};
+use crate::route::executor::{BoxFuture, HttpResponse, Middleware, PreparedHttp, RequestExecutor};
 use crate::route::framing::{Definition, FrameStream};
 use crate::route::model::{Model, ResolvedRequest};
 use crate::route::protocol::ProtocolState;
@@ -147,15 +147,7 @@ async fn advance(stage: Stage) -> Option<(Result<LlmEvent, AiError>, Stage)> {
                         Ok(response) => response,
                         Err(error) => return Some((Err(error), Stage::Done)),
                     };
-                    let http = Some(HttpContext {
-                        url,
-                        status: response.status,
-                        headers: response
-                            .headers
-                            .iter()
-                            .map(|(name, value)| (name.to_lowercase(), value.clone()))
-                            .collect(),
-                    });
+                    let http = Some(response_http(url, &response));
                     (framing.frame(response.body), http, None)
                 }
             };
@@ -202,11 +194,7 @@ fn channel_fallback(
         Box::pin(async move {
             let url = request.url.clone();
             let response = executor.execute(request, middleware).await?;
-            let http = HttpContext {
-                url,
-                status: response.status,
-                headers: response.headers.iter().map(|(name, value)| (name.to_lowercase(), value.clone())).collect(),
-            };
+            let http = response_http(url, &response);
             let frames: FrameStream = framing.frame(response.body);
             Ok(ChannelFallbackExecution { frames, http: Some(http) })
         })
@@ -309,8 +297,17 @@ async fn continue_response(state: &mut StreamState, token: String) -> Result<(),
         None => request.headers.push(("content-length".to_string(), length)),
     }
     let response = state.executor.execute(request, state.prepared.middleware.clone()).await?;
+    state.http = Some(response_http(state.prepared.request.url.clone(), &response));
     state.frames = state.prepared.framing.frame(response.body);
     Ok(())
+}
+
+fn response_http(url: String, response: &HttpResponse) -> HttpContext {
+    HttpContext {
+        url,
+        status: response.status,
+        headers: response.headers.iter().map(|(name, value)| (name.to_lowercase(), value.clone())).collect(),
+    }
 }
 
 fn attach_error(error: AiError, http: &Option<HttpContext>) -> AiError {

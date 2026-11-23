@@ -47,12 +47,19 @@ pub struct WebSocketConnection {
 }
 
 impl WebSocketConnection {
-    pub fn messages(&mut self) -> MessageStream {
-        self.messages
-            .lock()
-            .expect("WebSocket messages lock poisoned")
-            .take()
-            .expect("WebSocket messages already taken")
+    pub fn messages(&mut self) -> Result<MessageStream, AiError> {
+        let messages = self.messages.lock().expect("WebSocket messages lock poisoned").take();
+        messages.ok_or_else(|| {
+            websocket_error(
+                "WebSocket messages already taken".to_string(),
+                Some(self.url.clone()),
+                TransportOperation::Read,
+                None,
+                Some(TransportPhase::Receive),
+                None,
+                None,
+            )
+        })
     }
 
     pub async fn send_text(&self, message: String) -> Result<(), AiError> {
@@ -210,7 +217,7 @@ async fn direct_execution(
         return Err(attach_http(error, &connection.http));
     }
     let http = connection.http.clone();
-    let messages = connection.messages();
+    let messages = connection.messages()?;
     let frames = channel_frames(connection, messages, driver, interceptor, create);
     Ok(ChannelExecution { frames, http, complete: Box::pin(async {}) })
 }

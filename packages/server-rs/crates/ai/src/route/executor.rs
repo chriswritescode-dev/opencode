@@ -19,6 +19,7 @@ use crate::schema::{
 pub const DEFAULT_HTTP_TIMEOUT_MS: u64 = 300_000;
 pub const DEFAULT_CHUNK_TIMEOUT_MS: u64 = 900_000;
 const MAX_BODY_CHARS: usize = 2000;
+const MAX_ERROR_BODY_BYTES: usize = 1024 * 1024;
 
 pub type BoxFuture<T> = Pin<Box<dyn Future<Output = T> + Send>>;
 pub type ByteStream = Pin<Box<dyn Stream<Item = Result<Bytes, AiError>> + Send>>;
@@ -303,8 +304,11 @@ fn with_body_timeouts(
 
 async fn read_body(mut body: ByteStream) -> Result<String, AiError> {
     let mut content = Vec::new();
-    while let Some(chunk) = body.next().await {
-        content.extend_from_slice(&chunk?);
+    while content.len() < MAX_ERROR_BODY_BYTES {
+        let Some(chunk) = body.next().await else { break };
+        let chunk = chunk?;
+        let remaining = MAX_ERROR_BODY_BYTES - content.len();
+        content.extend_from_slice(&chunk[..chunk.len().min(remaining)]);
     }
     Ok(String::from_utf8_lossy(&content).into_owned())
 }

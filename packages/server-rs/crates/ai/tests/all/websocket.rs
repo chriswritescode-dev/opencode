@@ -154,7 +154,7 @@ async fn oversized_message_fails_the_stream_and_closes_with_1009() {
     });
     let mut connection =
         open(WebSocketRequest { url: format!("ws://{address}"), headers: Vec::new() }).await.expect("open connection");
-    let mut messages = connection.messages();
+    let mut messages = connection.messages().expect("messages");
     let error = match within(messages.next()).await {
         Some(Err(error)) => error,
         other => panic!("expected an oversized message error, got {other:?}"),
@@ -180,7 +180,7 @@ async fn binary_message_text_strips_a_leading_bom() {
     });
     let mut connection =
         open(WebSocketRequest { url: format!("ws://{address}"), headers: Vec::new() }).await.expect("open connection");
-    let mut messages = connection.messages();
+    let mut messages = connection.messages().expect("messages");
     let message = match within(messages.next()).await {
         Some(Ok(message)) => message,
         other => panic!("expected a binary message, got {other:?}"),
@@ -201,7 +201,7 @@ async fn read_error_reports_a_websocket_error() {
     });
     let mut connection =
         open(WebSocketRequest { url: format!("ws://{address}"), headers: Vec::new() }).await.expect("open connection");
-    let mut messages = connection.messages();
+    let mut messages = connection.messages().expect("messages");
     let reason = transport_reason(match within(messages.next()).await {
         Some(Err(error)) => error,
         other => panic!("expected a read error, got {other:?}"),
@@ -269,7 +269,8 @@ async fn closed_socket_classifies_delivery() {
     let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind");
     let address = listener.local_addr().expect("local address");
     let server = tokio::spawn(async move {
-        let _socket = accept(listener).await;
+        let mut socket = accept(listener).await;
+        let _ = socket.next().await;
     });
     let executor = make_direct(Arc::new(SystemConnector), None);
     let execution = within(executor.execute(exchange(
@@ -293,6 +294,7 @@ async fn closed_socket_classifies_delivery() {
     let address = listener.local_addr().expect("local address");
     let server = tokio::spawn(async move {
         let mut socket = accept(listener).await;
+        let _ = socket.next().await;
         socket.send(Message::Text("one".into())).await.expect("send one frame");
     });
     let executor = make_direct(Arc::new(SystemConnector), None);
