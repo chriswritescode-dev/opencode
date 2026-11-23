@@ -28,9 +28,11 @@ pub fn run_serve(args: Serve, env: ServerEnv) -> std::process::ExitCode {
 }
 
 async fn serve(args: Serve, mut env: ServerEnv) -> std::io::Result<std::process::ExitCode> {
-    let environment_password = env.password();
-    let _ = env.get("OPENCODE_PTY_HANDOFF");
     env.remove("OPENCODE_PTY_HANDOFF");
+    if args.service {
+        return crate::service_mode::run(args, env).await;
+    }
+    let environment_password = env.password();
     if args.stdio {
         env.remove("OPENCODE_PASSWORD");
         env.remove("OPENCODE_SERVER_PASSWORD");
@@ -44,21 +46,9 @@ async fn serve(args: Serve, mut env: ServerEnv) -> std::io::Result<std::process:
     let generated = environment_password.is_none();
     let password = environment_password
         .unwrap_or_else(|| base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(rand::random::<[u8; 32]>()));
-    let urls = Arc::new(move || connection_urls(address));
-    let app = opencode_http::app::App::new(opencode_http::app::Options {
-        password: password.clone(),
-        version: crate::VERSION.to_owned(),
-        cors: args.cors,
-        tmp,
-        hostname: Some(hostname),
-        urls,
-    });
-    let (shutdown_sender, shutdown_receiver) = oneshot::channel::<()>();
-    let server = tokio::spawn(opencode_http::serve::serve(listener, app.clone(), async move {
-        let _ = shutdown_receiver.await;
-    }));
+    let running = start(listener, tmp, password.clone(), hostname, args.cors).await?;
     let mut watch = Watch::new()?;
-    app.status().ready();
+    running.ready();
     if args.stdio {
         write_line(&serde_json::json!({ "url": format!("http://{address}") }).to_string())?;
         let reader = tokio::task::spawn_blocking(|| {
@@ -69,11 +59,9 @@ async fn serve(args: Serve, mut env: ServerEnv) -> std::io::Result<std::process:
             signal = watch.next() => Some(signal),
         };
         match stdin_or_signal {
-            Some(signal) => return Ok(teardown_server(&mut watch, signal, &app, shutdown_sender, server).await),
+            Some(signal) => return Ok(teardown_server(&mut watch, signal, running).await),
             None => {
-                app.status().begin_stopping();
-                let _ = shutdown_sender.send(());
-                let _ = server.await;
+                running.shutdown().await;
                 return Ok(std::process::ExitCode::SUCCESS);
             }
         }
@@ -83,22 +71,53 @@ async fn serve(args: Serve, mut env: ServerEnv) -> std::io::Result<std::process:
         write_line(&format!("server password {password}"))?;
     }
     let signal = watch.next().await;
-    Ok(teardown_server(&mut watch, signal, &app, shutdown_sender, server).await)
+    Ok(teardown_server(&mut watch, signal, running).await)
 }
 
-async fn teardown_server(
-    watch: &mut Watch,
-    signal: Signal,
-    app: &opencode_http::app::App,
+pub(crate) struct Running {
+    app: Arc<opencode_http::app::App>,
     shutdown: oneshot::Sender<()>,
     server: tokio::task::JoinHandle<()>,
-) -> std::process::ExitCode {
-    app.status().begin_stopping();
-    let _ = shutdown.send(());
-    crate::shutdown::teardown(watch, signal, async {
-        let _ = server.await;
-    })
-    .await
+}
+
+impl Running {
+    pub(crate) fn ready(&self) {
+        self.app.status().ready();
+    }
+
+    pub(crate) async fn shutdown(self) {
+        self.app.status().begin_stopping();
+        let _ = self.shutdown.send(());
+        let _ = self.server.await;
+    }
+}
+
+pub(crate) async fn start(
+    listener: tokio::net::TcpListener,
+    tmp: std::path::PathBuf,
+    password: String,
+    hostname: String,
+    cors: Vec<String>,
+) -> std::io::Result<Running> {
+    let address = listener.local_addr()?;
+    let urls = Arc::new(move || connection_urls(address));
+    let app = opencode_http::app::App::new(opencode_http::app::Options {
+        password,
+        version: crate::VERSION.to_owned(),
+        cors,
+        tmp,
+        hostname: Some(hostname),
+        urls,
+    });
+    let (shutdown, shutdown_receiver) = oneshot::channel::<()>();
+    let server = tokio::spawn(opencode_http::serve::serve(listener, app.clone(), async move {
+        let _ = shutdown_receiver.await;
+    }));
+    Ok(Running { app, shutdown, server })
+}
+
+async fn teardown_server(watch: &mut Watch, signal: Signal, running: Running) -> std::process::ExitCode {
+    crate::shutdown::teardown(watch, signal, running.shutdown()).await
 }
 
 async fn bind(hostname: &str, port: Option<u16>) -> std::io::Result<tokio::net::TcpListener> {
@@ -128,7 +147,7 @@ fn connection_urls(address: std::net::SocketAddr) -> Vec<String> {
     vec![format!("http://{bound}")]
 }
 
-fn write_line(line: &str) -> std::io::Result<()> {
+pub(crate) fn write_line(line: &str) -> std::io::Result<()> {
     let mut stdout = std::io::stdout();
     writeln!(stdout, "{line}")?;
     stdout.flush()

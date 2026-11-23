@@ -1,10 +1,18 @@
 mod cli;
 mod env;
+mod probe;
+mod registration;
 mod serve;
+mod service_mode;
 mod shutdown;
 
 pub(crate) const VERSION: &str = match option_env!("OPENCODE_VERSION") {
     Some(version) => version,
+    None => "local",
+};
+
+pub(crate) const CHANNEL: &str = match option_env!("OPENCODE_CHANNEL") {
+    Some(channel) => channel,
     None => "local",
 };
 

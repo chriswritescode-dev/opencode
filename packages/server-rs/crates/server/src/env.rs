@@ -19,7 +19,6 @@ impl ServerEnv {
         self.vars.get(OsStr::new(name)).map(OsString::as_os_str)
     }
 
-    #[expect(dead_code)]
     pub fn merge(&mut self, env: &IndexMap<String, String>) {
         let Some(env) = opencode_local::service_config::process_env(Some(env)) else {
             return;
