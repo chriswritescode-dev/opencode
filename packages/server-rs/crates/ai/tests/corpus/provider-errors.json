@@ -1,0 +1,2383 @@
+{
+  "errors": [
+    {
+      "input": {
+        "message": "tokens in request more than max tokens allowed"
+      },
+      "reason": {
+        "_tag": "InvalidRequest",
+        "message": "tokens in request more than max tokens allowed",
+        "classification": "context-overflow"
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "message": "Requested token count exceeds the model's maximum context length of 131072 tokens."
+      },
+      "reason": {
+        "_tag": "InvalidRequest",
+        "message": "Requested token count exceeds the model's maximum context length of 131072 tokens.",
+        "classification": "context-overflow"
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "message": "Requested input length 600010 exceeds maximum input length 131071"
+      },
+      "reason": {
+        "_tag": "InvalidRequest",
+        "message": "Requested input length 600010 exceeds maximum input length 131071",
+        "classification": "context-overflow"
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "message": "Input length (265330) exceeds model's maximum context length (262144)."
+      },
+      "reason": {
+        "_tag": "InvalidRequest",
+        "message": "Input length (265330) exceeds model's maximum context length (262144).",
+        "classification": "context-overflow"
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "message": "Input length 131393 exceeds the maximum allowed input length of 131040 tokens."
+      },
+      "reason": {
+        "_tag": "InvalidRequest",
+        "message": "Input length 131393 exceeds the maximum allowed input length of 131040 tokens.",
+        "classification": "context-overflow"
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "message": "The input (516368 tokens) is longer than the model's context length (262144 tokens)."
+      },
+      "reason": {
+        "_tag": "InvalidRequest",
+        "message": "The input (516368 tokens) is longer than the model's context length (262144 tokens).",
+        "classification": "context-overflow"
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "message": "The input is longer than the model's context length trace_id: 39d8c3a5c6c91dbc8dd9055f0b37e084"
+      },
+      "reason": {
+        "_tag": "InvalidRequest",
+        "message": "The input is longer than the model's context length trace_id: 39d8c3a5c6c91dbc8dd9055f0b37e084",
+        "classification": "context-overflow"
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "message": "Prompt has 5,958,968 tokens, but the configured context size is 256,000 tokens"
+      },
+      "reason": {
+        "_tag": "InvalidRequest",
+        "message": "Prompt has 5,958,968 tokens, but the configured context size is 256,000 tokens",
+        "classification": "context-overflow"
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "message": "Range of input length should be [1, 129024]"
+      },
+      "reason": {
+        "_tag": "InvalidRequest",
+        "message": "Range of input length should be [1, 129024]",
+        "classification": "context-overflow"
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "message": "Too many tokens"
+      },
+      "reason": {
+        "_tag": "InvalidRequest",
+        "message": "Too many tokens",
+        "classification": "context-overflow"
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "message": "Input validation error: `inputs` tokens + `max_new_tokens` must be <= 131073. Given: 600035 `inputs` tokens and 16 `max_new_tokens`"
+      },
+      "reason": {
+        "_tag": "InvalidRequest",
+        "message": "Input validation error: `inputs` tokens + `max_new_tokens` must be <= 131073. Given: 600035 `inputs` tokens and 16 `max_new_tokens`",
+        "classification": "context-overflow"
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "message": "Token limit exceeded"
+      },
+      "reason": {
+        "_tag": "InvalidRequest",
+        "message": "Token limit exceeded",
+        "classification": "context-overflow"
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "message": "Prompt exceeds max length"
+      },
+      "reason": {
+        "_tag": "InvalidRequest",
+        "message": "Prompt exceeds max length",
+        "classification": "context-overflow"
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "message": "The input is too long for the selected model."
+      },
+      "reason": {
+        "_tag": "InvalidRequest",
+        "message": "The input is too long for the selected model.",
+        "classification": "context-overflow"
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "message": "This text request is too large for the model's configured input limit."
+      },
+      "reason": {
+        "_tag": "InvalidRequest",
+        "message": "This text request is too large for the model's configured input limit.",
+        "classification": "context-overflow"
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "message": "litellm.ContextWindowExceededError: litellm.BadRequestError: litellm._pre_call_checks: Context Window exceeded for given call. No models have context window large enough for this call."
+      },
+      "reason": {
+        "_tag": "InvalidRequest",
+        "message": "litellm.ContextWindowExceededError: litellm.BadRequestError: litellm._pre_call_checks: Context Window exceeded for given call. No models have context window large enough for this call.",
+        "classification": "context-overflow"
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "message": "413 status code (no body)"
+      },
+      "reason": {
+        "_tag": "InvalidRequest",
+        "message": "413 status code (no body)",
+        "classification": "context-overflow"
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "{\"error\":{\"type\":\"request_too_large\",\"message\":\"Request exceeds the maximum size\"}}",
+        "status": 400
+      },
+      "reason": {
+        "_tag": "InvalidRequest",
+        "message": "{\"error\":{\"type\":\"request_too_large\",\"message\":\"Request exceeds the maximum size\"}}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 400,
+          "headers": {}
+        },
+        "classification": "context-overflow"
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "request too large",
+        "status": 413
+      },
+      "reason": {
+        "_tag": "InvalidRequest",
+        "message": "request too large",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 413,
+          "headers": {}
+        },
+        "classification": "payload-too-large"
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "upstream request entity too large",
+        "status": 502
+      },
+      "reason": {
+        "_tag": "InvalidRequest",
+        "message": "upstream request entity too large",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 502,
+          "headers": {}
+        },
+        "classification": "payload-too-large"
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "message": "Throttling error: Too many tokens, please wait before trying again."
+      },
+      "reason": {
+        "_tag": "UnknownProvider",
+        "message": "Throttling error: Too many tokens, please wait before trying again."
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "message": "Rate limit exceeded, please retry after 30 seconds."
+      },
+      "reason": {
+        "_tag": "RateLimit",
+        "message": "Rate limit exceeded, please retry after 30 seconds."
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "message": "Too many requests. Please slow down."
+      },
+      "reason": {
+        "_tag": "RateLimit",
+        "message": "Too many requests. Please slow down."
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "message": "Request rate increased too quickly"
+      },
+      "reason": {
+        "_tag": "RateLimit",
+        "message": "Request rate increased too quickly"
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "message": "Rate limit exceeded, please try again later"
+      },
+      "reason": {
+        "_tag": "RateLimit",
+        "message": "Rate limit exceeded, please try again later"
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "message": "Too many requests, please slow down"
+      },
+      "reason": {
+        "_tag": "RateLimit",
+        "message": "Too many requests, please slow down"
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "message": "{\"type\":\"error\",\"error\":{\"type\":\"too_many_requests\"}}"
+      },
+      "reason": {
+        "_tag": "RateLimit",
+        "message": "{\"type\":\"error\",\"error\":{\"type\":\"too_many_requests\"}}"
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "message": "{\"type\":\"error\",\"error\":{\"code\":\"rate_limit_exceeded\"}}"
+      },
+      "reason": {
+        "_tag": "RateLimit",
+        "message": "{\"type\":\"error\",\"error\":{\"code\":\"rate_limit_exceeded\"}}"
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "message": "{\"code\":\"bad_request\",\"error\":{\"code\":\"rate_limit_exceeded\"}}"
+      },
+      "reason": {
+        "_tag": "RateLimit",
+        "message": "{\"code\":\"bad_request\",\"error\":{\"code\":\"rate_limit_exceeded\"}}"
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "message": "{\"type\":\"error\",\"error\":{\"code\":\"unknown\",\"type\":\"too_many_requests\"}}"
+      },
+      "reason": {
+        "_tag": "RateLimit",
+        "message": "{\"type\":\"error\",\"error\":{\"code\":\"unknown\",\"type\":\"too_many_requests\"}}"
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "message": "{\"code\":\"resource_exhausted\"}"
+      },
+      "reason": {
+        "_tag": "ProviderInternal",
+        "message": "{\"code\":\"resource_exhausted\"}"
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "message": "{\"code\":\"service_unavailable\"}"
+      },
+      "reason": {
+        "_tag": "ProviderInternal",
+        "message": "{\"code\":\"service_unavailable\"}"
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "message": "{\"code\":\"slow_down\"}"
+      },
+      "reason": {
+        "_tag": "ProviderInternal",
+        "message": "{\"code\":\"slow_down\"}"
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "message": "The model is currently at capacity due to high demand. Please try again in a few minutes, or use a higher service tier for priority processing."
+      },
+      "reason": {
+        "_tag": "ProviderInternal",
+        "message": "The model is currently at capacity due to high demand. Please try again in a few minutes, or use a higher service tier for priority processing."
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "message": "Try again"
+      },
+      "reason": {
+        "_tag": "ProviderInternal",
+        "message": "Try again"
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "message": "Please retry your request shortly."
+      },
+      "reason": {
+        "_tag": "ProviderInternal",
+        "message": "Please retry your request shortly."
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "message": "You can retry the request."
+      },
+      "reason": {
+        "_tag": "ProviderInternal",
+        "message": "You can retry the request."
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "message": "Try your request again."
+      },
+      "reason": {
+        "_tag": "ProviderInternal",
+        "message": "Try your request again."
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "message": "The service is temporarily at capacity."
+      },
+      "reason": {
+        "_tag": "ProviderInternal",
+        "message": "The service is temporarily at capacity."
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "message": "The model is overloaded."
+      },
+      "reason": {
+        "_tag": "ProviderInternal",
+        "message": "The model is overloaded."
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "message": "Service unavailable"
+      },
+      "reason": {
+        "_tag": "ProviderInternal",
+        "message": "Service unavailable"
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "message": "Internal server error"
+      },
+      "reason": {
+        "_tag": "ProviderInternal",
+        "message": "Internal server error"
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "message": "The server is busy."
+      },
+      "reason": {
+        "_tag": "ProviderInternal",
+        "message": "The server is busy."
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "message": "Provider returned error"
+      },
+      "reason": {
+        "_tag": "ProviderInternal",
+        "message": "Provider returned error"
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "message": "Provider returned an error"
+      },
+      "reason": {
+        "_tag": "ProviderInternal",
+        "message": "Provider returned an error"
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "message": "ResourceExhausted"
+      },
+      "reason": {
+        "_tag": "ProviderInternal",
+        "message": "ResourceExhausted"
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "message": "Upstream connection failed"
+      },
+      "reason": {
+        "_tag": "ProviderInternal",
+        "message": "Upstream connection failed"
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "message": "Exceeded request buffer limit while retrying upstream"
+      },
+      "reason": {
+        "_tag": "ProviderInternal",
+        "message": "Exceeded request buffer limit while retrying upstream"
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "message": "Provider request failed",
+        "responseBody": "Please try again later."
+      },
+      "reason": {
+        "_tag": "ProviderInternal",
+        "message": "Provider request failed",
+        "body": "Please try again later."
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "Invalid credentials, try again",
+        "status": 401
+      },
+      "reason": {
+        "_tag": "Authentication",
+        "message": "Invalid credentials, try again",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 401,
+          "headers": {}
+        }
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "Quota exceeded, try again",
+        "status": 429
+      },
+      "reason": {
+        "_tag": "QuotaExceeded",
+        "message": "Quota exceeded, try again",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 429,
+          "headers": {}
+        }
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "message": "Rate limit exceeded, try again"
+      },
+      "reason": {
+        "_tag": "RateLimit",
+        "message": "Rate limit exceeded, try again"
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "Upstream request failed: validation failed",
+        "status": 400
+      },
+      "reason": {
+        "_tag": "InvalidRequest",
+        "message": "Upstream request failed: validation failed",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 400,
+          "headers": {}
+        }
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "Try again",
+        "status": 200
+      },
+      "reason": {
+        "_tag": "ProviderInternal",
+        "message": "Try again",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 200,
+          "headers": {}
+        }
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "The response was filtered",
+        "status": 400,
+        "responseBody": "{\"error\":{\"message\":\"The response was filtered\",\"type\":null,\"param\":\"prompt\",\"code\":\"content_filter\",\"status\":400,\"innererror\":{\"code\":\"ResponsibleAIPolicyViolation\",\"content_filter_result\":{}}}}"
+      },
+      "reason": {
+        "_tag": "ContentPolicy",
+        "message": "The response was filtered",
+        "body": "{\"error\":{\"message\":\"The response was filtered\",\"type\":null,\"param\":\"prompt\",\"code\":\"content_filter\",\"status\":400,\"innererror\":{\"code\":\"ResponsibleAIPolicyViolation\",\"content_filter_result\":{}}}}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 400,
+          "headers": {}
+        }
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "The response was filtered",
+        "status": 400,
+        "responseBody": "{\"error\":{\"message\":\"The response was filtered\",\"code\":null,\"innererror\":{\"code\":\"ResponsibleAIPolicyViolation\"}}}"
+      },
+      "reason": {
+        "_tag": "ContentPolicy",
+        "message": "The response was filtered",
+        "body": "{\"error\":{\"message\":\"The response was filtered\",\"code\":null,\"innererror\":{\"code\":\"ResponsibleAIPolicyViolation\"}}}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 400,
+          "headers": {}
+        }
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "Invalid prompt: your prompt was flagged as potentially violating our usage policy. Please try again with a different prompt.",
+        "status": 400,
+        "responseBody": "{\"error\":{\"message\":\"Invalid prompt: your prompt was flagged as potentially violating our usage policy. Please try again with a different prompt.\",\"type\":\"invalid_request_error\",\"param\":null,\"code\":\"invalid_prompt\"}}"
+      },
+      "reason": {
+        "_tag": "ContentPolicy",
+        "message": "Invalid prompt: your prompt was flagged as potentially violating our usage policy. Please try again with a different prompt.",
+        "body": "{\"error\":{\"message\":\"Invalid prompt: your prompt was flagged as potentially violating our usage policy. Please try again with a different prompt.\",\"type\":\"invalid_request_error\",\"param\":null,\"code\":\"invalid_prompt\"}}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 400,
+          "headers": {}
+        }
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "Output blocked by content filtering policy",
+        "status": 400,
+        "responseBody": "{\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Output blocked by content filtering policy\"}}"
+      },
+      "reason": {
+        "_tag": "ContentPolicy",
+        "message": "Output blocked by content filtering policy",
+        "body": "{\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Output blocked by content filtering policy\"}}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 400,
+          "headers": {}
+        }
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "Your input was flagged",
+        "status": 403,
+        "responseBody": "{\"id\":\"gen-abc123\",\"object\":\"chat.completion.chunk\",\"error\":{\"code\":403,\"message\":\"Your input was flagged\",\"metadata\":{\"error_type\":\"content_policy_violation\",\"reasons\":[\"violence\"],\"flagged_input\":\"...\"}},\"choices\":[{\"index\":0,\"delta\":{\"content\":\"\"},\"finish_reason\":\"error\"}]}"
+      },
+      "reason": {
+        "_tag": "ContentPolicy",
+        "message": "Your input was flagged",
+        "body": "{\"id\":\"gen-abc123\",\"object\":\"chat.completion.chunk\",\"error\":{\"code\":403,\"message\":\"Your input was flagged\",\"metadata\":{\"error_type\":\"content_policy_violation\",\"reasons\":[\"violence\"],\"flagged_input\":\"...\"}},\"choices\":[{\"index\":0,\"delta\":{\"content\":\"\"},\"finish_reason\":\"error\"}]}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 403,
+          "headers": {}
+        }
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "message": "Your input was flagged",
+        "responseBody": "{\"type\":\"response.failed\",\"response\":{\"id\":\"resp_abc123\",\"status\":\"failed\",\"error\":{\"code\":\"image_content_policy_violation\",\"message\":\"Your input was flagged\"},\"error_type\":\"content_policy_violation\"}}"
+      },
+      "reason": {
+        "_tag": "ContentPolicy",
+        "message": "Your input was flagged",
+        "body": "{\"type\":\"response.failed\",\"response\":{\"id\":\"resp_abc123\",\"status\":\"failed\",\"error\":{\"code\":\"image_content_policy_violation\",\"message\":\"Your input was flagged\"},\"error_type\":\"content_policy_violation\"}}"
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "message": "Claude refused to respond",
+        "responseBody": "{\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Claude refused to respond\",\"error_type\":\"refusal\"}}"
+      },
+      "reason": {
+        "_tag": "ContentPolicy",
+        "message": "Claude refused to respond",
+        "body": "{\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Claude refused to respond\",\"error_type\":\"refusal\"}}"
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "This content was flagged for possible cybersecurity risk. If this seems wrong, try rephrasing your request.",
+        "status": 400,
+        "responseBody": "{\"error\":{\"message\":\"This content was flagged for possible cybersecurity risk. If this seems wrong, try rephrasing your request.\",\"type\":\"invalid_request_error\",\"param\":null,\"code\":\"cyber_policy\"}}"
+      },
+      "reason": {
+        "_tag": "ContentPolicy",
+        "message": "This content was flagged for possible cybersecurity risk. If this seems wrong, try rephrasing your request.",
+        "body": "{\"error\":{\"message\":\"This content was flagged for possible cybersecurity risk. If this seems wrong, try rephrasing your request.\",\"type\":\"invalid_request_error\",\"param\":null,\"code\":\"cyber_policy\"}}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 400,
+          "headers": {}
+        }
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "message": "cyber_policy: This content was flagged for possible cybersecurity risk. If this seems wrong, try rephrasing your request.",
+        "responseBody": "{\"type\":\"error\",\"sequence_number\":1,\"code\":\"cyber_policy\",\"message\":\"This content was flagged for possible cybersecurity risk. If this seems wrong, try rephrasing your request.\",\"param\":null}"
+      },
+      "reason": {
+        "_tag": "ContentPolicy",
+        "message": "cyber_policy: This content was flagged for possible cybersecurity risk. If this seems wrong, try rephrasing your request.",
+        "body": "{\"type\":\"error\",\"sequence_number\":1,\"code\":\"cyber_policy\",\"message\":\"This content was flagged for possible cybersecurity risk. If this seems wrong, try rephrasing your request.\",\"param\":null}"
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "Green net check failed for text (input): Input data may contain inappropriate content.",
+        "status": 400,
+        "responseBody": "{\"request_id\":\"1537ecc9-6873-93f7-9865-6fe4eb1d7851\",\"code\":\"DataInspectionFailed\",\"message\":\"Green net check failed for text (input): Input data may contain inappropriate content.\"}"
+      },
+      "reason": {
+        "_tag": "ContentPolicy",
+        "message": "Green net check failed for text (input): Input data may contain inappropriate content.",
+        "body": "{\"request_id\":\"1537ecc9-6873-93f7-9865-6fe4eb1d7851\",\"code\":\"DataInspectionFailed\",\"message\":\"Green net check failed for text (input): Input data may contain inappropriate content.\"}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 400,
+          "headers": {}
+        }
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "Your request was rejected by the safety system. If you believe this is an error, contact us at help.openai.com and include the request ID req_123.",
+        "status": 400,
+        "responseBody": "{\"error\":{\"message\":\"Your request was rejected by the safety system. If you believe this is an error, contact us at help.openai.com and include the request ID req_123.\",\"type\":\"image_generation_user_error\",\"param\":null,\"code\":\"moderation_blocked\",\"moderation_details\":{\"moderation_stage\":\"input\",\"categories\":[\"other\"]}}}"
+      },
+      "reason": {
+        "_tag": "ContentPolicy",
+        "message": "Your request was rejected by the safety system. If you believe this is an error, contact us at help.openai.com and include the request ID req_123.",
+        "body": "{\"error\":{\"message\":\"Your request was rejected by the safety system. If you believe this is an error, contact us at help.openai.com and include the request ID req_123.\",\"type\":\"image_generation_user_error\",\"param\":null,\"code\":\"moderation_blocked\",\"moderation_details\":{\"moderation_stage\":\"input\",\"categories\":[\"other\"]}}}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 400,
+          "headers": {}
+        }
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "Your request was rejected by the safety system. If you believe this is an error, contact us at help.openai.com and include the request ID req_123.",
+        "status": 400,
+        "responseBody": "{\"error\":{\"message\":\"Your request was rejected by the safety system. If you believe this is an error, contact us at help.openai.com and include the request ID req_123.\",\"type\":\"AI_APICallError\",\"param\":{\"error\":\"Your request was rejected by the safety system. If you believe this is an error, contact us at help.openai.com and include the request ID req_123.\",\"statusCode\":400,\"name\":\"AI_APICallError\",\"message\":\"Your request was rejected by the safety system. If you believe this is an error, contact us at help.openai.com and include the request ID req_123.\",\"isRetryable\":false}}}"
+      },
+      "reason": {
+        "_tag": "ContentPolicy",
+        "message": "Your request was rejected by the safety system. If you believe this is an error, contact us at help.openai.com and include the request ID req_123.",
+        "body": "{\"error\":{\"message\":\"Your request was rejected by the safety system. If you believe this is an error, contact us at help.openai.com and include the request ID req_123.\",\"type\":\"AI_APICallError\",\"param\":{\"error\":\"Your request was rejected by the safety system. If you believe this is an error, contact us at help.openai.com and include the request ID req_123.\",\"statusCode\":400,\"name\":\"AI_APICallError\",\"message\":\"Your request was rejected by the safety system. If you believe this is an error, contact us at help.openai.com and include the request ID req_123.\",\"isRetryable\":false}}}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 400,
+          "headers": {}
+        }
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "Upstream request failed: [content_filter] The response was filtered",
+        "status": 400,
+        "responseBody": "{\"error\":{\"type\":\"server_error\",\"message\":\"Upstream request failed: [content_filter] The response was filtered\"}}"
+      },
+      "reason": {
+        "_tag": "ContentPolicy",
+        "message": "Upstream request failed: [content_filter] The response was filtered",
+        "body": "{\"error\":{\"type\":\"server_error\",\"message\":\"Upstream request failed: [content_filter] The response was filtered\"}}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 400,
+          "headers": {}
+        }
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "Request rejected in accordance with our terms of use and policies.",
+        "status": 403,
+        "responseBody": "{\"error\":{\"code\":403,\"message\":\"Request rejected in accordance with our terms of use and policies.\",\"status\":\"PERMISSION_DENIED\"}}"
+      },
+      "reason": {
+        "_tag": "ContentPolicy",
+        "message": "Request rejected in accordance with our terms of use and policies.",
+        "body": "{\"error\":{\"code\":403,\"message\":\"Request rejected in accordance with our terms of use and policies.\",\"status\":\"PERMISSION_DENIED\"}}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 403,
+          "headers": {}
+        }
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "Upstream request failed: [403] Request rejected in accordance with our terms of use and policies.",
+        "status": 403,
+        "responseBody": "{\"error\":{\"type\":\"server_error\",\"message\":\"Upstream request failed: [403] Request rejected in accordance with our terms of use and policies.\"}}"
+      },
+      "reason": {
+        "_tag": "ContentPolicy",
+        "message": "Upstream request failed: [403] Request rejected in accordance with our terms of use and policies.",
+        "body": "{\"error\":{\"type\":\"server_error\",\"message\":\"Upstream request failed: [403] Request rejected in accordance with our terms of use and policies.\"}}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 403,
+          "headers": {}
+        }
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "SubmitRequestFailure: code=-32602, msg=219 validation errors for ResponsesRequest\ninput.list[union[EasyInputMessageParam,ResponseComputerToolCallParam]].2.ResponseComputerToolCallParam.pending_safety_checks\n  Field required [type=missing, input_value={'content': [...], 'role': 'assistant', 'type': 'message'}, input_type=dict]",
+        "status": 200,
+        "responseBody": "{\"response\":{\"status\":\"failed\",\"error\":{\"code\":\"invalid_prompt\",\"message\":\"SubmitRequestFailure: code=-32602, msg=219 validation errors for ResponsesRequest\\ninput.list[union[EasyInputMessageParam,ResponseComputerToolCallParam]].2.ResponseComputerToolCallParam.pending_safety_checks\\n  Field required [type=missing, input_value={'content': [...], 'role': 'assistant', 'type': 'message'}, input_type=dict]\"}}}"
+      },
+      "reason": {
+        "_tag": "InvalidRequest",
+        "message": "SubmitRequestFailure: code=-32602, msg=219 validation errors for ResponsesRequest\ninput.list[union[EasyInputMessageParam,ResponseComputerToolCallParam]].2.ResponseComputerToolCallParam.pending_safety_checks\n  Field required [type=missing, input_value={'content': [...], 'role': 'assistant', 'type': 'message'}, input_type=dict]",
+        "body": "{\"response\":{\"status\":\"failed\",\"error\":{\"code\":\"invalid_prompt\",\"message\":\"SubmitRequestFailure: code=-32602, msg=219 validation errors for ResponsesRequest\\ninput.list[union[EasyInputMessageParam,ResponseComputerToolCallParam]].2.ResponseComputerToolCallParam.pending_safety_checks\\n  Field required [type=missing, input_value={'content': [...], 'role': 'assistant', 'type': 'message'}, input_type=dict]\"}}}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 200,
+          "headers": {}
+        }
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "Provider request failed with HTTP 400",
+        "status": 400,
+        "responseBody": "{\"error\":{\"message\":\"Unknown parameter: content_policy_id\"}}"
+      },
+      "reason": {
+        "_tag": "InvalidRequest",
+        "message": "Provider request failed with HTTP 400",
+        "body": "{\"error\":{\"message\":\"Unknown parameter: content_policy_id\"}}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 400,
+          "headers": {}
+        }
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "HTTP 408",
+        "status": 408
+      },
+      "reason": {
+        "_tag": "ProviderInternal",
+        "message": "HTTP 408",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 408,
+          "headers": {}
+        }
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "HTTP 409",
+        "status": 409
+      },
+      "reason": {
+        "_tag": "ProviderInternal",
+        "message": "HTTP 409",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 409,
+          "headers": {}
+        }
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "HTTP 400",
+        "status": 400
+      },
+      "reason": {
+        "_tag": "InvalidRequest",
+        "message": "HTTP 400",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 400,
+          "headers": {}
+        }
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "HTTP 404",
+        "status": 404
+      },
+      "reason": {
+        "_tag": "InvalidRequest",
+        "message": "HTTP 404",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 404,
+          "headers": {}
+        }
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "HTTP 418",
+        "status": 418
+      },
+      "reason": {
+        "_tag": "InvalidRequest",
+        "message": "HTTP 418",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 418,
+          "headers": {}
+        }
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "HTTP 422",
+        "status": 422
+      },
+      "reason": {
+        "_tag": "InvalidRequest",
+        "message": "HTTP 422",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 422,
+          "headers": {}
+        }
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "HTTP 451",
+        "status": 451
+      },
+      "reason": {
+        "_tag": "InvalidRequest",
+        "message": "HTTP 451",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 451,
+          "headers": {}
+        }
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "Payment Required",
+        "status": 402
+      },
+      "reason": {
+        "_tag": "QuotaExceeded",
+        "message": "Payment Required",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 402,
+          "headers": {}
+        }
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "Go usage limit exceeded",
+        "status": 429,
+        "responseBody": "{\"type\":\"error\",\"error\":{\"type\":\"GoUsageLimitError\",\"message\":\"Go usage limit exceeded\"}}"
+      },
+      "reason": {
+        "_tag": "QuotaExceeded",
+        "message": "Go usage limit exceeded",
+        "body": "{\"type\":\"error\",\"error\":{\"type\":\"GoUsageLimitError\",\"message\":\"Go usage limit exceeded\"}}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 429,
+          "headers": {}
+        }
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "A budget policy for this model has been reached.",
+        "status": 429,
+        "responseBody": "{\"type\":\"error\",\"error\":{\"type\":\"BudgetLimitError\",\"message\":\"A budget policy for this model has been reached.\"}}"
+      },
+      "reason": {
+        "_tag": "QuotaExceeded",
+        "message": "A budget policy for this model has been reached.",
+        "body": "{\"type\":\"error\",\"error\":{\"type\":\"BudgetLimitError\",\"message\":\"A budget policy for this model has been reached.\"}}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 429,
+          "headers": {}
+        }
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "A budget policy for this model has been reached.",
+        "status": 429,
+        "responseBody": "{\"error\":{\"code\":429,\"status\":\"RESOURCE_EXHAUSTED\",\"message\":\"A budget policy for this model has been reached.\",\"details\":[{\"@type\":\"type.googleapis.com/google.rpc.ErrorInfo\",\"reason\":\"BudgetLimitError\",\"domain\":\"opencode.ai\",\"metadata\":{\"coverage\":\"models\",\"resetsAt\":\"2026-11-01T00:00:00.000Z\"}}]}}"
+      },
+      "reason": {
+        "_tag": "QuotaExceeded",
+        "message": "A budget policy for this model has been reached.",
+        "body": "{\"error\":{\"code\":429,\"status\":\"RESOURCE_EXHAUSTED\",\"message\":\"A budget policy for this model has been reached.\",\"details\":[{\"@type\":\"type.googleapis.com/google.rpc.ErrorInfo\",\"reason\":\"BudgetLimitError\",\"domain\":\"opencode.ai\",\"metadata\":{\"coverage\":\"models\",\"resetsAt\":\"2026-11-01T00:00:00.000Z\"}}]}}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 429,
+          "headers": {}
+        }
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "Rate limit exceeded. Please try again later.",
+        "status": 429,
+        "responseBody": "{\"type\":\"error\",\"error\":{\"type\":\"FreeUsageLimitError\",\"message\":\"Rate limit exceeded. Please try again later.\"}}"
+      },
+      "reason": {
+        "_tag": "QuotaExceeded",
+        "message": "Rate limit exceeded. Please try again later.",
+        "body": "{\"type\":\"error\",\"error\":{\"type\":\"FreeUsageLimitError\",\"message\":\"Rate limit exceeded. Please try again later.\"}}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 429,
+          "headers": {}
+        }
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "Credit limit exceeded.",
+        "status": 402,
+        "responseBody": "{\"type\":\"error\",\"error\":{\"type\":\"CreditLimitExceeded\",\"message\":\"Credit limit exceeded.\"}}"
+      },
+      "reason": {
+        "_tag": "QuotaExceeded",
+        "message": "Credit limit exceeded.",
+        "body": "{\"type\":\"error\",\"error\":{\"type\":\"CreditLimitExceeded\",\"message\":\"Credit limit exceeded.\"}}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 402,
+          "headers": {}
+        }
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "Upstream request failed: Insufficient account funds",
+        "status": 402,
+        "responseBody": "{\"error\":{\"type\":\"server_error\",\"message\":\"Upstream request failed: Insufficient account funds\"}}"
+      },
+      "reason": {
+        "_tag": "QuotaExceeded",
+        "message": "Upstream request failed: Insufficient account funds",
+        "body": "{\"error\":{\"type\":\"server_error\",\"message\":\"Upstream request failed: Insufficient account funds\"}}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 402,
+          "headers": {}
+        }
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "Upstream request failed: Account invoice is overdue",
+        "status": 402,
+        "responseBody": "{\"error\":{\"type\":\"server_error\",\"message\":\"Upstream request failed: Account invoice is overdue\"}}"
+      },
+      "reason": {
+        "_tag": "QuotaExceeded",
+        "message": "Upstream request failed: Account invoice is overdue",
+        "body": "{\"error\":{\"type\":\"server_error\",\"message\":\"Upstream request failed: Account invoice is overdue\"}}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 402,
+          "headers": {}
+        }
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "Upstream request failed: Account budget exceeded",
+        "status": 429,
+        "responseBody": "{\"error\":{\"type\":\"server_error\",\"message\":\"Upstream request failed: Account budget exceeded\"}}"
+      },
+      "reason": {
+        "_tag": "QuotaExceeded",
+        "message": "Upstream request failed: Account budget exceeded",
+        "body": "{\"error\":{\"type\":\"server_error\",\"message\":\"Upstream request failed: Account budget exceeded\"}}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 429,
+          "headers": {}
+        }
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "Insufficient balance or no resource package. Please recharge.",
+        "status": 429,
+        "responseBody": "{\"error\":{\"code\":\"1113\",\"message\":\"Insufficient balance or no resource package. Please recharge.\"}}"
+      },
+      "reason": {
+        "_tag": "QuotaExceeded",
+        "message": "Insufficient balance or no resource package. Please recharge.",
+        "body": "{\"error\":{\"code\":\"1113\",\"message\":\"Insufficient balance or no resource package. Please recharge.\"}}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 429,
+          "headers": {}
+        }
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "Usage limit reached for 5 hours. Your limit will reset at 2026-10-01 00:00:00",
+        "status": 429,
+        "responseBody": "{\"error\":{\"code\":\"1308\",\"message\":\"Usage limit reached for 5 hours. Your limit will reset at 2026-10-01 00:00:00\"}}"
+      },
+      "reason": {
+        "_tag": "QuotaExceeded",
+        "message": "Usage limit reached for 5 hours. Your limit will reset at 2026-10-01 00:00:00",
+        "body": "{\"error\":{\"code\":\"1308\",\"message\":\"Usage limit reached for 5 hours. Your limit will reset at 2026-10-01 00:00:00\"}}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 429,
+          "headers": {}
+        }
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "Your GLM Coding Plan package has expired and is temporarily unavailable. You can resume using it after renewing the subscription on the official website.",
+        "status": 429,
+        "responseBody": "{\"error\":{\"code\":\"1309\",\"message\":\"Your GLM Coding Plan package has expired and is temporarily unavailable. You can resume using it after renewing the subscription on the official website.\"}}"
+      },
+      "reason": {
+        "_tag": "QuotaExceeded",
+        "message": "Your GLM Coding Plan package has expired and is temporarily unavailable. You can resume using it after renewing the subscription on the official website.",
+        "body": "{\"error\":{\"code\":\"1309\",\"message\":\"Your GLM Coding Plan package has expired and is temporarily unavailable. You can resume using it after renewing the subscription on the official website.\"}}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 429,
+          "headers": {}
+        }
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "Weekly/Monthly Limit Exhausted. Your limit will reset at 2026-10-01 00:00:00",
+        "status": 429,
+        "responseBody": "{\"error\":{\"code\":\"1310\",\"message\":\"Weekly/Monthly Limit Exhausted. Your limit will reset at 2026-10-01 00:00:00\"}}"
+      },
+      "reason": {
+        "_tag": "QuotaExceeded",
+        "message": "Weekly/Monthly Limit Exhausted. Your limit will reset at 2026-10-01 00:00:00",
+        "body": "{\"error\":{\"code\":\"1310\",\"message\":\"Weekly/Monthly Limit Exhausted. Your limit will reset at 2026-10-01 00:00:00\"}}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 429,
+          "headers": {}
+        }
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "Your current subscription plan does not yet include access to glm-5",
+        "status": 429,
+        "responseBody": "{\"error\":{\"code\":\"1311\",\"message\":\"Your current subscription plan does not yet include access to glm-5\"}}"
+      },
+      "reason": {
+        "_tag": "QuotaExceeded",
+        "message": "Your current subscription plan does not yet include access to glm-5",
+        "body": "{\"error\":{\"code\":\"1311\",\"message\":\"Your current subscription plan does not yet include access to glm-5\"}}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 429,
+          "headers": {}
+        }
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "Your enterprise package has expired. Please contact your enterprise administrator.",
+        "status": 429,
+        "responseBody": "{\"error\":{\"code\":\"1314\",\"message\":\"Your enterprise package has expired. Please contact your enterprise administrator.\"}}"
+      },
+      "reason": {
+        "_tag": "QuotaExceeded",
+        "message": "Your enterprise package has expired. Please contact your enterprise administrator.",
+        "body": "{\"error\":{\"code\":\"1314\",\"message\":\"Your enterprise package has expired. Please contact your enterprise administrator.\"}}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 429,
+          "headers": {}
+        }
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "[1309][Your GLM Coding Plan package has expired and is temporarily unavailable. You can resume using it after renewing the subscription on the official website.][20260929132151e73af01340d54b58]",
+        "status": 429,
+        "responseBody": "{\"type\":\"error\",\"error\":{\"type\":\"rate_limit_error\",\"code\":\"1309\",\"message\":\"[1309][Your GLM Coding Plan package has expired and is temporarily unavailable. You can resume using it after renewing the subscription on the official website.][20260929132151e73af01340d54b58]\"}}"
+      },
+      "reason": {
+        "_tag": "QuotaExceeded",
+        "message": "[1309][Your GLM Coding Plan package has expired and is temporarily unavailable. You can resume using it after renewing the subscription on the official website.][20260929132151e73af01340d54b58]",
+        "body": "{\"type\":\"error\",\"error\":{\"type\":\"rate_limit_error\",\"code\":\"1309\",\"message\":\"[1309][Your GLM Coding Plan package has expired and is temporarily unavailable. You can resume using it after renewing the subscription on the official website.][20260929132151e73af01340d54b58]\"}}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 429,
+          "headers": {}
+        }
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "Prompt 超长",
+        "status": 400,
+        "responseBody": "{\"error\":{\"code\":\"1261\",\"message\":\"Prompt 超长\"}}"
+      },
+      "reason": {
+        "_tag": "InvalidRequest",
+        "message": "Prompt 超长",
+        "body": "{\"error\":{\"code\":\"1261\",\"message\":\"Prompt 超长\"}}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 400,
+          "headers": {}
+        },
+        "classification": "context-overflow"
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "Prompt too long",
+        "status": 400,
+        "responseBody": "{\"error\":{\"code\":\"1261\",\"message\":\"Prompt too long\"}}"
+      },
+      "reason": {
+        "_tag": "InvalidRequest",
+        "message": "Prompt too long",
+        "body": "{\"error\":{\"code\":\"1261\",\"message\":\"Prompt too long\"}}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 400,
+          "headers": {}
+        },
+        "classification": "context-overflow"
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "[1261][Prompt too long][2026092913]",
+        "status": 400,
+        "responseBody": "{\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"code\":\"1261\",\"message\":\"[1261][Prompt too long][2026092913]\"}}"
+      },
+      "reason": {
+        "_tag": "InvalidRequest",
+        "message": "[1261][Prompt too long][2026092913]",
+        "body": "{\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"code\":\"1261\",\"message\":\"[1261][Prompt too long][2026092913]\"}}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 400,
+          "headers": {}
+        },
+        "classification": "context-overflow"
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "System detected potentially unsafe or sensitive content in input or generation. Please avoid using prompts that may generate sensitive content. Thank you for your cooperation.",
+        "status": 400,
+        "responseBody": "{\"error\":{\"code\":\"1301\",\"message\":\"System detected potentially unsafe or sensitive content in input or generation. Please avoid using prompts that may generate sensitive content. Thank you for your cooperation.\"}}"
+      },
+      "reason": {
+        "_tag": "ContentPolicy",
+        "message": "System detected potentially unsafe or sensitive content in input or generation. Please avoid using prompts that may generate sensitive content. Thank you for your cooperation.",
+        "body": "{\"error\":{\"code\":\"1301\",\"message\":\"System detected potentially unsafe or sensitive content in input or generation. Please avoid using prompts that may generate sensitive content. Thank you for your cooperation.\"}}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 400,
+          "headers": {}
+        }
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "Rate limit reached for requests",
+        "status": 429,
+        "responseBody": "{\"error\":{\"code\":\"1302\",\"message\":\"Rate limit reached for requests\"}}"
+      },
+      "reason": {
+        "_tag": "RateLimit",
+        "message": "Rate limit reached for requests",
+        "body": "{\"error\":{\"code\":\"1302\",\"message\":\"Rate limit reached for requests\"}}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 429,
+          "headers": {}
+        }
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "The service may be temporarily overloaded, please try again later",
+        "status": 429,
+        "responseBody": "{\"error\":{\"code\":\"1305\",\"message\":\"The service may be temporarily overloaded, please try again later\"}}"
+      },
+      "reason": {
+        "_tag": "RateLimit",
+        "message": "The service may be temporarily overloaded, please try again later",
+        "body": "{\"error\":{\"code\":\"1305\",\"message\":\"The service may be temporarily overloaded, please try again later\"}}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 429,
+          "headers": {}
+        }
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "Too many tokens, please wait before trying again.",
+        "status": 429,
+        "responseBody": "{\"message\":\"Too many tokens, please wait before trying again.\"}"
+      },
+      "reason": {
+        "_tag": "RateLimit",
+        "message": "Too many tokens, please wait before trying again.",
+        "body": "{\"message\":\"Too many tokens, please wait before trying again.\"}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 429,
+          "headers": {}
+        }
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "Too many tokens per day, please wait before trying again.",
+        "status": 429,
+        "responseBody": "{\"message\":\"Too many tokens per day, please wait before trying again.\"}"
+      },
+      "reason": {
+        "_tag": "RateLimit",
+        "message": "Too many tokens per day, please wait before trying again.",
+        "body": "{\"message\":\"Too many tokens per day, please wait before trying again.\"}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 429,
+          "headers": {}
+        }
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "Tokens per minute limit exceeded - too many tokens processed.",
+        "status": 429,
+        "responseBody": "{\"message\":\"Tokens per minute limit exceeded - too many tokens processed.\",\"type\":\"too_many_tokens_error\",\"param\":\"quota\",\"code\":\"token_quota_exceeded\"}",
+        "responseHeaders": {
+          "retry-after-ms": "4000"
+        }
+      },
+      "reason": {
+        "_tag": "RateLimit",
+        "message": "Tokens per minute limit exceeded - too many tokens processed.",
+        "body": "{\"message\":\"Tokens per minute limit exceeded - too many tokens processed.\",\"type\":\"too_many_tokens_error\",\"param\":\"quota\",\"code\":\"token_quota_exceeded\"}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 429,
+          "headers": {
+            "retry-after-ms": "4000"
+          }
+        },
+        "retryAfterMs": 4000,
+        "rateLimit": {
+          "retryAfterMs": 4000
+        }
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "Token limit reached: too many tokens per minute for this model.",
+        "status": 429,
+        "responseBody": "{\"message\":\"Token limit reached: too many tokens per minute for this model.\"}",
+        "responseHeaders": {
+          "retry-after-ms": "4000"
+        }
+      },
+      "reason": {
+        "_tag": "RateLimit",
+        "message": "Token limit reached: too many tokens per minute for this model.",
+        "body": "{\"message\":\"Token limit reached: too many tokens per minute for this model.\"}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 429,
+          "headers": {
+            "retry-after-ms": "4000"
+          }
+        },
+        "retryAfterMs": 4000,
+        "rateLimit": {
+          "retryAfterMs": 4000
+        }
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "User 10s request rate limit exhausted (3 of 3).",
+        "status": 429,
+        "responseBody": "{\"error\":{\"message\":\"User 10s request rate limit exhausted (3 of 3).\",\"type\":\"rate_limit_exceeded\",\"code\":null}}",
+        "responseHeaders": {
+          "retry-after-ms": "4000"
+        }
+      },
+      "reason": {
+        "_tag": "RateLimit",
+        "message": "User 10s request rate limit exhausted (3 of 3).",
+        "body": "{\"error\":{\"message\":\"User 10s request rate limit exhausted (3 of 3).\",\"type\":\"rate_limit_exceeded\",\"code\":null}}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 429,
+          "headers": {
+            "retry-after-ms": "4000"
+          }
+        },
+        "retryAfterMs": 4000,
+        "rateLimit": {
+          "retryAfterMs": 4000
+        }
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "Token limit exceeded",
+        "status": 429,
+        "data": {
+          "code": "ThrottlingException"
+        }
+      },
+      "reason": {
+        "_tag": "RateLimit",
+        "message": "Token limit exceeded",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 429,
+          "headers": {}
+        }
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "Too many tokens, please try again later",
+        "status": 429,
+        "data": {
+          "code": "ThrottlingException"
+        }
+      },
+      "reason": {
+        "_tag": "RateLimit",
+        "message": "Too many tokens, please try again later",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 429,
+          "headers": {}
+        }
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "Token limit exceeded",
+        "status": 429,
+        "responseBody": "{\"__type\":\"com.amazonaws.bedrock#ThrottlingException\"}"
+      },
+      "reason": {
+        "_tag": "RateLimit",
+        "message": "Token limit exceeded",
+        "body": "{\"__type\":\"com.amazonaws.bedrock#ThrottlingException\"}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 429,
+          "headers": {}
+        }
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "Too many tokens, please try again later",
+        "status": 429,
+        "responseBody": "{\"__type\":\"com.amazonaws.bedrock#ThrottlingException\"}"
+      },
+      "reason": {
+        "_tag": "RateLimit",
+        "message": "Too many tokens, please try again later",
+        "body": "{\"__type\":\"com.amazonaws.bedrock#ThrottlingException\"}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 429,
+          "headers": {}
+        }
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "message": "Token limit exceeded",
+        "responseBody": "{\"exception\":{\"type\":\"throttlingException\"}}"
+      },
+      "reason": {
+        "_tag": "RateLimit",
+        "message": "Token limit exceeded",
+        "body": "{\"exception\":{\"type\":\"throttlingException\"}}"
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "message": "Too many tokens, please try again later",
+        "responseBody": "{\"exception\":{\"type\":\"throttlingException\"}}"
+      },
+      "reason": {
+        "_tag": "RateLimit",
+        "message": "Too many tokens, please try again later",
+        "body": "{\"exception\":{\"type\":\"throttlingException\"}}"
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "Token limit exceeded",
+        "status": 429,
+        "responseHeaders": {
+          "x-amzn-errortype": "ThrottlingException:http://internal.amazon.com/coral/"
+        }
+      },
+      "reason": {
+        "_tag": "RateLimit",
+        "message": "Token limit exceeded",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 429,
+          "headers": {
+            "x-amzn-errortype": "ThrottlingException:http://internal.amazon.com/coral/"
+          }
+        }
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "Too many tokens, please try again later",
+        "status": 429,
+        "responseHeaders": {
+          "x-amzn-errortype": "ThrottlingException:http://internal.amazon.com/coral/"
+        }
+      },
+      "reason": {
+        "_tag": "RateLimit",
+        "message": "Too many tokens, please try again later",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 429,
+          "headers": {
+            "x-amzn-errortype": "ThrottlingException:http://internal.amazon.com/coral/"
+          }
+        }
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "Token limit exceeded",
+        "status": 429,
+        "responseHeaders": {
+          "x-amzn-errortype": "ThrottlingException:http://internal.amazon.com/coral/com.amazon.coral.availability/"
+        }
+      },
+      "reason": {
+        "_tag": "RateLimit",
+        "message": "Token limit exceeded",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 429,
+          "headers": {
+            "x-amzn-errortype": "ThrottlingException:http://internal.amazon.com/coral/com.amazon.coral.availability/"
+          }
+        }
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "prompt is too long",
+        "status": 400,
+        "data": {
+          "code": "ValidationException"
+        }
+      },
+      "reason": {
+        "_tag": "InvalidRequest",
+        "message": "prompt is too long",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 400,
+          "headers": {}
+        },
+        "classification": "context-overflow"
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "Upstream request failed: Model is unavailable.",
+        "status": 400,
+        "responseBody": "{\"error\":{\"type\":\"server_error\",\"message\":\"Upstream request failed: Model is unavailable.\"}}"
+      },
+      "reason": {
+        "_tag": "InvalidRequest",
+        "message": "Upstream request failed: Model is unavailable.",
+        "body": "{\"error\":{\"type\":\"server_error\",\"message\":\"Upstream request failed: Model is unavailable.\"}}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 400,
+          "headers": {}
+        }
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "Upstream request failed: Model is unavailable.",
+        "status": 400,
+        "responseBody": "{\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"Upstream request failed: Model is unavailable.\"}}"
+      },
+      "reason": {
+        "_tag": "InvalidRequest",
+        "message": "Upstream request failed: Model is unavailable.",
+        "body": "{\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"Upstream request failed: Model is unavailable.\"}}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 400,
+          "headers": {}
+        }
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "message": "Upstream request failed: Model is unavailable.",
+        "responseBody": "{\"error\":{\"type\":\"server_error\",\"message\":\"Upstream request failed: Model is unavailable.\"}}"
+      },
+      "reason": {
+        "_tag": "ProviderInternal",
+        "message": "Upstream request failed: Model is unavailable.",
+        "body": "{\"error\":{\"type\":\"server_error\",\"message\":\"Upstream request failed: Model is unavailable.\"}}"
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "Upstream request failed: Model is unavailable.",
+        "status": 200,
+        "responseBody": "{\"error\":{\"type\":\"server_error\",\"message\":\"Upstream request failed: Model is unavailable.\"}}"
+      },
+      "reason": {
+        "_tag": "ProviderInternal",
+        "message": "Upstream request failed: Model is unavailable.",
+        "body": "{\"error\":{\"type\":\"server_error\",\"message\":\"Upstream request failed: Model is unavailable.\"}}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 200,
+          "headers": {}
+        }
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "message": "{\"code\":\"bad_request\",\"error\":{\"code\":\"usage_not_included\"}}"
+      },
+      "reason": {
+        "_tag": "QuotaExceeded",
+        "message": "{\"code\":\"bad_request\",\"error\":{\"code\":\"usage_not_included\"}}"
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "message": "{\"code\":\"bad_request\",\"error\":{\"code\":\"server_error\"}}"
+      },
+      "reason": {
+        "_tag": "ProviderInternal",
+        "message": "{\"code\":\"bad_request\",\"error\":{\"code\":\"server_error\"}}"
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "message": "{\"code\":\"bad_request\",\"error\":{\"type\":\"invalid_request_error\"}}"
+      },
+      "reason": {
+        "_tag": "InvalidRequest",
+        "message": "{\"code\":\"bad_request\",\"error\":{\"type\":\"invalid_request_error\"}}"
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "message": "{\"error\":{\"message\":\"no_kv_space\"}}"
+      },
+      "reason": {
+        "_tag": "UnknownProvider",
+        "message": "{\"error\":{\"message\":\"no_kv_space\"}}"
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "message": "{\"type\":\"error\",\"error\":{\"code\":123}}"
+      },
+      "reason": {
+        "_tag": "UnknownProvider",
+        "message": "{\"type\":\"error\",\"error\":{\"code\":123}}"
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "message": "not-json"
+      },
+      "reason": {
+        "_tag": "UnknownProvider",
+        "message": "not-json"
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "message": "network error"
+      },
+      "reason": {
+        "_tag": "UnknownProvider",
+        "message": "network error"
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "message": "Request failed",
+        "responseBody": "{\"type\":\"error\",\"error\":{\"type\":\"overloaded_error\",\"message\":\"Try again\"}}"
+      },
+      "reason": {
+        "_tag": "ProviderInternal",
+        "message": "Request failed",
+        "body": "{\"type\":\"error\",\"error\":{\"type\":\"overloaded_error\",\"message\":\"Try again\"}}"
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "message": "Request failed",
+        "responseBody": "{\"error\":{\"code\":\"insufficient_quota\",\"message\":\"Request failed\"}}"
+      },
+      "reason": {
+        "_tag": "QuotaExceeded",
+        "message": "Request failed",
+        "body": "{\"error\":{\"code\":\"insufficient_quota\",\"message\":\"Request failed\"}}"
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "message": "Request failed",
+        "responseBody": "{\"type\":\"response.failed\",\"response\":{\"error\":{\"code\":\"authentication_error\",\"message\":\"Denied\"}}}"
+      },
+      "reason": {
+        "_tag": "Authentication",
+        "message": "Request failed",
+        "body": "{\"type\":\"response.failed\",\"response\":{\"error\":{\"code\":\"authentication_error\",\"message\":\"Denied\"}}}"
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "message": "Request failed",
+        "responseBody": "{\"error\":{\"code\":429,\"status\":\"RESOURCE_EXHAUSTED\",\"message\":\"Try again\"}}"
+      },
+      "reason": {
+        "_tag": "ProviderInternal",
+        "message": "Request failed",
+        "body": "{\"error\":{\"code\":429,\"status\":\"RESOURCE_EXHAUSTED\",\"message\":\"Try again\"}}"
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "message": "Request failed",
+        "responseBody": "{\"exception\":{\"type\":\"throttlingException\",\"details\":{\"message\":\"Try again\"}}}"
+      },
+      "reason": {
+        "_tag": "RateLimit",
+        "message": "Request failed",
+        "body": "{\"exception\":{\"type\":\"throttlingException\",\"details\":{\"message\":\"Try again\"}}}"
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "Request failed",
+        "status": 400,
+        "responseBody": "{\"message\":\"Request failed\"}",
+        "data": {
+          "error": {
+            "code": "authentication_error"
+          }
+        }
+      },
+      "reason": {
+        "_tag": "Authentication",
+        "message": "Request failed",
+        "body": "{\"message\":\"Request failed\"}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 400,
+          "headers": {}
+        }
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "Request failed",
+        "status": 400,
+        "responseBody": "{\"message\":\"Request failed\"}",
+        "data": "{\"error\":{\"code\":\"authentication_error\"}}"
+      },
+      "reason": {
+        "_tag": "Authentication",
+        "message": "Request failed",
+        "body": "{\"message\":\"Request failed\"}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 400,
+          "headers": {}
+        }
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "AiError: Ai: The estimated number of input and maximum output tokens (900047) exceeded this model context window limit (32000). (17851589-f2e6-405d-b67c-5550e52ee1c1)",
+        "status": 413,
+        "responseBody": "{\"errors\":[{\"message\":\"AiError: Ai: The estimated number of input and maximum output tokens (900047) exceeded this model context window limit (32000). (17851589-f2e6-405d-b67c-5550e52ee1c1)\",\"code\":5021}],\"success\":false,\"result\":{},\"messages\":[]}"
+      },
+      "reason": {
+        "_tag": "InvalidRequest",
+        "message": "AiError: Ai: The estimated number of input and maximum output tokens (900047) exceeded this model context window limit (32000). (17851589-f2e6-405d-b67c-5550e52ee1c1)",
+        "body": "{\"errors\":[{\"message\":\"AiError: Ai: The estimated number of input and maximum output tokens (900047) exceeded this model context window limit (32000). (17851589-f2e6-405d-b67c-5550e52ee1c1)\",\"code\":5021}],\"success\":false,\"result\":{},\"messages\":[]}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 413,
+          "headers": {}
+        },
+        "classification": "context-overflow"
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "message": "The model returned the following errors: Input Tokens Exceeded: Number of input tokens exceeds maximum length. Please update the input to try again.",
+        "responseBody": "{\"headers\":{\":exception-type\":{\"type\":\"string\",\"value\":\"validationException\"},\":content-type\":{\"type\":\"string\",\"value\":\"application/json\"},\":message-type\":{\"type\":\"string\",\"value\":\"exception\"}},\"body\":\"{\\\"message\\\":\\\"The model returned the following errors: Input Tokens Exceeded: Number of input tokens exceeds maximum length. Please update the input to try again.\\\"}\"}"
+      },
+      "reason": {
+        "_tag": "InvalidRequest",
+        "message": "The model returned the following errors: Input Tokens Exceeded: Number of input tokens exceeds maximum length. Please update the input to try again.",
+        "body": "{\"headers\":{\":exception-type\":{\"type\":\"string\",\"value\":\"validationException\"},\":content-type\":{\"type\":\"string\",\"value\":\"application/json\"},\":message-type\":{\"type\":\"string\",\"value\":\"exception\"}},\"body\":\"{\\\"message\\\":\\\"The model returned the following errors: Input Tokens Exceeded: Number of input tokens exceeds maximum length. Please update the input to try again.\\\"}\"}",
+        "classification": "context-overflow"
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "too many tokens: size limit exceeded by 168512 tokens. Try using shorter or fewer inputs. The limit for this model is 132000 tokens.",
+        "status": 400,
+        "responseBody": "{\"error_type\":\"TOO_MANY_TOKENS\",\"message\":\"too many tokens: size limit exceeded by 168512 tokens. Try using shorter or fewer inputs. The limit for this model is 132000 tokens.\"}"
+      },
+      "reason": {
+        "_tag": "InvalidRequest",
+        "message": "too many tokens: size limit exceeded by 168512 tokens. Try using shorter or fewer inputs. The limit for this model is 132000 tokens.",
+        "body": "{\"error_type\":\"TOO_MANY_TOKENS\",\"message\":\"too many tokens: size limit exceeded by 168512 tokens. Try using shorter or fewer inputs. The limit for this model is 132000 tokens.\"}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 400,
+          "headers": {}
+        },
+        "classification": "context-overflow"
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "too many tokens: max tokens must be less than or equal to 4096, the maximum output length for this model - received 1000000.",
+        "status": 400,
+        "responseBody": "{\"error_type\":\"TOO_MANY_TOKENS\",\"message\":\"too many tokens: max tokens must be less than or equal to 4096, the maximum output length for this model - received 1000000.\"}"
+      },
+      "reason": {
+        "_tag": "InvalidRequest",
+        "message": "too many tokens: max tokens must be less than or equal to 4096, the maximum output length for this model - received 1000000.",
+        "body": "{\"error_type\":\"TOO_MANY_TOKENS\",\"message\":\"too many tokens: max tokens must be less than or equal to 4096, the maximum output length for this model - received 1000000.\"}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 400,
+          "headers": {}
+        }
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "API key not valid. Please pass a valid API key.",
+        "status": 400,
+        "responseBody": "{\"error\":{\"code\":400,\"message\":\"API key not valid. Please pass a valid API key.\",\"status\":\"INVALID_ARGUMENT\",\"details\":[{\"@type\":\"type.googleapis.com/google.rpc.ErrorInfo\",\"reason\":\"API_KEY_INVALID\",\"domain\":\"googleapis.com\"},{\"@type\":\"type.googleapis.com/google.rpc.LocalizedMessage\",\"locale\":\"en-US\",\"message\":\"API key not valid. Please pass a valid API key.\"}]}}"
+      },
+      "reason": {
+        "_tag": "Authentication",
+        "message": "API key not valid. Please pass a valid API key.",
+        "body": "{\"error\":{\"code\":400,\"message\":\"API key not valid. Please pass a valid API key.\",\"status\":\"INVALID_ARGUMENT\",\"details\":[{\"@type\":\"type.googleapis.com/google.rpc.ErrorInfo\",\"reason\":\"API_KEY_INVALID\",\"domain\":\"googleapis.com\"},{\"@type\":\"type.googleapis.com/google.rpc.LocalizedMessage\",\"locale\":\"en-US\",\"message\":\"API key not valid. Please pass a valid API key.\"}]}}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 400,
+          "headers": {}
+        }
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "Incorrect API key provided. You can obtain an API key from https://console.x.ai.",
+        "status": 400,
+        "responseBody": "{\"code\":\"invalid-argument\",\"error\":\"Incorrect API key provided.\"}"
+      },
+      "reason": {
+        "_tag": "Authentication",
+        "message": "Incorrect API key provided. You can obtain an API key from https://console.x.ai.",
+        "body": "{\"code\":\"invalid-argument\",\"error\":\"Incorrect API key provided.\"}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 400,
+          "headers": {}
+        }
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "message": "Request failed",
+        "responseBody": "{\"error\":{\"message\":\"This model's maximum context length is 40960 tokens\"}}"
+      },
+      "reason": {
+        "_tag": "InvalidRequest",
+        "message": "Request failed",
+        "body": "{\"error\":{\"message\":\"This model's maximum context length is 40960 tokens\"}}",
+        "classification": "context-overflow"
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "message": "Request failed",
+        "responseBody": "{\"error\":{\"code\":\"insufficient_quota\"}}"
+      },
+      "reason": {
+        "_tag": "QuotaExceeded",
+        "message": "Request failed",
+        "body": "{\"error\":{\"code\":\"insufficient_quota\"}}"
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "message": "Unknown Model, please check the model code.",
+        "responseBody": "{\"type\":\"response.failed\",\"response\":{\"error\":{\"code\":\"model_not_found\"}}}"
+      },
+      "reason": {
+        "_tag": "InvalidRequest",
+        "message": "Unknown Model, please check the model code.",
+        "body": "{\"type\":\"response.failed\",\"response\":{\"error\":{\"code\":\"model_not_found\"}}}"
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "message": "Your GLM Coding Plan package has expired and is temporarily unavailable.",
+        "responseBody": "{\"type\":\"response.failed\",\"response\":{\"error\":{\"code\":\"permission_denied\"}}}"
+      },
+      "reason": {
+        "_tag": "Authentication",
+        "message": "Your GLM Coding Plan package has expired and is temporarily unavailable.",
+        "body": "{\"type\":\"response.failed\",\"response\":{\"error\":{\"code\":\"permission_denied\"}}}"
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "model not found",
+        "status": 404,
+        "responseBody": "{\"error\":{\"message\":\"model not found\",\"type\":\"invalid_request_error\",\"code\":\"model_not_found\"}}"
+      },
+      "reason": {
+        "_tag": "InvalidRequest",
+        "message": "model not found",
+        "body": "{\"error\":{\"message\":\"model not found\",\"type\":\"invalid_request_error\",\"code\":\"model_not_found\"}}",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 404,
+          "headers": {}
+        }
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "Internal server error",
+        "status": 500,
+        "responseHeaders": {
+          "x-should-retry": "true"
+        }
+      },
+      "reason": {
+        "_tag": "ProviderInternal",
+        "message": "Internal server error",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 500,
+          "headers": {
+            "x-should-retry": "true"
+          }
+        }
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "Internal server error",
+        "status": 500,
+        "responseHeaders": {
+          "x-should-retry": "false"
+        }
+      },
+      "reason": {
+        "_tag": "ProviderInternal",
+        "message": "Internal server error",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 500,
+          "headers": {
+            "x-should-retry": "false"
+          }
+        }
+      },
+      "retryable": false
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "rate limit exceeded",
+        "status": 429,
+        "responseHeaders": {
+          "retry-after-ms": "2500"
+        }
+      },
+      "reason": {
+        "_tag": "RateLimit",
+        "message": "rate limit exceeded",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 429,
+          "headers": {
+            "retry-after-ms": "2500"
+          }
+        },
+        "retryAfterMs": 2500,
+        "rateLimit": {
+          "retryAfterMs": 2500
+        }
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "rate limit exceeded",
+        "status": 429,
+        "responseHeaders": {
+          "retry-after": "3"
+        }
+      },
+      "reason": {
+        "_tag": "RateLimit",
+        "message": "rate limit exceeded",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 429,
+          "headers": {
+            "retry-after": "3"
+          }
+        },
+        "retryAfterMs": 3000,
+        "rateLimit": {
+          "retryAfterMs": 3000
+        }
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "rate limit exceeded",
+        "status": 429,
+        "responseHeaders": {
+          "retry-after": "Fri, 02 Jan 2026 03:04:10 GMT"
+        }
+      },
+      "reason": {
+        "_tag": "RateLimit",
+        "message": "rate limit exceeded",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 429,
+          "headers": {
+            "retry-after": "Fri, 02 Jan 2026 03:04:10 GMT"
+          }
+        },
+        "retryAfterMs": 5000,
+        "rateLimit": {
+          "retryAfterMs": 5000
+        }
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "rate limit exceeded",
+        "status": 429,
+        "responseHeaders": {
+          "x-ratelimit-limit-requests": "5000",
+          "x-ratelimit-remaining-requests": "4999",
+          "x-ratelimit-reset-requests": "1s"
+        }
+      },
+      "reason": {
+        "_tag": "RateLimit",
+        "message": "rate limit exceeded",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 429,
+          "headers": {
+            "x-ratelimit-limit-requests": "5000",
+            "x-ratelimit-remaining-requests": "4999",
+            "x-ratelimit-reset-requests": "1s"
+          }
+        },
+        "rateLimit": {
+          "limit": {
+            "requests": "5000"
+          },
+          "remaining": {
+            "requests": "4999"
+          },
+          "reset": {
+            "requests": "1s"
+          }
+        }
+      },
+      "retryable": true
+    },
+    {
+      "input": {
+        "url": "https://api.example.test/v1/messages",
+        "message": "rate limit exceeded",
+        "status": 429,
+        "responseHeaders": {
+          "anthropic-ratelimit-requests-limit": "1000",
+          "anthropic-ratelimit-requests-remaining": "999",
+          "anthropic-ratelimit-requests-reset": "2023-11-14T22:13:20Z"
+        }
+      },
+      "reason": {
+        "_tag": "RateLimit",
+        "message": "rate limit exceeded",
+        "http": {
+          "url": "https://api.example.test/v1/messages",
+          "status": 429,
+          "headers": {
+            "anthropic-ratelimit-requests-limit": "1000",
+            "anthropic-ratelimit-requests-remaining": "999",
+            "anthropic-ratelimit-requests-reset": "2023-11-14T22:13:20Z"
+          }
+        },
+        "rateLimit": {
+          "limit": {
+            "requests": "1000"
+          },
+          "remaining": {
+            "requests": "999"
+          },
+          "reset": {
+            "requests": "2023-11-14T22:13:20Z"
+          }
+        }
+      },
+      "retryable": true
+    }
+  ]
+}

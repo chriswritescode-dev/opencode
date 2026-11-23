@@ -1,0 +1,365 @@
+{
+  "cassette": "pdf/gemini-tool-result",
+  "protocol": "gemini",
+  "routeId": "gemini",
+  "clockEpochMs": 1767323045000,
+  "steps": [
+    {
+      "model": {
+        "id": "gemini-3.5-flash",
+        "provider": "google",
+        "route": {
+          "id": "gemini",
+          "protocol": "gemini",
+          "providerMetadataKey": "google"
+        },
+        "endpoint": {
+          "baseURL": "https://generativelanguage.googleapis.com/v1beta",
+          "path": null
+        },
+        "transport": "http",
+        "auth": {
+          "type": "header",
+          "name": "x-goog-api-key",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_pdf_gemini_tool_result",
+        "maxTokens": 256,
+        "temperature": 0,
+        "cache": "none",
+        "system": [
+          {
+            "type": "text",
+            "text": "Call read_pdf exactly once with path verification.pdf, then reply only with the verification code from its PDF."
+          }
+        ],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Use read_pdf with path verification.pdf and return the verification code."
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "tool",
+            "name": "read_pdf",
+            "description": "Read the attached PDF.",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "path"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "string"
+            }
+          }
+        ]
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:streamGenerateContent?alt=sse",
+            "headers": {
+              "content-length": "565",
+              "content-type": "application/json",
+              "x-goog-api-key": "fixture"
+            },
+            "body": "{\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":\"Use read_pdf with path verification.pdf and return the verification code.\"}]}],\"systemInstruction\":{\"parts\":[{\"text\":\"Call read_pdf exactly once with path verification.pdf, then reply only with the verification code from its PDF.\"}]},\"tools\":[{\"functionDeclarations\":[{\"name\":\"read_pdf\",\"description\":\"Read the attached PDF.\",\"parametersJsonSchema\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"}},\"required\":[\"path\"],\"additionalProperties\":false}}]}],\"generationConfig\":{\"maxOutputTokens\":256,\"temperature\":0}}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream"
+            },
+            "body": "data: {\"candidates\": [{\"content\": {\"parts\": [{\"functionCall\": {\"name\": \"read_pdf\",\"args\": {\"path\": \"verification.pdf\"},\"id\": \"call_475949\"},\"thoughtSignature\": \"Et4CCtsCAWkUfRPfQWeGIEQ/AhexY97IZoK8aNLr2EbW3nufnAXpa1y74z7qH1Tdk20j5EC57BSBbdy5u6xFHNomzZhGFVmdVlhgZFXGSO8F8K4t8rqQWUJZSDH4dFaC95KpUTfp5CAMepbOuc/dGLgXfVsSV0e/HvUcdWKoEz8Jlsgk59nexqSsdl/kGzuuIeW6zS5r8JHus+PfRzvSgua4B9OpDU9WWPCJZu93NLbXJELbZ330h7CP+uxXoo1Puu0KSrvLman8Geoc0nagMx895L0gO3CsbB+PpijQ6Pt6YAaiv1V2MeOCUKCYUpk+77MjC6RnsTFTRaJYJ5PPkniuRKedp/DF1aMj7nGxQ6BpHOMq9mjw2zlH3I2kJi1wqm+amVz30vTHa31xTH88w+IUc1yNdLAzdVJV+/+0mqw8bLweSjSHFxZN0NIv6aczAIS5stoGobNDO4bRGDETH3Q=\"}],\"role\": \"model\"},\"index\": 0}],\"usageMetadata\": {\"promptTokenCount\": 81,\"candidatesTokenCount\": 18,\"totalTokenCount\": 152,\"promptTokensDetails\": [{\"modality\": \"TEXT\",\"tokenCount\": 81}],\"thoughtsTokenCount\": 53,\"serviceTier\": \"standard\"},\"modelVersion\": \"gemini-3.5-flash\",\"responseId\": \"jHe0apWcM92aqtsP8t2LyAg\"}\r\n\r\ndata: {\"candidates\": [{\"content\": {\"parts\": [{\"text\": \"\"}],\"role\": \"model\"},\"finishReason\": \"STOP\",\"index\": 0}],\"usageMetadata\": {\"promptTokenCount\": 81,\"candidatesTokenCount\": 18,\"totalTokenCount\": 152,\"promptTokensDetails\": [{\"modality\": \"TEXT\",\"tokenCount\": 81}],\"thoughtsTokenCount\": 53,\"serviceTier\": \"standard\"},\"modelVersion\": \"gemini-3.5-flash\",\"responseId\": \"jHe0apWcM92aqtsP8t2LyAg\"}\r\n\r\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "tool-call",
+          "id": "call_475949",
+          "name": "read_pdf",
+          "input": {
+            "path": "verification.pdf"
+          },
+          "providerMetadata": {
+            "google": {
+              "thoughtSignature": "Et4CCtsCAWkUfRPfQWeGIEQ/AhexY97IZoK8aNLr2EbW3nufnAXpa1y74z7qH1Tdk20j5EC57BSBbdy5u6xFHNomzZhGFVmdVlhgZFXGSO8F8K4t8rqQWUJZSDH4dFaC95KpUTfp5CAMepbOuc/dGLgXfVsSV0e/HvUcdWKoEz8Jlsgk59nexqSsdl/kGzuuIeW6zS5r8JHus+PfRzvSgua4B9OpDU9WWPCJZu93NLbXJELbZ330h7CP+uxXoo1Puu0KSrvLman8Geoc0nagMx895L0gO3CsbB+PpijQ6Pt6YAaiv1V2MeOCUKCYUpk+77MjC6RnsTFTRaJYJ5PPkniuRKedp/DF1aMj7nGxQ6BpHOMq9mjw2zlH3I2kJi1wqm+amVz30vTHa31xTH88w+IUc1yNdLAzdVJV+/+0mqw8bLweSjSHFxZN0NIv6aczAIS5stoGobNDO4bRGDETH3Q="
+            }
+          }
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "tool-calls",
+            "raw": "STOP"
+          },
+          "usage": {
+            "inputTokens": 81,
+            "outputTokens": 71,
+            "nonCachedInputTokens": 81,
+            "reasoningTokens": 53,
+            "totalTokens": 152,
+            "providerMetadata": {
+              "google": {
+                "thoughtsTokenCount": 53,
+                "promptTokenCount": 81,
+                "candidatesTokenCount": 18,
+                "totalTokenCount": 152
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "tool-calls",
+            "raw": "STOP"
+          },
+          "usage": {
+            "inputTokens": 81,
+            "outputTokens": 71,
+            "nonCachedInputTokens": 81,
+            "reasoningTokens": 53,
+            "totalTokens": 152,
+            "providerMetadata": {
+              "google": {
+                "thoughtsTokenCount": 53,
+                "promptTokenCount": 81,
+                "candidatesTokenCount": 18,
+                "totalTokenCount": 152
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "model": {
+        "id": "gemini-3.5-flash",
+        "provider": "google",
+        "route": {
+          "id": "gemini",
+          "protocol": "gemini",
+          "providerMetadataKey": "google"
+        },
+        "endpoint": {
+          "baseURL": "https://generativelanguage.googleapis.com/v1beta",
+          "path": null
+        },
+        "transport": "http",
+        "auth": {
+          "type": "header",
+          "name": "x-goog-api-key",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_pdf_gemini_tool_result",
+        "maxTokens": 256,
+        "temperature": 0,
+        "cache": "none",
+        "system": [
+          {
+            "type": "text",
+            "text": "Call read_pdf exactly once with path verification.pdf, then reply only with the verification code from its PDF."
+          }
+        ],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Use read_pdf with path verification.pdf and return the verification code."
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "tool-call",
+                "id": "call_475949",
+                "name": "read_pdf",
+                "input": {
+                  "path": "verification.pdf"
+                },
+                "providerMetadata": {
+                  "google": {
+                    "thoughtSignature": "Et4CCtsCAWkUfRPfQWeGIEQ/AhexY97IZoK8aNLr2EbW3nufnAXpa1y74z7qH1Tdk20j5EC57BSBbdy5u6xFHNomzZhGFVmdVlhgZFXGSO8F8K4t8rqQWUJZSDH4dFaC95KpUTfp5CAMepbOuc/dGLgXfVsSV0e/HvUcdWKoEz8Jlsgk59nexqSsdl/kGzuuIeW6zS5r8JHus+PfRzvSgua4B9OpDU9WWPCJZu93NLbXJELbZ330h7CP+uxXoo1Puu0KSrvLman8Geoc0nagMx895L0gO3CsbB+PpijQ6Pt6YAaiv1V2MeOCUKCYUpk+77MjC6RnsTFTRaJYJ5PPkniuRKedp/DF1aMj7nGxQ6BpHOMq9mjw2zlH3I2kJi1wqm+amVz30vTHa31xTH88w+IUc1yNdLAzdVJV+/+0mqw8bLweSjSHFxZN0NIv6aczAIS5stoGobNDO4bRGDETH3Q="
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "role": "tool",
+            "content": [
+              {
+                "type": "tool-result",
+                "id": "call_475949",
+                "name": "read_pdf",
+                "result": {
+                  "type": "content",
+                  "value": [
+                    {
+                      "type": "text",
+                      "text": "PDF read successfully"
+                    },
+                    {
+                      "type": "file",
+                      "uri": "data:application/pdf;base64,JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA2MTIgNzkyXSAvUmVzb3VyY2VzIDw8IC9Gb250IDw8IC9GMSA1IDAgUiA+PiA+PiAvQ29udGVudHMgNCAwIFIgPj4KZW5kb2JqCjQgMCBvYmoKPDwgL0xlbmd0aCA3NSA+PgpzdHJlYW0KQlQKL0YxIDE4IFRmCjcyIDcyMCBUZAooUERGIGNhc3NldHRlIHZlcmlmaWNhdGlvbiBjb2RlOiBPUkNISUQtNzM5MSkgVGoKRVQKZW5kc3RyZWFtCmVuZG9iago1IDAgb2JqCjw8IC9UeXBlIC9Gb250IC9TdWJ0eXBlIC9UeXBlMSAvQmFzZUZvbnQgL0hlbHZldGljYSA+PgplbmRvYmoKeHJlZgowIDYKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDA5IDAwMDAwIG4gCjAwMDAwMDAwNTggMDAwMDAgbiAKMDAwMDAwMDExNSAwMDAwMCBuIAowMDAwMDAwMjQxIDAwMDAwIG4gCjAwMDAwMDAzNjUgMDAwMDAgbiAKdHJhaWxlcgo8PCAvU2l6ZSA2IC9Sb290IDEgMCBSID4+CnN0YXJ0eHJlZgo0MzUKJSVFT0YK",
+                      "mime": "application/pdf",
+                      "name": "verification.pdf"
+                    }
+                  ]
+                },
+                "providerMetadata": {
+                  "google": {
+                    "thoughtSignature": "Et4CCtsCAWkUfRPfQWeGIEQ/AhexY97IZoK8aNLr2EbW3nufnAXpa1y74z7qH1Tdk20j5EC57BSBbdy5u6xFHNomzZhGFVmdVlhgZFXGSO8F8K4t8rqQWUJZSDH4dFaC95KpUTfp5CAMepbOuc/dGLgXfVsSV0e/HvUcdWKoEz8Jlsgk59nexqSsdl/kGzuuIeW6zS5r8JHus+PfRzvSgua4B9OpDU9WWPCJZu93NLbXJELbZ330h7CP+uxXoo1Puu0KSrvLman8Geoc0nagMx895L0gO3CsbB+PpijQ6Pt6YAaiv1V2MeOCUKCYUpk+77MjC6RnsTFTRaJYJ5PPkniuRKedp/DF1aMj7nGxQ6BpHOMq9mjw2zlH3I2kJi1wqm+amVz30vTHa31xTH88w+IUc1yNdLAzdVJV+/+0mqw8bLweSjSHFxZN0NIv6aczAIS5stoGobNDO4bRGDETH3Q="
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "tool",
+            "name": "read_pdf",
+            "description": "Read the attached PDF.",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "path"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "string"
+            }
+          }
+        ]
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:streamGenerateContent?alt=sse",
+            "headers": {
+              "content-length": "2218",
+              "content-type": "application/json",
+              "x-goog-api-key": "fixture"
+            },
+            "body": "{\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":\"Use read_pdf with path verification.pdf and return the verification code.\"}]},{\"role\":\"model\",\"parts\":[{\"functionCall\":{\"id\":\"call_475949\",\"name\":\"read_pdf\",\"args\":{\"path\":\"verification.pdf\"}},\"thoughtSignature\":\"Et4CCtsCAWkUfRPfQWeGIEQ/AhexY97IZoK8aNLr2EbW3nufnAXpa1y74z7qH1Tdk20j5EC57BSBbdy5u6xFHNomzZhGFVmdVlhgZFXGSO8F8K4t8rqQWUJZSDH4dFaC95KpUTfp5CAMepbOuc/dGLgXfVsSV0e/HvUcdWKoEz8Jlsgk59nexqSsdl/kGzuuIeW6zS5r8JHus+PfRzvSgua4B9OpDU9WWPCJZu93NLbXJELbZ330h7CP+uxXoo1Puu0KSrvLman8Geoc0nagMx895L0gO3CsbB+PpijQ6Pt6YAaiv1V2MeOCUKCYUpk+77MjC6RnsTFTRaJYJ5PPkniuRKedp/DF1aMj7nGxQ6BpHOMq9mjw2zlH3I2kJi1wqm+amVz30vTHa31xTH88w+IUc1yNdLAzdVJV+/+0mqw8bLweSjSHFxZN0NIv6aczAIS5stoGobNDO4bRGDETH3Q=\"}]},{\"role\":\"user\",\"parts\":[{\"functionResponse\":{\"id\":\"call_475949\",\"name\":\"read_pdf\",\"response\":{\"name\":\"read_pdf\",\"content\":\"PDF read successfully\"},\"parts\":[{\"inlineData\":{\"mimeType\":\"application/pdf\",\"data\":\"JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA2MTIgNzkyXSAvUmVzb3VyY2VzIDw8IC9Gb250IDw8IC9GMSA1IDAgUiA+PiA+PiAvQ29udGVudHMgNCAwIFIgPj4KZW5kb2JqCjQgMCBvYmoKPDwgL0xlbmd0aCA3NSA+PgpzdHJlYW0KQlQKL0YxIDE4IFRmCjcyIDcyMCBUZAooUERGIGNhc3NldHRlIHZlcmlmaWNhdGlvbiBjb2RlOiBPUkNISUQtNzM5MSkgVGoKRVQKZW5kc3RyZWFtCmVuZG9iago1IDAgb2JqCjw8IC9UeXBlIC9Gb250IC9TdWJ0eXBlIC9UeXBlMSAvQmFzZUZvbnQgL0hlbHZldGljYSA+PgplbmRvYmoKeHJlZgowIDYKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDA5IDAwMDAwIG4gCjAwMDAwMDAwNTggMDAwMDAgbiAKMDAwMDAwMDExNSAwMDAwMCBuIAowMDAwMDAwMjQxIDAwMDAwIG4gCjAwMDAwMDAzNjUgMDAwMDAgbiAKdHJhaWxlcgo8PCAvU2l6ZSA2IC9Sb290IDEgMCBSID4+CnN0YXJ0eHJlZgo0MzUKJSVFT0YK\"}}]}}]}],\"systemInstruction\":{\"parts\":[{\"text\":\"Call read_pdf exactly once with path verification.pdf, then reply only with the verification code from its PDF.\"}]},\"tools\":[{\"functionDeclarations\":[{\"name\":\"read_pdf\",\"description\":\"Read the attached PDF.\",\"parametersJsonSchema\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"}},\"required\":[\"path\"],\"additionalProperties\":false}}]}],\"generationConfig\":{\"maxOutputTokens\":256,\"temperature\":0}}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream"
+            },
+            "body": "data: {\"candidates\": [{\"content\": {\"parts\": [{\"text\": \"ORCHID-7391\"}],\"role\": \"model\"},\"index\": 0}],\"usageMetadata\": {\"promptTokenCount\": 123,\"candidatesTokenCount\": 8,\"totalTokenCount\": 184,\"promptTokensDetails\": [{\"modality\": \"TEXT\",\"tokenCount\": 123}],\"thoughtsTokenCount\": 53,\"serviceTier\": \"standard\"},\"modelVersion\": \"gemini-3.5-flash\",\"responseId\": \"jXe0ar7CNdjBqtsPqMm2oAs\"}\r\n\r\ndata: {\"candidates\": [{\"content\": {\"parts\": [{\"text\": \"\",\"thoughtSignature\": \"EtcCCtQCAWkUfRM3dQjvavztF1qActLo1mpXoGlWdQ+qUpKf1DdrmgWIT1nm70cm+yGf4pj6UU9fhKU+/y+ScUv1IJrb3c3yU5X2/CGzcN/DeRhxuvuXRaGxtWi4GIu2nFr3oJrAOnJnh/kosgiqixwQ3EK6/0jdE2HOqxu7jImvozaVcR9OiVGgAHRwmDYtB6K+6/jMVjORBKB4nZp8MTb3IWaiN6soO+FiWRgl3etnnJhkJb6eBHhHmLW8qxyOmVwRII3Gtm5jJbxGND/aZSpxlBvfBpGfbJQJIfNQDs+sXeQpuZh8SZUVRgVAZyOrqbVS1vRq8kODaBvDHKuTr0Qo9RpGGGo0npaYooP663omHDhm7Uu5plFwAVYR5G4z11my6efbHE1WvbcCgg6deqMFf6BX0SzzgPovB3p+giuHVwjD7gyYS3sdw/txxYPkY3+H/gWchf0FGw==\"}],\"role\": \"model\"},\"finishReason\": \"STOP\",\"index\": 0}],\"usageMetadata\": {\"promptTokenCount\": 696,\"candidatesTokenCount\": 8,\"totalTokenCount\": 757,\"promptTokensDetails\": [{\"modality\": \"IMAGE\",\"tokenCount\": 520},{\"modality\": \"TEXT\",\"tokenCount\": 176}],\"thoughtsTokenCount\": 53,\"serviceTier\": \"standard\"},\"modelVersion\": \"gemini-3.5-flash\",\"responseId\": \"jXe0ar7CNdjBqtsPqMm2oAs\"}\r\n\r\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "text-start",
+          "id": "text-0"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "ORCHID-7391"
+        },
+        {
+          "type": "text-end",
+          "id": "text-0",
+          "providerMetadata": {
+            "google": {
+              "thoughtSignature": "EtcCCtQCAWkUfRM3dQjvavztF1qActLo1mpXoGlWdQ+qUpKf1DdrmgWIT1nm70cm+yGf4pj6UU9fhKU+/y+ScUv1IJrb3c3yU5X2/CGzcN/DeRhxuvuXRaGxtWi4GIu2nFr3oJrAOnJnh/kosgiqixwQ3EK6/0jdE2HOqxu7jImvozaVcR9OiVGgAHRwmDYtB6K+6/jMVjORBKB4nZp8MTb3IWaiN6soO+FiWRgl3etnnJhkJb6eBHhHmLW8qxyOmVwRII3Gtm5jJbxGND/aZSpxlBvfBpGfbJQJIfNQDs+sXeQpuZh8SZUVRgVAZyOrqbVS1vRq8kODaBvDHKuTr0Qo9RpGGGo0npaYooP663omHDhm7Uu5plFwAVYR5G4z11my6efbHE1WvbcCgg6deqMFf6BX0SzzgPovB3p+giuHVwjD7gyYS3sdw/txxYPkY3+H/gWchf0FGw=="
+            }
+          }
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "stop",
+            "raw": "STOP"
+          },
+          "usage": {
+            "inputTokens": 696,
+            "outputTokens": 61,
+            "nonCachedInputTokens": 696,
+            "reasoningTokens": 53,
+            "totalTokens": 757,
+            "providerMetadata": {
+              "google": {
+                "thoughtsTokenCount": 53,
+                "promptTokenCount": 696,
+                "candidatesTokenCount": 8,
+                "totalTokenCount": 757
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "stop",
+            "raw": "STOP"
+          },
+          "usage": {
+            "inputTokens": 696,
+            "outputTokens": 61,
+            "nonCachedInputTokens": 696,
+            "reasoningTokens": 53,
+            "totalTokens": 757,
+            "providerMetadata": {
+              "google": {
+                "thoughtsTokenCount": 53,
+                "promptTokenCount": 696,
+                "candidatesTokenCount": 8,
+                "totalTokenCount": 757
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

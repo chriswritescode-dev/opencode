@@ -1,0 +1,11 @@
+[package]
+name = "opencode-ai"
+description = "The LLM layer: protocols, routes, transports and their recorded corpus."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+autotests = false
+
+[lints]
+workspace = true

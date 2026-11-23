@@ -1,0 +1,150 @@
+{
+  "cassette": "deepinfra-chat/deepinfra-llama-3-3-70b-text",
+  "protocol": "openai-chat",
+  "routeId": "deepinfra-chat",
+  "clockEpochMs": 1767323045000,
+  "steps": [
+    {
+      "model": {
+        "id": "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+        "provider": "deepinfra",
+        "route": {
+          "id": "deepinfra-chat",
+          "protocol": "openai-chat",
+          "providerMetadataKey": "deepinfra"
+        },
+        "endpoint": {
+          "baseURL": "https://api.deepinfra.com/v1/openai",
+          "path": "/chat/completions"
+        },
+        "compatibility": {
+          "reasoningField": "reasoning_content",
+          "maxTokensField": "max_tokens"
+        },
+        "capabilities": {
+          "promptCacheKey": true
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_deepinfra_llama_3_3_70b_text_1",
+        "maxTokens": 40,
+        "temperature": 0,
+        "cache": "none",
+        "system": [
+          {
+            "type": "text",
+            "text": "You are concise."
+          }
+        ],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Reply exactly with: Hello!"
+              }
+            ]
+          }
+        ],
+        "tools": []
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://api.deepinfra.com/v1/openai/chat/completions",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "252",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"meta-llama/Llama-3.3-70B-Instruct-Turbo\",\"messages\":[{\"role\":\"system\",\"content\":\"You are concise.\"},{\"role\":\"user\",\"content\":\"Reply exactly with: Hello!\"}],\"stream\":true,\"stream_options\":{\"include_usage\":true},\"max_tokens\":40,\"temperature\":0}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream; charset=utf-8"
+            },
+            "body": "data: {\"service_tier\":null,\"id\":\"chatcmpl-RbZ8MyY5pos2MShihSmoXoRe\",\"object\":\"chat.completion.chunk\",\"created\":1787704442,\"model\":\"meta-llama/Llama-3.3-70B-Instruct-Turbo\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\",\"reasoning_content\":null,\"tool_calls\":null},\"logprobs\":null,\"finish_reason\":null}],\"usage\":null}\n\ndata: {\"service_tier\":\"default\",\"id\":\"chatcmpl-RbZ8MyY5pos2MShihSmoXoRe\",\"object\":\"chat.completion.chunk\",\"created\":1787704442,\"model\":\"meta-llama/Llama-3.3-70B-Instruct-Turbo\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"Hello\",\"reasoning_content\":null,\"tool_calls\":null},\"logprobs\":null,\"finish_reason\":null}],\"usage\":null}\n\ndata: {\"service_tier\":\"default\",\"id\":\"chatcmpl-RbZ8MyY5pos2MShihSmoXoRe\",\"object\":\"chat.completion.chunk\",\"created\":1787704442,\"model\":\"meta-llama/Llama-3.3-70B-Instruct-Turbo\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"!\",\"reasoning_content\":null,\"tool_calls\":null},\"logprobs\":null,\"finish_reason\":null}],\"usage\":null}\n\ndata: {\"service_tier\":\"default\",\"id\":\"chatcmpl-RbZ8MyY5pos2MShihSmoXoRe\",\"object\":\"chat.completion.chunk\",\"created\":1787704442,\"model\":\"meta-llama/Llama-3.3-70B-Instruct-Turbo\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\",\"reasoning_content\":null,\"tool_calls\":null},\"logprobs\":null,\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":25,\"total_tokens\":28,\"completion_tokens\":3,\"estimated_cost\":null,\"prompt_tokens_details\":null}}\n\ndata: {\"service_tier\":\"default\",\"id\":\"chatcmpl-RbZ8MyY5pos2MShihSmoXoRe\",\"object\":\"chat.completion.chunk\",\"created\":1787704442,\"model\":\"meta-llama/Llama-3.3-70B-Instruct-Turbo\",\"choices\":[],\"usage\":{\"prompt_tokens\":25,\"total_tokens\":28,\"completion_tokens\":3,\"estimated_cost\":3.46e-6,\"prompt_tokens_details\":null}}\n\ndata: [DONE]\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "text-start",
+          "id": "text-0"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "Hello"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "!"
+        },
+        {
+          "type": "text-end",
+          "id": "text-0"
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 25,
+            "outputTokens": 3,
+            "nonCachedInputTokens": 25,
+            "totalTokens": 28,
+            "providerMetadata": {
+              "deepinfra": {
+                "prompt_tokens": 25,
+                "completion_tokens": 3,
+                "total_tokens": 28,
+                "prompt_tokens_details": null,
+                "estimated_cost": 0.00000346
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 25,
+            "outputTokens": 3,
+            "nonCachedInputTokens": 25,
+            "totalTokens": 28,
+            "providerMetadata": {
+              "deepinfra": {
+                "prompt_tokens": 25,
+                "completion_tokens": 3,
+                "total_tokens": 28,
+                "prompt_tokens_details": null,
+                "estimated_cost": 0.00000346
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

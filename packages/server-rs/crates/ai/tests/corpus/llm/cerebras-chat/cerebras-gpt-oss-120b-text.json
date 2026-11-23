@@ -1,0 +1,238 @@
+{
+  "cassette": "cerebras-chat/cerebras-gpt-oss-120b-text",
+  "protocol": "openai-chat",
+  "routeId": "cerebras-chat",
+  "clockEpochMs": 1767323045000,
+  "steps": [
+    {
+      "model": {
+        "id": "gpt-oss-120b",
+        "provider": "cerebras",
+        "route": {
+          "id": "cerebras-chat",
+          "protocol": "openai-chat",
+          "providerMetadataKey": "cerebras"
+        },
+        "endpoint": {
+          "baseURL": "https://api.cerebras.ai/v1",
+          "path": "/chat/completions"
+        },
+        "compatibility": {
+          "reasoningField": "reasoning",
+          "maxTokensField": "max_tokens"
+        },
+        "capabilities": {
+          "promptCacheKey": true
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_cerebras_gpt_oss_120b_text_1",
+        "maxTokens": 256,
+        "cache": "none",
+        "system": [
+          {
+            "type": "text",
+            "text": "You are concise."
+          }
+        ],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Reply exactly with: Hello!"
+              }
+            ]
+          }
+        ],
+        "tools": []
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://api.cerebras.ai/v1/chat/completions",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "210",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"gpt-oss-120b\",\"messages\":[{\"role\":\"system\",\"content\":\"You are concise.\"},{\"role\":\"user\",\"content\":\"Reply exactly with: Hello!\"}],\"stream\":true,\"stream_options\":{\"include_usage\":true},\"max_tokens\":256}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream; charset=utf-8"
+            },
+            "body": "data: {\"id\":\"chatcmpl-cd45cd6e-886a-433e-8ba9-caca78c1f13a\",\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"index\":0}],\"created\":1787702127,\"model\":\"gpt-oss-120b\",\"system_fingerprint\":\"fp_e2cabf4999eb0aead3d1\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"id\":\"chatcmpl-cd45cd6e-886a-433e-8ba9-caca78c1f13a\",\"choices\":[{\"delta\":{\"reasoning\":\"The\"},\"index\":0}],\"created\":1787702127,\"model\":\"gpt-oss-120b\",\"system_fingerprint\":\"fp_e2cabf4999eb0aead3d1\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"id\":\"chatcmpl-cd45cd6e-886a-433e-8ba9-caca78c1f13a\",\"choices\":[{\"delta\":{\"reasoning\":\" user says: \\\"Reply exactly with: Hello!\\\" So we must output exactly\"},\"index\":0}],\"created\":1787702127,\"model\":\"gpt-oss-120b\",\"system_fingerprint\":\"fp_e2cabf4999eb0aead3d1\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"id\":\"chatcmpl-cd45cd6e-886a-433e-8ba9-caca78c1f13a\",\"choices\":[{\"delta\":{\"reasoning\":\" \\\"Hello!\\\" with no extra characters, no formatting\"},\"index\":0}],\"created\":1787702127,\"model\":\"gpt-oss-120b\",\"system_fingerprint\":\"fp_e2cabf4999eb0aead3d1\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"id\":\"chatcmpl-cd45cd6e-886a-433e-8ba9-caca78c1f13a\",\"choices\":[{\"delta\":{\"reasoning\":\". Ensure no extra spaces or new\"},\"index\":0}],\"created\":1787702127,\"model\":\"gpt-oss-120b\",\"system_fingerprint\":\"fp_e2cabf4999eb0aead3d1\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"id\":\"chatcmpl-cd45cd6e-886a-433e-8ba9-caca78c1f13a\",\"choices\":[{\"delta\":{\"reasoning\":\"lines? Probably just \\\"Hello!\\\".\"},\"index\":0}],\"created\":1787702127,\"model\":\"gpt-oss-120b\",\"system_fingerprint\":\"fp_e2cabf4999eb0aead3d1\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"id\":\"chatcmpl-cd45cd6e-886a-433e-8ba9-caca78c1f13a\",\"choices\":[{\"delta\":{\"reasoning\":\" Usually we output exactly that.\"},\"index\":0}],\"created\":1787702127,\"model\":\"gpt-oss-120b\",\"system_fingerprint\":\"fp_e2cabf4999eb0aead3d1\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"id\":\"chatcmpl-cd45cd6e-886a-433e-8ba9-caca78c1f13a\",\"choices\":[{\"delta\":{\"content\":\"Hello!\"},\"index\":0}],\"created\":1787702127,\"model\":\"gpt-oss-120b\",\"system_fingerprint\":\"fp_e2cabf4999eb0aead3d1\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"id\":\"chatcmpl-cd45cd6e-886a-433e-8ba9-caca78c1f13a\",\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1787702127,\"model\":\"gpt-oss-120b\",\"system_fingerprint\":\"fp_e2cabf4999eb0aead3d1\",\"object\":\"chat.completion.chunk\",\"usage\":{\"total_tokens\":142,\"completion_tokens\":58,\"completion_tokens_details\":{\"accepted_prediction_tokens\":0,\"rejected_prediction_tokens\":0,\"reasoning_tokens\":46},\"prompt_tokens\":84,\"prompt_tokens_details\":{\"cached_tokens\":0}},\"time_info\":{\"created\":1787702127.645281,\"queue_time\":0.003817115,\"prompt_time\":0.001587193,\"completion_time\":0.029805929,\"total_time\":0.036823272705078125}}\n\ndata: [DONE]\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "reasoning-start",
+          "id": "reasoning-0",
+          "providerMetadata": {
+            "cerebras": {
+              "reasoningField": "reasoning"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "The",
+          "providerMetadata": {
+            "cerebras": {
+              "reasoningField": "reasoning"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " user says: \"Reply exactly with: Hello!\" So we must output exactly",
+          "providerMetadata": {
+            "cerebras": {
+              "reasoningField": "reasoning"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " \"Hello!\" with no extra characters, no formatting",
+          "providerMetadata": {
+            "cerebras": {
+              "reasoningField": "reasoning"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ". Ensure no extra spaces or new",
+          "providerMetadata": {
+            "cerebras": {
+              "reasoningField": "reasoning"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "lines? Probably just \"Hello!\".",
+          "providerMetadata": {
+            "cerebras": {
+              "reasoningField": "reasoning"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " Usually we output exactly that.",
+          "providerMetadata": {
+            "cerebras": {
+              "reasoningField": "reasoning"
+            }
+          }
+        },
+        {
+          "type": "text-start",
+          "id": "text-0"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "Hello!"
+        },
+        {
+          "type": "reasoning-end",
+          "id": "reasoning-0",
+          "providerMetadata": {
+            "cerebras": {
+              "reasoningField": "reasoning"
+            }
+          }
+        },
+        {
+          "type": "text-end",
+          "id": "text-0"
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 84,
+            "outputTokens": 58,
+            "nonCachedInputTokens": 84,
+            "cacheReadInputTokens": 0,
+            "reasoningTokens": 46,
+            "totalTokens": 142,
+            "providerMetadata": {
+              "cerebras": {
+                "prompt_tokens": 84,
+                "completion_tokens": 58,
+                "total_tokens": 142,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                },
+                "completion_tokens_details": {
+                  "reasoning_tokens": 46,
+                  "accepted_prediction_tokens": 0,
+                  "rejected_prediction_tokens": 0
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 84,
+            "outputTokens": 58,
+            "nonCachedInputTokens": 84,
+            "cacheReadInputTokens": 0,
+            "reasoningTokens": 46,
+            "totalTokens": 142,
+            "providerMetadata": {
+              "cerebras": {
+                "prompt_tokens": 84,
+                "completion_tokens": 58,
+                "total_tokens": 142,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                },
+                "completion_tokens_details": {
+                  "reasoning_tokens": 46,
+                  "accepted_prediction_tokens": 0,
+                  "rejected_prediction_tokens": 0
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

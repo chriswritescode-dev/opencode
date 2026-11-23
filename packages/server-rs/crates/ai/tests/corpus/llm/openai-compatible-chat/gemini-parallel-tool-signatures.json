@@ -1,0 +1,483 @@
+{
+  "cassette": "openai-compatible-chat/gemini-parallel-tool-signatures",
+  "protocol": "openai-chat",
+  "routeId": "openai-compatible-chat",
+  "clockEpochMs": 1767323045000,
+  "steps": [
+    {
+      "model": {
+        "id": "gemini-3.8-flash",
+        "provider": "google",
+        "route": {
+          "id": "openai-compatible-chat",
+          "protocol": "openai-chat",
+          "providerMetadataKey": "google"
+        },
+        "endpoint": {
+          "baseURL": "https://generativelanguage.googleapis.com/v1beta/openai",
+          "path": "/chat/completions"
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "cache": "none",
+        "system": [
+          {
+            "type": "text",
+            "text": "Call get_weather for every requested city in parallel, then answer in one short sentence."
+          }
+        ],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "What is the weather in Paris and in Tokyo?"
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "tool",
+            "name": "get_weather",
+            "description": "Get current weather for a city.",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "city": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "city"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "temperature": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "string",
+                      "enum": [
+                        "Infinity",
+                        "-Infinity",
+                        "NaN"
+                      ]
+                    }
+                  ]
+                },
+                "condition": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "temperature",
+                "condition"
+              ],
+              "additionalProperties": false
+            }
+          }
+        ]
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "533",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"gemini-3.8-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"Call get_weather for every requested city in parallel, then answer in one short sentence.\"},{\"role\":\"user\",\"content\":\"What is the weather in Paris and in Tokyo?\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"get_weather\",\"description\":\"Get current weather for a city.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\"}},\"required\":[\"city\"],\"additionalProperties\":false},\"strict\":false}}],\"stream\":true,\"stream_options\":{\"include_usage\":true}}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream"
+            },
+            "body": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"extra_content\":{\"google\":{\"thought_signature\":\"ErYCCrMCAWkUfRNGh+/Zbc8YUSzk1yfWAfROcjA4HyF1x69jz6167w8zd4n6kZQQ5FDeBZ5HZMEbEkQ4ENOpzsQL8roCR6wONkhXpiduWrTD6XwbP8KGNkf6D1tX/JlBh7G5Cl+0rdjiSOl/mdY1lcjbkfyCRFs5T8odNWMG7WD3rCrXJDFQ/5QfOl+tqVTceKGz2yyXBhOhvsQDU33ulR9tHQJo/Fmx3HNyDdwvmyKUXm+kgqHsYZnkdv6y6xZwy9zBXGUO4QwxelMw3Rrc24Mp2rNbEDZS3YEeP72Jn/hIP5a8XWOx6+zop/4/CjYxxSfN/tJRY5d48NAKRNFzUN1Az8SvAs/N5X2I3/5ZMaDnQWW/BVdS9fm2KFYJ2baqtBiRRnJxMq4ELArkKjGZzHpd97XG8YjV6g==\"}},\"function\":{\"arguments\":\"{\\\"city\\\":\\\"Paris\\\"}\",\"name\":\"get_weather\"},\"id\":\"call_723181\",\"type\":\"function\"}]},\"index\":0}],\"created\":1790565123,\"id\":\"A9u5aoufBp3rz7IPke_3oAo\",\"model\":\"gemini-3.8-flash\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":16,\"prompt_tokens\":74,\"total_tokens\":132}}\n\ndata: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"function\":{\"arguments\":\"{\\\"city\\\":\\\"Tokyo\\\"}\",\"name\":\"get_weather\"},\"id\":\"call_723184\",\"type\":\"function\"}]},\"index\":0}],\"created\":1790565123,\"id\":\"A9u5aoufBp3rz7IPke_3oAo\",\"model\":\"gemini-3.8-flash\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":32,\"prompt_tokens\":74,\"total_tokens\":148}}\n\ndata: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1790565124,\"id\":\"A9u5aoufBp3rz7IPke_3oAo\",\"model\":\"gemini-3.8-flash\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":32,\"prompt_tokens\":74,\"total_tokens\":148}}\n\ndata: [DONE]\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "tool-input-start",
+          "id": "call_723181",
+          "name": "get_weather",
+          "providerMetadata": {
+            "google": {
+              "extraContent": {
+                "google": {
+                  "thought_signature": "ErYCCrMCAWkUfRNGh+/Zbc8YUSzk1yfWAfROcjA4HyF1x69jz6167w8zd4n6kZQQ5FDeBZ5HZMEbEkQ4ENOpzsQL8roCR6wONkhXpiduWrTD6XwbP8KGNkf6D1tX/JlBh7G5Cl+0rdjiSOl/mdY1lcjbkfyCRFs5T8odNWMG7WD3rCrXJDFQ/5QfOl+tqVTceKGz2yyXBhOhvsQDU33ulR9tHQJo/Fmx3HNyDdwvmyKUXm+kgqHsYZnkdv6y6xZwy9zBXGUO4QwxelMw3Rrc24Mp2rNbEDZS3YEeP72Jn/hIP5a8XWOx6+zop/4/CjYxxSfN/tJRY5d48NAKRNFzUN1Az8SvAs/N5X2I3/5ZMaDnQWW/BVdS9fm2KFYJ2baqtBiRRnJxMq4ELArkKjGZzHpd97XG8YjV6g=="
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "call_723181",
+          "name": "get_weather",
+          "text": "{\"city\":\"Paris\"}",
+          "input": {
+            "city": "Paris"
+          }
+        },
+        {
+          "type": "tool-input-start",
+          "id": "call_723184",
+          "name": "get_weather"
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "call_723184",
+          "name": "get_weather",
+          "text": "{\"city\":\"Tokyo\"}",
+          "input": {
+            "city": "Tokyo"
+          }
+        },
+        {
+          "type": "tool-input-end",
+          "id": "call_723181",
+          "name": "get_weather",
+          "providerMetadata": {
+            "google": {
+              "extraContent": {
+                "google": {
+                  "thought_signature": "ErYCCrMCAWkUfRNGh+/Zbc8YUSzk1yfWAfROcjA4HyF1x69jz6167w8zd4n6kZQQ5FDeBZ5HZMEbEkQ4ENOpzsQL8roCR6wONkhXpiduWrTD6XwbP8KGNkf6D1tX/JlBh7G5Cl+0rdjiSOl/mdY1lcjbkfyCRFs5T8odNWMG7WD3rCrXJDFQ/5QfOl+tqVTceKGz2yyXBhOhvsQDU33ulR9tHQJo/Fmx3HNyDdwvmyKUXm+kgqHsYZnkdv6y6xZwy9zBXGUO4QwxelMw3Rrc24Mp2rNbEDZS3YEeP72Jn/hIP5a8XWOx6+zop/4/CjYxxSfN/tJRY5d48NAKRNFzUN1Az8SvAs/N5X2I3/5ZMaDnQWW/BVdS9fm2KFYJ2baqtBiRRnJxMq4ELArkKjGZzHpd97XG8YjV6g=="
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "tool-call",
+          "id": "call_723181",
+          "name": "get_weather",
+          "input": {
+            "city": "Paris"
+          },
+          "providerMetadata": {
+            "google": {
+              "extraContent": {
+                "google": {
+                  "thought_signature": "ErYCCrMCAWkUfRNGh+/Zbc8YUSzk1yfWAfROcjA4HyF1x69jz6167w8zd4n6kZQQ5FDeBZ5HZMEbEkQ4ENOpzsQL8roCR6wONkhXpiduWrTD6XwbP8KGNkf6D1tX/JlBh7G5Cl+0rdjiSOl/mdY1lcjbkfyCRFs5T8odNWMG7WD3rCrXJDFQ/5QfOl+tqVTceKGz2yyXBhOhvsQDU33ulR9tHQJo/Fmx3HNyDdwvmyKUXm+kgqHsYZnkdv6y6xZwy9zBXGUO4QwxelMw3Rrc24Mp2rNbEDZS3YEeP72Jn/hIP5a8XWOx6+zop/4/CjYxxSfN/tJRY5d48NAKRNFzUN1Az8SvAs/N5X2I3/5ZMaDnQWW/BVdS9fm2KFYJ2baqtBiRRnJxMq4ELArkKjGZzHpd97XG8YjV6g=="
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "tool-input-end",
+          "id": "call_723184",
+          "name": "get_weather"
+        },
+        {
+          "type": "tool-call",
+          "id": "call_723184",
+          "name": "get_weather",
+          "input": {
+            "city": "Tokyo"
+          }
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "tool-calls",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 74,
+            "outputTokens": 32,
+            "nonCachedInputTokens": 74,
+            "totalTokens": 148,
+            "providerMetadata": {
+              "google": {
+                "prompt_tokens": 74,
+                "completion_tokens": 32,
+                "total_tokens": 148
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "tool-calls",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 74,
+            "outputTokens": 32,
+            "nonCachedInputTokens": 74,
+            "totalTokens": 148,
+            "providerMetadata": {
+              "google": {
+                "prompt_tokens": 74,
+                "completion_tokens": 32,
+                "total_tokens": 148
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "model": {
+        "id": "gemini-3.8-flash",
+        "provider": "google",
+        "route": {
+          "id": "openai-compatible-chat",
+          "protocol": "openai-chat",
+          "providerMetadataKey": "google"
+        },
+        "endpoint": {
+          "baseURL": "https://generativelanguage.googleapis.com/v1beta/openai",
+          "path": "/chat/completions"
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "cache": "none",
+        "system": [
+          {
+            "type": "text",
+            "text": "Call get_weather for every requested city in parallel, then answer in one short sentence."
+          }
+        ],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "What is the weather in Paris and in Tokyo?"
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "tool-call",
+                "id": "call_723181",
+                "name": "get_weather",
+                "input": {
+                  "city": "Paris"
+                },
+                "providerMetadata": {
+                  "google": {
+                    "extraContent": {
+                      "google": {
+                        "thought_signature": "ErYCCrMCAWkUfRNGh+/Zbc8YUSzk1yfWAfROcjA4HyF1x69jz6167w8zd4n6kZQQ5FDeBZ5HZMEbEkQ4ENOpzsQL8roCR6wONkhXpiduWrTD6XwbP8KGNkf6D1tX/JlBh7G5Cl+0rdjiSOl/mdY1lcjbkfyCRFs5T8odNWMG7WD3rCrXJDFQ/5QfOl+tqVTceKGz2yyXBhOhvsQDU33ulR9tHQJo/Fmx3HNyDdwvmyKUXm+kgqHsYZnkdv6y6xZwy9zBXGUO4QwxelMw3Rrc24Mp2rNbEDZS3YEeP72Jn/hIP5a8XWOx6+zop/4/CjYxxSfN/tJRY5d48NAKRNFzUN1Az8SvAs/N5X2I3/5ZMaDnQWW/BVdS9fm2KFYJ2baqtBiRRnJxMq4ELArkKjGZzHpd97XG8YjV6g=="
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "type": "tool-call",
+                "id": "call_723184",
+                "name": "get_weather",
+                "input": {
+                  "city": "Tokyo"
+                }
+              }
+            ]
+          },
+          {
+            "role": "tool",
+            "content": [
+              {
+                "type": "tool-result",
+                "id": "call_723181",
+                "name": "get_weather",
+                "result": {
+                  "type": "json",
+                  "value": {
+                    "temperature": 22,
+                    "condition": "sunny"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "role": "tool",
+            "content": [
+              {
+                "type": "tool-result",
+                "id": "call_723184",
+                "name": "get_weather",
+                "result": {
+                  "type": "json",
+                  "value": {
+                    "temperature": 0,
+                    "condition": "unknown"
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "tool",
+            "name": "get_weather",
+            "description": "Get current weather for a city.",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "city": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "city"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "temperature": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "string",
+                      "enum": [
+                        "Infinity",
+                        "-Infinity",
+                        "NaN"
+                      ]
+                    }
+                  ]
+                },
+                "condition": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "temperature",
+                "condition"
+              ],
+              "additionalProperties": false
+            }
+          }
+        ]
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "1477",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"gemini-3.8-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"Call get_weather for every requested city in parallel, then answer in one short sentence.\"},{\"role\":\"user\",\"content\":\"What is the weather in Paris and in Tokyo?\"},{\"role\":\"assistant\",\"content\":null,\"tool_calls\":[{\"id\":\"call_723181\",\"type\":\"function\",\"function\":{\"name\":\"get_weather\",\"arguments\":\"{\\\"city\\\":\\\"Paris\\\"}\"},\"extra_content\":{\"google\":{\"thought_signature\":\"ErYCCrMCAWkUfRNGh+/Zbc8YUSzk1yfWAfROcjA4HyF1x69jz6167w8zd4n6kZQQ5FDeBZ5HZMEbEkQ4ENOpzsQL8roCR6wONkhXpiduWrTD6XwbP8KGNkf6D1tX/JlBh7G5Cl+0rdjiSOl/mdY1lcjbkfyCRFs5T8odNWMG7WD3rCrXJDFQ/5QfOl+tqVTceKGz2yyXBhOhvsQDU33ulR9tHQJo/Fmx3HNyDdwvmyKUXm+kgqHsYZnkdv6y6xZwy9zBXGUO4QwxelMw3Rrc24Mp2rNbEDZS3YEeP72Jn/hIP5a8XWOx6+zop/4/CjYxxSfN/tJRY5d48NAKRNFzUN1Az8SvAs/N5X2I3/5ZMaDnQWW/BVdS9fm2KFYJ2baqtBiRRnJxMq4ELArkKjGZzHpd97XG8YjV6g==\"}}},{\"id\":\"call_723184\",\"type\":\"function\",\"function\":{\"name\":\"get_weather\",\"arguments\":\"{\\\"city\\\":\\\"Tokyo\\\"}\"}}]},{\"role\":\"tool\",\"tool_call_id\":\"call_723181\",\"content\":\"{\\\"temperature\\\":22,\\\"condition\\\":\\\"sunny\\\"}\"},{\"role\":\"tool\",\"tool_call_id\":\"call_723184\",\"content\":\"{\\\"temperature\\\":0,\\\"condition\\\":\\\"unknown\\\"}\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"get_weather\",\"description\":\"Get current weather for a city.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\"}},\"required\":[\"city\"],\"additionalProperties\":false},\"strict\":false}}],\"stream\":true,\"stream_options\":{\"include_usage\":true}}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream"
+            },
+            "body": "data: {\"choices\":[{\"delta\":{\"content\":\"It is currently sunny and 22°C in Paris,\",\"role\":\"assistant\"},\"index\":0}],\"created\":1790565125,\"id\":\"BNu5auWeB-2fz7IPxY6l4QY\",\"model\":\"gemini-3.8-flash\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":13,\"prompt_tokens\":150,\"total_tokens\":226}}\n\ndata: {\"choices\":[{\"delta\":{\"content\":\" while Tokyo is 0°C.\",\"role\":\"assistant\"},\"index\":0}],\"created\":1790565125,\"id\":\"BNu5auWeB-2fz7IPxY6l4QY\",\"model\":\"gemini-3.8-flash\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":21,\"prompt_tokens\":150,\"total_tokens\":234}}\n\ndata: {\"choices\":[{\"delta\":{\"extra_content\":{\"google\":{\"thought_signature\":\"EpcDCpQDAWkUfRM325TAUtfFiOeQIEWn/TsCU9oi2js4VPHFeeLfAu+2k8PJm0fN/OaF0y4ovau7S9QIAsuOPI2w2aIyQ2kMGj1XvUyRTvz30DOZgtq1km6W6YGzZyyTCNSeBcpwtJtziHZVVWq9xEI/HHB8Ta1Ot215xnFyDL7iUGEwgGu45/mInpk+SOCYBy9biDddpDxcDi14BGoleArY9XEFAzYLxXssl7HMWjpfee5095im7gD125Nripq1Jf3nGY/2TxqjgQAdJpQybwct63p74O1szGHQxrkBt7AwphDgbOWtLpUP/QJBRdl8qhrozqRe611NQ6V5lMSwpO7OhQ/IDRtWMwOyrrKblZfmMnnPl2/9xDfZRsYnfmWq+7PeAptJl1cDRlMBKhj5iRn31xvN43EiuvWwWPsSndiWvxrMvVBd89TR4u0+z0pYCYZcsFkYKFlPA7pZsdnh6CON24AA5WUkO4dQNoqYdik6aO5hE9jLHG5FHTdr0W69qgPNozbxnO0ptRcOtkGpB9xYUVoTxcSXXZE=\"}},\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1790565125,\"id\":\"BNu5auWeB-2fz7IPxY6l4QY\",\"model\":\"gemini-3.8-flash\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":21,\"prompt_tokens\":192,\"total_tokens\":276}}\n\ndata: [DONE]\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "text-start",
+          "id": "text-0"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "It is currently sunny and 22°C in Paris,"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " while Tokyo is 0°C."
+        },
+        {
+          "type": "text-end",
+          "id": "text-0"
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 192,
+            "outputTokens": 21,
+            "nonCachedInputTokens": 192,
+            "totalTokens": 276,
+            "providerMetadata": {
+              "google": {
+                "prompt_tokens": 192,
+                "completion_tokens": 21,
+                "total_tokens": 276
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 192,
+            "outputTokens": 21,
+            "nonCachedInputTokens": 192,
+            "totalTokens": 276,
+            "providerMetadata": {
+              "google": {
+                "prompt_tokens": 192,
+                "completion_tokens": 21,
+                "total_tokens": 276
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

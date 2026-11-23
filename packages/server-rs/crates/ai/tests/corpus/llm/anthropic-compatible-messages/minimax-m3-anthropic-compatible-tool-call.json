@@ -1,0 +1,190 @@
+{
+  "cassette": "anthropic-compatible-messages/minimax-m3-anthropic-compatible-tool-call",
+  "protocol": "anthropic-messages",
+  "routeId": "anthropic-compatible-messages",
+  "clockEpochMs": 1767323045000,
+  "steps": [
+    {
+      "model": {
+        "id": "MiniMax-M3",
+        "provider": "minimax",
+        "route": {
+          "id": "anthropic-compatible-messages",
+          "protocol": "anthropic-messages",
+          "providerMetadataKey": "minimax"
+        },
+        "endpoint": {
+          "baseURL": "https://api.minimax.io/anthropic/v1",
+          "path": null
+        },
+        "transport": "http",
+        "auth": {
+          "type": "header",
+          "name": "x-api-key",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_minimax_m3_anthropic_compatible_tool_call_1",
+        "maxTokens": 80,
+        "temperature": 0,
+        "cache": "none",
+        "system": [
+          {
+            "type": "text",
+            "text": "Call tools exactly as requested."
+          }
+        ],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Call get_weather with city exactly Paris."
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "tool",
+            "name": "get_weather",
+            "description": "Get current weather for a city.",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "city": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "city"
+              ],
+              "additionalProperties": false
+            }
+          }
+        ],
+        "toolChoice": {
+          "type": "tool",
+          "name": "get_weather"
+        }
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://api.minimax.io/anthropic/v1/messages",
+            "headers": {
+              "anthropic-beta": "interleaved-thinking-2025-05-14",
+              "anthropic-version": "2023-06-01",
+              "content-length": "499",
+              "content-type": "application/json",
+              "x-api-key": "fixture"
+            },
+            "body": "{\"model\":\"MiniMax-M3\",\"system\":[{\"type\":\"text\",\"text\":\"Call tools exactly as requested.\"}],\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"Call get_weather with city exactly Paris.\"}]}],\"tools\":[{\"name\":\"get_weather\",\"description\":\"Get current weather for a city.\",\"input_schema\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\"}},\"required\":[\"city\"],\"additionalProperties\":false}}],\"tool_choice\":{\"type\":\"tool\",\"name\":\"get_weather\"},\"stream\":true,\"max_tokens\":80,\"temperature\":0}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream; charset=utf-8"
+            },
+            "body": "event: message_start\ndata: {\"type\":\"message_start\",\"message\":{\"id\":\"6731ecc323233459d1792df9a733dd98\",\"type\":\"message\",\"role\":\"assistant\",\"content\":[],\"model\":\"MiniMax-M3\",\"stop_reason\":null,\"stop_sequence\":null,\"usage\":{\"input_tokens\":0,\"output_tokens\":0,\"cache_creation_input_tokens\":0,\"cache_read_input_tokens\":404,\"service_tier\":\"standard\"},\"service_tier\":\"standard\"}}\n\nevent: ping\ndata: {\"type\":\"ping\"}\n\nevent: content_block_start\ndata: {\"type\":\"content_block_start\",\"index\":0,\"content_block\":{\"type\":\"tool_use\",\"id\":\"call_function_vkxtif4epmvm_1\",\"name\":\"get_weather\",\"input\":{}}}\n\nevent: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"input_json_delta\",\"partial_json\":\"{\\\"city\\\": \\\"Paris\"}}\n\nevent: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"input_json_delta\",\"partial_json\":\"\\\"}\"}}\n\nevent: content_block_stop\ndata: {\"type\":\"content_block_stop\",\"index\":0}\n\nevent: message_delta\ndata: {\"type\":\"message_delta\",\"delta\":{\"stop_reason\":\"tool_use\"},\"usage\":{\"input_tokens\":290,\"output_tokens\":27,\"cache_read_input_tokens\":114,\"service_tier\":\"standard\"}}\n\nevent: message_stop\ndata: {\"type\":\"message_stop\"}\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "tool-input-start",
+          "id": "call_function_vkxtif4epmvm_1",
+          "name": "get_weather"
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "call_function_vkxtif4epmvm_1",
+          "name": "get_weather",
+          "text": "{\"city\": \"Paris",
+          "input": {
+            "city": "Paris"
+          }
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "call_function_vkxtif4epmvm_1",
+          "name": "get_weather",
+          "text": "\"}",
+          "input": {
+            "city": "Paris"
+          }
+        },
+        {
+          "type": "tool-input-end",
+          "id": "call_function_vkxtif4epmvm_1",
+          "name": "get_weather"
+        },
+        {
+          "type": "tool-call",
+          "id": "call_function_vkxtif4epmvm_1",
+          "name": "get_weather",
+          "input": {
+            "city": "Paris"
+          }
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "tool-calls",
+            "raw": "tool_use"
+          },
+          "usage": {
+            "inputTokens": 404,
+            "outputTokens": 27,
+            "nonCachedInputTokens": 290,
+            "cacheReadInputTokens": 114,
+            "cacheWriteInputTokens": 0,
+            "totalTokens": 431,
+            "providerMetadata": {
+              "minimax": {
+                "input_tokens": 290,
+                "output_tokens": 27,
+                "cache_creation_input_tokens": 0,
+                "cache_read_input_tokens": 114,
+                "service_tier": "standard"
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "tool-calls",
+            "raw": "tool_use"
+          },
+          "usage": {
+            "inputTokens": 404,
+            "outputTokens": 27,
+            "nonCachedInputTokens": 290,
+            "cacheReadInputTokens": 114,
+            "cacheWriteInputTokens": 0,
+            "totalTokens": 431,
+            "providerMetadata": {
+              "minimax": {
+                "input_tokens": 290,
+                "output_tokens": 27,
+                "cache_creation_input_tokens": 0,
+                "cache_read_input_tokens": 114,
+                "service_tier": "standard"
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

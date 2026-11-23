@@ -1,0 +1,157 @@
+{
+  "cassette": "bedrock-converse-options/sends-nova-2-reasoning-effort",
+  "protocol": "bedrock-converse",
+  "routeId": "bedrock-converse",
+  "clockEpochMs": 1767323045000,
+  "steps": [
+    {
+      "model": {
+        "id": "us.amazon.nova-2-lite-v1:0",
+        "provider": "amazon-bedrock",
+        "route": {
+          "id": "bedrock-converse",
+          "protocol": "bedrock-converse",
+          "providerMetadataKey": "bedrock"
+        },
+        "endpoint": {
+          "baseURL": "https://bedrock-runtime.us-east-1.amazonaws.com",
+          "path": null
+        },
+        "options": {
+          "providerOptions": {
+            "effort": "low"
+          }
+        },
+        "modelOptions": {
+          "providerOptions": {
+            "effort": "low"
+          }
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_bedrock_options_nova",
+        "maxTokens": 1000,
+        "cache": "none",
+        "system": [],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "What is 17*23? Reply with the number only."
+              }
+            ]
+          }
+        ],
+        "tools": []
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://bedrock-runtime.us-east-1.amazonaws.com/model/us.amazon.nova-2-lite-v1%3A0/converse-stream",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "269",
+              "content-type": "application/json"
+            },
+            "body": "{\"modelId\":\"us.amazon.nova-2-lite-v1:0\",\"messages\":[{\"role\":\"user\",\"content\":[{\"text\":\"What is 17*23? Reply with the number only.\"}]}],\"inferenceConfig\":{\"maxTokens\":1000},\"additionalModelRequestFields\":{\"reasoningConfig\":{\"type\":\"enabled\",\"maxReasoningEffort\":\"low\"}}}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "application/vnd.amazon.eventstream"
+            },
+            "body": "AAAAmAAAAFIBMYNgCzpldmVudC10eXBlBwAMbWVzc2FnZVN0YXJ0DTpjb250ZW50LXR5cGUHABBhcHBsaWNhdGlvbi9qc29uDTptZXNzYWdlLXR5cGUHAAVldmVudHsicCI6ImFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6QSIsInJvbGUiOiJhc3Npc3RhbnQifRK9PwwAAADaAAAAV1NofMYLOmV2ZW50LXR5cGUHABFjb250ZW50QmxvY2tEZWx0YQ06Y29udGVudC10eXBlBwAQYXBwbGljYXRpb24vanNvbg06bWVzc2FnZS10eXBlBwAFZXZlbnR7ImNvbnRlbnRCbG9ja0luZGV4IjowLCJkZWx0YSI6eyJyZWFzb25pbmdDb250ZW50Ijp7InRleHQiOiJbUkVEQUNURURdIn19LCJwIjoiYWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXpBQkNERUZHSCJ966snJwAAAM8AAABX+2hkNAs6ZXZlbnQtdHlwZQcAEWNvbnRlbnRCbG9ja0RlbHRhDTpjb250ZW50LXR5cGUHABBhcHBsaWNhdGlvbi9qc29uDTptZXNzYWdlLXR5cGUHAAVldmVudHsiY29udGVudEJsb2NrSW5kZXgiOjAsImRlbHRhIjp7InJlYXNvbmluZ0NvbnRlbnQiOnsidGV4dCI6Ii4ifX0sInAiOiJhYmNkZWZnaGlqa2xtbm9wcXJzdHV2d3h5ekFCQ0RFRiJ9txtPJQAAAIkAAABWW9z5Sws6ZXZlbnQtdHlwZQcAEGNvbnRlbnRCbG9ja1N0b3ANOmNvbnRlbnQtdHlwZQcAEGFwcGxpY2F0aW9uL2pzb24NOm1lc3NhZ2UtdHlwZQcABWV2ZW50eyJjb250ZW50QmxvY2tJbmRleCI6MCwicCI6ImFiY2RlIn3nHPCvAAAApwAAAFdSKli4CzpldmVudC10eXBlBwARY29udGVudEJsb2NrRGVsdGENOmNvbnRlbnQtdHlwZQcAEGFwcGxpY2F0aW9uL2pzb24NOm1lc3NhZ2UtdHlwZQcABWV2ZW50eyJjb250ZW50QmxvY2tJbmRleCI6MSwiZGVsdGEiOnsidGV4dCI6IjM5MSJ9LCJwIjoiYWJjZGVmZ2hpamsifVFEEycAAACHAAAAVuTsRyoLOmV2ZW50LXR5cGUHABBjb250ZW50QmxvY2tTdG9wDTpjb250ZW50LXR5cGUHABBhcHBsaWNhdGlvbi9qc29uDTptZXNzYWdlLXR5cGUHAAVldmVudHsiY29udGVudEJsb2NrSW5kZXgiOjEsInAiOiJhYmMifVAMp9gAAACjAAAAUU7JW00LOmV2ZW50LXR5cGUHAAttZXNzYWdlU3RvcA06Y29udGVudC10eXBlBwAQYXBwbGljYXRpb24vanNvbg06bWVzc2FnZS10eXBlBwAFZXZlbnR7InAiOiJhYmNkZWZnaGlqa2xtbm9wcXJzdHV2d3h5ekFCQ0RFRkdIIiwic3RvcFJlYXNvbiI6ImVuZF90dXJuIn3wGF+JAAABCwAAAE5IylFKCzpldmVudC10eXBlBwAIbWV0YWRhdGENOmNvbnRlbnQtdHlwZQcAEGFwcGxpY2F0aW9uL2pzb24NOm1lc3NhZ2UtdHlwZQcABWV2ZW50eyJtZXRyaWNzIjp7ImxhdGVuY3lNcyI6MTMzMn0sInAiOiJhYmNkZWZnaGlqa2xtbm9wcXJzdHV2d3h5ekFCQ0RFRkdISUpLTE1OT1BRUlNUVVZXWCIsInVzYWdlIjp7ImlucHV0VG9rZW5zIjoxMDksIm91dHB1dFRva2VucyI6MjQ2LCJzZXJ2ZXJUb29sVXNhZ2UiOnt9LCJ0b3RhbFRva2VucyI6MzU1fX3ERMiI",
+            "bodyEncoding": "base64"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "reasoning-start",
+          "id": "reasoning-0"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "[REDACTED]"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "."
+        },
+        {
+          "type": "reasoning-end",
+          "id": "reasoning-0"
+        },
+        {
+          "type": "text-start",
+          "id": "text-1"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-1",
+          "text": "391"
+        },
+        {
+          "type": "text-end",
+          "id": "text-1"
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "stop",
+            "raw": "end_turn"
+          },
+          "usage": {
+            "inputTokens": 109,
+            "outputTokens": 246,
+            "nonCachedInputTokens": 109,
+            "totalTokens": 355,
+            "providerMetadata": {
+              "bedrock": {
+                "inputTokens": 109,
+                "outputTokens": 246,
+                "totalTokens": 355
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "stop",
+            "raw": "end_turn"
+          },
+          "usage": {
+            "inputTokens": 109,
+            "outputTokens": 246,
+            "nonCachedInputTokens": 109,
+            "totalTokens": 355,
+            "providerMetadata": {
+              "bedrock": {
+                "inputTokens": 109,
+                "outputTokens": 246,
+                "totalTokens": 355
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
