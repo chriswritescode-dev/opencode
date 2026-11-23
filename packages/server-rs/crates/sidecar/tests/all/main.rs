@@ -3,6 +3,8 @@ mod bindings;
 mod bun;
 mod frame;
 #[cfg(unix)]
+mod protocol;
+#[cfg(unix)]
 mod spawn;
 #[cfg(unix)]
 mod support;

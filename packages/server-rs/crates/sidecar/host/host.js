@@ -485,6 +485,7 @@ function register(connection, options) {
     value: { maxInflight: connection.stats.maxInflight }
   }));
   connection.register("host.consume", consume);
+  connection.register("host.abort", abortCall);
   connection.register("host.crash", crash);
   connection.register("host.oversize", async () => {
     const header = Buffer.alloc(5);
@@ -569,6 +570,21 @@ async function consume(ctx, params) {
       await new Promise((resolve) => setTimeout(resolve, delayMs));
   }
   return { value: chunks };
+}
+async function abortCall(ctx, params) {
+  const method = stringAt(params, "method", "");
+  const inner = isRecord(params) ? params.params ?? null : null;
+  const ms = numberAt(params, "ms", 0);
+  const controller = new AbortController;
+  const timer = setTimeout(() => controller.abort(), ms);
+  try {
+    await ctx.call(method, inner, { signal: controller.signal });
+    return { value: { aborted: false } };
+  } catch (error) {
+    return { value: { aborted: error instanceof Error && error.name === "AbortError" } };
+  } finally {
+    clearTimeout(timer);
+  }
 }
 async function crash(_ctx, params) {
   process.exit(numberAt(params, "code", 0));

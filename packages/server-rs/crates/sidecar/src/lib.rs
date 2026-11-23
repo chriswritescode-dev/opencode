@@ -2,6 +2,9 @@
 
 pub mod bun;
 pub mod config;
+#[cfg(unix)]
+pub mod connection;
+pub mod error;
 pub mod frame;
 pub mod protocol;
 #[cfg(unix)]
