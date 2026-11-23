@@ -2,6 +2,7 @@
 
 pub mod database;
 pub mod error;
+pub mod generated;
 pub mod path;
 
 pub use database::Database;

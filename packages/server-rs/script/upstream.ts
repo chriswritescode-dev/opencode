@@ -1,4 +1,4 @@
-import { mkdir, realpath, rm, symlink } from "node:fs/promises"
+import { mkdir, readdir, readlink, realpath, rm, stat, symlink } from "node:fs/promises"
 import { dirname } from "node:path"
 
 const root = new URL("..", import.meta.url).pathname
@@ -13,6 +13,20 @@ const paths = [
   "packages/schema",
 ]
 const marker = paths.join("\n")
+
+const corePaths = [
+  "packages/ai",
+  "packages/codemode",
+  "packages/core",
+  "packages/http-recorder",
+  "packages/httpapi-codegen",
+  "packages/plugin",
+  "packages/plugin-browser",
+  "packages/protocol",
+  "packages/schema",
+  "packages/util",
+]
+const coreMarker = corePaths.join("\n")
 
 /** Packages linked for their own sake rather than through a pinned manifest. */
 const extra = ["effect", "prettier"]
@@ -47,6 +61,24 @@ export async function upstreamTree(commit?: string) {
   return directory
 }
 
+export async function upstreamCoreTree(commit?: string) {
+  const revision = commit ?? (await pin())
+  await requireVersions(revision)
+  const directory = `${root}target/upstream-core/${revision}`
+  if (
+    (await Bun.file(`${directory}/.complete`)
+      .text()
+      .catch(() => "")) === coreMarker
+  )
+    return directory
+  await rm(directory, { recursive: true, force: true })
+  await mkdir(directory, { recursive: true })
+  await extract(revision, directory, corePaths)
+  await linkCore(directory)
+  await Bun.write(`${directory}/.complete`, coreMarker)
+  return directory
+}
+
 function gitTopLevel() {
   const result = Bun.spawnSync(["git", "rev-parse", "--show-toplevel"], { cwd: root })
   if (result.exitCode !== 0) {
@@ -56,8 +88,8 @@ function gitTopLevel() {
   return `${result.stdout.toString().trim()}/`
 }
 
-async function extract(commit: string, directory: string) {
-  const archive = Bun.spawn(["git", "archive", commit, ...paths], {
+async function extract(commit: string, directory: string, files = paths) {
+  const archive = Bun.spawn(["git", "archive", commit, ...files], {
     cwd: repository,
     stdout: "pipe",
     stderr: "inherit",
@@ -153,6 +185,43 @@ async function link(directory: string) {
   for (const path of ["packages/ai", "packages/http-recorder"])
     for (const name of linkedNames(await Bun.file(`${directory}/${path}/package.json`).json()))
       await linkPackage(modules, name, `${repository}${path}`)
+}
+
+async function linkCore(directory: string) {
+  if (!(await directoryExists(`${repository}packages/core/node_modules`))) {
+    console.error("upstream: run bun install")
+    process.exit(1)
+  }
+  for (const path of corePaths) await linkCoreModules(directory, path)
+}
+
+async function linkCoreModules(directory: string, path: string) {
+  const installed = `${repository}${path}/node_modules`
+  if (!(await directoryExists(installed))) return
+  const modules = `${directory}/${path}/node_modules`
+  for (const entry of await readdir(installed)) {
+    if (!entry.startsWith("@")) {
+      await linkCoreEntry(`${installed}/${entry}`, `${modules}/${entry}`, entry)
+      continue
+    }
+    for (const name of await readdir(`${installed}/${entry}`))
+      await linkCoreEntry(`${installed}/${entry}/${name}`, `${modules}/${entry}/${name}`, `${entry}/${name}`)
+  }
+}
+
+async function linkCoreEntry(source: string, destination: string, name: string) {
+  await mkdir(dirname(destination), { recursive: true })
+  const target = name.startsWith("@opencode/") ? await readlink(source).catch(() => undefined) : undefined
+  if (target !== undefined && !target.includes("node_modules")) {
+    await symlink(target, destination)
+    return
+  }
+  await symlink(await realpath(source), destination)
+}
+
+async function directoryExists(path: string) {
+  const entry = await stat(path).catch(() => undefined)
+  return entry?.isDirectory() === true
 }
 
 async function linkPackage(modules: string, name: string, from = root) {
