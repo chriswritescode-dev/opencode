@@ -20,7 +20,7 @@ named in the row needs it.
 | AWS event-stream framing | `oc-llm` | Binary event-stream encoding and decoding | `ai` | OR-44 | `packages/ai/src/protocols/bedrock-event-stream.ts`; OR-44 ported from the TypeScript at the pin and imported no first-attempt code |
 | SSE framing | `oc-llm` | Server-sent event encoding and decoding | `ai` | OR-44 | `packages/ai/src/route/framing.ts`; OR-44 ported from the TypeScript at the pin and imported no first-attempt code |
 | transports | `oc-llm` | HTTP and WebSocket transports | `ai` | OR-44 | `packages/ai/src/route/transport/*`; OR-44 ported from the TypeScript at the pin and imported no first-attempt code |
-| file lock | `oc-core` | Cross-process lock directories | `config` | OR-42 | compare with `opencode_local::lock` first and prefer it when it already matches; `packages/util/src/flock.ts` |
+| file lock | `oc-core` | Cross-process lock directories | `config` | OR-42 | OR-42 reused `opencode_local::lock` and imported no first-attempt code, because the config system takes no lock of its own and `GlobalPaths::locks()` exposes the lock directory; `packages/util/src/flock.ts` |
 | OAuth callback page | `oc-core` | The local page shown after an OAuth redirect | `catalog` | OR-46 | `packages/core/src/oauth/page.ts` |
 | migration runner | `oc-storage` | Applies ordered migrations to SQLite | `storage` | OR-40 | `packages/core/src/database/migration.ts` |
 | dump tooling | `oc-storage` | Database dump and restore helpers | `storage` | OR-40 | the debug entry points for storage at the pin |
