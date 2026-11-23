@@ -103,6 +103,19 @@ async fn an_old_opencode_bun_is_not_taken() {
     assert_eq!(bun::find(&vars, &dir.path().join("project")).await, None);
 }
 
+#[test]
+fn a_bun_on_the_path_is_found_when_the_directory_is_a_filesystem_root() {
+    let dir = tempdir().expect("a directory");
+    let bin = dir.path().join("bin");
+    std::fs::create_dir_all(&bin).expect("a directory");
+    let bun = support::script(&bin, "bun", "echo 1.4.4");
+    let path = bin.into_os_string();
+
+    let found = bun::find_in("bun", &path, std::path::Path::new("/"), None).expect("bun");
+
+    assert_eq!(found, bun);
+}
+
 #[tokio::test]
 async fn a_bun_on_the_path_is_found() {
     let dir = tempdir().expect("a directory");

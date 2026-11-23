@@ -27,37 +27,90 @@ function encode(message, bytes, maxFrame) {
 
 class Decoder {
   maxFrame;
-  buffer = Buffer.alloc(0);
+  chunks = [];
+  size = 0;
   constructor(maxFrame) {
     this.maxFrame = maxFrame;
   }
   push(chunk) {
-    const joined = this.buffer.length === 0 ? Buffer.from(chunk) : Buffer.concat([this.buffer, chunk]);
-    const frames = [];
-    let at = 0;
-    while (joined.length - at >= HEADER) {
-      const len = joined.readUInt32LE(at);
-      const kind = joined[at + 4];
-      if (kind !== JSON && kind !== BINARY)
-        throw new Error(`a frame of unknown kind ${kind}`);
-      if (len > this.maxFrame)
-        throw new Error(`a frame of kind ${kind} and ${len} bytes, over its cap`);
-      if (joined.length - at < HEADER + len)
-        break;
-      frames.push(decode(kind, joined.subarray(at + HEADER, at + HEADER + len)));
-      at += HEADER + len;
-    }
-    this.buffer = at === joined.length ? Buffer.alloc(0) : Buffer.from(joined.subarray(at));
-    return frames;
+    const chunks = [...this.chunks];
+    if (chunk.length > 0)
+      chunks.push(asBuffer(chunk));
+    const decoded = drain(chunks, this.size + chunk.length, this.maxFrame);
+    this.chunks = decoded.chunks;
+    this.size = decoded.size;
+    return decoded.frames;
   }
   end() {
-    const got = this.buffer.length;
+    const got = this.size;
     if (got === 0)
       return;
     if (got < HEADER)
       throw new Error(`a frame cut short: ${got} of ${HEADER} bytes`);
-    throw new Error(`a frame cut short: ${got} of ${HEADER + this.buffer.readUInt32LE(0)} bytes`);
+    throw new Error(`a frame cut short: ${got} of ${HEADER + collect(this.chunks, HEADER).readUInt32LE(0)} bytes`);
   }
+}
+function drain(chunks, size, maxFrame) {
+  const frames = [];
+  for (;; ) {
+    if (size < HEADER)
+      break;
+    const header = collect(chunks, HEADER);
+    const kind = header[4];
+    if (kind !== JSON && kind !== BINARY)
+      throw new Error(`a frame of unknown kind ${kind}`);
+    const len = header.readUInt32LE(0);
+    if (len > maxFrame)
+      throw new Error(`a frame of kind ${kind} and ${len} bytes, over its cap`);
+    if (size < HEADER + len)
+      break;
+    frames.push(decode(kind, take(chunks, HEADER + len).subarray(HEADER)));
+    size -= HEADER + len;
+  }
+  return { frames, chunks, size };
+}
+function asBuffer(chunk) {
+  if (Buffer.isBuffer(chunk))
+    return chunk;
+  return Buffer.from(chunk.buffer, chunk.byteOffset, chunk.length);
+}
+function collect(chunks, bytes) {
+  const first = chunks[0];
+  if (first.length >= bytes)
+    return first.subarray(0, bytes);
+  const header = Buffer.allocUnsafe(bytes);
+  let at = 0;
+  for (const chunk of chunks) {
+    const copy = Math.min(chunk.length, bytes - at);
+    chunk.copy(header, at, 0, copy);
+    at += copy;
+    if (at === bytes)
+      break;
+  }
+  return header;
+}
+function take(chunks, bytes) {
+  const first = chunks[0];
+  if (first.length >= bytes) {
+    if (first.length === bytes)
+      chunks.shift();
+    else
+      chunks[0] = first.subarray(bytes);
+    return first.subarray(0, bytes);
+  }
+  const frame = Buffer.allocUnsafe(bytes);
+  let at = 0;
+  while (at < bytes) {
+    const chunk = chunks[0];
+    const copy = Math.min(chunk.length, bytes - at);
+    chunk.copy(frame, at, 0, copy);
+    at += copy;
+    if (copy === chunk.length)
+      chunks.shift();
+    else
+      chunks[0] = chunk.subarray(copy);
+  }
+  return frame;
 }
 function decode(kind, payload) {
   if (kind === JSON)
@@ -96,7 +149,7 @@ function write(bytes, fd = 0) {
 // host/src/connection.ts
 class Connection {
   done;
-  stats = { maxInflight: 0 };
+  stats = { maxInflight: 0, maxBuffered: 0 };
   onControl = () => {};
   transport;
   window;
@@ -151,8 +204,10 @@ class Connection {
       wake(pending);
     }
     this.pending.clear();
-    for (const incoming of this.incoming.values())
+    for (const incoming of this.incoming.values()) {
       incoming.controller.abort();
+      release(incoming);
+    }
     this.incoming.clear();
     this.finish();
   }
@@ -309,6 +364,7 @@ class Connection {
       if (pending === undefined || pending.kind !== "stream" || pending.closed)
         return;
       pending.queue.push(outcomeOf(message.value, frame.bytes));
+      this.stats.maxBuffered = Math.max(this.stats.maxBuffered, pending.queue.length);
       wake(pending);
       return;
     }
@@ -332,9 +388,7 @@ class Connection {
       else
         incoming.credited += message.chunks;
       incoming.credit += message.chunks;
-      const wakeIncoming = incoming.wake;
-      incoming.wake = undefined;
-      wakeIncoming?.();
+      release(incoming);
       return;
     }
     if (message.type === "cancel") {
@@ -343,9 +397,7 @@ class Connection {
         return;
       this.incoming.delete(message.id);
       incoming.controller.abort();
-      const wakeIncoming = incoming.wake;
-      incoming.wake = undefined;
-      wakeIncoming?.();
+      release(incoming);
       return;
     }
     this.onControl(message);
@@ -381,9 +433,10 @@ class Connection {
       this.dropIncoming(message.id);
       return;
     }
+    let iterator;
     try {
       const iterable = handler(this.context(message, incoming.controller.signal), message.params, bytes);
-      const iterator = iterable[Symbol.asyncIterator]();
+      iterator = iterable[Symbol.asyncIterator]();
       for (;; ) {
         while (incoming.credit <= 0) {
           if (incoming.controller.signal.aborted)
@@ -396,6 +449,8 @@ class Connection {
         if (incoming.controller.signal.aborted)
           return;
         const next = await iterator.next();
+        if (incoming.controller.signal.aborted)
+          return;
         if (next.done === true)
           break;
         incoming.credit -= 1;
@@ -408,6 +463,9 @@ class Connection {
     } catch (thrown) {
       this.fail(message.id, incoming, thrown instanceof Error && thrown.name ? thrown.name : "Error", thrown instanceof Error ? thrown.message : String(thrown));
     } finally {
+      await Promise.resolve(iterator?.return?.()).catch(() => {
+        return;
+      });
       this.dropIncoming(message.id);
     }
   }
@@ -466,6 +524,11 @@ function wake(entry) {
   for (const waiter of waiters)
     waiter();
 }
+function release(incoming) {
+  const wakeIncoming = incoming.wake;
+  incoming.wake = undefined;
+  wakeIncoming?.();
+}
 
 // host/src/methods.ts
 var fs2 = process.getBuiltinModule("node:fs");
@@ -484,7 +547,7 @@ function register(connection, options) {
   connection.register("host.streamStats", async () => ({
     value: { maxInflight: connection.stats.maxInflight }
   }));
-  connection.register("host.consume", consume);
+  connection.register("host.consume", (ctx, params) => consume(connection, ctx, params));
   connection.register("host.abort", abortCall);
   connection.register("host.crash", crash);
   connection.register("host.oversize", async () => {
@@ -559,7 +622,7 @@ async function* stream(ctx, params) {
     yield chunk;
   }
 }
-async function consume(ctx, params) {
+async function consume(connection, ctx, params) {
   const method = stringAt(params, "method", "");
   const inner = isRecord(params) ? params.params ?? null : null;
   const delayMs = numberAt(params, "delayMs", 0);
@@ -569,7 +632,7 @@ async function consume(ctx, params) {
     if (delayMs > 0)
       await new Promise((resolve) => setTimeout(resolve, delayMs));
   }
-  return { value: chunks };
+  return { value: { count: chunks, maxBuffered: connection.stats.maxBuffered } };
 }
 async function abortCall(ctx, params) {
   const method = stringAt(params, "method", "");
@@ -604,8 +667,9 @@ async function allocate(_ctx, params) {
 }
 async function print(_ctx, params) {
   const text = stringAt(params, "text", "");
-  fs2.writeSync(1, text);
-  console.error(text);
+  fs2.writeSync(1, `${text}:stdout
+`);
+  console.error(`${text}:stderr`);
   return { value: null };
 }
 async function importModule(_ctx, params) {
@@ -718,8 +782,10 @@ supervise();
 var decoder = new Decoder(DEFAULT_MAX_FRAME);
 var frames = readFrames(decoder);
 var hello = await readHello(frames[Symbol.asyncIterator]());
-if (hello.version !== VERSION)
+if (hello.version !== VERSION) {
+  console.error(`sidecar protocol version ${hello.version}, expected ${VERSION}`);
   process.exit(3);
+}
 decoder.maxFrame = hello.maxFrame;
 var connection = new Connection({ write: (bytes) => write(bytes, 0), frames }, { window: hello.window, maxFrame: hello.maxFrame });
 register(connection, { test: hello.test, maxFrame: hello.maxFrame, write: (bytes) => write(bytes, 0) });

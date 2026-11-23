@@ -19,6 +19,9 @@ pub fn config() -> Config {
 
 pub async fn runtime(config: &Config) -> Option<Runtime> {
     let runtime = config.runtime().await;
+    if runtime.is_none() && std::env::var_os("CI").is_some() {
+        panic!("neither Bun nor an opencode runtime was found; CI must run these tests");
+    }
     if runtime.is_none() {
         eprintln!("skipping: neither Bun nor an opencode runtime was found");
     }

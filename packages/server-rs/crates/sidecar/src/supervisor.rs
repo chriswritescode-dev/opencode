@@ -277,7 +277,7 @@ async fn start(inner: Weak<Inner>, crashes: usize) -> Result<Arc<Live>, SidecarE
     }
     let spawned = match spawn(&inner.config, &runtime).await {
         Ok(spawned) => spawned,
-        Err(error) => return Err(start_failed(&inner, crashes, io_error(error)).await),
+        Err(error) => return Err(start_failed(&inner, crashes, error).await),
     };
 
     let prepared = fcntl_dupfd_cloexec(spawned.stream.as_fd(), 0).map_err(std::io::Error::from).and_then(|copy| {
@@ -302,6 +302,7 @@ async fn start(inner: Weak<Inner>, crashes: usize) -> Result<Arc<Live>, SidecarE
         socket,
         exit: receiver,
     });
+    let mut slot = inner.slot.lock().await;
     tokio::spawn(monitor(
         Arc::downgrade(&inner),
         generation,
@@ -312,7 +313,6 @@ async fn start(inner: Weak<Inner>, crashes: usize) -> Result<Arc<Live>, SidecarE
         inner.config.limits.clone(),
     ));
 
-    let mut slot = inner.slot.lock().await;
     if !matches!(&*slot, Slot::Starting { crashes: starting, .. } if *starting == crashes) {
         drop(slot);
         kill_group(live.pid);
@@ -351,7 +351,7 @@ async fn monitor(
                 let reason = match ended {
                     Some(reason) => reason,
                     None if shutting_down(&inner) => SidecarError::ShuttingDown,
-                    None => exited_with(status, spawned.stderr()),
+                    None => exited_with(status, spawned.drained_stderr().await),
                 };
                 exit.send_replace(Some(reason.clone()));
                 if let Some(inner) = inner.upgrade() {
@@ -383,9 +383,17 @@ async fn monitor(
                     continue;
                 }
                 seq += 1;
-                if tokio::time::timeout(limits.liveness, connection.ping(seq)).await.is_err() {
-                    ended = Some(SidecarError::Unresponsive);
-                    kill_group(pid);
+                match tokio::time::timeout(limits.liveness, connection.ping(seq)).await {
+                    Ok(Ok(())) => {}
+                    Ok(Err(error)) if !error.is_ended() => {
+                        ended = Some(error);
+                        kill_group(pid);
+                    }
+                    Ok(Err(_)) => {}
+                    Err(_) => {
+                        ended = Some(SidecarError::Unresponsive);
+                        kill_group(pid);
+                    }
                 }
             }
         }

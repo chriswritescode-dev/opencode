@@ -21,7 +21,7 @@ use opencode_util::lock;
 use crate::config::Limits;
 use crate::error::SidecarError;
 use crate::frame::{self, Broken, Frame, FrameError};
-use crate::protocol::{LocationRef, Message, RemoteError};
+use crate::protocol::{LocationRef, LogLevel, Message, RemoteError};
 
 pub type BoxFuture<T> = Pin<Box<dyn Future<Output = T> + Send>>;
 
@@ -156,6 +156,7 @@ impl Connection {
             incoming: Mutex::new(HashMap::new()),
             credits: Mutex::new(HashMap::new()),
             slots: Arc::new(Semaphore::new(limits.max_incoming)),
+            refusals: Arc::new(Semaphore::new(limits.max_incoming)),
         });
         tokio::spawn(write_frames(write, queued, Arc::downgrade(&inner)));
         tokio::spawn(read_frames(read, Arc::downgrade(&inner), limits.max_frame));
@@ -205,6 +206,8 @@ impl Connection {
         let (chunks, queued) = mpsc::channel(window);
         let (answer, outcome) = oneshot::channel();
         let id = self.inner.register(Pending::Stream { chunks, done: Some(answer), sent: 0, taken: 0 })?;
+        let stream =
+            ReplyStream { connection: self.clone(), id, chunks: queued, done: Some(outcome), finished: false, owed: 0 };
         let message = Message::Call {
             id,
             method: request.method,
@@ -213,15 +216,9 @@ impl Connection {
             params: request.params,
             stream: true,
         };
-        if let Err(error) = self.inner.send(message, request.bytes.as_deref()).await {
-            self.inner.remove(id);
-            return Err(error);
-        }
-        if let Err(error) = self.inner.send(Message::Credit { id, chunks: self.inner.window }, None).await {
-            self.inner.remove(id);
-            return Err(error);
-        }
-        Ok(ReplyStream { connection: self.clone(), id, chunks: queued, done: Some(outcome), finished: false })
+        self.inner.send(message, request.bytes.as_deref()).await?;
+        self.inner.send(Message::Credit { id, chunks: self.inner.window }, None).await?;
+        Ok(stream)
     }
 
     /// A best-effort `cancel` that never blocks the caller: the send runs on the current runtime, if there is one.
@@ -249,12 +246,21 @@ pub struct ReplyStream {
     chunks: mpsc::Receiver<Reply>,
     done: Option<oneshot::Receiver<Result<(), SidecarError>>>,
     finished: bool,
+    owed: u32,
 }
 
 impl ReplyStream {
     pub async fn next(&mut self) -> Option<Result<Reply, SidecarError>> {
         if self.finished {
             return None;
+        }
+        if self.owed > 0 {
+            let live = matches!(lock(&self.connection.inner.pending).get(&self.id), Some(Pending::Stream { .. }));
+            if live
+                && self.connection.inner.send(Message::Credit { id: self.id, chunks: self.owed }, None).await.is_ok()
+            {
+                self.owed = 0;
+            }
         }
         match self.chunks.recv().await {
             Some(reply) => {
@@ -268,7 +274,7 @@ impl ReplyStream {
                     }
                 };
                 if live {
-                    let _ = self.connection.inner.send(Message::Credit { id: self.id, chunks: 1 }, None).await;
+                    self.owed += 1;
                 }
                 Some(Ok(reply))
             }
@@ -345,6 +351,7 @@ struct Inner {
     incoming: Mutex<HashMap<u64, CancellationToken>>,
     credits: Mutex<HashMap<u64, Arc<CreditGate>>>,
     slots: Arc<Semaphore>,
+    refusals: Arc<Semaphore>,
 }
 
 impl Inner {
@@ -479,7 +486,15 @@ impl Inner {
             Message::Pong { seq, rss } => {
                 *lock(&self.pong) = Some(Pong { seq, rss, at: Instant::now() });
             }
-            Message::Log { message, .. } => eprintln!("sidecar: {message}"),
+            Message::Log { level, message } => {
+                let level = match level {
+                    LogLevel::Debug => "debug",
+                    LogLevel::Info => "info",
+                    LogLevel::Warn => "warn",
+                    LogLevel::Error => "error",
+                };
+                eprintln!("sidecar [{level}]: {message}");
+            }
             Message::Call { id, method, location, parent, params, stream } => {
                 let request = Request { method, location, params, bytes };
                 self.dispatch(id, parent, stream, request).await;
@@ -492,7 +507,15 @@ impl Inner {
         let Ok(permit) = self.slots.clone().try_acquire_owned() else {
             let error =
                 RemoteError { tag: "Busy".to_owned(), message: "too many calls in flight".to_owned(), data: None };
-            let _ = self.send(Message::Error { id, error }, None).await;
+            let Ok(refusal) = self.refusals.clone().try_acquire_owned() else {
+                let _ = self.send(Message::Error { id, error }, None).await;
+                return;
+            };
+            let inner = Arc::clone(self);
+            tokio::spawn(async move {
+                let _ = inner.send(Message::Error { id, error }, None).await;
+                drop(refusal);
+            });
             return;
         };
         let cancel = CancellationToken::new();
@@ -591,6 +614,9 @@ async fn read_frames(mut read: OwnedReadHalf, inner: Weak<Inner>, max_frame: usi
                     return;
                 };
                 inner.receive(frame).await;
+                if lock(&inner.dead).is_some() {
+                    return;
+                }
             }
             Ok(None) => {
                 if let Some(inner) = inner.upgrade() {

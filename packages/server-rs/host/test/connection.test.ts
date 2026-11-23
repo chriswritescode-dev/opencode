@@ -166,6 +166,31 @@ test("a stream respects its window and keeps chunk order", async () => {
   b.close()
 })
 
+test("cancelling a stream runs the handler's finally", async () => {
+  const { a, b } = pair(1)
+  let cleaned = false
+  b.registerStream("slow", async function* () {
+    try {
+      yield { value: { index: 0 } }
+      await new Promise((resolve) => setTimeout(resolve, 40))
+      yield { value: { index: 1 } }
+    } finally {
+      cleaned = true
+    }
+  })
+  const controller = new AbortController()
+  const iterator = a.stream("slow", null, { signal: controller.signal })[Symbol.asyncIterator]()
+  const first = await iterator.next()
+  expect(first.value).toEqual({ value: { index: 0 } })
+  controller.abort()
+  for (let index = 0; index < 200 && !cleaned; index++) {
+    await new Promise((resolve) => setTimeout(resolve, 5))
+  }
+  expect(cleaned).toBe(true)
+  a.close()
+  b.close()
+})
+
 test("an error in a stream throws at the consumer", async () => {
   const { a, b } = pair()
   b.registerStream("fail", async function* () {

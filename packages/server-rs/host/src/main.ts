@@ -9,7 +9,10 @@ supervise()
 const decoder = new Decoder(DEFAULT_MAX_FRAME)
 const frames = readFrames(decoder)
 const hello = await readHello(frames[Symbol.asyncIterator]())
-if (hello.version !== VERSION) process.exit(3)
+if (hello.version !== VERSION) {
+  console.error(`sidecar protocol version ${hello.version}, expected ${VERSION}`)
+  process.exit(3)
+}
 decoder.maxFrame = hello.maxFrame
 
 const connection = new Connection(

@@ -72,7 +72,8 @@ pub fn inherited(name: &OsStr) -> bool {
 pub struct Config {
     /// The server's variables, snapshotted: the sidecar inherits the allowlisted ones and nothing else.
     pub vars: Vec<(OsString, OsString)>,
-    /// The directory the sidecar works for, told as data. It never starts Bun there.
+    /// The directory the sidecar works for, told as data. It is used only for Bun discovery, to refuse a runtime inside
+    /// the project; the sidecar never starts Bun there.
     pub directory: PathBuf,
     /// Where the sidecar's private directory is made.
     pub tmp: PathBuf,

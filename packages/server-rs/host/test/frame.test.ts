@@ -98,6 +98,29 @@ test("reports a stream cut short", () => {
   expect(() => clean.end()).not.toThrow()
 })
 
+test("decodes a large binary frame delivered in small chunks", () => {
+  const bytes = Buffer.alloc(8 << 20)
+  for (let at = 0; at < bytes.length; at++) bytes[at] = at & 0xff
+  const message: Message = { type: "chunk", id: 1, value: { index: 0 } }
+  const encoded = encode(message, bytes, DEFAULT_MAX_FRAME)
+  const decoder = new Decoder(DEFAULT_MAX_FRAME)
+  const frames: Frame[] = []
+  const start = performance.now()
+  for (let at = 0; at < encoded.length; at += 64 << 10) {
+    frames.push(...decoder.push(encoded.subarray(at, at + (64 << 10))))
+  }
+  const elapsed = performance.now() - start
+  decoder.end()
+  expect(frames).toHaveLength(1)
+  expect(frames[0].message).toEqual(message)
+  const decoded = frames[0].bytes
+  expect(decoded?.length).toBe(bytes.length)
+  expect(decoded?.[0]).toBe(0)
+  expect(decoded?.[100_000]).toBe(100_000 & 0xff)
+  expect(decoded?.[bytes.length - 1]).toBe((bytes.length - 1) & 0xff)
+  expect(elapsed).toBeLessThan(200)
+})
+
 test("reads maxFrame on every push", () => {
   const message: Message = { type: "ping", seq: 7 }
   const encoded = encode(message, undefined, DEFAULT_MAX_FRAME)

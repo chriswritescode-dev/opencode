@@ -95,8 +95,8 @@ fn semver(text: &str) -> Option<(u64, u64, u64)> {
 }
 
 /// `name` in the entries of `path`, as a server working for `directory` finds it: only in an absolute entry, as a
-/// relative or empty one is the working directory, and not inside `directory` (unless that is the home directory,
-/// which is no project): a project's own `bun` would run as soon as the server opened it.
+/// relative or empty one is the working directory, and not inside `directory` (unless that is the home directory or a
+/// filesystem root, which is no project): a project's own `bun` would run as soon as the server opened it.
 pub fn find_in(name: &str, path: &OsStr, directory: &Path, home: Option<&Path>) -> Option<PathBuf> {
     found_in(name, path, directory, home).into_iter().next()
 }
@@ -111,9 +111,10 @@ fn found_in(name: &str, path: &OsStr, directory: &Path, home: Option<&Path>) -> 
         .collect()
 }
 
-/// Whether `path` is outside the project in `directory`; a home directory is no project.
+/// Whether `path` is outside the project in `directory`; a home directory or a filesystem root is no project.
 fn outside(path: &Path, directory: &Path, home: Option<&Path>) -> bool {
     let real = |path: &Path| std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
     let project = real(directory);
-    Some(&project) == home.map(real).as_ref() || !real(path).starts_with(&project)
+    let no_project = project.parent().is_none() || Some(&project) == home.map(real).as_ref();
+    no_project || !real(path).starts_with(&project)
 }

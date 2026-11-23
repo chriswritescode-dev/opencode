@@ -184,6 +184,7 @@ async fn a_javascript_consumer_drains_a_rust_stream() {
         })
     });
     let config = support::config();
+    let window = u64::from(config.limits.window);
     let Some((_host, connection)) = connect(&config, handlers).await else { return };
 
     let request = Request::new(
@@ -191,11 +192,13 @@ async fn a_javascript_consumer_drains_a_rust_stream() {
         json!({
             "method": "test.many",
             "params": { "count": 200 },
-            "delayMs": 0,
+            "delayMs": 1,
         }),
     );
     let reply = within(connection.call(request)).await.expect("a reply");
-    assert_eq!(reply.value, json!(200));
+    assert_eq!(reply.value["count"], json!(200));
+    let buffered = reply.value["maxBuffered"].as_u64().expect("a count");
+    assert!(buffered <= window, "a max buffered of {buffered} stays within the window of {window}");
 }
 
 #[tokio::test]

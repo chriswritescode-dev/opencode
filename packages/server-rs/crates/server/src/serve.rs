@@ -113,7 +113,11 @@ pub(crate) async fn start(
     let urls = Arc::new(move || connection_urls(address));
     #[cfg(unix)]
     let sidecar = opencode_sidecar::supervisor::Sidecar::new(
-        opencode_sidecar::config::Config::new(env.vars(), std::env::current_dir()?, tmp.clone()),
+        opencode_sidecar::config::Config::new(
+            env.vars(),
+            std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/")),
+            tmp.clone(),
+        ),
         opencode_sidecar::connection::Handlers::default(),
     );
     #[cfg(not(unix))]

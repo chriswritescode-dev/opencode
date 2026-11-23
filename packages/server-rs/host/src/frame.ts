@@ -30,35 +30,87 @@ export function encode(message: Message, bytes: Uint8Array | undefined, maxFrame
 
 export class Decoder {
   maxFrame: number
-  private buffer = Buffer.alloc(0)
+  private chunks: Buffer[] = []
+  private size = 0
 
   constructor(maxFrame: number) {
     this.maxFrame = maxFrame
   }
 
   push(chunk: Uint8Array): Frame[] {
-    const joined = this.buffer.length === 0 ? Buffer.from(chunk) : Buffer.concat([this.buffer, chunk])
-    const frames: Frame[] = []
-    let at = 0
-    while (joined.length - at >= HEADER) {
-      const len = joined.readUInt32LE(at)
-      const kind = joined[at + 4]
-      if (kind !== JSON && kind !== BINARY) throw new Error(`a frame of unknown kind ${kind}`)
-      if (len > this.maxFrame) throw new Error(`a frame of kind ${kind} and ${len} bytes, over its cap`)
-      if (joined.length - at < HEADER + len) break
-      frames.push(decode(kind, joined.subarray(at + HEADER, at + HEADER + len)))
-      at += HEADER + len
-    }
-    this.buffer = at === joined.length ? Buffer.alloc(0) : Buffer.from(joined.subarray(at))
-    return frames
+    const chunks = [...this.chunks]
+    if (chunk.length > 0) chunks.push(asBuffer(chunk))
+    const decoded = drain(chunks, this.size + chunk.length, this.maxFrame)
+    this.chunks = decoded.chunks
+    this.size = decoded.size
+    return decoded.frames
   }
 
   end(): void {
-    const got = this.buffer.length
+    const got = this.size
     if (got === 0) return
     if (got < HEADER) throw new Error(`a frame cut short: ${got} of ${HEADER} bytes`)
-    throw new Error(`a frame cut short: ${got} of ${HEADER + this.buffer.readUInt32LE(0)} bytes`)
+    throw new Error(`a frame cut short: ${got} of ${HEADER + collect(this.chunks, HEADER).readUInt32LE(0)} bytes`)
   }
+}
+
+function drain(
+  chunks: Buffer[],
+  size: number,
+  maxFrame: number,
+): { frames: Frame[]; chunks: Buffer[]; size: number } {
+  const frames: Frame[] = []
+  for (;;) {
+    if (size < HEADER) break
+    const header = collect(chunks, HEADER)
+    const kind = header[4]
+    if (kind !== JSON && kind !== BINARY) throw new Error(`a frame of unknown kind ${kind}`)
+    const len = header.readUInt32LE(0)
+    if (len > maxFrame) throw new Error(`a frame of kind ${kind} and ${len} bytes, over its cap`)
+    if (size < HEADER + len) break
+    frames.push(decode(kind, take(chunks, HEADER + len).subarray(HEADER)))
+    size -= HEADER + len
+  }
+  return { frames, chunks, size }
+}
+
+function asBuffer(chunk: Uint8Array): Buffer {
+  if (Buffer.isBuffer(chunk)) return chunk
+  return Buffer.from(chunk.buffer, chunk.byteOffset, chunk.length)
+}
+
+function collect(chunks: Buffer[], bytes: number): Buffer {
+  const first = chunks[0]
+  if (first.length >= bytes) return first.subarray(0, bytes)
+  const header = Buffer.allocUnsafe(bytes)
+  let at = 0
+  for (const chunk of chunks) {
+    const copy = Math.min(chunk.length, bytes - at)
+    chunk.copy(header, at, 0, copy)
+    at += copy
+    if (at === bytes) break
+  }
+  return header
+}
+
+function take(chunks: Buffer[], bytes: number): Buffer {
+  const first = chunks[0]
+  if (first.length >= bytes) {
+    if (first.length === bytes) chunks.shift()
+    else chunks[0] = first.subarray(bytes)
+    return first.subarray(0, bytes)
+  }
+  const frame = Buffer.allocUnsafe(bytes)
+  let at = 0
+  while (at < bytes) {
+    const chunk = chunks[0]
+    const copy = Math.min(chunk.length, bytes - at)
+    chunk.copy(frame, at, 0, copy)
+    at += copy
+    if (copy === chunk.length) chunks.shift()
+    else chunks[0] = chunk.subarray(copy)
+  }
+  return frame
 }
 
 function decode(kind: number, payload: Buffer): Frame {

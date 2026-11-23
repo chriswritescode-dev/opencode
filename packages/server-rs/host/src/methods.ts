@@ -20,7 +20,7 @@ export function register(
   connection.register("host.streamStats", async () => ({
     value: { maxInflight: connection.stats.maxInflight },
   }))
-  connection.register("host.consume", consume)
+  connection.register("host.consume", (ctx, params) => consume(connection, ctx, params))
   connection.register("host.abort", abortCall)
   connection.register("host.crash", crash)
   connection.register("host.oversize", async () => {
@@ -102,7 +102,7 @@ async function* stream(ctx: Context, params: JsonValue): AsyncIterable<Outcome> 
   }
 }
 
-async function consume(ctx: Context, params: JsonValue): Promise<Outcome> {
+async function consume(connection: Connection, ctx: Context, params: JsonValue): Promise<Outcome> {
   const method = stringAt(params, "method", "")
   const inner = isRecord(params) ? (params.params ?? null) : null
   const delayMs = numberAt(params, "delayMs", 0)
@@ -111,7 +111,7 @@ async function consume(ctx: Context, params: JsonValue): Promise<Outcome> {
     chunks += 1
     if (delayMs > 0) await new Promise((resolve) => setTimeout(resolve, delayMs))
   }
-  return { value: chunks }
+  return { value: { count: chunks, maxBuffered: connection.stats.maxBuffered } }
 }
 
 async function abortCall(ctx: Context, params: JsonValue): Promise<Outcome> {
@@ -151,8 +151,8 @@ async function allocate(_ctx: Context, params: JsonValue): Promise<Outcome> {
 
 async function print(_ctx: Context, params: JsonValue): Promise<Outcome> {
   const text = stringAt(params, "text", "")
-  fs.writeSync(1, text)
-  console.error(text)
+  fs.writeSync(1, `${text}:stdout\n`)
+  console.error(`${text}:stderr`)
   return { value: null }
 }
 

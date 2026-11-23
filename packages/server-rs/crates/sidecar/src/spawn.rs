@@ -19,6 +19,7 @@ use opencode_util::temp::TempDir;
 
 use crate::bun::Runtime;
 use crate::config::{Config, inherited};
+use crate::error::SidecarError;
 use crate::frame::{self, Frame};
 use crate::protocol::{MAGIC, Message, VERSION};
 
@@ -46,6 +47,13 @@ impl Spawned {
     pub fn stderr(&self) -> Vec<String> {
         lock(&self.stderr).iter().cloned().collect()
     }
+
+    pub async fn drained_stderr(&mut self) -> Vec<String> {
+        for reader in &mut self.readers {
+            let _ = timeout(Duration::from_millis(500), reader).await;
+        }
+        self.stderr()
+    }
 }
 
 impl Drop for Spawned {
@@ -57,13 +65,13 @@ impl Drop for Spawned {
 }
 
 /// Starts `runtime` in a private directory under `config.tmp` and completes the handshake.
-pub async fn spawn(config: &Config, runtime: &Runtime) -> io::Result<Spawned> {
-    let dir = TempDir::new_in(&config.tmp)?;
-    std::fs::write(dir.path().join("host.js"), HOST)?;
-    std::fs::write(dir.path().join("bunfig.toml"), BUNFIG)?;
+pub async fn spawn(config: &Config, runtime: &Runtime) -> Result<Spawned, SidecarError> {
+    let dir = TempDir::new_in(&config.tmp).map_err(spawn_failed)?;
+    std::fs::write(dir.path().join("host.js"), HOST).map_err(spawn_failed)?;
+    std::fs::write(dir.path().join("bunfig.toml"), BUNFIG).map_err(spawn_failed)?;
 
-    let (ours, theirs) = std::os::unix::net::UnixStream::pair()?;
-    ours.set_nonblocking(true)?;
+    let (ours, theirs) = std::os::unix::net::UnixStream::pair().map_err(spawn_failed)?;
+    ours.set_nonblocking(true).map_err(spawn_failed)?;
 
     let mut command = Command::new(&runtime.bun);
     command
@@ -88,33 +96,31 @@ pub async fn spawn(config: &Config, runtime: &Runtime) -> io::Result<Spawned> {
         .arg(dir.path().join("host.js"));
     std::os::unix::process::CommandExt::process_group(command.as_std_mut(), 0);
 
-    let mut child = command.spawn()?;
-    let stdout = child.stdout.take().ok_or_else(|| io::Error::other("the sidecar has no stdout"))?;
-    let stderr_pipe = child.stderr.take().ok_or_else(|| io::Error::other("the sidecar has no stderr"))?;
+    let mut child = command.spawn().map_err(spawn_failed)?;
+    let stdout = child.stdout.take().ok_or_else(|| SidecarError::Spawn("the sidecar has no stdout".to_owned()))?;
+    let stderr_pipe = child.stderr.take().ok_or_else(|| SidecarError::Spawn("the sidecar has no stderr".to_owned()))?;
     let stderr = Arc::new(Mutex::new(VecDeque::new()));
-    let mut readers = vec![
+    let readers = vec![
         tokio::spawn(forward(stdout, Arc::clone(&stderr))),
         tokio::spawn(forward(stderr_pipe, Arc::clone(&stderr))),
     ];
 
-    let mut stream = UnixStream::from_std(ours)?;
-    let ready = timeout(config.limits.handshake, handshake(&mut stream, config)).await;
-    let pid = match ready {
-        Ok(Ok(pid)) => pid,
-        Ok(Err(error)) => return Err(report(&mut child, &stderr, &mut readers, error).await),
-        Err(_elapsed) => {
-            let error = io::Error::new(
-                io::ErrorKind::TimedOut,
-                format!("the sidecar was not ready within {:?}", config.limits.handshake),
-            );
-            return Err(report(&mut child, &stderr, &mut readers, error).await);
-        }
+    let stream = UnixStream::from_std(ours).map_err(spawn_failed)?;
+    let Some(pid) = child.id() else {
+        return Err(SidecarError::Handshake("the sidecar exited before the handshake".to_owned()));
     };
-
-    Ok(Spawned { child, stream, pid, stderr, readers, _dir: dir })
+    let mut spawned = Spawned { child, stream, pid, stderr, readers, _dir: dir };
+    match timeout(config.limits.handshake, handshake(&mut spawned.stream, config)).await {
+        Ok(Ok(())) => Ok(spawned),
+        Ok(Err(error)) => Err(report(&mut spawned, error.to_string()).await),
+        Err(_elapsed) => {
+            let message = format!("the sidecar was not ready within {:?}", config.limits.handshake);
+            Err(report(&mut spawned, message).await)
+        }
+    }
 }
 
-async fn handshake(stream: &mut UnixStream, config: &Config) -> io::Result<u32> {
+async fn handshake(stream: &mut UnixStream, config: &Config) -> io::Result<()> {
     let hello = Message::Hello {
         version: VERSION,
         max_frame: u32::try_from(config.limits.max_frame).unwrap_or(u32::MAX),
@@ -128,9 +134,9 @@ async fn handshake(stream: &mut UnixStream, config: &Config) -> io::Result<u32> 
 
     loop {
         match frame::read(stream, config.limits.max_frame).await {
-            Ok(Some(Frame { message: Message::Ready { magic, version, pid }, .. })) => {
+            Ok(Some(Frame { message: Message::Ready { magic, version, .. }, .. })) => {
                 if magic == MAGIC && version == VERSION {
-                    return Ok(pid);
+                    return Ok(());
                 }
                 return Err(io::Error::new(
                     io::ErrorKind::InvalidData,
@@ -146,22 +152,18 @@ async fn handshake(stream: &mut UnixStream, config: &Config) -> io::Result<u32> 
     }
 }
 
-/// Kills `child`, lets the line readers drain what it wrote, and adds the last lines, which say why it failed.
-async fn report(
-    child: &mut Child,
-    stderr: &Arc<Mutex<VecDeque<String>>>,
-    readers: &mut Vec<JoinHandle<()>>,
-    error: io::Error,
-) -> io::Error {
-    let _ = child.kill().await;
-    for reader in readers.drain(..) {
-        let _ = timeout(Duration::from_millis(500), reader).await;
-    }
-    let lines = lock(stderr).iter().cloned().collect::<Vec<_>>();
+/// Kills the process, lets the line readers drain what it wrote, and adds the last lines, which say why it failed.
+async fn report(spawned: &mut Spawned, message: String) -> SidecarError {
+    let _ = spawned.child.kill().await;
+    let lines = spawned.drained_stderr().await;
     if lines.is_empty() {
-        return error;
+        return SidecarError::Handshake(message);
     }
-    io::Error::new(error.kind(), format!("{error}; the sidecar's last stderr:\n{}", lines.join("\n")))
+    SidecarError::Handshake(format!("{message}; the sidecar's last stderr:\n{}", lines.join("\n")))
+}
+
+fn spawn_failed(error: io::Error) -> SidecarError {
+    SidecarError::Spawn(error.to_string())
 }
 
 /// Writes every line the host prints to the server's stderr and keeps the last [`STDERR_LINES`] of them.

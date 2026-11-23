@@ -17,7 +17,7 @@ export type Transport = {
   write: (bytes: Uint8Array) => void
   frames: AsyncIterable<Frame>
 }
-export type Stats = { maxInflight: number }
+export type Stats = { maxInflight: number; maxBuffered: number }
 
 type CallMessage = Extract<Message, { type: "call" }>
 
@@ -52,7 +52,7 @@ type Incoming = {
 
 export class Connection {
   readonly done: Promise<void>
-  readonly stats: Stats = { maxInflight: 0 }
+  readonly stats: Stats = { maxInflight: 0, maxBuffered: 0 }
   onControl: (message: Message) => void = () => {}
 
   private readonly transport: Transport
@@ -112,7 +112,10 @@ export class Connection {
       wake(pending)
     }
     this.pending.clear()
-    for (const incoming of this.incoming.values()) incoming.controller.abort()
+    for (const incoming of this.incoming.values()) {
+      incoming.controller.abort()
+      release(incoming)
+    }
     this.incoming.clear()
     this.finish()
   }
@@ -274,6 +277,7 @@ export class Connection {
       const pending = this.pending.get(message.id)
       if (pending === undefined || pending.kind !== "stream" || pending.closed) return
       pending.queue.push(outcomeOf(message.value, frame.bytes))
+      this.stats.maxBuffered = Math.max(this.stats.maxBuffered, pending.queue.length)
       wake(pending)
       return
     }
@@ -293,9 +297,7 @@ export class Connection {
       if (incoming.granted === undefined) incoming.granted = message.chunks
       else incoming.credited += message.chunks
       incoming.credit += message.chunks
-      const wakeIncoming = incoming.wake
-      incoming.wake = undefined
-      wakeIncoming?.()
+      release(incoming)
       return
     }
     if (message.type === "cancel") {
@@ -303,9 +305,7 @@ export class Connection {
       if (incoming === undefined) return
       this.incoming.delete(message.id)
       incoming.controller.abort()
-      const wakeIncoming = incoming.wake
-      incoming.wake = undefined
-      wakeIncoming?.()
+      release(incoming)
       return
     }
     this.onControl(message)
@@ -348,9 +348,10 @@ export class Connection {
       this.dropIncoming(message.id)
       return
     }
+    let iterator: AsyncIterator<Outcome> | undefined
     try {
       const iterable = handler(this.context(message, incoming.controller.signal), message.params, bytes)
-      const iterator = iterable[Symbol.asyncIterator]()
+      iterator = iterable[Symbol.asyncIterator]()
       for (;;) {
         while (incoming.credit <= 0) {
           if (incoming.controller.signal.aborted) return
@@ -361,6 +362,7 @@ export class Connection {
         }
         if (incoming.controller.signal.aborted) return
         const next = await iterator.next()
+        if (incoming.controller.signal.aborted) return
         if (next.done === true) break
         incoming.credit -= 1
         incoming.sent += 1
@@ -376,6 +378,7 @@ export class Connection {
         thrown instanceof Error ? thrown.message : String(thrown),
       )
     } finally {
+      await Promise.resolve(iterator?.return?.()).catch(() => undefined)
       this.dropIncoming(message.id)
     }
   }
@@ -448,4 +451,10 @@ function wake(entry: PendingStream): void {
   const waiters = entry.waiters
   entry.waiters = []
   for (const waiter of waiters) waiter()
+}
+
+function release(incoming: Incoming): void {
+  const wakeIncoming = incoming.wake
+  incoming.wake = undefined
+  wakeIncoming?.()
 }

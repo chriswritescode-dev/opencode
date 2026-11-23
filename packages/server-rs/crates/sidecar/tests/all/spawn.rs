@@ -57,7 +57,9 @@ async fn print_output_does_not_break_the_protocol() {
 
     assert_eq!(printed, Value::Null);
     assert_eq!(echoed, json!({ "after": true }));
-    assert!(wait_for(&spawned, "sidecar-print-marker").await, "the printed line is kept");
+    for marker in ["sidecar-print-marker:stdout", "sidecar-print-marker:stderr"] {
+        assert!(wait_for(&spawned, marker).await, "{marker} is kept");
+    }
 }
 
 async fn call(spawned: &mut Spawned, id: u64, method: &str, params: Value) -> Value {

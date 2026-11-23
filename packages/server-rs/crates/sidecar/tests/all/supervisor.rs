@@ -120,10 +120,10 @@ async fn a_crash_fails_the_calls_in_flight_and_restarts_after_the_backoff() {
     tokio::time::sleep(Duration::from_millis(100)).await;
 
     let crash = within(sidecar.call(Request::new("host.crash", json!({ "code": 7 })))).await;
-    assert!(matches!(crash, Err(SidecarError::Exited { .. })), "{crash:?}");
+    assert!(matches!(crash, Err(SidecarError::Exited { status: Some(7), .. })), "{crash:?}");
     for sleep in sleeps {
         let result = within(sleep).await.expect("the call task");
-        assert!(matches!(result, Err(SidecarError::Exited { .. })), "{result:?}");
+        assert!(matches!(result, Err(SidecarError::Exited { status: Some(7), .. })), "{result:?}");
     }
 
     let mut state = sidecar.state();
@@ -224,8 +224,8 @@ async fn max_outgoing_bounds_the_calls_in_flight() {
 #[tokio::test]
 async fn crashes_back_off_and_then_disable_the_sidecar() {
     let mut config = support::config();
-    config.limits.backoff_initial = Duration::from_millis(50);
-    config.limits.backoff_max = Duration::from_millis(400);
+    config.limits.backoff_initial = Duration::from_millis(300);
+    config.limits.backoff_max = Duration::from_secs(2);
     config.limits.crash_limit = 3;
     config.limits.crash_window = Duration::from_secs(60);
     let Some(_runtime) = support::runtime(&config).await else { return };
@@ -239,7 +239,7 @@ async fn crashes_back_off_and_then_disable_the_sidecar() {
 
     let error = sidecar.call(echo()).await.expect_err("a backoff");
     let SidecarError::Unavailable { retry_in: first } = error else { panic!("{error:?}") };
-    assert!(first > Duration::ZERO);
+    assert!(first >= Duration::from_millis(250), "the first backoff of {first:?} is the 300 ms initial");
     tokio::time::sleep(first + Duration::from_millis(100)).await;
 
     within(sidecar.call(echo())).await.expect("generation 2");
@@ -252,6 +252,7 @@ async fn crashes_back_off_and_then_disable_the_sidecar() {
     let error = sidecar.call(echo()).await.expect_err("a backoff");
     let SidecarError::Unavailable { retry_in: second } = error else { panic!("{error:?}") };
     assert!(second > first, "the second backoff of {second:?} grows past {first:?}");
+    assert!(second >= Duration::from_millis(500), "the second backoff of {second:?} nearly doubles the 300 ms initial");
     tokio::time::sleep(second + Duration::from_millis(100)).await;
 
     within(sidecar.call(echo())).await.expect("generation 3");

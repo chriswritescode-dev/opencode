@@ -5,14 +5,16 @@ describes that process as `opencode-sidecar` (`crates/sidecar`) implements it.
 
 ## Overview
 
-There is one sidecar per server process. `Running` in `crates/server/src/serve.rs` owns a single `Sidecar`, made from
-the server's variables (`ServerEnv`), its working directory and the temporary directory it already uses.
+There is one sidecar per server process on Linux and macOS; Windows has no sidecar for now. `Running` in
+`crates/server/src/serve.rs` owns a single `Sidecar`, made from the server's variables (`ServerEnv`), its working
+directory (`/` when it cannot be read) and the temporary directory it already uses. The server methods the host may
+call are the `Handlers` given to `Sidecar::new`; they are fixed for the life of the `Sidecar`.
 
 The sidecar is lazy: `Sidecar::new` starts nothing, and the first call or stream starts Bun, which then stays up until
 shutdown. Concurrent first callers share that one start. The server and the child talk over a socket placed on the
 child's fd 0, so the sidecar reads its input from stdin and needs no listening socket. The child's stdout and stderr
 are forwarded line by line to the server's stderr with a `sidecar: ` prefix, and the last 20 lines are kept for error
-messages.
+messages. A `log` message from the host is printed as `sidecar [<level>]: <message>`.
 
 ## Frames
 
@@ -61,7 +63,8 @@ and never edit it by hand.
 chunks, and `hello.heartbeatMs` the interval at which the server pings. `hello.test` asks the host to also register
 its test-only methods; the server leaves `Config::test_methods` off.
 
-`ready.pid` is the child's process id and `pong.rss` its resident set size in bytes. `call.params` and the `value` of
+`ready.pid` is the host's own process id, for diagnostics only: the server supervises and kills the process group of
+the child it spawned, whose id it already knows. `pong.rss` is the host's resident set size in bytes. `call.params` and the `value` of
 `result` and `chunk` are arbitrary JSON. `call.parent` names the call that caused this one when the host calls back
 into the server. A stream `call` carries `stream: true`, and its `chunk`s are followed by either `end` or `error`.
 
@@ -81,7 +84,9 @@ best effort: the receiver drops the call, and a reply already on its way is igno
 gone.
 
 A stream starts with the caller sending `credit { chunks: window }`. Each chunk sent spends one credit, and the caller
-grants one back for each chunk it consumes. A `chunk` beyond the granted credit breaks the connection.
+grants one back for each chunk it consumes. The server's `ReplyStream` sends the credit it owes when it is next asked
+for a chunk, in one `credit`, so dropping a pending `next()` loses neither a chunk nor a credit. A `chunk` beyond the
+granted credit breaks the connection.
 
 ## Limits
 
@@ -114,11 +119,13 @@ as they change.
   Every other caller that arrives meanwhile waits on the same result instead of starting another process.
 - `Ready` holds one generation. The monitor task pings it every `heartbeat` and records each `pong`.
 - A `pong.rss` above `memory` ends the generation with `MemoryExceeded`. No `pong` within `liveness` of the last one,
-  or no answer to a `ping` within `liveness`, ends it with `Unresponsive`. Either way the process group is killed.
+  or no answer to a `ping` within `liveness`, ends it with `Unresponsive`. A connection broken by the host, such as a
+  `chunk` beyond its credit, ends it at the next `ping` with that `ProtocolBroken` reason. Each way the process group
+  is killed.
 - A crash after `crash_window` of uptime counts as the first; otherwise the count grows. The delay is
   `backoff_initial * 2^(crashes - 1)`, capped at `backoff_max`, and `crash_limit` crashes in a row leave the sidecar
   `Disabled` until a new `Sidecar` is made. A start that fails after a runtime is found, in spawning it or setting up
-  the socket, counts as a crash too, so a broken runtime backs off instead of retrying in a hot loop; a runtime that
+  the socket (`Spawn`) or in the handshake (`Handshake`, with the last stderr lines), counts as a crash too, so a broken runtime backs off instead of retrying in a hot loop; a runtime that
   cannot be found returns to `Idle` without counting one.
 - Every generation has one typed exit reason: `Exited` with the status, signal and last stderr lines, or
   `Unresponsive`, `MemoryExceeded` or `ShuttingDown`. The connection reports its own end first, and a failing call or
@@ -141,7 +148,8 @@ as they change.
 4. `bun` on `PATH`, in an absolute entry only and outside the project directory.
 
 Relative and empty `PATH` entries are skipped: they are the working directory, so they are the project's own tools.
-A project that happens to be the home directory counts as no project, and a runtime there is accepted.
+A project that happens to be the home directory or a filesystem root counts as no project, and a runtime there is
+accepted.
 
 The probe for candidates 2 to 4 runs `<binary> --version` in the binary's own directory with a cleared environment,
 `BUN_BE_BUN=1`, only the variables in `NAMES`, and a one-second timeout. It must exit successfully and print one
@@ -180,14 +188,15 @@ is put in its own process group, which is what shutdown and a dropped handle kil
 
 Measured on 2026-11-23 from a release build in the development sandbox with `bun run measure:sidecar`, which runs
 `cargo test --release -p opencode-sidecar --test all measure -- --ignored --nocapture`. These are single-run figures:
-the memory rows move by several MiB between runs as Bun collects garbage.
+the memory rows move by several MiB between runs as Bun collects garbage. They were taken again after the host's frame
+decoder stopped copying a frame once per incoming chunk, which cut the 1 MiB p50 from 2.55 ms to 0.54 ms.
 
 | Measurement                              | Value                |
 | ---------------------------------------- | -------------------- |
 | Bun                                      | 1.4.4                |
 | Platform                                 | linux x86_64, 4 CPUs |
-| Memory, idle: RSS / peak                 | 26.5 MiB / 26.5 MiB  |
-| Memory, Effect loaded: RSS / peak        | 62.8 MiB / 62.8 MiB  |
-| Memory, sample plugin loaded: RSS / peak | 74.0 MiB / 74.0 MiB  |
-| Latency, small echo: p50 / p99           | 0.03 ms / 0.06 ms    |
-| Latency, 1 MiB echo: p50 / p99           | 2.55 ms / 5.65 ms    |
+| Memory, idle: RSS / peak                 | 27.1 MiB / 27.1 MiB  |
+| Memory, Effect loaded: RSS / peak        | 54.7 MiB / 54.7 MiB  |
+| Memory, sample plugin loaded: RSS / peak | 62.5 MiB / 62.5 MiB  |
+| Latency, small echo: p50 / p99           | 0.03 ms / 0.05 ms    |
+| Latency, 1 MiB echo: p50 / p99           | 0.54 ms / 3.66 ms    |
