@@ -1,0 +1,174 @@
+{
+  "cassette": "bedrock-converse/streams-a-tool-call",
+  "protocol": "bedrock-converse",
+  "routeId": "bedrock-converse",
+  "clockEpochMs": 1767323045000,
+  "steps": [
+    {
+      "model": {
+        "id": "us.amazon.nova-micro-v1:0",
+        "provider": "amazon-bedrock",
+        "route": {
+          "id": "bedrock-converse",
+          "protocol": "bedrock-converse",
+          "providerMetadataKey": "bedrock"
+        },
+        "endpoint": {
+          "baseURL": "https://bedrock-runtime.us-east-1.amazonaws.com",
+          "path": null
+        },
+        "transport": "http",
+        "auth": {
+          "type": "sigv4",
+          "region": "us-east-1",
+          "accessKeyId": "fixture",
+          "secretAccessKey": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_bedrock_tool_call",
+        "maxTokens": 80,
+        "temperature": 0,
+        "cache": "none",
+        "system": [
+          {
+            "type": "text",
+            "text": "Call tools exactly as requested."
+          }
+        ],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Call get_weather with city exactly Paris."
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "tool",
+            "name": "get_weather",
+            "description": "Get current weather for a city.",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "city": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "city"
+              ],
+              "additionalProperties": false
+            }
+          }
+        ],
+        "toolChoice": {
+          "type": "tool",
+          "name": "get_weather"
+        }
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://bedrock-runtime.us-east-1.amazonaws.com/model/us.amazon.nova-micro-v1%3A0/converse-stream",
+            "headers": {
+              "authorization": "AWS4-HMAC-SHA256 Credential=fixture/20260102/us-east-1/bedrock/aws4_request, SignedHeaders=host;x-amz-date, Signature=c1ca2423146f6806616720cffd8ff97adc14197cc17c7132a39e7cef44860452",
+              "content-length": "523",
+              "content-type": "application/json",
+              "x-amz-date": "20260102T030405Z"
+            },
+            "body": "{\"modelId\":\"us.amazon.nova-micro-v1:0\",\"messages\":[{\"role\":\"user\",\"content\":[{\"text\":\"Call get_weather with city exactly Paris.\"}]}],\"system\":[{\"text\":\"Call tools exactly as requested.\"}],\"inferenceConfig\":{\"maxTokens\":80,\"temperature\":0},\"toolConfig\":{\"tools\":[{\"toolSpec\":{\"name\":\"get_weather\",\"description\":\"Get current weather for a city.\",\"inputSchema\":{\"json\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\"}},\"required\":[\"city\"],\"additionalProperties\":false}}}}],\"toolChoice\":{\"tool\":{\"name\":\"get_weather\"}}}}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "application/vnd.amazon.eventstream"
+            },
+            "body": "AAAAuQAAAFL9kIXUCzpldmVudC10eXBlBwAMbWVzc2FnZVN0YXJ0DTpjb250ZW50LXR5cGUHABBhcHBsaWNhdGlvbi9qc29uDTptZXNzYWdlLXR5cGUHAAVldmVudHsicCI6ImFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVowMTIzNDU2NyIsInJvbGUiOiJhc3Npc3RhbnQifWf51EkAAAEMAAAAV56BJZoLOmV2ZW50LXR5cGUHABFjb250ZW50QmxvY2tTdGFydA06Y29udGVudC10eXBlBwAQYXBwbGljYXRpb24vanNvbg06bWVzc2FnZS10eXBlBwAFZXZlbnR7ImNvbnRlbnRCbG9ja0luZGV4IjowLCJwIjoiYWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXpBQkNERUZHSElKS0xNTk9QUVJTVFUiLCJzdGFydCI6eyJ0b29sVXNlIjp7Im5hbWUiOiJnZXRfd2VhdGhlciIsInRvb2xVc2VJZCI6InRvb2x1c2VfNmExcFB2bmM5OUdMS08zS0drVUEyTiJ9fX2LR7PFAAAA4gAAAFfCOY+BCzpldmVudC10eXBlBwARY29udGVudEJsb2NrRGVsdGENOmNvbnRlbnQtdHlwZQcAEGFwcGxpY2F0aW9uL2pzb24NOm1lc3NhZ2UtdHlwZQcABWV2ZW50eyJjb250ZW50QmxvY2tJbmRleCI6MCwiZGVsdGEiOnsidG9vbFVzZSI6eyJpbnB1dCI6IntcImNpdHlcIjpcIlBhcmlzXCJ9In19LCJwIjoiYWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXpBQkNERUZHSElKS0xNTiJ9RkW+2gAAAIcAAABW5OxHKgs6ZXZlbnQtdHlwZQcAEGNvbnRlbnRCbG9ja1N0b3ANOmNvbnRlbnQtdHlwZQcAEGFwcGxpY2F0aW9uL2pzb24NOm1lc3NhZ2UtdHlwZQcABWV2ZW50eyJjb250ZW50QmxvY2tJbmRleCI6MCwicCI6ImFiYyJ9y6nrtwAAAK4AAABRtlmf/As6ZXZlbnQtdHlwZQcAC21lc3NhZ2VTdG9wDTpjb250ZW50LXR5cGUHABBhcHBsaWNhdGlvbi9qc29uDTptZXNzYWdlLXR5cGUHAAVldmVudHsicCI6ImFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6QUJDREVGR0hJSktMTU5PUFFSUyIsInN0b3BSZWFzb24iOiJ0b29sX3VzZSJ9MTlQawAAAOIAAABOplInQQs6ZXZlbnQtdHlwZQcACG1ldGFkYXRhDTpjb250ZW50LXR5cGUHABBhcHBsaWNhdGlvbi9qc29uDTptZXNzYWdlLXR5cGUHAAVldmVudHsibWV0cmljcyI6eyJsYXRlbmN5TXMiOjM1NX0sInAiOiJhYmNkZWZnaGlqayIsInVzYWdlIjp7ImlucHV0VG9rZW5zIjo0MTksIm91dHB1dFRva2VucyI6MTYsInNlcnZlclRvb2xVc2FnZSI6e30sInRvdGFsVG9rZW5zIjo0MzV9fU1tVJc=",
+            "bodyEncoding": "base64"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "tool-input-start",
+          "id": "tooluse_6a1pPvnc99GLKO3KGkUA2N",
+          "name": "get_weather"
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "tooluse_6a1pPvnc99GLKO3KGkUA2N",
+          "name": "get_weather",
+          "text": "{\"city\":\"Paris\"}",
+          "input": {
+            "city": "Paris"
+          }
+        },
+        {
+          "type": "tool-input-end",
+          "id": "tooluse_6a1pPvnc99GLKO3KGkUA2N",
+          "name": "get_weather"
+        },
+        {
+          "type": "tool-call",
+          "id": "tooluse_6a1pPvnc99GLKO3KGkUA2N",
+          "name": "get_weather",
+          "input": {
+            "city": "Paris"
+          }
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "tool-calls",
+            "raw": "tool_use"
+          },
+          "usage": {
+            "inputTokens": 419,
+            "outputTokens": 16,
+            "nonCachedInputTokens": 419,
+            "totalTokens": 435,
+            "providerMetadata": {
+              "bedrock": {
+                "inputTokens": 419,
+                "outputTokens": 16,
+                "totalTokens": 435
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "tool-calls",
+            "raw": "tool_use"
+          },
+          "usage": {
+            "inputTokens": 419,
+            "outputTokens": 16,
+            "nonCachedInputTokens": 419,
+            "totalTokens": 435,
+            "providerMetadata": {
+              "bedrock": {
+                "inputTokens": 419,
+                "outputTokens": 16,
+                "totalTokens": 435
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

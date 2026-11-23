@@ -1,0 +1,243 @@
+{
+  "cassette": "bedrock-converse-options/sends-claude-effort-with-adaptive-thinking-service-tier-and-request-metadata",
+  "protocol": "bedrock-converse",
+  "routeId": "bedrock-converse",
+  "clockEpochMs": 1767323045000,
+  "steps": [
+    {
+      "model": {
+        "id": "us.anthropic.claude-sonnet-4-6",
+        "provider": "amazon-bedrock",
+        "route": {
+          "id": "bedrock-converse",
+          "protocol": "bedrock-converse",
+          "providerMetadataKey": "bedrock"
+        },
+        "endpoint": {
+          "baseURL": "https://bedrock-runtime.us-east-1.amazonaws.com",
+          "path": null
+        },
+        "options": {
+          "providerOptions": {
+            "effort": "high",
+            "thinking": {
+              "type": "adaptive",
+              "display": "summarized"
+            },
+            "serviceTier": "default",
+            "requestMetadata": {
+              "suite": "opencode-ai"
+            }
+          }
+        },
+        "modelOptions": {
+          "providerOptions": {
+            "effort": "high",
+            "thinking": {
+              "type": "adaptive",
+              "display": "summarized"
+            },
+            "serviceTier": "default",
+            "requestMetadata": {
+              "suite": "opencode-ai"
+            }
+          }
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_bedrock_options_claude",
+        "maxTokens": 4000,
+        "cache": "none",
+        "system": [],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "How many primes are below 60? Reply with the number only."
+              }
+            ]
+          }
+        ],
+        "tools": []
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/converse-stream",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "387",
+              "content-type": "application/json"
+            },
+            "body": "{\"modelId\":\"us.anthropic.claude-sonnet-4-6\",\"messages\":[{\"role\":\"user\",\"content\":[{\"text\":\"How many primes are below 60? Reply with the number only.\"}]}],\"inferenceConfig\":{\"maxTokens\":4000},\"additionalModelRequestFields\":{\"thinking\":{\"type\":\"adaptive\",\"display\":\"summarized\"},\"output_config\":{\"effort\":\"high\"}},\"serviceTier\":{\"type\":\"default\"},\"requestMetadata\":{\"suite\":\"opencode-ai\"}}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "application/vnd.amazon.eventstream"
+            },
+            "body": "AAAAqwAAAFLnsEE2CzpldmVudC10eXBlBwAMbWVzc2FnZVN0YXJ0DTpjb250ZW50LXR5cGUHABBhcHBsaWNhdGlvbi9qc29uDTptZXNzYWdlLXR5cGUHAAVldmVudHsicCI6ImFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6QUJDREVGR0hJSktMTU5PUFFSU1QiLCJyb2xlIjoiYXNzaXN0YW50In16qcl8AAAAvgAAAFc/2q1LCzpldmVudC10eXBlBwARY29udGVudEJsb2NrRGVsdGENOmNvbnRlbnQtdHlwZQcAEGFwcGxpY2F0aW9uL2pzb24NOm1lc3NhZ2UtdHlwZQcABWV2ZW50eyJjb250ZW50QmxvY2tJbmRleCI6MCwiZGVsdGEiOnsicmVhc29uaW5nQ29udGVudCI6eyJ0ZXh0IjoiUHIifX0sInAiOiJhYmNkZWZnaGlqa2xtbiJ9KsuSDAAAAPgAAABX6GkAogs6ZXZlbnQtdHlwZQcAEWNvbnRlbnRCbG9ja0RlbHRhDTpjb250ZW50LXR5cGUHABBhcHBsaWNhdGlvbi9qc29uDTptZXNzYWdlLXR5cGUHAAVldmVudHsiY29udGVudEJsb2NrSW5kZXgiOjAsImRlbHRhIjp7InJlYXNvbmluZ0NvbnRlbnQiOnsidGV4dCI6ImltZXMgYmVsb3cgNjA6In19LCJwIjoiYWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXpBQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWjAxMjM0NTY3In1+JGFAAAAAvAAAAFdFGv4rCzpldmVudC10eXBlBwARY29udGVudEJsb2NrRGVsdGENOmNvbnRlbnQtdHlwZQcAEGFwcGxpY2F0aW9uL2pzb24NOm1lc3NhZ2UtdHlwZQcABWV2ZW50eyJjb250ZW50QmxvY2tJbmRleCI6MCwiZGVsdGEiOnsicmVhc29uaW5nQ29udGVudCI6eyJ0ZXh0IjoiXG4yIn19LCJwIjoiYWJjZGVmZ2hpamsifd/D1UcAAADmAAAAVze5KUELOmV2ZW50LXR5cGUHABFjb250ZW50QmxvY2tEZWx0YQ06Y29udGVudC10eXBlBwAQYXBwbGljYXRpb24vanNvbg06bWVzc2FnZS10eXBlBwAFZXZlbnR7ImNvbnRlbnRCbG9ja0luZGV4IjowLCJkZWx0YSI6eyJyZWFzb25pbmdDb250ZW50Ijp7InRleHQiOiIsIDMsIDUsICJ9fSwicCI6ImFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6QUJDREVGR0hJSktMTU5PUFFSU1RVViJ94gGywwAAAO0AAABXQGkYUAs6ZXZlbnQtdHlwZQcAEWNvbnRlbnRCbG9ja0RlbHRhDTpjb250ZW50LXR5cGUHABBhcHBsaWNhdGlvbi9qc29uDTptZXNzYWdlLXR5cGUHAAVldmVudHsiY29udGVudEJsb2NrSW5kZXgiOjAsImRlbHRhIjp7InJlYXNvbmluZ0NvbnRlbnQiOnsidGV4dCI6IjcsIDExLCAxMywifX0sInAiOiJhYmNkZWZnaGlqa2xtbm9wcXJzdHV2d3h5ekFCQ0RFRkdISUpLTE1OT1BRUlNUVVZXWFlaMCJ9HGS9oAAAAN0AAABX4Uig1gs6ZXZlbnQtdHlwZQcAEWNvbnRlbnRCbG9ja0RlbHRhDTpjb250ZW50LXR5cGUHABBhcHBsaWNhdGlvbi9qc29uDTptZXNzYWdlLXR5cGUHAAVldmVudHsiY29udGVudEJsb2NrSW5kZXgiOjAsImRlbHRhIjp7InJlYXNvbmluZ0NvbnRlbnQiOnsidGV4dCI6IiAxNywgMTksIDIzIn19LCJwIjoiYWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXpBQkNERUZHSElKIn1J+fHjAAAA0gAAAFdjGDcHCzpldmVudC10eXBlBwARY29udGVudEJsb2NrRGVsdGENOmNvbnRlbnQtdHlwZQcAEGFwcGxpY2F0aW9uL2pzb24NOm1lc3NhZ2UtdHlwZQcABWV2ZW50eyJjb250ZW50QmxvY2tJbmRleCI6MCwiZGVsdGEiOnsicmVhc29uaW5nQ29udGVudCI6eyJ0ZXh0IjoiLCAyOSwgMzEsICJ9fSwicCI6ImFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6In3fWx7pAAAA2wAAAFduCFV2CzpldmVudC10eXBlBwARY29udGVudEJsb2NrRGVsdGENOmNvbnRlbnQtdHlwZQcAEGFwcGxpY2F0aW9uL2pzb24NOm1lc3NhZ2UtdHlwZQcABWV2ZW50eyJjb250ZW50QmxvY2tJbmRleCI6MCwiZGVsdGEiOnsicmVhc29uaW5nQ29udGVudCI6eyJ0ZXh0IjoiMzcsIDQxLCA0MywifX0sInAiOiJhYmNkZWZnaGlqa2xtbm9wcXJzdHV2d3h5ekFCQ0RFRkdIIn3POmzBAAAA1AAAAFfsWMKnCzpldmVudC10eXBlBwARY29udGVudEJsb2NrRGVsdGENOmNvbnRlbnQtdHlwZQcAEGFwcGxpY2F0aW9uL2pzb24NOm1lc3NhZ2UtdHlwZQcABWV2ZW50eyJjb250ZW50QmxvY2tJbmRleCI6MCwiZGVsdGEiOnsicmVhc29uaW5nQ29udGVudCI6eyJ0ZXh0IjoiIDQ3LCA1MywgNTkifX0sInAiOiJhYmNkZWZnaGlqa2xtbm9wcXJzdHV2d3h5ekEifX/dw1QAAADfAAAAV5uI87YLOmV2ZW50LXR5cGUHABFjb250ZW50QmxvY2tEZWx0YQ06Y29udGVudC10eXBlBwAQYXBwbGljYXRpb24vanNvbg06bWVzc2FnZS10eXBlBwAFZXZlbnR7ImNvbnRlbnRCbG9ja0luZGV4IjowLCJkZWx0YSI6eyJyZWFzb25pbmdDb250ZW50Ijp7InRleHQiOiJcblxuVGhhdCJ9fSwicCI6ImFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6QUJDREVGR0hJSktMTU5PIn0nPZ3pAAAA0AAAAFcZ2GRnCzpldmVudC10eXBlBwARY29udGVudEJsb2NrRGVsdGENOmNvbnRlbnQtdHlwZQcAEGFwcGxpY2F0aW9uL2pzb24NOm1lc3NhZ2UtdHlwZQcABWV2ZW50eyJjb250ZW50QmxvY2tJbmRleCI6MCwiZGVsdGEiOnsicmVhc29uaW5nQ29udGVudCI6eyJ0ZXh0IjoiJ3MgMTcifX0sInAiOiJhYmNkZWZnaGlqa2xtbm9wcXJzdHV2d3h5ekFCQyJ9ANoZdAAAANEAAABXJLhN1ws6ZXZlbnQtdHlwZQcAEWNvbnRlbnRCbG9ja0RlbHRhDTpjb250ZW50LXR5cGUHABBhcHBsaWNhdGlvbi9qc29uDTptZXNzYWdlLXR5cGUHAAVldmVudHsiY29udGVudEJsb2NrSW5kZXgiOjAsImRlbHRhIjp7InJlYXNvbmluZ0NvbnRlbnQiOnsidGV4dCI6IiBwcmltZXMuIn19LCJwIjoiYWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXpBIn3Hr86AAAAA0wAAAFdeeB63CzpldmVudC10eXBlBwARY29udGVudEJsb2NrRGVsdGENOmNvbnRlbnQtdHlwZQcAEGFwcGxpY2F0aW9uL2pzb24NOm1lc3NhZ2UtdHlwZQcABWV2ZW50eyJjb250ZW50QmxvY2tJbmRleCI6MCwiZGVsdGEiOnsicmVhc29uaW5nQ29udGVudCI6eyJ0ZXh0IjoiIn19LCJwIjoiYWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXpBQkNERUZHSElKSyJ99+quegAAApYAAABXg6NohQs6ZXZlbnQtdHlwZQcAEWNvbnRlbnRCbG9ja0RlbHRhDTpjb250ZW50LXR5cGUHABBhcHBsaWNhdGlvbi9qc29uDTptZXNzYWdlLXR5cGUHAAVldmVudHsiY29udGVudEJsb2NrSW5kZXgiOjAsImRlbHRhIjp7InJlYXNvbmluZ0NvbnRlbnQiOnsic2lnbmF0dXJlIjoiRXNFQ0Nud0lFeEFCR0FJcVFKeE9CNGF5MjA0QWtxbTFEMnl3OG5CZXRTNzhKTEZIR0JVYzN0MGJoc205ZDVpRm9DY0ZsanI4OThhc2tQWGN4U2JyaklRUWMwS0V5SUdtd1FBemtqRXlFV05zWVhWa1pTMXpiMjV1WlhRdE5DMDJPQUJDQ0hSb2FXNXJhVzVuV2d3eU16STNOekU0TlRZM09ER29BWnJJKzlZR0VneWNVNy9ydnROZVdEYUtJbm9hREtQb0ZKQ1VCa3QwKzlFM0JTSXc4OUJSVDdJWVZTVkFtN3Voakg0Q1Z5TmJobFFkZmNLNHZqN2o1QTkwWWRzRytPd0pzU3ZtajNjUE1vQmhIMEV6S25NNm40MVhvek1acHJLRVFVejBxcmJCZVJJNlMvd0ludHc0bTNKNkUybUNkYktKUkN3SzJSS1owNFBKUnNEdUFRUDBnSTFnd1p0RWQzZzBNekNkZ3ZydlBvRmk4UG53ZlprMHp2UzVIVC85TGJOZlJodmFOckRpOVQyZy9EODkzQVljYlJwNDV3ays2RHFYczAwY3dsLzdMVHpZR0FFPSJ9fSwicCI6ImFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6QUJDREVGR0hJSktMTU5PUFFSU1RVIn0Kc31GAAAApgAAAFYYTUGeCzpldmVudC10eXBlBwAQY29udGVudEJsb2NrU3RvcA06Y29udGVudC10eXBlBwAQYXBwbGljYXRpb24vanNvbg06bWVzc2FnZS10eXBlBwAFZXZlbnR7ImNvbnRlbnRCbG9ja0luZGV4IjowLCJwIjoiYWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXpBQkNERUZHSCJ9XtkDNQAAAK4AAABXXzo6yQs6ZXZlbnQtdHlwZQcAEWNvbnRlbnRCbG9ja0RlbHRhDTpjb250ZW50LXR5cGUHABBhcHBsaWNhdGlvbi9qc29uDTptZXNzYWdlLXR5cGUHAAVldmVudHsiY29udGVudEJsb2NrSW5kZXgiOjEsImRlbHRhIjp7InRleHQiOiIxNyJ9LCJwIjoiYWJjZGVmZ2hpamtsbW5vcHFycyJ9vjLcPQAAALIAAABWjS1w3As6ZXZlbnQtdHlwZQcAEGNvbnRlbnRCbG9ja1N0b3ANOmNvbnRlbnQtdHlwZQcAEGFwcGxpY2F0aW9uL2pzb24NOm1lc3NhZ2UtdHlwZQcABWV2ZW50eyJjb250ZW50QmxvY2tJbmRleCI6MSwicCI6ImFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6QUJDREVGR0hJSktMTU5PUFFSU1Qifa+sENsAAACiAAAAUXOpcv0LOmV2ZW50LXR5cGUHAAttZXNzYWdlU3RvcA06Y29udGVudC10eXBlBwAQYXBwbGljYXRpb24vanNvbg06bWVzc2FnZS10eXBlBwAFZXZlbnR7InAiOiJhYmNkZWZnaGlqa2xtbm9wcXJzdHV2d3h5ekFCQ0RFRkciLCJzdG9wUmVhc29uIjoiZW5kX3R1cm4ifbmQA7wAAAEgAAAATv7bT18LOmV2ZW50LXR5cGUHAAhtZXRhZGF0YQ06Y29udGVudC10eXBlBwAQYXBwbGljYXRpb24vanNvbg06bWVzc2FnZS10eXBlBwAFZXZlbnR7Im1ldHJpY3MiOnsibGF0ZW5jeU1zIjoxMTYxfSwicCI6ImFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6QUJDREVGR0hJSktMTU4iLCJzZXJ2aWNlVGllciI6eyJ0eXBlIjoiZGVmYXVsdCJ9LCJ1c2FnZSI6eyJpbnB1dFRva2VucyI6MjIsIm91dHB1dFRva2VucyI6ODUsInNlcnZlclRvb2xVc2FnZSI6e30sInRvdGFsVG9rZW5zIjoxMDd9fc422g8=",
+            "bodyEncoding": "base64"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "reasoning-start",
+          "id": "reasoning-0"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "Pr"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "imes below 60:"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "\n2"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ", 3, 5, "
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "7, 11, 13,"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " 17, 19, 23"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ", 29, 31, "
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "37, 41, 43,"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " 47, 53, 59"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "\n\nThat"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "'s 17"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " primes."
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ""
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "",
+          "providerMetadata": {
+            "bedrock": {
+              "signature": "EsECCnwIExABGAIqQJxOB4ay204Akqm1D2yw8nBetS78JLFHGBUc3t0bhsm9d5iFoCcFljr898askPXcxSbrjIQQc0KEyIGmwQAzkjEyEWNsYXVkZS1zb25uZXQtNC02OABCCHRoaW5raW5nWgwyMzI3NzE4NTY3ODGoAZrI+9YGEgycU7/rvtNeWDaKInoaDKPoFJCUBkt0+9E3BSIw89BRT7IYVSVAm7uhjH4CVyNbhlQdfcK4vj7j5A90YdsG+OwJsSvmj3cPMoBhH0EzKnM6n41XozMZprKEQUz0qrbBeRI6S/wIntw4m3J6E2mCdbKJRCwK2RKZ04PJRsDuAQP0gI1gwZtEd3g0MzCdgvrvPoFi8PnwfZk0zvS5HT/9LbNfRhvaNrDi9T2g/D893AYcbRp45wk+6DqXs00cwl/7LTzYGAE="
+            }
+          }
+        },
+        {
+          "type": "reasoning-end",
+          "id": "reasoning-0",
+          "providerMetadata": {
+            "bedrock": {
+              "signature": "EsECCnwIExABGAIqQJxOB4ay204Akqm1D2yw8nBetS78JLFHGBUc3t0bhsm9d5iFoCcFljr898askPXcxSbrjIQQc0KEyIGmwQAzkjEyEWNsYXVkZS1zb25uZXQtNC02OABCCHRoaW5raW5nWgwyMzI3NzE4NTY3ODGoAZrI+9YGEgycU7/rvtNeWDaKInoaDKPoFJCUBkt0+9E3BSIw89BRT7IYVSVAm7uhjH4CVyNbhlQdfcK4vj7j5A90YdsG+OwJsSvmj3cPMoBhH0EzKnM6n41XozMZprKEQUz0qrbBeRI6S/wIntw4m3J6E2mCdbKJRCwK2RKZ04PJRsDuAQP0gI1gwZtEd3g0MzCdgvrvPoFi8PnwfZk0zvS5HT/9LbNfRhvaNrDi9T2g/D893AYcbRp45wk+6DqXs00cwl/7LTzYGAE="
+            }
+          }
+        },
+        {
+          "type": "text-start",
+          "id": "text-1"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-1",
+          "text": "17"
+        },
+        {
+          "type": "text-end",
+          "id": "text-1"
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "stop",
+            "raw": "end_turn"
+          },
+          "usage": {
+            "inputTokens": 22,
+            "outputTokens": 85,
+            "nonCachedInputTokens": 22,
+            "totalTokens": 107,
+            "providerMetadata": {
+              "bedrock": {
+                "inputTokens": 22,
+                "outputTokens": 85,
+                "totalTokens": 107
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "stop",
+            "raw": "end_turn"
+          },
+          "usage": {
+            "inputTokens": 22,
+            "outputTokens": 85,
+            "nonCachedInputTokens": 22,
+            "totalTokens": 107,
+            "providerMetadata": {
+              "bedrock": {
+                "inputTokens": 22,
+                "outputTokens": 85,
+                "totalTokens": 107
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

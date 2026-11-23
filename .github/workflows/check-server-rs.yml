@@ -4,6 +4,8 @@ on:
   pull_request:
     paths:
       - packages/server-rs/**
+      - packages/ai/**
+      - packages/http-recorder/**
       - bun.lock
       - package.json
       - packages/cli-rs/Cargo.toml
@@ -20,6 +22,8 @@ on:
     branches: [dev]
     paths:
       - packages/server-rs/**
+      - packages/ai/**
+      - packages/http-recorder/**
       - bun.lock
       - package.json
       - packages/cli-rs/Cargo.toml

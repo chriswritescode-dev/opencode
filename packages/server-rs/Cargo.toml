@@ -21,6 +21,7 @@ todo = "warn"
 undocumented_unsafe_blocks = "deny"
 
 [workspace.dependencies]
+opencode-ai = { path = "crates/ai" }
 opencode-contract = { path = "crates/contract" }
 opencode-http = { path = "crates/http" }
 opencode-server = { path = "crates/server" }
@@ -33,18 +34,26 @@ base64 = "0.23"
 brotli = "9"
 bytes = "1"
 flate2 = "1"
+futures-util = { version = "0.3", default-features = false, features = ["std", "sink"] }
 http = "1"
 http-body-util = "0.1"
 hyper = { version = "1", features = ["server", "client", "http1"] }
 hyper-util = { version = "0.1", features = ["tokio"] }
 indexmap = "2"
+percent-encoding = "2"
 rand = "0.10"
 regex-lite = "0.1"
+reqwest = { version = "0.13", default-features = false, features = ["rustls-no-provider", "stream"] }
 ring = "0.17"
 rustix = { version = "1", features = ["system", "process", "fs"] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
+rustls-platform-verifier = "0.7"
+serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["float_roundtrip", "preserve_order", "raw_value"] }
 subtle = "2"
+thiserror = "2"
 tokio = { version = "1.53", features = ["macros", "rt", "rt-multi-thread", "net", "time", "signal", "io-util", "io-std", "sync", "process", "fs"] }
+tokio-tungstenite = { version = "0.30", features = ["rustls-tls-native-roots"] }
 url = "2"
 
 [profile.dev]

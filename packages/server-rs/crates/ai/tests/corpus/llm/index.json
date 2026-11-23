@@ -1,0 +1,259 @@
+{
+  "cassettes": [
+    {
+      "cassette": "anthropic-compatible-messages/minimax-m3-anthropic-compatible-text",
+      "protocol": "anthropic-messages",
+      "group": "anthropic-messages"
+    },
+    {
+      "cassette": "anthropic-compatible-messages/minimax-m3-anthropic-compatible-tool-call",
+      "protocol": "anthropic-messages",
+      "group": "anthropic-messages"
+    },
+    {
+      "cassette": "anthropic-compatible-messages/minimax-m3-anthropic-compatible-tool-loop",
+      "protocol": "anthropic-messages",
+      "group": "anthropic-messages"
+    },
+    {
+      "cassette": "anthropic-messages-cache/keeps-a-long-tool-turn-inside-the-cache-lookback",
+      "protocol": "anthropic-messages",
+      "group": "anthropic-messages"
+    },
+    {
+      "cassette": "anthropic-messages-cache/writes-then-reads-cache-control-on-identical-second-call",
+      "protocol": "anthropic-messages",
+      "group": "anthropic-messages"
+    },
+    {
+      "cassette": "anthropic-messages/anthropic-opus-4-7-image-tool-result",
+      "protocol": "anthropic-messages",
+      "group": "anthropic-messages"
+    },
+    {
+      "cassette": "bedrock-converse-cache/writes-then-reads-cachepoint-on-identical-second-call",
+      "protocol": "bedrock-converse",
+      "group": "bedrock-converse"
+    },
+    {
+      "cassette": "bedrock-converse-options/constrains-claude-output-to-a-json-schema",
+      "protocol": "bedrock-converse",
+      "group": "bedrock-converse"
+    },
+    {
+      "cassette": "bedrock-converse-options/sends-claude-effort-with-adaptive-thinking-service-tier-and-request-metadata",
+      "protocol": "bedrock-converse",
+      "group": "bedrock-converse"
+    },
+    {
+      "cassette": "bedrock-converse-options/sends-gpt-oss-reasoning-effort-with-the-priority-tier",
+      "protocol": "bedrock-converse",
+      "group": "bedrock-converse"
+    },
+    {
+      "cassette": "bedrock-converse-options/sends-nova-2-reasoning-effort",
+      "protocol": "bedrock-converse",
+      "group": "bedrock-converse"
+    },
+    {
+      "cassette": "bedrock-converse-thinking-binding/accepts-the-default-binding-with-no-thinking-configured",
+      "protocol": "bedrock-converse",
+      "group": "bedrock-converse"
+    },
+    {
+      "cassette": "bedrock-converse-thinking-binding/keeps-a-session-working-after-the-system-prompt-changes",
+      "protocol": "bedrock-converse",
+      "group": "bedrock-converse"
+    },
+    {
+      "cassette": "bedrock-converse/continues-after-parallel-tool-results",
+      "protocol": "bedrock-converse",
+      "group": "bedrock-converse"
+    },
+    {
+      "cassette": "bedrock-converse/drives-a-tool-loop",
+      "protocol": "bedrock-converse",
+      "group": "bedrock-converse"
+    },
+    {
+      "cassette": "bedrock-converse/streams-a-tool-call",
+      "protocol": "bedrock-converse",
+      "group": "bedrock-converse"
+    },
+    {
+      "cassette": "bedrock-converse/streams-text",
+      "protocol": "bedrock-converse",
+      "group": "bedrock-converse"
+    },
+    {
+      "cassette": "cerebras-chat/cerebras-gpt-oss-120b-text",
+      "protocol": "openai-chat",
+      "group": "openai-chat"
+    },
+    {
+      "cassette": "cerebras-chat/cerebras-gpt-oss-120b-tool-call",
+      "protocol": "openai-chat",
+      "group": "openai-chat"
+    },
+    {
+      "cassette": "cerebras-chat/cerebras-gpt-oss-120b-tool-loop",
+      "protocol": "openai-chat",
+      "group": "openai-chat"
+    },
+    {
+      "cassette": "deepinfra-chat/deepinfra-llama-3-3-70b-text",
+      "protocol": "openai-chat",
+      "group": "openai-chat"
+    },
+    {
+      "cassette": "deepinfra-chat/deepinfra-llama-3-3-70b-tool-call",
+      "protocol": "openai-chat",
+      "group": "openai-chat"
+    },
+    {
+      "cassette": "deepinfra-chat/deepinfra-llama-3-3-70b-tool-loop",
+      "protocol": "openai-chat",
+      "group": "openai-chat"
+    },
+    {
+      "cassette": "gemini-cache/reports-cachedcontenttokencount-on-identical-second-call",
+      "protocol": "gemini",
+      "group": "gemini"
+    },
+    {
+      "cassette": "gemini/gemini-2-5-flash-image",
+      "protocol": "gemini",
+      "group": "gemini"
+    },
+    {
+      "cassette": "openai-compatible-chat/gemini-parallel-tool-signatures",
+      "protocol": "openai-chat",
+      "group": "openai-chat"
+    },
+    {
+      "cassette": "openai-compatible-chat/togetherai-streams-text",
+      "protocol": "openai-chat",
+      "group": "openai-chat"
+    },
+    {
+      "cassette": "openai-compatible-chat/togetherai-streams-tool-call",
+      "protocol": "openai-chat",
+      "group": "openai-chat"
+    },
+    {
+      "cassette": "openai-responses-cache/caches-the-system-prompt-on-gpt-6-2-sol",
+      "protocol": "openai-responses",
+      "group": "open-responses"
+    },
+    {
+      "cassette": "openai-responses-cache/reports-cached-tokens-on-identical-second-call",
+      "protocol": "openai-responses",
+      "group": "open-responses"
+    },
+    {
+      "cassette": "openai-responses-images/generates-and-edits-an-image-with-the-hosted-tool",
+      "protocol": "openai-responses",
+      "group": "open-responses"
+    },
+    {
+      "cassette": "openai-responses-websocket/continues-a-tool-call-over-one-socket",
+      "protocol": "openai-responses",
+      "group": "openai-responses-websocket"
+    },
+    {
+      "cassette": "openai-responses-websocket/reconstructs-full-context-after-reconnect",
+      "protocol": "openai-responses",
+      "group": "openai-responses-websocket"
+    },
+    {
+      "cassette": "openai-responses-websocket/recovers-from-explicit-continuation-rejection",
+      "protocol": "openai-responses",
+      "group": "openai-responses-websocket"
+    },
+    {
+      "cassette": "openai-responses/openai-responses-gpt-5-5-image-tool-result",
+      "protocol": "openai-responses",
+      "group": "open-responses"
+    },
+    {
+      "cassette": "openai-responses/openai-responses-gpt-5-5-reasoning",
+      "protocol": "openai-responses",
+      "group": "open-responses"
+    },
+    {
+      "cassette": "openai-responses/openai-responses-gpt-5-5-reasoning-continuation",
+      "protocol": "openai-responses",
+      "group": "open-responses"
+    },
+    {
+      "cassette": "openai-responses/openai-responses-gpt-5-5-tool-loop",
+      "protocol": "openai-responses",
+      "group": "open-responses"
+    },
+    {
+      "cassette": "pdf/anthropic-tool-result",
+      "protocol": "anthropic-messages",
+      "group": "anthropic-messages"
+    },
+    {
+      "cassette": "pdf/anthropic-user-input",
+      "protocol": "anthropic-messages",
+      "group": "anthropic-messages"
+    },
+    {
+      "cassette": "pdf/bedrock-tool-result",
+      "protocol": "bedrock-converse",
+      "group": "bedrock-converse"
+    },
+    {
+      "cassette": "pdf/bedrock-user-input",
+      "protocol": "bedrock-converse",
+      "group": "bedrock-converse"
+    },
+    {
+      "cassette": "pdf/gemini-tool-result",
+      "protocol": "gemini",
+      "group": "gemini"
+    },
+    {
+      "cassette": "pdf/gemini-user-input",
+      "protocol": "gemini",
+      "group": "gemini"
+    },
+    {
+      "cassette": "pdf/openai-tool-result",
+      "protocol": "openai-responses",
+      "group": "open-responses"
+    },
+    {
+      "cassette": "pdf/openai-user-input",
+      "protocol": "openai-responses",
+      "group": "open-responses"
+    },
+    {
+      "cassette": "venice-responses/calls-a-freeform-text-tool",
+      "protocol": "open-responses",
+      "group": "open-responses"
+    },
+    {
+      "cassette": "venice-responses/continues-a-tool-call",
+      "protocol": "open-responses",
+      "group": "open-responses"
+    },
+    {
+      "cassette": "venice-responses/streams-text",
+      "protocol": "open-responses",
+      "group": "open-responses"
+    },
+    {
+      "cassette": "vercel-ai-gateway-reasoning",
+      "protocol": "openai-chat",
+      "group": "openai-chat"
+    },
+    {
+      "cassette": "vercel-ai-gateway-reasoning-tool-loop",
+      "protocol": "openai-chat",
+      "group": "openai-chat"
+    }
+  ]
+}

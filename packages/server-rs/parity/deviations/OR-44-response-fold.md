@@ -1,0 +1,9 @@
+# OR-44: an unfinished attempt folds into a response without a finish reason
+
+TypeScript: `packages/ai/src/schema/events.ts:709-724` makes `ResponseFold.complete` return `undefined` until a terminal finish exists, and `partial` returns `undefined` when only `step-start` arrived, otherwise a response whose `finishReason` defaults to `{ normalized: "error" }`. `LLMResponse.finishReason` is required (`events.ts:673-678`). `generateWith` in `packages/ai/src/route/client.ts:620-633` therefore fails the effect when `complete` is undefined, and every stream error is wrapped with `withPartial(error, ResponseFold.partial(state))` (pinned commit `73a0eae88de47f10068a0f9dc7a743638fa3d830`).
+
+Rust: `crates/ai/src/schema/events.rs` `ResponseFold::finish` always returns an `LlmResponse`, and `LlmResponse.finish_reason` is an `Option`. `LlmClient::generate` in `crates/ai/src/route/client.rs` folds the event stream and returns the response, but `read_next` still turns a stream that ends without a `Finish` event into an `IncompleteStream` error, so `generate` on an unfinished provider stream fails as TypeScript does. What differs is the public fold and response type, which can express a completed attempt with no finish reason, and the absence of any `partial` field on `AiError`, so a stream failure carries no accumulated output.
+
+Reason: the Rust response type represents an absent finish reason with `Option` instead of making the fold return `None`, so the fold itself cannot signal an unfinished attempt. The replay check (`crates/ai/tests/all/replay.rs`) compares event sequences and the completed response, not the fold's unfinished state. A session consumer that wires `generate` must reproduce the TypeScript rule itself: do not treat a `LlmResponse` with `finish_reason: None` as complete, and attach accumulated output to an error where TypeScript would attach `partial`.
+
+Accepted: pending owner

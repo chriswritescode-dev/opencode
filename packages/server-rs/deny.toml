@@ -1,7 +1,8 @@
 # `cargo deny check` for the server's dependency tree, on every target. `licenses`, `bans` and `sources` read only
 # the lock file and the crates cargo has fetched (`bun run check:deny`); `advisories` fetches the RustSec database
-# (`bun run check:advisories`). The same licence list covers the crate's runtime crates (hyper, tokio, ring, rustix
-# and the rest) and the test-only crates.
+# (`bun run check:advisories`). The server binary and the `opencode-ai` runtime crate pull the HTTP, TLS and socket
+# stack (hyper, tokio, ring, rustix and the rest), and the licence check covers the whole `Cargo.lock` tree,
+# including the test-only crates.
 
 [advisories]
 # A vulnerability fails, and so does a crate marked unmaintained, unsound or yanked: each is read, then ignored here
@@ -11,14 +12,17 @@ yanked = "deny"
 ignore = []
 
 [licenses]
-# Development-only crates are included, so the licence check covers the test tree too.
+# The workspace crates and their dependencies are checked, and development-only crates are included, so the licence
+# check covers the test tree too.
 include-dev = true
 # The licences the tree needs today, each with the crates that need it. A crate passes when these satisfy its
 # expression: `MIT OR Apache-2.0` needs either, `Apache-2.0 AND ISC` both.
 allow = [
-    # Most crates, the workspace's own, tokio, serde, flate2, crc32fast, adler2, simd-adler32 and the brotli crates.
+    # Most crates, the workspace's own, tokio, serde, flate2, crc32fast, adler2, simd-adler32, the brotli crates and
+    # the hyper/tower stack behind reqwest.
     "MIT",
-    # ring (with ISC) and sync_wrapper; most others offer it beside MIT, including flate2 and crc32fast.
+    # ring (with ISC) and sync_wrapper; reqwest, rustls, tokio-tungstenite, flate2, crc32fast and most others offer it
+    # beside MIT.
     "Apache-2.0",
     # subtle, brotli, brotli-decompressor, alloc-no-stdlib and alloc-stdlib.
     "BSD-3-Clause",

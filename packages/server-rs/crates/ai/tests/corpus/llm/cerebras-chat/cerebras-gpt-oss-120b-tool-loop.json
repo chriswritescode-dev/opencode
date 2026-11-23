@@ -1,0 +1,647 @@
+{
+  "cassette": "cerebras-chat/cerebras-gpt-oss-120b-tool-loop",
+  "protocol": "openai-chat",
+  "routeId": "cerebras-chat",
+  "clockEpochMs": 1767323045000,
+  "steps": [
+    {
+      "model": {
+        "id": "gpt-oss-120b",
+        "provider": "cerebras",
+        "route": {
+          "id": "cerebras-chat",
+          "protocol": "openai-chat",
+          "providerMetadataKey": "cerebras"
+        },
+        "endpoint": {
+          "baseURL": "https://api.cerebras.ai/v1",
+          "path": "/chat/completions"
+        },
+        "compatibility": {
+          "reasoningField": "reasoning",
+          "maxTokensField": "max_tokens"
+        },
+        "capabilities": {
+          "promptCacheKey": true
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_cerebras_gpt_oss_120b_tool_loop",
+        "maxTokens": 512,
+        "cache": "none",
+        "system": [
+          {
+            "type": "text",
+            "text": "Use the get_weather tool exactly once. After the tool result, reply exactly: Paris is sunny."
+          }
+        ],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "What is the weather in Paris?"
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "tool",
+            "name": "get_weather",
+            "description": "Get current weather for a city.",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "city": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "city"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "temperature": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "string",
+                      "enum": [
+                        "Infinity",
+                        "-Infinity",
+                        "NaN"
+                      ]
+                    }
+                  ]
+                },
+                "condition": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "temperature",
+                "condition"
+              ],
+              "additionalProperties": false
+            }
+          }
+        ]
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://api.cerebras.ai/v1/chat/completions",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "536",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"gpt-oss-120b\",\"messages\":[{\"role\":\"system\",\"content\":\"Use the get_weather tool exactly once. After the tool result, reply exactly: Paris is sunny.\"},{\"role\":\"user\",\"content\":\"What is the weather in Paris?\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"get_weather\",\"description\":\"Get current weather for a city.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\"}},\"required\":[\"city\"],\"additionalProperties\":false},\"strict\":false}}],\"stream\":true,\"stream_options\":{\"include_usage\":true},\"max_tokens\":512}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream; charset=utf-8"
+            },
+            "body": "data: {\"id\":\"chatcmpl-cffbdca2-64ee-487b-babe-0a02970550f9\",\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"index\":0}],\"created\":1787702128,\"model\":\"gpt-oss-120b\",\"system_fingerprint\":\"fp_4cfabdd6620dc0120785\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"id\":\"chatcmpl-cffbdca2-64ee-487b-babe-0a02970550f9\",\"choices\":[{\"delta\":{\"reasoning\":\"The\"},\"index\":0}],\"created\":1787702128,\"model\":\"gpt-oss-120b\",\"system_fingerprint\":\"fp_4cfabdd6620dc0120785\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"id\":\"chatcmpl-cffbdca2-64ee-487b-babe-0a02970550f9\",\"choices\":[{\"delta\":{\"reasoning\":\" user asks: \\\"What is the weather in Paris?\\\" The developer says: Use get\"},\"index\":0}],\"created\":1787702128,\"model\":\"gpt-oss-120b\",\"system_fingerprint\":\"fp_4cfabdd6620dc0120785\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"id\":\"chatcmpl-cffbdca2-64ee-487b-babe-0a02970550f9\",\"choices\":[{\"delta\":{\"reasoning\":\"_weather tool exactly once. After the tool result, reply exactly: \\\"Paris\"},\"index\":0}],\"created\":1787702128,\"model\":\"gpt-oss-120b\",\"system_fingerprint\":\"fp_4cfabdd6620dc0120785\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"id\":\"chatcmpl-cffbdca2-64ee-487b-babe-0a02970550f9\",\"choices\":[{\"delta\":{\"reasoning\":\" is sunny.\\\"\\n\\nSo we need to call the function get_weather\"},\"index\":0}],\"created\":1787702128,\"model\":\"gpt-oss-120b\",\"system_fingerprint\":\"fp_4cfabdd6620dc0120785\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"id\":\"chatcmpl-cffbdca2-64ee-487b-babe-0a02970550f9\",\"choices\":[{\"delta\":{\"reasoning\":\" with city: \\\"Paris\\\". Then after getting\"},\"index\":0}],\"created\":1787702128,\"model\":\"gpt-oss-120b\",\"system_fingerprint\":\"fp_4cfabdd6620dc0120785\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"id\":\"chatcmpl-cffbdca2-64ee-487b-babe-0a02970550f9\",\"choices\":[{\"delta\":{\"reasoning\":\" result, we need to output exactly \\\"Paris is sunny\"},\"index\":0}],\"created\":1787702128,\"model\":\"gpt-oss-120b\",\"system_fingerprint\":\"fp_4cfabdd6620dc0120785\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"id\":\"chatcmpl-cffbdca2-64ee-487b-babe-0a02970550f9\",\"choices\":[{\"delta\":{\"reasoning\":\".\\\"\\n\\nWe must obey that after tool\"},\"index\":0}],\"created\":1787702128,\"model\":\"gpt-oss-120b\",\"system_fingerprint\":\"fp_4cfabdd6620dc0120785\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"id\":\"chatcmpl-cffbdca2-64ee-487b-babe-0a02970550f9\",\"choices\":[{\"delta\":{\"reasoning\":\" result (i.e., the tool\"},\"index\":0}],\"created\":1787702128,\"model\":\"gpt-oss-120b\",\"system_fingerprint\":\"fp_4cfabdd6620dc0120785\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"id\":\"chatcmpl-cffbdca2-64ee-487b-babe-0a02970550f9\",\"choices\":[{\"delta\":{\"reasoning\":\"'s output) we reply\"},\"index\":0}],\"created\":1787702128,\"model\":\"gpt-oss-120b\",\"system_fingerprint\":\"fp_4cfabdd6620dc0120785\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"id\":\"chatcmpl-cffbdca2-64ee-487b-babe-0a02970550f9\",\"choices\":[{\"delta\":{\"reasoning\":\" exactly that string. So\"},\"index\":0}],\"created\":1787702128,\"model\":\"gpt-oss-120b\",\"system_fingerprint\":\"fp_4cfabdd6620dc0120785\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"id\":\"chatcmpl-cffbdca2-64ee-487b-babe-0a02970550f9\",\"choices\":[{\"delta\":{\"reasoning\":\" we should call the function\"},\"index\":0}],\"created\":1787702128,\"model\":\"gpt-oss-120b\",\"system_fingerprint\":\"fp_4cfabdd6620dc0120785\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"id\":\"chatcmpl-cffbdca2-64ee-487b-babe-0a02970550f9\",\"choices\":[{\"delta\":{\"reasoning\":\", then produce that answer\"},\"index\":0}],\"created\":1787702128,\"model\":\"gpt-oss-120b\",\"system_fingerprint\":\"fp_4cfabdd6620dc0120785\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"id\":\"chatcmpl-cffbdca2-64ee-487b-babe-0a02970550f9\",\"choices\":[{\"delta\":{\"reasoning\":\".\\n\\nWe must follow\"},\"index\":0}],\"created\":1787702128,\"model\":\"gpt-oss-120b\",\"system_fingerprint\":\"fp_4cfabdd6620dc0120785\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"id\":\"chatcmpl-cffbdca2-64ee-487b-babe-0a02970550f9\",\"choices\":[{\"delta\":{\"reasoning\":\" guidelines: we should not add\"},\"index\":0}],\"created\":1787702128,\"model\":\"gpt-oss-120b\",\"system_fingerprint\":\"fp_4cfabdd6620dc0120785\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"id\":\"chatcmpl-cffbdca2-64ee-487b-babe-0a02970550f9\",\"choices\":[{\"delta\":{\"reasoning\":\" any extra text. So we will\"},\"index\":0}],\"created\":1787702128,\"model\":\"gpt-oss-120b\",\"system_fingerprint\":\"fp_4cfabdd6620dc0120785\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"id\":\"chatcmpl-cffbdca2-64ee-487b-babe-0a02970550f9\",\"choices\":[{\"delta\":{\"reasoning\":\" call the function.\"},\"index\":0}],\"created\":1787702128,\"model\":\"gpt-oss-120b\",\"system_fingerprint\":\"fp_4cfabdd6620dc0120785\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"id\":\"chatcmpl-cffbdca2-64ee-487b-babe-0a02970550f9\",\"choices\":[{\"delta\":{\"tool_calls\":[{\"function\":{\"name\":\"get_weather\",\"arguments\":\"\"},\"type\":\"function\",\"id\":\"c882d2434\",\"index\":0}]},\"index\":0}],\"created\":1787702128,\"model\":\"gpt-oss-120b\",\"system_fingerprint\":\"fp_4cfabdd6620dc0120785\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"id\":\"chatcmpl-cffbdca2-64ee-487b-babe-0a02970550f9\",\"choices\":[{\"delta\":{\"tool_calls\":[{\"function\":{\"arguments\":\"{\\\"city\"},\"type\":\"function\",\"index\":0}]},\"index\":0}],\"created\":1787702128,\"model\":\"gpt-oss-120b\",\"system_fingerprint\":\"fp_4cfabdd6620dc0120785\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"id\":\"chatcmpl-cffbdca2-64ee-487b-babe-0a02970550f9\",\"choices\":[{\"delta\":{\"tool_calls\":[{\"function\":{\"arguments\":\"\\\":\\\"Paris\\\"}\"},\"type\":\"function\",\"index\":0}]},\"index\":0}],\"created\":1787702128,\"model\":\"gpt-oss-120b\",\"system_fingerprint\":\"fp_4cfabdd6620dc0120785\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"id\":\"chatcmpl-cffbdca2-64ee-487b-babe-0a02970550f9\",\"choices\":[{\"delta\":{},\"finish_reason\":\"tool_calls\",\"index\":0}],\"created\":1787702128,\"model\":\"gpt-oss-120b\",\"system_fingerprint\":\"fp_4cfabdd6620dc0120785\",\"object\":\"chat.completion.chunk\",\"usage\":{\"total_tokens\":294,\"completion_tokens\":144,\"completion_tokens_details\":{\"accepted_prediction_tokens\":0,\"rejected_prediction_tokens\":0,\"reasoning_tokens\":120},\"prompt_tokens\":150,\"prompt_tokens_details\":{\"cached_tokens\":0}},\"time_info\":{\"created\":1787702128.6481314,\"queue_time\":0.003597903,\"prompt_time\":0.00255912,\"completion_time\":0.087462961,\"total_time\":0.09496760368347168}}\n\ndata: [DONE]\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "reasoning-start",
+          "id": "reasoning-0",
+          "providerMetadata": {
+            "cerebras": {
+              "reasoningField": "reasoning"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "The",
+          "providerMetadata": {
+            "cerebras": {
+              "reasoningField": "reasoning"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " user asks: \"What is the weather in Paris?\" The developer says: Use get",
+          "providerMetadata": {
+            "cerebras": {
+              "reasoningField": "reasoning"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "_weather tool exactly once. After the tool result, reply exactly: \"Paris",
+          "providerMetadata": {
+            "cerebras": {
+              "reasoningField": "reasoning"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " is sunny.\"\n\nSo we need to call the function get_weather",
+          "providerMetadata": {
+            "cerebras": {
+              "reasoningField": "reasoning"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " with city: \"Paris\". Then after getting",
+          "providerMetadata": {
+            "cerebras": {
+              "reasoningField": "reasoning"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " result, we need to output exactly \"Paris is sunny",
+          "providerMetadata": {
+            "cerebras": {
+              "reasoningField": "reasoning"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ".\"\n\nWe must obey that after tool",
+          "providerMetadata": {
+            "cerebras": {
+              "reasoningField": "reasoning"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " result (i.e., the tool",
+          "providerMetadata": {
+            "cerebras": {
+              "reasoningField": "reasoning"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "'s output) we reply",
+          "providerMetadata": {
+            "cerebras": {
+              "reasoningField": "reasoning"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " exactly that string. So",
+          "providerMetadata": {
+            "cerebras": {
+              "reasoningField": "reasoning"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " we should call the function",
+          "providerMetadata": {
+            "cerebras": {
+              "reasoningField": "reasoning"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ", then produce that answer",
+          "providerMetadata": {
+            "cerebras": {
+              "reasoningField": "reasoning"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ".\n\nWe must follow",
+          "providerMetadata": {
+            "cerebras": {
+              "reasoningField": "reasoning"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " guidelines: we should not add",
+          "providerMetadata": {
+            "cerebras": {
+              "reasoningField": "reasoning"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " any extra text. So we will",
+          "providerMetadata": {
+            "cerebras": {
+              "reasoningField": "reasoning"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " call the function.",
+          "providerMetadata": {
+            "cerebras": {
+              "reasoningField": "reasoning"
+            }
+          }
+        },
+        {
+          "type": "tool-input-start",
+          "id": "c882d2434",
+          "name": "get_weather"
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "c882d2434",
+          "name": "get_weather",
+          "text": "{\"city",
+          "input": {}
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "c882d2434",
+          "name": "get_weather",
+          "text": "\":\"Paris\"}",
+          "input": {
+            "city": "Paris"
+          }
+        },
+        {
+          "type": "reasoning-end",
+          "id": "reasoning-0",
+          "providerMetadata": {
+            "cerebras": {
+              "reasoningField": "reasoning"
+            }
+          }
+        },
+        {
+          "type": "tool-input-end",
+          "id": "c882d2434",
+          "name": "get_weather"
+        },
+        {
+          "type": "tool-call",
+          "id": "c882d2434",
+          "name": "get_weather",
+          "input": {
+            "city": "Paris"
+          }
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "tool-calls",
+            "raw": "tool_calls"
+          },
+          "usage": {
+            "inputTokens": 150,
+            "outputTokens": 144,
+            "nonCachedInputTokens": 150,
+            "cacheReadInputTokens": 0,
+            "reasoningTokens": 120,
+            "totalTokens": 294,
+            "providerMetadata": {
+              "cerebras": {
+                "prompt_tokens": 150,
+                "completion_tokens": 144,
+                "total_tokens": 294,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                },
+                "completion_tokens_details": {
+                  "reasoning_tokens": 120,
+                  "accepted_prediction_tokens": 0,
+                  "rejected_prediction_tokens": 0
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "tool-calls",
+            "raw": "tool_calls"
+          },
+          "usage": {
+            "inputTokens": 150,
+            "outputTokens": 144,
+            "nonCachedInputTokens": 150,
+            "cacheReadInputTokens": 0,
+            "reasoningTokens": 120,
+            "totalTokens": 294,
+            "providerMetadata": {
+              "cerebras": {
+                "prompt_tokens": 150,
+                "completion_tokens": 144,
+                "total_tokens": 294,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                },
+                "completion_tokens_details": {
+                  "reasoning_tokens": 120,
+                  "accepted_prediction_tokens": 0,
+                  "rejected_prediction_tokens": 0
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "model": {
+        "id": "gpt-oss-120b",
+        "provider": "cerebras",
+        "route": {
+          "id": "cerebras-chat",
+          "protocol": "openai-chat",
+          "providerMetadataKey": "cerebras"
+        },
+        "endpoint": {
+          "baseURL": "https://api.cerebras.ai/v1",
+          "path": "/chat/completions"
+        },
+        "compatibility": {
+          "reasoningField": "reasoning",
+          "maxTokensField": "max_tokens"
+        },
+        "capabilities": {
+          "promptCacheKey": true
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_cerebras_gpt_oss_120b_tool_loop",
+        "maxTokens": 512,
+        "cache": "none",
+        "system": [
+          {
+            "type": "text",
+            "text": "Use the get_weather tool exactly once. After the tool result, reply exactly: Paris is sunny."
+          }
+        ],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "What is the weather in Paris?"
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "reasoning",
+                "text": "The user asks: \"What is the weather in Paris?\" The developer says: Use get_weather tool exactly once. After the tool result, reply exactly: \"Paris is sunny.\"\n\nSo we need to call the function get_weather with city: \"Paris\". Then after getting result, we need to output exactly \"Paris is sunny.\"\n\nWe must obey that after tool result (i.e., the tool's output) we reply exactly that string. So we should call the function, then produce that answer.\n\nWe must follow guidelines: we should not add any extra text. So we will call the function.",
+                "providerMetadata": {
+                  "cerebras": {
+                    "reasoningField": "reasoning"
+                  }
+                }
+              },
+              {
+                "type": "tool-call",
+                "id": "c882d2434",
+                "name": "get_weather",
+                "input": {
+                  "city": "Paris"
+                }
+              }
+            ]
+          },
+          {
+            "role": "tool",
+            "content": [
+              {
+                "type": "tool-result",
+                "id": "c882d2434",
+                "name": "get_weather",
+                "result": {
+                  "type": "json",
+                  "value": {
+                    "temperature": 22,
+                    "condition": "sunny"
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "tool",
+            "name": "get_weather",
+            "description": "Get current weather for a city.",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "city": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "city"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "temperature": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "string",
+                      "enum": [
+                        "Infinity",
+                        "-Infinity",
+                        "NaN"
+                      ]
+                    }
+                  ]
+                },
+                "condition": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "temperature",
+                "condition"
+              ],
+              "additionalProperties": false
+            }
+          }
+        ]
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://api.cerebras.ai/v1/chat/completions",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "1358",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"gpt-oss-120b\",\"messages\":[{\"role\":\"system\",\"content\":\"Use the get_weather tool exactly once. After the tool result, reply exactly: Paris is sunny.\"},{\"role\":\"user\",\"content\":\"What is the weather in Paris?\"},{\"role\":\"assistant\",\"content\":null,\"tool_calls\":[{\"id\":\"c882d2434\",\"type\":\"function\",\"function\":{\"name\":\"get_weather\",\"arguments\":\"{\\\"city\\\":\\\"Paris\\\"}\"}}],\"reasoning\":\"The user asks: \\\"What is the weather in Paris?\\\" The developer says: Use get_weather tool exactly once. After the tool result, reply exactly: \\\"Paris is sunny.\\\"\\n\\nSo we need to call the function get_weather with city: \\\"Paris\\\". Then after getting result, we need to output exactly \\\"Paris is sunny.\\\"\\n\\nWe must obey that after tool result (i.e., the tool's output) we reply exactly that string. So we should call the function, then produce that answer.\\n\\nWe must follow guidelines: we should not add any extra text. So we will call the function.\"},{\"role\":\"tool\",\"tool_call_id\":\"c882d2434\",\"content\":\"{\\\"temperature\\\":22,\\\"condition\\\":\\\"sunny\\\"}\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"get_weather\",\"description\":\"Get current weather for a city.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\"}},\"required\":[\"city\"],\"additionalProperties\":false},\"strict\":false}}],\"stream\":true,\"stream_options\":{\"include_usage\":true},\"max_tokens\":512}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream; charset=utf-8"
+            },
+            "body": "data: {\"id\":\"chatcmpl-26966d77-cb4c-4d07-b435-c2ad4279f271\",\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"index\":0}],\"created\":1787702128,\"model\":\"gpt-oss-120b\",\"system_fingerprint\":\"fp_4cfabdd6620dc0120785\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"id\":\"chatcmpl-26966d77-cb4c-4d07-b435-c2ad4279f271\",\"choices\":[{\"delta\":{\"content\":\"Paris\"},\"index\":0}],\"created\":1787702128,\"model\":\"gpt-oss-120b\",\"system_fingerprint\":\"fp_4cfabdd6620dc0120785\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"id\":\"chatcmpl-26966d77-cb4c-4d07-b435-c2ad4279f271\",\"choices\":[{\"delta\":{\"content\":\" is sunny.\"},\"index\":0}],\"created\":1787702128,\"model\":\"gpt-oss-120b\",\"system_fingerprint\":\"fp_4cfabdd6620dc0120785\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"id\":\"chatcmpl-26966d77-cb4c-4d07-b435-c2ad4279f271\",\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1787702128,\"model\":\"gpt-oss-120b\",\"system_fingerprint\":\"fp_4cfabdd6620dc0120785\",\"object\":\"chat.completion.chunk\",\"usage\":{\"total_tokens\":200,\"completion_tokens\":8,\"completion_tokens_details\":{\"accepted_prediction_tokens\":0,\"rejected_prediction_tokens\":0,\"reasoning_tokens\":0},\"prompt_tokens\":192,\"prompt_tokens_details\":{\"cached_tokens\":128}},\"time_info\":{\"created\":1787702128.8720248,\"queue_time\":0.003610424,\"prompt_time\":0.005012001,\"completion_time\":0.00146802,\"total_time\":0.012445449829101562}}\n\ndata: [DONE]\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "text-start",
+          "id": "text-0"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "Paris"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " is sunny."
+        },
+        {
+          "type": "text-end",
+          "id": "text-0"
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 192,
+            "outputTokens": 8,
+            "nonCachedInputTokens": 64,
+            "cacheReadInputTokens": 128,
+            "reasoningTokens": 0,
+            "totalTokens": 200,
+            "providerMetadata": {
+              "cerebras": {
+                "prompt_tokens": 192,
+                "completion_tokens": 8,
+                "total_tokens": 200,
+                "prompt_tokens_details": {
+                  "cached_tokens": 128
+                },
+                "completion_tokens_details": {
+                  "reasoning_tokens": 0,
+                  "accepted_prediction_tokens": 0,
+                  "rejected_prediction_tokens": 0
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 192,
+            "outputTokens": 8,
+            "nonCachedInputTokens": 64,
+            "cacheReadInputTokens": 128,
+            "reasoningTokens": 0,
+            "totalTokens": 200,
+            "providerMetadata": {
+              "cerebras": {
+                "prompt_tokens": 192,
+                "completion_tokens": 8,
+                "total_tokens": 200,
+                "prompt_tokens_details": {
+                  "cached_tokens": 128
+                },
+                "completion_tokens_details": {
+                  "reasoning_tokens": 0,
+                  "accepted_prediction_tokens": 0,
+                  "rejected_prediction_tokens": 0
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

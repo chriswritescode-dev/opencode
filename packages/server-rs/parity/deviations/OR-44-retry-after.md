@@ -1,0 +1,9 @@
+# OR-44: HTTP-date retry-after accepts fewer formats and uses the injected clock
+
+TypeScript: `packages/ai/src/route/executor.ts:57-70` parses `retry-after-ms` and `retry-after` seconds with `Number`, ignores an empty `retry-after`, then falls back to `Date.parse(value)` and subtracts `Date.now()`. `Date.parse` accepts the RFC 2822 date grammar and ISO-8601, so spellings beyond the HTTP-date forms still produce a delay (pinned commit `73a0eae88de47f10068a0f9dc7a743638fa3d830`).
+
+Rust: `crates/ai/src/provider_error.rs` `retry_after_ms` handles `retry-after-ms` and numeric seconds with JavaScript `Number()` semantics (`opencode_api_types::js::parse_number`) and ignores an empty `retry-after`, then calls `parse_http_date`. That accepts ISO-8601 (`YYYY-MM-DD` with a `T` or space, optional fraction, `Z` or `±HH:MM`) through `parse_iso_date`, the IMF-fixdate shape `[Www, ]DD Mon YYYY HH:MM:SS GMT`, the RFC 850 shape `[Www, ]DD-Mon-YY HH:MM:SS GMT` with the RFC 2822 two-digit year split (00-49 to the 2000s, 50-99 to the 1900s), and the asctime shape `Www Mon DD HH:MM:SS YYYY`. asctime carries no zone: `Date.parse` reads it as local time while Rust reads it as UTC, so the two agree only when the local zone is UTC. Its `now_ms` comes from the `Clock` passed to `http_failure`, not from the process, so results are deterministic.
+
+Reason: replay needs a fixed clock, and the corpus in `script/llm/errors.ts` covers `retry-after-ms`, numeric seconds, an empty value, a hexadecimal number, IMF-fixdate and RFC 850 dates in GMT, and a separator that exercises the quota lookbehind. No asctime row is generated because its result depends on the exporter's local zone. `Date.parse` also accepts RFC 2822 spellings outside those shapes (numeric `±HHMM` zones, zone-less four-part dates, named zones); those values still yield no `retry_after_ms` here.
+
+Accepted: pending owner
