@@ -16,6 +16,7 @@ base64.workspace = true
 bytes.workspace = true
 futures-util.workspace = true
 percent-encoding.workspace = true
+regex-lite.workspace = true
 reqwest.workspace = true
 ring.workspace = true
 rustls.workspace = true
@@ -25,6 +26,7 @@ serde_json.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 tokio-tungstenite.workspace = true
+url.workspace = true
 
 [[test]]
 name = "all"

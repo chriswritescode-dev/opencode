@@ -609,6 +609,7 @@ dependencies = [
  "futures-util",
  "opencode-contract",
  "percent-encoding",
+ "regex-lite",
  "reqwest",
  "ring",
  "rustls",
@@ -618,6 +619,7 @@ dependencies = [
  "thiserror",
  "tokio",
  "tokio-tungstenite",
+ "url",
 ]
 
 [[package]]
