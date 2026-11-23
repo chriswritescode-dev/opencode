@@ -2,7 +2,6 @@ use std::path::Path;
 use std::time::Duration;
 
 use opencode_local::registration::{self, Registration};
-use rustix::process::{Pid, Signal};
 
 use super::ensure::Pool;
 
@@ -20,9 +19,9 @@ pub(super) async fn terminate(file: &Path, registration: &Registration, pool: Op
     if !crate::registration::is_same(file, registration) {
         return Ok(());
     }
-    signal(registration.pid, Signal::TERM);
+    signal(registration.pid, Signal::Term);
     if !stopped(registration.pid, pool).await {
-        signal(registration.pid, Signal::KILL);
+        signal(registration.pid, Signal::Kill);
         if !stopped(registration.pid, pool).await {
             return Err(format!("Server process {} is still running", registration.pid));
         }
@@ -31,18 +30,42 @@ pub(super) async fn terminate(file: &Path, registration: &Registration, pool: Op
     Ok(())
 }
 
+#[derive(Clone, Copy)]
+enum Signal {
+    Term,
+    Kill,
+}
+
 fn signal(pid: u32, signal: Signal) {
-    if let Some(pid) = i32::try_from(pid).ok().and_then(Pid::from_raw) {
-        let _ = rustix::process::kill_process(pid, signal);
+    #[cfg(unix)]
+    {
+        let Some(pid) = i32::try_from(pid).ok().and_then(rustix::process::Pid::from_raw) else { return };
+        let raw = match signal {
+            Signal::Term => rustix::process::Signal::TERM,
+            Signal::Kill => rustix::process::Signal::KILL,
+        };
+        let _ = rustix::process::kill_process(pid, raw);
+    }
+    #[cfg(windows)]
+    {
+        let _ = signal;
+        let _ = opencode_util::win::terminate(pid);
     }
 }
 
+fn running(pid: u32) -> bool {
+    #[cfg(unix)]
+    return i32::try_from(pid)
+        .ok()
+        .and_then(rustix::process::Pid::from_raw)
+        .is_some_and(|pid| rustix::process::test_kill_process(pid).is_ok());
+    #[cfg(windows)]
+    return opencode_util::win::process_alive(pid);
+}
+
 async fn stopped(pid: u32, pool: Option<&Pool>) -> bool {
-    let Some(raw) = i32::try_from(pid).ok().and_then(Pid::from_raw) else {
-        return true;
-    };
     for attempt in 0..=POLL_ATTEMPTS {
-        if rustix::process::test_kill_process(raw).is_err() || pool.is_some_and(|pool| pool.exited(pid)) {
+        if !running(pid) || pool.is_some_and(|pool| pool.exited(pid)) {
             return true;
         }
         if attempt < POLL_ATTEMPTS {

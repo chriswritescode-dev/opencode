@@ -85,7 +85,7 @@ fn two_contenders_elect_one_service_and_the_loser_exits_zero() {
 
 #[test]
 fn ipv6_contenders_elect_one_service_and_the_loser_exits_zero() {
-    let Ok(held) = TcpListener::bind(("[::1]", 0)) else {
+    let Ok(held) = TcpListener::bind(("::1", 0)) else {
         return;
     };
     let port = held.local_addr().expect("ipv6 free port address").port();
