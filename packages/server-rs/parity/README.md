@@ -11,7 +11,16 @@ Runs a scenario against the TypeScript reference server and a candidate server, 
 - `--repeat <n>` repeats every scenario `n` times and defaults to `1`; values must be positive integers. Repetition stops at the first repetition that reports a difference.
 - Remaining positional arguments are scenario files. With none, every `parity/scenarios/*.scenario.ts` file runs in sorted order. A scenario name is its path relative to `parity/scenarios` without `.scenario.ts`, falling back to the basename for files outside that directory.
 - Each run writes `parity/out/<scenario>/reference.json`, `candidate.json` and `differences.json`. Each repetition overwrites the previous files.
-- At startup the harness reads `parity/upstream-pin`. When that commit exists in the clone and the TypeScript reference differs from it under the pinned source directories, a warning line names the number of changed files.
+- At startup the harness reads `packages/server-rs/upstream-pin`. When that commit exists in the clone and the TypeScript reference differs from it under the pinned source directories, a warning line names the number of changed files.
+
+## Steps
+
+Each scenario runs its `steps` in order. `http` steps add an entry to `steps`; `waitEvent` and `files` steps do not.
+
+- `http`: `method` and `path` are required. `query` values are strings or arrays, and array values repeat the key. `headers` are sent as written and `body` is JSON. `auth` is `basic` (default), `query` or `none`. `location` defaults to `true` and sends `x-opencode-directory: <work>`. `as` saves the parsed response body for later placeholders.
+- `waitEvent`: waits for an event of `type`. `match` is an optional deep-partial match against the event's `data` after templating: every object key must match and arrays compare as a prefix. `timeout` is in milliseconds and defaults to `30000`. The next wait starts after the previously matched event.
+- `files`: writes a `{ path: contents }` map below `work` mid-scenario, unlike the scenario-level `files` written before the server starts.
+- Templating: `{{work}}`, `{{root}}` and `{{<as>.<dotted.path>}}` are replaced in paths, query values, header values and the string leaves of request bodies and `match` objects. An unresolved placeholder fails the scenario.
 
 ## Sandbox and environment
 
@@ -40,21 +49,30 @@ Every variable is set for both sides:
 
 ## Normalisation rules
 
-Rules apply to every string, number and selected object key in a capture.
+Rules apply to every string, number and object key in a capture.
 
 | id | Replaces | Why |
 | --- | --- | --- |
 | `root` | The sandbox root and its URL-encoded form with `<root>`. | Both sides run in different random roots, and absolute paths appear in URLs and payloads. |
 | `port` | `<host>:<port>` for loopback `127.0.0.1:<port>` and `localhost:<port>`. | Each server binds an ephemeral port that differs between sides. |
 | `id` | Prefixed ids with `<prefix:n>` using first-seen numbering per capture. | Freshly generated session and message ids differ but should play the same role. |
+| `slug` | Session slugs with `<slug:n>`, numbered per first appearance and kept separate from ids. | The server picks a random human-readable slug per session. |
 | `time` | Millisecond numbers near the capture window and ISO-8601 timestamps with `<time>`. | Wall-clock values differ between the reference and candidate runs. |
 | `process` | `pid` and `hostname` values with `<pid>` and `<hostname>`. | Process ids differ per side and hostnames are machine specific. |
+| `base64` | Base64 strings that decode to a JSON object or array are decoded, normalised recursively, and re-encoded. | Session-list cursors encode session ids and timestamps. |
 
-Strings that look like JSON objects or arrays are parsed, normalized recursively, and serialized back, so JSON nested inside a string field is compared on its structure rather than its exact ids and times.
+Strings that look like JSON objects or arrays are parsed, normalized recursively, and serialized back, so JSON nested inside a string field is compared on its structure rather than its exact ids and times. Object keys are normalised too, so a `logs` map keyed by a raw session id becomes the same `<ses:n>` placeholder as its value.
 
 ## Captures
 
-A capture is `{ steps: [{ status, headers, body }] }`. `status` is the numeric response status. `headers` contains lower-cased header names sorted alphabetically, dropping `date`, `connection`, `keep-alive`, `content-length`, `transfer-encoding`, `etag` and `last-modified`. `body` is parsed as JSON when the response content type contains `json` and kept as text otherwise, so a 401 error body is captured but never asserted by the scenario itself.
+A capture is `{ steps, events, logs, model, database, files }`.
+
+- `steps`: one entry per `http` step, `{ status, headers, body }`. `status` is the numeric response status. `headers` contains lower-cased header names sorted alphabetically, dropping `date`, `connection`, `keep-alive`, `content-length`, `transfer-encoding`, `etag` and `last-modified`. `body` is parsed as JSON when the response content type contains `json` and kept as text otherwise, so a 401 error body is captured but never asserted by the scenario itself.
+- `events`: every `/api/event` frame collected in arrival order. The stream opens before the first step and closes after the last, so it starts with `server.connected`.
+- `logs`: for each session created in the run, the parsed frames of `GET /api/experimental/session/<id>/log`, keyed by the raw session id.
+- `model`: outbound model requests, currently always `[]`.
+- `database`: one entry per SQLite file under the sandbox, keyed by its relative path, captured after the server has exited. Each entry has `schema` (`type`, `name`, `tbl_name`, `sql`, sorted by type then name) and `tables` (one array of row objects per table). Blob values are `hex:<lowercase hex>`, and table rows are sorted by their serialised JSON after normalisation, so insertion order of random ids does not matter.
+- `files`: every other file under the sandbox as relative path to contents, captured after the server has exited. Valid UTF-8 files store their text and other files store `sha256:<hex>`. Excluded are SQLite files and their `-wal`, `-shm` and `-journal` siblings (captured as `database` instead), `models.json` (written by the harness), and `home/.local/share/opencode/log/**` (log lines carry wall-clock times, run ids and process ids).
 
 Each run writes three files below `parity/out/<scenario>/`: `reference.json` and `candidate.json` hold the normalized captures, and `differences.json` holds the compared paths with their reference and candidate values.
 

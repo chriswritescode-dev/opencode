@@ -9,7 +9,12 @@ export type HttpStep = {
   as?: string
 }
 
-export type Step = { http: HttpStep }
+export type WaitEventStep = { type: string; match?: Record<string, unknown> }
+
+export type Step =
+  | { http: HttpStep }
+  | { waitEvent: WaitEventStep; timeout?: number }
+  | { files: Record<string, string> }
 
 export type Reply = unknown
 

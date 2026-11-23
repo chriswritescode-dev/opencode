@@ -51,6 +51,20 @@ export const RULES: Rule[] = [
     },
   },
   {
+    id: "slug",
+    description: "Replace session slugs with stable `<slug:n>` placeholders.",
+    apply: (value, _context, state, key) => {
+      if (key !== "slug" || typeof value !== "string") return value
+      const lookup = `slug${"\u0000"}${value}`
+      const known = state.ids.get(lookup)
+      if (known !== undefined) return `<slug:${known}>`
+      const next = (state.counts.get("slug") ?? 0) + 1
+      state.counts.set("slug", next)
+      state.ids.set(lookup, next)
+      return `<slug:${next}>`
+    },
+  },
+  {
     id: "time",
     description: "Replace timestamps inside the capture window with `<time>`.",
     apply: (value, context) => {
@@ -74,7 +88,27 @@ export const RULES: Rule[] = [
       return value
     },
   },
+  {
+    id: "base64",
+    description: "Decode base64 JSON values, normalize them and re-encode the result.",
+    apply: (value, context, state) => {
+      if (typeof value !== "string") return value
+      const decoded = decodeBase64Json(value)
+      if (decoded === undefined) return value
+      return Buffer.from(JSON.stringify(walk(decoded, undefined, context, state))).toString("base64")
+    },
+  },
 ]
+
+const BASE64 = /^[A-Za-z0-9+/]+={0,2}$/
+
+const decodeBase64Json = (value: string): unknown => {
+  if (value.length < 8 || !BASE64.test(value)) return undefined
+  const text = Buffer.from(value, "base64").toString("utf-8")
+  if (!text.startsWith("{") && !text.startsWith("[")) return undefined
+  const parsed = parseJSON(text)
+  return parsed.ok ? parsed.value : undefined
+}
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> => {
   if (typeof value !== "object" || value === null || Array.isArray(value)) return false
@@ -97,7 +131,10 @@ const walk = (value: unknown, key: string | undefined, context: NormalizeContext
   if (Array.isArray(value)) return value.map((element) => walk(element, undefined, context, state))
   if (isPlainObject(value))
     return Object.fromEntries(
-      Object.entries(value).map(([entryKey, entryValue]) => [entryKey, walk(entryValue, entryKey, context, state)]),
+      Object.entries(value).map(([entryKey, entryValue]) => [
+        String(applyRules(entryKey, undefined, context, state)),
+        walk(entryValue, entryKey, context, state),
+      ]),
     )
   if (typeof value === "string" && (value.startsWith("{") || value.startsWith("["))) {
     const parsed = parseJSON(value)
@@ -108,5 +145,26 @@ const walk = (value: unknown, key: string | undefined, context: NormalizeContext
 
 export function normalizeCapture(capture: unknown, context: NormalizeContext): unknown {
   const state: NormalizeState = { ids: new Map(), counts: new Map() }
-  return walk(capture, undefined, context, state)
+  const walked = walk(capture, undefined, context, state)
+  if (!isPlainObject(walked) || !isPlainObject(walked.database)) return walked
+  const database = Object.fromEntries(
+    Object.entries(walked.database).map(([name, entry]) => {
+      if (!isPlainObject(entry) || !isPlainObject(entry.tables)) return [name, entry]
+      const tables = Object.fromEntries(
+        Object.entries(entry.tables).map(([table, rows]) => [
+          table,
+          Array.isArray(rows) ? [...rows].sort(compareRows) : rows,
+        ]),
+      )
+      return [name, { ...entry, tables }]
+    }),
+  )
+  return { ...walked, database }
+}
+
+const compareRows = (left: unknown, right: unknown) => {
+  const leftText = JSON.stringify(left)
+  const rightText = JSON.stringify(right)
+  if (leftText === rightText) return 0
+  return leftText < rightText ? -1 : 1
 }
