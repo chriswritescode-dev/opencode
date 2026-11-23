@@ -12,7 +12,7 @@ pub enum ToolUpdateKind {
     Replace,
 }
 
-pub type PlacedGuard = Arc<dyn Fn(&LlmRequest, usize) -> bool + Send + Sync>;
+pub type PlacedGuard = Arc<dyn Fn(&Model, &LlmRequest, usize) -> bool + Send + Sync>;
 pub type DeclarableGuard = Arc<dyn Fn(&ToolEntry) -> bool + Send + Sync>;
 
 #[derive(Clone, Default)]
@@ -201,7 +201,7 @@ fn plan(model: &Model, request: LlmRequest, supported: &[ToolUpdateKind]) -> Llm
         let native = first_turn.is_some_and(|first| *index > first)
             && kinds.iter().all(|kind| supported.contains(kind))
             && change.add.iter().chain(removed.iter()).all(|tool| declarable.is_none_or(|guard| guard(tool)))
-            && placeable.is_none_or(|guard| guard(&request, *index));
+            && placeable.is_none_or(|guard| guard(model, &request, *index));
         steps.push(PlanStep {
             index: *index,
             native,

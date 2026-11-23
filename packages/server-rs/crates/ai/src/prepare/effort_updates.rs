@@ -21,7 +21,7 @@ pub fn strip_effort_updates(request: LlmRequest) -> LlmRequest {
 }
 
 pub fn apply_effort_updates(model: &Model, request: LlmRequest) -> LlmRequest {
-    if model.route.protocol.supports_effort_updates(&request) {
+    if model.route.protocol.supports_effort_updates(model, &request) {
         return request;
     }
     strip_effort_updates(request)

@@ -79,7 +79,7 @@ impl Protocol for TestProtocol {
         self.sanitizer
     }
 
-    fn supports_effort_updates(&self, _request: &LlmRequest) -> bool {
+    fn supports_effort_updates(&self, _model: &Model, _request: &LlmRequest) -> bool {
         self.effort
     }
 

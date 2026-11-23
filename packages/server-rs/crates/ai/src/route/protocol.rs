@@ -24,10 +24,13 @@ pub trait Protocol: Send + Sync {
     fn required_headers(&self, _request: &LlmRequest) -> Vec<(String, String)> {
         Vec::new()
     }
+    fn body_headers(&self, _model: &Model, _request: &LlmRequest, _body: &Value) -> Vec<(String, String)> {
+        Vec::new()
+    }
     fn sanitizer(&self) -> Option<SanitizerKind> {
         None
     }
-    fn supports_effort_updates(&self, _request: &LlmRequest) -> bool {
+    fn supports_effort_updates(&self, _model: &Model, _request: &LlmRequest) -> bool {
         false
     }
     fn tool_updates(&self) -> Option<ToolUpdateEncoding> {

@@ -28,8 +28,16 @@ pub fn compile(
 ) -> Result<Compiled, AiError> {
     reject_local_files(&request)?;
     let request = crate::prepare::prepare(model, request);
-    let resolved = ResolvedRequest { request, model: model.clone() };
+    let mut resolved = ResolvedRequest { request, model: model.clone() };
     let body = resolved.model.route.protocol.build_body(&resolved, &resolved.model, context)?;
+    let prepared_headers = resolved.model.route.protocol.body_headers(&resolved.model, &resolved.request, &body);
+    if !prepared_headers.is_empty() {
+        let mut headers = resolved.request.headers.clone().unwrap_or_default();
+        for (name, value) in prepared_headers {
+            headers.insert(name, value);
+        }
+        resolved.request.headers = Some(headers);
+    }
     let mut endpoint = resolved.model.route.endpoint.clone();
     if matches!(endpoint.path, PathPart::Default) {
         endpoint.path =

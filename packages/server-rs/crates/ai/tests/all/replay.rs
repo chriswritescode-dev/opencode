@@ -218,3 +218,12 @@ async fn openai_chat_cassettes() {
     let steps = replay_group("openai-chat").await;
     assert_eq!(steps, 15, "openai-chat step count");
 }
+
+#[tokio::test]
+async fn anthropic_messages_cassettes() {
+    let corpus = crate::corpus::Corpus::load();
+    let cassettes = corpus.cassettes.iter().filter(|cassette| cassette.group == "anthropic-messages").count();
+    assert_eq!(cassettes, 8, "anthropic-messages cassette count");
+    let steps = replay_group("anthropic-messages").await;
+    assert_eq!(steps, 11, "anthropic-messages step count");
+}
