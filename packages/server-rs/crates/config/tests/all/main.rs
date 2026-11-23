@@ -4,6 +4,7 @@ mod load;
 mod normalize;
 mod paths;
 mod policy;
+mod service;
 mod substitute;
 mod support;
 mod wellknown;

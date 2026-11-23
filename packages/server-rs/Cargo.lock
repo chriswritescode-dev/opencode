@@ -746,6 +746,8 @@ dependencies = [
 name = "opencode-config"
 version = "0.1.0"
 dependencies = [
+ "log",
+ "notify",
  "opencode-api-types",
  "opencode-contract",
  "opencode-local",
@@ -754,6 +756,7 @@ dependencies = [
  "reqwest",
  "rustls",
  "rustls-platform-verifier",
+ "serde",
  "serde_json",
  "tokio",
 ]

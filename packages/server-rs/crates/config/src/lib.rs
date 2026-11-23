@@ -10,6 +10,8 @@ pub mod parse;
 pub mod paths;
 pub mod policy;
 pub mod seams;
+pub mod service;
 pub mod variable;
+pub mod watch;
 pub mod wellknown;
 pub mod wildcard;

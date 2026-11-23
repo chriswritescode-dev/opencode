@@ -11,6 +11,8 @@ autotests = false
 workspace = true
 
 [dependencies]
+log.workspace = true
+notify.workspace = true
 opencode-api-types.workspace = true
 opencode-contract.workspace = true
 opencode-local.workspace = true
@@ -19,6 +21,7 @@ regex-lite.workspace = true
 reqwest = { workspace = true, features = ["json"] }
 rustls.workspace = true
 rustls-platform-verifier.workspace = true
+serde.workspace = true
 serde_json.workspace = true
 tokio = { workspace = true, features = ["sync", "time", "process", "macros", "rt"] }
 
