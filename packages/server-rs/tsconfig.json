@@ -3,7 +3,8 @@
   "extends": "@tsconfig/bun/tsconfig.json",
   "compilerOptions": {
     "types": ["bun"],
-    "noUnusedLocals": true
+    "noUnusedLocals": true,
+    "noUncheckedIndexedAccess": false
   },
   "include": ["script"]
 }

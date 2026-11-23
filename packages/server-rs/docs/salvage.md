@@ -25,8 +25,8 @@ named in the row needs it.
 | migration runner | `oc-storage` | Applies ordered migrations to SQLite | `storage` | OR-40 | `packages/core/src/database/migration.ts` |
 | dump tooling | `oc-storage` | Database dump and restore helpers | `storage` | OR-40 | the debug entry points for storage at the pin |
 | ID helpers | `oc-schema` | Prefixed, sortable identifiers | `storage` | OR-40 | `packages/schema/src/identifier.ts` |
-| JavaScript-string helpers | `oc-schema` | String conversions that match JavaScript semantics | `contract` | OR-38 | compare with the `opencode_api_types` JavaScript helpers first |
-| number helpers | `oc-schema` | Number parsing and formatting that match JavaScript | `contract` | OR-38 | compare with the `opencode_api_types` JavaScript helpers first |
+| JavaScript-string helpers | `oc-schema` | String conversions that match JavaScript semantics | `contract` | OR-38 | OR-38 used `opencode_api_types::js` (`encode_component`, `decode_component`) and imported no first-attempt code: the helpers already match the TypeScript behaviour, and the first-attempt branches are not visible in this checkout. |
+| number helpers | `oc-schema` | Number parsing and formatting that match JavaScript | `contract` | OR-38 | OR-38 used `opencode_api_types::js` (`number_to_string`) and imported no first-attempt code: the helpers already match the TypeScript behaviour, and the first-attempt branches are not visible in this checkout. |
 | wildcard helpers | `oc-schema` | Glob-style pattern matching for permission rules | `session` permissions | OR-50 | `packages/core/src/util/wildcard.ts` |
 | response validator | `oc-contract` | Validates responses against the committed schema | `parity/` | OR-37 | `packages/protocol/src/client.ts` and `packages/protocol/openapi.json` at the pin |
 | git fixtures | `oc-testkit` | Temporary git repositories for tests | `vcs` tests | OR-53 | `packages/core/test/fixture/git.ts` |
