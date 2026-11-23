@@ -2,8 +2,6 @@ use std::ffi::OsString;
 
 pub const USAGE: &str = "usage: opencode-server <serve|service|--version>";
 
-const SERVICE_COMMANDS: &[&str] = &["start", "restart", "status", "stop", "get", "set", "unset"];
-
 pub struct Serve {
     pub hostname: Option<String>,
     pub port: Option<u16>,
@@ -15,7 +13,17 @@ pub struct Serve {
 pub enum Command {
     Version,
     Serve(Serve),
-    Service,
+    Service(ServiceCommand),
+}
+
+pub enum ServiceCommand {
+    Start,
+    Restart,
+    Status,
+    Stop,
+    Get { key: Option<String>, name: Option<String> },
+    Set { key: String, value: String, nested: Option<String> },
+    Unset { key: String, name: Option<String> },
 }
 
 pub enum Error {
@@ -48,13 +56,36 @@ pub fn parse(args: impl IntoIterator<Item = OsString>) -> Result<Command, Error>
 }
 
 fn parse_service(args: &[String]) -> Result<Command, Error> {
-    let Some(subcommand) = args.first() else {
+    let Some((subcommand, rest)) = args.split_first() else {
         return Err(Error::Usage);
     };
-    if SERVICE_COMMANDS.contains(&subcommand.as_str()) {
-        return Ok(Command::Service);
-    }
-    Err(Error::Message(format!("unknown command: {subcommand}")))
+    let command = match subcommand.as_str() {
+        "start" if rest.is_empty() => ServiceCommand::Start,
+        "restart" if rest.is_empty() => ServiceCommand::Restart,
+        "status" if rest.is_empty() => ServiceCommand::Status,
+        "stop" if rest.is_empty() => ServiceCommand::Stop,
+        "start" | "restart" | "status" | "stop" => return Err(Error::Usage),
+        "get" => match rest {
+            [] => ServiceCommand::Get { key: None, name: None },
+            [key] => ServiceCommand::Get { key: Some(key.clone()), name: None },
+            [key, name] => ServiceCommand::Get { key: Some(key.clone()), name: Some(name.clone()) },
+            _ => return Err(Error::Usage),
+        },
+        "set" => match rest {
+            [key, value] => ServiceCommand::Set { key: key.clone(), value: value.clone(), nested: None },
+            [key, value, nested] => {
+                ServiceCommand::Set { key: key.clone(), value: value.clone(), nested: Some(nested.clone()) }
+            }
+            _ => return Err(Error::Usage),
+        },
+        "unset" => match rest {
+            [key] => ServiceCommand::Unset { key: key.clone(), name: None },
+            [key, name] => ServiceCommand::Unset { key: key.clone(), name: Some(name.clone()) },
+            _ => return Err(Error::Usage),
+        },
+        _ => return Err(Error::Message(format!("unknown command: {subcommand}"))),
+    };
+    Ok(Command::Service(command))
 }
 
 fn parse_serve(args: &[String]) -> Result<Serve, Error> {

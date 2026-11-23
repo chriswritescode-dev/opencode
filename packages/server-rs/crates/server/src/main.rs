@@ -3,6 +3,7 @@ mod env;
 mod probe;
 mod registration;
 mod serve;
+mod service;
 mod service_mode;
 mod shutdown;
 
@@ -30,9 +31,6 @@ fn main() -> std::process::ExitCode {
             std::process::ExitCode::SUCCESS
         }
         cli::Command::Serve(args) => serve::run_serve(args, env::ServerEnv::from_process()),
-        cli::Command::Service => {
-            eprintln!("not implemented");
-            std::process::ExitCode::from(1)
-        }
+        cli::Command::Service(command) => service::run(command, env::ServerEnv::from_process()),
     }
 }

@@ -27,7 +27,9 @@ enum Election {
 
 pub(crate) async fn run(args: Serve, mut env: ServerEnv) -> std::io::Result<std::process::ExitCode> {
     let paths = Paths::from_vars(|name| env.get(name).map(OsStr::to_os_string))?;
-    let file = Files::new(&paths, crate::CHANNEL).file;
+    let files = Files::new(&paths, crate::CHANNEL);
+    files.migrate(crate::CHANNEL, crate::VERSION);
+    let file = files.file;
     let service_config = ServiceConfig::new(&paths, crate::CHANNEL);
     if let Err(error) = std::env::set_current_dir(&paths.home) {
         eprintln!("failed to change service directory to home: {error}");

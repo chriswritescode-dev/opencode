@@ -22,6 +22,7 @@ pub enum State {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Probe {
     Missing,
+    TimedOut,
     Incompatible,
     Answered(State),
 }
@@ -29,7 +30,7 @@ pub enum Probe {
 pub async fn probe(registration: &Registration, timeout: Duration) -> Probe {
     match tokio::time::timeout(timeout, fetch(registration)).await {
         Ok(probe) => probe,
-        Err(_) => Probe::Missing,
+        Err(_) => Probe::TimedOut,
     }
 }
 
@@ -38,7 +39,7 @@ pub async fn incumbent(file: &Path, url: &str, timeout: Duration) -> Option<Regi
     let mut candidate = found.clone();
     candidate.url = url.to_owned();
     match probe(&candidate, timeout).await {
-        Probe::Answered(State::Ready) => Some(found),
+        Probe::Answered(_) => Some(found),
         _ => None,
     }
 }
