@@ -1,5 +1,3 @@
-//! The `kv` table: JSON values keyed by string, and range scans over the keys.
-
 use opencode_contract::codec::encode_json;
 use rusqlite::{Connection, OptionalExtension, params};
 use serde_json::Value;
@@ -7,59 +5,48 @@ use serde_json::Value;
 use crate::StorageError;
 use crate::id::now_ms;
 
-/// One stored key and the JSON value it holds.
 pub struct Entry {
-    /// The key the value is stored under.
     pub key: String,
-    /// The decoded JSON value.
     pub value: Value,
 }
 
-/// The bounds of a key scan.
 pub struct ScanOptions {
-    /// Only keys from this prefix up to its successor are considered.
     pub prefix: String,
-    /// Excludes keys up to and including this one.
     pub after: Option<String>,
-    /// The maximum number of entries to return; clamped to 1 through 1000.
     pub limit: Option<f64>,
 }
 
-/// The entries a scan returned, and the key to continue after when more rows remain.
 pub struct ScanResult {
-    /// The entries in ascending key order.
     pub entries: Vec<Entry>,
-    /// The last returned key when the scan was truncated.
     pub next: Option<String>,
 }
 
-/// Reads the value stored under `key`, or `None` when no row exists.
 pub fn get(db: &Connection, key: &str) -> Result<Option<Value>, StorageError> {
-    let value = db.query_row("SELECT value FROM kv WHERE key = ?", [key], |row| row.get::<_, String>(0)).optional()?;
+    let value = db
+        .prepare_cached("SELECT value FROM kv WHERE key = ?")?
+        .query_row([key], |row| row.get::<_, String>(0))
+        .optional()?;
     match value {
         Some(text) => Ok(Some(serde_json::from_str(&text)?)),
         None => Ok(None),
     }
 }
 
-/// Inserts `key`, or replaces its value while keeping `time_created` and refreshing `time_updated`.
 pub fn set(db: &Connection, key: &str, value: &Value) -> Result<(), StorageError> {
     let text = encode_json(value);
     let now = now_ms();
-    db.execute(
+    db.prepare_cached(
         "INSERT INTO kv (key, value, time_created, time_updated) VALUES (?, ?, ?, ?) ON CONFLICT (key) DO UPDATE SET value = ?, time_updated = ?",
-        params![key, text, now, now, text, now],
-    )?;
+    )?
+    .execute(params![key, text, now, now, text, now])?;
     Ok(())
 }
 
-/// Deletes `key`; a key that is not stored is not an error.
 pub fn remove(db: &Connection, key: &str) -> Result<(), StorageError> {
-    db.execute("DELETE FROM kv WHERE key = ?", [key])?;
+    db.prepare_cached("DELETE FROM kv WHERE key = ?")?.execute([key])?;
     Ok(())
 }
 
-/// Reads up to `options.limit` keys in ascending order, reporting where to continue.
 pub fn scan(db: &Connection, options: ScanOptions) -> Result<ScanResult, StorageError> {
     let limit = match options.limit {
         None => 100,
@@ -90,8 +77,8 @@ pub fn scan(db: &Connection, options: ScanOptions) -> Result<ScanResult, Storage
     }
     sql.push_str(" ORDER BY key ASC LIMIT ?");
 
-    let mut statement = db.prepare(&sql)?;
-    let rows = statement
+    let rows = db
+        .prepare_cached(&sql)?
         .query_map(rusqlite::params_from_iter(values), |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)))?
         .collect::<Result<Vec<_>, _>>()?;
     let mut entries = rows
@@ -103,10 +90,6 @@ pub fn scan(db: &Connection, options: ScanOptions) -> Result<ScanResult, Storage
     Ok(ScanResult { entries, next })
 }
 
-/// The smallest key above every key that starts with `prefix`, or `None` when there is none.
-///
-/// `bun:sqlite` binds an incremented lone surrogate as the replacement character, so the same
-/// substitution is applied here.
 fn prefix_end(prefix: &str) -> Option<String> {
     let (index, last) = prefix.char_indices().rfind(|(_, value)| *value < char::MAX)?;
     let mut end = String::with_capacity(prefix.len() + 4);

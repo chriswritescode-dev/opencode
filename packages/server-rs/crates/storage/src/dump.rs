@@ -88,7 +88,10 @@ fn cell(row: &Row<'_>, index: usize, masked: bool) -> rusqlite::Result<Value> {
     Ok(match kind.as_str() {
         "integer" => json!(["integer", row.get::<_, i64>(index + 1)?.to_string()]),
         "real" => json!(["real", opencode_api_types::js::number_to_string(row.get(index + 1)?)]),
-        "text" => json!(["text", row.get::<_, String>(index + 1)?]),
+        "text" => {
+            let value = row.get_ref(index + 1)?;
+            json!(["text", String::from_utf8_lossy(value.as_bytes()?).into_owned()])
+        }
         "blob" => json!(["blob", row.get::<_, String>(index + 1)?]),
         _ => Value::Null,
     })

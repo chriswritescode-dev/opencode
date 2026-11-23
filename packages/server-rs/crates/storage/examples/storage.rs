@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 use std::process::ExitCode;
 
+use opencode_storage::Database;
 use opencode_storage::DatabaseLocation;
-use opencode_storage::database::open;
 use opencode_storage::dump::{Masks, dump};
 use serde_json::json;
 
@@ -40,7 +40,7 @@ fn open_command(file: PathBuf, mut args: impl Iterator<Item = String>) -> Result
     if args.next().is_some() {
         return Err(format!("open accepts only --data <dir> after <file>\n{}", usage()));
     }
-    let (_database, report) = open(DatabaseLocation::File(file), &data).map_err(|error| error.to_string())?;
+    let (_database, report) = Database::open(DatabaseLocation::File(file), &data).map_err(|error| error.to_string())?;
     println!(
         "{}",
         json!({
@@ -53,7 +53,11 @@ fn open_command(file: PathBuf, mut args: impl Iterator<Item = String>) -> Result
 }
 
 fn dump_command(file: PathBuf) -> Result<(), String> {
-    let connection = rusqlite::Connection::open(file).map_err(|error| error.to_string())?;
+    let connection = rusqlite::Connection::open_with_flags(
+        file,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY | rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX,
+    )
+    .map_err(|error| error.to_string())?;
     let dumped = dump(&connection, &Masks::new()).map_err(|error| error.to_string())?;
     println!("{dumped}");
     Ok(())

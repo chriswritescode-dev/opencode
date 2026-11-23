@@ -403,7 +403,11 @@ async function record(
   }
   try {
     const program = migration.up(tx) as { pipe: (apply: unknown) => unknown }
-    await Effect.runPromise(program.pipe(Effect.provideService(Global.Service, Global.make())))
+    await Effect.runPromise(
+      program.pipe(
+        Effect.provideService(Global.Service, Global.make({ data: "/nonexistent-opencode-storage-corpus" })),
+      ),
+    )
   } catch (error) {
     fail(`storage: ${migration.id} threw: ${error instanceof Error ? error.message : String(error)}`)
   }

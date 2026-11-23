@@ -1,6 +1,5 @@
 use std::path::Path;
 
-use opencode_storage::database::open;
 use opencode_storage::generated::migrations::{Body, MIGRATIONS, Migration};
 use opencode_storage::migration::hand::HAND_PORTED;
 use opencode_storage::migration::{apply_only, completed};
@@ -77,7 +76,7 @@ fn assert_credential_id(id: &str) {
 #[test]
 fn bootstraps_an_empty_file() {
     let dir = TempDir::new();
-    let (database, report) = open(file(&dir), dir.path()).expect("open the database");
+    let (database, report) = Database::open(file(&dir), dir.path()).expect("open the database");
 
     assert!(report.bootstrapped, "the empty file is bootstrapped");
     assert!(report.applied.is_empty(), "bootstrap records migrations without applying them");
@@ -91,11 +90,11 @@ fn bootstraps_an_empty_file() {
 #[test]
 fn a_second_open_applies_nothing() {
     let dir = TempDir::new();
-    let (database, report) = open(file(&dir), dir.path()).expect("open the database");
+    let (database, report) = Database::open(file(&dir), dir.path()).expect("open the database");
     assert!(report.bootstrapped, "the empty file is bootstrapped");
     drop(database);
 
-    let (_database, report) = open(file(&dir), dir.path()).expect("reopen the database");
+    let (_database, report) = Database::open(file(&dir), dir.path()).expect("reopen the database");
     assert!(!report.bootstrapped, "the second open does not bootstrap");
     assert!(report.applied.is_empty(), "the second open applies nothing");
 }
@@ -105,7 +104,7 @@ fn underscore_tables_are_ignored() {
     let dir = TempDir::new();
     seed(&dir.path().join("opencode.db"), "CREATE TABLE _embedder_state (id text PRIMARY KEY);");
 
-    let (database, report) = open(file(&dir), dir.path()).expect("open the database");
+    let (database, report) = Database::open(file(&dir), dir.path()).expect("open the database");
     assert!(report.bootstrapped, "the underscore table does not make the database non-empty");
     assert!(exists(&database, "SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name = 'session_v2'"));
 }
@@ -115,16 +114,62 @@ fn a_non_empty_database_without_a_session_table_is_rejected() {
     let dir = TempDir::new();
     seed(&dir.path().join("opencode.db"), "CREATE TABLE unrelated (id text PRIMARY KEY);");
 
-    match open(file(&dir), dir.path()) {
+    match Database::open(file(&dir), dir.path()) {
         Ok(_) => panic!("a non-empty database without a session table is rejected"),
         Err(error) => assert_eq!(error.to_string(), "Database is not empty and has no session table"),
     }
 }
 
 #[test]
+fn a_failing_probe_migration_rolls_back_and_records_nothing() {
+    let dir = TempDir::new();
+    let (database, _) = Database::open(file(&dir), dir.path()).expect("open the database");
+    let input = [Migration {
+        id: "29990101000000_probe",
+        foreign_keys: true,
+        body: Body::Sql(&["CREATE TABLE probe (id integer)", "NOT SQL"]),
+    }];
+
+    assert!(apply_only(&database, &input, None).is_err(), "the invalid statement fails the migration");
+    assert!(
+        !exists(&database, "SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name = 'probe'"),
+        "the created table is rolled back"
+    );
+    assert!(!exists(&database, "SELECT count(*) FROM migration WHERE id = '29990101000000_probe'"));
+}
+
+const PROBE_INSERT: &str = "INSERT INTO project_directory (project_id, directory, type, strategy, time_created) VALUES ('missing', '/tmp/probe', NULL, NULL, 0)";
+static PROBE_INSERT_ONLY: [&str; 1] = [PROBE_INSERT];
+static PROBE_INSERT_THEN_FAIL: [&str; 2] = [PROBE_INSERT, "NOT SQL"];
+
+#[test]
+fn a_foreign_key_free_migration_may_violate_foreign_keys() {
+    let dir = TempDir::new();
+    let (database, _) = Database::open(file(&dir), dir.path()).expect("open the database");
+    let input = [Migration { id: "29990101000000_probe", foreign_keys: false, body: Body::Sql(&PROBE_INSERT_ONLY) }];
+
+    let report = apply_only(&database, &input, None).expect("foreign keys are disabled for the migration");
+    assert_eq!(report.applied, vec!["29990101000000_probe"]);
+    assert_eq!(integer(&database, "PRAGMA foreign_keys"), 1, "foreign keys are restored after the migration");
+    assert!(exists(&database, "SELECT count(*) FROM project_directory WHERE project_id = 'missing'"));
+}
+
+#[test]
+fn a_failing_foreign_key_free_migration_restores_foreign_keys() {
+    let dir = TempDir::new();
+    let (database, _) = Database::open(file(&dir), dir.path()).expect("open the database");
+    let input =
+        [Migration { id: "29990101000000_probe", foreign_keys: false, body: Body::Sql(&PROBE_INSERT_THEN_FAIL) }];
+
+    assert!(apply_only(&database, &input, None).is_err(), "the invalid statement fails the migration");
+    assert_eq!(integer(&database, "PRAGMA foreign_keys"), 1, "foreign keys are restored after the failure");
+    assert!(!exists(&database, "SELECT count(*) FROM project_directory WHERE project_id = 'missing'"));
+}
+
+#[test]
 fn a_failing_pending_migration_rolls_back_and_records_nothing() {
     let dir = TempDir::new();
-    let (database, _) = open(file(&dir), dir.path()).expect("open the database");
+    let (database, _) = Database::open(file(&dir), dir.path()).expect("open the database");
     database
         .read(|connection| {
             connection.execute("DELETE FROM migration WHERE id = '20261120004954_machine-key'", [])?;
@@ -133,7 +178,7 @@ fn a_failing_pending_migration_rolls_back_and_records_nothing() {
         .expect("delete the pending migration");
     drop(database);
 
-    let error = match open(file(&dir), dir.path()) {
+    let error = match Database::open(file(&dir), dir.path()) {
         Ok(_) => panic!("the reopen applies the deleted migration and fails"),
         Err(error) => error,
     };
@@ -149,7 +194,7 @@ fn a_failing_pending_migration_rolls_back_and_records_nothing() {
 #[test]
 fn a_named_drizzle_journal_is_imported_once() {
     let dir = TempDir::new();
-    let (database, _) = open(file(&dir), dir.path()).expect("open the database");
+    let (database, _) = Database::open(file(&dir), dir.path()).expect("open the database");
     database
         .read(|connection| {
             connection.execute_batch(
@@ -181,7 +226,7 @@ fn a_named_drizzle_journal_is_imported_once() {
 #[test]
 fn an_unnamed_drizzle_journal_matches_by_timestamp() {
     let dir = TempDir::new();
-    let (database, _) = open(file(&dir), dir.path()).expect("open the database");
+    let (database, _) = Database::open(file(&dir), dir.path()).expect("open the database");
     database
         .read(|connection| {
             connection.execute_batch(
@@ -212,7 +257,7 @@ fn an_unnamed_drizzle_journal_matches_by_timestamp() {
 #[test]
 fn an_unknown_drizzle_timestamp_is_rejected() {
     let dir = TempDir::new();
-    let (database, _) = open(file(&dir), dir.path()).expect("open the database");
+    let (database, _) = Database::open(file(&dir), dir.path()).expect("open the database");
     database
         .read(|connection| {
             connection.execute_batch(
@@ -235,7 +280,7 @@ fn an_unknown_drizzle_timestamp_is_rejected() {
 #[test]
 fn unknown_migration_ids_are_tolerated() {
     let dir = TempDir::new();
-    let (database, _) = open(file(&dir), dir.path()).expect("open the database");
+    let (database, _) = Database::open(file(&dir), dir.path()).expect("open the database");
     database
         .read(|connection| {
             connection.execute_batch(
@@ -254,7 +299,7 @@ fn unknown_migration_ids_are_tolerated() {
 #[test]
 fn foreign_keys_are_restored_after_the_rebuild_migration() {
     let dir = TempDir::new();
-    let (database, _) = open(file(&dir), dir.path()).expect("open the database");
+    let (database, _) = Database::open(file(&dir), dir.path()).expect("open the database");
     database
         .read(|connection| {
             connection.execute("DELETE FROM migration WHERE id = '20260823191254_nullable_workspace_binding'", [])?;
@@ -263,7 +308,7 @@ fn foreign_keys_are_restored_after_the_rebuild_migration() {
         .expect("delete the rebuild migration");
     drop(database);
 
-    let (database, report) = open(file(&dir), dir.path()).expect("reopen the database");
+    let (database, report) = Database::open(file(&dir), dir.path()).expect("reopen the database");
     assert!(!report.bootstrapped, "the database is already bootstrapped");
     assert_eq!(report.applied, vec!["20260823191254_nullable_workspace_binding"]);
     assert_eq!(integer(&database, "PRAGMA foreign_keys"), 1, "the rebuild restores foreign key enforcement");
@@ -286,7 +331,7 @@ fn legacy_credentials_are_imported_on_file_bootstrap() {
     let _guard = crate::lock_identifiers();
     let dir = TempDir::new();
     std::fs::write(dir.path().join("auth.json"), LEGACY_CREDENTIALS).expect("write the legacy credential file");
-    let (database, _) = open(file(&dir), dir.path()).expect("open the database");
+    let (database, _) = Database::open(file(&dir), dir.path()).expect("open the database");
 
     let rows = credentials(&database);
     assert_eq!(
@@ -334,7 +379,7 @@ fn legacy_credentials_are_imported_on_file_bootstrap() {
         .expect("replace the imported credentials");
     drop(database);
 
-    let (database, report) = open(file(&dir), dir.path()).expect("reopen the database");
+    let (database, report) = Database::open(file(&dir), dir.path()).expect("reopen the database");
     assert_eq!(report.applied, vec!["20260805200742_import_legacy_credentials"]);
     assert_eq!(
         credential_rows(&credentials(&database)),
@@ -368,17 +413,18 @@ fn legacy_credentials_are_skipped_for_memory_databases() {
     let dir = TempDir::new();
     std::fs::write(dir.path().join("auth.json"), LEGACY_CREDENTIALS).expect("write the legacy credential file");
 
-    let (database, report) = open(DatabaseLocation::Memory, dir.path()).expect("open the database");
+    let (database, report) = Database::open(DatabaseLocation::Memory, dir.path()).expect("open the database");
     assert!(report.bootstrapped, "the memory database is bootstrapped");
     assert_eq!(count(&database, "SELECT count(*) FROM credential"), 0, "an in-memory database keeps no credentials");
 }
 
 #[test]
 fn a_malformed_legacy_credential_file_bootstraps_with_a_warning() {
+    let _guard = crate::lock_identifiers();
     let dir = TempDir::new();
     std::fs::write(dir.path().join("auth.json"), "not json").expect("write the malformed credential file");
 
-    let (database, report) = open(file(&dir), dir.path()).expect("open the database");
+    let (database, report) = Database::open(file(&dir), dir.path()).expect("open the database");
     assert!(report.bootstrapped, "the malformed file does not stop the bootstrap");
     assert_eq!(
         report.warnings,
@@ -394,7 +440,7 @@ fn a_malformed_legacy_credential_file_bootstraps_with_a_warning() {
 fn an_absent_legacy_credential_file_imports_nothing() {
     let dir = TempDir::new();
 
-    let (database, report) = open(file(&dir), dir.path()).expect("open the database");
+    let (database, report) = Database::open(file(&dir), dir.path()).expect("open the database");
     assert!(report.warnings.is_empty(), "an absent file warns about nothing");
     assert_eq!(count(&database, "SELECT count(*) FROM credential"), 0);
 }

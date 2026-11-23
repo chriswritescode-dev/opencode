@@ -136,7 +136,10 @@ export function dump(db: BunDatabase, masks: Record<string, string[]>): unknown 
     const raw =
       columns.length === 0
         ? []
-        : (db.query(`SELECT ${select} FROM ${quoteIdentifier(table)}`).values() as Array<unknown[]>)
+        : (db
+            .query(`SELECT ${select} FROM ${quoteIdentifier(table)}`)
+            .safeIntegers(true)
+            .values() as Array<unknown[]>)
     const rows = raw.map((row) => {
       const cells: Cell[] = []
       for (const [index, column] of columns.entries()) {

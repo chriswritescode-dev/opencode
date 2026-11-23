@@ -1,5 +1,3 @@
-//! The SQLite database: its path, the shared connection, pragmas and transactions.
-
 pub mod column;
 pub mod database;
 pub mod dump;

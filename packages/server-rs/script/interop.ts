@@ -16,11 +16,26 @@ type Corpus = {
 }
 
 const root = new URL("..", import.meta.url).pathname
+class InteropDifference extends Error {}
+
 const binary = `${root}target/debug/examples/storage`
 const corpus = (await Bun.file(`${root}crates/storage/tests/corpus/migrations.json`).json()) as Corpus
 
 const build = Bun.spawnSync(
-  ["bun", "run", "cargo", "build", "--locked", "-q", "-p", "opencode-storage", "--example", "storage"],
+  [
+    "bun",
+    "run",
+    "cargo",
+    "build",
+    "--locked",
+    "-q",
+    "--target-dir",
+    `${root}target`,
+    "-p",
+    "opencode-storage",
+    "--example",
+    "storage",
+  ],
   { cwd: root },
 )
 if (build.exitCode !== 0) {
@@ -73,6 +88,9 @@ try {
     databaseDump(rustFixture, corpus.masks),
     databaseDump(typescriptFixture, corpus.masks),
   )
+} catch (caught) {
+  console.error(caught instanceof InteropDifference ? caught.message : caught)
+  process.exitCode = 1
 } finally {
   await rm(directory, { recursive: true, force: true })
 }
@@ -126,15 +144,14 @@ function same(left: unknown, right: unknown) {
 }
 
 function difference(name: string, part: string, expected: unknown, actual: unknown): never {
-  console.error(`interop: ${name}: ${part}`)
+  const lines = [`interop: ${name}: ${part}`]
   for (const value of [expected, actual]) {
     const text = JSON.stringify(value)
-    if (text !== undefined && text.length <= 400) console.error(text)
+    if (text !== undefined && text.length <= 400) lines.push(text)
   }
-  process.exit(1)
+  fail(lines.join("\n"))
 }
 
 function fail(message: string): never {
-  console.error(message)
-  process.exit(1)
+  throw new InteropDifference(message)
 }

@@ -1,6 +1,3 @@
-//! The `project` and `project_directory` tables, as `packages/core/src/project/sql.ts` and
-//! `packages/core/src/project.ts` read and write them.
-
 use rusqlite::{Connection, Row, params};
 use serde_json::Value;
 
@@ -8,9 +5,19 @@ use crate::StorageError;
 use crate::column;
 use crate::id::now_ms;
 
-const SELECT: &str = "SELECT id, worktree, vcs, name, icon_url, icon_url_override, icon_color, time_created, time_updated, time_initialized, time_active, time_archived, sandboxes, commands FROM project";
+macro_rules! select_project {
+    ($rest:literal) => {
+        concat!(
+            "SELECT id, worktree, vcs, name, icon_url, icon_url_override, icon_color, time_created, time_updated, time_initialized, time_active, time_archived, sandboxes, commands FROM project",
+            $rest
+        )
+    };
+}
 
-/// One row of the `project` table.
+const GET: &str = select_project!(" WHERE id = ?1");
+const LIST_ACTIVE: &str = select_project!(" WHERE time_archived IS NULL ORDER BY time_active DESC, id ASC");
+const LIST_ALL: &str = select_project!(" ORDER BY time_active DESC, id ASC");
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ProjectRow {
     pub id: String,
@@ -29,40 +36,38 @@ pub struct ProjectRow {
     pub commands: Option<Value>,
 }
 
-/// Reads one Project by ID.
 pub fn get(db: &Connection, id: &str) -> Result<Option<ProjectRow>, StorageError> {
-    let mut statement = db.prepare(&format!("{SELECT} WHERE id = ?1"))?;
+    let mut statement = db.prepare_cached(GET)?;
     let mut rows = statement.query(params![id])?;
     Ok(collect(&mut rows)?.into_iter().next())
 }
 
-/// `Project.list`: every Project, archived ones included when `include_archived`.
 pub fn list(db: &Connection, include_archived: bool) -> Result<Vec<ProjectRow>, StorageError> {
-    let filter = if include_archived { "" } else { " WHERE time_archived IS NULL" };
-    let mut statement = db.prepare(&format!("{SELECT}{filter} ORDER BY time_active DESC, id ASC"))?;
+    let mut statement = db.prepare_cached(if include_archived { LIST_ALL } else { LIST_ACTIVE })?;
     let mut rows = statement.query([])?;
     collect(&mut rows)
 }
 
-/// `upsertProject`: inserts the Project, or rewrites its vcs and update time when the vcs changed.
 pub fn upsert(db: &Connection, id: &str, canonical: &str, vcs: Option<&str>) -> Result<(), StorageError> {
     let worktree = column::to_driver_absolute(canonical)?;
     let now = now_ms();
     match vcs {
-        Some(vcs) => db.execute(
-            "INSERT INTO project (id, worktree, vcs, sandboxes, time_created, time_updated, time_active)
+        Some(vcs) => db
+            .prepare_cached(
+                "INSERT INTO project (id, worktree, vcs, sandboxes, time_created, time_updated, time_active)
              VALUES (?1, ?2, ?3, '[]', ?4, ?4, ?4)
              ON CONFLICT (id) DO UPDATE SET vcs = ?3, time_updated = ?4
              WHERE project.vcs IS NULL OR project.vcs <> ?3",
-            params![id, worktree, vcs, now],
-        )?,
-        None => db.execute(
-            "INSERT INTO project (id, worktree, vcs, sandboxes, time_created, time_updated, time_active)
+            )?
+            .execute(params![id, worktree, vcs, now])?,
+        None => db
+            .prepare_cached(
+                "INSERT INTO project (id, worktree, vcs, sandboxes, time_created, time_updated, time_active)
              VALUES (?1, ?2, NULL, '[]', ?3, ?3, ?3)
              ON CONFLICT (id) DO UPDATE SET vcs = NULL, time_updated = ?3
              WHERE project.vcs IS NOT NULL",
-            params![id, worktree, now],
-        )?,
+            )?
+            .execute(params![id, worktree, now])?,
     };
     Ok(())
 }
@@ -98,19 +103,16 @@ fn read_project(row: &Row<'_>) -> Result<ProjectRow, StorageError> {
     })
 }
 
-/// One row of the `project_directory` table.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ProjectDirectoryRow {
     pub project_id: String,
     pub directory: String,
-    /// The `type` column: the directory's role for the Project.
     pub kind: Option<String>,
     pub strategy: Option<String>,
     pub time_created: i64,
 }
 
 impl ProjectDirectoryRow {
-    /// Inserts the directory under the Project and returns the row that was written.
     pub fn insert(
         db: &Connection,
         project_id: &str,
@@ -120,11 +122,11 @@ impl ProjectDirectoryRow {
     ) -> Result<ProjectDirectoryRow, StorageError> {
         let stored = column::to_driver_absolute(directory)?;
         let time_created = now_ms();
-        db.execute(
+        db.prepare_cached(
             "INSERT INTO project_directory (project_id, directory, type, strategy, time_created)
              VALUES (?1, ?2, ?3, ?4, ?5)",
-            params![project_id, stored, kind, strategy, time_created],
-        )?;
+        )?
+        .execute(params![project_id, stored, kind, strategy, time_created])?;
         Ok(ProjectDirectoryRow {
             project_id: project_id.to_string(),
             directory: directory.to_string(),
@@ -134,9 +136,8 @@ impl ProjectDirectoryRow {
         })
     }
 
-    /// Every directory of the Project, ordered by directory.
     pub fn list(db: &Connection, project_id: &str) -> Result<Vec<ProjectDirectoryRow>, StorageError> {
-        let mut statement = db.prepare(
+        let mut statement = db.prepare_cached(
             "SELECT project_id, directory, type, strategy, time_created FROM project_directory
              WHERE project_id = ?1 ORDER BY directory",
         )?;

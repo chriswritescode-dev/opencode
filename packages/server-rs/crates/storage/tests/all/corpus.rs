@@ -1,8 +1,7 @@
 use std::path::Path;
 
-use opencode_storage::DatabaseLocation;
-use opencode_storage::database::open;
 use opencode_storage::dump::{Masks, dump};
+use opencode_storage::{Database, DatabaseLocation};
 use serde_json::Value;
 
 use crate::TempDir;
@@ -11,6 +10,7 @@ const CORPUS: &str = include_str!("../corpus/migrations.json");
 
 #[test]
 fn corpus_matches_the_pinned_typescript() {
+    let _guard = crate::lock_identifiers();
     let corpus: Value = serde_json::from_str(CORPUS).expect("parse the migration corpus");
     let fixtures = corpus["fixtures"].as_array().expect("the corpus has a fixtures array");
     assert_eq!(fixtures.len(), 14, "the corpus holds every pinned fixture");
@@ -26,7 +26,7 @@ fn corpus_matches_the_pinned_typescript() {
         seed(&path, fixture["start"].as_array().expect("a start array"), name);
 
         let expected = &fixture["expected"];
-        let result = open(DatabaseLocation::File(path.clone()), dir.path());
+        let result = Database::open(DatabaseLocation::File(path.clone()), dir.path());
         match result {
             Ok((database, _)) => {
                 assert!(!expected.is_null(), "fixture {name} was expected to fail");
@@ -35,7 +35,7 @@ fn corpus_matches_the_pinned_typescript() {
                 drop(database);
 
                 let (database, report) =
-                    open(DatabaseLocation::File(path.clone()), dir.path()).expect("reopen the database");
+                    Database::open(DatabaseLocation::File(path.clone()), dir.path()).expect("reopen the database");
                 assert!(!report.bootstrapped, "fixture {name}: the second open does not bootstrap");
                 assert!(report.applied.is_empty(), "fixture {name}: the second open applies nothing");
                 let actual = database.read(|connection| dump(connection, &masks)).expect("dump the database again");

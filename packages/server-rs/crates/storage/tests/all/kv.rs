@@ -1,7 +1,5 @@
-//! The `kv` table: reading and writing values, and scanning keys.
-
 use opencode_storage::kv::{self, ScanOptions, ScanResult};
-use opencode_storage::{Database, DatabaseLocation, StorageError, database::open};
+use opencode_storage::{Database, DatabaseLocation, StorageError};
 use rusqlite::TransactionBehavior;
 use serde_json::{Value, json};
 
@@ -9,7 +7,7 @@ use crate::TempDir;
 
 fn database() -> (TempDir, Database) {
     let dir = TempDir::new();
-    let (database, _) = open(DatabaseLocation::Memory, dir.path()).expect("open the database");
+    let (database, _) = Database::open(DatabaseLocation::Memory, dir.path()).expect("open the database");
     (dir, database)
 }
 

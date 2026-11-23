@@ -1,7 +1,4 @@
-//! The `project` and `project_directory` tables and their upsert behavior.
-
 use opencode_storage::column;
-use opencode_storage::database::open;
 use opencode_storage::project::{self, ProjectDirectoryRow};
 use opencode_storage::{Database, DatabaseLocation, StorageError};
 
@@ -9,7 +6,7 @@ use crate::TempDir;
 
 fn database() -> (TempDir, Database) {
     let dir = TempDir::new();
-    let (database, _) = open(DatabaseLocation::Memory, dir.path()).expect("open the database");
+    let (database, _) = Database::open(DatabaseLocation::Memory, dir.path()).expect("open the database");
     (dir, database)
 }
 

@@ -1,6 +1,3 @@
-//! `Database::transaction`: commit, rollback, savepoints and a failed commit.
-
-use opencode_storage::database::open;
 use opencode_storage::{Database, DatabaseLocation, StorageError};
 use rusqlite::TransactionBehavior;
 
@@ -8,7 +5,7 @@ use crate::TempDir;
 
 fn database() -> (TempDir, Database) {
     let dir = TempDir::new();
-    let (database, _) = open(DatabaseLocation::Memory, dir.path()).expect("open the database");
+    let (database, _) = Database::open(DatabaseLocation::Memory, dir.path()).expect("open the database");
     (dir, database)
 }
 

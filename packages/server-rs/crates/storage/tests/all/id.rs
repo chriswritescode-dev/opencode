@@ -40,6 +40,18 @@ fn a_zero_timestamp_starts_at_one() {
 }
 
 #[test]
+fn known_timestamp_ids_match_the_pinned_typescript() {
+    let _guard = crate::lock_identifiers();
+    id::create(false, 0);
+    let ascending = id::create(false, 1_700_000_000_000);
+    id::create(false, 0);
+    let descending = id::create(true, 1_700_000_000_000);
+
+    assert_eq!(&ascending[..12], "bcfe56800001", "the first ascending id after a counter reset: {ascending}");
+    assert_eq!(&descending[..12], "4301a97ffffe", "the first descending id after a counter reset: {descending}");
+}
+
+#[test]
 fn ascending_and_descending_use_the_clock() {
     let _guard = crate::lock_identifiers();
     assert_eq!(id::ascending().len(), 26, "a clock-based ascending id is 26 characters");

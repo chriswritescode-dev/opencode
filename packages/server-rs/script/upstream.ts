@@ -26,7 +26,10 @@ const corePaths = [
   "packages/schema",
   "packages/util",
 ]
-const coreMarker = corePaths.join("\n")
+async function coreMarker() {
+  const lock = new Bun.CryptoHasher("sha256").update(await Bun.file(`${repository}bun.lock`).text()).digest("hex")
+  return `${corePaths.join("\n")}\n${lock}`
+}
 
 /** Packages linked for their own sake rather than through a pinned manifest. */
 const extra = ["effect", "prettier"]
@@ -64,18 +67,20 @@ export async function upstreamTree(commit?: string) {
 export async function upstreamCoreTree(commit?: string) {
   const revision = commit ?? (await pin())
   await requireVersions(revision)
+  await requireCoreVersions(revision)
   const directory = `${root}target/upstream-core/${revision}`
+  const marker = await coreMarker()
   if (
     (await Bun.file(`${directory}/.complete`)
       .text()
-      .catch(() => "")) === coreMarker
+      .catch(() => "")) === marker
   )
     return directory
   await rm(directory, { recursive: true, force: true })
   await mkdir(directory, { recursive: true })
   await extract(revision, directory, corePaths)
   await linkCore(directory)
-  await Bun.write(`${directory}/.complete`, coreMarker)
+  await Bun.write(`${directory}/.complete`, marker)
   return directory
 }
 
@@ -107,16 +112,30 @@ async function requireVersions(commit: string) {
   const catalog: Record<string, string> = manifest.workspaces?.catalog ?? {}
   await requireVersion(commit, "effect", catalog.effect)
   await requireVersion(commit, "prettier", catalog.prettier ?? manifest.devDependencies?.prettier)
-  for (const path of ["packages/ai", "packages/http-recorder"]) {
-    const packages = gitJson(commit, `${path}/package.json`)
-    for (const name of linkedNames(packages)) {
-      const expected = declaredVersion(packages, catalog, name)
-      if (expected === undefined) {
-        console.error(`upstream: ${commit} has no version for ${name}; re-sync the pin or the catalog`)
-        process.exit(1)
-      }
-      await requireVersion(commit, name, expected, `${repository}${path}`)
+  for (const path of ["packages/ai", "packages/http-recorder"]) await requireDeclaredVersions(commit, catalog, path)
+}
+
+async function requireCoreVersions(commit: string) {
+  const catalog: Record<string, string> = gitJson(commit, "package.json").workspaces?.catalog ?? {}
+  for (const path of ["packages/core", "packages/util"])
+    await requireDeclaredVersions(commit, catalog, path, { skipUninstalled: true })
+}
+
+async function requireDeclaredVersions(
+  commit: string,
+  catalog: Record<string, string>,
+  path: string,
+  { skipUninstalled = false }: { skipUninstalled?: boolean } = {},
+) {
+  const packages = gitJson(commit, `${path}/package.json`)
+  for (const name of linkedNames(packages)) {
+    if (skipUninstalled && installedPackage(name, `${repository}${path}`) === undefined) continue
+    const expected = declaredVersion(packages, catalog, name)
+    if (expected === undefined) {
+      console.error(`upstream: ${commit} has no version for ${name}; re-sync the pin or the catalog`)
+      process.exit(1)
     }
+    await requireVersion(commit, name, expected, `${repository}${path}`)
   }
 }
 
