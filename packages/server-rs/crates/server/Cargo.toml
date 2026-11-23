@@ -10,6 +10,28 @@ autotests = false
 [lints]
 workspace = true
 
+[dependencies]
+base64.workspace = true
+bytes.workspace = true
+http-body-util.workspace = true
+hyper.workspace = true
+hyper-util.workspace = true
+indexmap.workspace = true
+opencode-contract.workspace = true
+opencode-http.workspace = true
+opencode-local.workspace = true
+rand.workspace = true
+rustix.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+
+[dev-dependencies]
+opencode-api.workspace = true
+opencode-local.workspace = true
+opencode-util.workspace = true
+opencode-service.workspace = true
+tokio.workspace = true
+
 [[bin]]
 name = "opencode-server"
 path = "src/main.rs"
@@ -17,9 +39,3 @@ path = "src/main.rs"
 [[test]]
 name = "all"
 path = "tests/all/main.rs"
-
-[dev-dependencies]
-opencode-local.workspace = true
-opencode-util.workspace = true
-opencode-service.workspace = true
-tokio.workspace = true

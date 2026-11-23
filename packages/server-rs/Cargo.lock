@@ -774,9 +774,21 @@ dependencies = [
 name = "opencode-server"
 version = "0.1.0"
 dependencies = [
+ "base64",
+ "bytes",
+ "http-body-util",
+ "hyper",
+ "hyper-util",
+ "indexmap",
+ "opencode-api",
+ "opencode-contract",
+ "opencode-http",
  "opencode-local",
  "opencode-service",
  "opencode-util",
+ "rand",
+ "rustix",
+ "serde_json",
  "tokio",
 ]
 

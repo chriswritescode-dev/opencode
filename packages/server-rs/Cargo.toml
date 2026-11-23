@@ -25,6 +25,7 @@ opencode-contract = { path = "crates/contract" }
 opencode-http = { path = "crates/http" }
 opencode-server = { path = "crates/server" }
 opencode-api-types = { path = "../cli-rs/crates/api-types" }
+opencode-api = { path = "../cli-rs/crates/api" }
 opencode-local = { path = "../cli-rs/crates/local" }
 opencode-util = { path = "../cli-rs/crates/util" }
 opencode-service = { path = "../cli-rs/crates/service" }
@@ -36,6 +37,7 @@ http = "1"
 http-body-util = "0.1"
 hyper = { version = "1", features = ["server", "client", "http1"] }
 hyper-util = { version = "0.1", features = ["tokio"] }
+indexmap = "2"
 rand = "0.10"
 regex-lite = "0.1"
 ring = "0.17"
