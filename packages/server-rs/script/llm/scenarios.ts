@@ -7,7 +7,7 @@ if (!tree) throw new Error("scenarios: OPENCODE_UPSTREAM_TREE is not set")
 
 const load = createLoader(tree)
 
-const { ai, CacheHint, LLMEvent, Media, Message, ToolCallPart, ToolChoice, ToolDefinition, ToolRuntime } =
+const { ai, CacheHint, LLMEvent, Media, Message, SystemPart, ToolCallPart, ToolChoice, ToolDefinition, ToolRuntime } =
   await load("packages/ai/src/effect.ts")
 const { LLMClient } = await load("packages/ai/src/route.ts")
 const {
@@ -20,11 +20,15 @@ const {
   CloudflareAIGateway,
   CloudflareWorkersAI,
   DeepInfra,
+  DigitalOcean,
   Google,
+  Groq,
   MiniMax,
+  Mistral,
   Moonshot,
   OpenAI,
   OpenAICompatible,
+  OpenRouter,
   TogetherAI,
   VercelAIGateway,
   Venice,
@@ -339,7 +343,7 @@ const runThreeStepWeatherLoop = (request: any) =>
     })
   })
 
-const runMinimaxToolLoop = (request: any) =>
+const runChatToolLoop = (request: any) =>
   Effect.gen(function* () {
     const first = yield* LLMClient.generate(request)
     yield* LLMClient.generate({
@@ -759,7 +763,7 @@ const minimaxScenarios = [
       settings: minimaxAdaptiveSettings,
     },
     run: () =>
-      runMinimaxToolLoop(
+      runChatToolLoop(
         ai.request({
           id: "recorded_minimax_messages_m3_continues_a_tool_loop_with_adaptive_thinking",
           model: minimaxMessagesModel("MiniMax-M3", minimaxAdaptiveSettings),
@@ -793,7 +797,7 @@ const minimaxScenarios = [
     protocol: "openai-chat",
     provider: { package: "@opencode/ai/providers/minimax/chat", modelID: "MiniMax-M3", settings: fixtureSettings },
     run: () =>
-      runMinimaxToolLoop(
+      runChatToolLoop(
         ai.request({
           id: "recorded_minimax_chat_m3_continues_a_tool_loop_with_default_thinking",
           model: minimaxChatModel("MiniMax-M3", fixtureSettings),
@@ -831,7 +835,7 @@ const minimaxScenarios = [
       settings: minimaxMinimalSettings,
     },
     run: () =>
-      runMinimaxToolLoop(
+      runChatToolLoop(
         ai.request({
           id: "recorded_minimax_responses_m3_continues_a_tool_loop_with_effort_minimal",
           model: minimaxResponsesModel("MiniMax-M3", minimaxMinimalSettings),
@@ -844,7 +848,559 @@ const minimaxScenarios = [
   }),
 ]
 
+const groqLookupWeather = ToolDefinition.make({
+  name: "lookup_weather",
+  description: "Look up the current weather for a city",
+  inputSchema: {
+    type: "object",
+    properties: { city: { type: "string", enum: ["Paris", "London"] } },
+    required: ["city"],
+    additionalProperties: false,
+  },
+})
+const mistralLookupWeather = ToolDefinition.make({
+  name: "lookup_weather",
+  description: "Look up the current weather for a city",
+  inputSchema: {
+    type: "object",
+    properties: { city: { type: "string", enum: ["Paris"] } },
+    required: ["city"],
+    additionalProperties: false,
+  },
+})
+const veniceLookupRate = ToolDefinition.make({
+  name: "lookup_rate",
+  description: "Retrieve the private conversion rate for a code. Only this tool knows the rate.",
+  inputSchema: {
+    type: "object",
+    properties: { code: { type: "string", enum: ["ZEBRA", "MOOSE"] } },
+    required: ["code"],
+    additionalProperties: false,
+  },
+})
+
+const groqTextSettings = {
+  apiKey: "fixture",
+  includeReasoning: false,
+  reasoningEffort: "low",
+  serviceTier: "on_demand",
+  user: "recorded-test",
+}
+
+const groqScenarios = [
+  chatVariant({
+    cassette: "groq-chat/streams-text-with-usage",
+    protocol: "openai-chat",
+    provider: { package: "@opencode/ai/providers/groq", modelID: "openai/gpt-oss-20b", settings: groqTextSettings },
+    run: () =>
+      LLMClient.generate(
+        ai.request({
+          id: "recorded_groq_chat_streams_text_with_usage",
+          model: Groq.model("openai/gpt-oss-20b", groqTextSettings),
+          prompt: "Reply with exactly one word: hello",
+          maxTokens: 512,
+        }),
+      ),
+  }),
+  ...[
+    {
+      cassette: "groq-chat/continues-qwen-parallel-tool-calls",
+      modelID: "qwen/qwen3.6-27b",
+      settings: { apiKey: "fixture", parallelToolCalls: true, reasoningEffort: "none" },
+      prompt:
+        "Look up the current weather in Paris and London. Call lookup_weather once for each city in the same response before answering. After receiving all results, report each city's weather in one short sentence.",
+    },
+    {
+      cassette: "groq-chat/replays-gpt-oss-reasoning-through-a-tool-loop",
+      modelID: "openai/gpt-oss-20b",
+      settings: { apiKey: "fixture", includeReasoning: true, reasoningEffort: "low" },
+      prompt:
+        "Look up the current weather in Paris. Call lookup_weather once for each city in the same response before answering. After receiving all results, report each city's weather in one short sentence.",
+    },
+  ].map((item) =>
+    chatVariant({
+      cassette: item.cassette,
+      protocol: "openai-chat",
+      provider: { package: "@opencode/ai/providers/groq", modelID: item.modelID, settings: item.settings },
+      run: () =>
+        runChatToolLoop(
+          ai.request({
+            id: `recorded_${item.cassette.replaceAll(/[/-]/g, "_")}`,
+            model: Groq.model(item.modelID, item.settings),
+            prompt: item.prompt,
+            tools: [groqLookupWeather],
+            toolChoice: "required",
+            maxTokens: 1536,
+          }),
+        ),
+    }),
+  ),
+  chatVariant({
+    cassette: "groq-chat/streams-qwen-parsed-reasoning",
+    protocol: "openai-chat",
+    provider: {
+      package: "@opencode/ai/providers/groq",
+      modelID: "qwen/qwen3.6-27b",
+      settings: { apiKey: "fixture", reasoningEffort: "default" },
+    },
+    run: () =>
+      LLMClient.generate(
+        ai.request({
+          id: "recorded_groq_chat_streams_qwen_parsed_reasoning",
+          model: Groq.model("qwen/qwen3.6-27b", { apiKey: "fixture", reasoningEffort: "default" }),
+          prompt:
+            "What is 173 multiplied by 219? Think through the arithmetic, then reply with only the final integer.",
+          maxTokens: 2048,
+        }),
+      ),
+  }),
+]
+
+const veniceSystem =
+  "Use the provided tool for private data. After receiving the result, give only the requested number; do not call the tool again."
+const venicePrompt =
+  "Look up conversion rate for code ZEBRA. Then multiply that rate by 17 and add 9. You must use lookup_rate before answering."
+const veniceFollowUp = "Add 7 to your previous final answer. Reply with just the number."
+
+const veniceLoopScenarios = [
+  { modelID: "deepseek-v4-flash", settings: fixtureSettings },
+  { modelID: "claude-opus-4-8", settings: { apiKey: "fixture", reasoningEffort: "high" } },
+  { modelID: "gemini-3-1-pro-preview", settings: { apiKey: "fixture", reasoningEffort: "high" } },
+  { modelID: "openai-gpt-54-mini", settings: fixtureSettings },
+].map((item) =>
+  chatVariant({
+    cassette: `venice-chat/${item.modelID}-preserves-reasoning-through-a-tool-loop-and-follow-up`,
+    protocol: "openai-chat",
+    provider: { package: "@opencode/ai/providers/venice", modelID: item.modelID, settings: item.settings },
+    run: () =>
+      Effect.gen(function* () {
+        const request = ai.request({
+          id: `recorded_venice_chat_${item.modelID.replaceAll("-", "_")}_tool_loop`,
+          model: Venice.model(item.modelID, item.settings),
+          system: veniceSystem,
+          prompt: venicePrompt,
+          tools: [veniceLookupRate],
+          maxTokens: 4096,
+        })
+        const first = yield* LLMClient.generate(request)
+        const continuation = {
+          ...request,
+          toolChoice: ToolChoice.make("none"),
+          messages: [
+            ...request.messages,
+            first.message,
+            ...first.toolCalls.map((call: any) =>
+              Message.tool({ id: call.id, name: call.name, result: { code: "ZEBRA", rate: 23 } }),
+            ),
+          ],
+        }
+        const second = yield* LLMClient.generate(continuation)
+        yield* LLMClient.generate({
+          ...continuation,
+          messages: [...continuation.messages, second.message, Message.user(veniceFollowUp)],
+        })
+      }),
+  }),
+)
+
+const veniceParallelSettings = { apiKey: "fixture", reasoningEffort: "high", parallelToolCalls: true }
+
+const veniceScenarios = [
+  ...veniceLoopScenarios,
+  chatVariant({
+    cassette: "venice-chat/gemini-preserves-per-call-signatures-through-parallel-tools",
+    protocol: "openai-chat",
+    provider: {
+      package: "@opencode/ai/providers/venice",
+      modelID: "gemini-3-8-flash",
+      settings: veniceParallelSettings,
+    },
+    run: () =>
+      Effect.gen(function* () {
+        const request = ai.request({
+          id: "recorded_venice_chat_gemini_parallel_tools",
+          model: Venice.model("gemini-3-8-flash", veniceParallelSettings),
+          prompt:
+            "Look up private rates for both ZEBRA and MOOSE using two calls to lookup_rate. Then add the rates and multiply by 7. Use parallel calls if possible.",
+          tools: [veniceLookupRate],
+          maxTokens: 4096,
+        })
+        const first = yield* LLMClient.generate(request)
+        const continuation = {
+          ...request,
+          toolChoice: ToolChoice.make("none"),
+          messages: [
+            ...request.messages,
+            first.message,
+            ...first.toolCalls.map((call: any) =>
+              Message.tool({
+                id: call.id,
+                name: call.name,
+                result: { rate: call.input.code === "ZEBRA" ? 23 : 31 },
+              }),
+            ),
+          ],
+        }
+        const second = yield* LLMClient.generate(continuation)
+        yield* LLMClient.generate({
+          ...continuation,
+          messages: [...continuation.messages, second.message, Message.user(veniceFollowUp)],
+        })
+      }),
+  }),
+  chatVariant({
+    cassette: "venice-chat/qwen-disables-reasoning",
+    protocol: "openai-chat",
+    provider: {
+      package: "@opencode/ai/providers/venice",
+      modelID: "qwen3-6-27b",
+      settings: { apiKey: "fixture", reasoning: { enabled: false } },
+    },
+    run: () =>
+      LLMClient.generate(
+        ai.request({
+          id: "recorded_venice_chat_qwen_disables_reasoning",
+          model: Venice.model("qwen3-6-27b", { apiKey: "fixture", reasoning: { enabled: false } }),
+          prompt: "What is 23 multiplied by 17 plus 9? Reply with just the number.",
+          maxTokens: 4096,
+        }),
+      ),
+  }),
+  chatVariant({
+    cassette: "venice-chat/surfaces-venice-model-errors",
+    protocol: "openai-chat",
+    provider: { package: "@opencode/ai/providers/venice", modelID: "no-such-model-xyz", settings: fixtureSettings },
+    run: () =>
+      LLMClient.generate(
+        ai.request({
+          id: "recorded_venice_chat_surfaces_model_errors",
+          model: Venice.model("no-such-model-xyz", fixtureSettings),
+          prompt: "Hello",
+        }),
+      ).pipe(Effect.flip),
+  }),
+]
+
+const digitalOceanChatScenarios = [
+  { slug: "haiku", modelID: "anthropic-claude-haiku-4.5", maxTokens: 128, settings: fixtureSettings },
+  {
+    slug: "gpt-nano",
+    modelID: "openai-gpt-5-nano",
+    maxTokens: 1024,
+    settings: { apiKey: "fixture", reasoningEffort: "minimal" },
+  },
+].flatMap((item) => {
+  const model = () => DigitalOcean.model(item.modelID, item.settings)
+  return [
+    chatVariant({
+      cassette: `digitalocean-chat/${item.slug}-reuses-a-cached-prompt`,
+      protocol: "openai-chat",
+      provider: { package: "@opencode/ai/providers/digitalocean", modelID: item.modelID, settings: item.settings },
+      run: () =>
+        Effect.gen(function* () {
+          const request = ai.request({
+            id: `recorded_digitalocean_chat_${item.slug}_reuses_a_cached_prompt`,
+            model: model(),
+            system: LARGE_CACHEABLE_SYSTEM,
+            prompt: "Reply exactly: OK",
+            promptCacheKey: `digitalocean-recorded-${item.modelID}`,
+            maxTokens: item.maxTokens,
+          })
+          yield* LLMClient.generate(request)
+          yield* LLMClient.generate(request)
+        }),
+    }),
+    chatVariant({
+      cassette: `digitalocean-chat/${item.slug}-continues-a-tool-call-with-cache-markers`,
+      protocol: "openai-chat",
+      provider: { package: "@opencode/ai/providers/digitalocean", modelID: item.modelID, settings: item.settings },
+      run: () =>
+        runWeatherToolLoop({
+          ...goldenWeatherToolLoopRequest({
+            id: `digitalocean-${item.modelID}-tool-loop`,
+            model: model(),
+            maxTokens: item.maxTokens,
+            temperature: false,
+          }),
+          cache: "auto",
+        }),
+    }),
+  ]
+})
+
+const digitalOceanResponsesScenarios = [
+  chatVariant({
+    cassette: "digitalocean-responses/streams-text",
+    protocol: "open-responses",
+    provider: {
+      package: "@opencode/ai/providers/digitalocean/responses",
+      modelID: "openai-gpt-5.4-mini",
+      settings: fixtureSettings,
+    },
+    run: () =>
+      LLMClient.generate(
+        ai.request({
+          id: "recorded_digitalocean_responses_streams_text",
+          model: DigitalOcean.responsesModel("openai-gpt-5.4-mini", fixtureSettings),
+          prompt: "Reply exactly: OK",
+          maxTokens: 64,
+        }),
+      ),
+  }),
+  chatVariant({
+    cassette: "digitalocean-responses/continues-a-tool-call",
+    protocol: "open-responses",
+    provider: {
+      package: "@opencode/ai/providers/digitalocean/responses",
+      modelID: "openai-gpt-5.4-mini",
+      settings: fixtureSettings,
+    },
+    run: () =>
+      runWeatherToolLoop(
+        weatherToolLoopRequest({
+          id: "digitalocean-responses-tool-loop",
+          model: DigitalOcean.responsesModel("openai-gpt-5.4-mini", fixtureSettings),
+          maxTokens: 256,
+          temperature: false,
+        }),
+      ),
+  }),
+  chatVariant({
+    cassette: "digitalocean-responses/calls-a-freeform-text-tool",
+    protocol: "open-responses",
+    provider: {
+      package: "@opencode/ai/providers/digitalocean/responses",
+      modelID: "openai-gpt-5.4-mini",
+      settings: fixtureSettings,
+    },
+    run: () =>
+      LLMClient.generate(
+        ai.request({
+          id: "recorded_digitalocean_responses_calls_a_freeform_text_tool",
+          model: DigitalOcean.responsesModel("openai-gpt-5.4-mini", fixtureSettings),
+          prompt: "Use the run tool to execute exactly this code: print(1)",
+          tools: freeformRun,
+          toolChoice: "required",
+          maxTokens: 256,
+        }),
+      ),
+  }),
+]
+
+const openRouterResponsesScenarios = [
+  chatVariant({
+    cassette: "openrouter-responses/streams-text",
+    protocol: "open-responses",
+    provider: {
+      package: "@opencode/ai/providers/openrouter/responses",
+      modelID: "openai/gpt-5.4-mini",
+      settings: fixtureSettings,
+    },
+    run: () =>
+      LLMClient.generate(
+        ai.request({
+          id: "recorded_openrouter_responses_streams_text",
+          model: OpenRouter.responsesModel("openai/gpt-5.4-mini", fixtureSettings),
+          prompt: "Reply exactly: OK",
+          maxTokens: 64,
+        }),
+      ),
+  }),
+  chatVariant({
+    cassette: "openrouter-responses/continues-a-tool-call",
+    protocol: "open-responses",
+    provider: {
+      package: "@opencode/ai/providers/openrouter/responses",
+      modelID: "openai/gpt-5.4-mini",
+      settings: fixtureSettings,
+    },
+    run: () =>
+      runWeatherToolLoop(
+        weatherToolLoopRequest({
+          id: "openrouter-responses-tool-loop",
+          model: OpenRouter.responsesModel("openai/gpt-5.4-mini", fixtureSettings),
+          maxTokens: 256,
+          temperature: false,
+        }),
+      ),
+  }),
+  chatVariant({
+    cassette: "openrouter-responses/calls-a-freeform-text-tool",
+    protocol: "open-responses",
+    provider: {
+      package: "@opencode/ai/providers/openrouter/responses",
+      modelID: "openai/gpt-5.4-mini",
+      settings: fixtureSettings,
+    },
+    run: () =>
+      LLMClient.generate(
+        ai.request({
+          id: "recorded_openrouter_responses_calls_a_freeform_text_tool",
+          model: OpenRouter.responsesModel("openai/gpt-5.4-mini", fixtureSettings),
+          prompt: "Use the run tool to execute exactly this code: print(1)",
+          tools: freeformRun,
+          toolChoice: "required",
+          maxTokens: 256,
+        }),
+      ),
+  }),
+]
+
+const openRouterReasoningSettings = { apiKey: "fixture", reasoning: { max_tokens: 1024 } }
+const openRouterReasoningScenarios = [
+  chatVariant({
+    cassette: "openrouter-reasoning",
+    protocol: "openai-chat",
+    provider: {
+      package: "@opencode/ai/providers/openrouter",
+      modelID: "anthropic/claude-sonnet-4.6",
+      settings: openRouterReasoningSettings,
+    },
+    run: () =>
+      LLMClient.generate(
+        ai.request({
+          id: "recorded_openrouter_reasoning",
+          model: OpenRouter.model("anthropic/claude-sonnet-4.6", openRouterReasoningSettings),
+          system: "Think through the arithmetic, then reply with only the final integer.",
+          prompt: "What is 173 multiplied by 219?",
+          maxTokens: 1536,
+          temperature: 0,
+        }),
+      ),
+  }),
+  chatVariant({
+    cassette: "openrouter-reasoning-tool-loop",
+    protocol: "openai-chat",
+    provider: {
+      package: "@opencode/ai/providers/openrouter",
+      modelID: "anthropic/claude-sonnet-4.6",
+      settings: openRouterReasoningSettings,
+    },
+    run: () =>
+      runWeatherToolLoop(
+        goldenWeatherToolLoopRequest({
+          id: "openrouter-reasoning-tool-loop",
+          model: OpenRouter.model("anthropic/claude-sonnet-4.6", openRouterReasoningSettings),
+          maxTokens: 1536,
+          temperature: false,
+        }),
+      ),
+  }),
+]
+
+const mistralScenarios = [
+  chatVariant({
+    cassette: "mistral-chat/streams-text-with-usage",
+    protocol: "openai-chat",
+    provider: {
+      package: "@opencode/ai/providers/mistral",
+      modelID: "mistral-small-latest",
+      settings: { apiKey: "fixture", reasoningEffort: "none" },
+    },
+    run: () =>
+      LLMClient.generate(
+        ai.request({
+          id: "recorded_mistral_chat_streams_text_with_usage",
+          model: Mistral.model("mistral-small-latest", { apiKey: "fixture", reasoningEffort: "none" }),
+          prompt: "Reply with exactly one word: hello",
+          maxTokens: 40,
+          temperature: 0,
+        }),
+      ),
+  }),
+  chatVariant({
+    cassette: "mistral-chat/replays-native-reasoning",
+    protocol: "openai-chat",
+    provider: {
+      package: "@opencode/ai/providers/mistral",
+      modelID: "mistral-small-latest",
+      settings: { apiKey: "fixture", reasoningEffort: "high" },
+    },
+    run: () =>
+      Effect.gen(function* () {
+        const firstRequest = ai.request({
+          id: "recorded_mistral_chat_replays_native_reasoning",
+          model: Mistral.model("mistral-small-latest", { apiKey: "fixture", reasoningEffort: "high" }),
+          prompt: "Calculate 17 multiplied by 23. Think briefly, then reply with only the integer.",
+          maxTokens: 512,
+          temperature: 0,
+        })
+        const first = yield* LLMClient.generate(firstRequest)
+        yield* LLMClient.generate({
+          ...firstRequest,
+          messages: [...firstRequest.messages, first.message, Message.user("Reply with exactly: Done.")],
+          maxTokens: 256,
+          temperature: 0,
+        })
+      }),
+  }),
+  chatVariant({
+    cassette: "mistral-chat/drives-a-tool-loop",
+    protocol: "openai-chat",
+    provider: {
+      package: "@opencode/ai/providers/mistral",
+      modelID: "mistral-small-latest",
+      settings: { apiKey: "fixture", reasoningEffort: "none" },
+    },
+    run: () =>
+      Effect.gen(function* () {
+        const firstRequest = ai.request({
+          id: "recorded_mistral_chat_drives_a_tool_loop",
+          model: Mistral.model("mistral-small-latest", { apiKey: "fixture", reasoningEffort: "none" }),
+          system: [
+            SystemPart.make("Call lookup_weather exactly once with Paris."),
+            SystemPart.make("After the tool result, describe the weather briefly."),
+          ],
+          prompt: "What is the weather?",
+          tools: [mistralLookupWeather],
+          toolChoice: mistralLookupWeather,
+          maxTokens: 160,
+          temperature: 0,
+        })
+        const first = yield* LLMClient.generate(firstRequest)
+        yield* LLMClient.generate({
+          ...firstRequest,
+          toolChoice: ToolChoice.make("none"),
+          messages: [
+            ...firstRequest.messages,
+            first.message,
+            ...first.toolCalls.map((call: any) =>
+              Message.tool({ id: call.id, name: call.name, result: { condition: "sunny", temperature: "18C" } }),
+            ),
+          ],
+          maxTokens: 160,
+          temperature: 0,
+        })
+      }),
+  }),
+  chatVariant({
+    cassette: "mistral-chat-glm/streams-an-indexed-tool-call",
+    protocol: "openai-chat",
+    provider: { package: "@opencode/ai/providers/mistral", modelID: "zai-glm-5-2", settings: fixtureSettings },
+    run: () =>
+      LLMClient.generate(
+        ai.request({
+          id: "recorded_mistral_chat_glm_streams_an_indexed_tool_call",
+          model: Mistral.model("zai-glm-5-2", fixtureSettings),
+          system: "Call lookup_weather exactly once with Paris.",
+          prompt: "What is the weather?",
+          tools: [mistralLookupWeather],
+          toolChoice: mistralLookupWeather,
+          maxTokens: 256,
+          temperature: 0,
+        }),
+      ),
+  }),
+]
+
 const chatVariantScenarios = [
+  ...groqScenarios,
+  ...veniceScenarios,
+  ...digitalOceanChatScenarios,
+  ...digitalOceanResponsesScenarios,
+  ...openRouterResponsesScenarios,
+  ...openRouterReasoningScenarios,
+  ...mistralScenarios,
   ...zaiScenarios,
   ...moonshotEffortScenarios({
     name: "chat",

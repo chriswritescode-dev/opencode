@@ -37,7 +37,7 @@ export const GROUPS: Record<string, { protocols: string[] }> = {
   "chat-variants": { protocols: ["openai-chat", "anthropic-messages", "open-responses"] },
 }
 
-export const EXPECTED_CASSETTES = 144
+export const EXPECTED_CASSETTES = 171
 
 const exporter = `${tree}/exporter`
 await mkdir(exporter, { recursive: true })

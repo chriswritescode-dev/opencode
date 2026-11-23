@@ -1,0 +1,196 @@
+{
+  "cassette": "mistral-chat-glm/streams-an-indexed-tool-call",
+  "protocol": "openai-chat",
+  "routeId": "mistral-chat",
+  "clockEpochMs": 1767323045000,
+  "steps": [
+    {
+      "model": {
+        "id": "zai-glm-5-2",
+        "provider": "mistral",
+        "route": {
+          "id": "mistral-chat",
+          "protocol": "mistral-chat",
+          "providerMetadataKey": "mistral"
+        },
+        "endpoint": {
+          "baseURL": "https://api.mistral.ai/v1",
+          "path": "/chat/completions"
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_mistral_chat_glm_streams_an_indexed_tool_call",
+        "maxTokens": 256,
+        "temperature": 0,
+        "system": [
+          {
+            "type": "text",
+            "text": "Call lookup_weather exactly once with Paris."
+          }
+        ],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "What is the weather?"
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "tool",
+            "name": "lookup_weather",
+            "description": "Look up the current weather for a city",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "city": {
+                  "type": "string",
+                  "enum": [
+                    "Paris"
+                  ]
+                }
+              },
+              "required": [
+                "city"
+              ],
+              "additionalProperties": false
+            }
+          }
+        ],
+        "toolChoice": {
+          "type": "tool",
+          "name": "lookup_weather"
+        }
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/mistral",
+        "modelID": "zai-glm-5-2",
+        "settings": {
+          "apiKey": "fixture"
+        }
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://api.mistral.ai/v1/chat/completions",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "552",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"zai-glm-5-2\",\"messages\":[{\"role\":\"system\",\"content\":\"Call lookup_weather exactly once with Paris.\"},{\"role\":\"user\",\"content\":\"What is the weather?\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"lookup_weather\",\"description\":\"Look up the current weather for a city\",\"parameters\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\",\"enum\":[\"Paris\"]}},\"required\":[\"city\"],\"additionalProperties\":false},\"strict\":false}}],\"tool_choice\":{\"type\":\"function\",\"function\":{\"name\":\"lookup_weather\"}},\"stream\":true,\"max_tokens\":256,\"temperature\":0}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream; charset=utf-8"
+            },
+            "body": "data: {\"id\":\"f139bf0e4b984e51aabf6a83c237674d\",\"object\":\"chat.completion.chunk\",\"created\":1788111482,\"model\":\"zai-glm-5-2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"f139bf0e4b984e51aabf6a83c237674d\",\"object\":\"chat.completion.chunk\",\"created\":1788111482,\"model\":\"zai-glm-5-2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"index\":0,\"content\":\"\"},\"finish_reason\":null,\"logprobs\":null}]}\n\ndata: {\"id\":\"f139bf0e4b984e51aabf6a83c237674d\",\"object\":\"chat.completion.chunk\",\"created\":1788111482,\"model\":\"zai-glm-5-2\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"id\":\"chatcmpl-tool-8cc4d8f9f07b298a\",\"type\":\"function\",\"function\":{\"name\":\"lookup_weather\",\"arguments\":\"{\\\"city\\\": \\\"\"},\"index\":0}],\"index\":0,\"content\":\"\"},\"finish_reason\":null,\"logprobs\":null}]}\n\ndata: {\"id\":\"f139bf0e4b984e51aabf6a83c237674d\",\"object\":\"chat.completion.chunk\",\"created\":1788111482,\"model\":\"zai-glm-5-2\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"type\":\"function\",\"function\":{\"name\":\"\",\"arguments\":\"Paris\\\"}\"},\"index\":0}],\"index\":0,\"content\":\"\"},\"finish_reason\":null,\"logprobs\":null}]}\n\ndata: {\"id\":\"f139bf0e4b984e51aabf6a83c237674d\",\"object\":\"chat.completion.chunk\",\"created\":1788111482,\"model\":\"zai-glm-5-2\",\"choices\":[{\"index\":0,\"delta\":{\"index\":0,\"content\":\"\"},\"finish_reason\":\"stop\",\"logprobs\":null}],\"usage\":{\"prompt_tokens\":171,\"total_tokens\":182,\"completion_tokens\":11,\"prompt_tokens_details\":{\"cached_tokens\":0}}}\n\ndata: [DONE]\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "tool-input-start",
+          "id": "jl02amerr",
+          "name": "lookup_weather"
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "jl02amerr",
+          "name": "lookup_weather",
+          "text": "{\"city\": \"",
+          "input": {
+            "city": ""
+          }
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "jl02amerr",
+          "name": "lookup_weather",
+          "text": "Paris\"}",
+          "input": {
+            "city": "Paris"
+          }
+        },
+        {
+          "type": "tool-input-end",
+          "id": "jl02amerr",
+          "name": "lookup_weather"
+        },
+        {
+          "type": "tool-call",
+          "id": "jl02amerr",
+          "name": "lookup_weather",
+          "input": {
+            "city": "Paris"
+          }
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "tool-calls",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 171,
+            "outputTokens": 11,
+            "nonCachedInputTokens": 171,
+            "cacheReadInputTokens": 0,
+            "totalTokens": 182,
+            "providerMetadata": {
+              "mistral": {
+                "prompt_tokens": 171,
+                "completion_tokens": 11,
+                "total_tokens": 182,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "tool-calls",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 171,
+            "outputTokens": 11,
+            "nonCachedInputTokens": 171,
+            "cacheReadInputTokens": 0,
+            "totalTokens": 182,
+            "providerMetadata": {
+              "mistral": {
+                "prompt_tokens": 171,
+                "completion_tokens": 11,
+                "total_tokens": 182,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

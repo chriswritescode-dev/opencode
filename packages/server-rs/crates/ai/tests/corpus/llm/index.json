@@ -216,6 +216,41 @@
       "group": "openai-chat"
     },
     {
+      "cassette": "digitalocean-chat/gpt-nano-continues-a-tool-call-with-cache-markers",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "digitalocean-chat/gpt-nano-reuses-a-cached-prompt",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "digitalocean-chat/haiku-continues-a-tool-call-with-cache-markers",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "digitalocean-chat/haiku-reuses-a-cached-prompt",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "digitalocean-responses/calls-a-freeform-text-tool",
+      "protocol": "open-responses",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "digitalocean-responses/continues-a-tool-call",
+      "protocol": "open-responses",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "digitalocean-responses/streams-text",
+      "protocol": "open-responses",
+      "group": "chat-variants"
+    },
+    {
       "cassette": "gemini-cache/reports-cachedcontenttokencount-on-identical-second-call",
       "protocol": "gemini",
       "group": "gemini"
@@ -224,6 +259,26 @@
       "cassette": "gemini/gemini-2-5-flash-image",
       "protocol": "gemini",
       "group": "gemini"
+    },
+    {
+      "cassette": "groq-chat/continues-qwen-parallel-tool-calls",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "groq-chat/replays-gpt-oss-reasoning-through-a-tool-loop",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "groq-chat/streams-qwen-parsed-reasoning",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "groq-chat/streams-text-with-usage",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
     },
     {
       "cassette": "minimax-chat/m3-continues-a-tool-loop-with-default-thinking",
@@ -268,6 +323,26 @@
     {
       "cassette": "minimax-responses/m3-streams-text-with-effort-none",
       "protocol": "open-responses",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "mistral-chat-glm/streams-an-indexed-tool-call",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "mistral-chat/drives-a-tool-loop",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "mistral-chat/replays-native-reasoning",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "mistral-chat/streams-text-with-usage",
+      "protocol": "openai-chat",
       "group": "chat-variants"
     },
     {
@@ -511,6 +586,31 @@
       "group": "open-responses"
     },
     {
+      "cassette": "openrouter-reasoning",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "openrouter-reasoning-tool-loop",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "openrouter-responses/calls-a-freeform-text-tool",
+      "protocol": "open-responses",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "openrouter-responses/continues-a-tool-call",
+      "protocol": "open-responses",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "openrouter-responses/streams-text",
+      "protocol": "open-responses",
+      "group": "chat-variants"
+    },
+    {
       "cassette": "pdf/anthropic-tool-result",
       "protocol": "anthropic-messages",
       "group": "anthropic-messages"
@@ -549,6 +649,41 @@
       "cassette": "pdf/openai-user-input",
       "protocol": "openai-responses",
       "group": "open-responses"
+    },
+    {
+      "cassette": "venice-chat/claude-opus-4-8-preserves-reasoning-through-a-tool-loop-and-follow-up",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "venice-chat/deepseek-v4-flash-preserves-reasoning-through-a-tool-loop-and-follow-up",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "venice-chat/gemini-3-1-pro-preview-preserves-reasoning-through-a-tool-loop-and-follow-up",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "venice-chat/gemini-preserves-per-call-signatures-through-parallel-tools",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "venice-chat/openai-gpt-54-mini-preserves-reasoning-through-a-tool-loop-and-follow-up",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "venice-chat/qwen-disables-reasoning",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "venice-chat/surfaces-venice-model-errors",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
     },
     {
       "cassette": "venice-responses/calls-a-freeform-text-tool",

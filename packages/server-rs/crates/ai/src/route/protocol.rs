@@ -55,5 +55,11 @@ pub trait ProtocolState: Send {
     fn continuation(&mut self) -> Option<Result<String, AiError>> {
         None
     }
+    fn latest_tool_index(&self) -> Option<i64> {
+        None
+    }
+    fn tool_id_at(&self, _index: i64) -> Option<String> {
+        None
+    }
     fn terminal(&self, frame: &Frame) -> bool;
 }

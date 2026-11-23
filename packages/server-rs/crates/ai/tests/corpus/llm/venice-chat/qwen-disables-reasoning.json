@@ -1,0 +1,170 @@
+{
+  "cassette": "venice-chat/qwen-disables-reasoning",
+  "protocol": "openai-chat",
+  "routeId": "venice-chat",
+  "clockEpochMs": 1767323045000,
+  "steps": [
+    {
+      "model": {
+        "id": "qwen3-6-27b",
+        "provider": "venice",
+        "route": {
+          "id": "venice-chat",
+          "protocol": "venice-chat",
+          "providerMetadataKey": "venice"
+        },
+        "endpoint": {
+          "baseURL": "https://api.venice.ai/api/v1",
+          "path": "/chat/completions"
+        },
+        "options": {
+          "providerOptions": {
+            "reasoning": {
+              "enabled": false
+            }
+          }
+        },
+        "modelOptions": {
+          "providerOptions": {
+            "reasoning": {
+              "enabled": false
+            }
+          }
+        },
+        "compatibility": {
+          "maxTokensField": "max_completion_tokens"
+        },
+        "capabilities": {
+          "promptCacheKey": true
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_venice_chat_qwen_disables_reasoning",
+        "maxTokens": 4096,
+        "system": [],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "What is 23 multiplied by 17 plus 9? Reply with just the number."
+              }
+            ]
+          }
+        ],
+        "tools": []
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/venice",
+        "modelID": "qwen3-6-27b",
+        "settings": {
+          "apiKey": "fixture",
+          "reasoning": {
+            "enabled": false
+          }
+        }
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://api.venice.ai/api/v1/chat/completions",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "300",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"qwen3-6-27b\",\"messages\":[{\"role\":\"user\",\"content\":\"What is 23 multiplied by 17 plus 9? Reply with just the number.\"}],\"stream\":true,\"stream_options\":{\"include_usage\":true},\"max_completion_tokens\":4096,\"reasoning\":{\"enabled\":false},\"venice_parameters\":{\"include_venice_system_prompt\":false}}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream; charset=utf-8"
+            },
+            "body": "data: {\"service_tier\":null,\"id\":\"chatcmpl-RxYUpStKYw7YgEZcXjsb2dOt\",\"object\":\"chat.completion.chunk\",\"created\":1791169144,\"model\":\"qwen3-6-27b\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\",\"reasoning_content\":null,\"tool_calls\":null},\"logprobs\":null,\"finish_reason\":null}],\"usage\":null}\n\ndata: {\"service_tier\":\"default\",\"id\":\"chatcmpl-RxYUpStKYw7YgEZcXjsb2dOt\",\"object\":\"chat.completion.chunk\",\"created\":1791169144,\"model\":\"qwen3-6-27b\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\",\"reasoning_content\":null,\"tool_calls\":null},\"logprobs\":null,\"finish_reason\":null}],\"usage\":null}\n\ndata: {\"service_tier\":\"default\",\"id\":\"chatcmpl-RxYUpStKYw7YgEZcXjsb2dOt\",\"object\":\"chat.completion.chunk\",\"created\":1791169144,\"model\":\"qwen3-6-27b\",\"choices\":[{\"index\":0,\"delta\":{\"role\":null,\"content\":\"4\",\"reasoning_content\":null,\"tool_calls\":null},\"logprobs\":null,\"finish_reason\":null}],\"usage\":null}\n\ndata: {\"service_tier\":\"default\",\"id\":\"chatcmpl-RxYUpStKYw7YgEZcXjsb2dOt\",\"object\":\"chat.completion.chunk\",\"created\":1791169144,\"model\":\"qwen3-6-27b\",\"choices\":[{\"index\":0,\"delta\":{\"role\":null,\"content\":\"0\",\"reasoning_content\":null,\"tool_calls\":null},\"logprobs\":null,\"finish_reason\":null}],\"usage\":null}\n\ndata: {\"service_tier\":\"default\",\"id\":\"chatcmpl-RxYUpStKYw7YgEZcXjsb2dOt\",\"object\":\"chat.completion.chunk\",\"created\":1791169144,\"model\":\"qwen3-6-27b\",\"choices\":[{\"index\":0,\"delta\":{\"role\":null,\"content\":\"0\",\"reasoning_content\":null,\"tool_calls\":null},\"logprobs\":null,\"finish_reason\":null}],\"usage\":null}\n\ndata: {\"service_tier\":\"default\",\"id\":\"chatcmpl-RxYUpStKYw7YgEZcXjsb2dOt\",\"object\":\"chat.completion.chunk\",\"created\":1791169144,\"model\":\"qwen3-6-27b\",\"choices\":[{\"index\":0,\"delta\":{\"role\":null,\"content\":\"\",\"reasoning_content\":null,\"tool_calls\":null},\"logprobs\":null,\"finish_reason\":\"stop\"}]}\n\ndata: {\"service_tier\":\"default\",\"id\":\"chatcmpl-RxYUpStKYw7YgEZcXjsb2dOt\",\"object\":\"chat.completion.chunk\",\"created\":1791169144,\"model\":\"qwen3-6-27b\",\"choices\":[],\"usage\":{\"prompt_tokens\":32,\"completion_tokens\":4,\"total_tokens\":36},\"cost\":{\"usd\":0.0000234,\"diem\":0}}\n\ndata: [DONE]\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "text-start",
+          "id": "text-0"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "4"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "0"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "0"
+        },
+        {
+          "type": "text-end",
+          "id": "text-0",
+          "providerMetadata": {
+            "venice": {}
+          }
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 32,
+            "outputTokens": 4,
+            "nonCachedInputTokens": 32,
+            "totalTokens": 36,
+            "providerMetadata": {
+              "venice": {
+                "prompt_tokens": 32,
+                "completion_tokens": 4,
+                "total_tokens": 36
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 32,
+            "outputTokens": 4,
+            "nonCachedInputTokens": 32,
+            "totalTokens": 36,
+            "providerMetadata": {
+              "venice": {
+                "prompt_tokens": 32,
+                "completion_tokens": 4,
+                "total_tokens": 36
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

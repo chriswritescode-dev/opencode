@@ -1,0 +1,633 @@
+{
+  "cassette": "groq-chat/replays-gpt-oss-reasoning-through-a-tool-loop",
+  "protocol": "openai-chat",
+  "routeId": "groq-chat",
+  "clockEpochMs": 1767323045000,
+  "steps": [
+    {
+      "model": {
+        "id": "openai/gpt-oss-20b",
+        "provider": "groq",
+        "route": {
+          "id": "groq-chat",
+          "protocol": "groq-chat",
+          "providerMetadataKey": "groq"
+        },
+        "endpoint": {
+          "baseURL": "https://api.groq.com/openai/v1",
+          "path": "/chat/completions"
+        },
+        "options": {
+          "providerOptions": {
+            "includeReasoning": true,
+            "reasoningEffort": "low"
+          }
+        },
+        "modelOptions": {
+          "providerOptions": {
+            "includeReasoning": true,
+            "reasoningEffort": "low"
+          }
+        },
+        "compatibility": {
+          "reasoningField": "reasoning",
+          "requireReasoning": false,
+          "maxTokensField": "max_completion_tokens"
+        },
+        "capabilities": {
+          "tools": {
+            "strict": false
+          }
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_groq_chat_replays_gpt_oss_reasoning_through_a_tool_loop",
+        "maxTokens": 1536,
+        "system": [],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Look up the current weather in Paris. Call lookup_weather once for each city in the same response before answering. After receiving all results, report each city's weather in one short sentence."
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "tool",
+            "name": "lookup_weather",
+            "description": "Look up the current weather for a city",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "city": {
+                  "type": "string",
+                  "enum": [
+                    "Paris",
+                    "London"
+                  ]
+                }
+              },
+              "required": [
+                "city"
+              ],
+              "additionalProperties": false
+            }
+          }
+        ],
+        "toolChoice": {
+          "type": "required"
+        }
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/groq",
+        "modelID": "openai/gpt-oss-20b",
+        "settings": {
+          "apiKey": "fixture",
+          "includeReasoning": true,
+          "reasoningEffort": "low"
+        }
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://api.groq.com/openai/v1/chat/completions",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "692",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"openai/gpt-oss-20b\",\"messages\":[{\"role\":\"user\",\"content\":\"Look up the current weather in Paris. Call lookup_weather once for each city in the same response before answering. After receiving all results, report each city's weather in one short sentence.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"lookup_weather\",\"description\":\"Look up the current weather for a city\",\"parameters\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\",\"enum\":[\"Paris\",\"London\"]}},\"required\":[\"city\"],\"additionalProperties\":false}}}],\"tool_choice\":\"required\",\"stream\":true,\"stream_options\":{\"include_usage\":true},\"max_completion_tokens\":1536,\"reasoning_effort\":\"low\",\"include_reasoning\":true}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream"
+            },
+            "body": "data: {\"id\":\"chatcmpl-db8950e1-43a6-458b-adce-ec7c271296f7\",\"object\":\"chat.completion.chunk\",\"created\":1787755240,\"model\":\"openai/gpt-oss-20b\",\"system_fingerprint\":\"fp_8e23cedc90\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"},\"logprobs\":null,\"finish_reason\":null}],\"x_groq\":{\"id\":\"req_01m0z886k8egntsgz9r4v0m1d4\",\"seed\":1910723452}}\n\ndata: {\"id\":\"chatcmpl-db8950e1-43a6-458b-adce-ec7c271296f7\",\"object\":\"chat.completion.chunk\",\"created\":1787755240,\"model\":\"openai/gpt-oss-20b\",\"system_fingerprint\":\"fp_8e23cedc90\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning\":\"We\",\"channel\":\"analysis\"},\"logprobs\":null,\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-db8950e1-43a6-458b-adce-ec7c271296f7\",\"object\":\"chat.completion.chunk\",\"created\":1787755240,\"model\":\"openai/gpt-oss-20b\",\"system_fingerprint\":\"fp_8e23cedc90\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning\":\" need\",\"channel\":\"analysis\"},\"logprobs\":null,\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-db8950e1-43a6-458b-adce-ec7c271296f7\",\"object\":\"chat.completion.chunk\",\"created\":1787755240,\"model\":\"openai/gpt-oss-20b\",\"system_fingerprint\":\"fp_8e23cedc90\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning\":\" to\",\"channel\":\"analysis\"},\"logprobs\":null,\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-db8950e1-43a6-458b-adce-ec7c271296f7\",\"object\":\"chat.completion.chunk\",\"created\":1787755240,\"model\":\"openai/gpt-oss-20b\",\"system_fingerprint\":\"fp_8e23cedc90\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning\":\" call\",\"channel\":\"analysis\"},\"logprobs\":null,\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-db8950e1-43a6-458b-adce-ec7c271296f7\",\"object\":\"chat.completion.chunk\",\"created\":1787755240,\"model\":\"openai/gpt-oss-20b\",\"system_fingerprint\":\"fp_8e23cedc90\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning\":\" function\",\"channel\":\"analysis\"},\"logprobs\":null,\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-db8950e1-43a6-458b-adce-ec7c271296f7\",\"object\":\"chat.completion.chunk\",\"created\":1787755240,\"model\":\"openai/gpt-oss-20b\",\"system_fingerprint\":\"fp_8e23cedc90\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning\":\" lookup\",\"channel\":\"analysis\"},\"logprobs\":null,\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-db8950e1-43a6-458b-adce-ec7c271296f7\",\"object\":\"chat.completion.chunk\",\"created\":1787755240,\"model\":\"openai/gpt-oss-20b\",\"system_fingerprint\":\"fp_8e23cedc90\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning\":\"_weather\",\"channel\":\"analysis\"},\"logprobs\":null,\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-db8950e1-43a6-458b-adce-ec7c271296f7\",\"object\":\"chat.completion.chunk\",\"created\":1787755240,\"model\":\"openai/gpt-oss-20b\",\"system_fingerprint\":\"fp_8e23cedc90\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning\":\" for\",\"channel\":\"analysis\"},\"logprobs\":null,\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-db8950e1-43a6-458b-adce-ec7c271296f7\",\"object\":\"chat.completion.chunk\",\"created\":1787755240,\"model\":\"openai/gpt-oss-20b\",\"system_fingerprint\":\"fp_8e23cedc90\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning\":\" Paris\",\"channel\":\"analysis\"},\"logprobs\":null,\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-db8950e1-43a6-458b-adce-ec7c271296f7\",\"object\":\"chat.completion.chunk\",\"created\":1787755240,\"model\":\"openai/gpt-oss-20b\",\"system_fingerprint\":\"fp_8e23cedc90\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning\":\",\",\"channel\":\"analysis\"},\"logprobs\":null,\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-db8950e1-43a6-458b-adce-ec7c271296f7\",\"object\":\"chat.completion.chunk\",\"created\":1787755240,\"model\":\"openai/gpt-oss-20b\",\"system_fingerprint\":\"fp_8e23cedc90\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning\":\" then\",\"channel\":\"analysis\"},\"logprobs\":null,\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-db8950e1-43a6-458b-adce-ec7c271296f7\",\"object\":\"chat.completion.chunk\",\"created\":1787755240,\"model\":\"openai/gpt-oss-20b\",\"system_fingerprint\":\"fp_8e23cedc90\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning\":\" report\",\"channel\":\"analysis\"},\"logprobs\":null,\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-db8950e1-43a6-458b-adce-ec7c271296f7\",\"object\":\"chat.completion.chunk\",\"created\":1787755240,\"model\":\"openai/gpt-oss-20b\",\"system_fingerprint\":\"fp_8e23cedc90\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning\":\".\",\"channel\":\"analysis\"},\"logprobs\":null,\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-db8950e1-43a6-458b-adce-ec7c271296f7\",\"object\":\"chat.completion.chunk\",\"created\":1787755240,\"model\":\"openai/gpt-oss-20b\",\"system_fingerprint\":\"fp_8e23cedc90\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"id\":\"fc_db90d537-d954-4c54-86ed-0fe04424fbb3\",\"type\":\"function\",\"function\":{\"name\":\"lookup_weather\",\"arguments\":\"{\\\"city\\\":\\\"Paris\\\"}\"},\"index\":0}]},\"logprobs\":null,\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-db8950e1-43a6-458b-adce-ec7c271296f7\",\"object\":\"chat.completion.chunk\",\"created\":1787755240,\"model\":\"openai/gpt-oss-20b\",\"system_fingerprint\":\"fp_8e23cedc90\",\"choices\":[{\"index\":0,\"delta\":{},\"logprobs\":null,\"finish_reason\":\"tool_calls\"}],\"x_groq\":{\"id\":\"req_01m0z886k8egntsgz9r4v0m1d4\",\"usage\":{\"queue_time\":0.057877384,\"prompt_tokens\":169,\"prompt_time\":0.008344781,\"completion_tokens\":37,\"completion_time\":0.0500934,\"total_tokens\":206,\"total_time\":0.058438181,\"completion_tokens_details\":{\"reasoning_tokens\":14}}},\"usage\":{\"queue_time\":0.057877384,\"prompt_tokens\":169,\"prompt_time\":0.008344781,\"completion_tokens\":37,\"completion_time\":0.0500934,\"total_tokens\":206,\"total_time\":0.058438181,\"completion_tokens_details\":{\"reasoning_tokens\":14}}}\n\ndata: {\"id\":\"chatcmpl-db8950e1-43a6-458b-adce-ec7c271296f7\",\"object\":\"chat.completion.chunk\",\"created\":1787755240,\"model\":\"openai/gpt-oss-20b\",\"system_fingerprint\":\"fp_8e23cedc90\",\"choices\":[],\"usage\":{\"queue_time\":0.057877384,\"prompt_tokens\":169,\"prompt_time\":0.008344781,\"completion_tokens\":37,\"completion_time\":0.0500934,\"total_tokens\":206,\"total_time\":0.058438181,\"completion_tokens_details\":{\"reasoning_tokens\":14}},\"service_tier\":\"on_demand\"}\n\ndata: [DONE]\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "reasoning-start",
+          "id": "reasoning-0",
+          "providerMetadata": {
+            "groq": {
+              "reasoningField": "reasoning"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "We",
+          "providerMetadata": {
+            "groq": {
+              "reasoningField": "reasoning"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " need",
+          "providerMetadata": {
+            "groq": {
+              "reasoningField": "reasoning"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " to",
+          "providerMetadata": {
+            "groq": {
+              "reasoningField": "reasoning"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " call",
+          "providerMetadata": {
+            "groq": {
+              "reasoningField": "reasoning"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " function",
+          "providerMetadata": {
+            "groq": {
+              "reasoningField": "reasoning"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " lookup",
+          "providerMetadata": {
+            "groq": {
+              "reasoningField": "reasoning"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "_weather",
+          "providerMetadata": {
+            "groq": {
+              "reasoningField": "reasoning"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " for",
+          "providerMetadata": {
+            "groq": {
+              "reasoningField": "reasoning"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " Paris",
+          "providerMetadata": {
+            "groq": {
+              "reasoningField": "reasoning"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ",",
+          "providerMetadata": {
+            "groq": {
+              "reasoningField": "reasoning"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " then",
+          "providerMetadata": {
+            "groq": {
+              "reasoningField": "reasoning"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " report",
+          "providerMetadata": {
+            "groq": {
+              "reasoningField": "reasoning"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ".",
+          "providerMetadata": {
+            "groq": {
+              "reasoningField": "reasoning"
+            }
+          }
+        },
+        {
+          "type": "tool-input-start",
+          "id": "fc_db90d537-d954-4c54-86ed-0fe04424fbb3",
+          "name": "lookup_weather"
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "fc_db90d537-d954-4c54-86ed-0fe04424fbb3",
+          "name": "lookup_weather",
+          "text": "{\"city\":\"Paris\"}",
+          "input": {
+            "city": "Paris"
+          }
+        },
+        {
+          "type": "reasoning-end",
+          "id": "reasoning-0",
+          "providerMetadata": {
+            "groq": {
+              "reasoningField": "reasoning"
+            }
+          }
+        },
+        {
+          "type": "tool-input-end",
+          "id": "fc_db90d537-d954-4c54-86ed-0fe04424fbb3",
+          "name": "lookup_weather"
+        },
+        {
+          "type": "tool-call",
+          "id": "fc_db90d537-d954-4c54-86ed-0fe04424fbb3",
+          "name": "lookup_weather",
+          "input": {
+            "city": "Paris"
+          }
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "tool-calls",
+            "raw": "tool_calls"
+          },
+          "usage": {
+            "inputTokens": 169,
+            "outputTokens": 37,
+            "nonCachedInputTokens": 169,
+            "reasoningTokens": 14,
+            "totalTokens": 206,
+            "providerMetadata": {
+              "groq": {
+                "prompt_tokens": 169,
+                "completion_tokens": 37,
+                "total_tokens": 206,
+                "completion_tokens_details": {
+                  "reasoning_tokens": 14
+                },
+                "queue_time": 0.057877384,
+                "prompt_time": 0.008344781,
+                "completion_time": 0.0500934,
+                "total_time": 0.058438181
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "tool-calls",
+            "raw": "tool_calls"
+          },
+          "usage": {
+            "inputTokens": 169,
+            "outputTokens": 37,
+            "nonCachedInputTokens": 169,
+            "reasoningTokens": 14,
+            "totalTokens": 206,
+            "providerMetadata": {
+              "groq": {
+                "prompt_tokens": 169,
+                "completion_tokens": 37,
+                "total_tokens": 206,
+                "completion_tokens_details": {
+                  "reasoning_tokens": 14
+                },
+                "queue_time": 0.057877384,
+                "prompt_time": 0.008344781,
+                "completion_time": 0.0500934,
+                "total_time": 0.058438181
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "model": {
+        "id": "openai/gpt-oss-20b",
+        "provider": "groq",
+        "route": {
+          "id": "groq-chat",
+          "protocol": "groq-chat",
+          "providerMetadataKey": "groq"
+        },
+        "endpoint": {
+          "baseURL": "https://api.groq.com/openai/v1",
+          "path": "/chat/completions"
+        },
+        "options": {
+          "providerOptions": {
+            "includeReasoning": true,
+            "reasoningEffort": "low"
+          }
+        },
+        "modelOptions": {
+          "providerOptions": {
+            "includeReasoning": true,
+            "reasoningEffort": "low"
+          }
+        },
+        "compatibility": {
+          "reasoningField": "reasoning",
+          "requireReasoning": false,
+          "maxTokensField": "max_completion_tokens"
+        },
+        "capabilities": {
+          "tools": {
+            "strict": false
+          }
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_groq_chat_replays_gpt_oss_reasoning_through_a_tool_loop",
+        "maxTokens": 1536,
+        "system": [],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Look up the current weather in Paris. Call lookup_weather once for each city in the same response before answering. After receiving all results, report each city's weather in one short sentence."
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "reasoning",
+                "text": "We need to call function lookup_weather for Paris, then report.",
+                "providerMetadata": {
+                  "groq": {
+                    "reasoningField": "reasoning"
+                  }
+                }
+              },
+              {
+                "type": "tool-call",
+                "id": "fc_db90d537-d954-4c54-86ed-0fe04424fbb3",
+                "name": "lookup_weather",
+                "input": {
+                  "city": "Paris"
+                }
+              }
+            ]
+          },
+          {
+            "role": "tool",
+            "content": [
+              {
+                "type": "tool-result",
+                "id": "fc_db90d537-d954-4c54-86ed-0fe04424fbb3",
+                "name": "lookup_weather",
+                "result": {
+                  "type": "json",
+                  "value": {
+                    "condition": "sunny",
+                    "temperature": "18C"
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "tool",
+            "name": "lookup_weather",
+            "description": "Look up the current weather for a city",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "city": {
+                  "type": "string",
+                  "enum": [
+                    "Paris",
+                    "London"
+                  ]
+                }
+              },
+              "required": [
+                "city"
+              ],
+              "additionalProperties": false
+            }
+          }
+        ],
+        "toolChoice": {
+          "type": "none"
+        }
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/groq",
+        "modelID": "openai/gpt-oss-20b",
+        "settings": {
+          "apiKey": "fixture",
+          "includeReasoning": true,
+          "reasoningEffort": "low"
+        }
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://api.groq.com/openai/v1/chat/completions",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "1091",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"openai/gpt-oss-20b\",\"messages\":[{\"role\":\"user\",\"content\":\"Look up the current weather in Paris. Call lookup_weather once for each city in the same response before answering. After receiving all results, report each city's weather in one short sentence.\"},{\"role\":\"assistant\",\"content\":null,\"tool_calls\":[{\"id\":\"fc_db90d537-d954-4c54-86ed-0fe04424fbb3\",\"type\":\"function\",\"function\":{\"name\":\"lookup_weather\",\"arguments\":\"{\\\"city\\\":\\\"Paris\\\"}\"}}],\"reasoning\":\"We need to call function lookup_weather for Paris, then report.\"},{\"role\":\"tool\",\"tool_call_id\":\"fc_db90d537-d954-4c54-86ed-0fe04424fbb3\",\"content\":\"{\\\"condition\\\":\\\"sunny\\\",\\\"temperature\\\":\\\"18C\\\"}\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"lookup_weather\",\"description\":\"Look up the current weather for a city\",\"parameters\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\",\"enum\":[\"Paris\",\"London\"]}},\"required\":[\"city\"],\"additionalProperties\":false}}}],\"tool_choice\":\"none\",\"stream\":true,\"stream_options\":{\"include_usage\":true},\"max_completion_tokens\":1536,\"reasoning_effort\":\"low\",\"include_reasoning\":true}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream"
+            },
+            "body": "data: {\"id\":\"chatcmpl-b16b8480-6b57-4293-a8c1-4188ae6adf91\",\"object\":\"chat.completion.chunk\",\"created\":1787755240,\"model\":\"openai/gpt-oss-20b\",\"system_fingerprint\":\"fp_34cb00738d\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"},\"logprobs\":null,\"finish_reason\":null}],\"x_groq\":{\"id\":\"req_01m0z886t2esqs7bzn2sd7b2t0\",\"seed\":594081379}}\n\ndata: {\"id\":\"chatcmpl-b16b8480-6b57-4293-a8c1-4188ae6adf91\",\"object\":\"chat.completion.chunk\",\"created\":1787755240,\"model\":\"openai/gpt-oss-20b\",\"system_fingerprint\":\"fp_34cb00738d\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"Paris\"},\"logprobs\":null,\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-b16b8480-6b57-4293-a8c1-4188ae6adf91\",\"object\":\"chat.completion.chunk\",\"created\":1787755240,\"model\":\"openai/gpt-oss-20b\",\"system_fingerprint\":\"fp_34cb00738d\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\" is\"},\"logprobs\":null,\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-b16b8480-6b57-4293-a8c1-4188ae6adf91\",\"object\":\"chat.completion.chunk\",\"created\":1787755240,\"model\":\"openai/gpt-oss-20b\",\"system_fingerprint\":\"fp_34cb00738d\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\" sunny\"},\"logprobs\":null,\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-b16b8480-6b57-4293-a8c1-4188ae6adf91\",\"object\":\"chat.completion.chunk\",\"created\":1787755240,\"model\":\"openai/gpt-oss-20b\",\"system_fingerprint\":\"fp_34cb00738d\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\" with\"},\"logprobs\":null,\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-b16b8480-6b57-4293-a8c1-4188ae6adf91\",\"object\":\"chat.completion.chunk\",\"created\":1787755240,\"model\":\"openai/gpt-oss-20b\",\"system_fingerprint\":\"fp_34cb00738d\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\" a\"},\"logprobs\":null,\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-b16b8480-6b57-4293-a8c1-4188ae6adf91\",\"object\":\"chat.completion.chunk\",\"created\":1787755240,\"model\":\"openai/gpt-oss-20b\",\"system_fingerprint\":\"fp_34cb00738d\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\" temperature\"},\"logprobs\":null,\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-b16b8480-6b57-4293-a8c1-4188ae6adf91\",\"object\":\"chat.completion.chunk\",\"created\":1787755240,\"model\":\"openai/gpt-oss-20b\",\"system_fingerprint\":\"fp_34cb00738d\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\" of\"},\"logprobs\":null,\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-b16b8480-6b57-4293-a8c1-4188ae6adf91\",\"object\":\"chat.completion.chunk\",\"created\":1787755240,\"model\":\"openai/gpt-oss-20b\",\"system_fingerprint\":\"fp_34cb00738d\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\" \"},\"logprobs\":null,\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-b16b8480-6b57-4293-a8c1-4188ae6adf91\",\"object\":\"chat.completion.chunk\",\"created\":1787755240,\"model\":\"openai/gpt-oss-20b\",\"system_fingerprint\":\"fp_34cb00738d\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"18\"},\"logprobs\":null,\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-b16b8480-6b57-4293-a8c1-4188ae6adf91\",\"object\":\"chat.completion.chunk\",\"created\":1787755240,\"model\":\"openai/gpt-oss-20b\",\"system_fingerprint\":\"fp_34cb00738d\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"°C\"},\"logprobs\":null,\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-b16b8480-6b57-4293-a8c1-4188ae6adf91\",\"object\":\"chat.completion.chunk\",\"created\":1787755240,\"model\":\"openai/gpt-oss-20b\",\"system_fingerprint\":\"fp_34cb00738d\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\".\"},\"logprobs\":null,\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-b16b8480-6b57-4293-a8c1-4188ae6adf91\",\"object\":\"chat.completion.chunk\",\"created\":1787755240,\"model\":\"openai/gpt-oss-20b\",\"system_fingerprint\":\"fp_34cb00738d\",\"choices\":[{\"index\":0,\"delta\":{},\"logprobs\":null,\"finish_reason\":\"stop\"}],\"x_groq\":{\"id\":\"req_01m0z886t2esqs7bzn2sd7b2t0\",\"usage\":{\"queue_time\":0.128860404,\"prompt_tokens\":224,\"prompt_time\":0.060486793,\"completion_tokens\":15,\"completion_time\":0.015616316,\"total_tokens\":239,\"total_time\":0.076103109}},\"usage\":{\"queue_time\":0.128860404,\"prompt_tokens\":224,\"prompt_time\":0.060486793,\"completion_tokens\":15,\"completion_time\":0.015616316,\"total_tokens\":239,\"total_time\":0.076103109}}\n\ndata: {\"id\":\"chatcmpl-b16b8480-6b57-4293-a8c1-4188ae6adf91\",\"object\":\"chat.completion.chunk\",\"created\":1787755240,\"model\":\"openai/gpt-oss-20b\",\"system_fingerprint\":\"fp_34cb00738d\",\"choices\":[],\"usage\":{\"queue_time\":0.128860404,\"prompt_tokens\":224,\"prompt_time\":0.060486793,\"completion_tokens\":15,\"completion_time\":0.015616316,\"total_tokens\":239,\"total_time\":0.076103109},\"service_tier\":\"on_demand\"}\n\ndata: [DONE]\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "text-start",
+          "id": "text-0"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "Paris"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " is"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " sunny"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " with"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " a"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " temperature"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " of"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " "
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "18"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "°C"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "."
+        },
+        {
+          "type": "text-end",
+          "id": "text-0"
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 224,
+            "outputTokens": 15,
+            "nonCachedInputTokens": 224,
+            "totalTokens": 239,
+            "providerMetadata": {
+              "groq": {
+                "prompt_tokens": 224,
+                "completion_tokens": 15,
+                "total_tokens": 239,
+                "queue_time": 0.128860404,
+                "prompt_time": 0.060486793,
+                "completion_time": 0.015616316,
+                "total_time": 0.076103109
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 224,
+            "outputTokens": 15,
+            "nonCachedInputTokens": 224,
+            "totalTokens": 239,
+            "providerMetadata": {
+              "groq": {
+                "prompt_tokens": 224,
+                "completion_tokens": 15,
+                "total_tokens": 239,
+                "queue_time": 0.128860404,
+                "prompt_time": 0.060486793,
+                "completion_time": 0.015616316,
+                "total_time": 0.076103109
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

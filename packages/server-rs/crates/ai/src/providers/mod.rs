@@ -14,14 +14,18 @@ pub mod cloudflare_ai_gateway;
 pub mod cloudflare_shared;
 pub mod cloudflare_workers_ai;
 pub mod deepinfra;
+pub mod digitalocean;
 pub mod google;
+pub mod groq;
 pub mod minimax;
+pub mod mistral;
 pub mod moonshot;
 pub mod open_responses_options;
 pub mod openai;
 pub mod openai_compatible;
 pub mod openai_compatible_responses;
 pub mod openai_options;
+pub mod openrouter;
 pub mod settings;
 pub mod togetherai;
 pub mod venice;
@@ -111,11 +115,15 @@ impl ProviderPackages {
             ("@opencode/ai/providers/cloudflare-ai-gateway", cloudflare_ai_gateway::model as Entry),
             ("@opencode/ai/providers/cloudflare-workers-ai", cloudflare_workers_ai::model as Entry),
             ("@opencode/ai/providers/deepinfra", deepinfra::model as Entry),
+            ("@opencode/ai/providers/digitalocean", digitalocean::model as Entry),
+            ("@opencode/ai/providers/digitalocean/responses", digitalocean::responses_model as Entry),
             ("@opencode/ai/providers/google", google::model as Entry),
+            ("@opencode/ai/providers/groq", groq::model as Entry),
             ("@opencode/ai/providers/minimax", minimax::model as Entry),
             ("@opencode/ai/providers/minimax/messages", minimax::model as Entry),
             ("@opencode/ai/providers/minimax/chat", minimax::chat_model as Entry),
             ("@opencode/ai/providers/minimax/responses", minimax::responses_model as Entry),
+            ("@opencode/ai/providers/mistral", mistral::model as Entry),
             ("@opencode/ai/providers/moonshot", moonshot::model as Entry),
             ("@opencode/ai/providers/moonshot/chat", moonshot::model as Entry),
             ("@opencode/ai/providers/moonshot/messages", moonshot::messages_model as Entry),
@@ -125,7 +133,10 @@ impl ProviderPackages {
             ("@opencode/ai/providers/openai/responses", openai::model as Entry),
             ("@opencode/ai/providers/openai-compatible", openai_compatible::model as Entry),
             ("@opencode/ai/providers/openai-compatible-responses", openai_compatible_responses::model as Entry),
+            ("@opencode/ai/providers/openrouter", openrouter::model as Entry),
+            ("@opencode/ai/providers/openrouter/responses", openrouter::responses_model as Entry),
             ("@opencode/ai/providers/togetherai", togetherai::model as Entry),
+            ("@opencode/ai/providers/venice", venice::model as Entry),
             ("@opencode/ai/providers/venice/responses", venice::responses_model as Entry),
             ("@opencode/ai/providers/vercel-ai-gateway", vercel_ai_gateway::model as Entry),
             ("@opencode/ai/providers/vercel-ai-gateway/chat", vercel_ai_gateway::chat_model as Entry),
