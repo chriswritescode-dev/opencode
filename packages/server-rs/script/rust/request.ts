@@ -322,6 +322,11 @@ function describe(r: R): string {
 }
 
 const missing = new Set(["Undefined", "Void", "Never", "Null"])
+const transformChecks = new WeakSet<SchemaRepresentation.Filter>()
+
+export function isTransformCheck(check: SchemaRepresentation.Filter) {
+  return transformChecks.has(check)
+}
 
 export function applyStringTransforms(
   typed: R,
@@ -380,6 +385,7 @@ export function applyStringTransforms(
       !wireResolved.checks.some((check) => check.representation?.id === filter.representation?.id),
   )
   if (filters.length === 0) return
+  for (const filter of filters) transformChecks.add(filter)
   const target = wireResolved as unknown as { checks: Array<SchemaRepresentation.Check> }
   target.checks = [...target.checks, ...filters]
 }

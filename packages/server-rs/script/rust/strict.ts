@@ -1,5 +1,6 @@
 import type { SchemaRepresentation } from "effect"
 import { pascal, snake } from "../../../cli-rs/script/rust/types.ts"
+import { isTransformCheck } from "./request.ts"
 
 type R = SchemaRepresentation.Representation
 type Objects = SchemaRepresentation.Objects
@@ -215,6 +216,9 @@ impl crate::codec::Encode for ${name} {
         throw new Error(`strict: ${this.root} ${id}: unsupported RegExp flag ${flag}`)
       }
     }
+    if (flags.includes("u") && /\\[pP]\{|\\u\{/.test(source)) {
+      throw new Error(`strict: ${this.root} ${id}: unsupported Unicode RegExp syntax with the u flag`)
+    }
     const prefix = ["i", "m", "s"].filter((flag) => flags.includes(flag)).join("")
     const key = prefix === "" ? source : `(?${prefix})${source}`
     const existing = patterns.get(key)
@@ -374,7 +378,7 @@ impl crate::codec::Encode for ${name} {
 
   private trimmed(r: SchemaRepresentation.String | SchemaRepresentation.TemplateLiteral, hint: string) {
     const name = this.name(hint)
-    this.newtype(name, r)
+    this.newtype(name, r, "trim")
     return name
   }
 
@@ -384,8 +388,7 @@ impl crate::codec::Encode for ${name} {
     transform?: "trim",
   ) {
     const filters = this.filters(r.checks)
-    const trimmed =
-      transform === "trim" || filters.some((filter) => filter.representation?.id === "effect/schema/isTrimmed")
+    const trimmed = transform === "trim" || filters.some(isTrimTransform)
     const checks = trimmed ? withoutTrim(r.checks) : r.checks
     const conditions = [...this.implied(r, "value.as_str()"), ...this.conditions(checks, r, "value.as_str()")]
     if (trimmed) {
@@ -622,7 +625,7 @@ ${encode}
     const trimmed =
       single !== undefined &&
       ["String", "TemplateLiteral"].includes(this.tag(single)) &&
-      this.filters(checksOf(single)).some((filter) => filter.representation?.id === "effect/schema/isTrimmed")
+      this.filters(checksOf(single)).some(isTrimTransform)
     const trimName = trimmed ? this.trimmed(single as SchemaRepresentation.String, hint) : undefined
     const inner =
       trimName ??
@@ -1083,6 +1086,13 @@ ${order.map(([variant, type]) => `            Self::${variant}(value) => <${type
           return [one(`crate::checks::is_ending_with(${value}, ${string(payload, "endsWith")})`, "expected a suffix")]
         case "effect/schema/isIncluding":
           return [one(`crate::checks::is_including(${value}, ${string(payload, "includes")})`, "expected a substring")]
+        case "effect/schema/isTrimmed":
+          return [
+            one(
+              `(${value} == crate::checks::trim(${value}))`,
+              "expected a string with no leading or trailing whitespace",
+            ),
+          ]
         default:
           throw new Error(`strict: ${this.root} ${base._tag}: unsupported check ${id ?? filter._tag}`)
       }
@@ -1124,6 +1134,10 @@ ${this.guards(conditions, 12)}            Ok(())
 
 function checksOf(r: R): ReadonlyArray<Check> {
   return "checks" in r ? r.checks : []
+}
+
+function isTrimTransform(filter: Filter) {
+  return filter.representation?.id === "effect/schema/isTrimmed" && isTransformCheck(filter)
 }
 
 function withoutChecks(r: R): R {
