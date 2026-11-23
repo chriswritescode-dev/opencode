@@ -14,19 +14,25 @@ use crate::prepare::tool_updates::{
     tool_update_kinds,
 };
 use crate::protocols::open_responses::{self, ProviderAdapter};
+use crate::protocols::open_responses_channel::{self, HeaderTransform};
 use crate::protocols::openai_freeform::{self, Custom};
 use crate::protocols::shared;
 use crate::protocols::utils::cache;
 use crate::protocols::utils::open_responses_options;
 use crate::protocols::utils::responses_hosted_tools::{self, Definition, Definitions, HostedState};
+use crate::route::auth::set_header;
 use crate::route::model::{Model, ResolvedRequest};
 use crate::route::protocol::{Protocol, ProtocolState};
+use crate::route::transport::channel::ChannelPreparation;
+use crate::route::transport::http::JsonRequestParts;
 use crate::schema::{AiError, LlmRequest, ToolChoiceType, ToolContent, ToolDefinition, ToolEntry, ToolResultValue};
 
 pub const ID: &str = "openai-responses";
 pub const NAME: &str = "OpenAI Responses";
 pub const DEFAULT_BASE_URL: &str = "https://api.openai.com/v1";
 pub const PATH: &str = open_responses::PATH;
+pub const WEBSOCKET_PROTOCOL_HEADER: &str = open_responses_channel::WEBSOCKET_PROTOCOL_HEADER;
+pub const WEBSOCKET_ROTATE_AFTER_MS: u64 = open_responses_channel::WEBSOCKET_ROTATE_AFTER_MS;
 
 pub const ADAPTER: ProviderAdapter = ProviderAdapter {
     id: ID,
@@ -91,6 +97,19 @@ impl Protocol for OpenAiResponses {
         supports_effort_updates(model, request)
     }
 
+    fn prepare_channel(&self, _model: &Model, parts: &JsonRequestParts) -> Option<Result<ChannelPreparation, AiError>> {
+        let options = open_responses_channel::Options {
+            id: ID.to_string(),
+            name: NAME.to_string(),
+            rotate_after_ms: Some(WEBSOCKET_ROTATE_AFTER_MS),
+            enabled: None,
+            url: None,
+            headers: Some(Arc::new(protocol_headers) as HeaderTransform),
+            continuation: None,
+        };
+        open_responses_channel::prepare(&options, parts).transpose()
+    }
+
     fn tool_updates(&self) -> Option<ToolUpdateEncoding> {
         let placeable: PlacedGuard = Arc::new(placeable);
         let declarable: DeclarableGuard = Arc::new(declarable);
@@ -100,6 +119,12 @@ impl Protocol for OpenAiResponses {
             declarable: Some(declarable),
         })
     }
+}
+
+fn protocol_headers(headers: Vec<(String, String)>) -> Vec<(String, String)> {
+    let existing =
+        headers.iter().find(|(name, _)| name.eq_ignore_ascii_case("openai-beta")).map(|(_, value)| value.clone());
+    set_header(headers, "openai-beta", existing.unwrap_or_else(|| WEBSOCKET_PROTOCOL_HEADER.to_string()))
 }
 
 fn placeable(model: &Model, _request: &LlmRequest, _index: usize) -> bool {

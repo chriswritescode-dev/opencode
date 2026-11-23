@@ -30,17 +30,6 @@ pub struct JsonRequestParts {
     pub headers: Vec<(String, String)>,
 }
 
-pub struct TransportPrepareInput {
-    pub endpoint: Endpoint,
-    pub request: LlmRequest,
-    pub body: Value,
-    pub auth: Auth,
-    pub encode_body: Option<BodyEncoder>,
-    pub headers: Option<HeaderFactory>,
-    pub middleware: Option<Middleware>,
-    pub framing: Definition,
-}
-
 pub struct HttpPrepared {
     pub request: PreparedHttp,
     pub framing: Definition,
@@ -98,14 +87,6 @@ pub fn json_post(
     };
     let headers = set_header(headers, "content-length", body.len().to_string());
     Ok(PreparedHttp::new("POST", url, headers, body))
-}
-
-pub fn prepare(input: TransportPrepareInput, env: &dyn Env) -> Result<HttpPrepared, AiError> {
-    let TransportPrepareInput { endpoint, request, body, auth, encode_body, headers, middleware, framing } = input;
-    let encoding = request.http.as_ref().and_then(|http| http.encoding.clone());
-    let parts = json_request_parts(JsonRequestInput { endpoint, request, body, auth, encode_body, headers }, env)?;
-    let request = json_post(parts.url, parts.body_text, parts.headers, encoding)?;
-    Ok(HttpPrepared { request, framing, middleware })
 }
 
 fn invalid_request(message: impl Into<String>) -> AiError {

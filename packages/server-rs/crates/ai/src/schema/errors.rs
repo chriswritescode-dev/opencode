@@ -250,7 +250,23 @@ impl AiError {
     }
 
     pub fn status(&self) -> Option<u16> {
-        self.http().map(|http| http.status)
+        self.http_context().map(|http| http.status)
+    }
+
+    pub fn body(&self) -> Option<&str> {
+        match &self.reason {
+            AiErrorReason::InvalidRequest { body, .. }
+            | AiErrorReason::UnsupportedOperation { body, .. }
+            | AiErrorReason::Authentication { body, .. }
+            | AiErrorReason::RateLimit { body, .. }
+            | AiErrorReason::QuotaExceeded { body, .. }
+            | AiErrorReason::ContentPolicy { body, .. }
+            | AiErrorReason::ProviderInternal { body, .. }
+            | AiErrorReason::Transport { body, .. }
+            | AiErrorReason::InvalidProviderOutput { body, .. }
+            | AiErrorReason::UnknownProvider { body, .. }
+            | AiErrorReason::Timeout { body, .. } => body.as_deref(),
+        }
     }
 
     pub fn retry_after_ms(&self) -> Option<u64> {
@@ -265,7 +281,7 @@ impl AiError {
     }
 
     pub fn is_retryable(&self) -> bool {
-        match self.http().and_then(|http| http.headers.get("x-should-retry")).map(String::as_str) {
+        match self.http_context().and_then(|http| http.headers.get("x-should-retry")).map(String::as_str) {
             Some("true") => return true,
             Some("false") => return false,
             _ => {}
@@ -309,7 +325,7 @@ impl AiError {
         self
     }
 
-    fn http(&self) -> Option<&HttpContext> {
+    pub fn http_context(&self) -> Option<&HttpContext> {
         match &self.reason {
             AiErrorReason::InvalidRequest { http, .. }
             | AiErrorReason::UnsupportedOperation { http, .. }

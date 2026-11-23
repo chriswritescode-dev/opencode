@@ -11,3 +11,4 @@ mod provider_errors;
 mod replay;
 mod schema;
 mod shared;
+mod websocket;

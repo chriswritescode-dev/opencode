@@ -1669,7 +1669,7 @@ fn as_text(value: Option<&Value>) -> Option<String> {
     }
 }
 
-pub fn provider_failure(event: &Event, fallback: &str) -> AiError {
+pub fn provider_failure(event: &Event, fallback: &str, body: Option<&str>) -> AiError {
     let detail = error_detail(event);
     let summary = match (detail.message.clone(), detail.code.clone()) {
         (Some(message), Some(code)) => Some(format!("{code}: {message}")),
@@ -1677,7 +1677,7 @@ pub fn provider_failure(event: &Event, fallback: &str) -> AiError {
         (None, Some(code)) => Some(code),
         (None, None) => None,
     };
-    let body = crate::json::encode_body(event);
+    let body = body.map(str::to_string).unwrap_or_else(|| crate::json::encode_body(event));
     let message = summary.unwrap_or_else(|| if body == "{}" { fallback.to_string() } else { body.clone() });
     let status = event
         .get("status")
@@ -1810,10 +1810,10 @@ pub fn step(state: &mut State, event: &Event) -> Result<Vec<LlmEvent>, AiError> 
         return on_response_finish(state, event);
     }
     if kind == "response.failed" {
-        return Err(provider_failure(event, &format!("{} response failed", state.name)));
+        return Err(provider_failure(event, &format!("{} response failed", state.name), None));
     }
     if kind == "error" {
-        return Err(provider_failure(event, &format!("{} stream error", state.name)));
+        return Err(provider_failure(event, &format!("{} stream error", state.name), None));
     }
     Ok(Vec::new())
 }

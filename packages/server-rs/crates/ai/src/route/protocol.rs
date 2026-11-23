@@ -4,6 +4,8 @@ use crate::ExecutionContext;
 use crate::prepare::tool_updates::ToolUpdateEncoding;
 use crate::route::framing::Definition;
 use crate::route::model::{Model, ResolvedRequest};
+use crate::route::transport::channel::ChannelPreparation;
+use crate::route::transport::http::JsonRequestParts;
 use crate::schema::{AiError, LlmEvent, LlmRequest, SanitizerKind};
 
 pub type Frame = String;
@@ -26,6 +28,13 @@ pub trait Protocol: Send + Sync {
     }
     fn body_headers(&self, _model: &Model, _request: &LlmRequest, _body: &Value) -> Vec<(String, String)> {
         Vec::new()
+    }
+    fn prepare_channel(
+        &self,
+        _model: &Model,
+        _parts: &JsonRequestParts,
+    ) -> Option<Result<ChannelPreparation, AiError>> {
+        None
     }
     fn sanitizer(&self) -> Option<SanitizerKind> {
         None

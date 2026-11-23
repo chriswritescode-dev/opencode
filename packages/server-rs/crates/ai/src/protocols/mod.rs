@@ -1,5 +1,7 @@
 pub mod anthropic_messages;
 pub mod open_responses;
+pub mod open_responses_channel;
+pub mod open_responses_continuation;
 pub mod openai_chat;
 pub mod openai_compatible_responses;
 pub mod openai_freeform;

@@ -1,10 +1,13 @@
+use std::sync::Arc;
+
 use serde_json::Value;
 
 use crate::ExecutionContext;
 use crate::route::endpoint::PathPart;
 use crate::route::executor::Middleware;
-use crate::route::model::{Model, ResolvedRequest};
-use crate::route::transport::http::{HttpPrepared, TransportPrepareInput, prepare};
+use crate::route::model::{Model, ResolvedRequest, RouteTransport};
+use crate::route::transport::channel::{ChannelExecutor, ChannelPreparation};
+use crate::route::transport::http::{HttpPrepared, JsonRequestInput, json_post, json_request_parts};
 use crate::schema::{
     AiError, AiErrorReason, ContentPart, LlmRequest, MediaSource, Message, ToolContent, ToolResultValue,
 };
@@ -12,12 +15,14 @@ use crate::schema::{
 #[derive(Clone, Default)]
 pub struct StreamOptions {
     pub http: Option<Middleware>,
+    pub web_socket: Option<Arc<dyn ChannelExecutor>>,
 }
 
 pub struct Compiled {
     pub resolved: ResolvedRequest,
     pub body: Value,
     pub prepared: HttpPrepared,
+    pub channel: Option<ChannelPreparation>,
 }
 
 pub fn compile(
@@ -43,20 +48,28 @@ pub fn compile(
         endpoint.path =
             PathPart::Static(resolved.model.route.protocol.default_path(&resolved.model, &body).unwrap_or_default());
     }
-    let prepared = prepare(
-        TransportPrepareInput {
+    let parts = json_request_parts(
+        JsonRequestInput {
             endpoint,
             request: resolved.request.clone(),
             body: body.clone(),
             auth: resolved.model.route.auth.clone(),
             encode_body: None,
             headers: None,
-            middleware: options.http.clone(),
-            framing: resolved.model.route.protocol.framing(),
         },
         context.env.as_ref(),
     )?;
-    Ok(Compiled { resolved, body, prepared })
+    let channel = match options.web_socket {
+        Some(_) if resolved.model.route.transport == RouteTransport::OpenAiResponsesChannel => {
+            resolved.model.route.protocol.prepare_channel(&resolved.model, &parts).transpose()?
+        }
+        _ => None,
+    };
+    let encoding = resolved.request.http.as_ref().and_then(|http| http.encoding.clone());
+    let request = json_post(parts.url, parts.body_text, parts.headers, encoding)?;
+    let prepared =
+        HttpPrepared { request, framing: resolved.model.route.protocol.framing(), middleware: options.http.clone() };
+    Ok(Compiled { resolved, body, prepared, channel })
 }
 
 fn reject_local_files(request: &LlmRequest) -> Result<(), AiError> {

@@ -89,6 +89,44 @@ impl Step {
             Err(failure) => panic!("failed to decode error: {failure}"),
         }
     }
+
+    pub fn websocket_record(&self) -> WebSocketRecord {
+        let request_id = self.request.get("id").and_then(serde_json::Value::as_str).unwrap_or_default();
+        let Some(websocket) = &self.websocket else {
+            panic!("step {request_id} has no websocket record");
+        };
+        match serde_json::from_value(websocket.clone()) {
+            Ok(record) => record,
+            Err(error) => panic!("step {request_id} websocket record: {error}"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WebSocketRecord {
+    #[serde(default)]
+    pub ops: Vec<ChannelOp>,
+    pub sent: Vec<String>,
+    pub received: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub connect: Option<ConnectRecord>,
+}
+
+#[derive(Debug, Clone, serde::Deserialize)]
+#[serde(tag = "type", rename_all = "camelCase")]
+pub enum ChannelOp {
+    #[serde(rename_all = "camelCase")]
+    Reconnect {
+        #[serde(default)]
+        preserve_checkpoint: bool,
+    },
+}
+
+#[derive(Debug, Clone, serde::Deserialize)]
+pub struct ConnectRecord {
+    pub url: String,
+    pub headers: BTreeMap<String, String>,
 }
 
 #[derive(Debug, Clone, serde::Deserialize)]

@@ -1,16 +1,21 @@
 use std::collections::VecDeque;
 use std::pin::Pin;
+use std::sync::Arc;
 
 use futures_util::{Stream, StreamExt, stream};
 use serde_json::Value;
 
 use crate::ExecutionContext;
 use crate::route::compile::{StreamOptions, compile};
-use crate::route::executor::RequestExecutor;
-use crate::route::framing::FrameStream;
+use crate::route::executor::{BoxFuture, Middleware, PreparedHttp, RequestExecutor};
+use crate::route::framing::{Definition, FrameStream};
 use crate::route::model::{Model, ResolvedRequest};
 use crate::route::protocol::ProtocolState;
+use crate::route::transport::channel::{
+    ChannelExchange, ChannelExecutor, ChannelFallback, ChannelFallbackExecution, ChannelPreparation,
+};
 use crate::route::transport::http::HttpPrepared;
+use crate::route::transport::websocket::WebSocketRequest;
 use crate::schema::{
     AiError, AiErrorReason, HttpContext, InvalidProviderOutputClassification, LlmEvent, LlmRequest, LlmResponse,
     ResponseFold,
@@ -32,6 +37,7 @@ impl LlmClient {
         request: LlmRequest,
         options: StreamOptions,
     ) -> Pin<Box<dyn Stream<Item = Result<LlmEvent, AiError>> + Send>> {
+        let web_socket = options.web_socket.clone();
         let compiled = match compile(model, request, &options, &self.context) {
             Ok(compiled) => compiled,
             Err(error) => {
@@ -43,6 +49,8 @@ impl LlmClient {
         let stage = Stage::Execute(Box::new(ExecuteState {
             executor: self.executor.clone(),
             prepared: compiled.prepared,
+            channel: compiled.channel,
+            web_socket,
             resolved: compiled.resolved,
             context: self.context.clone(),
             include_raw,
@@ -75,6 +83,8 @@ enum Stage {
 struct ExecuteState {
     executor: RequestExecutor,
     prepared: HttpPrepared,
+    channel: Option<ChannelPreparation>,
+    web_socket: Option<Arc<dyn ChannelExecutor>>,
     resolved: ResolvedRequest,
     context: ExecutionContext,
     include_raw: bool,
@@ -84,7 +94,7 @@ struct ExecuteState {
 struct StreamState {
     frames: FrameStream,
     protocol: Box<dyn ProtocolState>,
-    http: HttpContext,
+    http: Option<HttpContext>,
     route: String,
     include_raw: bool,
     pending: VecDeque<LlmEvent>,
@@ -92,24 +102,54 @@ struct StreamState {
     frames_done: bool,
     halted: bool,
     done: bool,
+    complete: Option<BoxFuture<()>>,
 }
 
 async fn advance(stage: Stage) -> Option<(Result<LlmEvent, AiError>, Stage)> {
     match stage {
         Stage::Execute(state) => {
-            let ExecuteState { executor, prepared, resolved, context, include_raw, route } = *state;
-            let url = prepared.request.url.clone();
+            let ExecuteState { executor, prepared, channel, web_socket, resolved, context, include_raw, route } =
+                *state;
             let HttpPrepared { request, framing, middleware } = prepared;
-            let response = match executor.execute(request, middleware).await {
-                Ok(response) => response,
-                Err(error) => return Some((Err(error), Stage::Done)),
+            let (frames, http, complete) = match (channel, web_socket) {
+                (Some(channel), Some(web_socket)) => {
+                    let ChannelPreparation { url, headers, rotate_after_ms, driver } = channel;
+                    let exchange = ChannelExchange {
+                        id: resolved.request.id.clone().unwrap_or_else(|| "request".to_string()),
+                        connect: WebSocketRequest { url, headers },
+                        rotate_after_ms,
+                        fallback: channel_fallback(
+                            executor.clone(),
+                            request.clone(),
+                            framing.clone(),
+                            middleware.clone(),
+                        ),
+                        driver,
+                    };
+                    let execution = match web_socket.execute(exchange).await {
+                        Ok(execution) => execution,
+                        Err(error) => return Some((Err(error), Stage::Done)),
+                    };
+                    (execution.frames, execution.http, Some(execution.complete))
+                }
+                _ => {
+                    let url = request.url.clone();
+                    let response = match executor.execute(request, middleware).await {
+                        Ok(response) => response,
+                        Err(error) => return Some((Err(error), Stage::Done)),
+                    };
+                    let http = Some(HttpContext {
+                        url,
+                        status: response.status,
+                        headers: response
+                            .headers
+                            .iter()
+                            .map(|(name, value)| (name.to_lowercase(), value.clone()))
+                            .collect(),
+                    });
+                    (framing.frame(response.body), http, None)
+                }
             };
-            let http = HttpContext {
-                url,
-                status: response.status,
-                headers: response.headers.iter().map(|(name, value)| (name.to_lowercase(), value.clone())).collect(),
-            };
-            let frames = framing.frame(response.body);
             let protocol = resolved.model.route.protocol.new_state(&resolved, &context);
             let mut state = Box::new(StreamState {
                 frames,
@@ -122,6 +162,7 @@ async fn advance(stage: Stage) -> Option<(Result<LlmEvent, AiError>, Stage)> {
                 frames_done: false,
                 halted: false,
                 done: false,
+                complete,
             });
             let item = read_next(&mut state).await?;
             Some((item, Stage::Read(state)))
@@ -134,6 +175,31 @@ async fn advance(stage: Stage) -> Option<(Result<LlmEvent, AiError>, Stage)> {
     }
 }
 
+fn channel_fallback(
+    executor: RequestExecutor,
+    request: PreparedHttp,
+    framing: Definition,
+    middleware: Option<Middleware>,
+) -> ChannelFallback {
+    Arc::new(move || {
+        let executor = executor.clone();
+        let request = request.clone();
+        let framing = framing.clone();
+        let middleware = middleware.clone();
+        Box::pin(async move {
+            let url = request.url.clone();
+            let response = executor.execute(request, middleware).await?;
+            let http = HttpContext {
+                url,
+                status: response.status,
+                headers: response.headers.iter().map(|(name, value)| (name.to_lowercase(), value.clone())).collect(),
+            };
+            let frames: FrameStream = framing.frame(response.body);
+            Ok(ChannelFallbackExecution { frames, http: Some(http) })
+        })
+    })
+}
+
 async fn read_next(state: &mut StreamState) -> Option<Result<LlmEvent, AiError>> {
     loop {
         if state.done {
@@ -143,7 +209,7 @@ async fn read_next(state: &mut StreamState) -> Option<Result<LlmEvent, AiError>>
             if state.finished && !matches!(event, LlmEvent::Raw { .. }) {
                 state.done = true;
                 let message = format!("Provider emitted {} after the terminal event", event_type(&event));
-                return Some(Err(stream_error(&state.route, message).attach_http(&state.http)));
+                return Some(Err(attach_error(stream_error(&state.route, message), &state.http)));
             }
             if matches!(event, LlmEvent::Finish { .. }) {
                 state.finished = true;
@@ -164,13 +230,13 @@ async fn read_next(state: &mut StreamState) -> Option<Result<LlmEvent, AiError>>
                         }
                         Err(error) => {
                             state.done = true;
-                            return Some(Err(error.attach_http(&state.http)));
+                            return Some(Err(attach_error(error, &state.http)));
                         }
                     }
                 }
                 Some(Err(error)) => {
                     state.done = true;
-                    return Some(Err(error.attach_http(&state.http)));
+                    return Some(Err(attach_error(error, &state.http)));
                 }
                 None => state.frames_done = true,
             }
@@ -182,16 +248,26 @@ async fn read_next(state: &mut StreamState) -> Option<Result<LlmEvent, AiError>>
                 Ok(events) => state.pending.extend(events),
                 Err(error) => {
                     state.done = true;
-                    return Some(Err(error.attach_http(&state.http)));
+                    return Some(Err(attach_error(error, &state.http)));
                 }
             }
             continue;
         }
         state.done = true;
         if !state.finished {
-            return Some(Err(incomplete_stream_error(&state.route).attach_http(&state.http)));
+            return Some(Err(attach_error(incomplete_stream_error(&state.route), &state.http)));
+        }
+        if let Some(complete) = state.complete.take() {
+            complete.await;
         }
         return None;
+    }
+}
+
+fn attach_error(error: AiError, http: &Option<HttpContext>) -> AiError {
+    match http {
+        Some(http) => error.attach_http(http),
+        None => error,
     }
 }
 

@@ -15,9 +15,12 @@ use opencode_ai::route::client::LlmClient;
 use opencode_ai::route::compile::StreamOptions;
 use opencode_ai::route::executor::{BoxFuture, ByteStream, HttpResponse, HttpSender, PreparedHttp, RequestExecutor};
 use opencode_ai::route::model::{Model, ModelDescriptor, ProtocolRegistry};
-use opencode_ai::schema::{AiError, LlmEvent};
+use opencode_ai::route::transport::channel::{
+    ChannelCheckpoint, ChannelExchange, ChannelExecution, ChannelExecutor, ChannelMode, ChannelObservation,
+};
+use opencode_ai::schema::{AiError, LlmEvent, Recovery};
 
-use crate::corpus::{Cassette, Exchange, Prepared};
+use crate::corpus::{Cassette, ChannelOp, Exchange, Prepared, WebSocketRecord};
 
 const CHUNKED_BODY_SIZE: usize = 7;
 
@@ -208,6 +211,260 @@ fn chunk_bytes(body: Vec<u8>, chunk: Option<usize>) -> Vec<Bytes> {
         None => vec![Bytes::from(body)],
         Some(size) => body.chunks(size).map(Bytes::copy_from_slice).collect(),
     }
+}
+
+struct ReplayChannelExecutor {
+    cassette: String,
+    steps: Vec<WebSocketRecord>,
+    state: Arc<Mutex<ReplayState>>,
+}
+
+#[derive(Default)]
+struct ReplayState {
+    current: usize,
+    connected: bool,
+    executed: bool,
+    checkpoint: Option<ChannelCheckpoint>,
+    pending: Option<ChannelCheckpoint>,
+}
+
+impl ReplayChannelExecutor {
+    fn new(cassette: &Cassette) -> ReplayChannelExecutor {
+        ReplayChannelExecutor {
+            cassette: cassette.name.clone(),
+            steps: cassette.steps.iter().map(|step| step.websocket_record()).collect(),
+            state: Arc::new(Mutex::new(ReplayState::default())),
+        }
+    }
+
+    fn begin(&self, index: usize) {
+        let mut state = self.state.lock().expect("replay channel state");
+        for op in &self.steps[index].ops {
+            match op {
+                ChannelOp::Reconnect { preserve_checkpoint } => {
+                    state.connected = false;
+                    state.pending = None;
+                    if !preserve_checkpoint {
+                        state.checkpoint = None;
+                    }
+                }
+            }
+        }
+        state.current = index;
+        state.executed = false;
+    }
+
+    fn end(&self, index: usize) {
+        let state = self.state.lock().expect("replay channel state");
+        assert_eq!(state.current, index, "{} step {index} channel: ended on step {}", self.cassette, state.current);
+        assert!(state.executed, "{} step {index} channel: the executor never ran", self.cassette);
+    }
+}
+
+impl ChannelExecutor for ReplayChannelExecutor {
+    fn execute(&self, exchange: ChannelExchange) -> BoxFuture<Result<ChannelExecution, AiError>> {
+        let mut state = self.state.lock().expect("replay channel state");
+        let index = state.current;
+        let record = self.steps[index].clone();
+        let ChannelExchange { connect, mut driver, .. } = exchange;
+        if state.connected {
+            assert!(
+                record.connect.is_none(),
+                "{} step {index} channel connect: the corpus recorded a connect while the connection was open",
+                self.cassette
+            );
+        } else {
+            let Some(connect_record) = record.connect else {
+                panic!(
+                    "{} step {index} channel connect: the corpus recorded no connect while the connection was closed",
+                    self.cassette
+                );
+            };
+            assert_eq!(connect.url, connect_record.url, "{} step {index} channel connect.url", self.cassette);
+            let headers = connect
+                .headers
+                .into_iter()
+                .map(|(name, value)| (name.to_lowercase(), value))
+                .collect::<BTreeMap<String, String>>();
+            let recorded = connect_record
+                .headers
+                .into_iter()
+                .map(|(name, value)| (name.to_lowercase(), value))
+                .collect::<BTreeMap<String, String>>();
+            assert_eq!(headers, recorded, "{} step {index} channel connect.headers", self.cassette);
+            state.connected = true;
+        }
+        let create = driver
+            .create(state.checkpoint.as_ref())
+            .unwrap_or_else(|error| panic!("{} step {index} channel create: {}", self.cassette, error.message()));
+        if matches!(create.mode, ChannelMode::Full) {
+            state.checkpoint = None;
+        }
+        state.pending = None;
+        state.executed = true;
+        assert_eq!(record.sent, vec![create.message.clone()], "{} step {index} channel sent", self.cassette);
+        let mut items: Vec<Result<String, AiError>> = Vec::new();
+        for entry in &record.received {
+            let kind = entry.get("type").and_then(Value::as_str).unwrap_or_default();
+            match kind {
+                "frame" | "completed" | "incomplete" => {
+                    let frame = entry.get("frame").and_then(Value::as_str).unwrap_or_else(|| {
+                        panic!("{} step {index} channel {kind}: the entry recorded no frame", self.cassette)
+                    });
+                    let observation = driver.observe(&create, frame).unwrap_or_else(|error| {
+                        panic!("{} step {index} channel observe: {}", self.cassette, error.message())
+                    });
+                    match (kind, observation) {
+                        ("frame", ChannelObservation::Frame { frame: observed }) => {
+                            assert_eq!(observed, frame, "{} step {index} channel frame", self.cassette);
+                        }
+                        ("completed", ChannelObservation::Completed { frame: observed, checkpoint }) => {
+                            assert_eq!(observed, frame, "{} step {index} channel completed.frame", self.cassette);
+                            if checkpoint.is_some() {
+                                state.pending = checkpoint;
+                            }
+                        }
+                        ("incomplete", ChannelObservation::Incomplete { frame: observed }) => {
+                            assert_eq!(observed, frame, "{} step {index} channel incomplete.frame", self.cassette);
+                            state.checkpoint = None;
+                        }
+                        _ => panic!(
+                            "{} step {index} channel {kind}: the driver observed a different variant",
+                            self.cassette
+                        ),
+                    }
+                    items.push(Ok(frame.to_string()));
+                }
+                "rejected" | "provider-failure" => {
+                    let frame = entry["reason"]["body"].as_str().unwrap_or_else(|| {
+                        panic!("{} step {index} channel {kind}: the entry recorded no reason.body", self.cassette)
+                    });
+                    let observation = driver.observe(&create, frame).unwrap_or_else(|error| {
+                        panic!("{} step {index} channel observe: {}", self.cassette, error.message())
+                    });
+                    let retryable = entry.get("retryable").and_then(Value::as_bool).unwrap_or_else(|| {
+                        panic!("{} step {index} channel {kind}: the entry recorded no retryable", self.cassette)
+                    });
+                    match (kind, observation) {
+                        ("rejected", ChannelObservation::Rejected { error, recovery: observed }) => {
+                            let recorded = entry.get("recovery").cloned().unwrap_or_else(|| {
+                                panic!(
+                                    "{} step {index} channel rejected: the entry recorded no recovery",
+                                    self.cassette
+                                )
+                            });
+                            let recorded = serde_json::from_value::<Recovery>(recorded).unwrap_or_else(|error| {
+                                panic!("{} step {index} channel rejected.recovery: {error}", self.cassette)
+                            });
+                            assert_eq!(observed, recorded, "{} step {index} channel rejected.recovery", self.cassette);
+                            assert_eq!(
+                                serde_json::to_value(&error.reason).unwrap_or_else(|failure| panic!(
+                                    "{} step {index} channel rejected.reason: {failure}",
+                                    self.cassette
+                                )),
+                                entry["reason"],
+                                "{} step {index} channel rejected.reason",
+                                self.cassette
+                            );
+                            assert_eq!(
+                                error.is_retryable(),
+                                retryable,
+                                "{} step {index} channel rejected.retryable",
+                                self.cassette
+                            );
+                            state.checkpoint = None;
+                            items.push(Err(error));
+                        }
+                        ("provider-failure", ChannelObservation::ProviderFailure { error }) => {
+                            assert_eq!(
+                                serde_json::to_value(&error.reason).unwrap_or_else(|failure| panic!(
+                                    "{} step {index} channel provider-failure.reason: {failure}",
+                                    self.cassette
+                                )),
+                                entry["reason"],
+                                "{} step {index} channel provider-failure.reason",
+                                self.cassette
+                            );
+                            assert_eq!(
+                                error.is_retryable(),
+                                retryable,
+                                "{} step {index} channel provider-failure.retryable",
+                                self.cassette
+                            );
+                            state.checkpoint = None;
+                            items.push(Err(error));
+                        }
+                        _ => panic!(
+                            "{} step {index} channel {kind}: the driver observed a different variant",
+                            self.cassette
+                        ),
+                    }
+                }
+                other => panic!("{} step {index} channel: unknown received type {other}", self.cassette),
+            }
+            if matches!(kind, "completed" | "incomplete" | "rejected" | "provider-failure") {
+                break;
+            }
+        }
+        let mut pending = state.pending.take();
+        let shared = self.state.clone();
+        drop(state);
+        let complete: BoxFuture<()> = Box::pin(async move {
+            let mut state = shared.lock().expect("replay channel state");
+            state.checkpoint = pending.take();
+            state.pending = None;
+        });
+        Box::pin(async move { Ok(ChannelExecution { frames: Box::pin(stream::iter(items)), http: None, complete }) })
+    }
+}
+
+struct UnusedSender;
+
+impl HttpSender for UnusedSender {
+    fn send(&self, request: PreparedHttp) -> BoxFuture<Result<HttpResponse, AiError>> {
+        panic!("{}: the websocket channel sent an HTTP request", request.url);
+    }
+}
+
+async fn replay_websocket_cassette(cassette: &Cassette) {
+    let registry = ProtocolRegistry::builtin();
+    let channel = Arc::new(ReplayChannelExecutor::new(cassette));
+    for (index, step) in cassette.steps.iter().enumerate() {
+        let descriptor: ModelDescriptor = serde_json::from_value(step.model.clone())
+            .unwrap_or_else(|error| panic!("{} step {index} model descriptor: {error}", cassette.name));
+        let model = Model::from_descriptor(descriptor, &registry)
+            .unwrap_or_else(|error| panic!("{} step {index} model: {}", cassette.name, error.message()));
+        let recorded_events = match step.events.as_ref() {
+            Some(events) => events.clone(),
+            None if step.error.is_some() => Vec::new(),
+            None => panic!("{} step {index} events: the step recorded no events and no error", cassette.name),
+        };
+        channel.begin(index);
+        let clock = Arc::new(FixedClock::new(cassette.clock_epoch_ms));
+        let context = ExecutionContext::new(clock.clone(), Arc::new(SequenceIds::new()), Arc::new(MapEnv::default()));
+        let client = LlmClient::new(RequestExecutor::new(Arc::new(UnusedSender), None, clock), context);
+        let options = StreamOptions { web_socket: Some(channel.clone()), ..Default::default() };
+        let items = client.stream(&model, step.request(), options).collect::<Vec<Result<LlmEvent, AiError>>>().await;
+        channel.end(index);
+        assert_outcome(cassette, index, "websocket", step.error.as_ref(), &recorded_events, items);
+    }
+}
+
+#[tokio::test]
+async fn responses_websocket_cassettes() {
+    let corpus = crate::corpus::Corpus::load();
+    let cassettes = corpus
+        .cassettes
+        .iter()
+        .filter(|cassette| cassette.group == "openai-responses-websocket")
+        .collect::<Vec<&Cassette>>();
+    assert_eq!(cassettes.len(), 3, "websocket cassette count");
+    let mut steps = 0;
+    for cassette in cassettes {
+        replay_websocket_cassette(cassette).await;
+        steps += cassette.steps.len();
+    }
+    assert_eq!(steps, 7, "websocket step count");
 }
 
 #[tokio::test]
