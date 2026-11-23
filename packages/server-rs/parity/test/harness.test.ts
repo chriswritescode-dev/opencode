@@ -116,6 +116,17 @@ test(
   60_000,
 )
 
+test(
+  "ignores events that arrive while the warm-up runs",
+  async () => {
+    const result = await runParity(["--reference", fakeServer, "--candidate", fakeServer, infoScenario], {
+      PARITY_CANDIDATE_ENV: JSON.stringify({ FAKE_WARM_DELAY: "2500" }),
+    })
+    expect(result.exitCode).toBe(0)
+  },
+  60_000,
+)
+
 async function withTempRoot(run: (root: string) => Promise<void>) {
   await fs.mkdir("/tmp/opencode", { recursive: true })
   const root = await fs.mkdtemp(path.join("/tmp/opencode", "parity-capture-"))

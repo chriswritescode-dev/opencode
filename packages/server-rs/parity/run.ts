@@ -3,6 +3,7 @@ import path from "node:path"
 import { pathToFileURL } from "node:url"
 import { compareCaptures } from "./lib/compare"
 import { runSide } from "./lib/drive"
+import { startModelEndpoint, type ModelEndpoint } from "./lib/model"
 import { normalizeCapture } from "./lib/normalize"
 import { createSandbox, resetSandbox } from "./lib/sandbox"
 import type { Scenario } from "./lib/scenario"
@@ -188,13 +189,20 @@ async function loadScenario(file: string) {
 
 async function captureScenario(scenario: Scenario, options: Options, candidateEnv: Record<string, string>) {
   const box = await createSandbox()
+  const endpoint = await startModelEndpoint()
+  const template = { work: box.work, root: box.root }
+  const replies = scenario.model ?? []
   try {
+    endpoint.load(replies, template)
     const referenceStarted = Date.now()
-    const reference = await runSide(scenario, options.reference, box)
+    const reference = await runSide(scenario, options.reference, box, endpoint)
+    requireAllReplies(endpoint)
     const referenceEnd = Date.now()
     await resetSandbox(box.root)
+    endpoint.load(replies, template)
     const candidateStarted = Date.now()
-    const candidate = await runSide(scenario, options.candidate, box, candidateEnv)
+    const candidate = await runSide(scenario, options.candidate, box, endpoint, candidateEnv)
+    requireAllReplies(endpoint)
     const candidateEnd = Date.now()
     const referenceCapture = normalizeCapture(reference, {
       root: box.root,
@@ -209,8 +217,18 @@ async function captureScenario(scenario: Scenario, options: Options, candidateEn
     const differences = compareCaptures(referenceCapture, candidateCapture)
     return { reference: referenceCapture, candidate: candidateCapture, differences } satisfies Capture
   } finally {
-    await fs.rm(box.root, { recursive: true, force: true })
+    try {
+      await endpoint.stop()
+    } finally {
+      await fs.rm(box.root, { recursive: true, force: true })
+    }
   }
+}
+
+function requireAllReplies(endpoint: ModelEndpoint) {
+  const unused = endpoint.unused()
+  if (unused === 0) return
+  throw new Error(`scenario: ${unused} unused model ${unused === 1 ? "reply" : "replies"}`)
 }
 
 async function writeOutputs(name: string, capture: Capture) {

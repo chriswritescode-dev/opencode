@@ -16,7 +16,10 @@ export type Step =
   | { waitEvent: WaitEventStep; timeout?: number }
   | { files: Record<string, string> }
 
-export type Reply = unknown
+export type Reply =
+  | { text: string }
+  | { tool: { id: string; name: string; input: unknown } }
+  | { cassette: string; interaction?: number }
 
 export type Scenario = {
   files?: Record<string, string>

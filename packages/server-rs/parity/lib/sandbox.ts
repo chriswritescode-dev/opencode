@@ -24,6 +24,7 @@ export async function sandboxEnv(
   root: string,
   extra: Record<string, string> = {},
   config: Record<string, unknown> = {},
+  modelURL: string,
 ): Promise<Record<string, string>> {
   const home = path.join(root, "home")
   const bunCache = path.join(path.dirname(root), "bun-cache")
@@ -47,11 +48,38 @@ export async function sandboxEnv(
     OPENCODE_DISABLE_CHANNEL_DB: "1",
     OPENCODE_FLAGS: "-full_codemode",
     OPENCODE_CONFIG_CONTENT: JSON.stringify(
-      deepMerge({ update: "disable", agents: { title: { disabled: true } } }, config),
+      deepMerge(
+        {
+          update: "disable",
+          model: "openai-test/test-model",
+          agents: { title: { disabled: true } },
+          providers: {
+            "openai-test": modelProvider("OpenAI Test", "@ai-sdk/openai-compatible", modelURL),
+            "anthropic-test": modelProvider("Anthropic Test", "@ai-sdk/anthropic", modelURL),
+          },
+        },
+        config,
+      ),
     ),
     BUN_RUNTIME_TRANSPILER_CACHE_PATH: bunCache,
     ...extra,
   }
+}
+
+function modelProvider(name: string, pkg: string, modelURL: string) {
+  return {
+    name,
+    package: pkg,
+    settings: { apiKey: "parity", baseURL: `${modelURL}/v1` },
+    models: { "test-model": testModel },
+  }
+}
+
+const testModel = {
+  name: "Test Model",
+  capabilities: { tools: true, input: ["text"], output: ["text"] },
+  cost: { input: 0, output: 0 },
+  limit: { context: 100_000, output: 10_000 },
 }
 
 function deepMerge(base: Record<string, unknown>, override: Record<string, unknown>): Record<string, unknown> {

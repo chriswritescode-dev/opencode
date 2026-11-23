@@ -1,6 +1,7 @@
 import fs from "node:fs/promises"
 import path from "node:path"
 import { dumpDatabases, listFiles, waitForSearchSettled, type DatabaseCapture } from "./capture"
+import type { ModelEndpoint } from "./model"
 import { resolveSide, startServer, stopServer } from "./server"
 import { sandboxEnv, type Sandbox } from "./sandbox"
 import type { HttpStep, Scenario, Step, WaitEventStep } from "./scenario"
@@ -38,9 +39,10 @@ export async function runSide(
   scenario: Scenario,
   side: string,
   sandbox: Sandbox,
+  endpoint: ModelEndpoint,
   extraEnv?: Record<string, string>,
 ): Promise<Capture> {
-  const env = { ...(await sandboxEnv(sandbox.root, scenario.env, scenario.config)), ...extraEnv }
+  const env = { ...(await sandboxEnv(sandbox.root, scenario.env, scenario.config, endpoint.url)), ...extraEnv }
   await writeFiles(sandbox, scenario.files ?? {})
   const server = await startServer(resolveSide(side), env, sandbox.work, side)
   const saved: Record<string, unknown> = {}
@@ -49,7 +51,19 @@ export async function runSide(
   const logs: Record<string, unknown[]> = {}
   const cursor: Cursor = { index: 0 }
   let stream: EventStream | undefined
+  let warmup: EventStream | undefined
   try {
+    const warmupEvents: unknown[] = []
+    warmup = await openEventStream(server.url, side, warmupEvents)
+    const response = await fetch(new URL("/api/config", server.url), {
+      headers: { authorization: `Basic ${credentials}`, "x-opencode-directory": sandbox.work },
+      signal: AbortSignal.timeout(eventTimeout),
+    })
+    await response.body?.cancel()
+    await waitForSearchSettled(sandbox.root)
+    await settleEvents(warmupEvents)
+    await warmup.close()
+    warmup = undefined
     stream = await openEventStream(server.url, side, events)
     for (const step of scenario.steps) {
       const captured = await runStep(step, server.url, sandbox, saved, events, cursor)
@@ -59,7 +73,7 @@ export async function runSide(
     await settleEvents(events)
     for (const id of sessionIDs(events)) logs[id] = await fetchSessionLog(server.url, id)
   } finally {
-    const closing = stream?.close() ?? Promise.resolve()
+    const closing = Promise.all([stream?.close() ?? Promise.resolve(), warmup?.close() ?? Promise.resolve()])
     try {
       await stopServer(server)
     } finally {
@@ -68,7 +82,7 @@ export async function runSide(
   }
   const database = await dumpDatabases(sandbox.root)
   const files = await listFiles(sandbox.root)
-  return { steps, events, logs, model: [], database, files }
+  return { steps, events, logs, model: endpoint.requests(), database, files }
 }
 
 export function parseSseFrames(text: string): unknown[] {
