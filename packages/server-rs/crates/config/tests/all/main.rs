@@ -2,6 +2,7 @@ mod discover;
 mod flags;
 mod load;
 mod normalize;
+mod observer;
 mod paths;
 mod policy;
 mod service;

@@ -28,6 +28,9 @@ Each file has these paragraphs, in order:
 - `OR-39-remote-tunnel.md`: a `remote` service route prints a warning instead of starting a tunnel
 - `OR-39-logging.md`: diagnostic lines go to stderr and no log file is written
 - `OR-39-usage-errors.md`: malformed arguments print one fixed usage line and exit with code 1
+- `OR-42-observer-initial-apply.md`: the sources observer applies its initial load instead of returning it
+- `OR-42-variable-warning.md`: a missing config file reference substitutes empty without a warning
+- `OR-42-wellknown-warnings.md`: well-known source failures are silent instead of logged
 - `OR-44-aws-credentials.md`: Bedrock credentials come only from route configuration, not the AWS default chain
 - `OR-44-bedrock-output.md`: Bedrock frames, cache warnings and SigV4 output carry different wire details
 - `OR-44-client-tls.md`: per-request client certificates are not presented

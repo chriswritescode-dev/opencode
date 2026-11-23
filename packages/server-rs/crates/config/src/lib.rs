@@ -5,6 +5,7 @@ pub mod generated;
 pub mod http;
 pub mod load;
 pub mod normalize;
+pub mod observer;
 pub mod options;
 pub mod parse;
 pub mod paths;
