@@ -227,3 +227,46 @@ async fn anthropic_messages_cassettes() {
     let steps = replay_group("anthropic-messages").await;
     assert_eq!(steps, 11, "anthropic-messages step count");
 }
+
+#[tokio::test]
+async fn open_responses_cassettes() {
+    let corpus = crate::corpus::Corpus::load();
+    let cassettes = corpus
+        .cassettes
+        .iter()
+        .filter(|cassette| cassette.group == "open-responses" && cassette.protocol == "open-responses")
+        .collect::<Vec<&Cassette>>();
+    assert_eq!(cassettes.len(), 3, "open-responses cassette count");
+    let mut steps = 0;
+    for cassette in cassettes {
+        replay_cassette(cassette).await;
+        steps += cassette.steps.len();
+    }
+    assert_eq!(steps, 4, "open-responses step count");
+}
+
+#[tokio::test]
+async fn responses_http_cassettes() {
+    let corpus = crate::corpus::Corpus::load();
+    let cassettes = corpus.cassettes.iter().filter(|cassette| cassette.group == "open-responses").count();
+    assert_eq!(cassettes, 12, "responses-http cassette count");
+    let steps = replay_group("open-responses").await;
+    assert_eq!(steps, 18, "responses-http step count");
+}
+
+#[tokio::test]
+async fn openai_responses_cassettes() {
+    let corpus = crate::corpus::Corpus::load();
+    let cassettes = corpus
+        .cassettes
+        .iter()
+        .filter(|cassette| cassette.group == "open-responses" && cassette.protocol == "openai-responses")
+        .collect::<Vec<&Cassette>>();
+    assert_eq!(cassettes.len(), 9, "openai-responses cassette count");
+    let mut steps = 0;
+    for cassette in cassettes {
+        replay_cassette(cassette).await;
+        steps += cassette.steps.len();
+    }
+    assert_eq!(steps, 14, "openai-responses step count");
+}

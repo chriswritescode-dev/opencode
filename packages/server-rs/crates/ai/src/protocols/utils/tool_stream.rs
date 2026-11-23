@@ -31,6 +31,12 @@ pub struct FinishAll {
     pub events: Vec<LlmEvent>,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct FinishOutcome {
+    pub tools: State,
+    pub events: Vec<LlmEvent>,
+}
+
 #[derive(Debug, Clone)]
 pub struct AppendDelta<'a> {
     pub id: Option<&'a str>,
@@ -41,6 +47,34 @@ pub struct AppendDelta<'a> {
 
 pub fn empty() -> State {
     State::new()
+}
+
+pub fn start(mut tools: State, key: i64, tool: PendingTool) -> State {
+    tools.insert(key, tool);
+    tools
+}
+
+pub fn append_existing(
+    route: &str,
+    tools: State,
+    key: i64,
+    text: &str,
+    missing: &str,
+) -> Result<AppendOutcome, AiError> {
+    match append(tools, key, text) {
+        Some(outcome) => Ok(outcome),
+        None => Err(invalid_output(route, missing.to_string(), None)),
+    }
+}
+
+pub fn finish(route: &str, tools: State, key: i64, input: Option<&str>) -> Result<FinishOutcome, AiError> {
+    let Some(tool) = tools.get(&key).cloned() else {
+        return Ok(FinishOutcome { tools, events: Vec::new() });
+    };
+    let event = tool_call(route, &tool, input)?;
+    let mut tools = tools;
+    tools.remove(&key);
+    Ok(FinishOutcome { tools, events: vec![input_end(&tool), event] })
 }
 
 pub fn append_or_start(
@@ -87,39 +121,35 @@ pub fn append(tools: State, key: i64, text: &str) -> Option<AppendOutcome> {
 pub fn finish_all(route: &str, tools: State) -> Result<FinishAll, AiError> {
     let mut events = Vec::new();
     for tool in tools.into_values() {
-        let raw = tool.input.clone();
-        let call = match parse_tool_input(&raw) {
-            Some(input) => LlmEvent::ToolCall {
-                id: tool.id.clone(),
-                name: tool.name.clone(),
-                namespace: tool.namespace.clone(),
-                input,
-                provider_executed: tool.provider_executed.filter(|executed| *executed),
-                provider_metadata: tool.provider_metadata.clone(),
-            },
-            None if tool.provider_executed == Some(true) => {
-                return Err(invalid_output(
-                    route,
-                    format!("Invalid JSON input for {route} tool call {}", tool.name),
-                    Some(raw),
-                ));
-            }
-            None => LlmEvent::ToolInputError {
-                id: tool.id.clone(),
-                name: tool.name.clone(),
-                namespace: tool.namespace.clone(),
-                raw,
-            },
-        };
-        events.push(LlmEvent::ToolInputEnd {
+        events.push(input_end(&tool));
+        events.push(tool_call(route, &tool, None)?);
+    }
+    Ok(FinishAll { tools: empty(), events })
+}
+
+fn tool_call(route: &str, tool: &PendingTool, input: Option<&str>) -> Result<LlmEvent, AiError> {
+    let raw = input.unwrap_or(&tool.input);
+    match parse_tool_input(raw) {
+        Some(input) => Ok(LlmEvent::ToolCall {
             id: tool.id.clone(),
             name: tool.name.clone(),
             namespace: tool.namespace.clone(),
+            input,
+            provider_executed: tool.provider_executed.filter(|executed| *executed),
             provider_metadata: tool.provider_metadata.clone(),
-        });
-        events.push(call);
+        }),
+        None if tool.provider_executed == Some(true) => Err(invalid_output(
+            route,
+            format!("Invalid JSON input for {route} tool call {}", tool.name),
+            Some(raw.to_string()),
+        )),
+        None => Ok(LlmEvent::ToolInputError {
+            id: tool.id.clone(),
+            name: tool.name.clone(),
+            namespace: tool.namespace.clone(),
+            raw: raw.to_string(),
+        }),
     }
-    Ok(FinishAll { tools: empty(), events })
 }
 
 fn append_tool(mut tools: State, key: i64, tool: PendingTool, text: &str) -> AppendOutcome {
@@ -140,6 +170,15 @@ fn input_start(tool: &PendingTool) -> LlmEvent {
         name: tool.name.clone(),
         namespace: tool.namespace.clone(),
         provider_executed: tool.provider_executed.filter(|executed| *executed),
+        provider_metadata: tool.provider_metadata.clone(),
+    }
+}
+
+fn input_end(tool: &PendingTool) -> LlmEvent {
+    LlmEvent::ToolInputEnd {
+        id: tool.id.clone(),
+        name: tool.name.clone(),
+        namespace: tool.namespace.clone(),
         provider_metadata: tool.provider_metadata.clone(),
     }
 }
