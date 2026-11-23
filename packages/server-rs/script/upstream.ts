@@ -1,4 +1,4 @@
-import { mkdir, realpath, rm, symlink } from "node:fs/promises"
+import { mkdir, readdir, realpath, rm, stat, symlink } from "node:fs/promises"
 import { dirname } from "node:path"
 
 const root = new URL("..", import.meta.url).pathname
@@ -13,6 +13,9 @@ const paths = [
   "packages/schema",
 ]
 const marker = paths.join("\n")
+
+const workspacePaths = ["packages", "package.json", "bunfig.toml", "tsconfig.json"]
+const workspaceMarker = workspacePaths.join("\n")
 
 /** Packages linked for their own sake rather than through a pinned manifest. */
 const extra = ["effect", "prettier"]
@@ -47,6 +50,26 @@ export async function upstreamTree(commit?: string) {
   return directory
 }
 
+export async function upstreamWorkspace(commit?: string): Promise<string> {
+  const revision = commit ?? (await pin())
+  await requireVersions(revision)
+  const manifest = gitJson(revision, "packages/core/package.json")
+  await requireVersion(revision, "jsonc-parser", manifest.dependencies["jsonc-parser"], `${repository}packages/core`)
+  const directory = `${root}target/upstream-workspace/${revision}`
+  if (
+    (await Bun.file(`${directory}/.complete`)
+      .text()
+      .catch(() => "")) === workspaceMarker
+  )
+    return directory
+  await rm(directory, { recursive: true, force: true })
+  await mkdir(directory, { recursive: true })
+  await extract(revision, directory, workspacePaths)
+  await linkWorkspace(directory)
+  await Bun.write(`${directory}/.complete`, workspaceMarker)
+  return directory
+}
+
 function gitTopLevel() {
   const result = Bun.spawnSync(["git", "rev-parse", "--show-toplevel"], { cwd: root })
   if (result.exitCode !== 0) {
@@ -56,8 +79,8 @@ function gitTopLevel() {
   return `${result.stdout.toString().trim()}/`
 }
 
-async function extract(commit: string, directory: string) {
-  const archive = Bun.spawn(["git", "archive", commit, ...paths], {
+async function extract(commit: string, directory: string, files = paths) {
+  const archive = Bun.spawn(["git", "archive", commit, ...files], {
     cwd: repository,
     stdout: "pipe",
     stderr: "inherit",
@@ -169,4 +192,51 @@ function requiredPackage(name: string, from = root) {
     process.exit(1)
   }
   return path
+}
+
+async function linkWorkspace(directory: string) {
+  if (!(await isDirectory(`${repository}node_modules/.bun`))) {
+    console.error("upstream: run bun install at the repository root")
+    process.exit(1)
+  }
+  const packages = `${directory}/packages`
+  for (const entry of await readdir(packages, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue
+    const checkout = `${repository}packages/${entry.name}/node_modules`
+    if (!(await isDirectory(checkout))) continue
+    const modules = `${packages}/${entry.name}/node_modules`
+    await mkdir(modules, { recursive: true })
+    for (const item of await readdir(checkout, { withFileTypes: true })) {
+      if (item.name.startsWith(".")) continue
+      if (!item.name.startsWith("@")) {
+        await linkWorkspacePackage(directory, `${checkout}/${item.name}`, `${modules}/${item.name}`, item.name)
+        continue
+      }
+      const scope = `${modules}/${item.name}`
+      await mkdir(scope, { recursive: true })
+      for (const child of await readdir(`${checkout}/${item.name}`, { withFileTypes: true })) {
+        if (child.name.startsWith(".")) continue
+        const name = `${item.name}/${child.name}`
+        await linkWorkspacePackage(directory, `${checkout}/${name}`, `${scope}/${child.name}`, name)
+      }
+    }
+  }
+}
+
+async function linkWorkspacePackage(directory: string, source: string, target: string, name: string) {
+  if (name.startsWith("@opencode/")) {
+    const pinned = `${directory}/packages/${name.slice("@opencode/".length)}`
+    if (await isDirectory(pinned)) {
+      await symlink(pinned, target)
+      return
+    }
+  }
+  await symlink(await realpath(source), target)
+}
+
+async function isDirectory(path: string) {
+  return await stat(path).then(
+    (value) => value.isDirectory(),
+    () => false,
+  )
 }
