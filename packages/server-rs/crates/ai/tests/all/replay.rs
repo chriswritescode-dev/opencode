@@ -486,6 +486,15 @@ async fn anthropic_messages_cassettes() {
 }
 
 #[tokio::test]
+async fn gemini_cassettes() {
+    let corpus = crate::corpus::Corpus::load();
+    let cassettes = corpus.cassettes.iter().filter(|cassette| cassette.group == "gemini").count();
+    assert_eq!(cassettes, 4, "gemini cassette count");
+    let steps = replay_group("gemini").await;
+    assert_eq!(steps, 6, "gemini step count");
+}
+
+#[tokio::test]
 async fn open_responses_cassettes() {
     let corpus = crate::corpus::Corpus::load();
     let cassettes = corpus

@@ -1,6 +1,8 @@
 pub mod cache;
 pub mod claude_model;
+pub mod gemini_generate_content;
 pub mod lifecycle;
+pub mod media_input;
 pub mod open_responses_options;
 pub mod partial_json;
 pub mod partial_json_options;

@@ -52,5 +52,8 @@ pub trait ProtocolState: Send {
     fn halt(&mut self) -> Result<Vec<LlmEvent>, AiError> {
         Ok(Vec::new())
     }
+    fn continuation(&mut self) -> Option<Result<String, AiError>> {
+        None
+    }
     fn terminal(&self, frame: &Frame) -> bool;
 }

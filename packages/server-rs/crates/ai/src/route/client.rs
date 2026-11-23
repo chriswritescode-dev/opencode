@@ -2,6 +2,7 @@ use std::collections::VecDeque;
 use std::pin::Pin;
 use std::sync::Arc;
 
+use bytes::Bytes;
 use futures_util::{Stream, StreamExt, stream};
 use serde_json::Value;
 
@@ -49,6 +50,7 @@ impl LlmClient {
         let stage = Stage::Execute(Box::new(ExecuteState {
             executor: self.executor.clone(),
             prepared: compiled.prepared,
+            body: compiled.body,
             channel: compiled.channel,
             web_socket,
             resolved: compiled.resolved,
@@ -83,6 +85,7 @@ enum Stage {
 struct ExecuteState {
     executor: RequestExecutor,
     prepared: HttpPrepared,
+    body: Value,
     channel: Option<ChannelPreparation>,
     web_socket: Option<Arc<dyn ChannelExecutor>>,
     resolved: ResolvedRequest,
@@ -103,13 +106,18 @@ struct StreamState {
     halted: bool,
     done: bool,
     complete: Option<BoxFuture<()>>,
+    executor: RequestExecutor,
+    prepared: HttpPrepared,
+    body: Value,
+    continuation_checked: bool,
 }
 
 async fn advance(stage: Stage) -> Option<(Result<LlmEvent, AiError>, Stage)> {
     match stage {
         Stage::Execute(state) => {
-            let ExecuteState { executor, prepared, channel, web_socket, resolved, context, include_raw, route } =
+            let ExecuteState { executor, prepared, body, channel, web_socket, resolved, context, include_raw, route } =
                 *state;
+            let continuation = prepared.clone();
             let HttpPrepared { request, framing, middleware } = prepared;
             let (frames, http, complete) = match (channel, web_socket) {
                 (Some(channel), Some(web_socket)) => {
@@ -163,6 +171,10 @@ async fn advance(stage: Stage) -> Option<(Result<LlmEvent, AiError>, Stage)> {
                 halted: false,
                 done: false,
                 complete,
+                executor,
+                prepared: continuation,
+                body,
+                continuation_checked: false,
             });
             let item = read_next(&mut state).await?;
             Some((item, Stage::Read(state)))
@@ -242,6 +254,25 @@ async fn read_next(state: &mut StreamState) -> Option<Result<LlmEvent, AiError>>
             }
             continue;
         }
+        if !state.continuation_checked {
+            state.continuation_checked = true;
+            match state.protocol.continuation() {
+                Some(Ok(token)) => {
+                    if let Err(error) = continue_response(state, token).await {
+                        state.done = true;
+                        return Some(Err(attach_error(error, &state.http)));
+                    }
+                    state.frames_done = false;
+                    state.continuation_checked = false;
+                    continue;
+                }
+                Some(Err(error)) => {
+                    state.done = true;
+                    return Some(Err(attach_error(error, &state.http)));
+                }
+                None => {}
+            }
+        }
         if !state.halted {
             state.halted = true;
             match state.protocol.halt() {
@@ -262,6 +293,23 @@ async fn read_next(state: &mut StreamState) -> Option<Result<LlmEvent, AiError>>
         }
         return None;
     }
+}
+
+async fn continue_response(state: &mut StreamState, token: String) -> Result<(), AiError> {
+    let mut body = state.body.as_object().cloned().unwrap_or_default();
+    body.insert("continuationToken".to_string(), Value::String(token));
+    let body = Value::Object(body);
+    let text = crate::json::encode_body(&body);
+    let mut request = state.prepared.request.clone();
+    request.body = Bytes::from(text);
+    let length = request.body.len().to_string();
+    match request.headers.iter_mut().find(|(name, _)| name == "content-length") {
+        Some(header) => header.1 = length,
+        None => request.headers.push(("content-length".to_string(), length)),
+    }
+    let response = state.executor.execute(request, state.prepared.middleware.clone()).await?;
+    state.frames = state.prepared.framing.frame(response.body);
+    Ok(())
 }
 
 fn attach_error(error: AiError, http: &Option<HttpContext>) -> AiError {

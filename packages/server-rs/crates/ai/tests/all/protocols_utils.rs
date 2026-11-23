@@ -1,6 +1,9 @@
-use opencode_ai::protocols::utils::{cache, lifecycle, open_responses_options, partial_json, tool_stream};
+use opencode_ai::protocols::utils::{
+    cache, gemini_generate_content, lifecycle, open_responses_options, partial_json, tool_stream,
+};
 use opencode_ai::schema::{
-    CacheHint, CacheHintType, FinishReason, FinishReasonDetails, LlmEvent, LlmRequest, ToolChoice, ToolChoiceType,
+    AiErrorReason, CacheHint, CacheHintType, FinishReason, FinishReasonDetails, LlmEvent, LlmRequest, MediaAsset,
+    MediaSource, ToolChoice, ToolChoiceType,
 };
 use serde_json::{Value, json};
 
@@ -143,6 +146,62 @@ fn open_responses_parallel_tool_calls_prefers_option() {
     request.provider_options = Some(object(json!({ "parallelToolCalls": true })));
     let options = open_responses_options::resolve(&request);
     assert_eq!(open_responses_options::resolve_parallel_tool_calls(&request, &options), Some(true));
+}
+
+#[test]
+fn gemini_content_filtered_matches_policy_reasons() {
+    assert!(gemini_generate_content::content_filtered(Some("SAFETY")));
+    assert!(!gemini_generate_content::content_filtered(Some("STOP")));
+}
+
+#[test]
+fn gemini_media_part_inlines_base64_media() {
+    let asset = media_asset(MediaSource::Base64 { data: "aGVsbG8=".to_string(), media_type: "IMAGE/PNG".to_string() });
+    assert_eq!(
+        gemini_generate_content::media_part("test", &asset).expect("inline media"),
+        json!({ "inlineData": { "mimeType": "image/png", "data": "aGVsbG8=" } })
+    );
+}
+
+#[test]
+fn gemini_media_part_sends_google_refs_as_file_data() {
+    let asset = media_asset(MediaSource::Ref {
+        provider: "google".to_string(),
+        id: "files/abc".to_string(),
+        media_type: Some("video/mp4".to_string()),
+    });
+    assert_eq!(
+        gemini_generate_content::media_part("test", &asset).expect("file data"),
+        json!({ "fileData": { "mimeType": "video/mp4", "fileUri": "files/abc" } })
+    );
+}
+
+#[test]
+fn gemini_media_part_sends_video_urls_as_file_data() {
+    let asset = media_asset(MediaSource::Url {
+        url: "HTTPS://example.com/video.mp4".to_string(),
+        media_type: Some("video/mp4".to_string()),
+        expires_at: None,
+    });
+    assert_eq!(
+        gemini_generate_content::media_part("test", &asset).expect("file data"),
+        json!({ "fileData": { "mimeType": "video/mp4", "fileUri": "HTTPS://example.com/video.mp4" } })
+    );
+}
+
+#[test]
+fn gemini_media_part_rejects_other_provider_refs() {
+    let asset = media_asset(MediaSource::Ref {
+        provider: "openai".to_string(),
+        id: "file-abc".to_string(),
+        media_type: Some("image/png".to_string()),
+    });
+    let error = gemini_generate_content::media_part("test", &asset).expect_err("foreign ref requires inline media");
+    assert!(matches!(error.reason, AiErrorReason::InvalidRequest { .. }));
+}
+
+fn media_asset(source: MediaSource) -> MediaAsset {
+    MediaAsset { source, info: None, provider_metadata: None }
 }
 
 fn start_tool(tools: tool_stream::State, key: i64, name: &str, text: &str) -> tool_stream::State {

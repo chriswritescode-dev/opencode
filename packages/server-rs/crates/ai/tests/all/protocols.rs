@@ -1,5 +1,8 @@
-use std::sync::Arc;
+use std::collections::VecDeque;
+use std::sync::{Arc, Mutex};
 
+use bytes::Bytes;
+use futures_util::{StreamExt, stream};
 use opencode_ai::ExecutionContext;
 use opencode_ai::MapEnv;
 use opencode_ai::clock::FixedClock;
@@ -7,10 +10,12 @@ use opencode_ai::id::SequenceIds;
 use opencode_ai::protocols::openai_compatible_responses;
 use opencode_ai::protocols::utils::{responses_checkpoint, responses_compaction};
 use opencode_ai::route::auth::Auth;
+use opencode_ai::route::client::LlmClient;
 use opencode_ai::route::compile::{StreamOptions, compile};
 use opencode_ai::route::endpoint::PathPart;
+use opencode_ai::route::executor::{BoxFuture, ByteStream, HttpResponse, HttpSender, PreparedHttp, RequestExecutor};
 use opencode_ai::route::model::{Model, ModelDescriptor, ProtocolRegistry, RouteTransport};
-use opencode_ai::schema::{LlmRequest, StringMap};
+use opencode_ai::schema::{AiError, FinishReason, LlmEvent, LlmRequest, StringMap};
 use serde_json::{Value, json};
 
 #[test]
@@ -211,4 +216,89 @@ fn openai_compatible_responses_route_reuses_open_responses() {
     let provider_options = route.options.as_ref().unwrap().provider_options.as_ref().unwrap();
     assert_eq!(provider_options.get("store"), Some(&json!(false)));
     assert_eq!(provider_options.get("include"), Some(&json!(["reasoning.encrypted_content"])));
+}
+
+struct ContinuationSender {
+    responses: Mutex<VecDeque<Vec<u8>>>,
+    requests: Mutex<Vec<PreparedHttp>>,
+}
+
+impl HttpSender for ContinuationSender {
+    fn send(&self, request: PreparedHttp) -> BoxFuture<Result<HttpResponse, AiError>> {
+        self.requests.lock().expect("continuation requests").push(request);
+        let body = self.responses.lock().expect("continuation responses").pop_front().expect("scripted response");
+        let body: ByteStream = Box::pin(stream::once(async move { Ok(Bytes::from(body)) }));
+        Box::pin(async move { Ok(HttpResponse::new(200, Vec::new(), body)) })
+    }
+}
+
+#[tokio::test]
+async fn gemini_continuation_resends_the_body_with_the_token() {
+    let descriptor: ModelDescriptor = serde_json::from_value(json!({
+        "id": "gemini-3-pro",
+        "provider": "google",
+        "route": {"id": "gemini", "protocol": "gemini", "providerMetadataKey": "google"},
+        "endpoint": {"baseURL": "https://generativelanguage.googleapis.com/v1beta", "path": null},
+        "transport": "http",
+        "auth": {"type": "header", "name": "x-goog-api-key", "value": "fixture"}
+    }))
+    .unwrap();
+    let model = Model::from_descriptor(descriptor, &ProtocolRegistry::builtin()).unwrap();
+    let request: LlmRequest = serde_json::from_value(json!({
+        "system": [],
+        "messages": [{"role": "user", "content": [{"type": "text", "text": "Say hi."}]}],
+        "tools": [],
+        "maxTokens": 16,
+        "temperature": 0
+    }))
+    .unwrap();
+    let first = concat!(
+        "data: {\"candidates\":[{\"content\":{\"role\":\"model\",\"parts\":[{\"text\":\"Hel\"}]},",
+        "\"finishReason\":\"CONTINUATION\",\"continuationToken\":\"tok\"}]}\n\n"
+    );
+    let second = concat!(
+        "data: {\"candidates\":[{\"content\":{\"role\":\"model\",\"parts\":[{\"text\":\"lo\"}]},",
+        "\"finishReason\":\"STOP\"}],\"usageMetadata\":{\"promptTokenCount\":1,",
+        "\"candidatesTokenCount\":1,\"totalTokenCount\":2}}\n\n"
+    );
+    let sender = Arc::new(ContinuationSender {
+        responses: Mutex::new(VecDeque::from([first.as_bytes().to_vec(), second.as_bytes().to_vec()])),
+        requests: Mutex::new(Vec::new()),
+    });
+    let clock = Arc::new(FixedClock::new(1_767_323_045_000));
+    let context = ExecutionContext::new(clock.clone(), Arc::new(SequenceIds::new()), Arc::new(MapEnv::default()));
+    let client = LlmClient::new(RequestExecutor::new(sender.clone(), None, clock), context);
+    let items =
+        client.stream(&model, request, StreamOptions::default()).collect::<Vec<Result<LlmEvent, AiError>>>().await;
+    let events = items
+        .into_iter()
+        .map(|item| item.unwrap_or_else(|error| panic!("stream failed: {error}")))
+        .collect::<Vec<LlmEvent>>();
+    let requests = sender.requests.lock().expect("continuation requests");
+    assert_eq!(requests.len(), 2, "both exchanges were sent");
+    assert!(sender.responses.lock().expect("continuation responses").is_empty(), "both responses were consumed");
+    let body: Value = serde_json::from_slice(&requests[1].body).expect("second request body");
+    assert_eq!(body["continuationToken"], json!("tok"));
+    let length = requests[1]
+        .headers
+        .iter()
+        .find(|(name, _)| name == "content-length")
+        .map(|(_, value)| value.clone())
+        .expect("second request content-length");
+    assert_eq!(length, requests[1].body.len().to_string());
+    let deltas = events
+        .iter()
+        .filter_map(|event| match event {
+            LlmEvent::TextDelta { text, .. } => Some(text.as_str()),
+            _ => None,
+        })
+        .collect::<Vec<&str>>();
+    assert_eq!(deltas, vec!["Hel", "lo"]);
+    match events.last() {
+        Some(LlmEvent::Finish { reason, .. }) => {
+            assert_eq!(reason.normalized, FinishReason::Stop);
+            assert_eq!(reason.raw.as_deref(), Some("STOP"));
+        }
+        other => panic!("the stream did not finish: {other:?}"),
+    }
 }

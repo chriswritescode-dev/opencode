@@ -1,4 +1,5 @@
 pub mod anthropic_messages;
+pub mod gemini;
 pub mod open_responses;
 pub mod open_responses_channel;
 pub mod open_responses_continuation;
@@ -12,6 +13,7 @@ pub mod utils;
 pub fn registry() -> crate::route::model::ProtocolRegistry {
     let mut registry = crate::route::model::ProtocolRegistry::new();
     registry.register(std::sync::Arc::new(anthropic_messages::AnthropicMessages));
+    registry.register(std::sync::Arc::new(gemini::Gemini));
     registry.register(std::sync::Arc::new(open_responses::OpenResponses));
     registry.register(std::sync::Arc::new(openai_chat::OpenAiChat));
     registry.register(std::sync::Arc::new(openai_responses::OpenAiResponses));

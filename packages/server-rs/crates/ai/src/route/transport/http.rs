@@ -30,6 +30,7 @@ pub struct JsonRequestParts {
     pub headers: Vec<(String, String)>,
 }
 
+#[derive(Clone)]
 pub struct HttpPrepared {
     pub request: PreparedHttp,
     pub framing: Definition,
