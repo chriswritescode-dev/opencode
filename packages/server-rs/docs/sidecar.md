@@ -177,3 +177,17 @@ installs. Bun runs in that directory, not in the project, so a plugin sees a scr
 is put in its own process group, which is what shutdown and a dropped handle kill.
 
 ## Measurements
+
+Measured on 2026-11-23 from a release build in the development sandbox with `bun run measure:sidecar`, which runs
+`cargo test --release -p opencode-sidecar --test all measure -- --ignored --nocapture`. These are single-run figures:
+the memory rows move by several MiB between runs as Bun collects garbage.
+
+| Measurement                              | Value                |
+| ---------------------------------------- | -------------------- |
+| Bun                                      | 1.4.4                |
+| Platform                                 | linux x86_64, 4 CPUs |
+| Memory, idle: RSS / peak                 | 26.5 MiB / 26.5 MiB  |
+| Memory, Effect loaded: RSS / peak        | 62.8 MiB / 62.8 MiB  |
+| Memory, sample plugin loaded: RSS / peak | 74.0 MiB / 74.0 MiB  |
+| Latency, small echo: p50 / p99           | 0.03 ms / 0.06 ms    |
+| Latency, 1 MiB echo: p50 / p99           | 2.55 ms / 5.65 ms    |

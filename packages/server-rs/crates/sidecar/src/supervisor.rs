@@ -448,13 +448,17 @@ fn backoff(limits: &Limits, crashes: usize) -> Duration {
 async fn start_failed(inner: &Inner, crashes: usize, error: SidecarError) -> SidecarError {
     let crashes = crashes + 1;
     let delay = backoff(&inner.config.limits, crashes);
+    let disabled = crashes >= inner.config.limits.crash_limit;
     let mut slot = inner.slot.lock().await;
     if matches!(*slot, Slot::Starting { .. }) {
-        *slot = if crashes >= inner.config.limits.crash_limit {
+        *slot = if disabled {
             Slot::Disabled { crashes }
         } else {
             Slot::Backoff { until: Instant::now() + delay, crashes }
         };
+        if disabled {
+            inner.state.send_replace(State::Disabled);
+        }
     }
     error
 }

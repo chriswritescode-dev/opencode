@@ -8,6 +8,7 @@ use serde_json::{Value, json};
 use tokio::io::AsyncWriteExt;
 use tokio::sync::watch;
 
+use opencode_sidecar::bun::Runtime;
 use opencode_sidecar::connection::{Handlers, Request};
 use opencode_sidecar::error::SidecarError;
 use opencode_sidecar::frame::{self, DEFAULT_MAX_FRAME};
@@ -266,6 +267,29 @@ async fn crashes_back_off_and_then_disable_the_sidecar() {
     assert!(matches!(*state.borrow(), State::Disabled));
 
     sidecar.shutdown().await;
+}
+
+#[tokio::test]
+async fn failing_starts_report_disabled() {
+    let mut config = support::config();
+    config.bun = Some(Runtime { bun: config.directory.join("missing-bun"), opencode: false, version: None });
+    config.limits.crash_limit = 3;
+    config.limits.backoff_initial = Duration::from_millis(1);
+    config.limits.backoff_max = Duration::from_millis(1);
+    let sidecar = Sidecar::new(config, Handlers::new());
+    let mut state = sidecar.state();
+
+    within(async {
+        loop {
+            match sidecar.call(echo()).await {
+                Err(SidecarError::Disabled { .. }) => break,
+                _ => tokio::time::sleep(Duration::from_millis(5)).await,
+            }
+        }
+    })
+    .await;
+
+    wait_state(&mut state, |state| matches!(state, State::Disabled)).await;
 }
 
 #[tokio::test]
