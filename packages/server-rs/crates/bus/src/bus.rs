@@ -1,0 +1,464 @@
+use std::collections::HashMap;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Mutex, MutexGuard};
+
+use opencode_contract::codec::encode_json;
+use opencode_contract::generated::LocationRef;
+use opencode_storage::Database;
+use rusqlite::{Connection, OptionalExtension, TransactionBehavior, params};
+use serde_json::{Map, Value};
+use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel};
+
+use crate::error::BusError;
+use crate::event::{Definition, DurableSpec, Event, EventId, versioned_type};
+use crate::lock::KeyedMutex;
+
+type Projector = Arc<dyn Fn(&Connection, &Event) -> Result<(), BusError> + Send + Sync>;
+type ProjectorRegistration = Box<dyn Fn(&Connection, &Event) -> Result<(), BusError> + Send + Sync>;
+type Listener = Arc<dyn Fn(&Event) -> Result<(), BusError> + Send + Sync>;
+type ListenerRegistration = Box<dyn Fn(&Event) -> Result<(), BusError> + Send + Sync>;
+type CommitHook = Box<dyn FnOnce(&Connection, i64) -> Result<(), BusError>>;
+
+pub struct BusOptions {
+    pub persist: bool,
+    #[allow(dead_code)]
+    pub log_read_page_size: usize,
+}
+
+impl Default for BusOptions {
+    fn default() -> Self {
+        BusOptions { persist: false, log_read_page_size: 512 }
+    }
+}
+
+#[derive(Default)]
+pub struct PublishOptions {
+    pub id: Option<String>,
+    pub metadata: Option<Map<String, Value>>,
+    pub location: Option<LocationRef>,
+    pub global: bool,
+    pub commit: Option<CommitHook>,
+}
+
+pub struct PublishInput {
+    pub definition: Definition,
+    pub data: Value,
+    pub options: PublishOptions,
+}
+
+pub struct Bus {
+    db: Arc<Database>,
+    options: BusOptions,
+    projectors: Mutex<HashMap<String, Vec<Projector>>>,
+    listeners: Arc<Mutex<Vec<(u64, Listener)>>>,
+    next_listener_id: AtomicU64,
+    durable: Mutex<HashMap<String, Vec<UnboundedSender<()>>>>,
+    subscribers: Arc<Mutex<Vec<Subscriber>>>,
+    next_subscriber_id: AtomicU64,
+    locks: KeyedMutex<String>,
+}
+
+struct Subscriber {
+    id: u64,
+    types: Option<Vec<String>>,
+    location: Option<LocationRef>,
+    sender: UnboundedSender<Event>,
+}
+
+struct Prepared {
+    event: Event,
+    r#type: &'static str,
+    spec: DurableSpec,
+    aggregate_id: String,
+    commit: Option<CommitHook>,
+}
+
+struct EventRow {
+    id: String,
+    seq: i64,
+    created: i64,
+    r#type: String,
+    data: String,
+}
+
+pub struct Subscription {
+    receiver: UnboundedReceiver<Event>,
+    subscribers: Arc<Mutex<Vec<Subscriber>>>,
+    id: u64,
+}
+
+impl Subscription {
+    pub fn try_recv(&mut self) -> Option<Event> {
+        self.receiver.try_recv().ok()
+    }
+
+    pub async fn recv(&mut self) -> Option<Event> {
+        self.receiver.recv().await
+    }
+}
+
+impl Drop for Subscription {
+    fn drop(&mut self) {
+        lock(&self.subscribers).retain(|subscriber| subscriber.id != self.id);
+    }
+}
+
+pub struct ListenerHandle {
+    listeners: Arc<Mutex<Vec<(u64, Listener)>>>,
+    id: u64,
+}
+
+impl Drop for ListenerHandle {
+    fn drop(&mut self) {
+        lock(&self.listeners).retain(|(id, _)| *id != self.id);
+    }
+}
+
+impl Bus {
+    pub fn new(db: Arc<Database>, options: BusOptions) -> Arc<Bus> {
+        Arc::new(Bus {
+            db,
+            options,
+            projectors: Mutex::new(HashMap::new()),
+            listeners: Arc::new(Mutex::new(Vec::new())),
+            next_listener_id: AtomicU64::new(0),
+            durable: Mutex::new(HashMap::new()),
+            subscribers: Arc::new(Mutex::new(Vec::new())),
+            next_subscriber_id: AtomicU64::new(0),
+            locks: KeyedMutex::default(),
+        })
+    }
+
+    pub fn publish(&self, definition: &Definition, data: Value, options: PublishOptions) -> Result<Event, BusError> {
+        let Some(spec) = definition.durable else {
+            if options.commit.is_some() {
+                return Err(BusError::InvalidDurableEvent {
+                    r#type: definition.r#type.to_string(),
+                    message: "Local commit hooks require a durable event".to_string(),
+                });
+            }
+            let event = self.make_payload(definition, data, &options);
+            self.notify(&event, false)?;
+            return Ok(event);
+        };
+        let aggregate_id = aggregate_id(definition.r#type, spec.aggregate, &data)?;
+        let event = self.make_payload(definition, data, &options);
+        let commit = options.commit;
+        self.locks.with(aggregate_id.clone(), || self.commit_one(definition.r#type, spec, &aggregate_id, event, commit))
+    }
+
+    pub fn publish_all(&self, events: Vec<PublishInput>) -> Result<Vec<Event>, BusError> {
+        if events.is_empty() {
+            return Ok(Vec::new());
+        }
+        let mut prepared = Vec::with_capacity(events.len());
+        for input in events {
+            let r#type = input.definition.r#type;
+            let Some(spec) = input.definition.durable else {
+                return Err(BusError::InvalidDurableEvent {
+                    r#type: r#type.to_string(),
+                    message: "Published events must be durable".to_string(),
+                });
+            };
+            let aggregate_id = aggregate_id(r#type, spec.aggregate, &input.data)?;
+            let event = self.make_payload(&input.definition, input.data, &input.options);
+            prepared.push(Prepared { event, r#type, spec, aggregate_id, commit: input.options.commit });
+        }
+        let aggregate_id = prepared[0].aggregate_id.clone();
+        if prepared.iter().any(|item| item.aggregate_id != aggregate_id) {
+            return Err(BusError::InvalidDurableEvent {
+                r#type: prepared[0].r#type.to_string(),
+                message: "Published events must belong to the same aggregate".to_string(),
+            });
+        }
+        self.locks.with(aggregate_id.clone(), || self.commit_batch(&aggregate_id, prepared))
+    }
+
+    pub fn project(&self, versioned_type: &str, projector: ProjectorRegistration) {
+        let mut projectors = lock(&self.projectors);
+        projectors.entry(versioned_type.to_string()).or_default().push(Arc::from(projector));
+    }
+
+    pub fn listen(&self, listener: ListenerRegistration) -> ListenerHandle {
+        let id = self.next_listener_id.fetch_add(1, Ordering::Relaxed);
+        lock(&self.listeners).push((id, Arc::from(listener)));
+        ListenerHandle { listeners: self.listeners.clone(), id }
+    }
+
+    pub fn subscribe_all(&self, location: Option<LocationRef>) -> Subscription {
+        self.register(None, location)
+    }
+
+    pub fn subscribe(&self, types: &[&str], location: Option<LocationRef>) -> Subscription {
+        self.register(Some(types.iter().map(|r#type| r#type.to_string()).collect()), location)
+    }
+
+    pub fn remove(&self, aggregate_id: &str) -> Result<(), BusError> {
+        self.db.transaction(TransactionBehavior::Immediate, |tx| {
+            tx.execute("DELETE FROM event_sequence WHERE aggregate_id = ?1", [aggregate_id])?;
+            tx.execute("DELETE FROM event WHERE aggregate_id = ?1", [aggregate_id])?;
+            Ok::<(), BusError>(())
+        })
+    }
+
+    pub fn claim(&self, aggregate_id: &str, owner_id: &str) -> Result<(), BusError> {
+        self.db.read(|connection| {
+            connection.execute(
+                "UPDATE event_sequence SET owner_id = ?2 WHERE aggregate_id = ?1",
+                params![aggregate_id, owner_id],
+            )?;
+            Ok(())
+        })?;
+        Ok(())
+    }
+
+    fn commit_one(
+        &self,
+        r#type: &str,
+        spec: DurableSpec,
+        aggregate_id: &str,
+        event: Event,
+        commit: Option<CommitHook>,
+    ) -> Result<Event, BusError> {
+        let persist = self.options.persist;
+        let versioned = versioned_type(r#type, spec.version);
+        let committed = self.db.transaction(TransactionBehavior::Immediate, |tx| {
+            let seq = latest_sequence(tx, aggregate_id)? + 1;
+            if persist && let Some((existing_aggregate, existing_seq)) = stored_event(tx, event.id())? {
+                return Err(already_exists(r#type, event.id(), &existing_aggregate, existing_seq));
+            }
+            let committed = with_durable(&event, aggregate_id, seq, spec.version);
+            self.run_projectors(&versioned, tx, &committed)?;
+            if let Some(commit) = commit {
+                commit(tx, seq)?;
+            }
+            reserve_sequence(tx, aggregate_id, seq)?;
+            if persist {
+                insert_event(tx, &committed, aggregate_id, seq, &versioned)?;
+            }
+            Ok(committed)
+        })?;
+        self.wake(aggregate_id);
+        self.notify(&committed, true)?;
+        Ok(committed)
+    }
+
+    fn commit_batch(&self, aggregate_id: &str, prepared: Vec<Prepared>) -> Result<Vec<Event>, BusError> {
+        let persist = self.options.persist;
+        let committed = self.db.transaction(TransactionBehavior::Immediate, |tx| {
+            let first = latest_sequence(tx, aggregate_id)? + 1;
+            let final_seq = first + prepared.len() as i64 - 1;
+            let mut ids: Vec<String> = Vec::new();
+            let mut queued = Vec::with_capacity(prepared.len());
+            let mut rows = Vec::new();
+            for (index, item) in prepared.into_iter().enumerate() {
+                let seq = first + index as i64;
+                if persist {
+                    if ids.iter().any(|id| id == item.event.id()) {
+                        return Err(BusError::InvalidDurableEvent {
+                            r#type: item.r#type.to_string(),
+                            message: format!("Event {} appears more than once in the batch", item.event.id()),
+                        });
+                    }
+                    ids.push(item.event.id().to_string());
+                    if let Some((existing_aggregate, existing_seq)) = stored_event(tx, item.event.id())? {
+                        return Err(already_exists(item.r#type, item.event.id(), &existing_aggregate, existing_seq));
+                    }
+                }
+                let versioned = versioned_type(item.r#type, item.spec.version);
+                let event = with_durable(&item.event, aggregate_id, seq, item.spec.version);
+                self.run_projectors(&versioned, tx, &event)?;
+                if let Some(commit) = item.commit {
+                    commit(tx, seq)?;
+                }
+                if persist {
+                    rows.push(EventRow {
+                        id: event.id().to_string(),
+                        seq,
+                        created: event.created(),
+                        r#type: versioned,
+                        data: encode_json(event.data()),
+                    });
+                }
+                queued.push(event);
+            }
+            tx.execute(
+                "INSERT INTO event_sequence (aggregate_id, seq) VALUES (?1, ?2) \
+                 ON CONFLICT(aggregate_id) DO UPDATE SET seq = excluded.seq",
+                params![aggregate_id, final_seq],
+            )?;
+            for row in rows {
+                tx.execute(
+                    "INSERT INTO event (id, aggregate_id, seq, created, type, data) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                    params![row.id, aggregate_id, row.seq, row.created, row.r#type, row.data],
+                )?;
+            }
+            Ok(queued)
+        })?;
+        self.wake(aggregate_id);
+        for event in &committed {
+            self.notify(event, true)?;
+        }
+        Ok(committed)
+    }
+
+    fn make_payload(&self, definition: &Definition, data: Value, options: &PublishOptions) -> Event {
+        let mut payload = Map::new();
+        payload.insert("id".to_string(), Value::String(options.id.clone().unwrap_or_else(EventId::create)));
+        payload.insert("created".to_string(), Value::from(opencode_storage::id::now_ms()));
+        if let Some(metadata) = &options.metadata {
+            payload.insert("metadata".to_string(), Value::Object(metadata.clone()));
+        }
+        payload.insert("type".to_string(), Value::String(definition.r#type.to_string()));
+        if !options.global
+            && let Some(location) = &options.location
+        {
+            payload.insert("location".to_string(), location_value(location));
+        }
+        payload.insert("data".to_string(), data);
+        Event::from_payload(payload)
+    }
+
+    fn notify(&self, event: &Event, isolate: bool) -> Result<(), BusError> {
+        let listeners = lock(&self.listeners).iter().map(|(_, listener)| listener.clone()).collect::<Vec<_>>();
+        for listener in listeners {
+            let result = listener(event);
+            if !isolate {
+                result?;
+                continue;
+            }
+            if let Err(error) = result {
+                eprintln!("Event listener failed: eventID={} eventType={} error={error}", event.id(), event.r#type());
+            }
+        }
+        let (untyped, typed) = {
+            let subscribers = lock(&self.subscribers);
+            let untyped = subscribers
+                .iter()
+                .filter(|subscriber| subscriber.types.is_none() && accepts(&subscriber.location, event))
+                .map(|subscriber| subscriber.sender.clone())
+                .collect::<Vec<_>>();
+            let typed = subscribers
+                .iter()
+                .filter(|subscriber| {
+                    subscriber.types.as_ref().is_some_and(|types| types.iter().any(|r#type| r#type == event.r#type()))
+                        && accepts(&subscriber.location, event)
+                })
+                .map(|subscriber| subscriber.sender.clone())
+                .collect::<Vec<_>>();
+            (untyped, typed)
+        };
+        for sender in untyped.into_iter().chain(typed) {
+            let _ = sender.send(event.clone());
+        }
+        Ok(())
+    }
+
+    fn register(&self, types: Option<Vec<String>>, location: Option<LocationRef>) -> Subscription {
+        let (sender, receiver) = unbounded_channel();
+        let id = self.next_subscriber_id.fetch_add(1, Ordering::Relaxed);
+        lock(&self.subscribers).push(Subscriber { id, types, location, sender });
+        Subscription { receiver, subscribers: self.subscribers.clone(), id }
+    }
+
+    fn run_projectors(&self, key: &str, connection: &Connection, event: &Event) -> Result<(), BusError> {
+        let projectors = lock(&self.projectors)
+            .get(key)
+            .map(|projectors| projectors.iter().map(Arc::clone).collect::<Vec<_>>())
+            .unwrap_or_default();
+        for projector in projectors {
+            projector(connection, event)?;
+        }
+        Ok(())
+    }
+
+    fn wake(&self, aggregate_id: &str) {
+        let senders = lock(&self.durable).get(aggregate_id).cloned().unwrap_or_default();
+        for sender in senders {
+            let _ = sender.send(());
+        }
+    }
+}
+
+pub fn latest_sequence(connection: &Connection, aggregate_id: &str) -> rusqlite::Result<i64> {
+    let seq = connection
+        .query_row("SELECT seq FROM event_sequence WHERE aggregate_id = ?1", [aggregate_id], |row| row.get(0))
+        .optional()?;
+    Ok(seq.unwrap_or(-1))
+}
+
+pub fn reserve_sequence(connection: &Connection, aggregate_id: &str, seq: i64) -> rusqlite::Result<()> {
+    connection.execute(
+        "INSERT INTO event_sequence (aggregate_id, seq) VALUES (?1, ?2) \
+         ON CONFLICT(aggregate_id) DO UPDATE SET seq = max(seq, excluded.seq)",
+        params![aggregate_id, seq],
+    )?;
+    Ok(())
+}
+
+fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
+    mutex.lock().unwrap_or_else(|error| error.into_inner())
+}
+
+fn aggregate_id(r#type: &str, aggregate: &str, data: &Value) -> Result<String, BusError> {
+    data.get(aggregate).and_then(Value::as_str).map(str::to_string).ok_or_else(|| BusError::InvalidDurableEvent {
+        r#type: r#type.to_string(),
+        message: format!("Expected string aggregate field {aggregate}"),
+    })
+}
+
+fn already_exists(r#type: &str, id: &str, aggregate_id: &str, seq: i64) -> BusError {
+    BusError::InvalidDurableEvent {
+        r#type: r#type.to_string(),
+        message: format!("Event {id} already exists at aggregate {aggregate_id} sequence {seq}"),
+    }
+}
+
+fn stored_event(connection: &Connection, id: &str) -> rusqlite::Result<Option<(String, i64)>> {
+    connection
+        .query_row("SELECT aggregate_id, seq FROM event WHERE id = ?1", [id], |row| Ok((row.get(0)?, row.get(1)?)))
+        .optional()
+}
+
+fn insert_event(
+    connection: &Connection,
+    event: &Event,
+    aggregate_id: &str,
+    seq: i64,
+    versioned: &str,
+) -> rusqlite::Result<()> {
+    connection.execute(
+        "INSERT INTO event (id, aggregate_id, seq, created, type, data) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+        params![event.id(), aggregate_id, seq, event.created(), versioned, encode_json(event.data())],
+    )?;
+    Ok(())
+}
+
+fn with_durable(event: &Event, aggregate_id: &str, seq: i64, version: u32) -> Event {
+    let mut payload = event.payload().clone();
+    let mut durable = Map::new();
+    durable.insert("aggregateID".to_string(), Value::String(aggregate_id.to_string()));
+    durable.insert("seq".to_string(), Value::from(seq));
+    durable.insert("version".to_string(), Value::from(version));
+    payload.insert("durable".to_string(), Value::Object(durable));
+    Event::from_payload(payload)
+}
+
+fn location_value(location: &LocationRef) -> Value {
+    let mut object = Map::new();
+    object.insert("directory".to_string(), Value::String(location.directory.0.clone()));
+    if let Some(workspace_id) = &location.workspace_id {
+        object.insert("workspaceID".to_string(), Value::String(workspace_id.0.clone()));
+    }
+    Value::Object(object)
+}
+
+fn accepts(location: &Option<LocationRef>, event: &Event) -> bool {
+    let Some(location) = location else {
+        return true;
+    };
+    let Some(event_location) = event.location() else {
+        return true;
+    };
+    &event_location == location
+}
