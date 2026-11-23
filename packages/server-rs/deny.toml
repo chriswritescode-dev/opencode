@@ -16,11 +16,11 @@ include-dev = true
 # The licences the tree needs today, each with the crates that need it. A crate passes when these satisfy its
 # expression: `MIT OR Apache-2.0` needs either, `Apache-2.0 AND ISC` both.
 allow = [
-    # Most crates, the workspace's own, tokio and serde.
+    # Most crates, the workspace's own, tokio, serde, flate2, crc32fast, adler2, simd-adler32 and the brotli crates.
     "MIT",
-    # ring (with ISC) and sync_wrapper; most others offer it beside MIT.
+    # ring (with ISC) and sync_wrapper; most others offer it beside MIT, including flate2 and crc32fast.
     "Apache-2.0",
-    # subtle.
+    # subtle, brotli, brotli-decompressor, alloc-no-stdlib and alloc-stdlib.
     "BSD-3-Clause",
     # notify.
     "CC0-1.0",
@@ -30,7 +30,7 @@ allow = [
     "ISC",
     # unicode-ident's Unicode tables.
     "Unicode-3.0",
-    # foldhash.
+    # foldhash, miniz_oxide and flate2's zlib-rs backend.
     "Zlib",
 ]
 

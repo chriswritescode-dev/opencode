@@ -1,6 +1,9 @@
 mod auth;
+mod compression;
+mod cors;
 mod info;
 mod pairing;
+mod request_site;
 mod router;
 mod serve;
 mod status;
@@ -16,10 +19,14 @@ use opencode_http::app::{App, Options};
 const UNAUTHORIZED_BODY: &str = r#"{"_tag":"UnauthorizedError","message":"Authentication required"}"#;
 
 fn app() -> Arc<App> {
+    app_with_cors(Vec::new())
+}
+
+fn app_with_cors(cors: Vec<String>) -> Arc<App> {
     App::new(Options {
         password: "pw".to_owned(),
         version: "test-version".to_owned(),
-        cors: Vec::new(),
+        cors,
         tmp: PathBuf::from("/tmp/opencode-http-test"),
         hostname: None,
         urls: Arc::new(|| vec!["http://127.0.0.1:4096".to_owned()]),
@@ -28,6 +35,12 @@ fn app() -> Arc<App> {
 
 fn ready_app() -> Arc<App> {
     let app = app();
+    app.status().ready();
+    app
+}
+
+fn ready_app_with_cors(cors: Vec<String>) -> Arc<App> {
+    let app = app_with_cors(cors);
     app.status().ready();
     app
 }
@@ -63,4 +76,9 @@ async fn text(response: http::Response<http_body_util::Full<Bytes>>) -> String {
     use http_body_util::BodyExt;
     let bytes = response.into_body().collect().await.expect("a body").to_bytes();
     String::from_utf8(bytes.to_vec()).expect("utf-8")
+}
+
+async fn body(response: http::Response<http_body_util::Full<Bytes>>) -> Bytes {
+    use http_body_util::BodyExt;
+    response.into_body().collect().await.expect("a body").to_bytes()
 }

@@ -29,7 +29,9 @@ opencode-local = { path = "../cli-rs/crates/local" }
 opencode-util = { path = "../cli-rs/crates/util" }
 opencode-service = { path = "../cli-rs/crates/service" }
 base64 = "0.23"
+brotli = "9"
 bytes = "1"
+flate2 = "1"
 http = "1"
 http-body-util = "0.1"
 hyper = { version = "1", features = ["server", "client", "http1"] }

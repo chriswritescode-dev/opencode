@@ -6,7 +6,10 @@ use http::{HeaderValue, Request, StatusCode, header};
 use opencode_contract::generated::{PairingSession, ServerInfo, ServerInfoCapabilities, ServerInfoPaths};
 
 use crate::auth;
+use crate::compression;
+use crate::cors;
 use crate::pairing::Pairing;
+use crate::request_site;
 use crate::response;
 use crate::router;
 use crate::status::{State, Status};
@@ -44,16 +47,30 @@ impl App {
     }
 
     pub async fn handle(&self, request: Request<Bytes>) -> response::Response {
+        if request.method() == http::Method::OPTIONS {
+            return cors::preflight(&request, &self.options.cors);
+        }
+        let response = if request_site::rejected(&request, &self.options.cors) {
+            forbidden()
+        } else {
+            self.dispatch(&request).await
+        };
+        let response = cors::apply(&request, response, &self.options.cors);
+        let accept_encoding = request.headers().get(header::ACCEPT_ENCODING).and_then(|value| value.to_str().ok());
+        compression::apply(accept_encoding, response)
+    }
+
+    async fn dispatch(&self, request: &Request<Bytes>) -> response::Response {
         let state = self.status.current();
         let ready = state == State::Ready;
         if request.method() == http::Method::GET && request.uri().path() == "/api/info" && !ready {
-            if !self.authorized(&request) {
-                return auth::unauthorized(&request, "Authentication required");
+            if !self.authorized(request) {
+                return auth::unauthorized(request, "Authentication required");
             }
             return info(&self.options, state);
         }
-        if !exempt(&request, ready) && !self.authorized(&request) {
-            return auth::unauthorized(&request, "Authentication required");
+        if !exempt(request, ready) && !self.authorized(request) {
+            return auth::unauthorized(request, "Authentication required");
         }
         if !ready {
             return unavailable(state);
@@ -75,7 +92,7 @@ impl App {
                 "application/json",
                 opencode_contract::codec::encode_json(&self.pairing.issue()),
             ),
-            "server.connect" => self.connect(&request, &found),
+            "server.connect" => self.connect(request, &found),
             _ => {
                 let body = serde_json::json!({
                     "_tag": "UnknownError",
@@ -131,6 +148,14 @@ impl App {
         }
         response
     }
+}
+
+fn forbidden() -> response::Response {
+    let body = serde_json::json!({
+        "_tag": "ForbiddenError",
+        "message": "Cross-site requests to the API are not allowed",
+    });
+    response::json(StatusCode::FORBIDDEN, &body)
 }
 
 fn exempt(request: &Request<Bytes>, ready: bool) -> bool {

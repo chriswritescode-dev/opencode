@@ -20,3 +20,21 @@ pub fn empty(status: StatusCode) -> Response {
     *response.status_mut() = status;
     response
 }
+
+pub fn vary_with(response: &mut Response, dimension: &str) {
+    let current = response.headers().get(header::VARY).and_then(|value| value.to_str().ok()).map(str::to_owned);
+    let next = match current {
+        Some(vary) => {
+            let lower = dimension.to_ascii_lowercase();
+            let present = vary.split(',').any(|member| {
+                let member = member.trim().to_ascii_lowercase();
+                member == "*" || member == lower
+            });
+            if present { vary } else { format!("{vary}, {dimension}") }
+        }
+        None => dimension.to_owned(),
+    };
+    if let Ok(value) = HeaderValue::from_str(&next) {
+        response.headers_mut().insert(header::VARY, value);
+    }
+}
