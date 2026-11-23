@@ -6,6 +6,7 @@ mod corpus;
 mod event_stream;
 mod executor;
 mod framing;
+mod google_adc;
 mod prepare;
 mod protocols;
 mod protocols_utils;

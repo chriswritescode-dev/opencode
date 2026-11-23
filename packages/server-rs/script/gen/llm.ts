@@ -25,6 +25,16 @@ type ExportedError = {
   retryable: boolean
 }
 
+type ExportedAdc = {
+  clockEpochMs: number
+  cases: Array<{
+    name: string
+    files: Record<string, string>
+    env: Record<string, string>
+    steps: Array<{ requests: Array<unknown>; token?: string; error?: string }>
+  }>
+}
+
 export const GROUPS: Record<string, { protocols: string[] }> = {
   "anthropic-messages": { protocols: ["anthropic-messages"] },
   "openai-chat": { protocols: ["openai-chat"] },
@@ -50,14 +60,18 @@ export const GROUPS: Record<string, { protocols: string[] }> = {
 }
 
 export const EXPECTED_CASSETTES = 248
+const EXPECTED_ADC_CASES = 11
 
 const exporter = `${tree}/exporter`
 await mkdir(exporter, { recursive: true })
-for (const name of ["capture", "scenarios", "errors"])
+for (const name of ["capture", "scenarios", "errors", "adc"])
   await Bun.write(`${exporter}/${name}.ts`, Bun.file(`${root}script/llm/${name}.ts`))
 
 const scenarios = await run<ScenarioOutput>("scenarios")
 const errors = await run<Array<ExportedError>>("errors")
+const adc = await run<ExportedAdc>("adc")
+
+if (adc.cases.length !== EXPECTED_ADC_CASES) fail(`expected ${EXPECTED_ADC_CASES} ADC cases, got ${adc.cases.length}`)
 
 if (scenarios.cassettes.length !== EXPECTED_CASSETTES)
   fail(`expected ${EXPECTED_CASSETTES} cassettes, got ${scenarios.cassettes.length}`)
@@ -85,7 +99,10 @@ for (const cassette of scenarios.cassettes) {
 await mkdir(`${output}/llm`, { recursive: true })
 await Bun.write(`${output}/llm/index.json`, `${JSON.stringify({ cassettes: index }, null, 2)}\n`)
 await Bun.write(`${output}/provider-errors.json`, `${JSON.stringify({ errors }, null, 2)}\n`)
-console.log(`llm: ${scenarios.cassettes.length} cassettes, ${errors.length} provider errors -> ${output}`)
+await Bun.write(`${output}/google-adc.json`, `${JSON.stringify(adc, null, 2)}\n`)
+console.log(
+  `llm: ${scenarios.cassettes.length} cassettes, ${errors.length} provider errors, ${adc.cases.length} ADC cases -> ${output}`,
+)
 
 async function run<T>(name: string) {
   const proc = Bun.spawn(["bun", "run", `${exporter}/${name}.ts`], {

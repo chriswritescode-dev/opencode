@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::sync::Arc;
 
 use opencode_api_types::js::encode_component;
 use opencode_util::hash::sha256_hex;
@@ -6,7 +7,9 @@ use serde::Deserialize;
 use serde_json::Value;
 
 use crate::Env;
+use crate::ExecutionContext;
 use crate::clock::utc_datetime;
+use crate::route::executor::{BoxFuture, HttpSender};
 use crate::schema::{AiError, AiErrorReason};
 
 pub const DEFAULT_SIGV4_SERVICE: &str = "bedrock";
@@ -26,6 +29,10 @@ const UNSIGNABLE_HEADERS: [&str; 9] = [
 
 pub trait CredentialSource: Send + Sync + std::fmt::Debug {
     fn load(&self, env: &dyn Env) -> Result<String, AiError>;
+
+    fn prepare(&self, _context: &ExecutionContext, _sender: &Arc<dyn HttpSender>) -> BoxFuture<Result<(), AiError>> {
+        Box::pin(async { Ok(()) })
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -93,6 +100,33 @@ impl Credential {
             },
             Credential::OrElse(first, second) => first.load(env).or_else(|_| second.load(env)),
             Credential::Source(source) => source.load(env),
+        }
+    }
+
+    pub fn prepare(&self, context: &ExecutionContext, sender: &Arc<dyn HttpSender>) -> BoxFuture<Result<(), AiError>> {
+        match self {
+            Credential::Source(source) => {
+                let source = source.clone();
+                let context = context.clone();
+                let sender = sender.clone();
+                Box::pin(async move { source.prepare(&context, &sender).await })
+            }
+            Credential::OrElse(first, second) => {
+                let first = (**first).clone();
+                let second = (**second).clone();
+                let context = context.clone();
+                let sender = sender.clone();
+                Box::pin(async move {
+                    match first.prepare(&context, &sender).await {
+                        Ok(()) => Ok(()),
+                        Err(_) => second.prepare(&context, &sender).await,
+                    }
+                })
+            }
+            _ => match self.load(context.env.as_ref()) {
+                Ok(_) => Box::pin(async { Ok(()) }),
+                Err(error) => Box::pin(async move { Err(error) }),
+            },
         }
     }
 }
@@ -186,6 +220,35 @@ impl Auth {
                 let headers = set_header(input.headers, "content-type", "application/json");
                 sign_sigv4(source, &input.method, &input.url, &input.body, headers, input.now_ms, &source.name)
             }
+        }
+    }
+
+    pub fn prepare(&self, context: &ExecutionContext, sender: &Arc<dyn HttpSender>) -> BoxFuture<Result<(), AiError>> {
+        match self {
+            Auth::Credential { credential, .. } => credential.prepare(context, sender),
+            Auth::AndThen(first, second) => {
+                let first = (**first).clone();
+                let second = (**second).clone();
+                let context = context.clone();
+                let sender = sender.clone();
+                Box::pin(async move {
+                    first.prepare(&context, &sender).await?;
+                    second.prepare(&context, &sender).await
+                })
+            }
+            Auth::OrElse(first, second) => {
+                let first = (**first).clone();
+                let second = (**second).clone();
+                let context = context.clone();
+                let sender = sender.clone();
+                Box::pin(async move {
+                    match first.prepare(&context, &sender).await {
+                        Ok(()) => Ok(()),
+                        Err(_) => second.prepare(&context, &sender).await,
+                    }
+                })
+            }
+            _ => Box::pin(async { Ok(()) }),
         }
     }
 }

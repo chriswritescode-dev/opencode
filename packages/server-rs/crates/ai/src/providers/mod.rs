@@ -18,6 +18,7 @@ pub mod cohere;
 pub mod deepinfra;
 pub mod digitalocean;
 pub mod google;
+pub mod google_adc;
 pub mod google_vertex;
 pub mod google_vertex_chat;
 pub mod google_vertex_interactions;
@@ -139,6 +140,7 @@ impl ProviderPackages {
             ("@opencode/ai/providers/google-vertex", google_vertex::model as Entry),
             ("@opencode/ai/providers/google-vertex-messages", google_vertex_messages::model as Entry),
             ("@opencode/ai/providers/google-vertex/chat", google_vertex_chat::model as Entry),
+            ("@opencode/ai/providers/google-vertex/gemini", google_vertex::model as Entry),
             ("@opencode/ai/providers/google-vertex/interactions", google_vertex_interactions::model as Entry),
             ("@opencode/ai/providers/google-vertex/messages", google_vertex_messages::model as Entry),
             ("@opencode/ai/providers/google-vertex/mistral", google_vertex_mistral::model as Entry),

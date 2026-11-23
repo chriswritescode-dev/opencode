@@ -3,16 +3,15 @@ use std::sync::Arc;
 use crate::Env;
 use crate::protocols::shared::invalid_request;
 use crate::providers::Settings;
-use crate::route::auth::{Auth, Credential, CredentialSource, Render};
+use crate::providers::google_adc::GoogleAdc;
+use crate::route::auth::{Auth, Credential, Render};
 use crate::route::endpoint::Endpoint;
 use crate::route::model::Route;
-use crate::schema::{AiError, AiErrorReason, RequestOptions, merge_request_options};
+use crate::schema::{AiError, RequestOptions, merge_request_options};
 
 pub const ID: &str = "google-vertex";
 pub const METADATA_KEY: &str = "vertex";
 pub const CONNECTION_KEYS: [&str; 5] = ["accessToken", "apiKey", "baseURL", "location", "project"];
-
-const ADC_SOURCE: &str = "Google Application Default Credentials";
 
 pub fn project(value: Option<&str>, env: &dyn Env) -> Option<String> {
     value
@@ -78,22 +77,11 @@ pub struct OAuthInput {
     pub auth: Option<Auth>,
 }
 
-#[derive(Debug)]
-pub struct MissingAdc;
-
-impl CredentialSource for MissingAdc {
-    fn load(&self, _env: &dyn Env) -> Result<String, AiError> {
-        Err(AiError {
-            reason: AiErrorReason::Authentication { message: ADC_SOURCE.to_string(), body: None, http: None },
-        })
-    }
+pub fn adc(project: Option<&str>) -> Auth {
+    Auth::credential(Credential::Source(Arc::new(GoogleAdc::new(project.map(str::to_string)))), Render::Bearer)
 }
 
-pub fn adc() -> Auth {
-    Auth::credential(Credential::Source(Arc::new(MissingAdc)), Render::Bearer)
-}
-
-pub fn oauth(input: &OAuthInput, _project: Option<&str>) -> Result<Auth, AiError> {
+pub fn oauth(input: &OAuthInput, project: Option<&str>) -> Result<Auth, AiError> {
     if input.access_token.is_some() && input.auth.is_some() {
         return Err(invalid_request("Google Vertex accessToken cannot be combined with auth"));
     }
@@ -103,7 +91,7 @@ pub fn oauth(input: &OAuthInput, _project: Option<&str>) -> Result<Auth, AiError
     if let Some(access_token) = &input.access_token {
         return Ok(Credential::value(access_token.clone()).bearer());
     }
-    Ok(adc())
+    Ok(adc(project))
 }
 
 #[derive(Default)]

@@ -42,3 +42,4 @@ Each file has these paragraphs, in order:
 - `OR-44-transport-codes.md`: HTTP transport error codes are Rust I/O kinds instead of Node errno names
 - `OR-44-utf16-truncation.md`: id and name limits count Unicode scalars instead of UTF-16 code units
 - `OR-44-websocket-channel.md`: WebSocket failures omit readyState and OS codes, and the HTTP fallback is unused
+- `OR-45-google-adc.md`: Google ADC supports authorized users, service accounts and the metadata server only

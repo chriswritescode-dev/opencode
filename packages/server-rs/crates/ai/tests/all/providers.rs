@@ -1,5 +1,5 @@
 use opencode_ai::MapEnv;
-use opencode_ai::providers::google_vertex_shared::{self, ApiKeyInput, MissingAdc};
+use opencode_ai::providers::google_vertex_shared::{self, ApiKeyInput};
 use opencode_ai::providers::{ProviderPackages, RuntimeModel, Settings};
 use opencode_ai::route::auth::CredentialSource;
 use opencode_ai::route::compile::{Compiled, StreamOptions, compile};
@@ -614,11 +614,30 @@ fn google_vertex_api_key_rules() {
 }
 
 #[test]
-fn google_vertex_adc_reports_a_missing_credential() {
-    let error = MissingAdc.load(&MapEnv::default()).expect_err("missing ADC");
+fn google_vertex_gemini_entry_matches_the_root_provider() {
+    let settings = from_value(json!({ "apiKey": "fixture" }));
+    let env = MapEnv::default();
+    let packages = ProviderPackages::builtin();
+    let RuntimeModel::Language(root) = packages
+        .model("@opencode/ai/providers/google-vertex", "gemini-2.5-flash", &settings, &env)
+        .expect("root model");
+    let RuntimeModel::Language(gemini) = packages
+        .model("@opencode/ai/providers/google-vertex/gemini", "gemini-2.5-flash", &settings, &env)
+        .expect("gemini model");
+    assert_eq!(gemini.route.id, "google-vertex-gemini");
+    assert_eq!(
+        serde_json::to_value(gemini.descriptor()).expect("gemini descriptor"),
+        serde_json::to_value(root.descriptor()).expect("root descriptor")
+    );
+}
+
+#[test]
+fn google_adc_reports_a_missing_credential() {
+    let error =
+        opencode_ai::providers::google_adc::GoogleAdc::new(None).load(&MapEnv::default()).expect_err("missing ADC");
     match error.reason {
         AiErrorReason::Authentication { message, .. } => {
-            assert_eq!(message, "Google Application Default Credentials");
+            assert_eq!(message, "Missing auth credential: Google Application Default Credentials");
         }
         other => panic!("expected authentication error, got {other:?}"),
     }
