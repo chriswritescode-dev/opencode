@@ -3,7 +3,7 @@ use opencode_config::parse::parse_info;
 use opencode_contract::codec::encode_json;
 use serde_json::{Value, json};
 
-use crate::support::area;
+use crate::support::{Case, area};
 
 fn diagnostics_value(diagnostics: &[Diagnostic]) -> Value {
     Value::Array(
@@ -23,18 +23,27 @@ fn diagnostics_value(diagnostics: &[Diagnostic]) -> Value {
 #[test]
 fn current_cases_match_the_pinned_typescript() {
     let cases = area("normalize");
-    assert_eq!(cases.len(), 117, "expected 117 normalize cases, found {}", cases.len());
+    assert_eq!(cases.len(), 131, "expected 131 normalize cases, found {}", cases.len());
     let current = cases.iter().filter(|case| case.value["group"] == "current").count();
     let v1 = cases.iter().filter(|case| case.value["group"] == "v1").count();
     assert_eq!(current, 93, "expected 93 current normalize cases, found {current}");
-    assert_eq!(v1, 24, "expected 24 v1 normalize cases, found {v1}");
+    assert_eq!(v1, 38, "expected 38 v1 normalize cases, found {v1}");
     for case in &cases {
         let group = case.value["group"].as_str();
         assert!(matches!(group, Some("current" | "v1")), "{} has unknown group {group:?}", case.name);
     }
 
-    for case in &cases {
-        if case.value["group"] != "current" {
+    verify_group(&cases, "current");
+}
+
+#[test]
+fn v1_cases_match_the_pinned_typescript() {
+    verify_group(&area("normalize"), "v1");
+}
+
+fn verify_group(cases: &[Case], group: &str) {
+    for case in cases {
+        if case.value["group"] != group {
             continue;
         }
         let input = case.value["input"].as_str().unwrap_or_else(|| panic!("{} input is not a string", case.name));
@@ -56,10 +65,16 @@ fn current_cases_match_the_pinned_typescript() {
                     let Normalized::Normalized { encoded, diagnostics } = result else {
                         panic!("{} expected a normalized result, got {result:?}", case.name)
                     };
+                    let encoded = Value::Object(encoded.clone());
                     assert_eq!(
-                        Value::Object(encoded.clone()),
-                        expected_normalized["encoded"],
+                        encoded, expected_normalized["encoded"],
                         "{} normalized encoded configuration",
+                        case.name
+                    );
+                    assert_eq!(
+                        serde_json::to_string(&encoded).unwrap(),
+                        serde_json::to_string(&expected_normalized["encoded"]).unwrap(),
+                        "{} normalized encoded key order",
                         case.name
                     );
                     assert_eq!(
@@ -93,9 +108,15 @@ fn current_cases_match_the_pinned_typescript() {
                 let info =
                     outcome.info.as_ref().unwrap_or_else(|| panic!("{} expected parsed info, got none", case.name));
                 let encoded = encode_json(info);
-                let encoded: Value = serde_json::from_str(&encoded)
+                let value: Value = serde_json::from_str(&encoded)
                     .unwrap_or_else(|error| panic!("{} encoded info is not JSON: {error}", case.name));
-                assert_eq!(encoded, expected_parsed["info"], "{} parsed info", case.name);
+                assert_eq!(value, expected_parsed["info"], "{} parsed info", case.name);
+                assert_eq!(
+                    encoded,
+                    serde_json::to_string(&expected_parsed["info"]).unwrap(),
+                    "{} parsed info key order",
+                    case.name
+                );
                 assert_eq!(
                     diagnostics_value(&outcome.diagnostics),
                     case.value["normalized"]["diagnostics"],

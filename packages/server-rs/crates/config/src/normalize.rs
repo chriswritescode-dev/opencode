@@ -1,3 +1,5 @@
+mod v1;
+
 use serde_json::{Map, Value};
 
 use opencode_contract::codec::{Decode, Encode, encode_json};
@@ -20,6 +22,7 @@ const REMOVED_AUTOMATIONS_MESSAGE: &str = "Use the top-level automations setting
 const ENABLED_ONLY_MCP_MESSAGE: &str = "omitted enabled-only legacy MCP entry";
 const REJECTED_ROOT_MESSAGE: &str = "rejected configuration because its root is not an object";
 const UNSUPPORTED_MODEL_MESSAGE: &str = "omitted unsupported legacy model reference";
+const UNSUPPORTED_VARIANT_MESSAGE: &str = "omitted unsupported legacy model variant";
 
 const UNSUPPORTED_TOP_LEVEL: [&str; 4] = ["logLevel", "server", "subagent_depth", "layout"];
 const UNSUPPORTED_EXPERIMENTAL: [&str; 5] =
@@ -382,7 +385,7 @@ fn normalize_mcp(input: &Map<String, Value>, encoded: &mut Map<String, Value>, d
                     normalize_mcp_timeout(&migrated, &mut timeout, &path, diagnostics);
                     continue;
                 }
-                if let Some(server) = migrate_legacy_mcp(value) {
+                if let Some(server) = migrate_legacy_mcp(value, &path, diagnostics) {
                     legacy_servers.insert(name.clone(), server);
                 }
             }
@@ -842,7 +845,7 @@ fn decode_worktree(value: &Value, path: &[String], diagnostics: &mut Vec<Diagnos
         invalid(path, diagnostics);
         return None;
     };
-    let Some(Value::String(directory)) = map.remove("directory") else {
+    let Some(Value::String(directory)) = map.shift_remove("directory") else {
         invalid(path, diagnostics);
         return None;
     };
@@ -926,7 +929,7 @@ fn drop_invalid_color(value: &Value) -> Value {
         return value.clone();
     }
     let mut copy = map.clone();
-    copy.remove("color");
+    copy.shift_remove("color");
     Value::Object(copy)
 }
 
@@ -1073,41 +1076,77 @@ fn provider_id(input: &str) -> &str {
     }
 }
 
-fn migrate_commands(_value: Option<&Value>, _diagnostics: &mut Vec<Diagnostic>) -> Vec<(String, Value)> {
-    Vec::new()
+fn migrate_commands(value: Option<&Value>, diagnostics: &mut Vec<Diagnostic>) -> Vec<(String, Value)> {
+    migrate_entries(value, "command", diagnostics, v1::migrate_command, v1::decode_command)
 }
 
-fn migrate_agents(_value: Option<&Value>, _diagnostics: &mut Vec<Diagnostic>) -> Vec<(String, Value)> {
-    Vec::new()
+fn migrate_agents(value: Option<&Value>, diagnostics: &mut Vec<Diagnostic>) -> Vec<(String, Value)> {
+    migrate_entries(value, "agent", diagnostics, v1::migrate_agent, v1::decode_agent)
 }
 
-fn migrate_mode_agents(_value: Option<&Value>, _diagnostics: &mut Vec<Diagnostic>) -> Vec<(String, Value)> {
-    Vec::new()
+fn migrate_mode_agents(value: Option<&Value>, diagnostics: &mut Vec<Diagnostic>) -> Vec<(String, Value)> {
+    migrate_entries(value, "mode", diagnostics, v1::migrate_agent, |raw| {
+        let mut agent = v1::decode_agent(raw)?;
+        if let Value::Object(map) = &mut agent {
+            map.insert("mode".to_owned(), Value::String("primary".to_owned()));
+        }
+        Some(agent)
+    })
 }
 
-fn migrate_small_model(_value: Option<&Value>, _diagnostics: &mut Vec<Diagnostic>) -> Option<Value> {
-    None
+fn migrate_entries(
+    value: Option<&Value>,
+    key: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+    migrate: fn(&Value) -> Value,
+    decode: fn(&Value) -> Option<Value>,
+) -> Vec<(String, Value)> {
+    let Some(value) = value else { return Vec::new() };
+    let Some(entries) = value.as_object() else {
+        invalid(&[key.to_owned()], diagnostics);
+        return Vec::new();
+    };
+    let mut result = Vec::new();
+    for (name, raw) in entries {
+        match decode(raw) {
+            Some(decoded) => result.push((name.clone(), migrate(&decoded))),
+            None => invalid(&push_path(&[key.to_owned()], name), diagnostics),
+        }
+    }
+    result
 }
 
-fn migrate_providers(_value: Option<&Value>, _diagnostics: &mut Vec<Diagnostic>) -> Vec<(String, Value)> {
-    Vec::new()
+fn migrate_small_model(value: Option<&Value>, _diagnostics: &mut Vec<Diagnostic>) -> Option<Value> {
+    v1::model_selection(value?.as_str(), None)
 }
 
-fn migrate_tools(_value: Option<&Value>, _diagnostics: &mut Vec<Diagnostic>) -> Vec<Value> {
-    Vec::new()
+fn migrate_providers(value: Option<&Value>, diagnostics: &mut Vec<Diagnostic>) -> Vec<(String, Value)> {
+    v1::migrate_providers(value, diagnostics)
 }
 
-fn migrate_permissions(_value: Option<&Value>, _diagnostics: &mut Vec<Diagnostic>) -> Vec<Value> {
-    Vec::new()
+fn migrate_tools(value: Option<&Value>, diagnostics: &mut Vec<Diagnostic>) -> Vec<Value> {
+    v1::migrate_tools(value, diagnostics)
 }
 
-fn migrate_legacy_mcp(_value: &Value) -> Option<Value> {
-    None
+fn migrate_permissions(value: Option<&Value>, diagnostics: &mut Vec<Diagnostic>) -> Vec<Value> {
+    v1::migrate_permissions(value, diagnostics)
 }
 
-fn diagnose_selection_map(_value: Option<&Value>, _path: &[String], _diagnostics: &mut Vec<Diagnostic>) {}
+fn migrate_legacy_mcp(value: &Value, path: &[String], diagnostics: &mut Vec<Diagnostic>) -> Option<Value> {
+    let Some(info) = v1::decode_mcp(value) else {
+        invalid(path, diagnostics);
+        return None;
+    };
+    v1::migrate_mcp(&info)
+}
 
-fn diagnose_agent_unsupported(_value: Option<&Value>, _path: &[String], _diagnostics: &mut Vec<Diagnostic>) {}
+fn diagnose_selection_map(value: Option<&Value>, path: &[String], diagnostics: &mut Vec<Diagnostic>) {
+    v1::diagnose_selection_map(value, path, diagnostics);
+}
+
+fn diagnose_agent_unsupported(value: Option<&Value>, path: &[String], diagnostics: &mut Vec<Diagnostic>) {
+    v1::diagnose_agent_unsupported(value, path, diagnostics);
+}
 
 fn is_non_empty_string(value: Option<&Value>) -> bool {
     matches!(value, Some(Value::String(text)) if !text.is_empty())
@@ -1200,7 +1239,7 @@ fn decode_one_key<T: Decode + Encode>(
     probe.insert(key.to_owned(), value.clone());
     let mut encoded = decode_encoded::<T>(&Value::Object(probe), path, diagnostics)?;
     match &mut encoded {
-        Value::Object(map) => map.remove(key),
+        Value::Object(map) => map.shift_remove(key),
         _ => None,
     }
 }

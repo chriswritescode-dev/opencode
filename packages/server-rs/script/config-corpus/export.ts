@@ -532,6 +532,77 @@ function exportNormalize() {
         compaction: { preserve_recent_tokens: 1000, keep: { tokens: 1000 } },
       }),
     },
+    "v1-fixture-formatter-lsp-skills": {
+      group: "v1",
+      text: JSON.stringify({
+        formatter: {
+          prettier: {
+            command: ["prettier", "--write", "$FILE"],
+            extensions: [".ts"],
+            environment: { NODE_ENV: "production" },
+          },
+          custom: { disabled: true },
+        },
+        lsp: {
+          typescript: {
+            command: ["tsc", "--lsp"],
+            extensions: [".ts"],
+            env: { NODE_ENV: "production" },
+            initialization: { tsserver: { maxTsServerMemory: 3072 } },
+          },
+        },
+        skills: { paths: ["./skills"], urls: ["https://example.com/.well-known/skills/"] },
+      }),
+    },
+    "v1-fixture-mcp-options": {
+      group: "v1",
+      text: JSON.stringify({
+        mcp: {
+          local: {
+            type: "local",
+            command: ["node", "server.js"],
+            cwd: "./server",
+            environment: { KEY: "value" },
+            enabled: false,
+            codemode: false,
+            timeout: 3000,
+          },
+          remote: {
+            type: "remote",
+            url: "https://example.com/mcp",
+            headers: { Authorization: "Bearer token" },
+            oauth: {
+              clientId: "client",
+              clientSecret: "secret",
+              scope: "read write",
+              callbackPort: 19876,
+              redirectUri: "http://127.0.0.1:19876/mcp/oauth/callback",
+            },
+            enabled: true,
+            timeout: 9000,
+          },
+        },
+      }),
+    },
+    "v1-fixture-top-level": {
+      group: "v1",
+      text: JSON.stringify({
+        layout: "auto",
+        server: { port: 4096, hostname: "127.0.0.1", mdns: false, cors: ["https://app.example.com"] },
+        logLevel: "DEBUG",
+        attachment: {
+          image: { auto_resize: false, max_width: 1200, max_height: 900, max_base64_bytes: 1048576 },
+        },
+      }),
+    },
+    "v1-fixture-tool-output-enterprise": {
+      group: "v1",
+      text: JSON.stringify({
+        enterprise: { url: "https://enterprise.example.com" },
+        tool_output: { max_lines: 1200, max_bytes: 40960 },
+        experimental: { subagent_depth: 2, mcp_timeout: 7000 },
+      }),
+    },
     "v1-invalid-provider-overlays": {
       group: "v1",
       text: JSON.stringify({
@@ -629,6 +700,156 @@ function exportNormalize() {
         tools: { bash: true, write: false },
         permission: { read: "allow", custom: { first: "deny", second: "ask" }, task: "allow" },
         permissions: [{ action: "native", resource: "*", effect: "deny" }],
+      }),
+    },
+    "v1-provider-compatible-body": {
+      group: "v1",
+      text: JSON.stringify({
+        provider: {
+          compatible: {
+            npm: "@ai-sdk/openai-compatible",
+            options: {
+              reasoningEffort: "high",
+              timeout: 1000,
+              allowed_openai_params: ["reasoning_effort"],
+              chat_template_kwargs: { enable_thinking: true },
+            },
+            models: {
+              model: {
+                options: { reasoningEffort: "low", taskBudget: 1024, metadata: { userId: "user" } },
+                variants: { fast: { disabled: true, reasoningEffort: "low", extra: true } },
+              },
+            },
+          },
+        },
+      }),
+    },
+    "v1-provider-model-costs": {
+      group: "v1",
+      text: JSON.stringify({
+        provider: {
+          custom: {
+            models: {
+              model: {
+                id: "model-id",
+                name: "Model",
+                family: "family",
+                cost: {
+                  input: 1.5,
+                  output: 2.5,
+                  cache_read: 0.3,
+                  cache_write: 0.4,
+                  context_over_200k: { input: 3, output: 5, cache_read: 0.5, cache_write: 0.6 },
+                },
+                limit: { context: 200000, input: 180000, output: 8192 },
+                modalities: { input: ["text", "image"], output: ["text"] },
+                tool_call: true,
+                interleaved: { field: "reasoning_content" },
+                status: "deprecated",
+                headers: { "x-model": "1" },
+              },
+            },
+          },
+        },
+      }),
+    },
+    "v1-provider-options-split": {
+      group: "v1",
+      text: JSON.stringify({
+        provider: {
+          custom: {
+            name: "Custom",
+            npm: "@ai-sdk/openai-compatible",
+            options: {
+              apiKey: "secret",
+              baseURL: "https://openai.example/v1",
+              organization: "org",
+              headers: { "x-test": "1", invalid: true },
+              body: { store: true },
+              nested: { camelCase: true },
+            },
+          },
+        },
+      }),
+    },
+    "v1-provider-options-valid-overlays": {
+      group: "v1",
+      text: JSON.stringify({
+        provider: {
+          custom: {
+            name: "Custom",
+            npm: "@ai-sdk/openai-compatible",
+            options: {
+              apiKey: "secret",
+              baseURL: "https://openai.example/v1",
+              organization: "org",
+              headers: { "x-test": "1" },
+              body: { store: true },
+              nested: { camelCase: true },
+            },
+          },
+        },
+      }),
+    },
+    "v1-provider-model-thinking-key-order": {
+      group: "v1",
+      text: JSON.stringify({
+        provider: {
+          custom: {
+            npm: "x",
+            models: {
+              removed: { options: { thinking: { blockBinding: false }, a: 1, b: 2 } },
+              kept: { options: { thinking: { blockBinding: false, budget: 1, type: "x" }, a: 1, b: 2 } },
+            },
+          },
+        },
+      }),
+    },
+    "v1-provider-options-unknown-order": {
+      group: "v1",
+      text: JSON.stringify({
+        provider: { custom: { options: { foo: 1, apiKey: "a", baseURL: "b", bar: 2 } } },
+      }),
+    },
+    "v1-provider-retired-azure-override": {
+      group: "v1",
+      text: JSON.stringify({
+        provider: {
+          "azure-cognitive-services": {
+            npm: "@ai-sdk/openai-compatible",
+            env: ["AZURE_COGNITIVE_SERVICES_RESOURCE_NAME", "AZURE_API_KEY"],
+            options: { baseURL: "https://custom.example/openai" },
+          },
+          "google-vertex-anthropic": { models: { claude: { name: "Claude" } } },
+        },
+      }),
+    },
+    "v1-provider-set-cache-key-order": {
+      group: "v1",
+      text: JSON.stringify({
+        provider: { custom: { options: { setCacheKey: true, apiKey: "a", baseURL: "b", bar: 2 } } },
+      }),
+    },
+    "v1-variant-disabled-order": {
+      group: "v1",
+      text: JSON.stringify({
+        provider: {
+          custom: {
+            npm: "x",
+            models: { model: { variants: { v: { zz: 1, disabled: false, apiKey: "k" } } } },
+          },
+        },
+      }),
+    },
+    "v1-variant-disabled-order-compatible": {
+      group: "v1",
+      text: JSON.stringify({
+        provider: {
+          custom: {
+            npm: "@ai-sdk/openai-compatible",
+            models: { model: { variants: { v: { zz: 1, disabled: false, apiKey: "k" } } } },
+          },
+        },
       }),
     },
     "v1-recovers-malformed-entries": {
