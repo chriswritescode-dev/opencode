@@ -13,7 +13,7 @@ use crate::flag;
 use crate::options::{ConfigLocation, ConfigOptions};
 use crate::parse::parse_info;
 use crate::policy::{self, Action, Effect, Statement};
-use crate::seams::{CredentialLookup, KvStore, WellKnownSource};
+use crate::seams::{CredentialLookup, WellKnownSource};
 use crate::variable::{Source, SubstituteInput, substitute};
 
 pub struct FlagInputs {
@@ -24,7 +24,6 @@ pub struct FlagInputs {
 pub struct LoadDeps<'a> {
     pub credentials: &'a dyn CredentialLookup,
     pub wellknown: &'a dyn WellKnownSource,
-    pub kv: &'a dyn KvStore,
     pub integrations: &'a [Document],
     pub home: &'a Path,
 }
@@ -186,7 +185,10 @@ async fn load_wellknown(lockdown: &[Statement], deps: &LoadDeps<'_>, references:
         };
         let configs = match deps.wellknown.resolve(&entry, &variables).await {
             Ok(configs) => configs,
-            Err(_) => deps.wellknown.cached(&entry.origin).await,
+            Err(error) => {
+                log::warn!("failed to load wellknown config source={} error={error}", entry.origin);
+                deps.wellknown.cached(&entry.origin).await
+            }
         };
         let allowed = supplies(lockdown, &entry.integration_id, None, deps.credentials);
         for config in configs {
@@ -273,13 +275,13 @@ async fn load_preferences(plist: &Path, home: &Path, references: &mut BTreeSet<P
         .stdin(std::process::Stdio::null())
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped())
+        .kill_on_drop(true)
         .output();
-    let Ok(Ok(output)) = tokio::time::timeout(Duration::from_secs(10), output).await else {
+    let output = tokio::time::timeout(Duration::from_secs(10), output).await.ok().and_then(Result::ok);
+    let Some(output) = output.filter(|output| output.status.success()) else {
+        log::warn!("failed to convert managed preferences source={}", plist.display());
         return Vec::new();
     };
-    if !output.status.success() {
-        return Vec::new();
-    }
     references.insert(plist.to_path_buf());
     let text = String::from_utf8_lossy(&output.stdout);
     let stripped = crate::discovery::strip_preference_metadata(&text);

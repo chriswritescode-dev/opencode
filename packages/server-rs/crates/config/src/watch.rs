@@ -31,11 +31,12 @@ impl WatchTarget {
     }
 
     fn key(&self) -> String {
-        let kind = match self {
-            Self::Directory { .. } => "directory",
-            Self::Entries { .. } => "entries",
-        };
-        format!("{kind}:{}", self.path().to_string_lossy())
+        match self {
+            Self::Directory { path, ignore } => {
+                format!("directory:{}:{}", path.to_string_lossy(), ignore.join("\u{1f}"))
+            }
+            Self::Entries { path, names } => format!("entries:{}:{}", path.to_string_lossy(), names.join("\u{1f}")),
+        }
     }
 }
 

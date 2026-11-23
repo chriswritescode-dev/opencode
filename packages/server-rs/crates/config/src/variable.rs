@@ -84,9 +84,25 @@ fn substitute_files(input: &SubstituteInput<'_>, text: &str, references: &mut BT
             Some(rest) => Flavor::NATIVE.join(&[home.as_ref(), rest]),
             None => file_path.to_owned(),
         };
-        let resolved = Flavor::NATIVE.resolve(&[&dir, &expanded]);
-        references.insert(PathBuf::from(&resolved));
-        out.push_str(&json_escape(read_file(&resolved).unwrap_or_default().trim()));
+        let resolved = PathBuf::from(Flavor::NATIVE.resolve(&[&dir, &expanded]));
+        let resolved = match std::env::current_dir() {
+            Ok(directory) if !resolved.is_absolute() => directory.join(&resolved),
+            _ => resolved,
+        };
+        references.insert(resolved.clone());
+        let content = match read_file(&resolved) {
+            Ok(content) => content,
+            Err(error) => {
+                log::warn!(
+                    "config file reference is missing or unreadable source={} reference={} path={} error={error}",
+                    source_name(&input.source),
+                    &text[start..=close],
+                    resolved.display()
+                );
+                String::new()
+            }
+        };
+        out.push_str(&json_escape(content.trim()));
         cursor = close + 1;
         search = cursor;
     }
@@ -104,10 +120,17 @@ fn source_dir(source: &Source<'_>) -> String {
     }
 }
 
-fn read_file(path: &str) -> Option<String> {
-    let bytes = std::fs::read(path).ok()?;
+fn source_name(source: &Source<'_>) -> String {
+    match source {
+        Source::Path(path) => path.to_string_lossy().into_owned(),
+        Source::Virtual { source, .. } => (*source).to_owned(),
+    }
+}
+
+fn read_file(path: &Path) -> std::io::Result<String> {
+    let bytes = std::fs::read(path)?;
     let text = String::from_utf8_lossy(&bytes);
-    Some(text.strip_prefix('\u{feff}').unwrap_or(&text).to_owned())
+    Ok(text.strip_prefix('\u{feff}').unwrap_or(&text).to_owned())
 }
 
 fn json_escape(value: &str) -> String {

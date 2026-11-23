@@ -52,7 +52,6 @@ impl WellKnown {
     }
 
     pub async fn entries(&self) -> Vec<WellKnownEntry> {
-        let _permit = self.lock.acquire().await.expect("the wellknown operation lock is never closed");
         let origins = self.read_origins().await;
         let current = self.snapshot();
         let mut next: Vec<WellKnownEntry> = Vec::new();
@@ -187,7 +186,10 @@ impl WellKnown {
                 value
             }
             Err(error) => match self.kv.get(&manifest_key(origin)).await {
-                Some(cached) if manifest(&cached).is_some() => cached,
+                Some(cached) if manifest(&cached).is_some() => {
+                    log::warn!("failed to load wellknown manifest origin={origin} error={error}");
+                    cached
+                }
                 _ => return Err(error),
             },
         };
@@ -195,7 +197,13 @@ impl WellKnown {
     }
 
     async fn load_source(&self, origin: &str) -> Option<WellKnownEntry> {
-        self.load_entry(origin).await.ok()
+        match self.load_entry(origin).await {
+            Ok(entry) => Some(entry),
+            Err(error) => {
+                log::warn!("skipping wellknown source origin={origin} error={error}");
+                None
+            }
+        }
     }
 
     async fn read_origins(&self) -> Vec<String> {

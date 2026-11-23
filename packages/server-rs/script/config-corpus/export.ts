@@ -1,5 +1,5 @@
 import { ConfigExperimental } from "@opencode/schema/config/experimental"
-import { Document, Entry, Info } from "@opencode/schema/config"
+import { Document, Entry, Event, Info } from "@opencode/schema/config"
 import { FlagResolve } from "@opencode/core/flag/resolve"
 import { ConfigNormalize } from "@opencode/core/config/normalize"
 import { ConfigVariable } from "@opencode/core/config/variable"
@@ -24,14 +24,24 @@ import { Global } from "@opencode/util/global"
 import { Location } from "@opencode/core/location"
 import { Project } from "@opencode/core/project"
 import { AbsolutePath } from "@opencode/core/schema"
-import { Effect, Layer, Logger, Option, Schema } from "effect"
+import { Effect, Fiber, Layer, Logger, Option, Schema, Stream } from "effect"
 import { parse, type ParseError } from "jsonc-parser"
-import os from "node:os"
 import path from "node:path"
-import { chmod, mkdir, mkdtemp, readFile, realpath, rm, stat, symlink, writeFile } from "node:fs/promises"
+import { chmod, mkdir, readFile, realpath, rm, stat, symlink, writeFile } from "node:fs/promises"
+import { isDeepStrictEqual } from "node:util"
 
 const options = { errors: "all", onExcessProperty: "ignore" } as const
 const decodeInfo = Schema.decodeUnknownOption(Info, options)
+
+function insideRoot(root: string, value: string) {
+  const relative = path.relative(root, value)
+  return relative === "" || (relative !== ".." && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative))
+}
+
+function relativeToRoot(area: string, name: string, root: string, value: string) {
+  if (!insideRoot(root, value)) throw new Error(`corpus: ${area} ${name} produced a path outside its root: ${value}`)
+  return path.relative(root, value).split(path.sep).join("/")
+}
 
 const area = process.argv[2]
 if (area === "flags") exportFlags()
@@ -120,8 +130,14 @@ function exportFlags() {
   process.stdout.write(`{\n${lines.join(",\n")}\n}\n`)
 }
 
+type NormalizeCase = {
+  group: "current" | "v1"
+  text: string
+  throws?: { diagnostic: { kind: string; path: string[]; message: string } }
+}
+
 function exportNormalize() {
-  const cases: Record<string, { group: "current" | "v1"; text: string }> = {
+  const cases: Record<string, NormalizeCase> = {
     "agents-invalid-color": {
       group: "current",
       text: JSON.stringify({ agents: { reviewer: { color: "blue", system: "Keep" } } }),
@@ -200,6 +216,18 @@ function exportNormalize() {
     "experimental-image-generate-true": {
       group: "current",
       text: JSON.stringify({ experimental: { image_generate: true } }),
+    },
+    "experimental-location-timeout-false": {
+      group: "current",
+      text: JSON.stringify({ experimental: { location_idle_timeout: false } }),
+    },
+    "experimental-location-timeout-invalid": {
+      group: "current",
+      text: JSON.stringify({ experimental: { location_idle_timeout: "soon" } }),
+    },
+    "experimental-video-generate-model": {
+      group: "current",
+      text: JSON.stringify({ experimental: { video_generate: { model: "openai/sora#hd" } } }),
     },
     "experimental-location-timeout": {
       group: "current",
@@ -539,12 +567,38 @@ function exportNormalize() {
         },
       }),
     },
+    "v1-agent-options-and-legacy-fields": {
+      group: "v1",
+      text: JSON.stringify({
+        agent: {
+          reviewer: {
+            prompt: "Review changes",
+            options: { reasoningEffort: "high", nested: { enabled: true } },
+            temperature: 0.3,
+            top_p: 0.9,
+            color: "primary",
+            steps: 10,
+            maxSteps: 20,
+            disable: true,
+            hidden: true,
+            customSetting: "extra",
+            extraList: [1, 2],
+          },
+        },
+      }),
+    },
     "v1-agents-precedence": {
       group: "v1",
       text: JSON.stringify({
         agent: { reviewer: { prompt: "agent" }, agentOnly: { prompt: "agent-only" } },
         mode: { reviewer: { prompt: "mode" }, modeOnly: { prompt: "mode-only" } },
         agents: { reviewer: { system: "native" }, nativeOnly: { system: "native-only" } },
+      }),
+    },
+    "v1-command-subtask-agent-description": {
+      group: "v1",
+      text: JSON.stringify({
+        command: { deploy: { template: "deploy", description: "Deploy the app", agent: "build", subtask: true } },
       }),
     },
     "v1-canonical-equal-duplicates": {
@@ -680,6 +734,12 @@ function exportNormalize() {
         },
       }),
     },
+    "v1-mcp-oauth-false": {
+      group: "v1",
+      text: JSON.stringify({
+        mcp: { remote: { type: "remote", url: "https://example.com/mcp", oauth: false } },
+      }),
+    },
     "v1-mcp-reserved-names": {
       group: "v1",
       text: JSON.stringify({
@@ -717,6 +777,16 @@ function exportNormalize() {
         command: { review: { template: "review", model: "anthropic/claude#high" } },
       }),
     },
+    "v1-permission-action-only-object": {
+      group: "v1",
+      text: JSON.stringify({
+        permission: {
+          question: { "*": "allow" },
+          websearch: { "example.com": "deny" },
+          doom_loop: { "*": "ask" },
+        },
+      }),
+    },
     "v1-permission-redaction": {
       group: "v1",
       text: JSON.stringify({
@@ -729,6 +799,22 @@ function exportNormalize() {
         tools: { bash: true, write: false },
         permission: { read: "allow", custom: { first: "deny", second: "ask" }, task: "allow" },
         permissions: [{ action: "native", resource: "*", effect: "deny" }],
+      }),
+    },
+    "v1-provider-api-and-model-provider": {
+      group: "v1",
+      text: JSON.stringify({
+        provider: {
+          custom: {
+            api: "https://api.example.com/v1",
+            npm: "@ai-sdk/openai-compatible",
+            models: {
+              model: {
+                provider: { npm: "@ai-sdk/openai", api: "https://model.example.com/v1" },
+              },
+            },
+          },
+        },
       }),
     },
     "v1-provider-compatible-body": {
@@ -752,6 +838,25 @@ function exportNormalize() {
           },
         },
       }),
+    },
+    "v1-provider-empty-api-and-npm": {
+      group: "v1",
+      text: JSON.stringify({
+        provider: {
+          custom: {
+            npm: "",
+            api: "",
+            models: { model: { provider: { npm: "", api: "" } } },
+          },
+        },
+      }),
+    },
+    "v1-provider-invalid-options-tls": {
+      group: "v1",
+      text: JSON.stringify({ provider: { x: { options: { tls: 1 } } } }),
+      throws: {
+        diagnostic: { kind: "invalid", path: ["provider", "x"], message: "skipped malformed recognized value" },
+      },
     },
     "v1-provider-model-costs": {
       group: "v1",
@@ -949,6 +1054,19 @@ function exportNormalize() {
         },
       }),
     },
+    "v1-tool-permission-renames": {
+      group: "v1",
+      text: JSON.stringify({
+        tools: { apply_patch: false, task: true, bash: false },
+        permission: { apply_patch: "deny", task: "allow", bash: "ask" },
+        agent: {
+          reviewer: {
+            tools: { apply_patch: false, task: true },
+            permission: { apply_patch: "deny", task: "allow", bash: "ask" },
+          },
+        },
+      }),
+    },
     "v1-unsupported-legacy-settings": {
       group: "v1",
       text: JSON.stringify({
@@ -1002,7 +1120,7 @@ function exportNormalize() {
     })
   process.stdout.write(`{\n${lines.join(",\n")}\n}\n`)
 
-  function run(item: { group: "current" | "v1"; text: string }) {
+  function run(item: NormalizeCase) {
     const errors: ParseError[] = []
     const input: unknown = parse(item.text, errors, { allowTrailingComma: true })
     if (errors.length > 0)
@@ -1022,38 +1140,48 @@ function exportNormalize() {
           ],
         },
       }
-    const result = ConfigNormalize.normalize(input)
-    if (result.type === "rejected")
+    try {
+      const result = ConfigNormalize.normalize(input)
+      if (result.type === "rejected")
+        return {
+          group: item.group,
+          input: item.text,
+          normalized: result,
+          parsed: { type: "rejected", stage: "normalize", diagnostics: result.diagnostics },
+        }
+      const info = Option.getOrUndefined(decodeInfo(result.encoded))
+      if (info !== undefined)
+        return {
+          group: item.group,
+          input: item.text,
+          normalized: result,
+          parsed: { type: "info", info: Schema.encodeSync(Info)(info) },
+        }
       return {
         group: item.group,
         input: item.text,
         normalized: result,
-        parsed: { type: "rejected", stage: "normalize", diagnostics: result.diagnostics },
+        parsed: {
+          type: "rejected",
+          stage: "final",
+          diagnostics: [
+            ...result.diagnostics,
+            {
+              kind: "invalid",
+              path: ["$"],
+              message: "rejected canonical configuration after final validation",
+            },
+          ],
+        },
       }
-    const info = Option.getOrUndefined(decodeInfo(result.encoded))
-    if (info !== undefined)
+    } catch (error) {
+      if (!item.throws) throw error
       return {
         group: item.group,
         input: item.text,
-        normalized: result,
-        parsed: { type: "info", info: Schema.encodeSync(Info)(info) },
+        throws: true,
+        diagnostic: item.throws.diagnostic,
       }
-    return {
-      group: item.group,
-      input: item.text,
-      normalized: result,
-      parsed: {
-        type: "rejected",
-        stage: "final",
-        diagnostics: [
-          ...result.diagnostics,
-          {
-            kind: "invalid",
-            path: ["$"],
-            message: "rejected canonical configuration after final validation",
-          },
-        ],
-      },
     }
   }
 }
@@ -1523,6 +1651,12 @@ type LoadCase = {
 }
 
 async function exportLoad() {
+  const corpus = process.env.OPENCODE_CORPUS_ROOT
+  if (!corpus) {
+    console.error("corpus: load needs OPENCODE_CORPUS_ROOT")
+    process.exit(1)
+  }
+
   const g = { config: "global", home: "global/home" }
   const shell = (value: string) => JSON.stringify({ shell: value })
   const policy = (action: ConfigPolicy.Action, resource: string, effect: "allow" | "deny") => ({
@@ -1985,7 +2119,12 @@ async function exportLoad() {
 
   for (const name of Object.keys(cases).sort()) {
     const item = cases[name]!
-    const root = await realpath(await mkdtemp(path.join(os.tmpdir(), "opencode-load-")))
+    const candidate = path.join(corpus, "load", name)
+    await rm(candidate, { recursive: true, force: true })
+    await mkdir(candidate, { recursive: true })
+    const root = await realpath(candidate)
+    const inside = (value: string) => insideRoot(root, value)
+    const rel = (value: string) => relativeToRoot("load", name, root, value)
     const previousFlags = process.env.OPENCODE_FLAGS
     try {
       for (const directory of item.directories ?? []) await mkdir(path.join(root, directory), { recursive: true })
@@ -2099,7 +2238,9 @@ async function exportLoad() {
             }),
           )
         }
-        const loaded = yield* config.entries()
+        const loaded = (yield* config.entries()).filter(
+          (entry) => entry.path === undefined || inside(entry.path),
+        )
         const compatibility = yield* config.compatibility!()
         return {
           entries: loaded.map((entry) => ({
@@ -2126,7 +2267,6 @@ async function exportLoad() {
         Layer.succeed(FlagResolve.Overrides, flags.overrides ?? ""),
       )
       const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
-      const rel = (value: string) => path.relative(root, value).split(path.sep).join("/")
       const loaded = result.entries.map((entry) => {
         const wire = entry.wire as Record<string, unknown>
         if (typeof wire.path === "string") wire.path = rel(wire.path)
@@ -2152,8 +2292,8 @@ async function exportLoad() {
           policy: item.policy ?? [],
           entries: loaded,
           compatibility: {
-            claude: result.compatibility.claude.map(rel),
-            agents: result.compatibility.agents.map(rel),
+            claude: result.compatibility.claude.filter(inside).map(rel),
+            agents: result.compatibility.agents.filter(inside).map(rel),
           },
           statements: result.statements,
           decisions: result.decisions,
@@ -2175,6 +2315,12 @@ type UpdateCase = {
 }
 
 async function exportUpdate() {
+  const corpus = process.env.OPENCODE_CORPUS_ROOT
+  if (!corpus) {
+    console.error("corpus: update needs OPENCODE_CORPUS_ROOT")
+    process.exit(1)
+  }
+
   const cases: Record<string, UpdateCase> = {
     "create-when-neither": { patch: { shell: "added" } },
     "json-only": { files: { "opencode.json": `{"shell":"old"}\n` }, patch: { shell: "new" } },
@@ -2226,7 +2372,12 @@ async function exportUpdate() {
 
   for (const name of Object.keys(cases).sort()) {
     const item = cases[name]!
-    const root = await realpath(await mkdtemp(path.join(os.tmpdir(), "opencode-update-")))
+    const candidate = path.join(corpus, "update", name)
+    await rm(candidate, { recursive: true, force: true })
+    await mkdir(candidate, { recursive: true })
+    const root = await realpath(candidate)
+    const inside = (value: string) => insideRoot(root, value)
+    const rel = (value: string) => relativeToRoot("update", name, root, value)
     const previousFlags = process.env.OPENCODE_FLAGS
     try {
       const home = path.join(root, "home")
@@ -2299,20 +2450,34 @@ async function exportUpdate() {
       ])
       const program = Effect.gen(function* () {
         const config = yield* Config.Service
+        const bus = yield* Bus.Service
+        const before = yield* config.entries()
+        const updated = yield* bus.subscribe(Event.Updated).pipe(
+          Stream.take(1),
+          Stream.runDrain,
+          Effect.forkChild({ startImmediately: true }),
+        )
+        yield* Effect.yieldNow
         yield* config.update!({ shell: item.patch.shell })
-        yield* Effect.sleep("300 millis")
-        return yield* config.entries()
+        const event = yield* Fiber.join(updated).pipe(Effect.timeoutOption("10 seconds"))
+        const after = yield* config.entries()
+        if (Option.isNone(event) && !isDeepStrictEqual(before, after))
+          return yield* Effect.fail(
+            new Error(`corpus: update ${name} changed entries without publishing a config.updated event`),
+          )
+        return after
       })
       console.log = () => {}
       const layer = Layer.provide(Layer.mergeAll(built, watcher), Layer.succeed(FlagResolve.Overrides, ""))
       const loaded = await Effect.runPromise(program.pipe(Effect.provide(layer)))
-      const rel = (value: string) => path.relative(root, value).split(path.sep).join("/")
-      const entries = loaded.map((entry) => {
-        const wire = JSON.parse(JSON.stringify(encodeEntry(entry))) as Record<string, unknown>
-        if (typeof wire.path === "string") wire.path = rel(wire.path)
-        const origin = entryOrigin(entry)
-        return origin ? { ...wire, origin } : wire
-      })
+      const entries = loaded
+        .filter((entry) => entry.path === undefined || inside(entry.path))
+        .map((entry) => {
+          const wire = JSON.parse(JSON.stringify(encodeEntry(entry))) as Record<string, unknown>
+          if (typeof wire.path === "string") wire.path = rel(wire.path)
+          const origin = entryOrigin(entry)
+          return origin ? { ...wire, origin } : wire
+        })
       const written =
         (
           await Promise.all(

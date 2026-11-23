@@ -40,12 +40,11 @@ pub fn observe(config: &ConfigService, reload: impl Fn(&[Entry]) + Send + 'stati
         tokio::spawn(async move {
             loop {
                 match updated.recv().await {
-                    Ok(()) => {
+                    Ok(()) | Err(broadcast::error::RecvError::Lagged(_)) => {
                         let fresh = config.entries();
                         *entries.write().expect("the config observer lock is never poisoned") = fresh.clone();
                         reload(&fresh);
                     }
-                    Err(broadcast::error::RecvError::Lagged(_)) => continue,
                     Err(broadcast::error::RecvError::Closed) => return,
                 }
             }
@@ -80,7 +79,9 @@ pub fn observe_sources<T: Send + 'static>(
                             let _ = notifications.send(());
                         }
                     }
-                    Err(broadcast::error::RecvError::Lagged(_)) => continue,
+                    Err(broadcast::error::RecvError::Lagged(_)) => {
+                        let _ = notifications.send(());
+                    }
                     Err(broadcast::error::RecvError::Closed) => return,
                 }
             }
@@ -95,7 +96,9 @@ pub fn observe_sources<T: Send + 'static>(
                     Ok(()) => {
                         let _ = notifications.send(());
                     }
-                    Err(broadcast::error::RecvError::Lagged(_)) => continue,
+                    Err(broadcast::error::RecvError::Lagged(_)) => {
+                        let _ = notifications.send(());
+                    }
                     Err(broadcast::error::RecvError::Closed) => return,
                 }
             }

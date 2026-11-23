@@ -27,28 +27,9 @@ const UNSUPPORTED_VARIANT_MESSAGE: &str = "omitted unsupported legacy model vari
 const UNSUPPORTED_TOP_LEVEL: [&str; 4] = ["logLevel", "server", "subagent_depth", "layout"];
 const UNSUPPORTED_EXPERIMENTAL: [&str; 5] =
     ["disable_paste_summary", "batch_tool", "openTelemetry", "primary_tools", "continue_loop_on_deny"];
-const EXPERIMENTAL_FIELDS: [&str; 20] = [
-    "portable_shell_scanner",
-    "codemode_vm",
-    "all_flags",
-    "todo",
-    "media_blob",
-    "artifacts",
-    "video_generate",
-    "console_watches",
-    "mcp_events",
-    "recommended_api",
-    "full_codemode",
-    "machines",
-    "home_memory",
-    "project_overlay",
-    "sqlite_fts",
-    "part_rows",
-    "image_generate",
-    "subagent_depth",
-    "location_idle_timeout",
-    "policies",
-];
+const EXPERIMENTAL_PREFIX: [&str; 3] = ["portable_shell_scanner", "codemode_vm", "all_flags"];
+const EXPERIMENTAL_SUFFIX: [&str; 6] =
+    ["video_generate", "part_rows", "image_generate", "subagent_depth", "location_idle_timeout", "policies"];
 const NATIVE_ATOMIC: [&str; 14] = [
     "$schema",
     "shell",
@@ -179,8 +160,12 @@ pub fn normalize(input: &Value) -> Normalized {
         &mut diagnostics,
     );
 
-    let legacy_commands =
-        map_values(&map_from_pairs(migrate_commands(input.get("command"), &mut diagnostics)), canonical_command);
+    let legacy_commands = map_values(
+        &map_from_pairs(migrate_commands(input.get("command"), &mut diagnostics)),
+        &["command".to_owned()],
+        &mut diagnostics,
+        canonical_command,
+    );
     diagnose_selection_map(input.get("command"), &["command".to_owned()], &mut diagnostics);
     let native_commands =
         decode_map(input.get("commands"), &["commands".to_owned()], &mut diagnostics, decode_command_entry);
@@ -193,8 +178,12 @@ pub fn normalize(input: &Value) -> Normalized {
         &mut diagnostics,
     );
 
-    let legacy_agents =
-        map_values(&map_from_pairs(migrate_agents(input.get("agent"), &mut diagnostics)), canonical_agent);
+    let legacy_agents = map_values(
+        &map_from_pairs(migrate_agents(input.get("agent"), &mut diagnostics)),
+        &["agent".to_owned()],
+        &mut diagnostics,
+        canonical_agent,
+    );
     let legacy_small_model = input
         .get("small_model")
         .and_then(|value| decode_encoded::<String>(value, &["small_model".to_owned()], &mut diagnostics));
@@ -210,8 +199,12 @@ pub fn normalize(input: &Value) -> Normalized {
         Some(model) => with_default_model(&legacy_agents, model),
         None => legacy_agents,
     };
-    let mode_agents =
-        map_values(&map_from_pairs(migrate_mode_agents(input.get("mode"), &mut diagnostics)), canonical_agent);
+    let mode_agents = map_values(
+        &map_from_pairs(migrate_mode_agents(input.get("mode"), &mut diagnostics)),
+        &["mode".to_owned()],
+        &mut diagnostics,
+        canonical_agent,
+    );
     let migrated_agents = merge_maps(&legacy_agents, &mode_agents, &["agents".to_owned()], &mut diagnostics);
     let native_agents = decode_map(input.get("agents"), &["agents".to_owned()], &mut diagnostics, decode_agent_entry);
     diagnose_agent_unsupported(input.get("agent"), &["agent".to_owned()], &mut diagnostics);
@@ -678,7 +671,7 @@ fn normalize_experimental(
                         message: REMOVED_AUTOMATIONS_MESSAGE.to_owned(),
                     });
                 }
-                for key in EXPERIMENTAL_FIELDS {
+                for key in experimental_fields() {
                     if key == "policies" || !own(experimental, key) {
                         continue;
                     }
@@ -699,6 +692,21 @@ fn normalize_experimental(
     }
 }
 
+fn experimental_fields() -> Vec<&'static str> {
+    let mut fields = EXPERIMENTAL_PREFIX.to_vec();
+    for key in crate::generated::flags::REGISTRY.iter().map(|(key, _)| *key) {
+        if !fields.contains(&key) {
+            fields.push(key);
+        }
+    }
+    for key in EXPERIMENTAL_SUFFIX {
+        if !fields.contains(&key) {
+            fields.push(key);
+        }
+    }
+    fields
+}
+
 fn decode_experimental_field(
     key: &str,
     value: &Value,
@@ -706,21 +714,6 @@ fn decode_experimental_field(
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Option<Value> {
     match key {
-        "portable_shell_scanner"
-        | "codemode_vm"
-        | "all_flags"
-        | "todo"
-        | "media_blob"
-        | "artifacts"
-        | "console_watches"
-        | "mcp_events"
-        | "recommended_api"
-        | "full_codemode"
-        | "machines"
-        | "home_memory"
-        | "project_overlay"
-        | "sqlite_fts"
-        | "part_rows" => decode_encoded::<bool>(value, path, diagnostics),
         "video_generate" => {
             let encoded = decode_encoded::<ConfigEntryDocumentInfoExperimentalVideoGenerate>(value, path, diagnostics)?;
             Some(rewrite_model_field(encoded))
@@ -733,7 +726,7 @@ fn decode_experimental_field(
             decode_one_key::<ConfigEntryDocumentInfoExperimental>("subagent_depth", value, path, diagnostics)
         }
         "location_idle_timeout" => decode_location_idle_timeout(value, path, diagnostics),
-        _ => None,
+        _ => decode_encoded::<bool>(value, path, diagnostics),
     }
 }
 
@@ -1137,7 +1130,11 @@ fn migrate_legacy_mcp(value: &Value, path: &[String], diagnostics: &mut Vec<Diag
         invalid(path, diagnostics);
         return None;
     };
-    v1::migrate_mcp(&info)
+    let Some(server) = v1::migrate_mcp(&info) else {
+        invalid(path, diagnostics);
+        return None;
+    };
+    Some(server)
 }
 
 fn diagnose_selection_map(value: Option<&Value>, path: &[String], diagnostics: &mut Vec<Diagnostic>) {
@@ -1252,12 +1249,19 @@ fn canonical<T: Decode + Encode>(value: &Value) -> Option<Value> {
     Some(encoded)
 }
 
-fn map_values(input: &Map<String, Value>, map: fn(&Value) -> Option<Value>) -> Map<String, Value> {
+fn map_values(
+    input: &Map<String, Value>,
+    path: &[String],
+    diagnostics: &mut Vec<Diagnostic>,
+    map: fn(&Value) -> Option<Value>,
+) -> Map<String, Value> {
     let mut result = Map::new();
     for (key, value) in input {
-        if let Some(mapped) = map(value) {
-            result.insert(key.clone(), mapped);
-        }
+        let Some(mapped) = map(value) else {
+            invalid(&push_path(path, key), diagnostics);
+            continue;
+        };
+        result.insert(key.clone(), mapped);
     }
     reorder_map(result)
 }

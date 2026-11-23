@@ -23,11 +23,11 @@ fn diagnostics_value(diagnostics: &[Diagnostic]) -> Value {
 #[test]
 fn current_cases_match_the_pinned_typescript() {
     let cases = area("normalize");
-    assert_eq!(cases.len(), 131, "expected 131 normalize cases, found {}", cases.len());
+    assert_eq!(cases.len(), 142, "expected 142 normalize cases, found {}", cases.len());
     let current = cases.iter().filter(|case| case.value["group"] == "current").count();
     let v1 = cases.iter().filter(|case| case.value["group"] == "v1").count();
-    assert_eq!(current, 93, "expected 93 current normalize cases, found {current}");
-    assert_eq!(v1, 38, "expected 38 v1 normalize cases, found {v1}");
+    assert_eq!(current, 96, "expected 96 current normalize cases, found {current}");
+    assert_eq!(v1, 46, "expected 46 v1 normalize cases, found {v1}");
     for case in &cases {
         let group = case.value["group"].as_str();
         assert!(matches!(group, Some("current" | "v1")), "{} has unknown group {group:?}", case.name);
@@ -48,6 +48,25 @@ fn verify_group(cases: &[Case], group: &str) {
         }
         let input = case.value["input"].as_str().unwrap_or_else(|| panic!("{} input is not a string", case.name));
         let parsed = opencode_local::jsonc::parse(input);
+        if case.value["throws"] == true {
+            let input_value = parsed.unwrap_or_else(|| panic!("{} jsonc failed to parse", case.name));
+            let Normalized::Normalized { encoded, diagnostics } = normalize(&input_value) else {
+                panic!("{} expected a normalized result before the pinned TypeScript throws", case.name)
+            };
+            assert_eq!(
+                diagnostics_value(&diagnostics),
+                Value::Array(vec![case.value["diagnostic"].clone()]),
+                "{} canonical failure diagnostic",
+                case.name
+            );
+            let providers = encoded.get("providers").and_then(Value::as_object);
+            assert!(
+                providers.is_none_or(|providers| !providers.contains_key("x")),
+                "{} kept a provider the pinned TypeScript rejects",
+                case.name
+            );
+            continue;
+        }
         let result = parsed.as_ref().map(normalize);
         let expected_normalized = &case.value["normalized"];
 
@@ -154,7 +173,13 @@ fn the_corpus_covers_every_parsed_outcome() {
     let mut types = Vec::new();
     let mut stages = Vec::new();
     for case in &cases {
-        for key in ["group", "input", "normalized", "parsed"] {
+        for key in ["group", "input"] {
+            assert!(case.value.get(key).is_some(), "{} is missing {key}", case.name);
+        }
+        if case.value["throws"] == true {
+            continue;
+        }
+        for key in ["normalized", "parsed"] {
             assert!(case.value.get(key).is_some(), "{} is missing {key}", case.name);
         }
         if case.value["group"] != "current" {

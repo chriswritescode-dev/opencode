@@ -3,17 +3,18 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use opencode_config::discovery::{Root, Sources};
-use opencode_config::entry::{Entry, latest};
+use opencode_config::entry::{Entry, Origin, latest};
 use opencode_config::options::{ConfigLocation, ConfigOptions, SystemOption};
 use opencode_config::parse::parse_info;
 use opencode_config::paths::GlobalPaths;
 use opencode_config::seams::NoKv;
-use opencode_config::service::{ConfigService, IntegrationDocument, ServiceDeps};
+use opencode_config::service::{ConfigService, ConfigUpdateError, IntegrationDocument, ServiceDeps};
 use opencode_config::watch::{WatchUpdate, plan};
 use opencode_config::wellknown::WellKnown;
+use opencode_contract::generated::requests::ConfigPatch;
 use opencode_util::temp::TempDir;
 use serde_json::{Value, json};
-use tokio::sync::broadcast::Receiver;
+use tokio::sync::broadcast::{self, Receiver};
 
 use crate::support::area;
 
@@ -167,6 +168,88 @@ async fn an_equal_integration_document_does_not_reload() {
     assert_no_update(&mut updated).await;
 }
 
+#[tokio::test]
+async fn updating_an_integration_moves_it_last() {
+    let workspace = workspace();
+    let service = start(&workspace).await;
+    service.integration("first", Some(integration("first", "one"))).await;
+    service.integration("second", Some(integration("second", "two"))).await;
+    assert_eq!(integration_ids(&service), ["first", "second"]);
+    assert_eq!(shell(&service), Some("two".to_owned()));
+
+    service.integration("first", Some(integration("first", "three"))).await;
+    assert_eq!(integration_ids(&service), ["second", "first"]);
+    assert_eq!(shell(&service), Some("three".to_owned()));
+}
+
+#[tokio::test]
+async fn update_keeps_other_content_when_the_file_is_not_utf8() {
+    let workspace = workspace();
+    let file = workspace.config.join("opencode.jsonc");
+    let mut bytes = b"// caf".to_vec();
+    bytes.push(0xe9);
+    bytes.extend_from_slice(b"\n{\"theme\": \"kept\"}\n");
+    std::fs::write(&file, bytes).unwrap();
+    let service = start(&workspace).await;
+
+    service.update(&ConfigPatch { shell: Some("zsh".to_owned()) }).await.unwrap();
+
+    let text = std::fs::read(&file).unwrap();
+    let text = String::from_utf8_lossy(&text);
+    assert!(text.contains("caf\u{fffd}"), "the lossily decoded comment is kept: {text}");
+    assert!(text.contains("\"theme\""), "the other content is kept: {text}");
+    assert!(text.contains("kept"), "the other content is kept: {text}");
+    assert!(text.contains("zsh"), "the shell is written: {text}");
+}
+
+#[tokio::test]
+async fn update_fails_when_the_config_file_cannot_be_read() {
+    let workspace = workspace();
+    std::fs::create_dir(workspace.config.join("opencode.jsonc")).unwrap();
+    let service = start(&workspace).await;
+
+    let result = service.update(&ConfigPatch { shell: Some("zsh".to_owned()) }).await;
+
+    assert!(matches!(result, Err(ConfigUpdateError::Io(_))), "an unreadable file is an io error: {result:?}");
+}
+
+#[tokio::test]
+async fn dropping_the_service_stops_its_background_tasks() {
+    let workspace = workspace();
+    let service = start(&workspace).await;
+    let mut updated = service.subscribe_updated();
+
+    drop(service);
+
+    let closed = tokio::time::timeout(Duration::from_secs(10), async {
+        loop {
+            match updated.recv().await {
+                Err(broadcast::error::RecvError::Closed) => return,
+                Ok(()) | Err(broadcast::error::RecvError::Lagged(_)) => continue,
+            }
+        }
+    })
+    .await;
+    assert!(closed.is_ok(), "dropping the service ends its background tasks");
+}
+
+#[test]
+fn plan_keys_include_the_watched_names() {
+    let sources = |file: &str| Sources { direct: vec![PathBuf::from(file)], ..Sources::default() };
+    let first = plan(&sources("/root/a.json"));
+    let second = plan(&sources("/root/b.json"));
+    assert_ne!(
+        first.keys().collect::<Vec<_>>(),
+        second.keys().collect::<Vec<_>>(),
+        "a changed name set keys differently"
+    );
+    assert_eq!(
+        first.keys().collect::<Vec<_>>(),
+        plan(&sources("/root/a.json")).keys().collect::<Vec<_>>(),
+        "the same target keys identically"
+    );
+}
+
 #[test]
 fn plan_matches_every_discover_corpus_case() {
     let cases = area("discover");
@@ -183,6 +266,28 @@ fn plan_matches_every_discover_corpus_case() {
 
 fn shell(service: &ConfigService) -> Option<String> {
     latest(&service.entries(), |info| info.shell.clone())
+}
+
+fn integration(id: &str, shell: &str) -> IntegrationDocument {
+    IntegrationDocument {
+        connection: json!({ "type": "credential", "id": id }),
+        organization: None,
+        info: parse_info(&format!(r#"{{"shell":"{shell}"}}"#), id).info.unwrap(),
+    }
+}
+
+fn integration_ids(service: &ConfigService) -> Vec<String> {
+    service
+        .entries()
+        .iter()
+        .filter_map(|entry| match entry {
+            Entry::Document(document) => match &document.origin {
+                Origin::Integration { integration_id, .. } => Some(integration_id.clone()),
+                _ => None,
+            },
+            Entry::Directory { .. } => None,
+        })
+        .collect()
 }
 
 fn instructions(service: &ConfigService) -> Option<Vec<String>> {

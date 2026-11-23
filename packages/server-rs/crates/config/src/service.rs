@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 use std::path::PathBuf;
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, RwLock, Weak};
 use std::time::Duration;
 
 use opencode_contract::generated::ConfigEntryDocumentInfo;
@@ -9,6 +9,7 @@ use opencode_local::jsonc::{Segment, modify};
 use opencode_util::path::{Flavor, realpath};
 use serde_json::Value;
 use tokio::sync::{Mutex, broadcast, mpsc};
+use tokio::task::JoinHandle;
 
 use crate::discovery::{NAMES, Sources, discover};
 use crate::entry::{Document, Entry, Origin};
@@ -16,7 +17,7 @@ use crate::flag::{self, FlagState};
 use crate::load::{FlagInputs, LoadDeps, load};
 use crate::options::{ConfigLocation, ConfigOptions};
 use crate::paths::GlobalPaths;
-use crate::seams::{CredentialLookup, NoKv};
+use crate::seams::CredentialLookup;
 use crate::watch::{self, InputSet, WatchTarget, WatchUpdate, Watcher};
 use crate::wellknown::WellKnown;
 
@@ -53,12 +54,17 @@ pub struct IntegrationDocument {
     pub info: ConfigEntryDocumentInfo,
 }
 
+struct WatchedTarget {
+    target: WatchTarget,
+    real: Option<PathBuf>,
+}
+
 struct State {
     entries: Vec<Entry>,
     sources: Sources,
     inputs: InputSet,
-    targets: BTreeMap<String, WatchTarget>,
-    integrations: BTreeMap<String, Document>,
+    targets: BTreeMap<String, WatchedTarget>,
+    integrations: Vec<(String, Document)>,
 }
 
 struct Inner {
@@ -73,6 +79,16 @@ struct Inner {
     updated: broadcast::Sender<()>,
     requests: mpsc::UnboundedSender<()>,
     watcher: Watcher,
+    tasks: std::sync::Mutex<Vec<JoinHandle<()>>>,
+}
+
+impl Drop for Inner {
+    fn drop(&mut self) {
+        let Ok(tasks) = self.tasks.get_mut() else { return };
+        for task in tasks.iter() {
+            task.abort();
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -101,7 +117,7 @@ impl ConfigService {
                 sources: Sources::default(),
                 inputs: InputSet::default(),
                 targets: BTreeMap::new(),
-                integrations: BTreeMap::new(),
+                integrations: Vec::new(),
             }),
             reload_lock: Mutex::new(()),
             update_lock: Mutex::new(()),
@@ -109,6 +125,7 @@ impl ConfigService {
             updated,
             requests,
             watcher: Watcher::new(updates, watching),
+            tasks: std::sync::Mutex::new(Vec::new()),
         });
         let service = Self { inner };
 
@@ -157,13 +174,23 @@ impl ConfigService {
         });
         {
             let mut state = self.inner.state.write().expect("the config state lock is never poisoned");
-            if state.integrations.get(integration_id) == next.as_ref() {
-                return;
-            }
             match next {
-                Some(document) => state.integrations.insert(integration_id.to_owned(), document),
-                None => state.integrations.remove(integration_id),
-            };
+                Some(document) => {
+                    if let Some(index) = state.integrations.iter().position(|(id, _)| id == integration_id) {
+                        if state.integrations[index].1 == document {
+                            return;
+                        }
+                        state.integrations.remove(index);
+                    }
+                    state.integrations.push((integration_id.to_owned(), document));
+                }
+                None => {
+                    let Some(index) = state.integrations.iter().position(|(id, _)| id == integration_id) else {
+                        return;
+                    };
+                    state.integrations.remove(index);
+                }
+            }
         }
         self.reload().await;
     }
@@ -186,7 +213,18 @@ impl ConfigService {
             .map(|name| directory.join(name))
             .rfind(|path| path.is_file())
             .unwrap_or_else(|| directory.join("opencode.jsonc"));
-        let text = std::fs::read_to_string(&file).unwrap_or_else(|_| "{}\n".to_owned());
+        let bytes = match std::fs::read(&file) {
+            Ok(bytes) => Some(bytes),
+            Err(error)
+                if matches!(error.kind(), std::io::ErrorKind::NotFound | std::io::ErrorKind::PermissionDenied) =>
+            {
+                None
+            }
+            Err(error) => return Err(ConfigUpdateError::Io(error)),
+        };
+        let text =
+            bytes.as_deref().map_or_else(|| "{}\n".to_owned(), |bytes| String::from_utf8_lossy(bytes).into_owned());
+        let text = text.strip_prefix('\u{feff}').unwrap_or(&text).to_owned();
         let value = patch.shell.as_ref().map(|shell| Value::String(shell.clone()));
         let mut updated = modify(&text, &[Segment::Key("shell".to_owned())], value.as_ref())?;
         if !updated.ends_with('\n') {
@@ -234,12 +272,11 @@ impl ConfigService {
     async fn load(&self, sources: &Sources) -> crate::load::Loaded {
         let integrations: Vec<Document> = {
             let state = self.inner.state.read().expect("the config state lock is never poisoned");
-            state.integrations.values().cloned().collect()
+            state.integrations.iter().map(|(_, document)| document.clone()).collect()
         };
         let deps = LoadDeps {
             credentials: &*self.inner.deps.credentials,
             wellknown: &*self.inner.deps.wellknown,
-            kv: &NoKv,
             integrations: &integrations,
             home: &self.inner.paths.home,
         };
@@ -249,7 +286,13 @@ impl ConfigService {
     }
 
     fn store(&self, loaded: crate::load::Loaded) {
-        let targets = watch::plan(&loaded.sources);
+        let targets = watch::plan(&loaded.sources)
+            .into_iter()
+            .map(|(key, target)| {
+                let real = realpath(target.path());
+                (key, WatchedTarget { target, real })
+            })
+            .collect();
         let inputs = watch::inputs(&loaded.sources, &loaded.references);
         let mut state = self.inner.state.write().expect("the config state lock is never poisoned");
         state.entries = loaded.entries;
@@ -259,8 +302,15 @@ impl ConfigService {
     }
 
     fn reconcile(&self) -> usize {
-        let targets = self.inner.state.read().expect("the config state lock is never poisoned").targets.clone();
+        let targets: BTreeMap<String, WatchTarget> = {
+            let state = self.inner.state.read().expect("the config state lock is never poisoned");
+            state.targets.iter().map(|(key, watched)| (key.clone(), watched.target.clone())).collect()
+        };
         self.inner.watcher.reconcile(&targets)
+    }
+
+    fn from_weak(inner: &Weak<Inner>) -> Option<Self> {
+        Some(Self { inner: inner.upgrade()? })
     }
 
     fn request_reload(&self) {
@@ -268,26 +318,31 @@ impl ConfigService {
     }
 
     fn spawn_updates(&self) {
-        let service = self.clone();
-        let mut updates = service.inner.updates.subscribe();
-        tokio::spawn(async move {
+        let mut updates = self.inner.updates.subscribe();
+        let inner = Arc::downgrade(&self.inner);
+        let task = tokio::spawn(async move {
             loop {
                 match updates.recv().await {
                     Ok(update) => {
+                        let Some(service) = Self::from_weak(&inner) else { return };
                         if service.needs_reload(&update.path) {
                             service.request_reload();
                         }
                     }
-                    Err(broadcast::error::RecvError::Lagged(_)) => continue,
+                    Err(broadcast::error::RecvError::Lagged(_)) => {
+                        let Some(service) = Self::from_weak(&inner) else { return };
+                        service.request_reload();
+                    }
                     Err(broadcast::error::RecvError::Closed) => return,
                 }
             }
         });
+        self.track(task);
     }
 
     fn spawn_reloads(&self, mut requests: mpsc::UnboundedReceiver<()>) {
-        let service = self.clone();
-        tokio::spawn(async move {
+        let inner = Arc::downgrade(&self.inner);
+        let task = tokio::spawn(async move {
             while requests.recv().await.is_some() {
                 loop {
                     match tokio::time::timeout(DEBOUNCE, requests.recv()).await {
@@ -296,30 +351,36 @@ impl ConfigService {
                         Err(_) => break,
                     }
                 }
+                let Some(service) = Self::from_weak(&inner) else { return };
                 service.reload().await;
             }
         });
+        self.track(task);
     }
 
     fn spawn_wellknown(&self) {
-        let service = self.clone();
         let mut updates = self.inner.deps.wellknown.subscribe();
-        tokio::spawn(async move {
+        let inner = Arc::downgrade(&self.inner);
+        let task = tokio::spawn(async move {
             loop {
                 match updates.recv().await {
-                    Ok(()) => service.reload().await,
-                    Err(broadcast::error::RecvError::Lagged(_)) => continue,
+                    Ok(()) | Err(broadcast::error::RecvError::Lagged(_)) => {
+                        let Some(service) = Self::from_weak(&inner) else { return };
+                        service.reload().await;
+                    }
                     Err(broadcast::error::RecvError::Closed) => return,
                 }
             }
         });
+        self.track(task);
 
-        let service = self.clone();
-        tokio::spawn(async move {
+        let inner = Arc::downgrade(&self.inner);
+        let task = tokio::spawn(async move {
             let start = tokio::time::Instant::now() + REFRESH;
             let mut interval = tokio::time::interval_at(start, REFRESH);
             loop {
                 interval.tick().await;
+                let Some(service) = Self::from_weak(&inner) else { return };
                 if service.inner.deps.wellknown.snapshot().is_empty() {
                     continue;
                 }
@@ -328,6 +389,11 @@ impl ConfigService {
                 }
             }
         });
+        self.track(task);
+    }
+
+    fn track(&self, task: JoinHandle<()>) {
+        self.inner.tasks.lock().expect("the config task list is never poisoned").push(task);
     }
 
     fn needs_reload(&self, path: &std::path::Path) -> bool {
@@ -335,9 +401,9 @@ impl ConfigService {
         if state.inputs.matches(path) {
             return true;
         }
-        for target in state.targets.values() {
-            let root = target.path();
-            let real = realpath(root).unwrap_or_else(|| root.to_path_buf());
+        for watched in state.targets.values() {
+            let root = watched.target.path();
+            let Some(real) = watched.real.clone().or_else(|| realpath(root)) else { continue };
             if real == root || !watch::contains(&real, path) {
                 continue;
             }

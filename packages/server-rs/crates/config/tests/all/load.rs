@@ -8,7 +8,7 @@ use opencode_config::options::{ConfigLocation, ConfigOptions, SystemOption};
 use opencode_config::paths::GlobalPaths;
 use opencode_config::policy;
 use opencode_config::seams::{
-    BoxFuture, CredentialLookup, CredentialValue, NoKv, WellKnownEntry, WellKnownError, WellKnownSource,
+    BoxFuture, CredentialLookup, CredentialValue, WellKnownEntry, WellKnownError, WellKnownSource,
 };
 use opencode_contract::codec::{Decode, Encode, decode_json, encode_json};
 use opencode_contract::generated::{ConfigEntryDocumentInfo, ConfigEntryDocumentInfoPoliciesItemAction};
@@ -69,13 +69,7 @@ async fn verify(case: &crate::support::Case) {
     let wellknown = corpus_wellknown(&case.value["wellknown"]);
     let integrations: Vec<Document> =
         case.value["integrations"].as_array().cloned().unwrap_or_default().iter().map(integration_document).collect();
-    let deps = LoadDeps {
-        credentials: &credentials,
-        wellknown: &wellknown,
-        kv: &NoKv,
-        integrations: &integrations,
-        home: &home,
-    };
+    let deps = LoadDeps { credentials: &credentials, wellknown: &wellknown, integrations: &integrations, home: &home };
 
     let loaded = load(&sources, &options, &location, &deps, flags).await;
 

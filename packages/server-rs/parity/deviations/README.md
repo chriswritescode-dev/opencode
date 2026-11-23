@@ -29,9 +29,13 @@ Each file has these paragraphs, in order:
 - `OR-39-remote-tunnel.md`: a `remote` service route prints a warning instead of starting a tunnel
 - `OR-39-logging.md`: diagnostic lines go to stderr and no log file is written
 - `OR-39-usage-errors.md`: malformed arguments print one fixed usage line and exit with code 1
+- `OR-42-canonical-failure.md`: a migrated legacy entry that fails re-decoding is dropped with an invalid diagnostic
+- `OR-42-config-read-errors.md`: an unreadable or unresolvable config file is skipped instead of failing the load
+- `OR-42-duration-precision.md`: durations beyond i128 nanoseconds or with 39 or more fractional digits are rejected
+- `OR-42-file-home.md`: `{file:~/...}` expands from the configured home instead of `os.homedir()`
+- `OR-42-macos-preferences-user.md`: managed preferences take the user name from `$USER` instead of the passwd entry
 - `OR-42-observer-initial-apply.md`: the sources observer applies its initial load instead of returning it
-- `OR-42-variable-warning.md`: a missing config file reference substitutes empty without a warning
-- `OR-42-wellknown-warnings.md`: well-known source failures are silent instead of logged
+- `OR-42-watcher-ignore.md`: config watching ignores directories per event and uses one native watcher per target
 - `OR-44-aws-credentials.md`: Bedrock credentials come only from route configuration, not the AWS default chain
 - `OR-44-bedrock-output.md`: Bedrock frames, cache warnings and SigV4 output carry different wire details
 - `OR-44-client-tls.md`: per-request client certificates are not presented

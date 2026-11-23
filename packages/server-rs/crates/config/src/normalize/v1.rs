@@ -397,6 +397,7 @@ pub fn migrate_providers(value: Option<&Value>, diagnostics: &mut Vec<Diagnostic
         };
         let destination = provider_id(name).to_owned();
         let Some(provider) = canonical::<ConfigEntryDocumentInfoProvidersValue>(&migrate_provider(name, &info)) else {
+            invalid(&path, diagnostics);
             continue;
         };
         candidates.push((name.clone(), destination, provider));
@@ -681,7 +682,7 @@ fn migrate_standard_provider(info: &Value) -> Value {
         out.insert("env".to_owned(), env.clone());
     }
     let npm = map.get("npm").and_then(Value::as_str);
-    if let Some(npm) = npm {
+    if let Some(npm) = npm.filter(|value| !value.is_empty()) {
         out.insert("package".to_owned(), Value::String(package_specifier(npm)));
     }
     if let Some(set_cache_key) = set_cache_key {
@@ -690,7 +691,7 @@ fn migrate_standard_provider(info: &Value) -> Value {
             object(vec![("supportsPromptCacheKey".to_owned(), Value::Bool(set_cache_key))]),
         );
     }
-    let settings = if let Some(api) = map.get("api").and_then(Value::as_str) {
+    let settings = if let Some(api) = map.get("api").and_then(Value::as_str).filter(|value| !value.is_empty()) {
         let mut settings = overlays.settings.clone();
         let base_url = settings.get("baseURL").and_then(Value::as_str).filter(|value| !value.is_empty()).unwrap_or(api);
         settings.insert("baseURL".to_owned(), Value::String(base_url.to_owned()));
@@ -901,13 +902,17 @@ fn migrate_model(info: &Value, npm: Option<&str>) -> Value {
     if let Some(compatibility) = compatibility {
         out.insert("compatibility".to_owned(), compatibility);
     }
-    if let Some(npm) =
-        map.get("provider").and_then(as_object).and_then(|provider| provider.get("npm")).and_then(Value::as_str)
+    if let Some(npm) = map
+        .get("provider")
+        .and_then(as_object)
+        .and_then(|provider| provider.get("npm"))
+        .and_then(Value::as_str)
+        .filter(|value| !value.is_empty())
     {
         out.insert("package".to_owned(), Value::String(package_specifier(npm)));
     }
     let provider_api = map.get("provider").and_then(as_object).and_then(|provider| provider.get("api"));
-    let settings = match provider_api.and_then(Value::as_str) {
+    let settings = match provider_api.and_then(Value::as_str).filter(|value| !value.is_empty()) {
         Some(api) => {
             let mut settings = settings.unwrap_or_default();
             settings.insert("baseURL".to_owned(), Value::String(api.to_owned()));

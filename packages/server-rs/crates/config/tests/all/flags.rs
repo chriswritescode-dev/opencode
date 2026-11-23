@@ -65,5 +65,5 @@ fn the_corpus_covers_the_pinned_registry() {
 
 #[test]
 fn build_channel_defaults_to_local() {
-    assert_eq!(build_channel(), "local");
+    assert_eq!(build_channel(), option_env!("OPENCODE_CHANNEL").unwrap_or("local"));
 }
