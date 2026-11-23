@@ -1,0 +1,14 @@
+pub const STR: u16 = 0b000000001;
+pub const NUM: u16 = 0b000000010;
+pub const ARR: u16 = 0b000000100;
+pub const OBJ: u16 = 0b000001000;
+pub const NULL: u16 = 0b000010000;
+pub const BOOL: u16 = 0b000100000;
+pub const NAN: u16 = 0b001000000;
+pub const INFINITY: u16 = 0b010000000;
+pub const _INFINITY: u16 = 0b100000000;
+pub const INF: u16 = INFINITY | _INFINITY;
+pub const SPECIAL: u16 = NULL | BOOL | INF | NAN;
+pub const ATOM: u16 = STR | NUM | SPECIAL;
+pub const COLLECTION: u16 = ARR | OBJ;
+pub const ALL: u16 = ATOM | COLLECTION;

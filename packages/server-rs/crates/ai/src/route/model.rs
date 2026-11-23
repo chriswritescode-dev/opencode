@@ -109,7 +109,7 @@ impl ProtocolRegistry {
     }
 
     pub fn builtin() -> Self {
-        Self::new()
+        crate::protocols::registry()
     }
 }
 

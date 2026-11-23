@@ -53,7 +53,7 @@ pub struct Usage {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub total_tokens: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub cost: Option<f64>,
+    pub cost: Option<serde_json::Number>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub provider_metadata: Option<ProviderMetadata>,
 }
