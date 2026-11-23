@@ -3,12 +3,18 @@ import { Document, Info } from "@opencode/schema/config"
 import { FlagResolve } from "@opencode/core/flag/resolve"
 import { ConfigNormalize } from "@opencode/core/config/normalize"
 import { ConfigVariable } from "@opencode/core/config/variable"
+import { ConfigDiscovery } from "@opencode/core/config/discovery"
+import { ConfigWatch } from "@opencode/core/config/watch"
 import { FSUtil } from "@opencode/util/fs-util"
 import { LayerNode } from "@opencode/util/effect/layer-node"
-import { Effect, Logger, Option, Schema } from "effect"
+import { Global } from "@opencode/util/global"
+import { Location } from "@opencode/core/location"
+import { Project } from "@opencode/core/project"
+import { AbsolutePath } from "@opencode/core/schema"
+import { Effect, Layer, Logger, Option, Schema } from "effect"
 import { parse, type ParseError } from "jsonc-parser"
 import path from "node:path"
-import { mkdir, rm, writeFile } from "node:fs/promises"
+import { chmod, mkdir, realpath, rm, symlink, writeFile } from "node:fs/promises"
 
 const options = { errors: "all", onExcessProperty: "ignore" } as const
 const decodeInfo = Schema.decodeUnknownOption(Info, options)
@@ -17,6 +23,7 @@ const area = process.argv[2]
 if (area === "flags") exportFlags()
 else if (area === "normalize") exportNormalize()
 else if (area === "substitute") await exportSubstitute()
+else if (area === "discover") await exportDiscover()
 else {
   console.error(`corpus: unknown area ${area ?? ""}`)
   process.exit(1)
@@ -1174,6 +1181,292 @@ async function exportSubstitute() {
         references: [...references].map((ref) => path.relative(root, ref).split(path.sep).join("/")).sort(),
       })}`,
     )
+  }
+  process.stdout.write(`{\n${lines.join(",\n")}\n}\n`)
+}
+
+type DiscoverCase = {
+  directories?: string[]
+  files?: Record<string, string>
+  symlinks?: Record<string, string>
+  modes?: Record<string, number>
+  options?: {
+    project?: boolean
+    global?: boolean
+    claude?: boolean
+    system?: boolean | string
+    file?: string
+    content?: string
+  }
+  location: { directory: string; project_id: string }
+  global: { config: string; home: string }
+}
+
+async function exportDiscover() {
+  const corpus = process.env.OPENCODE_CORPUS_ROOT
+  if (!corpus) {
+    console.error("corpus: discover needs OPENCODE_CORPUS_ROOT")
+    process.exit(1)
+  }
+
+  const g = { config: "global", home: "global/home" }
+  const cases: Record<string, DiscoverCase> = {
+    "absent-ancestor-candidates": {
+      directories: ["ws/org/repo/.opencode"],
+      files: { "ws/org/repo/packages/feature/opencode.json": "{}" },
+      options: { system: false },
+      location: { directory: "ws/org/repo/packages/feature", project_id: "global" },
+      global: g,
+    },
+    "denied-ancestor-listing": {
+      directories: ["guarded/.opencode", "guarded/project"],
+      modes: { guarded: 0o111 },
+      options: { system: false },
+      location: { directory: "guarded/project", project_id: "global" },
+      global: g,
+    },
+    "mixed-case-names": {
+      directories: ["Workspace/Repo/.opencode", "Workspace/Repo/.claude", "Workspace/Repo/.agents"],
+      files: { "Workspace/Repo/opencode.jsonc": "{}" },
+      options: { system: false },
+      location: { directory: "Workspace/Repo", project_id: "global" },
+      global: g,
+    },
+    "ancestors-across-project-boundary": {
+      directories: ["a/.opencode", "a/b/.opencode", "a/b/c/.opencode"],
+      files: { "a/b/c/d/opencode.json": "{}" },
+      options: { system: false },
+      location: { directory: "a/b/c/d", project_id: "global" },
+      global: g,
+    },
+    "global-disabled-home-claude-agents": {
+      directories: ["global/home/.claude", "global/home/.agents", "global/home/project"],
+      options: { global: false, system: false },
+      location: { directory: "global/home/project", project_id: "global" },
+      global: g,
+    },
+    "claude-disabled": {
+      directories: ["global/home/.claude", "global/home/.agents", "project/.claude", "project/.agents"],
+      options: { claude: false, system: false },
+      location: { directory: "project", project_id: "global" },
+      global: g,
+    },
+    "global-disabled-walk-reaches-global-file": {
+      directories: ["global/plugins/demo"],
+      files: { "global/opencode.json": "{}" },
+      options: { global: false, system: false },
+      location: { directory: "global/plugins/demo", project_id: "global" },
+      global: g,
+    },
+    "location-inside-global-config": {
+      directories: ["global/plugins/demo"],
+      files: { "global/opencode.json": "{}" },
+      options: { system: false },
+      location: { directory: "global/plugins/demo", project_id: "global" },
+      global: g,
+    },
+    "symlinked-global-root": {
+      directories: ["real/.opencode"],
+      files: { "real/.opencode/opencode.json": "{}" },
+      symlinks: { link: "real" },
+      options: { system: false },
+      location: { directory: "link", project_id: "global" },
+      global: { config: "real/.opencode", home: "global/home" },
+    },
+    "global-root-same-spelling": {
+      directories: ["real/.opencode"],
+      files: { "real/.opencode/opencode.json": "{}" },
+      options: { system: false },
+      location: { directory: "real", project_id: "global" },
+      global: { config: "real/.opencode", home: "global/home" },
+    },
+    "system-directory": {
+      directories: ["system", "project"],
+      files: { "system/opencode.json": "{}", "global/opencode.json": "{}", "project/opencode.json": "{}" },
+      options: { system: "system" },
+      location: { directory: "project", project_id: "global" },
+      global: g,
+    },
+    "project-disabled": {
+      directories: ["project/.opencode"],
+      files: { "project/opencode.json": "{}" },
+      options: { project: false, system: false },
+      location: { directory: "project", project_id: "global" },
+      global: g,
+    },
+    "missing-project-directory": {
+      options: { system: false },
+      location: { directory: "project", project_id: "global" },
+      global: g,
+    },
+    "explicit-file": {
+      files: { "custom.json": "{}", "project/opencode.json": "{}" },
+      options: { file: "custom.json", content: `{"shell":"content"}`, system: false },
+      location: { directory: "project", project_id: "global" },
+      global: g,
+    },
+    "global-enabled-home-directories": {
+      directories: ["global/home/.claude", "global/home/.agents", "global/home/project"],
+      options: { system: false },
+      location: { directory: "global/home/project", project_id: "global" },
+      global: g,
+    },
+    "overlay-present": {
+      directories: ["global/project/proj_one"],
+      options: { system: false },
+      location: { directory: "project", project_id: "proj_one" },
+      global: g,
+    },
+    "overlay-missing": {
+      options: { system: false },
+      location: { directory: "project", project_id: "proj_missing" },
+      global: g,
+    },
+    "overlay-global-project": {
+      directories: ["global/project/global"],
+      options: { system: false },
+      location: { directory: "project", project_id: "global" },
+      global: g,
+    },
+    "overlay-global-disabled": {
+      directories: ["global/project/proj_one"],
+      options: { global: false, system: false },
+      location: { directory: "project", project_id: "proj_one" },
+      global: g,
+    },
+    "overlay-project-disabled": {
+      directories: ["global/project/proj_one"],
+      options: { project: false, system: false },
+      location: { directory: "project", project_id: "proj_one" },
+      global: g,
+    },
+    "overlay-home": {
+      directories: ["global/project/home-project"],
+      options: { system: false },
+      location: { directory: "global/home", project_id: "home-project" },
+      global: g,
+    },
+  }
+
+  const fsLayer = LayerNode.compile(FSUtil.node)
+  const lines: Array<string> = []
+  for (const name of Object.keys(cases).sort()) {
+    const item = cases[name]!
+    const dir = path.join(corpus, name)
+    await rm(dir, { recursive: true, force: true })
+    await mkdir(dir, { recursive: true })
+    const root = await realpath(dir)
+    const inside = (value: string) => {
+      const relative = path.relative(root, value)
+      return relative === "" || (relative !== ".." && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative))
+    }
+    const rel = (value: string) => path.relative(root, value).split(path.sep).join("/")
+
+    for (const directory of item.directories ?? []) await mkdir(path.join(root, directory), { recursive: true })
+    for (const [file, content] of Object.entries(item.files ?? {})) {
+      const target = path.join(root, file)
+      await mkdir(path.dirname(target), { recursive: true })
+      await writeFile(target, content)
+    }
+    for (const [link, target] of Object.entries(item.symlinks ?? {})) {
+      const linkPath = path.join(root, link)
+      await mkdir(path.dirname(linkPath), { recursive: true })
+      await symlink(path.join(root, target), linkPath)
+    }
+    for (const [file, mode] of Object.entries(item.modes ?? {})) await chmod(path.join(root, file), mode)
+
+    const globalLayer = Layer.succeed(
+      Global.Service,
+      Global.Service.of({
+        home: path.join(root, item.global.home),
+        config: path.join(root, item.global.config),
+        data: path.join(root, ".runtime/data"),
+        cache: path.join(root, ".runtime/cache"),
+        state: path.join(root, ".runtime/state"),
+        tmp: path.join(root, ".runtime/tmp"),
+        bin: path.join(root, ".runtime/bin"),
+        log: path.join(root, ".runtime/log"),
+        repos: path.join(root, ".runtime/repos"),
+      }),
+    )
+    const locationDirectory = AbsolutePath.make(path.join(root, item.location.directory))
+    const locationLayer = Layer.succeed(
+      Location.Service,
+      Location.Service.of({
+        directory: locationDirectory,
+        workspaceID: undefined,
+        project: {
+          id: Project.ID.make(item.location.project_id),
+          directory: locationDirectory,
+          canonical: locationDirectory,
+        },
+      }),
+    )
+    const layer = Layer.mergeAll(fsLayer, globalLayer, locationLayer)
+    const options = {
+      project: item.options?.project,
+      global: item.options?.global,
+      claude: item.options?.claude,
+      system:
+        item.options?.system === false
+          ? false
+          : item.options?.system === undefined
+            ? undefined
+            : path.join(root, item.options.system),
+      file: item.options?.file === undefined ? undefined : path.join(root, item.options.file),
+      content: item.options?.content,
+    }
+
+    try {
+      const sources = await Effect.runPromise(
+        ConfigDiscovery.discover(options).pipe(Effect.provide(layer), Effect.provide(Logger.layer([]))),
+      )
+      const overlay = await Effect.runPromise(
+        ConfigDiscovery.overlay(options).pipe(Effect.provide(layer), Effect.provide(Logger.layer([]))),
+      )
+      const plan = [...ConfigWatch.plan(sources).values()]
+        .filter((target) => inside(target.path))
+        .map((target) =>
+          target.type === "directory"
+            ? { path: rel(target.path), type: "directory", ignore: [...target.ignore] }
+            : { path: rel(target.path), type: "entries", names: [...target.names].sort() },
+        )
+        .sort((a, b) => {
+          const left = JSON.stringify(a)
+          const right = JSON.stringify(b)
+          return left < right ? -1 : left > right ? 1 : 0
+        })
+      lines.push(
+        `${JSON.stringify(name)}:${JSON.stringify({
+          files: item.files ?? {},
+          directories: item.directories ?? [],
+          symlinks: item.symlinks ?? {},
+          modes: item.modes ?? {},
+          options: item.options ?? {},
+          location: item.location,
+          global: item.global,
+          sources: {
+            system:
+              sources.system && inside(sources.system.path)
+                ? { path: rel(sources.system.path), present: sources.system.present }
+                : null,
+            preferences: sources.preferences && inside(sources.preferences) ? rel(sources.preferences) : null,
+            global: sources.global && inside(sources.global) ? rel(sources.global) : null,
+            explicit: sources.explicit && inside(sources.explicit) ? rel(sources.explicit) : null,
+            direct: sources.direct.filter(inside).map(rel),
+            project: sources.project
+              .filter((entry) => inside(entry.path))
+              .map((entry) => ({ path: rel(entry.path), present: entry.present })),
+            claude: sources.claude.filter(inside).map(rel),
+            agents: sources.agents.filter(inside).map(rel),
+          },
+          overlay: overlay && inside(overlay.path) ? { path: rel(overlay.path), present: overlay.present } : null,
+          plan,
+        })}`,
+      )
+    } finally {
+      for (const file of Object.keys(item.modes ?? {})) await chmod(path.join(root, file), 0o755)
+    }
   }
   process.stdout.write(`{\n${lines.join(",\n")}\n}\n`)
 }

@@ -1,3 +1,4 @@
+mod discover;
 mod flags;
 mod normalize;
 mod paths;
