@@ -1,0 +1,5 @@
+# Must match packages/cli-rs/rust-toolchain.toml: the server links and tests the client's crates.
+[toolchain]
+channel = "1.99.1"
+profile = "minimal"
+components = ["rustfmt", "clippy", "rust-src"]
