@@ -21,6 +21,10 @@ impl Settings {
         self.values.get(key).and_then(Value::as_str)
     }
 
+    pub fn boolean(&self, key: &str) -> Option<bool> {
+        self.values.get(key).and_then(Value::as_bool)
+    }
+
     pub fn optional_string(&self, key: &str) -> Option<String> {
         self.string(key).map(str::to_string)
     }

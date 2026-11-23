@@ -52,7 +52,10 @@ const STREAM_BLOCK_TYPES: [&str; 6] =
 const STREAM_DELTA_TYPES: [&str; 5] =
     ["compaction_delta", "text_delta", "thinking_delta", "signature_delta", "input_json_delta"];
 
-pub struct AnthropicMessages;
+#[derive(Default)]
+pub struct AnthropicMessages {
+    pub effort_updates_require_5_1: bool,
+}
 
 #[derive(Debug, Clone, PartialEq)]
 struct BlockBinding {
@@ -2177,7 +2180,23 @@ impl Protocol for AnthropicMessages {
             .and_then(|thinking| thinking.get("type"))
             .and_then(Value::as_str)
             .is_some_and(|kind| kind == "disabled" || kind == "between_tools");
-        model_supports_effort_updates(model, thinking_off)
+        if !model_supports_effort_updates(model, thinking_off) {
+            return false;
+        }
+        if !self.effort_updates_require_5_1 {
+            return true;
+        }
+        if model
+            .capabilities
+            .as_ref()
+            .and_then(|capabilities| capabilities.get("reasoning"))
+            .and_then(|reasoning| reasoning.get("updates"))
+            .is_some()
+        {
+            return true;
+        }
+        claude_model::claude_version(&model.id)
+            .is_some_and(|version| version.major > 5 || (version.major == 5 && version.minor >= 1))
     }
 
     fn tool_updates(&self) -> Option<ToolUpdateEncoding> {

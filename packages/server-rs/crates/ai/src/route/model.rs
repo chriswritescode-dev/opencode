@@ -22,6 +22,7 @@ pub enum RouteTransport {
 }
 
 pub type HeaderFactory = Arc<dyn Fn(&LlmRequest) -> Vec<(String, String)> + Send + Sync>;
+pub type BodyTransform = Arc<dyn Fn(Value, &ResolvedRequest, &Model) -> Result<Value, AiError> + Send + Sync>;
 
 #[derive(Clone)]
 pub struct Route {
@@ -31,6 +32,8 @@ pub struct Route {
     pub endpoint: Endpoint,
     pub auth: Auth,
     pub headers: Option<HeaderFactory>,
+    pub body: Option<BodyTransform>,
+    pub channel: Option<Arc<crate::protocols::open_responses_channel::Options>>,
     pub transport: RouteTransport,
     pub options: Option<RequestOptions>,
 }
@@ -144,6 +147,8 @@ impl Model {
                 endpoint: Endpoint { base_url: endpoint.base_url, path, query: endpoint.query.unwrap_or_default() },
                 auth: auth.into(),
                 headers: None,
+                body: None,
+                channel: None,
                 transport,
                 options: route_options,
             },

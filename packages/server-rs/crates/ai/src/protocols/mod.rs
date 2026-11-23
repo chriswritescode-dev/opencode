@@ -14,7 +14,7 @@ pub mod utils;
 
 pub fn registry() -> crate::route::model::ProtocolRegistry {
     let mut registry = crate::route::model::ProtocolRegistry::new();
-    registry.register(std::sync::Arc::new(anthropic_messages::AnthropicMessages));
+    registry.register(std::sync::Arc::new(anthropic_messages::AnthropicMessages::default()));
     registry.register(std::sync::Arc::new(bedrock_converse::BedrockConverse));
     registry.register(std::sync::Arc::new(gemini::Gemini));
     registry.register(std::sync::Arc::new(open_responses::OpenResponses));

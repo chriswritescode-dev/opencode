@@ -10,6 +10,7 @@ use crate::clock::utc_datetime;
 use crate::schema::{AiError, AiErrorReason};
 
 pub const DEFAULT_SIGV4_SERVICE: &str = "bedrock";
+pub const DEFAULT_SIGV4_NAME: &str = "Bedrock Converse";
 
 const UNSIGNABLE_HEADERS: [&str; 9] = [
     "authorization",
@@ -177,7 +178,7 @@ impl Auth {
             },
             Auth::SigV4(source) => {
                 let headers = set_header(input.headers, "content-type", "application/json");
-                sign_sigv4(source, &input.method, &input.url, &input.body, headers, input.now_ms, "Bedrock Converse")
+                sign_sigv4(source, &input.method, &input.url, &input.body, headers, input.now_ms, &source.name)
             }
         }
     }
@@ -322,6 +323,7 @@ pub struct SigV4Source {
     pub secret_access_key: String,
     pub session_token: Option<String>,
     pub service: String,
+    pub name: String,
 }
 
 #[derive(Debug, Clone, serde::Serialize, Deserialize)]
@@ -356,6 +358,7 @@ impl From<AuthDescriptor> for Auth {
                     secret_access_key,
                     session_token,
                     service: DEFAULT_SIGV4_SERVICE.to_string(),
+                    name: DEFAULT_SIGV4_NAME.to_string(),
                 })
             }
             AuthDescriptor::None => Auth::None,

@@ -474,7 +474,7 @@ async fn replay_websocket_cassette(cassette: &Cassette) {
 #[tokio::test]
 async fn every_in_scope_cassette_replays() {
     let corpus = crate::corpus::Corpus::load();
-    assert_eq!(corpus.cassettes.len(), 51, "in-scope cassette count");
+    assert_eq!(corpus.cassettes.len(), 63, "in-scope cassette count");
     let groups = [
         "anthropic-messages",
         "bedrock-converse",
@@ -482,6 +482,7 @@ async fn every_in_scope_cassette_replays() {
         "open-responses",
         "openai-chat",
         "openai-responses-websocket",
+        "wrapped-core",
     ];
     for cassette in &corpus.cassettes {
         assert!(groups.contains(&cassette.group.as_str()), "{} has unexpected group {}", cassette.name, cassette.group);
@@ -498,7 +499,16 @@ async fn every_in_scope_cassette_replays() {
         }
         replayed += 1;
     }
-    assert_eq!(replayed, 51, "replayed cassette count");
+    assert_eq!(replayed, 63, "replayed cassette count");
+}
+
+#[tokio::test]
+async fn wrapped_core_cassettes() {
+    let corpus = crate::corpus::Corpus::load();
+    let cassettes = corpus.cassettes.iter().filter(|cassette| cassette.group == "wrapped-core").count();
+    assert_eq!(cassettes, 12, "wrapped-core cassette count");
+    let steps = replay_group("wrapped-core").await;
+    assert_eq!(steps, 14, "wrapped-core step count");
 }
 
 #[tokio::test]

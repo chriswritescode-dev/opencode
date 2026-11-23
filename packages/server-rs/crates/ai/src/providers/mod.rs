@@ -5,8 +5,10 @@ use crate::route::model::Model;
 use crate::schema::{AiError, AiErrorReason};
 
 pub mod amazon_bedrock;
+pub mod amazon_bedrock_mantle;
 pub mod anthropic;
 pub mod anthropic_compatible;
+pub mod azure;
 pub mod cerebras;
 pub mod deepinfra;
 pub mod google;
@@ -39,19 +41,38 @@ pub(crate) fn language_model(
     compatibility: Option<serde_json::Value>,
     capabilities: Option<serde_json::Value>,
 ) -> RuntimeModel {
-    RuntimeModel::Language(Model {
-        id: model_id.to_string(),
-        provider: provider.to_string(),
-        route: crate::route::model::Route {
+    language_model_with_route(
+        model_id,
+        provider,
+        crate::route::model::Route {
             id: route_id.to_string(),
             protocol,
             provider_metadata_key: provider_metadata_key.map(str::to_string),
             endpoint,
             auth,
             headers: None,
+            body: None,
+            channel: None,
             transport: crate::route::model::RouteTransport::Http,
             options: options.clone(),
         },
+        compatibility,
+        capabilities,
+    )
+}
+
+pub(crate) fn language_model_with_route(
+    model_id: &str,
+    provider: &str,
+    route: crate::route::model::Route,
+    compatibility: Option<serde_json::Value>,
+    capabilities: Option<serde_json::Value>,
+) -> RuntimeModel {
+    let options = route.options.clone();
+    RuntimeModel::Language(Model {
+        id: model_id.to_string(),
+        provider: provider.to_string(),
+        route,
         options,
         compatibility,
         capabilities,
@@ -68,8 +89,16 @@ impl ProviderPackages {
     pub fn builtin() -> Self {
         let entries = BTreeMap::from([
             ("@opencode/ai/providers/amazon-bedrock", amazon_bedrock::model as Entry),
+            ("@opencode/ai/providers/amazon-bedrock/mantle", amazon_bedrock_mantle::model as Entry),
+            ("@opencode/ai/providers/amazon-bedrock/mantle/chat", amazon_bedrock_mantle::chat_model as Entry),
+            ("@opencode/ai/providers/amazon-bedrock/mantle/messages", amazon_bedrock_mantle::messages_model as Entry),
+            ("@opencode/ai/providers/amazon-bedrock/mantle/responses", amazon_bedrock_mantle::responses_model as Entry),
             ("@opencode/ai/providers/anthropic", anthropic::model as Entry),
             ("@opencode/ai/providers/anthropic-compatible", anthropic_compatible::model as Entry),
+            ("@opencode/ai/providers/azure", azure::model as Entry),
+            ("@opencode/ai/providers/azure/chat", azure::chat_model as Entry),
+            ("@opencode/ai/providers/azure/messages", azure::messages_model as Entry),
+            ("@opencode/ai/providers/azure/responses", azure::responses_model as Entry),
             ("@opencode/ai/providers/cerebras", cerebras::model as Entry),
             ("@opencode/ai/providers/deepinfra", deepinfra::model as Entry),
             ("@opencode/ai/providers/google", google::model as Entry),

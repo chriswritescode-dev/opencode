@@ -10,16 +10,6 @@ use crate::schema::{AiError, GenerationOptions, RequestOptions, StringMap, merge
 
 pub const ID: &str = "amazon-bedrock";
 
-#[derive(serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct CredentialsInput {
-    region: String,
-    access_key_id: String,
-    secret_access_key: String,
-    #[serde(default)]
-    session_token: Option<String>,
-}
-
 pub fn model(model_id: &str, settings: &Settings, env: &dyn Env) -> Result<RuntimeModel, AiError> {
     let api_key = settings.string("apiKey").map(str::to_string);
     let mode = match settings.string("auth") {
@@ -36,7 +26,7 @@ pub fn model(model_id: &str, settings: &Settings, env: &dyn Env) -> Result<Runti
     if matches!(mode, Some(bedrock_auth::AuthMode::Sigv4)) && api_key.is_some() {
         return Err(invalid_request("Amazon Bedrock SigV4 auth does not accept apiKey"));
     }
-    let credentials = credentials(settings);
+    let credentials = bedrock_auth::credentials(settings.value("credentials"));
     let region = bedrock_auth::resolve_region(settings.string("region"), credentials.as_ref(), env);
     let base_url = settings
         .string("baseURL")
@@ -45,7 +35,7 @@ pub fn model(model_id: &str, settings: &Settings, env: &dyn Env) -> Result<Runti
     let auth = bedrock_auth::resolve_auth(
         bedrock_auth::ResolveAuthInput { api_key, credentials, profile: settings.optional_string("profile") },
         &region,
-        bedrock_auth::ResolveAuthOptions { service: None, mode },
+        bedrock_auth::ResolveAuthOptions { service: None, name: None, mode },
         env,
     )?;
     let options = settings.request_options(&["apiKey", "auth", "baseURL", "credentials", "profile", "region", "topP"]);
@@ -65,14 +55,4 @@ pub fn model(model_id: &str, settings: &Settings, env: &dyn Env) -> Result<Runti
         None,
         None,
     ))
-}
-
-fn credentials(settings: &Settings) -> Option<bedrock_auth::Credentials> {
-    let input: CredentialsInput = serde_json::from_value(settings.value("credentials")?.clone()).ok()?;
-    Some(bedrock_auth::Credentials {
-        region: input.region,
-        access_key_id: input.access_key_id,
-        secret_access_key: input.secret_access_key,
-        session_token: input.session_token,
-    })
 }

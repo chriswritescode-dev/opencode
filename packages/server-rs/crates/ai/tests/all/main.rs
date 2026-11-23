@@ -1,6 +1,7 @@
 #![allow(clippy::result_large_err)]
 
 mod auth;
+mod compile;
 mod corpus;
 mod event_stream;
 mod executor;

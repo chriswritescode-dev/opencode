@@ -31,6 +31,41 @@
       "group": "anthropic-messages"
     },
     {
+      "cassette": "azure/chat-streams-text",
+      "protocol": "openai-chat",
+      "group": "wrapped-core"
+    },
+    {
+      "cassette": "azure/chat-streams-text-from-a-foundry-models-url",
+      "protocol": "openai-chat",
+      "group": "wrapped-core"
+    },
+    {
+      "cassette": "azure/messages-calls-a-tool",
+      "protocol": "anthropic-messages",
+      "group": "wrapped-core"
+    },
+    {
+      "cassette": "azure/messages-streams-text",
+      "protocol": "anthropic-messages",
+      "group": "wrapped-core"
+    },
+    {
+      "cassette": "azure/responses-calls-a-tool",
+      "protocol": "openai-responses",
+      "group": "wrapped-core"
+    },
+    {
+      "cassette": "azure/responses-continues-after-a-tool-result",
+      "protocol": "openai-responses",
+      "group": "wrapped-core"
+    },
+    {
+      "cassette": "azure/responses-streams-text",
+      "protocol": "openai-responses",
+      "group": "wrapped-core"
+    },
+    {
       "cassette": "bedrock-converse-cache/writes-then-reads-cachepoint-on-identical-second-call",
       "protocol": "bedrock-converse",
       "group": "bedrock-converse"
@@ -84,6 +119,31 @@
       "cassette": "bedrock-converse/streams-text",
       "protocol": "bedrock-converse",
       "group": "bedrock-converse"
+    },
+    {
+      "cassette": "bedrock-mantle-messages/applies-mid-conversation-effort-updates-and-thinking-block-binding-on-opus-5-5",
+      "protocol": "anthropic-messages",
+      "group": "wrapped-core"
+    },
+    {
+      "cassette": "bedrock-mantle-messages/lowers-system-updates-to-wrapped-user-text-on-haiku-4-5-with-budget-thinking",
+      "protocol": "anthropic-messages",
+      "group": "wrapped-core"
+    },
+    {
+      "cassette": "bedrock-mantle-messages/replays-signed-thinking-through-a-tool-loop-and-native-system-update",
+      "protocol": "anthropic-messages",
+      "group": "wrapped-core"
+    },
+    {
+      "cassette": "bedrock-mantle-messages/strips-unsupported-mid-conversation-effort-updates-on-opus-5-0",
+      "protocol": "anthropic-messages",
+      "group": "wrapped-core"
+    },
+    {
+      "cassette": "bedrock-mantle/streams-text",
+      "protocol": "open-responses",
+      "group": "wrapped-core"
     },
     {
       "cassette": "cerebras-chat/cerebras-gpt-oss-120b-text",

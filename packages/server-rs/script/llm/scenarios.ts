@@ -14,6 +14,8 @@ const {
   Anthropic,
   AnthropicCompatible,
   AmazonBedrock,
+  AmazonBedrockMantle,
+  Azure,
   Cerebras,
   DeepInfra,
   Google,
@@ -71,6 +73,32 @@ const bedrockCache = AmazonBedrock.configure({ apiKey: "fixture", region: "us-ea
 const bedrockPdf = AmazonBedrock.configure({ apiKey: "fixture", region: "us-east-1" }).model(
   "us.anthropic.claude-haiku-4-5-20251001-v1:0",
 )
+
+const azureResourceName = "aiden-azury-group"
+const azureFoundryBaseURL = `https://${azureResourceName}.services.ai.azure.com/models`
+const azure = Azure.configure({ resourceName: azureResourceName, apiKey: "fixture" })
+const azureChat = azure.chat("gpt-5.6-luna")
+const azureResponses = azure.responses("gpt-5.6-luna")
+const azureMessages = azure.messages("claude-haiku-4-5")
+const azureFoundryChat = Azure.configure({ baseURL: azureFoundryBaseURL, apiKey: "fixture" }).chat("Kimi-K2.5")
+const azureLookupWeather = ToolDefinition.make({
+  name: "lookup_weather",
+  description: "Look up the current weather for a city",
+  inputSchema: { type: "object", properties: { city: { type: "string" } }, required: ["city"] },
+})
+const mantleOptions = { apiKey: "fixture", region: "us-east-1" }
+const mantleResponses = AmazonBedrockMantle.configure(mantleOptions).responses("openai.gpt-oss-120b")
+const mantleMessages = (modelID: string) => AmazonBedrockMantle.configure(mantleOptions).messages(modelID)
+const mantleWeather = ToolDefinition.make({
+  name: "get_weather",
+  description: "Get the current weather in a city",
+  inputSchema: {
+    type: "object",
+    properties: { city: { type: "string", enum: ["Paris"] } },
+    required: ["city"],
+    additionalProperties: false,
+  },
+})
 
 const PDF =
   "JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA2MTIgNzkyXSAvUmVzb3VyY2VzIDw8IC9Gb250IDw8IC9GMSA1IDAgUiA+PiA+PiAvQ29udGVudHMgNCAwIFIgPj4KZW5kb2JqCjQgMCBvYmoKPDwgL0xlbmd0aCA3NSA+PgpzdHJlYW0KQlQKL0YxIDE4IFRmCjcyIDcyMCBUZAooUERGIGNhc3NldHRlIHZlcmlmaWNhdGlvbiBjb2RlOiBPUkNISUQtNzM5MSkgVGoKRVQKZW5kc3RyZWFtCmVuZG9iago1IDAgb2JqCjw8IC9UeXBlIC9Gb250IC9TdWJ0eXBlIC9UeXBlMSAvQmFzZUZvbnQgL0hlbHZldGljYSA+PgplbmRvYmoKeHJlZgowIDYKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDA5IDAwMDAwIG4gCjAwMDAwMDAwNTggMDAwMDAgbiAKMDAwMDAwMDExNSAwMDAwMCBuIAowMDAwMDAwMjQxIDAwMDAwIG4gCjAwMDAwMDAzNjUgMDAwMDAgbiAKdHJhaWxlcgo8PCAvU2l6ZSA2IC9Sb290IDEgMCBSID4+CnN0YXJ0eHJlZgo0MzUKJSVFT0YK"
@@ -1469,6 +1497,271 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
               }),
             ],
             tools: [readPdf],
+          }),
+        ),
+    },
+  },
+  {
+    group: "wrapped-core",
+    scenario: {
+      cassette: "azure/chat-streams-text",
+      protocol: "openai-chat",
+      provider: {
+        package: "@opencode/ai/providers/azure/chat",
+        modelID: "gpt-5.6-luna",
+        settings: { resourceName: azureResourceName, apiKey: "fixture" },
+      },
+      run: () => LLMClient.generate(ai.request({ model: azureChat, prompt: "Reply with exactly one word: hello" })),
+    },
+  },
+  {
+    group: "wrapped-core",
+    scenario: {
+      cassette: "azure/chat-streams-text-from-a-foundry-models-url",
+      protocol: "openai-chat",
+      provider: {
+        package: "@opencode/ai/providers/azure/chat",
+        modelID: "Kimi-K2.5",
+        settings: { baseURL: azureFoundryBaseURL, apiKey: "fixture" },
+      },
+      run: () =>
+        LLMClient.generate(ai.request({ model: azureFoundryChat, prompt: "Reply with exactly one word: hello" })),
+    },
+  },
+  {
+    group: "wrapped-core",
+    scenario: {
+      cassette: "azure/messages-streams-text",
+      protocol: "anthropic-messages",
+      provider: {
+        package: "@opencode/ai/providers/azure/messages",
+        modelID: "claude-haiku-4-5",
+        settings: { resourceName: azureResourceName, apiKey: "fixture" },
+      },
+      run: () => LLMClient.generate(ai.request({ model: azureMessages, prompt: "Reply with exactly one word: hola" })),
+    },
+  },
+  {
+    group: "wrapped-core",
+    scenario: {
+      cassette: "azure/messages-calls-a-tool",
+      protocol: "anthropic-messages",
+      provider: {
+        package: "@opencode/ai/providers/azure/messages",
+        modelID: "claude-haiku-4-5",
+        settings: { resourceName: azureResourceName, apiKey: "fixture" },
+      },
+      run: () =>
+        LLMClient.generate(
+          ai.request({
+            model: azureMessages,
+            prompt: "What is the weather in Paris? Use the lookup_weather tool.",
+            tools: [azureLookupWeather],
+          }),
+        ),
+    },
+  },
+  {
+    group: "wrapped-core",
+    scenario: {
+      cassette: "azure/responses-streams-text",
+      protocol: "openai-responses",
+      provider: {
+        package: "@opencode/ai/providers/azure/responses",
+        modelID: "gpt-5.6-luna",
+        settings: { resourceName: azureResourceName, apiKey: "fixture" },
+      },
+      run: () =>
+        LLMClient.generate(ai.request({ model: azureResponses, prompt: "Reply with exactly one word: bonjour" })),
+    },
+  },
+  {
+    group: "wrapped-core",
+    scenario: {
+      cassette: "azure/responses-calls-a-tool",
+      protocol: "openai-responses",
+      provider: {
+        package: "@opencode/ai/providers/azure/responses",
+        modelID: "gpt-5.6-luna",
+        settings: { resourceName: azureResourceName, apiKey: "fixture" },
+      },
+      run: () =>
+        LLMClient.generate(
+          ai.request({
+            model: azureResponses,
+            prompt: "What is the weather in Paris? Use the lookup_weather tool.",
+            tools: [azureLookupWeather],
+          }),
+        ),
+    },
+  },
+  {
+    group: "wrapped-core",
+    scenario: {
+      cassette: "azure/responses-continues-after-a-tool-result",
+      protocol: "openai-responses",
+      provider: {
+        package: "@opencode/ai/providers/azure/responses",
+        modelID: "gpt-5.6-luna",
+        settings: { resourceName: azureResourceName, apiKey: "fixture" },
+      },
+      run: () =>
+        LLMClient.generate(
+          ai.request({
+            model: azureResponses,
+            messages: [
+              Message.user("What is the weather in Paris?"),
+              Message.assistant([
+                ToolCallPart.make({ id: "call_paris_1", name: "lookup_weather", input: { city: "Paris" } }),
+              ]),
+              Message.tool({
+                id: "call_paris_1",
+                name: "lookup_weather",
+                result: "18C, light rain",
+                resultType: "text",
+              }),
+            ],
+            tools: [azureLookupWeather],
+          }),
+        ),
+    },
+  },
+  {
+    group: "wrapped-core",
+    scenario: {
+      cassette: "bedrock-mantle/streams-text",
+      protocol: "open-responses",
+      provider: {
+        package: "@opencode/ai/providers/amazon-bedrock/mantle/responses",
+        modelID: "openai.gpt-oss-120b",
+        settings: mantleOptions,
+      },
+      run: () =>
+        LLMClient.generate(
+          ai.request({ model: mantleResponses, prompt: "Reply with exactly: hello", maxTokens: 256, temperature: 0 }),
+        ),
+    },
+  },
+  {
+    group: "wrapped-core",
+    scenario: {
+      cassette: "bedrock-mantle-messages/replays-signed-thinking-through-a-tool-loop-and-native-system-update",
+      protocol: "anthropic-messages",
+      provider: {
+        package: "@opencode/ai/providers/amazon-bedrock/mantle/messages",
+        modelID: "anthropic.claude-opus-4-8",
+        settings: mantleOptions,
+      },
+      redact: { allowRequestHeaders: ["anthropic-version", "anthropic-beta"] },
+      run: () =>
+        Effect.gen(function* () {
+          const model = mantleMessages("anthropic.claude-opus-4-8")
+          const initial = ai.request({
+            model,
+            system: "You are a concise assistant.",
+            prompt:
+              "First calculate 37 * 43. Then call get_weather for Paris. After receiving the tool result, state both the product and the weather.",
+            tools: [mantleWeather],
+            providerOptions: { thinking: { type: "adaptive", display: "summarized" }, effort: "medium" },
+            maxTokens: 2048,
+          })
+          const first = yield* LLMClient.generate(initial)
+          yield* LLMClient.generate({
+            ...initial,
+            messages: [
+              ...initial.messages,
+              first.message,
+              ...first.toolCalls.map((call) =>
+                Message.tool({ id: call.id, name: call.name, result: { condition: "sunny", temperatureC: 18 } }),
+              ),
+              Message.system("Reply in French in one short sentence."),
+            ],
+          })
+        }),
+    },
+  },
+  {
+    group: "wrapped-core",
+    scenario: {
+      cassette: "bedrock-mantle-messages/lowers-system-updates-to-wrapped-user-text-on-haiku-4-5-with-budget-thinking",
+      protocol: "anthropic-messages",
+      provider: {
+        package: "@opencode/ai/providers/amazon-bedrock/mantle/messages",
+        modelID: "anthropic.claude-haiku-4-5",
+        settings: mantleOptions,
+      },
+      redact: { allowRequestHeaders: ["anthropic-version", "anthropic-beta"] },
+      run: () =>
+        LLMClient.generate(
+          ai.request({
+            model: mantleMessages("anthropic.claude-haiku-4-5"),
+            messages: [Message.user("What is 19 multiplied by 23?"), Message.system("Reply with only the integer.")],
+            providerOptions: { thinking: { type: "enabled", budgetTokens: 1024 } },
+            maxTokens: 2048,
+          }),
+        ),
+    },
+  },
+  {
+    group: "wrapped-core",
+    scenario: {
+      cassette:
+        "bedrock-mantle-messages/applies-mid-conversation-effort-updates-and-thinking-block-binding-on-opus-5-5",
+      protocol: "anthropic-messages",
+      provider: {
+        package: "@opencode/ai/providers/amazon-bedrock/mantle/messages",
+        modelID: "anthropic.claude-opus-5-5",
+        settings: mantleOptions,
+      },
+      redact: { allowRequestHeaders: ["anthropic-version", "anthropic-beta"] },
+      run: () =>
+        Effect.gen(function* () {
+          const firstRequest = ai.request({
+            model: mantleMessages("anthropic.claude-opus-5-5"),
+            prompt: "Compute 37 * 43 step by step, then reply with only the integer.",
+            providerOptions: { thinking: { type: "adaptive", display: "summarized" }, effort: "high" },
+            maxTokens: 2048,
+          })
+          const first = yield* LLMClient.generate(firstRequest)
+          yield* LLMClient.generate(
+            ai.request({
+              model: mantleMessages("anthropic.claude-opus-5-5"),
+              messages: [
+                ...firstRequest.messages,
+                first.message,
+                Message.effort({ effort: "low", previous: "high" }),
+                Message.user("Add 9 to that result. Reply with only the integer."),
+              ],
+              providerOptions: { thinking: { type: "adaptive", display: "summarized" }, effort: "low" },
+              maxTokens: 2048,
+            }),
+          )
+        }),
+    },
+  },
+  {
+    group: "wrapped-core",
+    scenario: {
+      cassette: "bedrock-mantle-messages/strips-unsupported-mid-conversation-effort-updates-on-opus-5-0",
+      protocol: "anthropic-messages",
+      provider: {
+        package: "@opencode/ai/providers/amazon-bedrock/mantle/messages",
+        modelID: "anthropic.claude-opus-5",
+        settings: mantleOptions,
+      },
+      redact: { allowRequestHeaders: ["anthropic-version", "anthropic-beta"] },
+      run: () =>
+        LLMClient.generate(
+          ai.request({
+            model: mantleMessages("anthropic.claude-opus-5"),
+            messages: [
+              Message.user("What is 12 + 30?"),
+              Message.assistant("42"),
+              Message.effort({ effort: "low", previous: "high" }),
+              Message.user("Add 8 to that result. Reply with only the integer."),
+            ],
+            providerOptions: { thinking: { type: "adaptive", display: "summarized" }, effort: "low" },
+            maxTokens: 1024,
           }),
         ),
     },

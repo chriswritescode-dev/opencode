@@ -27,7 +27,7 @@ pub fn model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result<Runt
         ID,
         "anthropic-messages",
         Some("anthropic"),
-        Arc::new(AnthropicMessages),
+        Arc::new(AnthropicMessages::default()),
         Endpoint {
             base_url: Some(settings.string("baseURL").unwrap_or(DEFAULT_BASE_URL).to_string()),
             path: PathPart::Default,

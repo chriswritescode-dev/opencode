@@ -32,9 +32,10 @@ export const GROUPS: Record<string, { protocols: string[] }> = {
   "openai-responses-websocket": { protocols: ["openai-responses"] },
   gemini: { protocols: ["gemini"] },
   "bedrock-converse": { protocols: ["bedrock-converse"] },
+  "wrapped-core": { protocols: ["openai-chat", "anthropic-messages", "openai-responses", "open-responses"] },
 }
 
-export const EXPECTED_CASSETTES = 51
+export const EXPECTED_CASSETTES = 63
 
 const exporter = `${tree}/exporter`
 await mkdir(exporter, { recursive: true })
