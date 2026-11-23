@@ -78,6 +78,27 @@ pub fn round_trip<T: Decode + Encode>(input: &str) -> Result<String, DecodeError
     decode_json::<T>(input).map(|value| encode_json(&value))
 }
 
+pub fn durable_version(object: &Map<String, Value>, path: &mut Path) -> Result<u32, DecodeError> {
+    path.push_key("durable");
+    let result = decode_durable_version(object, path);
+    path.pop();
+    result
+}
+
+fn decode_durable_version(object: &Map<String, Value>, path: &mut Path) -> Result<u32, DecodeError> {
+    let Some(durable) = object.get("durable") else {
+        return Err(path.at("missing required field"));
+    };
+    let envelope = as_object(durable, path)?;
+    path.push_key("version");
+    let result = match envelope.get("version").and_then(Value::as_f64) {
+        Some(value) if value.fract() == 0.0 && (0.0..=f64::from(u32::MAX)).contains(&value) => Ok(value as u32),
+        _ => Err(path.at("expected a durable version")),
+    };
+    path.pop();
+    result
+}
+
 pub fn as_object<'a>(value: &'a Value, path: &Path) -> Result<&'a Map<String, Value>, DecodeError> {
     value.as_object().ok_or_else(|| path.at("expected an object"))
 }
@@ -219,6 +240,9 @@ fn decode_optional_present<T>(
     let Some(value) = object.get(key) else {
         return Ok(None);
     };
+    if value.is_null() {
+        return Ok(None);
+    }
     path.push_key(key);
     let decoded = decode(value, path);
     path.pop();

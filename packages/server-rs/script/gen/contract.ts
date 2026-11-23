@@ -1,7 +1,7 @@
 import { mkdir } from "node:fs/promises"
 import { Schema, SchemaAST, SchemaRepresentation } from "effect"
 import { pascal } from "../../../cli-rs/script/rust/types.ts"
-import { contractErrors, contractRoutes, normalize, type Route } from "../contract/model"
+import { contractErrors, contractEvents, contractRoutes, normalize, type Route } from "../contract/model"
 import { StrictTypes } from "../rust/strict"
 import { pin } from "../upstream"
 
@@ -55,15 +55,64 @@ const lines = routes.map(
 )
 
 const errors = await contractErrors()
-const asts = [...errors.map((error) => Schema.toEncoded(error.schema).ast), Schema.toEncoded(Schema.Number).ast]
+const events = await contractEvents()
+
+const publicAsts = events.public.map((event) => Schema.toEncoded(event.schema).ast)
+const durableAsts = events.durable.map((event) => Schema.toEncoded(event.schema).ast)
+const idAsts = events.ids.map((id) => id.wire.ast)
+const asts = [
+  ...errors.map((error) => Schema.toEncoded(error.schema).ast),
+  Schema.toEncoded(Schema.Number).ast,
+  ...publicAsts,
+  ...durableAsts,
+  Schema.toEncoded(events.publicUnion).ast,
+  Schema.toEncoded(events.sessionLog).ast,
+  ...idAsts,
+]
 const typeDocument = SchemaRepresentation.toRepresentations(normalize(asts) as [SchemaAST.AST, ...Array<SchemaAST.AST>])
 const types = new StrictTypes(typeDocument.references)
+
+let cursor = 0
+const representations = (count: number) => {
+  const start = cursor
+  cursor += count
+  return typeDocument.representations.slice(start, start + count)
+}
+const errorRepresentations = representations(errors.length)
+const numbers = representations(1)[0]!
+const publicRepresentations = representations(publicAsts.length)
+const durableRepresentations = representations(durableAsts.length)
+const unionRepresentation = representations(1)[0]!
+const sessionLogRepresentation = representations(1)[0]!
+const idRepresentations = representations(idAsts.length)
+
+types.section("ids")
+for (const id of events.ids) if (id.transform !== undefined) types.transform(id.identifier, id.transform)
+const ids = events.ids.map((id, index) => ({
+  ...id,
+  rustName: types.type(idRepresentations[index]!, id.identifier),
+}))
+
+types.section("types")
 const roots = errors.map((error, index) => ({
   tag: error.tag,
   status: error.status,
-  rustName: types.type(typeDocument.representations[index], error.tag),
+  rustName: types.type(errorRepresentations[index]!, error.tag),
 }))
-types.type(typeDocument.representations[errors.length], "numbers")
+types.type(numbers, "numbers")
+const publicEvents = events.public.map((event, index) => ({
+  ...event,
+  rustName: types.type(publicRepresentations[index]!, event.identifier),
+}))
+const durableEvents = events.durable.map((event, index) => ({
+  ...event,
+  rustName: types.type(durableRepresentations[index]!, event.identifier),
+}))
+
+types.section("events")
+types.rename("V2Event", "PublicEvent")
+types.type(unionRepresentation, "PublicEvent")
+const sessionLog = types.type(sessionLogRepresentation, "SessionLogItem")
 
 const used = new Set<string>()
 const variants = roots.map((root) => {
@@ -73,23 +122,92 @@ const variants = roots.map((root) => {
   used.add(variant)
   return { ...root, variant }
 })
+const durableVariants = durableEvents.map((event) => {
+  const base = pascal(event.type)
+  let variant = base
+  for (let index = 2; used.has(variant); index++) variant = `${base}${index}`
+  used.add(variant)
+  return { ...event, variant }
+})
 const corpus = [
   ...roots.map((root) => ({ name: root.tag, rustName: root.rustName })),
   { name: "numbers", rustName: "f64" },
+  ...publicEvents.map((event) => ({ name: event.type, rustName: event.rustName })),
+  ...durableEvents.map((event) => ({ name: event.key, rustName: event.rustName })),
+  { name: "SessionLogItem", rustName: sessionLog },
+  ...ids.map((id) => ({ name: id.identifier, rustName: id.rustName })),
 ].toSorted((a, b) => (a.name < b.name ? -1 : 1))
+const duplicate = corpus.find((root, index) => index > 0 && corpus[index - 1]?.name === root.name)
+if (duplicate !== undefined) throw new Error(`contract: duplicate corpus root ${duplicate.name}`)
 
 const typesFile = `${root}crates/contract/src/generated/types.rs`
+const idsFile = `${root}crates/contract/src/generated/ids.rs`
+const eventsFile = `${root}crates/contract/src/generated/events.rs`
 const errorsFile = `${root}crates/contract/src/generated/errors.rs`
 const routesFile = `${root}crates/contract/src/generated/routes.rs`
 const modFile = `${root}crates/contract/src/generated/mod.rs`
 await mkdir(`${root}crates/contract/src/generated`, { recursive: true })
+
+const idImport = (text: string) =>
+  ids.some((id) => new RegExp(`\\b${id.rustName}\\b`).test(text)) ? "use super::ids::*;\n" : ""
+const typeItems = types.items().join("\n\n")
+const eventItems = types.items("events").join("\n\n")
+const eventBody = `${eventItems}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum DurableEvent {
+${durableVariants.map((event) => `    ${event.variant}(${event.rustName}),`).join("\n")}
+}
+
+impl crate::codec::Decode for DurableEvent {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        let tag: String = crate::codec::decode_field(object, "type", path)?;
+        let version = crate::codec::durable_version(object, path)?;
+        match (tag.as_str(), version) {
+${durableVariants.map((event) => `            (${literal(event.type)}, ${event.version}) => <${event.rustName} as crate::codec::Decode>::decode(value, path).map(Self::${event.variant}),`).join("\n")}
+            _ => Err(path.at("expected a known durable type and version")),
+        }
+    }
+}
+
+impl crate::codec::Encode for DurableEvent {
+    fn encode(&self, out: &mut String) {
+        match self {
+${durableVariants.map((event) => `            Self::${event.variant}(value) => <${event.rustName} as crate::codec::Encode>::encode(value, out),`).join("\n")}
+        }
+    }
+}
+
+pub static PUBLIC_EVENT_TYPES: [&str; ${publicEvents.length}] = [
+${publicEvents.map((event) => `    ${literal(event.type)},`).join("\n")}
+];
+
+pub static DURABLE_EVENTS: [(&str, u32, &str); ${durableEvents.length}] = [
+${durableEvents.map((event) => `    (${literal(event.type)}, ${event.version}, ${literal(event.aggregate)}),`).join("\n")}
+];
+`
+
 await Bun.write(
   routesFile,
   `${header()}\n#![allow(clippy::all, clippy::pedantic)]\nuse crate::route::{BodyKind, Method, Route, Scope, Stability, SuccessKind};\n\npub static ROUTES: [Route; ${routes.length}] = [\n${lines.join("\n")}\n];\n`,
 )
 await Bun.write(
   typesFile,
-  `${header()}\n#![allow(clippy::all, clippy::pedantic)]\nuse serde_json::Value;\n\n${types.items.join("\n\n")}\n`,
+  `${header()}\n#![allow(clippy::all, clippy::pedantic)]\n${idImport(typeItems)}use serde_json::Value;\n\n${typeItems}\n`,
+)
+await Bun.write(
+  idsFile,
+  `${header()}\n#![allow(clippy::all, clippy::pedantic)]\nuse serde_json::Value;\n\n${types.items("ids").join("\n\n")}\n`,
+)
+await Bun.write(
+  eventsFile,
+  `${header()}
+#![allow(clippy::all, clippy::pedantic)]
+${idImport(eventBody)}use super::types::*;
+use serde_json::Value;
+
+${eventBody}`,
 )
 await Bun.write(
   errorsFile,
@@ -136,12 +254,6 @@ ${variants.map((root) => `            Self::${root.variant}(value) => crate::cod
     }
 }
 
-pub fn corpus_roots() -> &'static [(&'static str, fn(&str) -> Result<String, crate::codec::DecodeError>)] {
-    &[
-${corpus.map((root) => `        (${literal(root.name)}, crate::codec::round_trip::<${root.rustName}>),`).join("\n")}
-    ]
-}
-
 pub static ERROR_STATUS: [(&str, u16); ${roots.length}] = [
 ${roots.map((root) => `    (${literal(root.tag)}, ${root.status}),`).join("\n")}
 ];
@@ -152,19 +264,34 @@ await Bun.write(
   `${header()}
 
 mod errors;
+mod events;
+mod ids;
 mod routes;
 mod types;
 
-pub use errors::{ApiError, ERROR_STATUS, corpus_roots};
+pub use errors::{ApiError, ERROR_STATUS};
+pub use events::{DurableEvent, PublicEvent, SessionLogItem, DURABLE_EVENTS, PUBLIC_EVENT_TYPES};
+pub use ids::*;
 pub use routes::ROUTES;
 pub use types::*;
+
+pub type RoundTrip = fn(&str) -> Result<String, crate::codec::DecodeError>;
+
+pub fn corpus_roots() -> &'static [(&'static str, RoundTrip)] {
+    &[
+${corpus.map((root) => `        (${literal(root.name)}, crate::codec::round_trip::<${root.rustName}>),`).join("\n")}
+    ]
+}
 `,
 )
 
-const format = Bun.spawnSync(["rustfmt", "--edition", "2024", modFile, typesFile, errorsFile, routesFile], {
-  stdout: "inherit",
-  stderr: "inherit",
-})
+const format = Bun.spawnSync(
+  ["rustfmt", "--edition", "2024", modFile, typesFile, idsFile, eventsFile, errorsFile, routesFile],
+  {
+    stdout: "inherit",
+    stderr: "inherit",
+  },
+)
 if (format.exitCode !== 0) process.exit(format.exitCode ?? 1)
 
 const count = (predicate: (route: Route) => boolean) => routes.filter(predicate).length
@@ -177,7 +304,9 @@ console.log(
 )
 console.log(`contract: body ${report(["None", "Json", "Binary"], (route) => route.body)}`)
 console.log(`contract: scope ${report(["Global", "Location", "Session", "Form"], (route) => route.scope)}`)
-console.log(`contract: ${errors.length} errors, ${types.items.length} types`)
+console.log(
+  `contract: ${errors.length} errors, ${publicEvents.length + durableEvents.length} events, ${ids.length} ids, ${types.items().length + types.items("ids").length + types.items("events").length} types`,
+)
 
 function header() {
   return "// Generated by script/gen/contract.ts from the upstream pin. Do not edit."

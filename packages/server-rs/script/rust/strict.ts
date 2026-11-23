@@ -9,20 +9,41 @@ type LiteralValue = SchemaRepresentation.Literal["literal"]
 
 type Field = { type: string; decode: string; encode: string }
 type Condition = { condition: string; reason: string }
+type TagEntry = { exact: string | boolean } | { prefix: string }
+type Tag = { key: string; entries: Array<TagEntry> }
 
 export class StrictTypes {
-  readonly items: Array<string> = []
+  private readonly output = new Map<string, Array<string>>([["types", []]])
   private readonly names = new Set<string>()
   private readonly referenced = new Map<string, string>()
+  private readonly renamed = new Map<string, string>()
+  private readonly transforms = new Map<string, "trim">()
   private readonly visiting = new Set<string>()
   private readonly suspending = new Set<SchemaRepresentation.Suspend>()
+  private active = "types"
   private root = ""
 
   constructor(private readonly references: SchemaRepresentation.References) {}
 
+  section(name: string) {
+    this.active = name
+  }
+
+  items(name = "types"): Array<string> {
+    return this.output.get(name) ?? []
+  }
+
   type(r: R, hint: string): string {
     this.root = hint
     return this.render(r, hint)
+  }
+
+  rename(identifier: string, name: string) {
+    this.renamed.set(identifier, name)
+  }
+
+  transform(identifier: string, transform: "trim") {
+    this.transforms.set(identifier, transform)
   }
 
   name(seed: string) {
@@ -31,6 +52,12 @@ export class StrictTypes {
     for (let index = 2; this.names.has(name); index++) name = `${base}${index}`
     this.names.add(name)
     return name
+  }
+
+  private push(item: string) {
+    const items = this.output.get(this.active)
+    if (items === undefined) this.output.set(this.active, [item])
+    else items.push(item)
   }
 
   private render(r: R, hint: string): string {
@@ -116,7 +143,7 @@ export class StrictTypes {
     if (existing !== undefined) return this.visiting.has(ref) ? `Box<${existing}>` : existing
     const target = this.references[ref]
     if (target === undefined) throw new Error(`strict: ${this.root} Reference: unknown reference ${ref}`)
-    const name = this.name(ref)
+    const name = this.name(this.renamed.get(ref) ?? ref)
     this.referenced.set(ref, name)
     this.visiting.add(ref)
     this.referenceBody(ref, name, target)
@@ -126,7 +153,7 @@ export class StrictTypes {
 
   private referenceBody(ref: string, name: string, target: R) {
     const resolved = this.deref(target)
-    if (resolved._tag === "Objects" && resolved.propertySignatures.length > 0) {
+    if (resolved._tag === "Objects" && resolved.indexSignatures.length === 0) {
       this.objects(resolved, name, name)
       return
     }
@@ -135,24 +162,77 @@ export class StrictTypes {
         throw new Error(`strict: ${this.root} Reference: nullable reference body ${ref}`)
       }
       const type = this.union(resolved, name, name)
-      if (type !== name) this.items.push(`pub type ${name} = ${type};`)
+      if (type !== name) this.push(`pub type ${name} = ${type};`)
       return
     }
     if (resolved._tag === "String" || resolved._tag === "TemplateLiteral") {
-      this.newtype(name, resolved)
+      this.newtype(name, resolved, this.transforms.get(ref))
       return
     }
-    this.items.push(`pub type ${name} = ${this.render(resolved, name)};`)
+    if (resolved._tag === "Number") {
+      this.numberNewtype(name, resolved)
+      return
+    }
+    this.push(`pub type ${name} = ${this.render(resolved, name)};`)
   }
 
-  private newtype(name: string, r: SchemaRepresentation.String | SchemaRepresentation.TemplateLiteral) {
+  private numberNewtype(name: string, r: SchemaRepresentation.Number) {
+    const conditions = this.conditions(r.checks, r, "value")
+    const decode =
+      conditions.length === 0
+        ? `        <f64 as crate::codec::Decode>::decode(value, path).map(Self)`
+        : `        let value = <f64 as crate::codec::Decode>::decode(value, path)?;
+${this.guards(conditions, 8)}        Ok(Self(value))`
+    this.push(`#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ${name}(pub f64);
+
+impl crate::codec::Decode for ${name} {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+${decode}
+    }
+}
+
+impl crate::codec::Encode for ${name} {
+    fn encode(&self, out: &mut String) {
+        crate::codec::Encode::encode(&self.0, out);
+    }
+}`)
+  }
+
+  private newtype(
+    name: string,
+    r: SchemaRepresentation.String | SchemaRepresentation.TemplateLiteral,
+    transform?: "trim",
+  ) {
     const conditions = this.conditions(r.checks, r, "value.as_str()")
+    if (transform === "trim") {
+      this.push(`#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ${name}(pub String);
+
+impl crate::codec::Decode for ${name} {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let value = <String as crate::codec::Decode>::decode(value, path)?;
+        let value = crate::checks::trim(&value).to_owned();
+${conditions.length === 0 ? "" : this.guards(conditions, 8)}        if value.is_empty() {
+            return Err(path.at("expected a non-empty trimmed value"));
+        }
+        Ok(Self(value))
+    }
+}
+
+impl crate::codec::Encode for ${name} {
+    fn encode(&self, out: &mut String) {
+        crate::codec::write_string(out, &self.0);
+    }
+}`)
+      return
+    }
     const decode =
       conditions.length === 0
         ? `        <String as crate::codec::Decode>::decode(value, path).map(Self)`
         : `        let value = <String as crate::codec::Decode>::decode(value, path)?;
 ${this.guards(conditions, 8)}        Ok(Self(value))`
-    this.items.push(`#[derive(Debug, Clone, PartialEq, Eq)]
+    this.push(`#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ${name}(pub String);
 
 impl crate::codec::Decode for ${name} {
@@ -178,13 +258,31 @@ impl crate::codec::Encode for ${name} {
         return this.fail(r, "an index signature with a non-string key")
       return `crate::codec::JsonMap<${this.render(index.type, `${hint}Value`)}>`
     }
-    if (r.propertySignatures.length === 0) return this.fail(r, "an object without properties")
+    if (r.propertySignatures.length === 0) return this.objects(r, this.name(hint), hint)
     if (r.indexSignatures.length > 0) return this.fail(r, "mixed properties and index signatures")
     return this.objects(r, this.name(hint), hint)
   }
 
   private objects(r: Objects, name: string, hint: string): string {
     this.unchecked(r)
+    if (r.propertySignatures.length === 0) {
+      this.push(`#[derive(Debug, Clone, PartialEq)]
+pub struct ${name};
+
+impl crate::codec::Decode for ${name} {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        crate::codec::as_object(value, path)?;
+        Ok(Self)
+    }
+}
+
+impl crate::codec::Encode for ${name} {
+    fn encode(&self, out: &mut String) {
+        out.push_str("{}");
+    }
+}`)
+      return name
+    }
     const used = new Set<string>()
     const lines: Array<string> = []
     const decodes: Array<string> = []
@@ -197,7 +295,7 @@ impl crate::codec::Encode for ${name} {
       decodes.push(`            ${ident}: ${field.decode},`)
       encodes.push(`        ${field.encode};`)
     }
-    this.items.push(`#[derive(Debug, Clone, PartialEq)]
+    this.push(`#[derive(Debug, Clone, PartialEq)]
 pub struct ${name} {
 ${lines.join("\n")}
 }
@@ -355,7 +453,7 @@ ${encodes.join("\n")}
         values.length === 1
           ? `expected ${JSON.stringify(values[0])}`
           : `expected one of ${values.map((value) => JSON.stringify(value)).join(", ")}`
-      this.items.push(`#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+      this.push(`#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ${enumName} {
 ${arms.map(({ variant }) => `    ${variant},`).join("\n")}
 }
@@ -377,7 +475,7 @@ impl crate::codec::Encode for ${enumName} {
       return enumName
     }
     if (kind === "boolean") {
-      this.items.push(`#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+      this.push(`#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ${enumName} {
 ${arms.map(({ variant }) => `    ${variant},`).join("\n")}
 }
@@ -398,7 +496,7 @@ impl crate::codec::Encode for ${enumName} {
 }`)
       return enumName
     }
-    this.items.push(`#[derive(Debug, Clone, Copy, PartialEq)]
+    this.push(`#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum ${enumName} {
 ${arms.map(({ variant }) => `    ${variant},`).join("\n")}
 }
@@ -406,7 +504,7 @@ ${arms.map(({ variant }) => `    ${variant},`).join("\n")}
 impl crate::codec::Decode for ${enumName} {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         match value.as_f64() {
-${arms.map(({ value, variant }) => `            Some(value) if value == ${String(value)} => Ok(Self::${variant}),`).join("\n")}
+${arms.map(({ value, variant }) => `            Some(value) if value == ${float(value)} => Ok(Self::${variant}),`).join("\n")}
             _ => Err(path.at("expected a number literal")),
         }
     }
@@ -414,7 +512,7 @@ ${arms.map(({ value, variant }) => `            Some(value) if value == ${String
 
 impl crate::codec::Encode for ${enumName} {
     fn encode(&self, out: &mut String) {
-        crate::codec::Encode::encode(&match self { ${arms.map(({ value, variant }) => `Self::${variant} => ${String(value)}f64`).join(", ")} }, out);
+        crate::codec::Encode::encode(&match self { ${arms.map(({ value, variant }) => `Self::${variant} => ${float(value)}f64`).join(", ")} }, out);
     }
 }`)
     return enumName
@@ -442,17 +540,30 @@ impl crate::codec::Encode for ${enumName} {
       const exact = values as Array<string | boolean>
       if (new Set(exact.map((value) => JSON.stringify(value))).size !== exact.length) continue
       if (new Set(exact.map((value) => typeof value)).size !== 1) continue
-      return { key, values: exact }
+      return { key, entries: exact.map((value): TagEntry => ({ exact: value })) }
     }
     for (const key of ordered) {
-      const prefixes = objects.map((object) => {
+      const entries = objects.map((object) => {
         const property = object.propertySignatures.find((field) => String(field.name) === key)
         if (property === undefined || property.isOptional) return undefined
-        return this.prefix(property.type)
+        const type = this.deref(property.type)
+        if (type._tag === "Literal" && (typeof type.literal === "string" || typeof type.literal === "boolean")) {
+          return { exact: type.literal } as TagEntry
+        }
+        const prefix = this.prefix(property.type)
+        return prefix === undefined ? undefined : ({ prefix } as TagEntry)
       })
-      if (prefixes.every((prefix) => prefix !== undefined)) {
-        throw new Error(`strict: ${this.root} Union: prefix tag ${key} is not supported`)
+      if (entries.some((entry) => entry === undefined)) continue
+      const present = entries as Array<TagEntry>
+      const prefixes = present.flatMap((entry) => ("prefix" in entry ? [entry.prefix] : []))
+      if (prefixes.length === 0) continue
+      if (new Set(prefixes).size !== prefixes.length) continue
+      const exacts = present.flatMap((entry) => ("exact" in entry ? [entry.exact] : []))
+      if (exacts.some((value) => typeof value !== "string")) continue
+      if (exacts.some((value) => prefixes.some((prefix) => (value as string).startsWith(prefix)))) {
+        throw new Error(`strict: ${this.root} Union: prefix tag ${key} overlaps an exact value`)
       }
+      return { key, entries: present }
     }
     return undefined
   }
@@ -466,27 +577,25 @@ impl crate::codec::Encode for ${enumName} {
     return head.literal
   }
 
-  private tagged(
-    members: ReadonlyArray<R>,
-    tag: { key: string; values: Array<string | boolean> },
-    hint: string,
-    name?: string,
-  ): string {
+  private tagged(members: ReadonlyArray<R>, tag: Tag, hint: string, name?: string): string {
     const enumName = name ?? this.name(hint)
-    const variants = uniqueVariants(tag.values.map((value) => pascal(String(value))))
+    const label = (entry: TagEntry) => ("prefix" in entry ? entry.prefix : String(entry.exact))
+    const variants = uniqueVariants(tag.entries.map((entry) => pascal(label(entry))))
     const types = members.map((member, index) => this.render(member, `${enumName}${variants[index]}`))
-    const boolean = typeof tag.values[0] === "boolean"
+    const boolean = tag.entries.every((entry) => "exact" in entry && typeof entry.exact === "boolean")
     const read = boolean
       ? `        let tag: bool = crate::codec::decode_field(object, ${JSON.stringify(tag.key)}, path)?;`
       : `        let tag: String = crate::codec::decode_field(object, ${JSON.stringify(tag.key)}, path)?;`
     const scrutinee = boolean ? "tag" : "tag.as_str()"
-    const arms = tag.values
-      .map(
-        (value, index) =>
-          `            ${boolean ? value : JSON.stringify(value)} => <${types[index]} as crate::codec::Decode>::decode(value, path).map(Self::${variants[index]}),`,
-      )
-      .join("\n")
-    this.items.push(`#[derive(Debug, Clone, PartialEq)]
+    const arm = (entry: TagEntry, index: number) =>
+      "prefix" in entry
+        ? `            text if text.starts_with(${JSON.stringify(entry.prefix)}) => <${types[index]} as crate::codec::Decode>::decode(value, path).map(Self::${variants[index]}),`
+        : `            ${boolean ? entry.exact : JSON.stringify(entry.exact)} => <${types[index]} as crate::codec::Decode>::decode(value, path).map(Self::${variants[index]}),`
+    const ordered = tag.entries
+      .map((entry, index) => ({ entry, index }))
+      .toSorted((left, right) => Number("prefix" in left.entry) - Number("prefix" in right.entry))
+    const arms = ordered.map(({ entry, index }) => arm(entry, index)).join("\n")
+    this.push(`#[derive(Debug, Clone, PartialEq)]
 pub enum ${enumName} {
 ${variants.map((variant, index) => `    ${variant}(${types[index]}),`).join("\n")}
 }
@@ -544,7 +653,7 @@ ${variants.map((variant, index) => `            Self::${variant}(value) => <${ty
       ? `        matched.ok_or_else(|| path.at("expected exactly one member to match"))`
       : `        Err(path.at("no member matched"))`
     const matched = oneOf ? "        let mut matched: Option<Self> = None;\n" : ""
-    this.items.push(`#[derive(Debug, Clone, PartialEq)]
+    this.push(`#[derive(Debug, Clone, PartialEq)]
 pub enum ${enumName} {
 ${order.map(([variant, type]) => `    ${variant}(${type}),`).join("\n")}
 }
@@ -602,12 +711,12 @@ ${order.map(([variant, type]) => `            Self::${variant}(value) => <${type
       const expected = filter.annotations?.expected
       const reason = typeof expected === "string" ? `expected ${expected}` : undefined
       const one = (condition: string, fallback: string) => ({ condition, reason: reason ?? fallback })
-      const json = (key: string) => {
+      const json = (key: string, kind: "float" | "int" = "float") => {
         const item = payload?.[key]
         if (typeof item !== "number") {
           throw new Error(`strict: ${this.root} ${base._tag}: ${id} needs a numeric ${key}`)
         }
-        return String(item)
+        return kind === "float" ? float(item) : String(item)
       }
       switch (id) {
         case "effect/schema/isInt":
@@ -645,14 +754,14 @@ ${order.map(([variant, type]) => `            Self::${variant}(value) => <${type
         case "effect/schema/isMinLength":
           return [
             kind === "Arrays"
-              ? one(`crate::checks::is_min_items(${value}, ${json("minLength")})`, "expected more items")
-              : one(`crate::checks::is_min_length(${value}, ${json("minLength")})`, "expected a longer value"),
+              ? one(`crate::checks::is_min_items(${value}, ${json("minLength", "int")})`, "expected more items")
+              : one(`crate::checks::is_min_length(${value}, ${json("minLength", "int")})`, "expected a longer value"),
           ]
         case "effect/schema/isMaxLength":
           return [
             kind === "Arrays"
-              ? one(`crate::checks::is_max_items(${value}, ${json("maxLength")})`, "expected fewer items")
-              : one(`crate::checks::is_max_length(${value}, ${json("maxLength")})`, "expected a shorter value"),
+              ? one(`crate::checks::is_max_items(${value}, ${json("maxLength", "int")})`, "expected fewer items")
+              : one(`crate::checks::is_max_length(${value}, ${json("maxLength", "int")})`, "expected a shorter value"),
           ]
         case "effect/schema/isPattern": {
           const source = payload?.source
@@ -731,4 +840,10 @@ function string(payload: { readonly [key: string]: unknown } | null | undefined,
   const value = payload?.[key]
   if (typeof value !== "string") throw new Error(`strict: check needs a string ${key}`)
   return JSON.stringify(value)
+}
+
+function float(value: LiteralValue) {
+  if (typeof value !== "number" && typeof value !== "bigint") throw new Error("strict: expected a numeric literal")
+  const text = String(value)
+  return /[.eE]/.test(text) ? text : `${text}.0`
 }

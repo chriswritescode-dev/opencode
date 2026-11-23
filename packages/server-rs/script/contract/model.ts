@@ -40,6 +40,169 @@ const scopeKeys = {
 
 export type ContractError = { tag: string; status: number; schema: Schema.Top }
 
+export type EventRoot = { type: string; identifier: string; schema: Schema.Top }
+
+export type DurableRoot = EventRoot & { key: string; version: number; aggregate: string }
+
+export type IdRoot = {
+  identifier: string
+  schema: Schema.Top
+  wire: Schema.Top
+  transform: "trim" | undefined
+}
+
+type DurableDefinition = Schema.Top & {
+  readonly type: string
+  readonly durable: { readonly version: number; readonly aggregate: string }
+}
+
+const brandedId = /ID$/
+
+export async function contractEvents(): Promise<{
+  publicUnion: Schema.Top
+  sessionLog: Schema.Top
+  public: Array<EventRoot>
+  durable: Array<DurableRoot>
+  sessionLogTypes: Array<string>
+  ids: Array<IdRoot>
+}> {
+  const protocolEvents = await import(`${tree}/packages/protocol/src/groups/event.ts`)
+  const eventManifest = await import(`${tree}/packages/schema/src/event-manifest.ts`)
+  const sessionEvents = await import(`${tree}/packages/schema/src/session-event.ts`)
+  const eventLog = await import(`${tree}/packages/schema/src/event-log.ts`)
+
+  const members: ReadonlyArray<SchemaAST.AST> = SchemaAST.isUnion(protocolEvents.OpenCodeEvent.ast)
+    ? protocolEvents.OpenCodeEvent.ast.types
+    : []
+  const publicEvents: Array<EventRoot> = members.map((member) => {
+    const type = eventType(member)
+    if (type === undefined) throw new Error("contract: public event member has no type tag")
+    return { type, identifier: SchemaAST.resolveIdentifier(member) ?? type, schema: Schema.make(member) }
+  })
+
+  const durable = [...(eventManifest.Durable as ReadonlyMap<string, DurableDefinition>).entries()].map(([key, value]) => ({
+    key,
+    type: value.type,
+    identifier: SchemaAST.resolveIdentifier(value.ast) ?? value.type,
+    version: value.durable.version,
+    aggregate: value.durable.aggregate,
+    schema: value,
+  }))
+
+  const synced = eventType(eventLog.Synced.ast)
+  if (synced === undefined) throw new Error("contract: log.synced has no type tag")
+  const sessionLogTypes = [
+    ...(sessionEvents.DurableDefinitions as ReadonlyArray<DurableDefinition>).map((definition) => definition.type),
+    synced,
+  ]
+
+  return {
+    publicUnion: protocolEvents.OpenCodeEvent,
+    public: publicEvents,
+    durable,
+    sessionLog: sessionLogItem(),
+    sessionLogTypes,
+    ids: await contractIds([...publicEvents.map((event) => event.schema), ...durable.map((event) => event.schema)]),
+  }
+}
+
+function sessionLogItem(): Schema.Top {
+  let data: SchemaAST.AST | undefined
+  reflect({
+    onEndpoint({ endpoint }) {
+      if (endpoint.path !== "/api/experimental/session/:sessionID/log") return
+      const success = [...endpoint.success][0]
+      if (success === undefined) throw new Error("contract: session.log has no success schema")
+      data = sseData(success)
+    },
+  })
+  if (data === undefined) throw new Error("contract: session.log is missing from the API")
+  return Schema.make<Schema.Top>(data)
+}
+
+async function contractIds(events: ReadonlyArray<Schema.Top>): Promise<Array<IdRoot>> {
+  const asts = [...contractApiAsts(), ...events.map((schema) => schema.ast)]
+  const found = new Map<string, SchemaAST.AST>()
+  for (const ast of asts) visit(ast, found)
+  return [...found.entries()]
+    .toSorted(([left], [right]) => (left < right ? -1 : 1))
+    .map(([identifier, ast]) => branded(identifier, ast))
+}
+
+function branded(identifier: string, ast: SchemaAST.AST): IdRoot {
+  const schema = Schema.make<Schema.Top>(ast)
+  const encoded = Schema.toEncoded(schema).ast
+  const wire = Schema.make<Schema.Top>(encoded)
+  return {
+    identifier,
+    schema,
+    wire: SchemaAST.resolveIdentifier(encoded) === undefined ? wire.annotate({ identifier }) : wire,
+    transform: idTransform(identifier, ast),
+  }
+}
+
+function idTransform(identifier: string, ast: SchemaAST.AST): "trim" | undefined {
+  if (ast._tag !== "String" || ast.encoding === undefined) return undefined
+  const filters = (checks: ReadonlyArray<SchemaAST.Check<unknown>>): Array<SchemaAST.Filter<unknown>> =>
+    checks.flatMap((check) => (check._tag === "FilterGroup" ? filters(check.checks) : [check]))
+  const checks = filters(ast.checks ?? [])
+  const trimmed = checks.some((filter) => filter.annotations?.representation?.id === "effect/schema/isTrimmed")
+  const nonEmpty = checks.some((filter) => {
+    if (filter.annotations?.representation?.id !== "effect/schema/isMinLength") return false
+    const payload = filter.annotations.representation.payload as { readonly minLength?: unknown } | null | undefined
+    return payload?.minLength === 1
+  })
+  const link = ast.encoding.length === 1 ? ast.encoding[0] : undefined
+  if (trimmed && nonEmpty && link?.transformation._tag === "Transformation") {
+    if (link.transformation.decode._tag === "Transform" && link.transformation.encode._tag === "Passthrough") {
+      return "trim"
+    }
+  }
+  throw new Error(`contract: ${identifier} has a transformation the generator does not model`)
+}
+
+function contractApiAsts(): Array<SchemaAST.AST> {
+  const asts: Array<SchemaAST.AST> = []
+  reflect({
+    onEndpoint({ endpoint, successes, errors }) {
+      if (endpoint.params !== undefined) asts.push(endpoint.params.ast)
+      for (const item of endpoint.payload.values()) for (const schema of item.schemas) asts.push(schema.ast)
+      for (const schema of endpoint.success) asts.push(schema.ast)
+      for (const schema of endpoint.error) asts.push(schema.ast)
+      for (const group of successes.values()) for (const schema of group) asts.push(schema.ast)
+      for (const group of errors.values()) for (const schema of group) asts.push(schema.ast)
+    },
+  })
+  return asts
+}
+
+function visit(ast: SchemaAST.AST, found: Map<string, SchemaAST.AST>, seen = new Set<SchemaAST.AST>()) {
+  if (seen.has(ast)) return
+  seen.add(ast)
+  const identifier = SchemaAST.resolveIdentifier(ast)
+  if (identifier !== undefined && brandedId.test(identifier) && !found.has(identifier)) found.set(identifier, ast)
+  if (!("recur" in ast) || typeof ast.recur !== "function") return
+  ast.recur((child: SchemaAST.AST) => {
+    visit(child, found, seen)
+    return child
+  })
+}
+
+function eventType(ast: SchemaAST.AST) {
+  if (!SchemaAST.isObjects(ast)) return undefined
+  const property = ast.propertySignatures.find((field) => String(field.name) === "type")
+  if (property === undefined) return undefined
+  const type = property.type
+  if (type._tag === "Literal" && typeof type.literal === "string") return type.literal
+  if (type._tag === "TemplateLiteral" && type.parts.length === 2) {
+    const [head, tail] = type.parts
+    if (head?._tag === "Literal" && typeof head.literal === "string" && tail?._tag === "String") {
+      return `${head.literal}\${string}`
+    }
+  }
+  return undefined
+}
+
 type ReflectOptions = Parameters<typeof HttpApi.reflect>[1]
 
 function reflect(options: Pick<ReflectOptions, "onEndpoint">) {

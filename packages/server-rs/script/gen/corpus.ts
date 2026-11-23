@@ -1,9 +1,10 @@
 import { mkdir } from "node:fs/promises"
 import { Arbitrary, Effect, Schema } from "effect"
-import { contractErrors } from "../contract/model"
+import { contractErrors, contractEvents } from "../contract/model"
 
 const root = new URL("../..", import.meta.url).pathname
 const file = `${root}crates/contract/tests/corpus/schemas.json`
+const eventsFile = `${root}crates/contract/tests/corpus/events.json`
 
 type JsonCodec = Schema.Codec<unknown, unknown>
 type Sample = { input: string; expected: string }
@@ -22,10 +23,15 @@ const numbers = [
 ]
 
 const errors = await contractErrors()
+const events = await contractEvents()
 
 const roots: Array<Root> = []
-for (const error of errors) roots.push(await errorRoot(error.tag, error.schema))
+for (const error of errors) roots.push(await schemaRoot(error.tag, error.schema))
 roots.push(numbersRoot())
+for (const event of events.public) roots.push(await schemaRoot(event.type, event.schema))
+for (const event of events.durable) roots.push(await schemaRoot(event.key, event.schema))
+roots.push(await schemaRoot("SessionLogItem", events.sessionLog))
+for (const id of events.ids) roots.push(await schemaRoot(id.identifier, id.schema))
 roots.sort((a, b) => (a.name < b.name ? -1 : 1))
 
 const lines = roots.map(
@@ -33,6 +39,18 @@ const lines = roots.map(
 )
 await mkdir(`${root}crates/contract/tests/corpus`, { recursive: true })
 await Bun.write(file, `{\n${lines.join(",\n")}\n}\n`)
+await Bun.write(
+  eventsFile,
+  `${JSON.stringify(
+    {
+      public: events.public.map((event) => event.type),
+      durable: events.durable.map((event) => [event.type, event.version, event.aggregate]),
+      sessionLog: events.sessionLogTypes,
+    },
+    null,
+    2,
+  )}\n`,
+)
 
 const total = (pick: (item: Root) => number) => roots.reduce((sum, item) => sum + pick(item), 0)
 console.log(
@@ -41,7 +59,7 @@ console.log(
 for (const item of roots)
   console.log(`corpus: ${item.name} valid=${item.valid.length} invalid=${item.invalid.length} skipped=${item.skipped}`)
 
-async function errorRoot(name: string, schema: Schema.Top): Promise<Root> {
+async function schemaRoot(name: string, schema: Schema.Top): Promise<Root> {
   const codec = Schema.toCodecJson(schema as unknown as JsonCodec)
   const samples = await Effect.runPromise(
     Arbitrary.sampleEffect(Arbitrary.schema(schema), { seed: name, count: 12, size: 4 }),
@@ -55,21 +73,12 @@ async function errorRoot(name: string, schema: Schema.Top): Promise<Root> {
       continue
     }
     if (valid.length === 3) continue
-    const input = JSON.stringify(encoded)
-    valid.push({ input, expected: roundTrip(codec, input) })
+    const decoded = Schema.decodeUnknownSync(codec)(JSON.parse(JSON.stringify(encoded)))
+    const input = JSON.stringify(withoutNullOptionals(encoded, decoded))
+    valid.push({ input, expected: input })
   }
   if (valid.length === 0) throw new Error(`corpus: ${name} produced no surrogate-free sample`)
   const first = JSON.parse(valid[0].input)
-  if (!isObject(first)) return { name, valid, invalid: [], skipped }
-
-  const excess = { ...first, __excess__: 123 }
-  const excessInput = JSON.stringify(excess)
-  const decoded = Schema.decodeUnknownExit(codec)(excess)
-  if (decoded._tag === "Success") {
-    const expected = JSON.stringify(Schema.encodeUnknownSync(codec)(decoded.value))
-    if (expected !== excessInput) valid.push({ input: excessInput, expected })
-  }
-
   const known = new Set(valid.map((sample) => sample.input))
   const invalid: Array<string> = []
   const add = (candidate: unknown) => {
@@ -83,6 +92,20 @@ async function errorRoot(name: string, schema: Schema.Top): Promise<Root> {
     known.add(input)
     invalid.push(input)
   }
+  if (!isObject(first)) {
+    for (const candidate of [null, true, 0, "", " ", "!", `!${String(first)}`, `${String(first)}!`, "__invalid__"])
+      add(candidate)
+    return { name, valid, invalid, skipped }
+  }
+
+  const excess = { ...first, __excess__: 123 }
+  const excessInput = JSON.stringify(excess)
+  const decoded = Schema.decodeUnknownExit(codec)(excess)
+  if (decoded._tag === "Success") {
+    const expected = JSON.stringify(withoutNullOptionals(Schema.encodeUnknownSync(codec)(decoded.value), decoded.value))
+    if (expected !== excessInput) valid.push({ input: excessInput, expected })
+  }
+
   const keys = Object.keys(first)
   const withValue = (key: string, value: unknown) => ({ ...first, [key]: value })
   for (const key of keys) {
@@ -121,7 +144,8 @@ function numbersRoot(): Root {
 }
 
 function roundTrip(codec: JsonCodec, input: string) {
-  return JSON.stringify(Schema.encodeUnknownSync(codec)(Schema.decodeUnknownSync(codec)(JSON.parse(input))))
+  const decoded = Schema.decodeUnknownSync(codec)(JSON.parse(input))
+  return JSON.stringify(Schema.encodeUnknownSync(codec)(decoded))
 }
 
 function replacement(value: unknown): unknown {
@@ -135,6 +159,18 @@ function replacement(value: unknown): unknown {
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)
+}
+
+function withoutNullOptionals(encoded: unknown, decoded: unknown): unknown {
+  if (Array.isArray(encoded) && Array.isArray(decoded))
+    return encoded.map((value, index) => withoutNullOptionals(value, decoded[index]))
+  if (!isObject(encoded) || !isObject(decoded)) return encoded
+  const result: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(encoded)) {
+    if (value === null && (!(key in decoded) || decoded[key] === undefined)) continue
+    result[key] = withoutNullOptionals(value, decoded[key])
+  }
+  return result
 }
 
 function hasLoneSurrogate(value: unknown): boolean {
@@ -153,6 +189,8 @@ function hasLoneSurrogate(value: unknown): boolean {
   }
   if (Array.isArray(value)) return value.some(hasLoneSurrogate)
   if (typeof value === "object" && value !== null)
-    return Object.values(value as Record<string, unknown>).some(hasLoneSurrogate)
+    return Object.entries(value as Record<string, unknown>).some(
+      ([key, item]) => hasLoneSurrogate(key) || hasLoneSurrogate(item),
+    )
   return false
 }
