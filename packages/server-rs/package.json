@@ -9,6 +9,8 @@
     "check:deny": "cargo deny --workspace --frozen check --hide-inclusion-graph licenses bans sources",
     "check:advisories": "cargo deny --workspace --locked check --hide-inclusion-graph advisories",
     "drift:report": "bun run script/drift-report.ts",
+    "parity": "bun run parity/run.ts",
+    "parity:test": "bun test ./parity/test",
     "test:shell": "bun test --timeout 120000 ./test/shell",
     "typecheck": "bun check --no-script",
     "typecheck:tsc": "tsc --noEmit"
