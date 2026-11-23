@@ -147,6 +147,7 @@ export interface ChannelController {
 export interface ScenarioContext {
   readonly load: Loader
   readonly channel: ChannelController
+  readonly executor: any
 }
 
 export interface Scenario {
@@ -191,6 +192,8 @@ const PROTOCOLS: Record<string, { readonly path: string; readonly transport: str
   "meta-messages": { path: "packages/ai/src/protocols/meta-messages.ts", transport: "http-json/sse" },
   "meta-responses": { path: "packages/ai/src/protocols/meta-responses.ts", transport: "http-json/sse" },
   "xai-responses": { path: "packages/ai/src/protocols/xai-responses.ts", transport: "http-json/sse" },
+  "cohere-chat": { path: "packages/ai/src/protocols/cohere-chat.ts", transport: "http-json/sse" },
+  "google-interactions": { path: "packages/ai/src/protocols/google-interactions.ts", transport: "http-json/sse" },
 }
 
 const TEXT_CONTENT_TYPES = new Set([
@@ -281,7 +284,11 @@ const pendingChannelOps: Array<unknown> = []
 const captureHttp = (request: any, next: any) =>
   Effect.gen(function* () {
     const step = active
-    if (step === undefined) throw new Error("capture: HTTP request outside a captured step")
+    if (step === undefined) {
+      const forwarded = yield* next(request)
+      yield* forwarded.arrayBuffer
+      return forwarded
+    }
     const web = yield* HttpClientRequest.toWeb(request)
     const body = yield* Effect.promise(() => web.text())
     const prepared: CapturedRequest = {
@@ -546,11 +553,12 @@ export async function capture(tree: string, scenario: Scenario): Promise<Capture
   const webSocket = HttpRecorder.layerWebSocketConstructor(scenario.cassette, { directory }).pipe(
     Layer.provide(platformNode.NodeWS.layerWebSocketConstructor),
   )
-  const layer = Layer.mergeAll(wrapped, webSocket)
+  const layer = Layer.mergeAll(wrapped, webSocket, capturing)
 
   const program = Effect.gen(function* () {
     const channel = yield* makeChannel
-    yield* scenario.run({ load, channel }) as Effect.Effect<void, unknown>
+    const executor = yield* RequestExecutor.Service
+    yield* scenario.run({ load, channel, executor }) as Effect.Effect<void, unknown>
   })
 
   const exit = await Effect.runPromise(

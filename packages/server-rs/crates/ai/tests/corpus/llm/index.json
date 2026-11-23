@@ -411,6 +411,26 @@
       "group": "gateways"
     },
     {
+      "cassette": "cohere/continues-a-native-tool-call",
+      "protocol": "cohere-chat",
+      "group": "native-vendors"
+    },
+    {
+      "cassette": "cohere/streams-compatible-chat-reasoning",
+      "protocol": "openai-chat",
+      "group": "native-vendors"
+    },
+    {
+      "cassette": "cohere/streams-native-text-and-usage",
+      "protocol": "cohere-chat",
+      "group": "native-vendors"
+    },
+    {
+      "cassette": "cohere/streams-native-thinking-with-a-budget",
+      "protocol": "cohere-chat",
+      "group": "native-vendors"
+    },
+    {
       "cassette": "deepinfra-chat/deepinfra-llama-3-3-70b-text",
       "protocol": "openai-chat",
       "group": "openai-chat"
@@ -469,6 +489,41 @@
       "cassette": "gemini/gemini-2-5-flash-image",
       "protocol": "gemini",
       "group": "gemini"
+    },
+    {
+      "cassette": "google-interactions/continues-tool-results-with-previous-interaction-id",
+      "protocol": "google-interactions",
+      "group": "native-vendors"
+    },
+    {
+      "cassette": "google-interactions/replays-native-tool-results-and-signatures-statelessly",
+      "protocol": "google-interactions",
+      "group": "native-vendors"
+    },
+    {
+      "cassette": "google-interactions/streams-reasoning-and-retains-thought-signatures",
+      "protocol": "google-interactions",
+      "group": "native-vendors"
+    },
+    {
+      "cassette": "google-interactions/streams-text-and-reports-usage",
+      "protocol": "google-interactions",
+      "group": "native-vendors"
+    },
+    {
+      "cassette": "google-vertex/calls-a-tool",
+      "protocol": "gemini",
+      "group": "native-vendors"
+    },
+    {
+      "cassette": "google-vertex/continues-after-a-tool-result",
+      "protocol": "gemini",
+      "group": "native-vendors"
+    },
+    {
+      "cassette": "google-vertex/streams-text",
+      "protocol": "gemini",
+      "group": "native-vendors"
     },
     {
       "cassette": "groq-chat/continues-qwen-parallel-tool-calls",

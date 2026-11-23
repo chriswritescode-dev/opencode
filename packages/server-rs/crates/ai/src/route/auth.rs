@@ -24,12 +24,17 @@ const UNSIGNABLE_HEADERS: [&str; 9] = [
     "connection",
 ];
 
+pub trait CredentialSource: Send + Sync + std::fmt::Debug {
+    fn load(&self, env: &dyn Env) -> Result<String, AiError>;
+}
+
 #[derive(Debug, Clone)]
 pub enum Credential {
     Value { secret: String, source: String },
     Optional { secret: Option<String>, source: String },
     Env(String),
     OrElse(Box<Credential>, Box<Credential>),
+    Source(std::sync::Arc<dyn CredentialSource>),
 }
 
 impl Credential {
@@ -87,6 +92,7 @@ impl Credential {
                 }),
             },
             Credential::OrElse(first, second) => first.load(env).or_else(|_| second.load(env)),
+            Credential::Source(source) => source.load(env),
         }
     }
 }

@@ -54,21 +54,17 @@ impl Settings {
     }
 
     pub fn request_options(&self, declared: &[&str]) -> Option<RequestOptions> {
-        let provider_options = self.values.iter().filter(|(key, _)| {
-            !declared.contains(&key.as_str()) && !matches!(key.as_str(), "headers" | "body" | "queryParams")
-        });
+        let provider_options = self
+            .values
+            .iter()
+            .filter(|(key, _)| !declared.contains(&key.as_str()) && !matches!(key.as_str(), "headers" | "body"));
         let mut provider = Map::new();
         for (key, value) in provider_options {
             provider.insert(key.clone(), value.clone());
         }
         let headers = self.headers();
         let body = self.body();
-        let query = self.query_params();
-        let http = if body.is_none() && query.is_none() {
-            None
-        } else {
-            Some(HttpOptions { query, body, ..HttpOptions::default() })
-        };
+        let http = body.map(|body| HttpOptions { body: Some(body), ..HttpOptions::default() });
         let options = RequestOptions {
             headers,
             http,

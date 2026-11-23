@@ -46,9 +46,10 @@ export const GROUPS: Record<string, { protocols: string[] }> = {
       "xai-responses",
     ],
   },
+  "native-vendors": { protocols: ["cohere-chat", "gemini", "google-interactions", "openai-chat"] },
 }
 
-export const EXPECTED_CASSETTES = 237
+export const EXPECTED_CASSETTES = 248
 
 const exporter = `${tree}/exporter`
 await mkdir(exporter, { recursive: true })

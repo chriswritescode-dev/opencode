@@ -1,5 +1,7 @@
 use opencode_ai::MapEnv;
+use opencode_ai::providers::google_vertex_shared::{self, ApiKeyInput, MissingAdc};
 use opencode_ai::providers::{ProviderPackages, RuntimeModel, Settings};
+use opencode_ai::route::auth::CredentialSource;
 use opencode_ai::route::compile::{Compiled, StreamOptions, compile};
 use opencode_ai::route::model::Model;
 use opencode_ai::schema::AiErrorReason;
@@ -25,16 +27,27 @@ fn request_options_split_connection_keys_from_provider_options() {
     let options = settings.request_options(&["apiKey", "baseURL"]).expect("request options");
     assert_eq!(options.headers.as_ref().and_then(|headers| headers.get("x-test")), Some("one"));
     let http = options.http.as_ref().expect("http options");
-    assert_eq!(http.query.as_ref().and_then(|query| query.get("api-version")), Some("v1"));
+    assert!(http.query.is_none());
     assert_eq!(http.body.as_ref().and_then(|body| body.get("reasoning")), Some(&json!({ "enabled": true })));
     let provider = options.provider_options.as_ref().expect("provider options");
     assert_eq!(provider.get("effort"), Some(&json!("high")));
     assert_eq!(provider.get("reasoningEffort"), Some(&json!("low")));
+    assert_eq!(provider.get("queryParams"), Some(&json!({ "api-version": "v1" })));
     assert!(provider.get("apiKey").is_none());
     assert!(provider.get("baseURL").is_none());
     assert!(provider.get("headers").is_none());
     assert!(provider.get("body").is_none());
-    assert!(provider.get("queryParams").is_none());
+}
+
+#[test]
+fn declared_query_params_leave_provider_options() {
+    let settings = from_value(json!({
+        "apiKey": "fixture",
+        "baseURL": "https://example.test",
+        "queryParams": { "foo": "bar" }
+    }));
+    assert!(settings.request_options(&["apiKey", "baseURL", "queryParams"]).is_none());
+    assert_eq!(settings.query_params().and_then(|query| query.get("foo").map(str::to_string)), Some("bar".to_string()));
 }
 
 #[test]
@@ -510,4 +523,103 @@ fn minimax_chat_uses_max_completion_tokens_and_reasoning_split() {
     );
     let body = json_body(&compile_zai(&split_off, zai_request(None, false)));
     assert_eq!(body.get("reasoning_split"), Some(&json!(false)));
+}
+
+fn vertex_env(pairs: &[(&str, &str)]) -> MapEnv {
+    MapEnv::new(pairs.iter().map(|(key, value)| (key.to_string(), value.to_string())))
+}
+
+#[test]
+fn google_vertex_environment_fallbacks_follow_precedence() {
+    let all = vertex_env(&[
+        ("GOOGLE_VERTEX_PROJECT", "vertex-project"),
+        ("GOOGLE_CLOUD_PROJECT", "cloud-project"),
+        ("GCP_PROJECT", "gcp-project"),
+        ("GCLOUD_PROJECT", "gcloud-project"),
+        ("GOOGLE_VERTEX_LOCATION", "europe-west4"),
+        ("GOOGLE_CLOUD_LOCATION", "us-central1"),
+        ("VERTEX_LOCATION", "us-east1"),
+    ]);
+    assert_eq!(google_vertex_shared::project(Some("explicit"), &all).as_deref(), Some("explicit"));
+    assert_eq!(google_vertex_shared::project(None, &all).as_deref(), Some("vertex-project"));
+    assert_eq!(google_vertex_shared::location(Some("asia-east1"), &all), "asia-east1");
+    assert_eq!(google_vertex_shared::location(None, &all), "europe-west4");
+
+    let cloud = vertex_env(&[
+        ("GOOGLE_CLOUD_PROJECT", "cloud-project"),
+        ("GCP_PROJECT", "gcp-project"),
+        ("GCLOUD_PROJECT", "gcloud-project"),
+        ("GOOGLE_CLOUD_LOCATION", "us-central1"),
+        ("VERTEX_LOCATION", "us-east1"),
+    ]);
+    assert_eq!(google_vertex_shared::project(None, &cloud).as_deref(), Some("cloud-project"));
+    assert_eq!(google_vertex_shared::location(None, &cloud), "us-central1");
+
+    let gcp = vertex_env(&[("GCP_PROJECT", "gcp-project"), ("GCLOUD_PROJECT", "gcloud-project")]);
+    assert_eq!(google_vertex_shared::project(None, &gcp).as_deref(), Some("gcp-project"));
+
+    let gcloud = vertex_env(&[("GCLOUD_PROJECT", "gcloud-project"), ("VERTEX_LOCATION", "us-east1")]);
+    assert_eq!(google_vertex_shared::project(None, &gcloud).as_deref(), Some("gcloud-project"));
+    assert_eq!(google_vertex_shared::location(None, &gcloud), "us-east1");
+
+    let empty = MapEnv::default();
+    assert_eq!(google_vertex_shared::project(None, &empty), None);
+    assert_eq!(google_vertex_shared::location(None, &empty), "global");
+}
+
+#[test]
+fn google_vertex_hosts_use_jurisdictional_endpoints() {
+    assert_eq!(google_vertex_shared::host("global"), "aiplatform.googleapis.com");
+    assert_eq!(google_vertex_shared::host("eu"), "aiplatform.eu.rep.googleapis.com");
+    assert_eq!(google_vertex_shared::host("us"), "aiplatform.us.rep.googleapis.com");
+    assert_eq!(google_vertex_shared::host("europe-west4"), "europe-west4-aiplatform.googleapis.com");
+}
+
+#[test]
+fn google_vertex_api_key_rules() {
+    let empty = MapEnv::default();
+    let explicit = ApiKeyInput { api_key: Some("explicit".to_string()), ..ApiKeyInput::default() };
+    assert_eq!(google_vertex_shared::api_key(&explicit, &empty).expect("explicit key").as_deref(), Some("explicit"));
+
+    let ambient = vertex_env(&[("GOOGLE_VERTEX_API_KEY", "ambient")]);
+    assert_eq!(
+        google_vertex_shared::api_key(&ApiKeyInput::default(), &ambient).expect("ambient key").as_deref(),
+        Some("ambient")
+    );
+
+    let project = ApiKeyInput { project: Some("project".to_string()), ..ApiKeyInput::default() };
+    assert_eq!(google_vertex_shared::api_key(&project, &ambient).expect("project suppresses key"), None);
+
+    let location = ApiKeyInput { location: Some("global".to_string()), ..ApiKeyInput::default() };
+    assert_eq!(google_vertex_shared::api_key(&location, &ambient).expect("location suppresses key"), None);
+
+    let access_token = ApiKeyInput { access_token: Some("token".to_string()), ..ApiKeyInput::default() };
+    assert_eq!(google_vertex_shared::api_key(&access_token, &ambient).expect("access token suppresses key"), None);
+
+    let conflict = ApiKeyInput {
+        api_key: Some("explicit".to_string()),
+        access_token: Some("token".to_string()),
+        ..ApiKeyInput::default()
+    };
+    let error = google_vertex_shared::api_key(&conflict, &empty).expect_err("conflicting credentials");
+    assert_eq!(error.message(), "Google Vertex apiKey cannot be combined with accessToken or auth");
+
+    let auth_conflict = ApiKeyInput {
+        api_key: Some("explicit".to_string()),
+        auth: Some(opencode_ai::route::auth::Auth::None),
+        ..ApiKeyInput::default()
+    };
+    let error = google_vertex_shared::api_key(&auth_conflict, &empty).expect_err("conflicting auth");
+    assert_eq!(error.message(), "Google Vertex apiKey cannot be combined with accessToken or auth");
+}
+
+#[test]
+fn google_vertex_adc_reports_a_missing_credential() {
+    let error = MissingAdc.load(&MapEnv::default()).expect_err("missing ADC");
+    match error.reason {
+        AiErrorReason::Authentication { message, .. } => {
+            assert_eq!(message, "Google Application Default Credentials");
+        }
+        other => panic!("expected authentication error, got {other:?}"),
+    }
 }

@@ -474,13 +474,14 @@ async fn replay_websocket_cassette(cassette: &Cassette) {
 #[tokio::test]
 async fn every_in_scope_cassette_replays() {
     let corpus = crate::corpus::Corpus::load();
-    assert_eq!(corpus.cassettes.len(), 237, "in-scope cassette count");
+    assert_eq!(corpus.cassettes.len(), 248, "in-scope cassette count");
     let groups = [
         "anthropic-messages",
         "bedrock-converse",
         "chat-variants",
         "gateways",
         "gemini",
+        "native-vendors",
         "open-responses",
         "openai-chat",
         "openai-responses-websocket",
@@ -502,7 +503,7 @@ async fn every_in_scope_cassette_replays() {
         }
         replayed += 1;
     }
-    assert_eq!(replayed, 237, "replayed cassette count");
+    assert_eq!(replayed, 248, "replayed cassette count");
 }
 
 #[tokio::test]
@@ -521,6 +522,15 @@ async fn vendor_variant_cassettes() {
     assert_eq!(cassettes, 66, "vendor-variant cassette count");
     let steps = replay_group("vendor-variants").await;
     assert_eq!(steps, 79, "vendor-variant step count");
+}
+
+#[tokio::test]
+async fn native_vendor_cassettes() {
+    let corpus = crate::corpus::Corpus::load();
+    let cassettes = corpus.cassettes.iter().filter(|cassette| cassette.group == "native-vendors").count();
+    assert_eq!(cassettes, 11, "native-vendor cassette count");
+    let steps = replay_group("native-vendors").await;
+    assert_eq!(steps, 14, "native-vendor step count");
 }
 
 #[tokio::test]

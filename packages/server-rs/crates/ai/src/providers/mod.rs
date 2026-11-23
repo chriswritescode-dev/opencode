@@ -14,9 +14,17 @@ pub mod cerebras;
 pub mod cloudflare_ai_gateway;
 pub mod cloudflare_shared;
 pub mod cloudflare_workers_ai;
+pub mod cohere;
 pub mod deepinfra;
 pub mod digitalocean;
 pub mod google;
+pub mod google_vertex;
+pub mod google_vertex_chat;
+pub mod google_vertex_interactions;
+pub mod google_vertex_messages;
+pub mod google_vertex_mistral;
+pub mod google_vertex_responses;
+pub mod google_vertex_shared;
 pub mod groq;
 pub mod meta;
 pub mod minimax;
@@ -121,10 +129,20 @@ impl ProviderPackages {
             ("@opencode/ai/providers/cerebras", cerebras::model as Entry),
             ("@opencode/ai/providers/cloudflare-ai-gateway", cloudflare_ai_gateway::model as Entry),
             ("@opencode/ai/providers/cloudflare-workers-ai", cloudflare_workers_ai::model as Entry),
+            ("@opencode/ai/providers/cohere", cohere::model as Entry),
+            ("@opencode/ai/providers/cohere/chat", cohere::chat_model as Entry),
             ("@opencode/ai/providers/deepinfra", deepinfra::model as Entry),
             ("@opencode/ai/providers/digitalocean", digitalocean::model as Entry),
             ("@opencode/ai/providers/digitalocean/responses", digitalocean::responses_model as Entry),
             ("@opencode/ai/providers/google", google::model as Entry),
+            ("@opencode/ai/providers/google/interactions", google::interactions_model as Entry),
+            ("@opencode/ai/providers/google-vertex", google_vertex::model as Entry),
+            ("@opencode/ai/providers/google-vertex-messages", google_vertex_messages::model as Entry),
+            ("@opencode/ai/providers/google-vertex/chat", google_vertex_chat::model as Entry),
+            ("@opencode/ai/providers/google-vertex/interactions", google_vertex_interactions::model as Entry),
+            ("@opencode/ai/providers/google-vertex/messages", google_vertex_messages::model as Entry),
+            ("@opencode/ai/providers/google-vertex/mistral", google_vertex_mistral::model as Entry),
+            ("@opencode/ai/providers/google-vertex/responses", google_vertex_responses::model as Entry),
             ("@opencode/ai/providers/groq", groq::model as Entry),
             ("@opencode/ai/providers/meta", meta::model as Entry),
             ("@opencode/ai/providers/meta/chat", meta::chat_model as Entry),

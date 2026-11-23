@@ -1,5 +1,6 @@
 import "./capture.js"
 import { Effect, Schema, Stream } from "effect"
+import { HttpClientRequest } from "effect/http"
 import { capture, createLoader, type Scenario } from "./capture.js"
 
 const tree = process.env.OPENCODE_UPSTREAM_TREE
@@ -20,9 +21,11 @@ const {
   Cerebras,
   CloudflareAIGateway,
   CloudflareWorkersAI,
+  Cohere,
   DeepInfra,
   DigitalOcean,
   Google,
+  GoogleVertex,
   Groq,
   Meta,
   MiniMax,
@@ -137,6 +140,9 @@ const cloudflareClaudeRedact = { url: redactCloudflareURL, allowRequestHeaders: 
 const vercelGateway = VercelAIGateway.configure({ apiKey: "fixture" })
 const vercelGatewayChat = VercelAIGateway.configure({ apiKey: "fixture" })
 const vercelGatewaySettings = { apiKey: "fixture" }
+const cohere = Cohere.configure({ apiKey: "fixture" })
+const googleInteractions = Google.configure({ apiKey: "fixture" }).interactions("gemini-3.8-flash")
+const googleVertex = GoogleVertex.configure({ apiKey: "fixture" }).model("gemini-3.5-flash")
 
 const PDF =
   "JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA2MTIgNzkyXSAvUmVzb3VyY2VzIDw8IC9Gb250IDw8IC9GMSA1IDAgUiA+PiA+PiAvQ29udGVudHMgNCAwIFIgPj4KZW5kb2JqCjQgMCBvYmoKPDwgL0xlbmd0aCA3NSA+PgpzdHJlYW0KQlQKL0YxIDE4IFRmCjcyIDcyMCBUZAooUERGIGNhc3NldHRlIHZlcmlmaWNhdGlvbiBjb2RlOiBPUkNISUQtNzM5MSkgVGoKRVQKZW5kc3RyZWFtCmVuZG9iago1IDAgb2JqCjw8IC9UeXBlIC9Gb250IC9TdWJ0eXBlIC9UeXBlMSAvQmFzZUZvbnQgL0hlbHZldGljYSA+PgplbmRvYmoKeHJlZgowIDYKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDA5IDAwMDAwIG4gCjAwMDAwMDAwNTggMDAwMDAgbiAKMDAwMDAwMDExNSAwMDAwMCBuIAowMDAwMDAwMjQxIDAwMDAwIG4gCjAwMDAwMDAzNjUgMDAwMDAgbiAKdHJhaWxlcgo8PCAvU2l6ZSA2IC9Sb290IDEgMCBSID4+CnN0YXJ0eHJlZgo0MzUKJSVFT0YK"
@@ -1476,6 +1482,7 @@ const chatVariantScenarios = [
 ]
 
 const vendorVariant = (scenario: Scenario) => ({ group: "vendor-variants", scenario })
+const nativeVendor = (scenario: Scenario) => ({ group: "native-vendors", scenario })
 
 const alibabaSettings = { region: "ap-southeast-1", apiKey: "fixture" }
 const metaSettings = { apiKey: "fixture" }
@@ -2082,6 +2089,270 @@ const vendorVariantScenarios = [
   ...metaSearchScenarios,
   ...metaImageScenarios,
   ...xaiPdfScenarios,
+]
+
+const lookupWeather = ToolDefinition.make({
+  name: "lookup_weather",
+  description: "Look up the current weather for a city",
+  inputSchema: { type: "object", properties: { city: { type: "string" } }, required: ["city"] },
+})
+
+const nativeVendorScenarios = [
+  nativeVendor({
+    cassette: "cohere/streams-native-text-and-usage",
+    protocol: "cohere-chat",
+    provider: {
+      package: "@opencode/ai/providers/cohere",
+      modelID: "command-a-03-2025",
+      settings: { apiKey: "fixture" },
+    },
+    run: () =>
+      LLMClient.generate(
+        ai.request({
+          model: cohere.model("command-a-03-2025"),
+          prompt: "Reply exactly: OK",
+          maxTokens: 64,
+        }),
+      ),
+  }),
+  nativeVendor({
+    cassette: "cohere/streams-native-thinking-with-a-budget",
+    protocol: "cohere-chat",
+    provider: {
+      package: "@opencode/ai/providers/cohere",
+      modelID: "command-a-reasoning-08-2025",
+      settings: { apiKey: "fixture" },
+    },
+    run: () =>
+      LLMClient.generate(
+        ai.request({
+          model: cohere.model("command-a-reasoning-08-2025"),
+          prompt: "What is 17 times 23? Answer briefly.",
+          providerOptions: { thinking: { type: "enabled", tokenBudget: 128 } },
+          maxTokens: 2048,
+        }),
+      ),
+  }),
+  nativeVendor({
+    cassette: "cohere/continues-a-native-tool-call",
+    protocol: "cohere-chat",
+    provider: {
+      package: "@opencode/ai/providers/cohere",
+      modelID: "command-a-plus-05-2026",
+      settings: { apiKey: "fixture" },
+    },
+    run: () =>
+      runWeatherToolLoop({
+        ...goldenWeatherToolLoopRequest({
+          id: "cohere-tool-loop",
+          model: cohere.model("command-a-plus-05-2026"),
+          maxTokens: 2048,
+          temperature: false,
+        }),
+        system: [
+          SystemPart.make("Use the get_weather tool exactly once."),
+          SystemPart.make("After the tool result, reply exactly: Paris is sunny."),
+        ],
+      }),
+  }),
+  nativeVendor({
+    cassette: "cohere/streams-compatible-chat-reasoning",
+    protocol: "openai-chat",
+    provider: {
+      package: "@opencode/ai/providers/cohere/chat",
+      modelID: "command-a-reasoning-08-2025",
+      settings: { apiKey: "fixture" },
+    },
+    run: () =>
+      LLMClient.generate(
+        ai.request({
+          model: cohere.chat("command-a-reasoning-08-2025"),
+          prompt: "What is 17 times 23? Answer briefly.",
+          providerOptions: { reasoningEffort: "high" },
+          maxTokens: 2048,
+        }),
+      ),
+  }),
+  nativeVendor({
+    cassette: "google-interactions/streams-text-and-reports-usage",
+    protocol: "google-interactions",
+    provider: {
+      package: "@opencode/ai/providers/google/interactions",
+      modelID: "gemini-3.8-flash",
+      settings: { apiKey: "fixture" },
+    },
+    run: () =>
+      LLMClient.generate(
+        ai.request({
+          model: googleInteractions,
+          prompt: "Reply with exactly one word: hello",
+          maxTokens: 2048,
+          providerOptions: { thinkingLevel: "low" },
+        }),
+      ),
+  }),
+  nativeVendor({
+    cassette: "google-interactions/streams-reasoning-and-retains-thought-signatures",
+    protocol: "google-interactions",
+    provider: {
+      package: "@opencode/ai/providers/google/interactions",
+      modelID: "gemini-3.8-flash",
+      settings: { apiKey: "fixture" },
+    },
+    run: () =>
+      LLMClient.generate(
+        ai.request({
+          model: googleInteractions,
+          prompt:
+            "Find the smallest positive integer that leaves remainder 1 modulo 7, 2 modulo 9, and 3 modulo 11. Explain briefly.",
+          maxTokens: 4096,
+          providerOptions: { thinkingLevel: "high", thinkingSummaries: "auto" },
+        }),
+      ),
+  }),
+  nativeVendor({
+    cassette: "google-interactions/replays-native-tool-results-and-signatures-statelessly",
+    protocol: "google-interactions",
+    provider: {
+      package: "@opencode/ai/providers/google/interactions",
+      modelID: "gemini-3.8-flash",
+      settings: { apiKey: "fixture" },
+    },
+    run: () =>
+      Effect.gen(function* () {
+        const request = ai.request({
+          model: googleInteractions,
+          system: "Use get_weather for weather questions. Answer concisely after receiving the result.",
+          prompt: "What is the weather in Paris?",
+          tools: [weatherTool],
+          toolChoice: { type: "tool", name: weatherTool.name },
+          maxTokens: 2048,
+          providerOptions: { thinkingLevel: "low", thinkingSummaries: "auto" },
+        })
+        const first = yield* LLMClient.generate(request)
+        const call = first.toolCalls[0]
+        if (!call) throw new Error("Missing recorded weather tool call")
+        yield* LLMClient.generate(
+          ai.request({
+            model: googleInteractions,
+            system: request.system,
+            tools: [weatherTool],
+            toolChoice: "none",
+            maxTokens: 2048,
+            providerOptions: { thinkingLevel: "low", thinkingSummaries: "auto" },
+            messages: [
+              ...request.messages,
+              first.message,
+              Message.tool({ id: call.id, name: call.name, result: { temperature: 22, condition: "sunny" } }),
+            ],
+          }),
+        )
+      }),
+  }),
+  nativeVendor({
+    cassette: "google-interactions/continues-tool-results-with-previous-interaction-id",
+    protocol: "google-interactions",
+    provider: {
+      package: "@opencode/ai/providers/google/interactions",
+      modelID: "gemini-3.8-flash",
+      settings: { apiKey: "fixture" },
+    },
+    run: ({ executor }) =>
+      Effect.gen(function* () {
+        const request = ai.request({
+          model: googleInteractions,
+          system: "Use get_weather for weather questions. Answer concisely after receiving the result.",
+          prompt: "What is the weather in Paris?",
+          tools: [weatherTool],
+          toolChoice: "required",
+          maxTokens: 2048,
+          providerOptions: { thinkingLevel: "low", store: true },
+        })
+        const first = yield* LLMClient.generate(request)
+        const interactionId = first.events.find(LLMEvent.is.finish)?.providerMetadata?.google?.interactionId
+        if (typeof interactionId !== "string") throw new Error("Missing recorded interaction id")
+        const cleanup = executor
+          .execute(
+            HttpClientRequest.delete(
+              `https://generativelanguage.googleapis.com/v1beta/interactions/${interactionId}`,
+            ).pipe(HttpClientRequest.setHeader("x-goog-api-key", "fixture")),
+          )
+          .pipe(Effect.orDie)
+        yield* Effect.gen(function* () {
+          const call = first.toolCalls[0]
+          if (!call) throw new Error("Missing recorded weather tool call")
+          yield* LLMClient.generate(
+            ai.request({
+              model: googleInteractions,
+              system: request.system,
+              tools: [weatherTool],
+              toolChoice: "none",
+              maxTokens: 2048,
+              providerOptions: { thinkingLevel: "low", previousInteractionId: interactionId, store: false },
+              messages: [
+                Message.tool({ id: call.id, name: call.name, result: { temperature: 22, condition: "sunny" } }),
+              ],
+            }),
+          )
+        }).pipe(Effect.ensuring(cleanup))
+      }),
+  }),
+  nativeVendor({
+    cassette: "google-vertex/streams-text",
+    protocol: "gemini",
+    provider: {
+      package: "@opencode/ai/providers/google-vertex",
+      modelID: "gemini-3.5-flash",
+      settings: { apiKey: "fixture" },
+    },
+    run: () =>
+      LLMClient.generate(ai.request({ model: googleVertex, prompt: "Reply with exactly one word: hello" })),
+  }),
+  nativeVendor({
+    cassette: "google-vertex/calls-a-tool",
+    protocol: "gemini",
+    provider: {
+      package: "@opencode/ai/providers/google-vertex",
+      modelID: "gemini-3.5-flash",
+      settings: { apiKey: "fixture" },
+    },
+    run: () =>
+      LLMClient.generate(
+        ai.request({
+          model: googleVertex,
+          prompt: "What is the weather in Paris? Use the lookup_weather tool.",
+          tools: [lookupWeather],
+        }),
+      ),
+  }),
+  nativeVendor({
+    cassette: "google-vertex/continues-after-a-tool-result",
+    protocol: "gemini",
+    provider: {
+      package: "@opencode/ai/providers/google-vertex",
+      modelID: "gemini-3.5-flash",
+      settings: { apiKey: "fixture" },
+    },
+    run: () =>
+      LLMClient.generate(
+        ai.request({
+          model: googleVertex,
+          messages: [
+            Message.user("What is the weather in Paris?"),
+            Message.assistant([
+              ToolCallPart.make({ id: "call_paris_1", name: "lookup_weather", input: { city: "Paris" } }),
+            ]),
+            Message.tool({
+              id: "call_paris_1",
+              name: "lookup_weather",
+              result: "18C, light rain",
+              resultType: "text",
+            }),
+          ],
+          tools: [lookupWeather],
+        }),
+      ),
+  }),
 ]
 
 const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scenario }> = [
@@ -3987,6 +4258,7 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
   },
   ...chatVariantScenarios,
   ...vendorVariantScenarios,
+  ...nativeVendorScenarios,
 ]
 
 const cassettes = []
