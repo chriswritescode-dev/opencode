@@ -8,6 +8,7 @@
     "check:drift": "bun run script/drift.ts",
     "check:deny": "cargo deny --workspace --frozen check --hide-inclusion-graph licenses bans sources",
     "check:advisories": "cargo deny --workspace --locked check --hide-inclusion-graph advisories",
+    "drift:report": "bun run script/drift-report.ts",
     "typecheck": "bun check --no-script",
     "typecheck:tsc": "tsc --noEmit"
   },
