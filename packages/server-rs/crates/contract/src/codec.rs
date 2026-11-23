@@ -326,6 +326,10 @@ impl Decode for f64 {
 
 impl Encode for f64 {
     fn encode(&self, out: &mut String) {
+        if !self.is_finite() {
+            out.push_str("null");
+            return;
+        }
         out.push_str(&opencode_api_types::js::number_to_string(*self));
     }
 }
