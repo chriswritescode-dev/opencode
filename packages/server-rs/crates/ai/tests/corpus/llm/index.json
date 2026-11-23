@@ -161,6 +161,46 @@
       "group": "openai-chat"
     },
     {
+      "cassette": "cloudflare-ai-gateway/cloudflare-ai-gateway-claude-haiku-4-5-text",
+      "protocol": "anthropic-messages",
+      "group": "gateways"
+    },
+    {
+      "cassette": "cloudflare-ai-gateway/cloudflare-ai-gateway-claude-haiku-4-5-tool-loop",
+      "protocol": "anthropic-messages",
+      "group": "gateways"
+    },
+    {
+      "cassette": "cloudflare-ai-gateway/cloudflare-ai-gateway-openai-gpt-5-nano-text",
+      "protocol": "openai-responses",
+      "group": "gateways"
+    },
+    {
+      "cassette": "cloudflare-ai-gateway/cloudflare-ai-gateway-openai-gpt-5-nano-tool-loop",
+      "protocol": "openai-responses",
+      "group": "gateways"
+    },
+    {
+      "cassette": "cloudflare-ai-gateway/cloudflare-ai-gateway-workers-ai-gpt-oss-20b-tools-tool-call",
+      "protocol": "openai-chat",
+      "group": "gateways"
+    },
+    {
+      "cassette": "cloudflare-ai-gateway/cloudflare-ai-gateway-workers-ai-llama-3-1-8b-text",
+      "protocol": "openai-chat",
+      "group": "gateways"
+    },
+    {
+      "cassette": "cloudflare-workers-ai/cloudflare-workers-ai-gpt-oss-20b-tools-tool-call",
+      "protocol": "openai-chat",
+      "group": "gateways"
+    },
+    {
+      "cassette": "cloudflare-workers-ai/cloudflare-workers-ai-llama-3-1-8b-text",
+      "protocol": "openai-chat",
+      "group": "gateways"
+    },
+    {
       "cassette": "deepinfra-chat/deepinfra-llama-3-3-70b-text",
       "protocol": "openai-chat",
       "group": "openai-chat"
@@ -314,6 +354,51 @@
       "cassette": "vercel-ai-gateway-reasoning-tool-loop",
       "protocol": "openai-chat",
       "group": "openai-chat"
+    },
+    {
+      "cassette": "vercel-native/automatically-caches-distinct-claude-system-blocks",
+      "protocol": "anthropic-messages",
+      "group": "gateways"
+    },
+    {
+      "cassette": "vercel-native/continues-chat-claude-reasoning-and-tools",
+      "protocol": "openai-chat",
+      "group": "gateways"
+    },
+    {
+      "cassette": "vercel-native/continues-chat-muse-reasoning-and-tools",
+      "protocol": "openai-chat",
+      "group": "gateways"
+    },
+    {
+      "cassette": "vercel-native/continues-messages-claude-reasoning-and-tools",
+      "protocol": "anthropic-messages",
+      "group": "gateways"
+    },
+    {
+      "cassette": "vercel-native/continues-messages-deepseek-reasoning-and-tools",
+      "protocol": "anthropic-messages",
+      "group": "gateways"
+    },
+    {
+      "cassette": "vercel-native/continues-messages-gemini-reasoning-and-tools",
+      "protocol": "anthropic-messages",
+      "group": "gateways"
+    },
+    {
+      "cassette": "vercel-native/continues-responses-gpt-reasoning-and-tools",
+      "protocol": "open-responses",
+      "group": "gateways"
+    },
+    {
+      "cassette": "vercel-native/continues-responses-grok-reasoning-and-tools",
+      "protocol": "open-responses",
+      "group": "gateways"
+    },
+    {
+      "cassette": "vercel-native/rejects-invalid-credentials-without-retryable-classification",
+      "protocol": "anthropic-messages",
+      "group": "gateways"
     }
   ]
 }

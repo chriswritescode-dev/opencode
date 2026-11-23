@@ -1,0 +1,366 @@
+{
+  "cassette": "cloudflare-workers-ai/cloudflare-workers-ai-gpt-oss-20b-tools-tool-call",
+  "protocol": "openai-chat",
+  "routeId": "cloudflare-workers-ai",
+  "clockEpochMs": 1767323045000,
+  "steps": [
+    {
+      "model": {
+        "id": "@cf/openai/gpt-oss-20b",
+        "provider": "cloudflare-workers-ai",
+        "route": {
+          "id": "cloudflare-workers-ai",
+          "protocol": "openai-chat",
+          "providerMetadataKey": "cloudflare-workers-ai"
+        },
+        "endpoint": {
+          "baseURL": "https://api.cloudflare.com/client/v4/accounts/fixture-account/ai/v1",
+          "path": "/chat/completions"
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_cloudflare_workers_ai_gpt_oss_20b_tools_tool_call_1",
+        "maxTokens": 120,
+        "temperature": 0,
+        "cache": "none",
+        "system": [
+          {
+            "type": "text",
+            "text": "Call tools exactly as requested."
+          }
+        ],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Call get_weather with city exactly Paris."
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "tool",
+            "name": "get_weather",
+            "description": "Get current weather for a city.",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "city": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "city"
+              ],
+              "additionalProperties": false
+            }
+          }
+        ],
+        "toolChoice": {
+          "type": "tool",
+          "name": "get_weather"
+        }
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/cloudflare-workers-ai",
+        "modelID": "@cf/openai/gpt-oss-20b",
+        "settings": {
+          "accountId": "fixture-account",
+          "apiKey": "fixture"
+        }
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://api.cloudflare.com/client/v4/accounts/fixture-account/ai/v1/chat/completions",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "582",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"@cf/openai/gpt-oss-20b\",\"messages\":[{\"role\":\"system\",\"content\":\"Call tools exactly as requested.\"},{\"role\":\"user\",\"content\":\"Call get_weather with city exactly Paris.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"get_weather\",\"description\":\"Get current weather for a city.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\"}},\"required\":[\"city\"],\"additionalProperties\":false},\"strict\":false}}],\"tool_choice\":{\"type\":\"function\",\"function\":{\"name\":\"get_weather\"}},\"stream\":true,\"stream_options\":{\"include_usage\":true},\"max_tokens\":120,\"temperature\":0}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream"
+            },
+            "body": "data: {\"id\":\"id-1778260814069\",\"created\":1778260814,\"model\":\"@cf/openai/gpt-oss-20b\",\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"},\"logprobs\":null,\"finish_reason\":null}]}\n\ndata: {\"id\":\"id-1778260814069\",\"created\":1778260814,\"model\":\"@cf/openai/gpt-oss-20b\",\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"\"},\"logprobs\":null,\"finish_reason\":null,\"token_ids\":null}]}\n\ndata: {\"id\":\"id-1778260814069\",\"created\":1778260814,\"model\":\"@cf/openai/gpt-oss-20b\",\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"We\"},\"logprobs\":null,\"finish_reason\":null,\"token_ids\":null}]}\n\ndata: {\"id\":\"id-1778260814069\",\"created\":1778260814,\"model\":\"@cf/openai/gpt-oss-20b\",\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" need\"},\"logprobs\":null,\"finish_reason\":null,\"token_ids\":null}]}\n\ndata: {\"id\":\"id-1778260814069\",\"created\":1778260814,\"model\":\"@cf/openai/gpt-oss-20b\",\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" to\"},\"logprobs\":null,\"finish_reason\":null,\"token_ids\":null}]}\n\ndata: {\"id\":\"id-1778260814069\",\"created\":1778260814,\"model\":\"@cf/openai/gpt-oss-20b\",\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" call\"},\"logprobs\":null,\"finish_reason\":null,\"token_ids\":null}]}\n\ndata: {\"id\":\"id-1778260814069\",\"created\":1778260814,\"model\":\"@cf/openai/gpt-oss-20b\",\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" the\"},\"logprobs\":null,\"finish_reason\":null,\"token_ids\":null}]}\n\ndata: {\"id\":\"id-1778260814069\",\"created\":1778260814,\"model\":\"@cf/openai/gpt-oss-20b\",\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" function\"},\"logprobs\":null,\"finish_reason\":null,\"token_ids\":null}]}\n\ndata: {\"id\":\"id-1778260814069\",\"created\":1778260814,\"model\":\"@cf/openai/gpt-oss-20b\",\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" get\"},\"logprobs\":null,\"finish_reason\":null,\"token_ids\":null}]}\n\ndata: {\"id\":\"id-1778260814069\",\"created\":1778260814,\"model\":\"@cf/openai/gpt-oss-20b\",\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"_weather\"},\"logprobs\":null,\"finish_reason\":null,\"token_ids\":null}]}\n\ndata: {\"id\":\"id-1778260814069\",\"created\":1778260814,\"model\":\"@cf/openai/gpt-oss-20b\",\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" with\"},\"logprobs\":null,\"finish_reason\":null,\"token_ids\":null}]}\n\ndata: {\"id\":\"id-1778260814069\",\"created\":1778260814,\"model\":\"@cf/openai/gpt-oss-20b\",\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" city\"},\"logprobs\":null,\"finish_reason\":null,\"token_ids\":null}]}\n\ndata: {\"id\":\"id-1778260814069\",\"created\":1778260814,\"model\":\"@cf/openai/gpt-oss-20b\",\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" \\\"\"},\"logprobs\":null,\"finish_reason\":null,\"token_ids\":null}]}\n\ndata: {\"id\":\"id-1778260814069\",\"created\":1778260814,\"model\":\"@cf/openai/gpt-oss-20b\",\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"Paris\"},\"logprobs\":null,\"finish_reason\":null,\"token_ids\":null}]}\n\ndata: {\"id\":\"id-1778260814069\",\"created\":1778260814,\"model\":\"@cf/openai/gpt-oss-20b\",\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"\\\".\"},\"logprobs\":null,\"finish_reason\":null,\"token_ids\":null}]}\n\ndata: {\"id\":\"id-1778260814069\",\"created\":1778260814,\"model\":\"@cf/openai/gpt-oss-20b\",\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"id\":\"chatcmpl-tool-ed7127682c90443da222d0f8c607b5d5\",\"type\":\"function\",\"index\":0,\"function\":{\"name\":\"get_weather\",\"arguments\":\"\"}}]},\"logprobs\":null,\"finish_reason\":null,\"token_ids\":null}]}\n\ndata: {\"id\":\"id-1778260814069\",\"created\":1778260814,\"model\":\"@cf/openai/gpt-oss-20b\",\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"{\\\"\"}}]},\"logprobs\":null,\"finish_reason\":null,\"token_ids\":null}]}\n\ndata: {\"id\":\"id-1778260814069\",\"created\":1778260814,\"model\":\"@cf/openai/gpt-oss-20b\",\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"city\"}}]},\"logprobs\":null,\"finish_reason\":null,\"token_ids\":null}]}\n\ndata: {\"id\":\"id-1778260814069\",\"created\":1778260814,\"model\":\"@cf/openai/gpt-oss-20b\",\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\":\\\"\"}}]},\"logprobs\":null,\"finish_reason\":null,\"token_ids\":null}]}\n\ndata: {\"id\":\"id-1778260814069\",\"created\":1778260814,\"model\":\"@cf/openai/gpt-oss-20b\",\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"Paris\"}}]},\"logprobs\":null,\"finish_reason\":null,\"token_ids\":null}]}\n\ndata: {\"id\":\"id-1778260814069\",\"created\":1778260814,\"model\":\"@cf/openai/gpt-oss-20b\",\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\"}\"}}]},\"logprobs\":null,\"finish_reason\":null,\"token_ids\":null}]}\n\ndata: {\"id\":\"id-1778260814069\",\"created\":1778260814,\"model\":\"@cf/openai/gpt-oss-20b\",\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{},\"logprobs\":null,\"finish_reason\":null,\"stop_reason\":200012,\"token_ids\":null}]}\n\ndata: {\"id\":\"id-1778260814069\",\"object\":\"chat.completion.chunk\",\"created\":1778260814,\"model\":\"@cf/openai/gpt-oss-20b\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"tool_calls\"}],\"usage\":{\"prompt_tokens\":136,\"total_tokens\":173,\"completion_tokens\":37}}\n\ndata: {\"id\":\"id-1778260814069\",\"object\":\"chat.completion.chunk\",\"created\":1778260814,\"model\":\"@cf/openai/gpt-oss-20b\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"tool_calls\"}],\"usage\":{\"prompt_tokens\":136,\"completion_tokens\":37,\"total_tokens\":173,\"prompt_tokens_details\":{\"cached_tokens\":0}}}\n\ndata: [DONE]\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "reasoning-start",
+          "id": "reasoning-0",
+          "providerMetadata": {
+            "cloudflare-workers-ai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "We",
+          "providerMetadata": {
+            "cloudflare-workers-ai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " need",
+          "providerMetadata": {
+            "cloudflare-workers-ai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " to",
+          "providerMetadata": {
+            "cloudflare-workers-ai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " call",
+          "providerMetadata": {
+            "cloudflare-workers-ai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " the",
+          "providerMetadata": {
+            "cloudflare-workers-ai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " function",
+          "providerMetadata": {
+            "cloudflare-workers-ai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " get",
+          "providerMetadata": {
+            "cloudflare-workers-ai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "_weather",
+          "providerMetadata": {
+            "cloudflare-workers-ai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " with",
+          "providerMetadata": {
+            "cloudflare-workers-ai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " city",
+          "providerMetadata": {
+            "cloudflare-workers-ai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " \"",
+          "providerMetadata": {
+            "cloudflare-workers-ai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "Paris",
+          "providerMetadata": {
+            "cloudflare-workers-ai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "\".",
+          "providerMetadata": {
+            "cloudflare-workers-ai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "tool-input-start",
+          "id": "chatcmpl-tool-ed7127682c90443da222d0f8c607b5d5",
+          "name": "get_weather"
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "chatcmpl-tool-ed7127682c90443da222d0f8c607b5d5",
+          "name": "get_weather",
+          "text": "{\"",
+          "input": {}
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "chatcmpl-tool-ed7127682c90443da222d0f8c607b5d5",
+          "name": "get_weather",
+          "text": "city",
+          "input": {}
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "chatcmpl-tool-ed7127682c90443da222d0f8c607b5d5",
+          "name": "get_weather",
+          "text": "\":\"",
+          "input": {
+            "city": ""
+          }
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "chatcmpl-tool-ed7127682c90443da222d0f8c607b5d5",
+          "name": "get_weather",
+          "text": "Paris",
+          "input": {
+            "city": "Paris"
+          }
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "chatcmpl-tool-ed7127682c90443da222d0f8c607b5d5",
+          "name": "get_weather",
+          "text": "\"}",
+          "input": {
+            "city": "Paris"
+          }
+        },
+        {
+          "type": "reasoning-end",
+          "id": "reasoning-0",
+          "providerMetadata": {
+            "cloudflare-workers-ai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "tool-input-end",
+          "id": "chatcmpl-tool-ed7127682c90443da222d0f8c607b5d5",
+          "name": "get_weather"
+        },
+        {
+          "type": "tool-call",
+          "id": "chatcmpl-tool-ed7127682c90443da222d0f8c607b5d5",
+          "name": "get_weather",
+          "input": {
+            "city": "Paris"
+          }
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "tool-calls",
+            "raw": "tool_calls"
+          },
+          "usage": {
+            "inputTokens": 136,
+            "outputTokens": 37,
+            "nonCachedInputTokens": 136,
+            "cacheReadInputTokens": 0,
+            "totalTokens": 173,
+            "providerMetadata": {
+              "cloudflare-workers-ai": {
+                "prompt_tokens": 136,
+                "completion_tokens": 37,
+                "total_tokens": 173,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "tool-calls",
+            "raw": "tool_calls"
+          },
+          "usage": {
+            "inputTokens": 136,
+            "outputTokens": 37,
+            "nonCachedInputTokens": 136,
+            "cacheReadInputTokens": 0,
+            "totalTokens": 173,
+            "providerMetadata": {
+              "cloudflare-workers-ai": {
+                "prompt_tokens": 136,
+                "completion_tokens": 37,
+                "total_tokens": 173,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

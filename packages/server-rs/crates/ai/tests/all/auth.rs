@@ -156,13 +156,14 @@ fn corpus_auth_descriptors_resolve() {
             let auth: Auth = descriptor.clone().into();
             let result = apply(&auth, Vec::new(), &env);
             match descriptor {
-                AuthDescriptor::Bearer { .. } => {
+                AuthDescriptor::Bearer { value } => {
                     let headers = result.unwrap_or_else(|error| panic!("{}: {error}", cassette.name));
-                    assert_eq!(header(&headers, "authorization"), Some("Bearer fixture"), "{}", cassette.name);
+                    let expected = format!("Bearer {value}");
+                    assert_eq!(header(&headers, "authorization"), Some(expected.as_str()), "{}", cassette.name);
                 }
-                AuthDescriptor::Header { name, .. } => {
+                AuthDescriptor::Header { name, value } => {
                     let headers = result.unwrap_or_else(|error| panic!("{}: {error}", cassette.name));
-                    assert_eq!(header(&headers, &name.to_lowercase()), Some("fixture"), "{}", cassette.name);
+                    assert_eq!(header(&headers, &name.to_lowercase()), Some(value.as_str()), "{}", cassette.name);
                 }
                 AuthDescriptor::None => {
                     assert!(

@@ -4,6 +4,7 @@ pub mod bedrock_media;
 pub mod cache;
 pub mod claude_model;
 pub mod crc32;
+pub mod gateway_protocol;
 pub mod gemini_generate_content;
 pub mod lifecycle;
 pub mod media_input;

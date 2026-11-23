@@ -10,6 +10,9 @@ pub mod anthropic;
 pub mod anthropic_compatible;
 pub mod azure;
 pub mod cerebras;
+pub mod cloudflare_ai_gateway;
+pub mod cloudflare_shared;
+pub mod cloudflare_workers_ai;
 pub mod deepinfra;
 pub mod google;
 pub mod open_responses_options;
@@ -20,6 +23,7 @@ pub mod openai_options;
 pub mod settings;
 pub mod togetherai;
 pub mod venice;
+pub mod vercel_ai_gateway;
 
 pub use settings::Settings;
 
@@ -100,6 +104,8 @@ impl ProviderPackages {
             ("@opencode/ai/providers/azure/messages", azure::messages_model as Entry),
             ("@opencode/ai/providers/azure/responses", azure::responses_model as Entry),
             ("@opencode/ai/providers/cerebras", cerebras::model as Entry),
+            ("@opencode/ai/providers/cloudflare-ai-gateway", cloudflare_ai_gateway::model as Entry),
+            ("@opencode/ai/providers/cloudflare-workers-ai", cloudflare_workers_ai::model as Entry),
             ("@opencode/ai/providers/deepinfra", deepinfra::model as Entry),
             ("@opencode/ai/providers/google", google::model as Entry),
             ("@opencode/ai/providers/openai", openai::model as Entry),
@@ -109,6 +115,10 @@ impl ProviderPackages {
             ("@opencode/ai/providers/openai-compatible-responses", openai_compatible_responses::model as Entry),
             ("@opencode/ai/providers/togetherai", togetherai::model as Entry),
             ("@opencode/ai/providers/venice/responses", venice::responses_model as Entry),
+            ("@opencode/ai/providers/vercel-ai-gateway", vercel_ai_gateway::model as Entry),
+            ("@opencode/ai/providers/vercel-ai-gateway/chat", vercel_ai_gateway::chat_model as Entry),
+            ("@opencode/ai/providers/vercel-ai-gateway/messages", vercel_ai_gateway::messages_model as Entry),
+            ("@opencode/ai/providers/vercel-ai-gateway/responses", vercel_ai_gateway::responses_model as Entry),
         ]);
         Self { entries }
     }

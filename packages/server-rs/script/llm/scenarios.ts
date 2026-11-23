@@ -17,11 +17,14 @@ const {
   AmazonBedrockMantle,
   Azure,
   Cerebras,
+  CloudflareAIGateway,
+  CloudflareWorkersAI,
   DeepInfra,
   Google,
   OpenAI,
   OpenAICompatible,
   TogetherAI,
+  VercelAIGateway,
   Venice,
 } = await load("packages/ai/src/providers.ts")
 const { toDefinitions, tool } = await load("packages/ai/src/tool.ts")
@@ -99,6 +102,31 @@ const mantleWeather = ToolDefinition.make({
     additionalProperties: false,
   },
 })
+
+const cloudflareAccountId = "fixture-account"
+const cloudflareAIGateway = CloudflareAIGateway.configure({
+  accountId: cloudflareAccountId,
+  gatewayApiKey: "fixture",
+})
+const cloudflareWorkers = CloudflareWorkersAI.configure({
+  accountId: cloudflareAccountId,
+  apiKey: "fixture",
+})
+const cloudflareAIGatewayWorkers = cloudflareAIGateway.model("workers-ai/@cf/meta/llama-3.1-8b-instruct")
+const cloudflareAIGatewayWorkersTools = cloudflareAIGateway.model("workers-ai/@cf/openai/gpt-oss-20b")
+const cloudflareAIGatewayClaude = cloudflareAIGateway.model("anthropic/claude-haiku-4.5")
+const cloudflareAIGatewayOpenAI = cloudflareAIGateway.model("openai/gpt-5-nano")
+const cloudflareWorkersAI = cloudflareWorkers.model("@cf/meta/llama-3.1-8b-instruct")
+const cloudflareWorkersAITools = cloudflareWorkers.model("@cf/openai/gpt-oss-20b")
+const redactCloudflareURL = (url: string) =>
+  url
+    .replace(/\/client\/v4\/accounts\/[^/]+\/ai\/v1\//, "/client/v4/accounts/{account}/ai/v1/")
+    .replace(/\/v1\/[^/]+\/[^/]+\/(anthropic|openai)\//, "/v1/{account}/{gateway}/$1/")
+const cloudflareRedact = { url: redactCloudflareURL }
+const cloudflareClaudeRedact = { url: redactCloudflareURL, allowRequestHeaders: ["anthropic-version"] }
+const vercelGateway = VercelAIGateway.configure({ apiKey: "fixture" })
+const vercelGatewayChat = VercelAIGateway.configure({ apiKey: "fixture" })
+const vercelGatewaySettings = { apiKey: "fixture" }
 
 const PDF =
   "JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA2MTIgNzkyXSAvUmVzb3VyY2VzIDw8IC9Gb250IDw8IC9GMSA1IDAgUiA+PiA+PiAvQ29udGVudHMgNCAwIFIgPj4KZW5kb2JqCjQgMCBvYmoKPDwgL0xlbmd0aCA3NSA+PgpzdHJlYW0KQlQKL0YxIDE4IFRmCjcyIDcyMCBUZAooUERGIGNhc3NldHRlIHZlcmlmaWNhdGlvbiBjb2RlOiBPUkNISUQtNzM5MSkgVGoKRVQKZW5kc3RyZWFtCmVuZG9iago1IDAgb2JqCjw8IC9UeXBlIC9Gb250IC9TdWJ0eXBlIC9UeXBlMSAvQmFzZUZvbnQgL0hlbHZldGljYSA+PgplbmRvYmoKeHJlZgowIDYKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDA5IDAwMDAwIG4gCjAwMDAwMDAwNTggMDAwMDAgbiAKMDAwMDAwMDExNSAwMDAwMCBuIAowMDAwMDAwMjQxIDAwMDAwIG4gCjAwMDAwMDAzNjUgMDAwMDAgbiAKdHJhaWxlcgo8PCAvU2l6ZSA2IC9Sb290IDEgMCBSID4+CnN0YXJ0eHJlZgo0MzUKJSVFT0YK"
@@ -1764,6 +1792,363 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
             maxTokens: 1024,
           }),
         ),
+    },
+  },
+  {
+    group: "gateways",
+    scenario: {
+      cassette: "cloudflare-ai-gateway/cloudflare-ai-gateway-workers-ai-llama-3-1-8b-text",
+      protocol: "openai-chat",
+      provider: {
+        package: "@opencode/ai/providers/cloudflare-ai-gateway",
+        modelID: "workers-ai/@cf/meta/llama-3.1-8b-instruct",
+        settings: { accountId: cloudflareAccountId, gatewayApiKey: "fixture" },
+      },
+      redact: cloudflareRedact,
+      run: () =>
+        runGoldenScenario("text", {
+          id: "recorded_cloudflare_ai_gateway_workers_ai_llama_3_1_8b_text",
+          model: cloudflareAIGatewayWorkers,
+        }),
+    },
+  },
+  {
+    group: "gateways",
+    scenario: {
+      cassette: "cloudflare-ai-gateway/cloudflare-ai-gateway-workers-ai-gpt-oss-20b-tools-tool-call",
+      protocol: "openai-chat",
+      provider: {
+        package: "@opencode/ai/providers/cloudflare-ai-gateway",
+        modelID: "workers-ai/@cf/openai/gpt-oss-20b",
+        settings: { accountId: cloudflareAccountId, gatewayApiKey: "fixture" },
+      },
+      redact: cloudflareRedact,
+      run: () =>
+        runGoldenScenario("tool-call", {
+          id: "recorded_cloudflare_ai_gateway_workers_ai_gpt_oss_20b_tools_tool_call",
+          model: cloudflareAIGatewayWorkersTools,
+          maxTokens: 120,
+        }),
+    },
+  },
+  {
+    group: "gateways",
+    scenario: {
+      cassette: "cloudflare-ai-gateway/cloudflare-ai-gateway-claude-haiku-4-5-text",
+      protocol: "anthropic-messages",
+      provider: {
+        package: "@opencode/ai/providers/cloudflare-ai-gateway",
+        modelID: "anthropic/claude-haiku-4.5",
+        settings: { accountId: cloudflareAccountId, gatewayApiKey: "fixture" },
+      },
+      redact: cloudflareClaudeRedact,
+      run: () =>
+        runGoldenScenario("text", {
+          id: "recorded_cloudflare_ai_gateway_claude_haiku_4_5_text",
+          model: cloudflareAIGatewayClaude,
+        }),
+    },
+  },
+  {
+    group: "gateways",
+    scenario: {
+      cassette: "cloudflare-ai-gateway/cloudflare-ai-gateway-claude-haiku-4-5-tool-loop",
+      protocol: "anthropic-messages",
+      provider: {
+        package: "@opencode/ai/providers/cloudflare-ai-gateway",
+        modelID: "anthropic/claude-haiku-4.5",
+        settings: { accountId: cloudflareAccountId, gatewayApiKey: "fixture" },
+      },
+      redact: cloudflareClaudeRedact,
+      run: () =>
+        runGoldenScenario("tool-loop", {
+          id: "recorded_cloudflare_ai_gateway_claude_haiku_4_5_tool_loop",
+          model: cloudflareAIGatewayClaude,
+        }),
+    },
+  },
+  {
+    group: "gateways",
+    scenario: {
+      cassette: "cloudflare-ai-gateway/cloudflare-ai-gateway-openai-gpt-5-nano-text",
+      protocol: "openai-responses",
+      provider: {
+        package: "@opencode/ai/providers/cloudflare-ai-gateway",
+        modelID: "openai/gpt-5-nano",
+        settings: { accountId: cloudflareAccountId, gatewayApiKey: "fixture" },
+      },
+      redact: cloudflareRedact,
+      run: () =>
+        runGoldenScenario("text", {
+          id: "recorded_cloudflare_ai_gateway_openai_gpt_5_nano_text",
+          model: cloudflareAIGatewayOpenAI,
+          temperature: false,
+          maxTokens: 2000,
+        }),
+    },
+  },
+  {
+    group: "gateways",
+    scenario: {
+      cassette: "cloudflare-ai-gateway/cloudflare-ai-gateway-openai-gpt-5-nano-tool-loop",
+      protocol: "openai-responses",
+      provider: {
+        package: "@opencode/ai/providers/cloudflare-ai-gateway",
+        modelID: "openai/gpt-5-nano",
+        settings: { accountId: cloudflareAccountId, gatewayApiKey: "fixture" },
+      },
+      redact: cloudflareRedact,
+      run: () =>
+        runGoldenScenario("tool-loop", {
+          id: "recorded_cloudflare_ai_gateway_openai_gpt_5_nano_tool_loop",
+          model: cloudflareAIGatewayOpenAI,
+          temperature: false,
+          maxTokens: 2000,
+        }),
+    },
+  },
+  {
+    group: "gateways",
+    scenario: {
+      cassette: "cloudflare-workers-ai/cloudflare-workers-ai-llama-3-1-8b-text",
+      protocol: "openai-chat",
+      provider: {
+        package: "@opencode/ai/providers/cloudflare-workers-ai",
+        modelID: "@cf/meta/llama-3.1-8b-instruct",
+        settings: { accountId: cloudflareAccountId, apiKey: "fixture" },
+      },
+      redact: cloudflareRedact,
+      run: () =>
+        runGoldenScenario("text", {
+          id: "recorded_cloudflare_workers_ai_llama_3_1_8b_text",
+          model: cloudflareWorkersAI,
+        }),
+    },
+  },
+  {
+    group: "gateways",
+    scenario: {
+      cassette: "cloudflare-workers-ai/cloudflare-workers-ai-gpt-oss-20b-tools-tool-call",
+      protocol: "openai-chat",
+      provider: {
+        package: "@opencode/ai/providers/cloudflare-workers-ai",
+        modelID: "@cf/openai/gpt-oss-20b",
+        settings: { accountId: cloudflareAccountId, apiKey: "fixture" },
+      },
+      redact: cloudflareRedact,
+      run: () =>
+        runGoldenScenario("tool-call", {
+          id: "recorded_cloudflare_workers_ai_gpt_oss_20b_tools_tool_call",
+          model: cloudflareWorkersAITools,
+          maxTokens: 120,
+        }),
+    },
+  },
+  {
+    group: "gateways",
+    scenario: {
+      cassette: "vercel-native/continues-messages-claude-reasoning-and-tools",
+      protocol: "anthropic-messages",
+      provider: {
+        package: "@opencode/ai/providers/vercel-ai-gateway",
+        modelID: "anthropic/claude-sonnet-5.5",
+        settings: vercelGatewaySettings,
+      },
+      run: () =>
+        runWeatherToolLoop({
+          ...goldenWeatherToolLoopRequest({
+            id: "messages Claude",
+            model: vercelGateway.messages("anthropic/claude-sonnet-5.5"),
+            maxTokens: 2048,
+            temperature: false,
+          }),
+          providerOptions: { reasoningEffort: "low" },
+        }),
+    },
+  },
+  {
+    group: "gateways",
+    scenario: {
+      cassette: "vercel-native/continues-messages-gemini-reasoning-and-tools",
+      protocol: "anthropic-messages",
+      provider: {
+        package: "@opencode/ai/providers/vercel-ai-gateway",
+        modelID: "google/gemini-3.8-flash",
+        settings: vercelGatewaySettings,
+      },
+      run: () =>
+        runWeatherToolLoop({
+          ...goldenWeatherToolLoopRequest({
+            id: "messages Gemini",
+            model: vercelGateway.messages("google/gemini-3.8-flash"),
+            maxTokens: 2048,
+            temperature: false,
+          }),
+          providerOptions: { reasoningEffort: "low" },
+        }),
+    },
+  },
+  {
+    group: "gateways",
+    scenario: {
+      cassette: "vercel-native/continues-responses-gpt-reasoning-and-tools",
+      protocol: "open-responses",
+      provider: {
+        package: "@opencode/ai/providers/vercel-ai-gateway",
+        modelID: "openai/gpt-6-luna",
+        settings: vercelGatewaySettings,
+      },
+      run: () =>
+        runWeatherToolLoop({
+          ...goldenWeatherToolLoopRequest({
+            id: "responses GPT",
+            model: vercelGateway.model("openai/gpt-6-luna"),
+            maxTokens: 2048,
+            temperature: false,
+          }),
+          providerOptions: { reasoningEffort: "low" },
+        }),
+    },
+  },
+  {
+    group: "gateways",
+    scenario: {
+      cassette: "vercel-native/continues-chat-muse-reasoning-and-tools",
+      protocol: "openai-chat",
+      provider: {
+        package: "@opencode/ai/providers/vercel-ai-gateway",
+        modelID: "meta/muse-spark-1.3",
+        settings: vercelGatewaySettings,
+      },
+      run: () =>
+        runWeatherToolLoop({
+          ...goldenWeatherToolLoopRequest({
+            id: "chat Muse",
+            model: vercelGateway.model("meta/muse-spark-1.3"),
+            maxTokens: 2048,
+            temperature: false,
+          }),
+          providerOptions: { reasoningEffort: "low" },
+        }),
+    },
+  },
+  {
+    group: "gateways",
+    scenario: {
+      cassette: "vercel-native/continues-messages-deepseek-reasoning-and-tools",
+      protocol: "anthropic-messages",
+      provider: {
+        package: "@opencode/ai/providers/vercel-ai-gateway",
+        modelID: "deepseek/deepseek-v4.1-flash",
+        settings: vercelGatewaySettings,
+      },
+      run: () =>
+        runWeatherToolLoop({
+          ...goldenWeatherToolLoopRequest({
+            id: "messages DeepSeek",
+            model: vercelGateway.model("deepseek/deepseek-v4.1-flash"),
+            maxTokens: 2048,
+            temperature: false,
+          }),
+          providerOptions: { reasoningEffort: "high" },
+        }),
+    },
+  },
+  {
+    group: "gateways",
+    scenario: {
+      cassette: "vercel-native/continues-responses-grok-reasoning-and-tools",
+      protocol: "open-responses",
+      provider: {
+        package: "@opencode/ai/providers/vercel-ai-gateway",
+        modelID: "spacexai/grok-4.7",
+        settings: vercelGatewaySettings,
+      },
+      run: () =>
+        runWeatherToolLoop({
+          ...goldenWeatherToolLoopRequest({
+            id: "responses Grok",
+            model: vercelGateway.model("spacexai/grok-4.7"),
+            maxTokens: 2048,
+            temperature: false,
+          }),
+          providerOptions: { reasoningEffort: "low" },
+        }),
+    },
+  },
+  {
+    group: "gateways",
+    scenario: {
+      cassette: "vercel-native/continues-chat-claude-reasoning-and-tools",
+      protocol: "openai-chat",
+      provider: {
+        package: "@opencode/ai/providers/vercel-ai-gateway/chat",
+        modelID: "anthropic/claude-sonnet-5.5",
+        settings: vercelGatewaySettings,
+      },
+      run: () =>
+        runWeatherToolLoop({
+          ...goldenWeatherToolLoopRequest({
+            id: "chat Claude",
+            model: vercelGatewayChat.chat("anthropic/claude-sonnet-5.5"),
+            maxTokens: 2048,
+            temperature: false,
+          }),
+          providerOptions: { reasoningEffort: "low" },
+        }),
+    },
+  },
+  {
+    group: "gateways",
+    scenario: {
+      cassette: "vercel-native/rejects-invalid-credentials-without-retryable-classification",
+      protocol: "anthropic-messages",
+      provider: {
+        package: "@opencode/ai/providers/vercel-ai-gateway",
+        modelID: "anthropic/claude-sonnet-5.5",
+        settings: { apiKey: "invalid-gateway-key" },
+      },
+      run: () =>
+        LLMClient.generate(
+          ai.request({
+            model: VercelAIGateway.configure({ apiKey: "invalid-gateway-key" }).messages("anthropic/claude-sonnet-5.5"),
+            prompt: "Hello",
+            maxTokens: 32,
+          }),
+        ).pipe(Effect.flip),
+    },
+  },
+  {
+    group: "gateways",
+    scenario: {
+      cassette: "vercel-native/automatically-caches-distinct-claude-system-blocks",
+      protocol: "anthropic-messages",
+      provider: {
+        package: "@opencode/ai/providers/vercel-ai-gateway",
+        modelID: "anthropic/claude-sonnet-5.5",
+        settings: vercelGatewaySettings,
+      },
+      run: () =>
+        Effect.gen(function* () {
+          const request = ai.request({
+            model: vercelGateway.messages("anthropic/claude-sonnet-5.5"),
+            system: [
+              {
+                type: "text",
+                text: Array.from(
+                  { length: 250 },
+                  (_, i) => `Rule ${i}: Preserve provider reasoning state and keep stable prompt prefixes intact.`,
+                ).join("\n"),
+              },
+              { type: "text", text: "Reply with OK only." },
+            ],
+            prompt: "Confirm.",
+            maxTokens: 32,
+            providerOptions: { gateway: { only: ["anthropic"] } },
+          })
+          yield* LLMClient.generate(request)
+          yield* LLMClient.generate(request)
+        }),
     },
   },
 ]
