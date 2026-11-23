@@ -22,9 +22,9 @@ named in the row needs it.
 | transports | `oc-llm` | HTTP and WebSocket transports | `ai` | OR-44 | `packages/ai/src/route/transport/*`; OR-44 ported from the TypeScript at the pin and imported no first-attempt code |
 | file lock | `oc-core` | Cross-process lock directories | `config` | OR-42 | compare with `opencode_local::lock` first and prefer it when it already matches; `packages/util/src/flock.ts` |
 | OAuth callback page | `oc-core` | The local page shown after an OAuth redirect | `catalog` | OR-46 | `packages/core/src/oauth/page.ts` |
-| migration runner | `oc-storage` | Applies ordered migrations to SQLite | `storage` | OR-40 | `packages/core/src/database/migration.ts` |
-| dump tooling | `oc-storage` | Database dump and restore helpers | `storage` | OR-40 | the debug entry points for storage at the pin |
-| ID helpers | `oc-schema` | Prefixed, sortable identifiers | `storage` | OR-40 | `packages/schema/src/identifier.ts` |
+| migration runner | `oc-storage` | Applies ordered migrations to SQLite | `storage` | OR-40 | `packages/core/src/database/migration.ts`; OR-40 ported the TypeScript at the pin and imported no first-attempt code, because that branch is not visible in this checkout |
+| dump tooling | `oc-storage` | Database dump and restore helpers | `storage` | OR-40 | the debug entry points for storage at the pin; OR-40 ported the dump format from the TypeScript at the pin and imported no first-attempt code, because that branch is not visible in this checkout |
+| ID helpers | `oc-schema` | Prefixed, sortable identifiers | `storage` | OR-40 | `packages/schema/src/identifier.ts`; OR-40 ported the TypeScript at the pin and imported no first-attempt code, because that branch is not visible in this checkout |
 | JavaScript-string helpers | `oc-schema` | String conversions that match JavaScript semantics | `contract` | OR-38 | OR-38 used `opencode_api_types::js` (`encode_component`, `decode_component`) and imported no first-attempt code: the helpers already match the TypeScript behaviour, and the first-attempt branches are not visible in this checkout. |
 | number helpers | `oc-schema` | Number parsing and formatting that match JavaScript | `contract` | OR-38 | OR-38 used `opencode_api_types::js` (`number_to_string`) and imported no first-attempt code: the helpers already match the TypeScript behaviour, and the first-attempt branches are not visible in this checkout. |
 | wildcard helpers | `oc-schema` | Glob-style pattern matching for permission rules | `session` permissions | OR-50 | `packages/core/src/util/wildcard.ts` |
