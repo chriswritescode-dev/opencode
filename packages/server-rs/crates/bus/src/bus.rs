@@ -9,8 +9,10 @@ use rusqlite::{Connection, OptionalExtension, TransactionBehavior, params};
 use serde_json::{Map, Value};
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel};
 
+use crate::decode;
 use crate::error::BusError;
 use crate::event::{Definition, DurableSpec, Event, EventId, versioned_type};
+use crate::legacy;
 use crate::lock::KeyedMutex;
 
 type Projector = Arc<dyn Fn(&Connection, &Event) -> Result<(), BusError> + Send + Sync>;
@@ -44,6 +46,22 @@ pub struct PublishInput {
     pub definition: Definition,
     pub data: Value,
     pub options: PublishOptions,
+}
+
+pub struct SerializedEvent {
+    pub id: String,
+    pub r#type: String,
+    pub created: Option<i64>,
+    pub seq: i64,
+    pub aggregate_id: String,
+    pub data: Value,
+}
+
+#[derive(Default)]
+pub struct ReplayOptions {
+    pub publish: bool,
+    pub owner_id: Option<String>,
+    pub strict_owner: bool,
 }
 
 pub struct Bus {
@@ -174,6 +192,15 @@ impl Bus {
         self.locks.with(aggregate_id.clone(), || self.commit_batch(&aggregate_id, prepared))
     }
 
+    pub fn replay(&self, event: SerializedEvent, options: ReplayOptions) -> Result<(), BusError> {
+        let Some(definition) = Definition::durable_lookup(&event.r#type) else {
+            return Err(BusError::unknown_durable_event(&event.r#type));
+        };
+        let spec = definition.durable.expect("a resolved durable definition carries its spec");
+        let versioned = versioned_type(definition.r#type, spec.version);
+        self.locks.with(event.aggregate_id.clone(), || self.replay_event(definition, &versioned, event, &options))
+    }
+
     pub fn project(&self, versioned_type: &str, projector: ProjectorRegistration) {
         let mut projectors = lock(&self.projectors);
         projectors.entry(versioned_type.to_string()).or_default().push(Arc::from(projector));
@@ -302,6 +329,118 @@ impl Bus {
         Ok(committed)
     }
 
+    fn replay_event(
+        &self,
+        definition: Definition,
+        versioned: &str,
+        event: SerializedEvent,
+        options: &ReplayOptions,
+    ) -> Result<(), BusError> {
+        let spec = definition.durable.expect("a resolved durable definition carries its spec");
+        let persist = self.options.persist;
+        let data = decode::decode_stored(&event.r#type, &event.data)?;
+        let aggregate = aggregate_id(definition.r#type, spec.aggregate, &data)?;
+        if aggregate != event.aggregate_id {
+            return Err(BusError::InvalidDurableEvent {
+                r#type: definition.r#type.to_string(),
+                message: format!("Aggregate mismatch: expected {}, got {aggregate}", event.aggregate_id),
+            });
+        }
+        let created = event.created.unwrap_or(0);
+        let mut payload = Map::new();
+        payload.insert("id".to_string(), Value::String(event.id.clone()));
+        payload.insert("created".to_string(), Value::from(created));
+        payload.insert("type".to_string(), Value::String(definition.r#type.to_string()));
+        payload.insert("data".to_string(), data.clone());
+        let payload = Event::from_payload(payload);
+        let committed =
+            self.db.transaction(TransactionBehavior::Immediate, |tx| -> Result<Option<Event>, BusError> {
+                let row = sequence_row(tx, &aggregate)?;
+                let latest = row.as_ref().map_or(-1, |(seq, _)| *seq);
+                let owner = row.as_ref().and_then(|(_, owner)| owner.clone());
+                if options.strict_owner
+                    && let Some(owner_id) = &owner
+                    && options.owner_id.as_ref() != Some(owner_id)
+                {
+                    return Err(BusError::InvalidDurableEvent {
+                        r#type: definition.r#type.to_string(),
+                        message: format!(
+                            "Replay owner mismatch for aggregate {aggregate}: expected {owner_id}, got {}",
+                            options.owner_id.as_deref().unwrap_or("none")
+                        ),
+                    });
+                }
+                if event.seq <= latest {
+                    if !persist {
+                        return Ok(None);
+                    }
+                    if replay_row_matches(tx, versioned, definition.r#type, &event, &data, created)? {
+                        if let Some(owner_id) = &options.owner_id
+                            && owner.is_none()
+                        {
+                            tx.execute(
+                                "UPDATE event_sequence SET owner_id = ?2 WHERE aggregate_id = ?1",
+                                params![aggregate, owner_id],
+                            )?;
+                        }
+                        return Ok(None);
+                    }
+                    return Err(BusError::InvalidDurableEvent {
+                        r#type: definition.r#type.to_string(),
+                        message: format!("Replay diverged at aggregate {aggregate} sequence {}", event.seq),
+                    });
+                }
+                if let Some(owner_id) = &owner
+                    && options.owner_id.as_ref() != Some(owner_id)
+                {
+                    return Ok(None);
+                }
+                if event.seq != latest + 1 {
+                    return Err(BusError::InvalidDurableEvent {
+                        r#type: definition.r#type.to_string(),
+                        message: format!(
+                            "Sequence mismatch for aggregate {aggregate}: expected {}, got {}",
+                            latest + 1,
+                            event.seq
+                        ),
+                    });
+                }
+                if persist && let Some((existing_aggregate, existing_seq)) = stored_event(tx, &event.id)? {
+                    return Err(already_exists(definition.r#type, &event.id, &existing_aggregate, existing_seq));
+                }
+                let committed = with_durable(&payload, &aggregate, event.seq, spec.version);
+                self.run_projectors(versioned, tx, &committed)?;
+                if row.is_none() {
+                    tx.execute(
+                        "INSERT INTO event_sequence (aggregate_id, seq, owner_id) VALUES (?1, ?2, ?3)",
+                        params![aggregate, event.seq, options.owner_id.as_deref()],
+                    )?;
+                } else {
+                    reserve_sequence(tx, &aggregate, event.seq)?;
+                    if let Some(owner_id) = &options.owner_id
+                        && owner.is_none()
+                    {
+                        tx.execute(
+                            "UPDATE event_sequence SET owner_id = ?2 WHERE aggregate_id = ?1",
+                            params![aggregate, owner_id],
+                        )?;
+                    }
+                }
+                if persist {
+                    insert_event(tx, &committed, &aggregate, event.seq, versioned)?;
+                }
+                Ok(Some(committed))
+            })?;
+        let Some(committed) = committed else {
+            return Ok(());
+        };
+        self.wake(&aggregate);
+        if options.publish {
+            self.notify(&committed, true)?;
+        }
+        Ok(())
+    }
+
     fn make_payload(&self, definition: &Definition, data: Value, options: &PublishOptions) -> Event {
         let mut payload = Map::new();
         payload.insert("id".to_string(), Value::String(options.id.clone().unwrap_or_else(EventId::create)));
@@ -418,6 +557,50 @@ fn stored_event(connection: &Connection, id: &str) -> rusqlite::Result<Option<(S
     connection
         .query_row("SELECT aggregate_id, seq FROM event WHERE id = ?1", [id], |row| Ok((row.get(0)?, row.get(1)?)))
         .optional()
+}
+
+struct StoredRow {
+    id: String,
+    r#type: String,
+    created: i64,
+    data: String,
+}
+
+fn sequence_row(connection: &Connection, aggregate_id: &str) -> rusqlite::Result<Option<(i64, Option<String>)>> {
+    connection
+        .query_row("SELECT seq, owner_id FROM event_sequence WHERE aggregate_id = ?1", [aggregate_id], |row| {
+            Ok((row.get(0)?, row.get(1)?))
+        })
+        .optional()
+}
+
+fn stored_row(connection: &Connection, aggregate_id: &str, seq: i64) -> rusqlite::Result<Option<StoredRow>> {
+    connection
+        .query_row(
+            "SELECT id, type, created, data FROM event WHERE aggregate_id = ?1 AND seq = ?2",
+            params![aggregate_id, seq],
+            |row| Ok(StoredRow { id: row.get(0)?, r#type: row.get(1)?, created: row.get(2)?, data: row.get(3)? }),
+        )
+        .optional()
+}
+
+fn replay_row_matches(
+    connection: &Connection,
+    versioned: &str,
+    r#type: &str,
+    event: &SerializedEvent,
+    data: &Value,
+    created: i64,
+) -> Result<bool, BusError> {
+    let Some(stored) = stored_row(connection, &event.aggregate_id, event.seq)? else {
+        return Ok(false);
+    };
+    if stored.id != event.id || stored.r#type != versioned || stored.created != created {
+        return Ok(false);
+    }
+    let parsed = serde_json::from_str::<Value>(&stored.data)
+        .map_err(|error| BusError::InvalidDurableEvent { r#type: versioned.to_string(), message: error.to_string() })?;
+    Ok(&legacy::upgrade_event(r#type, parsed) == data)
 }
 
 fn insert_event(

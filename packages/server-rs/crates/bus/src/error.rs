@@ -10,3 +10,12 @@ pub enum BusError {
     #[error(transparent)]
     Sqlite(#[from] rusqlite::Error),
 }
+
+impl BusError {
+    pub(crate) fn unknown_durable_event(r#type: &str) -> BusError {
+        BusError::InvalidDurableEvent {
+            r#type: r#type.to_string(),
+            message: format!("Unknown durable event type {}", r#type),
+        }
+    }
+}

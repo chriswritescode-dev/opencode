@@ -1,4 +1,5 @@
 mod publish;
+mod replay;
 
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
