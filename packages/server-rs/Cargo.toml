@@ -21,15 +21,27 @@ todo = "warn"
 undocumented_unsafe_blocks = "deny"
 
 [workspace.dependencies]
+opencode-ai = { path = "crates/ai" }
 opencode-contract = { path = "crates/contract" }
 opencode-server = { path = "crates/server" }
 opencode-api-types = { path = "../cli-rs/crates/api-types" }
 opencode-local = { path = "../cli-rs/crates/local" }
 opencode-util = { path = "../cli-rs/crates/util" }
 opencode-service = { path = "../cli-rs/crates/service" }
+base64 = "0.23"
+bytes = "1"
+futures-util = { version = "0.3", default-features = false, features = ["std", "sink"] }
+percent-encoding = "2"
 regex-lite = "0.1"
+reqwest = { version = "0.13", default-features = false, features = ["rustls-no-provider", "stream"] }
+ring = "0.17"
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
+rustls-platform-verifier = "0.7"
+serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["float_roundtrip", "preserve_order", "raw_value"] }
-tokio = { version = "1.53", features = ["macros", "rt"] }
+thiserror = "2"
+tokio = { version = "1.53", features = ["macros", "rt", "time", "sync", "net", "rt-multi-thread"] }
+tokio-tungstenite = { version = "0.30", features = ["rustls-tls-native-roots"] }
 url = "2"
 
 [profile.dev]

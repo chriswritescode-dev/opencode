@@ -603,6 +603,22 @@ checksum = "9f7c3e4beb33f85d45ae3e3a1792185706c8e16d043238c593331cc7cd313b50"
 [[package]]
 name = "opencode-ai"
 version = "0.1.0"
+dependencies = [
+ "base64",
+ "bytes",
+ "futures-util",
+ "opencode-contract",
+ "percent-encoding",
+ "reqwest",
+ "ring",
+ "rustls",
+ "rustls-platform-verifier",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tokio-tungstenite",
+]
 
 [[package]]
 name = "opencode-api"
