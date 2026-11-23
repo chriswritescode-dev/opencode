@@ -209,7 +209,10 @@ const isTextContentType = (contentType: string | undefined) => {
   )
 }
 
-const roundTrip = (value: unknown): any => JSON.parse(JSON.stringify(value))
+const roundTrip = (value: unknown): any =>
+  JSON.parse(
+    JSON.stringify(value, (_key, item) => (item instanceof Uint8Array ? Buffer.from(item).toString("base64") : item)),
+  )
 
 const normalizeModel = (value: unknown) => {
   const model = roundTrip(value)

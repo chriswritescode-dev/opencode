@@ -57,6 +57,44 @@ pub struct AnthropicMessages {
     pub effort_updates_require_5_1: bool,
 }
 
+#[derive(Default)]
+pub struct AnthropicMessagesPlain(pub AnthropicMessages);
+
+impl Protocol for AnthropicMessagesPlain {
+    fn id(&self) -> &str {
+        ID
+    }
+
+    fn build_body(
+        &self,
+        request: &ResolvedRequest,
+        model: &Model,
+        context: &ExecutionContext,
+    ) -> Result<Value, AiError> {
+        self.0.build_body(request, model, context)
+    }
+
+    fn default_path(&self, model: &Model, body: &Value) -> Option<String> {
+        self.0.default_path(model, body)
+    }
+
+    fn framing(&self) -> Definition {
+        self.0.framing()
+    }
+
+    fn new_state(&self, request: &ResolvedRequest, context: &ExecutionContext) -> Box<dyn ProtocolState> {
+        self.0.new_state(request, context)
+    }
+
+    fn supports_effort_updates(&self, model: &Model, request: &LlmRequest) -> bool {
+        self.0.supports_effort_updates(model, request)
+    }
+
+    fn tool_updates(&self) -> Option<ToolUpdateEncoding> {
+        self.0.tool_updates()
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 struct BlockBinding {
     prefix_mismatch_behavior: Option<String>,

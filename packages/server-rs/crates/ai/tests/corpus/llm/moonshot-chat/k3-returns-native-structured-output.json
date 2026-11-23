@@ -1,0 +1,600 @@
+{
+  "cassette": "moonshot-chat/k3-returns-native-structured-output",
+  "protocol": "openai-chat",
+  "routeId": "moonshot-chat",
+  "clockEpochMs": 1767323045000,
+  "steps": [
+    {
+      "model": {
+        "id": "kimi-k3",
+        "provider": "moonshotai",
+        "route": {
+          "id": "moonshot-chat",
+          "protocol": "moonshot-chat",
+          "providerMetadataKey": "moonshot"
+        },
+        "endpoint": {
+          "baseURL": "https://api.moonshot.ai/v1",
+          "path": "/chat/completions"
+        },
+        "options": {
+          "providerOptions": {
+            "reasoningEffort": "low"
+          }
+        },
+        "modelOptions": {
+          "providerOptions": {
+            "reasoningEffort": "low"
+          }
+        },
+        "compatibility": {
+          "sanitizer": "moonshot",
+          "reasoningField": "reasoning_content",
+          "maxTokensField": "max_tokens"
+        },
+        "capabilities": {
+          "tools": {
+            "strict": false
+          },
+          "promptCacheKey": true
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_moonshot_chat_k3_returns_native_structured_output",
+        "maxTokens": 4096,
+        "http": {
+          "body": {
+            "response_format": {
+              "type": "json_schema",
+              "json_schema": {
+                "name": "location",
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "city": {
+                      "type": "string",
+                      "enum": [
+                        "Paris"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "city"
+                  ],
+                  "additionalProperties": false
+                },
+                "strict": true
+              }
+            }
+          }
+        },
+        "system": [],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Return a JSON object containing the capital city of France."
+              }
+            ]
+          }
+        ],
+        "tools": []
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/moonshot",
+        "modelID": "kimi-k3",
+        "settings": {
+          "apiKey": "fixture",
+          "reasoningEffort": "low"
+        }
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://api.moonshot.ai/v1/chat/completions",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "439",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"kimi-k3\",\"messages\":[{\"role\":\"user\",\"content\":\"Return a JSON object containing the capital city of France.\"}],\"stream\":true,\"stream_options\":{\"include_usage\":true},\"max_tokens\":4096,\"reasoning_effort\":\"low\",\"response_format\":{\"type\":\"json_schema\",\"json_schema\":{\"name\":\"location\",\"schema\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\",\"enum\":[\"Paris\"]}},\"required\":[\"city\"],\"additionalProperties\":false},\"strict\":true}}}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream"
+            },
+            "body": "data: {\"id\":\"chatcmpl-2f2e0ec8c9dabfb9bca20eefb\",\"object\":\"chat.completion.chunk\",\"created\":1788813422,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ec8c9dabfb9bca20eefb\",\"object\":\"chat.completion.chunk\",\"created\":1788813422,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"The\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ec8c9dabfb9bca20eefb\",\"object\":\"chat.completion.chunk\",\"created\":1788813422,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" user\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ec8c9dabfb9bca20eefb\",\"object\":\"chat.completion.chunk\",\"created\":1788813422,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" wants\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ec8c9dabfb9bca20eefb\",\"object\":\"chat.completion.chunk\",\"created\":1788813422,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" a\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ec8c9dabfb9bca20eefb\",\"object\":\"chat.completion.chunk\",\"created\":1788813422,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" JSON\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ec8c9dabfb9bca20eefb\",\"object\":\"chat.completion.chunk\",\"created\":1788813422,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" object\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ec8c9dabfb9bca20eefb\",\"object\":\"chat.completion.chunk\",\"created\":1788813422,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" containing\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ec8c9dabfb9bca20eefb\",\"object\":\"chat.completion.chunk\",\"created\":1788813422,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" the\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ec8c9dabfb9bca20eefb\",\"object\":\"chat.completion.chunk\",\"created\":1788813422,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" capital\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ec8c9dabfb9bca20eefb\",\"object\":\"chat.completion.chunk\",\"created\":1788813422,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" city\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ec8c9dabfb9bca20eefb\",\"object\":\"chat.completion.chunk\",\"created\":1788813422,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" of\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ec8c9dabfb9bca20eefb\",\"object\":\"chat.completion.chunk\",\"created\":1788813422,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" France\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ec8c9dabfb9bca20eefb\",\"object\":\"chat.completion.chunk\",\"created\":1788813422,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\".\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ec8c9dabfb9bca20eefb\",\"object\":\"chat.completion.chunk\",\"created\":1788813422,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" The\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ec8c9dabfb9bca20eefb\",\"object\":\"chat.completion.chunk\",\"created\":1788813422,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" schema\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ec8c9dabfb9bca20eefb\",\"object\":\"chat.completion.chunk\",\"created\":1788813422,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" requires\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ec8c9dabfb9bca20eefb\",\"object\":\"chat.completion.chunk\",\"created\":1788813422,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" an\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ec8c9dabfb9bca20eefb\",\"object\":\"chat.completion.chunk\",\"created\":1788813422,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" object\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ec8c9dabfb9bca20eefb\",\"object\":\"chat.completion.chunk\",\"created\":1788813422,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" with\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ec8c9dabfb9bca20eefb\",\"object\":\"chat.completion.chunk\",\"created\":1788813422,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" a\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ec8c9dabfb9bca20eefb\",\"object\":\"chat.completion.chunk\",\"created\":1788813422,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" \\\"\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ec8c9dabfb9bca20eefb\",\"object\":\"chat.completion.chunk\",\"created\":1788813422,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"city\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ec8c9dabfb9bca20eefb\",\"object\":\"chat.completion.chunk\",\"created\":1788813422,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"\\\"\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ec8c9dabfb9bca20eefb\",\"object\":\"chat.completion.chunk\",\"created\":1788813422,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" property\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ec8c9dabfb9bca20eefb\",\"object\":\"chat.completion.chunk\",\"created\":1788813422,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" that\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ec8c9dabfb9bca20eefb\",\"object\":\"chat.completion.chunk\",\"created\":1788813422,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" must\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ec8c9dabfb9bca20eefb\",\"object\":\"chat.completion.chunk\",\"created\":1788813422,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" be\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ec8c9dabfb9bca20eefb\",\"object\":\"chat.completion.chunk\",\"created\":1788813422,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" \\\"\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ec8c9dabfb9bca20eefb\",\"object\":\"chat.completion.chunk\",\"created\":1788813422,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"Paris\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ec8c9dabfb9bca20eefb\",\"object\":\"chat.completion.chunk\",\"created\":1788813422,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"\\\".\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ec8c9dabfb9bca20eefb\",\"object\":\"chat.completion.chunk\",\"created\":1788813422,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" I\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ec8c9dabfb9bca20eefb\",\"object\":\"chat.completion.chunk\",\"created\":1788813422,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" should\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ec8c9dabfb9bca20eefb\",\"object\":\"chat.completion.chunk\",\"created\":1788813422,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" output\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ec8c9dabfb9bca20eefb\",\"object\":\"chat.completion.chunk\",\"created\":1788813422,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" raw\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ec8c9dabfb9bca20eefb\",\"object\":\"chat.completion.chunk\",\"created\":1788813422,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" JSON\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ec8c9dabfb9bca20eefb\",\"object\":\"chat.completion.chunk\",\"created\":1788813422,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" only\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ec8c9dabfb9bca20eefb\",\"object\":\"chat.completion.chunk\",\"created\":1788813422,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\".\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ec8c9dabfb9bca20eefb\",\"object\":\"chat.completion.chunk\",\"created\":1788813422,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ec8c9dabfb9bca20eefb\",\"object\":\"chat.completion.chunk\",\"created\":1788813422,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"{\\\"\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ec8c9dabfb9bca20eefb\",\"object\":\"chat.completion.chunk\",\"created\":1788813422,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"city\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ec8c9dabfb9bca20eefb\",\"object\":\"chat.completion.chunk\",\"created\":1788813422,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"\\\":\\\"\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ec8c9dabfb9bca20eefb\",\"object\":\"chat.completion.chunk\",\"created\":1788813422,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"Paris\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ec8c9dabfb9bca20eefb\",\"object\":\"chat.completion.chunk\",\"created\":1788813422,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"\\\"}\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ec8c9dabfb9bca20eefb\",\"object\":\"chat.completion.chunk\",\"created\":1788813422,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\",\"usage\":{\"prompt_tokens\":184,\"completion_tokens\":55,\"total_tokens\":239,\"completion_tokens_details\":{\"reasoning_tokens\":37},\"prompt_tokens_details\":{}}}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ec8c9dabfb9bca20eefb\",\"object\":\"chat.completion.chunk\",\"created\":1788813422,\"model\":\"kimi-k3\",\"choices\":[],\"usage\":{\"prompt_tokens\":184,\"completion_tokens\":55,\"total_tokens\":239,\"completion_tokens_details\":{\"reasoning_tokens\":37},\"prompt_tokens_details\":{}}}\n\ndata: [DONE]\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "reasoning-start",
+          "id": "reasoning-0",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "The",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " user",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " wants",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " a",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " JSON",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " object",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " containing",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " the",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " capital",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " city",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " of",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " France",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ".",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " The",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " schema",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " requires",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " an",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " object",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " with",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " a",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " \"",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "city",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "\"",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " property",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " that",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " must",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " be",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " \"",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "Paris",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "\".",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " I",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " should",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " output",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " raw",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " JSON",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " only",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ".",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "text-start",
+          "id": "text-0"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "{\""
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "city"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "\":\""
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "Paris"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "\"}"
+        },
+        {
+          "type": "reasoning-end",
+          "id": "reasoning-0",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "text-end",
+          "id": "text-0"
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 184,
+            "outputTokens": 55,
+            "nonCachedInputTokens": 184,
+            "reasoningTokens": 37,
+            "totalTokens": 239,
+            "providerMetadata": {
+              "moonshot": {
+                "prompt_tokens": 184,
+                "completion_tokens": 55,
+                "total_tokens": 239,
+                "prompt_tokens_details": {},
+                "completion_tokens_details": {
+                  "reasoning_tokens": 37
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 184,
+            "outputTokens": 55,
+            "nonCachedInputTokens": 184,
+            "reasoningTokens": 37,
+            "totalTokens": 239,
+            "providerMetadata": {
+              "moonshot": {
+                "prompt_tokens": 184,
+                "completion_tokens": 55,
+                "total_tokens": 239,
+                "prompt_tokens_details": {},
+                "completion_tokens_details": {
+                  "reasoning_tokens": 37
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

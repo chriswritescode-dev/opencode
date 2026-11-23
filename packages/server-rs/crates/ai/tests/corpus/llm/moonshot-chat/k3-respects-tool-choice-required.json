@@ -1,0 +1,396 @@
+{
+  "cassette": "moonshot-chat/k3-respects-tool-choice-required",
+  "protocol": "openai-chat",
+  "routeId": "moonshot-chat",
+  "clockEpochMs": 1767323045000,
+  "steps": [
+    {
+      "model": {
+        "id": "kimi-k3",
+        "provider": "moonshotai",
+        "route": {
+          "id": "moonshot-chat",
+          "protocol": "moonshot-chat",
+          "providerMetadataKey": "moonshot"
+        },
+        "endpoint": {
+          "baseURL": "https://api.moonshot.ai/v1",
+          "path": "/chat/completions"
+        },
+        "options": {
+          "providerOptions": {
+            "reasoningEffort": "low"
+          }
+        },
+        "modelOptions": {
+          "providerOptions": {
+            "reasoningEffort": "low"
+          }
+        },
+        "compatibility": {
+          "sanitizer": "moonshot",
+          "reasoningField": "reasoning_content",
+          "maxTokensField": "max_tokens"
+        },
+        "capabilities": {
+          "tools": {
+            "strict": false
+          },
+          "promptCacheKey": true
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_moonshot_chat_k3_tool_choice_required",
+        "maxTokens": 4096,
+        "system": [],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Use get_weather to look up the current weather in Paris."
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "tool",
+            "name": "get_weather",
+            "description": "Get the current weather in a city",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "city": {
+                  "type": "string",
+                  "enum": [
+                    "Paris"
+                  ]
+                }
+              },
+              "required": [
+                "city"
+              ],
+              "additionalProperties": false
+            }
+          }
+        ],
+        "toolChoice": {
+          "type": "required"
+        }
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/moonshot",
+        "modelID": "kimi-k3",
+        "settings": {
+          "apiKey": "fixture",
+          "reasoningEffort": "low"
+        }
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://api.moonshot.ai/v1/chat/completions",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "490",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"kimi-k3\",\"messages\":[{\"role\":\"user\",\"content\":\"Use get_weather to look up the current weather in Paris.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"get_weather\",\"description\":\"Get the current weather in a city\",\"parameters\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\",\"enum\":[\"Paris\"]}},\"required\":[\"city\"],\"additionalProperties\":false}}}],\"tool_choice\":\"required\",\"stream\":true,\"stream_options\":{\"include_usage\":true},\"max_tokens\":4096,\"reasoning_effort\":\"low\"}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream"
+            },
+            "body": "data: {\"id\":\"chatcmpl-2f2e0ba31ed689bf49616e056\",\"object\":\"chat.completion.chunk\",\"created\":1788813372,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ba31ed689bf49616e056\",\"object\":\"chat.completion.chunk\",\"created\":1788813372,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"Need\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ba31ed689bf49616e056\",\"object\":\"chat.completion.chunk\",\"created\":1788813372,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" call\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ba31ed689bf49616e056\",\"object\":\"chat.completion.chunk\",\"created\":1788813372,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" get\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ba31ed689bf49616e056\",\"object\":\"chat.completion.chunk\",\"created\":1788813372,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"_we\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ba31ed689bf49616e056\",\"object\":\"chat.completion.chunk\",\"created\":1788813372,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"ather\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ba31ed689bf49616e056\",\"object\":\"chat.completion.chunk\",\"created\":1788813372,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" Paris\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ba31ed689bf49616e056\",\"object\":\"chat.completion.chunk\",\"created\":1788813372,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\".\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ba31ed689bf49616e056\",\"object\":\"chat.completion.chunk\",\"created\":1788813372,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" Then\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ba31ed689bf49616e056\",\"object\":\"chat.completion.chunk\",\"created\":1788813372,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" final\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ba31ed689bf49616e056\",\"object\":\"chat.completion.chunk\",\"created\":1788813372,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" summarize\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ba31ed689bf49616e056\",\"object\":\"chat.completion.chunk\",\"created\":1788813372,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\".\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ba31ed689bf49616e056\",\"object\":\"chat.completion.chunk\",\"created\":1788813372,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" Call\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ba31ed689bf49616e056\",\"object\":\"chat.completion.chunk\",\"created\":1788813372,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" now\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ba31ed689bf49616e056\",\"object\":\"chat.completion.chunk\",\"created\":1788813372,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\".\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ba31ed689bf49616e056\",\"object\":\"chat.completion.chunk\",\"created\":1788813372,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":0,\"id\":\"get_weather_0\",\"type\":\"function\",\"function\":{\"name\":\"get_weather\",\"arguments\":\"\"}}]},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ba31ed689bf49616e056\",\"object\":\"chat.completion.chunk\",\"created\":1788813372,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"{\"}}]},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ba31ed689bf49616e056\",\"object\":\"chat.completion.chunk\",\"created\":1788813372,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\"city\\\": \\\"\"}}]},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ba31ed689bf49616e056\",\"object\":\"chat.completion.chunk\",\"created\":1788813372,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"Paris\"}}]},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ba31ed689bf49616e056\",\"object\":\"chat.completion.chunk\",\"created\":1788813372,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\"\"}}]},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ba31ed689bf49616e056\",\"object\":\"chat.completion.chunk\",\"created\":1788813372,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"}\"}}]},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ba31ed689bf49616e056\",\"object\":\"chat.completion.chunk\",\"created\":1788813372,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"tool_calls\",\"usage\":{\"prompt_tokens\":223,\"completion_tokens\":64,\"total_tokens\":287,\"completion_tokens_details\":{\"reasoning_tokens\":14},\"prompt_tokens_details\":{}}}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0ba31ed689bf49616e056\",\"object\":\"chat.completion.chunk\",\"created\":1788813372,\"model\":\"kimi-k3\",\"choices\":[],\"usage\":{\"prompt_tokens\":223,\"completion_tokens\":64,\"total_tokens\":287,\"completion_tokens_details\":{\"reasoning_tokens\":14},\"prompt_tokens_details\":{}}}\n\ndata: [DONE]\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "reasoning-start",
+          "id": "reasoning-0",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "Need",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " call",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " get",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "_we",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "ather",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " Paris",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ".",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " Then",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " final",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " summarize",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ".",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " Call",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " now",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ".",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "tool-input-start",
+          "id": "get_weather_0",
+          "name": "get_weather"
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "get_weather_0",
+          "name": "get_weather",
+          "text": "{",
+          "input": {}
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "get_weather_0",
+          "name": "get_weather",
+          "text": "\"city\": \"",
+          "input": {
+            "city": ""
+          }
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "get_weather_0",
+          "name": "get_weather",
+          "text": "Paris",
+          "input": {
+            "city": "Paris"
+          }
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "get_weather_0",
+          "name": "get_weather",
+          "text": "\"",
+          "input": {
+            "city": "Paris"
+          }
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "get_weather_0",
+          "name": "get_weather",
+          "text": "}",
+          "input": {
+            "city": "Paris"
+          }
+        },
+        {
+          "type": "reasoning-end",
+          "id": "reasoning-0",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "tool-input-end",
+          "id": "get_weather_0",
+          "name": "get_weather"
+        },
+        {
+          "type": "tool-call",
+          "id": "get_weather_0",
+          "name": "get_weather",
+          "input": {
+            "city": "Paris"
+          }
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "tool-calls",
+            "raw": "tool_calls"
+          },
+          "usage": {
+            "inputTokens": 223,
+            "outputTokens": 64,
+            "nonCachedInputTokens": 223,
+            "reasoningTokens": 14,
+            "totalTokens": 287,
+            "providerMetadata": {
+              "moonshot": {
+                "prompt_tokens": 223,
+                "completion_tokens": 64,
+                "total_tokens": 287,
+                "prompt_tokens_details": {},
+                "completion_tokens_details": {
+                  "reasoning_tokens": 14
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "tool-calls",
+            "raw": "tool_calls"
+          },
+          "usage": {
+            "inputTokens": 223,
+            "outputTokens": 64,
+            "nonCachedInputTokens": 223,
+            "reasoningTokens": 14,
+            "totalTokens": 287,
+            "providerMetadata": {
+              "moonshot": {
+                "prompt_tokens": 223,
+                "completion_tokens": 64,
+                "total_tokens": 287,
+                "prompt_tokens_details": {},
+                "completion_tokens_details": {
+                  "reasoning_tokens": 14
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -226,6 +226,226 @@
       "group": "gemini"
     },
     {
+      "cassette": "minimax-chat/m3-continues-a-tool-loop-with-default-thinking",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "minimax-chat/m3-streams-text-with-thinking-disabled",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "minimax-messages/m2-7-streams-default-thinking",
+      "protocol": "anthropic-messages",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "minimax-messages/m3-continues-a-tool-loop-with-adaptive-thinking",
+      "protocol": "anthropic-messages",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "minimax-messages/m3-generates-a-named-tool-call-with-default-thinking-off",
+      "protocol": "anthropic-messages",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "minimax-messages/m3-streams-adaptive-thinking",
+      "protocol": "anthropic-messages",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "minimax-messages/m3-streams-text-with-thinking-disabled",
+      "protocol": "anthropic-messages",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "minimax-responses/m3-continues-a-tool-loop-with-effort-minimal",
+      "protocol": "open-responses",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "minimax-responses/m3-streams-text-with-effort-none",
+      "protocol": "open-responses",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-chat/k3-reads-image-bytes",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-chat/k3-respects-tool-choice-none",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-chat/k3-respects-tool-choice-required",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-chat/k3-returns-native-structured-output",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-chat/k3-streams-text-with-default-effort",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-chat/k3-streams-text-with-high-effort",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-chat/k3-streams-text-with-low-effort",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-chat/k3-streams-text-with-max-effort",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-chat/kimi-k2-6-preserves-reasoning-through-a-tool-loop-and-follow-up",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-chat/kimi-k2-6-streams-text-with-default-thinking",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-chat/kimi-k2-6-streams-text-with-disabled-thinking",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-chat/kimi-k2-6-streams-text-with-enabled-thinking",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-chat/kimi-k2-7-code-highspeed-preserves-reasoning-through-a-tool-loop-and-follow-up",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-chat/kimi-k2-7-code-highspeed-streams-text-with-default-thinking",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-chat/kimi-k2-7-code-preserves-reasoning-through-a-tool-loop-and-follow-up",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-chat/kimi-k2-7-code-streams-text-with-default-thinking",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-chat/kimi-k3-preserves-reasoning-through-a-tool-loop-and-follow-up",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-messages/k3-reads-image-bytes",
+      "protocol": "anthropic-messages",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-messages/k3-respects-tool-choice-none",
+      "protocol": "anthropic-messages",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-messages/k3-respects-tool-choice-required",
+      "protocol": "anthropic-messages",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-messages/k3-returns-native-structured-output",
+      "protocol": "anthropic-messages",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-messages/k3-streams-text-with-default-effort",
+      "protocol": "anthropic-messages",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-messages/k3-streams-text-with-high-effort",
+      "protocol": "anthropic-messages",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-messages/k3-streams-text-with-low-effort",
+      "protocol": "anthropic-messages",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-messages/k3-streams-text-with-max-effort",
+      "protocol": "anthropic-messages",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-messages/kimi-k3-preserves-reasoning-through-a-tool-loop-and-follow-up",
+      "protocol": "anthropic-messages",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-responses/k3-reads-image-bytes",
+      "protocol": "open-responses",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-responses/k3-rejects-unsupported-tool-choice-none",
+      "protocol": "open-responses",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-responses/k3-rejects-unsupported-tool-choice-required",
+      "protocol": "open-responses",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-responses/k3-returns-native-structured-output",
+      "protocol": "open-responses",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-responses/k3-streams-text-with-default-effort",
+      "protocol": "open-responses",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-responses/k3-streams-text-with-high-effort",
+      "protocol": "open-responses",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-responses/k3-streams-text-with-low-effort",
+      "protocol": "open-responses",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-responses/k3-streams-text-with-max-effort",
+      "protocol": "open-responses",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-responses/kimi-k3-preserves-reasoning-through-a-tool-loop-and-follow-up",
+      "protocol": "open-responses",
+      "group": "chat-variants"
+    },
+    {
       "cassette": "openai-compatible-chat/gemini-parallel-tool-signatures",
       "protocol": "openai-chat",
       "group": "openai-chat"
@@ -399,6 +619,106 @@
       "cassette": "vercel-native/rejects-invalid-credentials-without-retryable-classification",
       "protocol": "anthropic-messages",
       "group": "gateways"
+    },
+    {
+      "cassette": "zai-chat/glm-4-5-calls-a-tool-without-streaming-arguments",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "zai-chat/glm-4-7-streams-thinking-disabled",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "zai-chat/glm-4-7-streams-thinking-enabled",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "zai-chat/glm-5-2-streams-high-effort",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "zai-chat/glm-5-2-streams-low-effort",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "zai-chat/glm-5-2-streams-max-effort",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "zai-chat/glm-5-2-streams-medium-effort",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "zai-chat/glm-5-2-streams-minimal-effort",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "zai-chat/glm-5-2-streams-none-effort",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "zai-chat/glm-5-2-streams-thinking-disabled",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "zai-chat/glm-5-2-streams-thinking-enabled",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "zai-chat/glm-5-2-streams-xhigh-effort",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "zai-chat/glm-5-3-flash-reads-image-bytes",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "zai-chat/glm-5-3-preserves-reasoning-through-a-tool-loop-and-follow-up",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "zai-chat/glm-5-3-rejects-disabled-thinking",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "zai-chat/glm-5-3-returns-a-json-object",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "zai-chat/glm-5-3-streams-default-effort",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "zai-chat/glm-5-3-streams-high-effort",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "zai-chat/glm-5-3-streams-low-effort",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "zai-chat/glm-5-3-streams-max-effort",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
     }
   ]
 }

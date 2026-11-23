@@ -1,0 +1,214 @@
+{
+  "cassette": "minimax-messages/m3-generates-a-named-tool-call-with-default-thinking-off",
+  "protocol": "anthropic-messages",
+  "routeId": "minimax-messages",
+  "clockEpochMs": 1767323045000,
+  "steps": [
+    {
+      "model": {
+        "id": "MiniMax-M3",
+        "provider": "minimax",
+        "route": {
+          "id": "minimax-messages",
+          "protocol": "anthropic-messages",
+          "providerMetadataKey": "minimax"
+        },
+        "endpoint": {
+          "baseURL": "https://api.minimax.io/anthropic/v1",
+          "path": "/messages"
+        },
+        "compatibility": {
+          "requireSignature": false
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_minimax_messages_m3_generates_a_named_tool_call_with_default_thinking_off",
+        "maxTokens": 512,
+        "system": [],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Use get_weather to look up the current weather in Paris."
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "tool",
+            "name": "get_weather",
+            "description": "Get the current weather in a city",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "city": {
+                  "type": "string",
+                  "enum": [
+                    "Paris"
+                  ]
+                }
+              },
+              "required": [
+                "city"
+              ],
+              "additionalProperties": false
+            }
+          }
+        ],
+        "toolChoice": {
+          "type": "tool",
+          "name": "get_weather"
+        }
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/minimax",
+        "modelID": "MiniMax-M3",
+        "settings": {
+          "apiKey": "fixture"
+        }
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://api.minimax.io/anthropic/v1/messages",
+            "headers": {
+              "anthropic-version": "2023-06-01",
+              "authorization": "Bearer fixture",
+              "content-length": "523",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"MiniMax-M3\",\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"Use get_weather to look up the current weather in Paris.\",\"cache_control\":{\"type\":\"ephemeral\"}}]}],\"tools\":[{\"name\":\"get_weather\",\"description\":\"Get the current weather in a city\",\"input_schema\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\",\"enum\":[\"Paris\"]}},\"required\":[\"city\"],\"additionalProperties\":false},\"cache_control\":{\"type\":\"ephemeral\"}}],\"tool_choice\":{\"type\":\"tool\",\"name\":\"get_weather\"},\"stream\":true,\"max_tokens\":512}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream; charset=utf-8"
+            },
+            "body": "event: message_start\ndata: {\"type\":\"message_start\",\"message\":{\"id\":\"5f4a7ce22c5a82497fedc65028aa4825\",\"type\":\"message\",\"role\":\"assistant\",\"content\":[],\"model\":\"MiniMax-M3\",\"stop_reason\":null,\"stop_sequence\":null,\"usage\":{\"input_tokens\":0,\"output_tokens\":0,\"service_tier\":\"standard\"},\"service_tier\":\"standard\"}}\n\nevent: ping\ndata: {\"type\":\"ping\"}\n\nevent: content_block_start\ndata: {\"type\":\"content_block_start\",\"index\":0,\"content_block\":{\"type\":\"text\",\"text\":\"\"}}\n\nevent: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"I'll\"}}\n\nevent: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\" look\"}}\n\nevent: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\" up the current weather\"}}\n\nevent: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\" in Paris for you\"}}\n\nevent: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\".\"}}\n\nevent: content_block_stop\ndata: {\"type\":\"content_block_stop\",\"index\":0}\n\nevent: content_block_start\ndata: {\"type\":\"content_block_start\",\"index\":1,\"content_block\":{\"type\":\"tool_use\",\"id\":\"call_01a0eba235fb7281a0f2ea2c\",\"name\":\"get_weather\",\"input\":{}}}\n\nevent: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"input_json_delta\",\"partial_json\":\"{\\\"city\\\":\\\"Paris\\\"}\"}}\n\nevent: content_block_stop\ndata: {\"type\":\"content_block_stop\",\"index\":1}\n\nevent: message_delta\ndata: {\"type\":\"message_delta\",\"delta\":{\"stop_reason\":\"tool_use\"},\"usage\":{\"input_tokens\":287,\"output_tokens\":39,\"cache_read_input_tokens\":128,\"service_tier\":\"standard\"}}\n\nevent: message_stop\ndata: {\"type\":\"message_stop\"}\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "text-start",
+          "id": "text-0"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "I'll"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " look"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " up the current weather"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " in Paris for you"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "."
+        },
+        {
+          "type": "text-end",
+          "id": "text-0"
+        },
+        {
+          "type": "tool-input-start",
+          "id": "call_01a0eba235fb7281a0f2ea2c",
+          "name": "get_weather"
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "call_01a0eba235fb7281a0f2ea2c",
+          "name": "get_weather",
+          "text": "{\"city\":\"Paris\"}",
+          "input": {
+            "city": "Paris"
+          }
+        },
+        {
+          "type": "tool-input-end",
+          "id": "call_01a0eba235fb7281a0f2ea2c",
+          "name": "get_weather"
+        },
+        {
+          "type": "tool-call",
+          "id": "call_01a0eba235fb7281a0f2ea2c",
+          "name": "get_weather",
+          "input": {
+            "city": "Paris"
+          }
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "tool-calls",
+            "raw": "tool_use"
+          },
+          "usage": {
+            "inputTokens": 415,
+            "outputTokens": 39,
+            "nonCachedInputTokens": 287,
+            "cacheReadInputTokens": 128,
+            "totalTokens": 454,
+            "providerMetadata": {
+              "minimax": {
+                "input_tokens": 287,
+                "output_tokens": 39,
+                "service_tier": "standard",
+                "cache_read_input_tokens": 128
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "tool-calls",
+            "raw": "tool_use"
+          },
+          "usage": {
+            "inputTokens": 415,
+            "outputTokens": 39,
+            "nonCachedInputTokens": 287,
+            "cacheReadInputTokens": 128,
+            "totalTokens": 454,
+            "providerMetadata": {
+              "minimax": {
+                "input_tokens": 287,
+                "output_tokens": 39,
+                "service_tier": "standard",
+                "cache_read_input_tokens": 128
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

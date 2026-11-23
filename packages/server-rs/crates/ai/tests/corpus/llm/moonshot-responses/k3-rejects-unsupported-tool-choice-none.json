@@ -1,0 +1,127 @@
+{
+  "cassette": "moonshot-responses/k3-rejects-unsupported-tool-choice-none",
+  "protocol": "open-responses",
+  "routeId": "moonshot-responses",
+  "clockEpochMs": 1767323045000,
+  "steps": [
+    {
+      "model": {
+        "id": "kimi-k3",
+        "provider": "moonshotai",
+        "route": {
+          "id": "moonshot-responses",
+          "protocol": "open-responses",
+          "providerMetadataKey": "moonshot"
+        },
+        "endpoint": {
+          "baseURL": "https://api.moonshot.ai/v1",
+          "path": "/responses"
+        },
+        "options": {
+          "providerOptions": {
+            "reasoningEffort": "low"
+          }
+        },
+        "modelOptions": {
+          "providerOptions": {
+            "reasoningEffort": "low"
+          }
+        },
+        "compatibility": {
+          "sanitizer": "moonshot"
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_moonshot_responses_k3_tool_choice_none",
+        "maxTokens": 4096,
+        "system": [],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Use get_weather to look up the current weather in Paris."
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "tool",
+            "name": "get_weather",
+            "description": "Get the current weather in a city",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "city": {
+                  "type": "string",
+                  "enum": [
+                    "Paris"
+                  ]
+                }
+              },
+              "required": [
+                "city"
+              ],
+              "additionalProperties": false
+            }
+          }
+        ],
+        "toolChoice": {
+          "type": "none"
+        }
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/moonshot/responses",
+        "modelID": "kimi-k3",
+        "settings": {
+          "apiKey": "fixture",
+          "reasoningEffort": "low"
+        }
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://api.moonshot.ai/v1/responses",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "504",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"kimi-k3\",\"input\":[{\"type\":\"message\",\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"Use get_weather to look up the current weather in Paris.\"}]}],\"stream\":true,\"max_output_tokens\":4096,\"reasoning\":{\"effort\":\"low\"},\"tools\":[{\"type\":\"function\",\"name\":\"get_weather\",\"description\":\"Get the current weather in a city\",\"parameters\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\",\"enum\":[\"Paris\"]}},\"required\":[\"city\"],\"additionalProperties\":false},\"strict\":false}],\"tool_choice\":\"none\"}"
+          },
+          "response": {
+            "status": 400,
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": "{\"error\":{\"message\":\"invalid_request_error: responses: unsupported tool_choice value: \\\"none\\\"\",\"type\":\"invalid_request_error\",\"param\":null,\"code\":\"invalid_request_error\"}}\n"
+          }
+        }
+      ],
+      "error": {
+        "reason": {
+          "_tag": "InvalidRequest",
+          "message": "invalid_request_error: responses: unsupported tool_choice value: \"none\"",
+          "body": "{\"error\":{\"message\":\"invalid_request_error: responses: unsupported tool_choice value: \\\"none\\\"\",\"type\":\"invalid_request_error\",\"param\":null,\"code\":\"invalid_request_error\"}}\n",
+          "http": {
+            "url": "https://api.moonshot.ai/v1/responses",
+            "status": 400,
+            "headers": {
+              "content-type": "application/json"
+            }
+          }
+        },
+        "retryable": false
+      }
+    }
+  ]
+}

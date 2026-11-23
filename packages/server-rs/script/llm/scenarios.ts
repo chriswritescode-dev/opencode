@@ -21,11 +21,14 @@ const {
   CloudflareWorkersAI,
   DeepInfra,
   Google,
+  MiniMax,
+  Moonshot,
   OpenAI,
   OpenAICompatible,
   TogetherAI,
   VercelAIGateway,
   Venice,
+  ZAI,
 } = await load("packages/ai/src/providers.ts")
 const { toDefinitions, tool } = await load("packages/ai/src/tool.ts")
 const {
@@ -249,6 +252,669 @@ const freeformRun = toDefinitions([
     freeform: { type: "text" },
   }),
 ])
+
+const chatVariant = (scenario: Scenario) => ({ group: "chat-variants", scenario })
+
+const fixtureSettings = { apiKey: "fixture" }
+const integerPrompt = "What is 173 multiplied by 219? Reply with only the final integer."
+const weatherPrompt =
+  "Use get_weather to look up the current weather in Paris. After receiving the result, report the weather in one short sentence."
+const minimaxWeatherPrompt =
+  "Look up the current weather in Paris using get_weather before answering. After receiving the result, report the weather in one short sentence."
+const locationSchema = {
+  type: "object",
+  properties: { city: { type: "string", enum: ["Paris"] } },
+  required: ["city"],
+  additionalProperties: false,
+}
+const chatWeather = ToolDefinition.make({
+  name: "get_weather",
+  description: "Get the current weather in a city",
+  inputSchema: locationSchema,
+})
+const legacyChatWeather = ToolDefinition.make({
+  name: "get_weather",
+  description: "Get weather in a city",
+  inputSchema: {
+    type: "object",
+    properties: { city: { type: "string", enum: ["Paris"] } },
+    required: ["city"],
+  },
+})
+const restroomImage = () =>
+  Effect.promise(() => Bun.file(`${tree}/packages/ai/test/fixtures/media/restroom.png`).bytes())
+
+const configureOptions = (settings: Record<string, unknown>) => {
+  const { apiKey, ...providerOptions } = settings
+  return Object.keys(providerOptions).length === 0 ? { apiKey } : { apiKey, providerOptions }
+}
+
+const zaiModel = (modelID: string, settings: Record<string, unknown>) => ZAI.model(modelID, settings)
+const moonshotChatModel = (modelID: string, settings: Record<string, unknown>) => Moonshot.model(modelID, settings)
+const moonshotMessagesModel = (modelID: string, settings: Record<string, unknown>) =>
+  Moonshot.configure(configureOptions(settings)).messages(modelID)
+const moonshotResponsesModel = (modelID: string, settings: Record<string, unknown>) =>
+  Moonshot.configure(configureOptions(settings)).responses(modelID)
+const minimaxMessagesModel = (modelID: string, settings: Record<string, unknown>) => MiniMax.model(modelID, settings)
+const minimaxChatModel = (modelID: string, settings: Record<string, unknown>) =>
+  MiniMax.configure(configureOptions(settings)).chat(modelID)
+const minimaxResponsesModel = (modelID: string, settings: Record<string, unknown>) =>
+  MiniMax.configure(configureOptions(settings)).responses(modelID)
+
+const moonshotApi = {
+  chat: { protocol: "openai-chat", package: "@opencode/ai/providers/moonshot", model: moonshotChatModel },
+  messages: {
+    protocol: "anthropic-messages",
+    package: "@opencode/ai/providers/moonshot/messages",
+    model: moonshotMessagesModel,
+  },
+  responses: {
+    protocol: "open-responses",
+    package: "@opencode/ai/providers/moonshot/responses",
+    model: moonshotResponsesModel,
+  },
+} as const
+
+const runThreeStepWeatherLoop = (request: any) =>
+  Effect.gen(function* () {
+    const first = yield* LLMClient.generate(request)
+    const continuation = {
+      ...request,
+      messages: [
+        ...request.messages,
+        first.message,
+        ...first.toolCalls.map((call: any) =>
+          Message.tool({ id: call.id, name: call.name, result: { condition: "sunny", temperature: "18C" } }),
+        ),
+      ],
+    }
+    const second = yield* LLMClient.generate(continuation)
+    yield* LLMClient.generate({
+      ...continuation,
+      messages: [
+        ...continuation.messages,
+        second.message,
+        Message.user("What temperature did the tool report? Reply with only the temperature."),
+      ],
+    })
+  })
+
+const runMinimaxToolLoop = (request: any) =>
+  Effect.gen(function* () {
+    const first = yield* LLMClient.generate(request)
+    yield* LLMClient.generate({
+      ...request,
+      toolChoice: ToolChoice.make("none"),
+      messages: [
+        ...request.messages,
+        first.message,
+        ...first.toolCalls.map((call: any) =>
+          Message.tool({ id: call.id, name: call.name, result: { condition: "sunny", temperature: "18C" } }),
+        ),
+      ],
+    })
+  })
+
+const moonshotEffortScenarios = (api: {
+  readonly name: "chat" | "messages" | "responses"
+  readonly protocol: string
+  readonly package: string
+  readonly model: (modelID: string, settings: Record<string, unknown>) => unknown
+  readonly effortKey: "reasoningEffort" | "effort"
+}) =>
+  (["default", "low", "high", "max"] as const).map((effort) => {
+    const settings = effort === "default" ? fixtureSettings : { apiKey: "fixture", [api.effortKey]: effort }
+    return chatVariant({
+      cassette: `moonshot-${api.name}/k3-streams-text-with-${effort}-effort`,
+      protocol: api.protocol,
+      provider: { package: api.package, modelID: "kimi-k3", settings },
+      run: () =>
+        LLMClient.generate(
+          ai.request({
+            id: `recorded_moonshot_${api.name}_k3_streams_text_with_${effort}_effort`,
+            model: api.model("kimi-k3", settings),
+            prompt: integerPrompt,
+            maxTokens: 4096,
+          }),
+        ),
+    })
+  })
+
+const moonshotLoopScenario = (api: {
+  readonly name: "chat" | "messages" | "responses"
+  readonly protocol: string
+  readonly package: string
+  readonly model: (modelID: string, settings: Record<string, unknown>) => unknown
+  readonly modelID: string
+  readonly settings: Record<string, unknown>
+}) => {
+  const slug = api.modelID.replaceAll(".", "-")
+  return chatVariant({
+    cassette: `moonshot-${api.name}/${slug}-preserves-reasoning-through-a-tool-loop-and-follow-up`,
+    protocol: api.protocol,
+    provider: { package: api.package, modelID: api.modelID, settings: api.settings },
+    run: () =>
+      runThreeStepWeatherLoop(
+        ai.request({
+          id: `recorded_moonshot_${api.name}_${slug}_tool_loop`,
+          model: api.model(api.modelID, api.settings),
+          prompt: weatherPrompt,
+          tools: [chatWeather],
+          maxTokens: 4096,
+        }),
+      ),
+  })
+}
+
+const moonshotCapabilityScenarios = (api: {
+  readonly name: "chat" | "messages" | "responses"
+  readonly protocol: string
+  readonly package: string
+  readonly model: (modelID: string, settings: Record<string, unknown>) => unknown
+  readonly rejectsToolChoice: boolean
+  readonly structuredBody: Record<string, unknown>
+}) => {
+  const settings =
+    api.name === "messages" ? { apiKey: "fixture", effort: "low" } : { apiKey: "fixture", reasoningEffort: "low" }
+  const model = api.model("kimi-k3", settings)
+  return [
+    chatVariant({
+      cassette: `moonshot-${api.name}/k3-reads-image-bytes`,
+      protocol: api.protocol,
+      provider: { package: api.package, modelID: "kimi-k3", settings },
+      run: () =>
+        Effect.gen(function* () {
+          const image = yield* restroomImage()
+          yield* LLMClient.generate(
+            ai.request({
+              id: `recorded_moonshot_${api.name}_k3_reads_image_bytes`,
+              model,
+              messages: [
+                Message.user([
+                  { type: "text", text: "Read the three words in this image. Reply only with those words in order." },
+                  { type: "media", media: Media.bytes(image, "image/png") },
+                ]),
+              ],
+              maxTokens: 4096,
+            }),
+          )
+        }),
+    }),
+    ...(["none", "required"] as const).map((toolChoice) =>
+      chatVariant({
+        cassette: `moonshot-${api.name}/k3-${api.rejectsToolChoice ? "rejects-unsupported" : "respects"}-tool-choice-${toolChoice}`,
+        protocol: api.protocol,
+        provider: { package: api.package, modelID: "kimi-k3", settings },
+        run: () => {
+          const generate = LLMClient.generate(
+            ai.request({
+              id: `recorded_moonshot_${api.name}_k3_tool_choice_${toolChoice}`,
+              model,
+              prompt: "Use get_weather to look up the current weather in Paris.",
+              tools: [chatWeather],
+              toolChoice,
+              maxTokens: 4096,
+            }),
+          )
+          return api.rejectsToolChoice ? generate.pipe(Effect.flip) : generate
+        },
+      }),
+    ),
+    chatVariant({
+      cassette: `moonshot-${api.name}/k3-returns-native-structured-output`,
+      protocol: api.protocol,
+      provider: { package: api.package, modelID: "kimi-k3", settings },
+      run: () =>
+        LLMClient.generate(
+          ai.request({
+            id: `recorded_moonshot_${api.name}_k3_returns_native_structured_output`,
+            model,
+            prompt: "Return a JSON object containing the capital city of France.",
+            maxTokens: 4096,
+            http: { body: api.structuredBody },
+          }),
+        ),
+    }),
+  ]
+}
+
+const zaiEffortScenarios = (["default", "low", "high", "max"] as const).map((effort) => {
+  const settings = effort === "default" ? fixtureSettings : { apiKey: "fixture", reasoningEffort: effort }
+  return chatVariant({
+    cassette: `zai-chat/glm-5-3-streams-${effort}-effort`,
+    protocol: "openai-chat",
+    provider: { package: "@opencode/ai/providers/zai", modelID: "glm-5.3", settings },
+    run: () =>
+      LLMClient.generate(
+        ai.request({
+          id: `recorded_zai_glm_5_3_streams_${effort}_effort`,
+          model: zaiModel("glm-5.3", settings),
+          prompt: integerPrompt,
+          maxTokens: 4096,
+        }),
+      ),
+  })
+})
+
+const zaiThinkingScenarios = (["glm-4.7", "glm-5.2"] as const).flatMap((modelID) =>
+  (["enabled", "disabled"] as const).map((type) => {
+    const settings = { apiKey: "fixture", thinking: { type, clear_thinking: true } }
+    const slug = modelID.replaceAll(".", "-")
+    return chatVariant({
+      cassette: `zai-chat/${slug}-streams-thinking-${type}`,
+      protocol: "openai-chat",
+      provider: { package: "@opencode/ai/providers/zai", modelID, settings },
+      run: () =>
+        LLMClient.generate(
+          ai.request({
+            id: `recorded_zai_${slug}_streams_thinking_${type}`,
+            model: zaiModel(modelID, settings),
+            prompt: integerPrompt,
+            maxTokens: 4096,
+          }),
+        ),
+    })
+  }),
+)
+
+const zaiReasoningScenarios = (["none", "minimal", "low", "medium", "high", "xhigh", "max"] as const).map((effort) => {
+  const settings = { apiKey: "fixture", reasoningEffort: effort }
+  return chatVariant({
+    cassette: `zai-chat/glm-5-2-streams-${effort}-effort`,
+    protocol: "openai-chat",
+    provider: { package: "@opencode/ai/providers/zai", modelID: "glm-5.2", settings },
+    run: () =>
+      LLMClient.generate(
+        ai.request({
+          id: `recorded_zai_glm_5_2_streams_${effort}_effort`,
+          model: zaiModel("glm-5.2", settings),
+          prompt: integerPrompt,
+          maxTokens: 4096,
+        }),
+      ),
+  })
+})
+
+const zaiToolLoopSettings = {
+  apiKey: "fixture",
+  reasoningEffort: "high",
+  thinking: { type: "enabled", clear_thinking: false },
+}
+const zaiRejectSettings = { apiKey: "fixture", thinking: { type: "disabled" } }
+const zaiImageSettings = { apiKey: "fixture", reasoningEffort: "low" }
+const zaiJsonSettings = { apiKey: "fixture", reasoningEffort: "low", responseFormat: { type: "json_object" } }
+
+const zaiScenarios = [
+  ...zaiEffortScenarios,
+  ...zaiThinkingScenarios,
+  ...zaiReasoningScenarios,
+  chatVariant({
+    cassette: "zai-chat/glm-5-3-preserves-reasoning-through-a-tool-loop-and-follow-up",
+    protocol: "openai-chat",
+    provider: { package: "@opencode/ai/providers/zai", modelID: "glm-5.3", settings: zaiToolLoopSettings },
+    run: () =>
+      runThreeStepWeatherLoop(
+        ai.request({
+          id: "recorded_zai_glm_5_3_tool_loop",
+          model: zaiModel("glm-5.3", zaiToolLoopSettings),
+          prompt:
+            "We have a budget of 38000 dollars for 219 trips costing 173 dollars each. Calculate whether that is affordable. If it is, use get_weather to look up the current weather in Paris. After receiving the result, report the weather in one short sentence.",
+          tools: [chatWeather],
+          maxTokens: 4096,
+        }),
+      ),
+  }),
+  chatVariant({
+    cassette: "zai-chat/glm-5-3-rejects-disabled-thinking",
+    protocol: "openai-chat",
+    provider: { package: "@opencode/ai/providers/zai", modelID: "glm-5.3", settings: zaiRejectSettings },
+    run: () =>
+      LLMClient.generate(
+        ai.request({
+          id: "recorded_zai_glm_5_3_rejects_disabled_thinking",
+          model: zaiModel("glm-5.3", zaiRejectSettings),
+          prompt: integerPrompt,
+          maxTokens: 4096,
+        }),
+      ).pipe(Effect.flip),
+  }),
+  chatVariant({
+    cassette: "zai-chat/glm-5-3-flash-reads-image-bytes",
+    protocol: "openai-chat",
+    provider: { package: "@opencode/ai/providers/zai", modelID: "glm-5.3-flash", settings: zaiImageSettings },
+    run: () =>
+      Effect.gen(function* () {
+        const bytes = yield* restroomImage()
+        yield* LLMClient.generate(
+          ai.request({
+            id: "recorded_zai_glm_5_3_flash_reads_image_bytes",
+            model: zaiModel("glm-5.3-flash", zaiImageSettings),
+            messages: [
+              Message.user([
+                { type: "text", text: "Read the three words in this image. Reply with only the words in order." },
+                { type: "media", media: Media.bytes(bytes, "image/png") },
+              ]),
+            ],
+            maxTokens: 4096,
+          }),
+        )
+      }),
+  }),
+  chatVariant({
+    cassette: "zai-chat/glm-5-3-returns-a-json-object",
+    protocol: "openai-chat",
+    provider: { package: "@opencode/ai/providers/zai", modelID: "glm-5.3", settings: zaiJsonSettings },
+    run: () =>
+      LLMClient.generate(
+        ai.request({
+          id: "recorded_zai_glm_5_3_returns_a_json_object",
+          model: zaiModel("glm-5.3", zaiJsonSettings),
+          prompt: 'Return a JSON object with one key "city" set to the capital city of France.',
+          maxTokens: 4096,
+        }),
+      ),
+  }),
+  chatVariant({
+    cassette: "zai-chat/glm-4-5-calls-a-tool-without-streaming-arguments",
+    protocol: "openai-chat",
+    provider: { package: "@opencode/ai/providers/zai", modelID: "glm-4.5", settings: fixtureSettings },
+    run: () =>
+      LLMClient.generate(
+        ai.request({
+          id: "recorded_zai_glm_4_5_calls_a_tool_without_streaming_arguments",
+          model: zaiModel("glm-4.5", fixtureSettings),
+          prompt: "Use get_weather to look up the current weather in Paris.",
+          tools: [legacyChatWeather],
+          maxTokens: 4096,
+        }),
+      ),
+  }),
+]
+
+const moonshotChatThinkingScenarios = [
+  { modelID: "kimi-k2.6", name: "default", settings: fixtureSettings },
+  {
+    modelID: "kimi-k2.6",
+    name: "disabled",
+    settings: { apiKey: "fixture", thinking: { type: "disabled" } },
+  },
+  {
+    modelID: "kimi-k2.6",
+    name: "enabled",
+    settings: { apiKey: "fixture", thinking: { type: "enabled", keep: null } },
+  },
+  { modelID: "kimi-k2.7-code", name: "default", settings: fixtureSettings },
+  { modelID: "kimi-k2.7-code-highspeed", name: "default", settings: fixtureSettings },
+].map((item) => {
+  const slug = item.modelID.replaceAll(".", "-")
+  return chatVariant({
+    cassette: `moonshot-chat/${slug}-streams-text-with-${item.name}-thinking`,
+    protocol: moonshotApi.chat.protocol,
+    provider: { package: moonshotApi.chat.package, modelID: item.modelID, settings: item.settings },
+    run: () =>
+      LLMClient.generate(
+        ai.request({
+          id: `recorded_moonshot_chat_${slug}_streams_text_with_${item.name}_thinking`,
+          model: moonshotApi.chat.model(item.modelID, item.settings),
+          prompt: integerPrompt,
+          maxTokens: 4096,
+        }),
+      ),
+  })
+})
+
+const moonshotChatLoopScenarios = [
+  { modelID: "kimi-k3", settings: { apiKey: "fixture", reasoningEffort: "low" } },
+  { modelID: "kimi-k2.6", settings: { apiKey: "fixture", thinking: { type: "enabled", keep: "all" } } },
+  { modelID: "kimi-k2.7-code", settings: fixtureSettings },
+  { modelID: "kimi-k2.7-code-highspeed", settings: fixtureSettings },
+].map((item) =>
+  moonshotLoopScenario({
+    name: "chat",
+    protocol: moonshotApi.chat.protocol,
+    package: moonshotApi.chat.package,
+    model: moonshotApi.chat.model,
+    ...item,
+  }),
+)
+
+const minimaxAdaptiveSettings = { apiKey: "fixture", thinking: { type: "adaptive" } }
+const minimaxDisabledSettings = { apiKey: "fixture", thinking: { type: "disabled" } }
+const minimaxNoneSettings = { apiKey: "fixture", reasoningEffort: "none" }
+const minimaxMinimalSettings = { apiKey: "fixture", reasoningEffort: "minimal" }
+
+const minimaxScenarios = [
+  chatVariant({
+    cassette: "minimax-messages/m3-streams-text-with-thinking-disabled",
+    protocol: "anthropic-messages",
+    provider: {
+      package: "@opencode/ai/providers/minimax",
+      modelID: "MiniMax-M3",
+      settings: minimaxDisabledSettings,
+    },
+    run: () =>
+      LLMClient.generate(
+        ai.request({
+          id: "recorded_minimax_messages_m3_streams_text_with_thinking_disabled",
+          model: minimaxMessagesModel("MiniMax-M3", minimaxDisabledSettings),
+          prompt: integerPrompt,
+          maxTokens: 1536,
+        }),
+      ),
+  }),
+  chatVariant({
+    cassette: "minimax-messages/m3-streams-adaptive-thinking",
+    protocol: "anthropic-messages",
+    provider: {
+      package: "@opencode/ai/providers/minimax",
+      modelID: "MiniMax-M3",
+      settings: minimaxAdaptiveSettings,
+    },
+    run: () =>
+      LLMClient.generate(
+        ai.request({
+          id: "recorded_minimax_messages_m3_streams_adaptive_thinking",
+          model: minimaxMessagesModel("MiniMax-M3", minimaxAdaptiveSettings),
+          prompt: integerPrompt,
+          maxTokens: 1536,
+        }),
+      ),
+  }),
+  chatVariant({
+    cassette: "minimax-messages/m2-7-streams-default-thinking",
+    protocol: "anthropic-messages",
+    provider: { package: "@opencode/ai/providers/minimax", modelID: "MiniMax-M2.7", settings: fixtureSettings },
+    run: () =>
+      LLMClient.generate(
+        ai.request({
+          id: "recorded_minimax_messages_m2_7_streams_default_thinking",
+          model: minimaxMessagesModel("MiniMax-M2.7", fixtureSettings),
+          prompt: integerPrompt,
+          maxTokens: 1536,
+        }),
+      ),
+  }),
+  chatVariant({
+    cassette: "minimax-messages/m3-generates-a-named-tool-call-with-default-thinking-off",
+    protocol: "anthropic-messages",
+    provider: { package: "@opencode/ai/providers/minimax", modelID: "MiniMax-M3", settings: fixtureSettings },
+    run: () =>
+      LLMClient.generate(
+        ai.request({
+          id: "recorded_minimax_messages_m3_generates_a_named_tool_call_with_default_thinking_off",
+          model: minimaxMessagesModel("MiniMax-M3", fixtureSettings),
+          prompt: "Use get_weather to look up the current weather in Paris.",
+          tools: [chatWeather],
+          toolChoice: ToolChoice.named("get_weather"),
+          maxTokens: 512,
+        }),
+      ),
+  }),
+  chatVariant({
+    cassette: "minimax-messages/m3-continues-a-tool-loop-with-adaptive-thinking",
+    protocol: "anthropic-messages",
+    provider: {
+      package: "@opencode/ai/providers/minimax",
+      modelID: "MiniMax-M3",
+      settings: minimaxAdaptiveSettings,
+    },
+    run: () =>
+      runMinimaxToolLoop(
+        ai.request({
+          id: "recorded_minimax_messages_m3_continues_a_tool_loop_with_adaptive_thinking",
+          model: minimaxMessagesModel("MiniMax-M3", minimaxAdaptiveSettings),
+          prompt: minimaxWeatherPrompt,
+          tools: [chatWeather],
+          toolChoice: "auto",
+          maxTokens: 1536,
+        }),
+      ),
+  }),
+  chatVariant({
+    cassette: "minimax-chat/m3-streams-text-with-thinking-disabled",
+    protocol: "openai-chat",
+    provider: {
+      package: "@opencode/ai/providers/minimax/chat",
+      modelID: "MiniMax-M3",
+      settings: minimaxDisabledSettings,
+    },
+    run: () =>
+      LLMClient.generate(
+        ai.request({
+          id: "recorded_minimax_chat_m3_streams_text_with_thinking_disabled",
+          model: minimaxChatModel("MiniMax-M3", minimaxDisabledSettings),
+          prompt: integerPrompt,
+          maxTokens: 1536,
+        }),
+      ),
+  }),
+  chatVariant({
+    cassette: "minimax-chat/m3-continues-a-tool-loop-with-default-thinking",
+    protocol: "openai-chat",
+    provider: { package: "@opencode/ai/providers/minimax/chat", modelID: "MiniMax-M3", settings: fixtureSettings },
+    run: () =>
+      runMinimaxToolLoop(
+        ai.request({
+          id: "recorded_minimax_chat_m3_continues_a_tool_loop_with_default_thinking",
+          model: minimaxChatModel("MiniMax-M3", fixtureSettings),
+          prompt: minimaxWeatherPrompt,
+          tools: [chatWeather],
+          toolChoice: "auto",
+          maxTokens: 1536,
+        }),
+      ),
+  }),
+  chatVariant({
+    cassette: "minimax-responses/m3-streams-text-with-effort-none",
+    protocol: "open-responses",
+    provider: {
+      package: "@opencode/ai/providers/minimax/responses",
+      modelID: "MiniMax-M3",
+      settings: minimaxNoneSettings,
+    },
+    run: () =>
+      LLMClient.generate(
+        ai.request({
+          id: "recorded_minimax_responses_m3_streams_text_with_effort_none",
+          model: minimaxResponsesModel("MiniMax-M3", minimaxNoneSettings),
+          prompt: integerPrompt,
+          maxTokens: 1536,
+        }),
+      ),
+  }),
+  chatVariant({
+    cassette: "minimax-responses/m3-continues-a-tool-loop-with-effort-minimal",
+    protocol: "open-responses",
+    provider: {
+      package: "@opencode/ai/providers/minimax/responses",
+      modelID: "MiniMax-M3",
+      settings: minimaxMinimalSettings,
+    },
+    run: () =>
+      runMinimaxToolLoop(
+        ai.request({
+          id: "recorded_minimax_responses_m3_continues_a_tool_loop_with_effort_minimal",
+          model: minimaxResponsesModel("MiniMax-M3", minimaxMinimalSettings),
+          prompt: minimaxWeatherPrompt,
+          tools: [chatWeather],
+          toolChoice: "auto",
+          maxTokens: 1536,
+        }),
+      ),
+  }),
+]
+
+const chatVariantScenarios = [
+  ...zaiScenarios,
+  ...moonshotEffortScenarios({
+    name: "chat",
+    protocol: moonshotApi.chat.protocol,
+    package: moonshotApi.chat.package,
+    model: moonshotApi.chat.model,
+    effortKey: "reasoningEffort",
+  }),
+  ...moonshotEffortScenarios({
+    name: "messages",
+    protocol: moonshotApi.messages.protocol,
+    package: moonshotApi.messages.package,
+    model: moonshotApi.messages.model,
+    effortKey: "effort",
+  }),
+  ...moonshotEffortScenarios({
+    name: "responses",
+    protocol: moonshotApi.responses.protocol,
+    package: moonshotApi.responses.package,
+    model: moonshotApi.responses.model,
+    effortKey: "reasoningEffort",
+  }),
+  ...moonshotChatThinkingScenarios,
+  ...moonshotChatLoopScenarios,
+  moonshotLoopScenario({
+    name: "messages",
+    protocol: moonshotApi.messages.protocol,
+    package: moonshotApi.messages.package,
+    model: moonshotApi.messages.model,
+    modelID: "kimi-k3",
+    settings: { apiKey: "fixture", effort: "low" },
+  }),
+  moonshotLoopScenario({
+    name: "responses",
+    protocol: moonshotApi.responses.protocol,
+    package: moonshotApi.responses.package,
+    model: moonshotApi.responses.model,
+    modelID: "kimi-k3",
+    settings: { apiKey: "fixture", reasoningEffort: "low" },
+  }),
+  ...moonshotCapabilityScenarios({
+    name: "chat",
+    protocol: moonshotApi.chat.protocol,
+    package: moonshotApi.chat.package,
+    model: moonshotApi.chat.model,
+    rejectsToolChoice: false,
+    structuredBody: {
+      response_format: { type: "json_schema", json_schema: { name: "location", schema: locationSchema, strict: true } },
+    },
+  }),
+  ...moonshotCapabilityScenarios({
+    name: "messages",
+    protocol: moonshotApi.messages.protocol,
+    package: moonshotApi.messages.package,
+    model: moonshotApi.messages.model,
+    rejectsToolChoice: false,
+    structuredBody: { output_config: { format: { type: "json_schema", schema: locationSchema } } },
+  }),
+  ...moonshotCapabilityScenarios({
+    name: "responses",
+    protocol: moonshotApi.responses.protocol,
+    package: moonshotApi.responses.package,
+    model: moonshotApi.responses.model,
+    rejectsToolChoice: true,
+    structuredBody: {
+      text: { format: { type: "json_schema", name: "location", schema: locationSchema, strict: true } },
+    },
+  }),
+  ...minimaxScenarios,
+]
 
 const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scenario }> = [
   {
@@ -2151,6 +2817,7 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
         }),
     },
   },
+  ...chatVariantScenarios,
 ]
 
 const cassettes = []

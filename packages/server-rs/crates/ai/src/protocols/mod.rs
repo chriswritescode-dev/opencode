@@ -11,6 +11,8 @@ pub mod openai_freeform;
 pub mod openai_responses;
 pub mod shared;
 pub mod utils;
+pub mod zai_chat;
+pub mod zai_messages;
 
 pub fn registry() -> crate::route::model::ProtocolRegistry {
     let mut registry = crate::route::model::ProtocolRegistry::new();
@@ -20,5 +22,7 @@ pub fn registry() -> crate::route::model::ProtocolRegistry {
     registry.register(std::sync::Arc::new(open_responses::OpenResponses));
     registry.register(std::sync::Arc::new(openai_chat::OpenAiChat));
     registry.register(std::sync::Arc::new(openai_responses::OpenAiResponses));
+    registry.register(std::sync::Arc::new(zai_chat::ZaiChat));
+    registry.register(std::sync::Arc::new(zai_messages::ZaiMessages));
     registry
 }

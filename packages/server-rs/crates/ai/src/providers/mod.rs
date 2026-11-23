@@ -15,6 +15,8 @@ pub mod cloudflare_shared;
 pub mod cloudflare_workers_ai;
 pub mod deepinfra;
 pub mod google;
+pub mod minimax;
+pub mod moonshot;
 pub mod open_responses_options;
 pub mod openai;
 pub mod openai_compatible;
@@ -24,6 +26,8 @@ pub mod settings;
 pub mod togetherai;
 pub mod venice;
 pub mod vercel_ai_gateway;
+pub mod zai;
+pub mod zai_coding_plan;
 
 pub use settings::Settings;
 
@@ -108,6 +112,14 @@ impl ProviderPackages {
             ("@opencode/ai/providers/cloudflare-workers-ai", cloudflare_workers_ai::model as Entry),
             ("@opencode/ai/providers/deepinfra", deepinfra::model as Entry),
             ("@opencode/ai/providers/google", google::model as Entry),
+            ("@opencode/ai/providers/minimax", minimax::model as Entry),
+            ("@opencode/ai/providers/minimax/messages", minimax::model as Entry),
+            ("@opencode/ai/providers/minimax/chat", minimax::chat_model as Entry),
+            ("@opencode/ai/providers/minimax/responses", minimax::responses_model as Entry),
+            ("@opencode/ai/providers/moonshot", moonshot::model as Entry),
+            ("@opencode/ai/providers/moonshot/chat", moonshot::model as Entry),
+            ("@opencode/ai/providers/moonshot/messages", moonshot::messages_model as Entry),
+            ("@opencode/ai/providers/moonshot/responses", moonshot::responses_model as Entry),
             ("@opencode/ai/providers/openai", openai::model as Entry),
             ("@opencode/ai/providers/openai/chat", openai::chat_model as Entry),
             ("@opencode/ai/providers/openai/responses", openai::model as Entry),
@@ -119,6 +131,12 @@ impl ProviderPackages {
             ("@opencode/ai/providers/vercel-ai-gateway/chat", vercel_ai_gateway::chat_model as Entry),
             ("@opencode/ai/providers/vercel-ai-gateway/messages", vercel_ai_gateway::messages_model as Entry),
             ("@opencode/ai/providers/vercel-ai-gateway/responses", vercel_ai_gateway::responses_model as Entry),
+            ("@opencode/ai/providers/zai", zai::model as Entry),
+            ("@opencode/ai/providers/zai/chat", zai::chat_model as Entry),
+            ("@opencode/ai/providers/zai-coding-plan", zai_coding_plan::model as Entry),
+            ("@opencode/ai/providers/zai-coding-plan/chat", zai_coding_plan::model as Entry),
+            ("@opencode/ai/providers/zai-coding-plan/messages", zai_coding_plan::messages_model as Entry),
+            ("@opencode/ai/providers/zai-coding-plan/responses", zai_coding_plan::responses_model as Entry),
         ]);
         Self { entries }
     }

@@ -474,10 +474,11 @@ async fn replay_websocket_cassette(cassette: &Cassette) {
 #[tokio::test]
 async fn every_in_scope_cassette_replays() {
     let corpus = crate::corpus::Corpus::load();
-    assert_eq!(corpus.cassettes.len(), 80, "in-scope cassette count");
+    assert_eq!(corpus.cassettes.len(), 144, "in-scope cassette count");
     let groups = [
         "anthropic-messages",
         "bedrock-converse",
+        "chat-variants",
         "gateways",
         "gemini",
         "open-responses",
@@ -500,7 +501,16 @@ async fn every_in_scope_cassette_replays() {
         }
         replayed += 1;
     }
-    assert_eq!(replayed, 80, "replayed cassette count");
+    assert_eq!(replayed, 144, "replayed cassette count");
+}
+
+#[tokio::test]
+async fn chat_variant_cassettes() {
+    let corpus = crate::corpus::Corpus::load();
+    let cassettes = corpus.cassettes.iter().filter(|cassette| cassette.group == "chat-variants").count();
+    assert_eq!(cassettes, 64, "chat-variant cassette count");
+    let steps = replay_group("chat-variants").await;
+    assert_eq!(steps, 81, "chat-variant step count");
 }
 
 #[tokio::test]

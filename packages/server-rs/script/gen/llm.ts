@@ -34,9 +34,10 @@ export const GROUPS: Record<string, { protocols: string[] }> = {
   "bedrock-converse": { protocols: ["bedrock-converse"] },
   "wrapped-core": { protocols: ["openai-chat", "anthropic-messages", "openai-responses", "open-responses"] },
   gateways: { protocols: ["openai-chat", "anthropic-messages", "openai-responses", "open-responses"] },
+  "chat-variants": { protocols: ["openai-chat", "anthropic-messages", "open-responses"] },
 }
 
-export const EXPECTED_CASSETTES = 80
+export const EXPECTED_CASSETTES = 144
 
 const exporter = `${tree}/exporter`
 await mkdir(exporter, { recursive: true })

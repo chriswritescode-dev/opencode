@@ -1,0 +1,177 @@
+{
+  "cassette": "zai-chat/glm-4-7-streams-thinking-disabled",
+  "protocol": "openai-chat",
+  "routeId": "zai-chat",
+  "clockEpochMs": 1767323045000,
+  "steps": [
+    {
+      "model": {
+        "id": "glm-4.7",
+        "provider": "zai",
+        "route": {
+          "id": "zai-chat",
+          "protocol": "zai-chat",
+          "providerMetadataKey": "zai"
+        },
+        "endpoint": {
+          "baseURL": "https://api.z.ai/api/paas/v4",
+          "path": "/chat/completions"
+        },
+        "options": {
+          "providerOptions": {
+            "thinking": {
+              "type": "disabled",
+              "clear_thinking": true
+            }
+          }
+        },
+        "modelOptions": {
+          "providerOptions": {
+            "thinking": {
+              "type": "disabled",
+              "clear_thinking": true
+            }
+          }
+        },
+        "compatibility": {
+          "reasoningField": "reasoning_content",
+          "maxTokensField": "max_tokens",
+          "zaiToolStream": false
+        },
+        "capabilities": {
+          "tools": {
+            "strict": false
+          }
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_zai_glm-4-7_streams_thinking_disabled",
+        "maxTokens": 4096,
+        "system": [],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "What is 173 multiplied by 219? Reply with only the final integer."
+              }
+            ]
+          }
+        ],
+        "tools": []
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/zai",
+        "modelID": "glm-4.7",
+        "settings": {
+          "apiKey": "fixture",
+          "thinking": {
+            "type": "disabled",
+            "clear_thinking": true
+          }
+        }
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://api.z.ai/api/paas/v4/chat/completions",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "251",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"glm-4.7\",\"messages\":[{\"role\":\"user\",\"content\":\"What is 173 multiplied by 219? Reply with only the final integer.\"}],\"stream\":true,\"stream_options\":{\"include_usage\":true},\"max_tokens\":4096,\"thinking\":{\"type\":\"disabled\",\"clear_thinking\":true}}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream;charset=UTF-8"
+            },
+            "body": "data: {\"id\":\"20260908085928f9beb3885fd04e69\",\"created\":1788829168,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.7\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"3\"}}]}\n\ndata: {\"id\":\"20260908085928f9beb3885fd04e69\",\"created\":1788829168,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.7\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"7887\"}}]}\n\ndata: {\"id\":\"20260908085928f9beb3885fd04e69\",\"created\":1788829168,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.7\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}]}\n\ndata: {\"id\":\"20260908085928f9beb3885fd04e69\",\"created\":1788829168,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.7\",\"choices\":[{\"index\":0,\"finish_reason\":\"stop\",\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}],\"usage\":{\"prompt_tokens\":22,\"completion_tokens\":3,\"total_tokens\":25,\"prompt_tokens_details\":{\"cached_tokens\":0}}}\n\ndata: [DONE]\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "text-start",
+          "id": "text-0"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "3"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "7887"
+        },
+        {
+          "type": "text-end",
+          "id": "text-0"
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 22,
+            "outputTokens": 3,
+            "nonCachedInputTokens": 22,
+            "cacheReadInputTokens": 0,
+            "totalTokens": 25,
+            "providerMetadata": {
+              "zai": {
+                "prompt_tokens": 22,
+                "completion_tokens": 3,
+                "total_tokens": 25,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 22,
+            "outputTokens": 3,
+            "nonCachedInputTokens": 22,
+            "cacheReadInputTokens": 0,
+            "totalTokens": 25,
+            "providerMetadata": {
+              "zai": {
+                "prompt_tokens": 22,
+                "completion_tokens": 3,
+                "total_tokens": 25,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
