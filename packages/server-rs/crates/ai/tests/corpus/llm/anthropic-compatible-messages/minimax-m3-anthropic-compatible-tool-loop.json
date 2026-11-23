@@ -94,6 +94,15 @@
           }
         ]
       },
+      "provider": {
+        "package": "@opencode/ai/providers/anthropic-compatible",
+        "modelID": "MiniMax-M3",
+        "settings": {
+          "apiKey": "fixture",
+          "baseURL": "https://api.minimax.io/anthropic/v1",
+          "provider": "minimax"
+        }
+      },
       "transport": "http",
       "exchanges": [
         {
@@ -329,6 +338,15 @@
             }
           }
         ]
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/anthropic-compatible",
+        "modelID": "MiniMax-M3",
+        "settings": {
+          "apiKey": "fixture",
+          "baseURL": "https://api.minimax.io/anthropic/v1",
+          "provider": "minimax"
+        }
       },
       "transport": "http",
       "exchanges": [

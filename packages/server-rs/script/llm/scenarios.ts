@@ -200,7 +200,11 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
     scenario: {
       cassette: "anthropic-messages/anthropic-opus-4-7-image-tool-result",
       protocol: "anthropic-messages",
-      auth: { type: "header", name: "x-api-key", value: "fixture" },
+      provider: {
+        package: "@opencode/ai/providers/anthropic",
+        modelID: "claude-opus-4-7",
+        settings: { apiKey: "fixture" },
+      },
       redact: { allowRequestHeaders: ["anthropic-version"] },
       run: () =>
         runGoldenScenario("image-tool-result", {
@@ -216,7 +220,11 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
     scenario: {
       cassette: "anthropic-messages-cache/writes-then-reads-cache-control-on-identical-second-call",
       protocol: "anthropic-messages",
-      auth: { type: "header", name: "x-api-key", value: "fixture" },
+      provider: {
+        package: "@opencode/ai/providers/anthropic",
+        modelID: "claude-haiku-4-5-20251001",
+        settings: { apiKey: "fixture" },
+      },
       redact: { allowRequestHeaders: ["anthropic-version"] },
       run: () =>
         Effect.gen(function* () {
@@ -230,7 +238,11 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
     scenario: {
       cassette: "anthropic-messages-cache/keeps-a-long-tool-turn-inside-the-cache-lookback",
       protocol: "anthropic-messages",
-      auth: { type: "header", name: "x-api-key", value: "fixture" },
+      provider: {
+        package: "@opencode/ai/providers/anthropic",
+        modelID: "claude-haiku-4-5-20251001",
+        settings: { apiKey: "fixture" },
+      },
       redact: { allowRequestHeaders: ["anthropic-version"] },
       run: () =>
         Effect.gen(function* () {
@@ -251,7 +263,11 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
     scenario: {
       cassette: "anthropic-compatible-messages/minimax-m3-anthropic-compatible-text",
       protocol: "anthropic-messages",
-      auth: { type: "header", name: "x-api-key", value: "fixture" },
+      provider: {
+        package: "@opencode/ai/providers/anthropic-compatible",
+        modelID: "MiniMax-M3",
+        settings: { apiKey: "fixture", baseURL: "https://api.minimax.io/anthropic/v1", provider: "minimax" },
+      },
       redact: { allowRequestHeaders: ["anthropic-version"] },
       run: () =>
         runGoldenScenario("text", {
@@ -265,7 +281,11 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
     scenario: {
       cassette: "anthropic-compatible-messages/minimax-m3-anthropic-compatible-tool-call",
       protocol: "anthropic-messages",
-      auth: { type: "header", name: "x-api-key", value: "fixture" },
+      provider: {
+        package: "@opencode/ai/providers/anthropic-compatible",
+        modelID: "MiniMax-M3",
+        settings: { apiKey: "fixture", baseURL: "https://api.minimax.io/anthropic/v1", provider: "minimax" },
+      },
       redact: { allowRequestHeaders: ["anthropic-version"] },
       run: () =>
         runGoldenScenario("tool-call", {
@@ -279,7 +299,11 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
     scenario: {
       cassette: "anthropic-compatible-messages/minimax-m3-anthropic-compatible-tool-loop",
       protocol: "anthropic-messages",
-      auth: { type: "header", name: "x-api-key", value: "fixture" },
+      provider: {
+        package: "@opencode/ai/providers/anthropic-compatible",
+        modelID: "MiniMax-M3",
+        settings: { apiKey: "fixture", baseURL: "https://api.minimax.io/anthropic/v1", provider: "minimax" },
+      },
       redact: { allowRequestHeaders: ["anthropic-version"] },
       run: () =>
         runGoldenScenario("tool-loop", {
@@ -293,7 +317,11 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
     scenario: {
       cassette: "pdf/anthropic-user-input",
       protocol: "anthropic-messages",
-      auth: { type: "header", name: "x-api-key", value: "fixture" },
+      provider: {
+        package: "@opencode/ai/providers/anthropic",
+        modelID: "claude-haiku-4-5-20251001",
+        settings: { apiKey: "fixture" },
+      },
       run: () =>
         LLMClient.generate(
           ai.request({
@@ -317,7 +345,11 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
     scenario: {
       cassette: "pdf/anthropic-tool-result",
       protocol: "anthropic-messages",
-      auth: { type: "header", name: "x-api-key", value: "fixture" },
+      provider: {
+        package: "@opencode/ai/providers/anthropic",
+        modelID: "claude-haiku-4-5-20251001",
+        settings: { apiKey: "fixture" },
+      },
       run: () =>
         LLMClient.generate(
           ai.request({
@@ -355,7 +387,15 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
     scenario: {
       cassette: "openai-compatible-chat/gemini-parallel-tool-signatures",
       protocol: "openai-chat",
-      auth: { type: "bearer", value: "fixture" },
+      provider: {
+        package: "@opencode/ai/providers/openai-compatible",
+        modelID: "gemini-3.8-flash",
+        settings: {
+          provider: "google",
+          baseURL: "https://generativelanguage.googleapis.com/v1beta/openai",
+          apiKey: "fixture",
+        },
+      },
       run: () =>
         Effect.gen(function* () {
           const tools = [weatherRuntimeTool]
@@ -389,7 +429,11 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
     scenario: {
       cassette: "openai-compatible-chat/togetherai-streams-text",
       protocol: "openai-chat",
-      auth: { type: "bearer", value: "fixture" },
+      provider: {
+        package: "@opencode/ai/providers/togetherai",
+        modelID: "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+        settings: { apiKey: "fixture" },
+      },
       run: () =>
         runGoldenScenario("text", {
           id: "recorded_togetherai_llama_3_3_70b_text",
@@ -404,7 +448,11 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
     scenario: {
       cassette: "openai-compatible-chat/togetherai-streams-tool-call",
       protocol: "openai-chat",
-      auth: { type: "bearer", value: "fixture" },
+      provider: {
+        package: "@opencode/ai/providers/togetherai",
+        modelID: "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+        settings: { apiKey: "fixture" },
+      },
       run: () =>
         runGoldenScenario("tool-call", {
           id: "recorded_togetherai_llama_3_3_70b_tool_call",
@@ -417,7 +465,11 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
     scenario: {
       cassette: "cerebras-chat/cerebras-gpt-oss-120b-text",
       protocol: "openai-chat",
-      auth: { type: "bearer", value: "fixture" },
+      provider: {
+        package: "@opencode/ai/providers/cerebras",
+        modelID: "gpt-oss-120b",
+        settings: { apiKey: "fixture" },
+      },
       run: () =>
         runGoldenScenario("text", {
           id: "recorded_cerebras_gpt_oss_120b_text",
@@ -432,7 +484,11 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
     scenario: {
       cassette: "cerebras-chat/cerebras-gpt-oss-120b-tool-call",
       protocol: "openai-chat",
-      auth: { type: "bearer", value: "fixture" },
+      provider: {
+        package: "@opencode/ai/providers/cerebras",
+        modelID: "gpt-oss-120b",
+        settings: { apiKey: "fixture" },
+      },
       run: () =>
         runGoldenScenario("tool-call", {
           id: "recorded_cerebras_gpt_oss_120b_tool_call",
@@ -447,7 +503,11 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
     scenario: {
       cassette: "cerebras-chat/cerebras-gpt-oss-120b-tool-loop",
       protocol: "openai-chat",
-      auth: { type: "bearer", value: "fixture" },
+      provider: {
+        package: "@opencode/ai/providers/cerebras",
+        modelID: "gpt-oss-120b",
+        settings: { apiKey: "fixture" },
+      },
       run: () =>
         runGoldenScenario("tool-loop", {
           id: "recorded_cerebras_gpt_oss_120b_tool_loop",
@@ -462,7 +522,11 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
     scenario: {
       cassette: "deepinfra-chat/deepinfra-llama-3-3-70b-text",
       protocol: "openai-chat",
-      auth: { type: "bearer", value: "fixture" },
+      provider: {
+        package: "@opencode/ai/providers/deepinfra",
+        modelID: "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+        settings: { apiKey: "fixture" },
+      },
       run: () =>
         runGoldenScenario("text", {
           id: "recorded_deepinfra_llama_3_3_70b_text",
@@ -475,7 +539,11 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
     scenario: {
       cassette: "deepinfra-chat/deepinfra-llama-3-3-70b-tool-call",
       protocol: "openai-chat",
-      auth: { type: "bearer", value: "fixture" },
+      provider: {
+        package: "@opencode/ai/providers/deepinfra",
+        modelID: "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+        settings: { apiKey: "fixture" },
+      },
       run: () =>
         runGoldenScenario("tool-call", {
           id: "recorded_deepinfra_llama_3_3_70b_tool_call",
@@ -488,7 +556,11 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
     scenario: {
       cassette: "deepinfra-chat/deepinfra-llama-3-3-70b-tool-loop",
       protocol: "openai-chat",
-      auth: { type: "bearer", value: "fixture" },
+      provider: {
+        package: "@opencode/ai/providers/deepinfra",
+        modelID: "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+        settings: { apiKey: "fixture" },
+      },
       run: () =>
         runGoldenScenario("tool-loop", {
           id: "recorded_deepinfra_llama_3_3_70b_tool_loop",
@@ -501,7 +573,16 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
     scenario: {
       cassette: "vercel-ai-gateway-reasoning",
       protocol: "openai-chat",
-      auth: { type: "bearer", value: "fixture" },
+      provider: {
+        package: "@opencode/ai/providers/openai-compatible",
+        modelID: "anthropic/claude-sonnet-4.6",
+        settings: {
+          provider: "vercel-ai-gateway",
+          baseURL: "https://ai-gateway.vercel.sh/v1",
+          apiKey: "fixture",
+          body: { reasoning: { enabled: true, max_tokens: 1024 } },
+        },
+      },
       run: () =>
         LLMClient.generate(
           ai.request({
@@ -519,7 +600,16 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
     scenario: {
       cassette: "vercel-ai-gateway-reasoning-tool-loop",
       protocol: "openai-chat",
-      auth: { type: "bearer", value: "fixture" },
+      provider: {
+        package: "@opencode/ai/providers/openai-compatible",
+        modelID: "anthropic/claude-sonnet-4.6",
+        settings: {
+          provider: "vercel-ai-gateway",
+          baseURL: "https://ai-gateway.vercel.sh/v1",
+          apiKey: "fixture",
+          body: { reasoning: { enabled: true, max_tokens: 1024 } },
+        },
+      },
       run: () =>
         runWeatherToolLoop(
           goldenWeatherToolLoopRequest({
@@ -536,7 +626,11 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
     scenario: {
       cassette: "openai-responses/openai-responses-gpt-5-5-reasoning",
       protocol: "openai-responses",
-      auth: { type: "bearer", value: "fixture" },
+      provider: {
+        package: "@opencode/ai/providers/openai/responses",
+        modelID: "gpt-5.5",
+        settings: { apiKey: "fixture" },
+      },
       run: () =>
         runGoldenScenario("reasoning", {
           id: "recorded_openai_responses_gpt_5_5_reasoning",
@@ -550,7 +644,11 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
     scenario: {
       cassette: "openai-responses/openai-responses-gpt-5-5-reasoning-continuation",
       protocol: "openai-responses",
-      auth: { type: "bearer", value: "fixture" },
+      provider: {
+        package: "@opencode/ai/providers/openai/responses",
+        modelID: "gpt-5.5",
+        settings: { apiKey: "fixture" },
+      },
       run: () =>
         runGoldenScenario("reasoning-continuation", {
           id: "recorded_openai_responses_gpt_5_5_reasoning_continuation",
@@ -564,7 +662,11 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
     scenario: {
       cassette: "openai-responses/openai-responses-gpt-5-5-tool-loop",
       protocol: "openai-responses",
-      auth: { type: "bearer", value: "fixture" },
+      provider: {
+        package: "@opencode/ai/providers/openai/responses",
+        modelID: "gpt-5.5",
+        settings: { apiKey: "fixture" },
+      },
       run: () =>
         runGoldenScenario("tool-loop", {
           id: "recorded_openai_responses_gpt_5_5_tool_loop",
@@ -578,7 +680,11 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
     scenario: {
       cassette: "openai-responses/openai-responses-gpt-5-5-image-tool-result",
       protocol: "openai-responses",
-      auth: { type: "bearer", value: "fixture" },
+      provider: {
+        package: "@opencode/ai/providers/openai/responses",
+        modelID: "gpt-5.5",
+        settings: { apiKey: "fixture" },
+      },
       run: () =>
         runGoldenScenario("image-tool-result", {
           id: "recorded_openai_responses_gpt_5_5_image_tool_result",
@@ -593,7 +699,11 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
     scenario: {
       cassette: "openai-responses-cache/reports-cached-tokens-on-identical-second-call",
       protocol: "openai-responses",
-      auth: { type: "bearer", value: "fixture" },
+      provider: {
+        package: "@opencode/ai/providers/openai/responses",
+        modelID: "gpt-4.1-mini",
+        settings: { apiKey: "fixture" },
+      },
       run: () =>
         Effect.gen(function* () {
           yield* LLMClient.generate(openaiCacheRequest)
@@ -606,7 +716,11 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
     scenario: {
       cassette: "openai-responses-cache/caches-the-system-prompt-on-gpt-6-2-sol",
       protocol: "openai-responses",
-      auth: { type: "bearer", value: "fixture" },
+      provider: {
+        package: "@opencode/ai/providers/openai/responses",
+        modelID: "gpt-6.2-sol",
+        settings: { apiKey: "fixture" },
+      },
       run: () =>
         Effect.gen(function* () {
           yield* LLMClient.generate(openaiFrontierRequest)
@@ -619,7 +733,11 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
     scenario: {
       cassette: "openai-responses-images/generates-and-edits-an-image-with-the-hosted-tool",
       protocol: "openai-responses",
-      auth: { type: "bearer", value: "fixture" },
+      provider: {
+        package: "@opencode/ai/providers/openai/responses",
+        modelID: "gpt-5-mini",
+        settings: { apiKey: "fixture" },
+      },
       run: () =>
         Effect.gen(function* () {
           const initial = Message.user("Generate a simple flat black triangle centered on a plain white background.")
@@ -657,7 +775,11 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
     scenario: {
       cassette: "pdf/openai-user-input",
       protocol: "openai-responses",
-      auth: { type: "bearer", value: "fixture" },
+      provider: {
+        package: "@opencode/ai/providers/openai/responses",
+        modelID: "gpt-4o-mini",
+        settings: { apiKey: "fixture" },
+      },
       run: () =>
         LLMClient.generate(
           ai.request({
@@ -681,7 +803,11 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
     scenario: {
       cassette: "pdf/openai-tool-result",
       protocol: "openai-responses",
-      auth: { type: "bearer", value: "fixture" },
+      provider: {
+        package: "@opencode/ai/providers/openai/responses",
+        modelID: "gpt-4o-mini",
+        settings: { apiKey: "fixture" },
+      },
       run: () =>
         LLMClient.generate(
           ai.request({
@@ -719,7 +845,11 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
     scenario: {
       cassette: "venice-responses/streams-text",
       protocol: "open-responses",
-      auth: { type: "bearer", value: "fixture" },
+      provider: {
+        package: "@opencode/ai/providers/venice/responses",
+        modelID: "openai-gpt-54-mini",
+        settings: { apiKey: "fixture" },
+      },
       run: () => LLMClient.generate(ai.request({ model: venice, prompt: "Reply exactly: OK", maxTokens: 64 })),
     },
   },
@@ -728,7 +858,11 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
     scenario: {
       cassette: "venice-responses/continues-a-tool-call",
       protocol: "open-responses",
-      auth: { type: "bearer", value: "fixture" },
+      provider: {
+        package: "@opencode/ai/providers/venice/responses",
+        modelID: "openai-gpt-54-mini",
+        settings: { apiKey: "fixture" },
+      },
       run: () =>
         runWeatherToolLoop(
           weatherToolLoopRequest({
@@ -745,7 +879,11 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
     scenario: {
       cassette: "venice-responses/calls-a-freeform-text-tool",
       protocol: "open-responses",
-      auth: { type: "bearer", value: "fixture" },
+      provider: {
+        package: "@opencode/ai/providers/venice/responses",
+        modelID: "openai-gpt-54-mini",
+        settings: { apiKey: "fixture" },
+      },
       run: () =>
         LLMClient.generate(
           ai.request({
@@ -764,6 +902,7 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
       cassette: "openai-responses-websocket/continues-a-tool-call-over-one-socket",
       protocol: "openai-responses",
       auth: { type: "bearer", value: "fixture" },
+      descriptorOnly: "the stream selects the OpenAI Responses channel per call",
       transport: "websocket",
       run: ({ channel }) =>
         Effect.gen(function* () {
@@ -800,6 +939,7 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
       cassette: "openai-responses-websocket/reconstructs-full-context-after-reconnect",
       protocol: "openai-responses",
       auth: { type: "bearer", value: "fixture" },
+      descriptorOnly: "the stream selects the OpenAI Responses channel per call",
       transport: "websocket",
       run: ({ channel }) =>
         Effect.gen(function* () {
@@ -826,6 +966,7 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
       cassette: "openai-responses-websocket/recovers-from-explicit-continuation-rejection",
       protocol: "openai-responses",
       auth: { type: "bearer", value: "fixture" },
+      descriptorOnly: "the stream selects the OpenAI Responses channel per call",
       transport: "websocket",
       run: ({ channel }) =>
         Effect.gen(function* () {
@@ -853,7 +994,11 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
     scenario: {
       cassette: "gemini/gemini-2-5-flash-image",
       protocol: "gemini",
-      auth: { type: "header", name: "x-goog-api-key", value: "fixture" },
+      provider: {
+        package: "@opencode/ai/providers/google",
+        modelID: "gemini-2.5-flash",
+        settings: { apiKey: "fixture" },
+      },
       run: () =>
         runGoldenScenario("image", {
           id: "recorded_gemini_2_5_flash_image",
@@ -867,7 +1012,11 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
     scenario: {
       cassette: "gemini-cache/reports-cachedcontenttokencount-on-identical-second-call",
       protocol: "gemini",
-      auth: { type: "header", name: "x-goog-api-key", value: "fixture" },
+      provider: {
+        package: "@opencode/ai/providers/google",
+        modelID: "gemini-2.5-flash",
+        settings: { apiKey: "fixture" },
+      },
       run: () =>
         Effect.gen(function* () {
           yield* LLMClient.generate(geminiCacheRequest)
@@ -880,7 +1029,11 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
     scenario: {
       cassette: "pdf/gemini-user-input",
       protocol: "gemini",
-      auth: { type: "header", name: "x-goog-api-key", value: "fixture" },
+      provider: {
+        package: "@opencode/ai/providers/google",
+        modelID: "gemini-3.5-flash",
+        settings: { apiKey: "fixture" },
+      },
       run: () =>
         LLMClient.generate(
           ai.request({
@@ -904,7 +1057,11 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
     scenario: {
       cassette: "pdf/gemini-tool-result",
       protocol: "gemini",
-      auth: { type: "header", name: "x-goog-api-key", value: "fixture" },
+      provider: {
+        package: "@opencode/ai/providers/google",
+        modelID: "gemini-3.5-flash",
+        settings: { apiKey: "fixture" },
+      },
       run: () =>
         runTools({
           request: ai.request({
@@ -926,11 +1083,10 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
     scenario: {
       cassette: "bedrock-converse/streams-text",
       protocol: "bedrock-converse",
-      auth: {
-        type: "sigv4",
-        region: "us-east-1",
-        accessKeyId: "fixture",
-        secretAccessKey: "fixture",
+      provider: {
+        package: "@opencode/ai/providers/amazon-bedrock",
+        modelID: "us.amazon.nova-micro-v1:0",
+        settings: { credentials: { region: "us-east-1", accessKeyId: "fixture", secretAccessKey: "fixture" } },
       },
       run: () =>
         LLMClient.generate(
@@ -951,11 +1107,10 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
     scenario: {
       cassette: "bedrock-converse/streams-a-tool-call",
       protocol: "bedrock-converse",
-      auth: {
-        type: "sigv4",
-        region: "us-east-1",
-        accessKeyId: "fixture",
-        secretAccessKey: "fixture",
+      provider: {
+        package: "@opencode/ai/providers/amazon-bedrock",
+        modelID: "us.amazon.nova-micro-v1:0",
+        settings: { credentials: { region: "us-east-1", accessKeyId: "fixture", secretAccessKey: "fixture" } },
       },
       run: () =>
         LLMClient.generate(
@@ -978,11 +1133,10 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
     scenario: {
       cassette: "bedrock-converse/drives-a-tool-loop",
       protocol: "bedrock-converse",
-      auth: {
-        type: "sigv4",
-        region: "us-east-1",
-        accessKeyId: "fixture",
-        secretAccessKey: "fixture",
+      provider: {
+        package: "@opencode/ai/providers/amazon-bedrock",
+        modelID: "us.amazon.nova-micro-v1:0",
+        settings: { credentials: { region: "us-east-1", accessKeyId: "fixture", secretAccessKey: "fixture" } },
       },
       run: () =>
         runWeatherToolLoop(
@@ -998,11 +1152,10 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
     scenario: {
       cassette: "bedrock-converse/continues-after-parallel-tool-results",
       protocol: "bedrock-converse",
-      auth: {
-        type: "sigv4",
-        region: "us-east-1",
-        accessKeyId: "fixture",
-        secretAccessKey: "fixture",
+      provider: {
+        package: "@opencode/ai/providers/amazon-bedrock",
+        modelID: "us.amazon.nova-micro-v1:0",
+        settings: { credentials: { region: "us-east-1", accessKeyId: "fixture", secretAccessKey: "fixture" } },
       },
       run: () =>
         LLMClient.generate(
@@ -1040,7 +1193,11 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
     scenario: {
       cassette: "bedrock-converse-cache/writes-then-reads-cachepoint-on-identical-second-call",
       protocol: "bedrock-converse",
-      auth: { type: "bearer", value: "fixture" },
+      provider: {
+        package: "@opencode/ai/providers/amazon-bedrock",
+        modelID: "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+        settings: { apiKey: "fixture", region: "us-east-1" },
+      },
       run: () =>
         Effect.gen(function* () {
           yield* LLMClient.generate(bedrockCacheRequest)
@@ -1053,7 +1210,24 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
     scenario: {
       cassette: "bedrock-converse-options/constrains-claude-output-to-a-json-schema",
       protocol: "bedrock-converse",
-      auth: { type: "bearer", value: "fixture" },
+      provider: {
+        package: "@opencode/ai/providers/amazon-bedrock",
+        modelID: "us.anthropic.claude-sonnet-4-6",
+        settings: {
+          apiKey: "fixture",
+          region: "us-east-1",
+          outputFormat: {
+            type: "json_schema",
+            name: "answer",
+            schema: {
+              type: "object",
+              properties: { product: { type: "integer" } },
+              required: ["product"],
+              additionalProperties: false,
+            },
+          },
+        },
+      },
       run: () =>
         LLMClient.generate(
           ai.request({
@@ -1082,7 +1256,18 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
     scenario: {
       cassette: "bedrock-converse-options/sends-claude-effort-with-adaptive-thinking-service-tier-and-request-metadata",
       protocol: "bedrock-converse",
-      auth: { type: "bearer", value: "fixture" },
+      provider: {
+        package: "@opencode/ai/providers/amazon-bedrock",
+        modelID: "us.anthropic.claude-sonnet-4-6",
+        settings: {
+          apiKey: "fixture",
+          region: "us-east-1",
+          effort: "high",
+          thinking: { type: "adaptive", display: "summarized" },
+          serviceTier: "default",
+          requestMetadata: { suite: "opencode-ai" },
+        },
+      },
       run: () =>
         LLMClient.generate(
           ai.request({
@@ -1105,7 +1290,17 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
     scenario: {
       cassette: "bedrock-converse-options/sends-gpt-oss-reasoning-effort-with-the-priority-tier",
       protocol: "bedrock-converse",
-      auth: { type: "bearer", value: "fixture" },
+      provider: {
+        package: "@opencode/ai/providers/amazon-bedrock",
+        modelID: "openai.gpt-oss-120b-1:0",
+        settings: {
+          apiKey: "fixture",
+          region: "us-east-1",
+          effort: "low",
+          serviceTier: "priority",
+          requestMetadata: { suite: "opencode-ai" },
+        },
+      },
       run: () =>
         LLMClient.generate(
           ai.request({
@@ -1127,7 +1322,11 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
     scenario: {
       cassette: "bedrock-converse-options/sends-nova-2-reasoning-effort",
       protocol: "bedrock-converse",
-      auth: { type: "bearer", value: "fixture" },
+      provider: {
+        package: "@opencode/ai/providers/amazon-bedrock",
+        modelID: "us.amazon.nova-2-lite-v1:0",
+        settings: { apiKey: "fixture", region: "us-east-1", effort: "low" },
+      },
       run: () =>
         LLMClient.generate(
           ai.request({
@@ -1145,7 +1344,11 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
     scenario: {
       cassette: "bedrock-converse-thinking-binding/accepts-the-default-binding-with-no-thinking-configured",
       protocol: "bedrock-converse",
-      auth: { type: "bearer", value: "fixture" },
+      provider: {
+        package: "@opencode/ai/providers/amazon-bedrock",
+        modelID: "global.anthropic.claude-opus-5-5",
+        settings: { apiKey: "fixture", region: "us-east-1" },
+      },
       run: () =>
         LLMClient.generate(
           ai.request({
@@ -1168,6 +1371,7 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
       cassette: "bedrock-converse-thinking-binding/keeps-a-session-working-after-the-system-prompt-changes",
       protocol: "bedrock-converse",
       auth: { type: "bearer", value: "fixture" },
+      descriptorOnly: "the steps use different bedrock thinking settings",
       run: () =>
         Effect.gen(function* () {
           const first = ai.request({
@@ -1204,7 +1408,11 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
     scenario: {
       cassette: "pdf/bedrock-user-input",
       protocol: "bedrock-converse",
-      auth: { type: "bearer", value: "fixture" },
+      provider: {
+        package: "@opencode/ai/providers/amazon-bedrock",
+        modelID: "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+        settings: { apiKey: "fixture", region: "us-east-1" },
+      },
       run: () =>
         LLMClient.generate(
           ai.request({
@@ -1228,7 +1436,11 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
     scenario: {
       cassette: "pdf/bedrock-tool-result",
       protocol: "bedrock-converse",
-      auth: { type: "bearer", value: "fixture" },
+      provider: {
+        package: "@opencode/ai/providers/amazon-bedrock",
+        modelID: "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+        settings: { apiKey: "fixture", region: "us-east-1" },
+      },
       run: () =>
         LLMClient.generate(
           ai.request({

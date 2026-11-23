@@ -112,6 +112,21 @@
           }
         ]
       },
+      "provider": {
+        "package": "@opencode/ai/providers/openai-compatible",
+        "modelID": "anthropic/claude-sonnet-4.6",
+        "settings": {
+          "provider": "vercel-ai-gateway",
+          "baseURL": "https://ai-gateway.vercel.sh/v1",
+          "apiKey": "fixture",
+          "body": {
+            "reasoning": {
+              "enabled": true,
+              "max_tokens": 1024
+            }
+          }
+        }
+      },
       "transport": "http",
       "exchanges": [
         {
@@ -483,6 +498,21 @@
             }
           }
         ]
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/openai-compatible",
+        "modelID": "anthropic/claude-sonnet-4.6",
+        "settings": {
+          "provider": "vercel-ai-gateway",
+          "baseURL": "https://ai-gateway.vercel.sh/v1",
+          "apiKey": "fixture",
+          "body": {
+            "reasoning": {
+              "enabled": true,
+              "max_tokens": 1024
+            }
+          }
+        }
       },
       "transport": "http",
       "exchanges": [

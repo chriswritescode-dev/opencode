@@ -59,6 +59,19 @@
         ],
         "tools": []
       },
+      "provider": {
+        "package": "@opencode/ai/providers/amazon-bedrock",
+        "modelID": "openai.gpt-oss-120b-1:0",
+        "settings": {
+          "apiKey": "fixture",
+          "region": "us-east-1",
+          "effort": "low",
+          "serviceTier": "priority",
+          "requestMetadata": {
+            "suite": "opencode-ai"
+          }
+        }
+      },
       "transport": "http",
       "exchanges": [
         {

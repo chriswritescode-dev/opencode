@@ -9,6 +9,7 @@ mod prepare;
 mod protocols;
 mod protocols_utils;
 mod provider_errors;
+mod providers;
 mod replay;
 mod schema;
 mod shared;

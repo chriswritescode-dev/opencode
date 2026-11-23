@@ -93,6 +93,13 @@
           }
         ]
       },
+      "provider": {
+        "package": "@opencode/ai/providers/anthropic",
+        "modelID": "claude-opus-4-7",
+        "settings": {
+          "apiKey": "fixture"
+        }
+      },
       "transport": "http",
       "exchanges": [
         {

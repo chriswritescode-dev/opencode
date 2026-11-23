@@ -52,12 +52,24 @@ pub struct Cassette {
 #[derive(Debug, Clone, serde::Deserialize)]
 pub struct Step {
     pub model: serde_json::Value,
+    #[serde(default)]
+    pub provider: Option<ProviderStep>,
     pub request: serde_json::Value,
     pub transport: String,
     pub exchanges: Option<Vec<Exchange>>,
     pub websocket: Option<serde_json::Value>,
     pub events: Option<Vec<serde_json::Value>>,
     pub error: Option<StepError>,
+}
+
+#[derive(Debug, Clone, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProviderStep {
+    pub package: String,
+    #[serde(rename = "modelID")]
+    pub model_id: String,
+    #[serde(default)]
+    pub settings: serde_json::Map<String, serde_json::Value>,
 }
 
 impl Step {

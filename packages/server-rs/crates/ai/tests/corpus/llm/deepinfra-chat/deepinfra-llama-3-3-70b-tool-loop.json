@@ -100,6 +100,13 @@
           }
         ]
       },
+      "provider": {
+        "package": "@opencode/ai/providers/deepinfra",
+        "modelID": "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+        "settings": {
+          "apiKey": "fixture"
+        }
+      },
       "transport": "http",
       "exchanges": [
         {
@@ -326,6 +333,13 @@
             }
           }
         ]
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/deepinfra",
+        "modelID": "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+        "settings": {
+          "apiKey": "fixture"
+        }
       },
       "transport": "http",
       "exchanges": [

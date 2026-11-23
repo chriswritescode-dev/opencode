@@ -77,6 +77,12 @@ export type AuthDescriptor =
     }
   | { readonly type: "none" }
 
+export interface ProviderStep {
+  readonly package: string
+  readonly modelID: string
+  readonly settings: Record<string, unknown>
+}
+
 export interface RedactOptions {
   readonly headers?: ReadonlyArray<string>
   readonly allowRequestHeaders?: ReadonlyArray<string>
@@ -110,6 +116,7 @@ export interface CapturedExchange {
 export interface CapturedStep {
   readonly model: Record<string, unknown>
   readonly request: Record<string, unknown>
+  readonly provider?: ProviderStep
   readonly transport: "http" | "openai-responses-channel"
   readonly exchanges?: ReadonlyArray<CapturedExchange>
   readonly websocket?: {
@@ -145,7 +152,9 @@ export interface ScenarioContext {
 export interface Scenario {
   readonly cassette: string
   readonly protocol: string
-  readonly auth: AuthDescriptor
+  readonly auth?: AuthDescriptor
+  readonly provider?: ProviderStep
+  readonly descriptorOnly?: string
   readonly transport?: "http" | "websocket"
   readonly directory?: string
   readonly redact?: RedactOptions
@@ -155,6 +164,7 @@ export interface Scenario {
 interface StepRecord {
   model: Record<string, unknown>
   request: Record<string, unknown>
+  provider?: ProviderStep
   transport: "http" | "openai-responses-channel"
   exchanges?: Array<CapturedExchange>
   websocket?: {
@@ -201,6 +211,60 @@ const isTextContentType = (contentType: string | undefined) => {
 
 const roundTrip = (value: unknown): any => JSON.parse(JSON.stringify(value))
 
+const normalizeModel = (value: unknown) => {
+  const model = roundTrip(value)
+  for (const key of ["options", "modelOptions"]) {
+    const options = model[key]
+    if (options === undefined) continue
+    if (options.providerOptions !== undefined && Object.keys(options.providerOptions).length === 0)
+      delete options.providerOptions
+    if (Object.keys(options).length === 0) delete model[key]
+  }
+  return model
+}
+
+const providerAuthHeader = new Map([
+  ["@opencode/ai/providers/anthropic", "x-api-key"],
+  ["@opencode/ai/providers/anthropic-compatible", "x-api-key"],
+  ["@opencode/ai/providers/google", "x-goog-api-key"],
+])
+
+const describeAuth = (provider: ProviderStep): AuthDescriptor => {
+  const settings = provider.settings as Record<string, any>
+  if (provider.package === "@opencode/ai/providers/amazon-bedrock") {
+    const credentials = settings.credentials
+    if (credentials !== null && typeof credentials === "object") {
+      return {
+        type: "sigv4",
+        region: settings.region ?? credentials.region ?? "us-east-1",
+        accessKeyId: credentials.accessKeyId,
+        secretAccessKey: credentials.secretAccessKey,
+        ...(credentials.sessionToken === undefined ? {} : { sessionToken: credentials.sessionToken }),
+      }
+    }
+  }
+  if (settings.apiKey === false) return { type: "none" }
+  if (typeof settings.apiKey === "string") {
+    const header = providerAuthHeader.get(provider.package)
+    if (header !== undefined) return { type: "header", name: header, value: settings.apiKey }
+    return { type: "bearer", value: settings.apiKey }
+  }
+  if (typeof settings.authToken === "string") return { type: "bearer", value: settings.authToken }
+  return { type: "none" }
+}
+
+const providerModel = async (load: Loader, tree: string, provider: ProviderStep) => {
+  const settings = JSON.parse(JSON.stringify(provider.settings)) as Record<string, unknown>
+  if (JSON.stringify(settings) !== JSON.stringify(provider.settings))
+    throw new Error(`capture: provider settings for ${provider.package} do not survive JSON`)
+  const manifest = await Bun.file(`${tree}/packages/ai/package.json`).json()
+  const key = provider.package.replace(/^@opencode\/ai\//, "./")
+  const target = manifest.exports?.[key]
+  if (typeof target !== "string") throw new Error(`capture: ${provider.package} is not exported by the pin`)
+  const module = await load(`packages/ai/${target.replace(/^\.\//, "")}`)
+  return module.model(provider.modelID, settings)
+}
+
 let active: StepRecord | undefined
 let steps: Array<StepRecord> = []
 const pendingChannelOps: Array<unknown> = []
@@ -239,14 +303,16 @@ export async function capture(tree: string, scenario: Scenario): Promise<Capture
   if (registered === undefined) throw new Error(`capture: no protocol module is registered for "${scenario.protocol}"`)
 
   const load = createLoader(tree)
+  const built = scenario.provider === undefined ? undefined : await providerModel(load, tree, scenario.provider)
+  const auth: AuthDescriptor =
+    scenario.auth ?? (scenario.provider === undefined ? { type: "none" } : describeAuth(scenario.provider))
   process.env.CI = "true"
 
-  const [httpRecorder, platformNode, route, schema, protocolModule] = await Promise.all([
+  const [httpRecorder, platformNode, route, schema] = await Promise.all([
     load("@opencode/http-recorder"),
     load("@effect/platform-node"),
     load("packages/ai/src/route.ts"),
     load("packages/ai/src/schema/index.ts"),
-    load(registered.path),
   ])
   const HttpRecorder = httpRecorder.HttpRecorder
   const { LLMClient, RequestExecutor, WebSocketTransport } = route
@@ -283,8 +349,8 @@ export async function capture(tree: string, scenario: Scenario): Promise<Capture
     })
   }
 
-  const encodeModel = (model: any, transport: StepRecord["transport"]) =>
-    roundTrip({
+  const encodeModel = (model: any, transport: StepRecord["transport"], auth: AuthDescriptor) =>
+    normalizeModel({
       id: model.id,
       provider: model.provider,
       route: {
@@ -302,31 +368,16 @@ export async function capture(tree: string, scenario: Scenario): Promise<Capture
       compatibility: model.compatibility,
       capabilities: model.capabilities,
       transport,
-      auth: scenario.auth,
+      auth,
     })
-
-  const validateRoute = (request: any) => {
-    const mismatch = (detail: string) =>
-      new Error(
-        `capture: route ${String(request.model.route.id)} ${detail}; ` +
-          `the route replaces the protocol's body builder or transport and belongs to OR-45`,
-      )
-    if (request.model.route.protocol !== scenario.protocol)
-      throw mismatch(`declares protocol ${String(request.model.route.protocol)} instead of ${scenario.protocol}`)
-    if (request.model.route.body !== protocolModule.protocol.body)
-      throw mismatch("does not use the protocol's body builder")
-    const transports = [registered.transport, registered.transport.split("/", 1)[0]]
-    if (!transports.includes(request.model.route.transport.id))
-      throw mismatch(`declares transport ${String(request.model.route.transport.id)}`)
-  }
 
   const begin = (request: any, options: any): StepRecord => {
     resetUUID()
-    validateRoute(request)
     const transport = options?.webSocket === undefined ? "http" : "openai-responses-channel"
     const step: StepRecord = {
-      model: encodeModel(request.model, transport),
+      model: encodeModel(request.model, transport, auth),
       request: encodeRequest(request),
+      provider: scenario.provider,
       transport,
       raw: [],
     }
@@ -504,6 +555,15 @@ export async function capture(tree: string, scenario: Scenario): Promise<Capture
 
   const first = steps[0]
   if (first === undefined) throw new Error(`capture: cassette ${scenario.cassette} produced no steps`)
+  if (built !== undefined) {
+    for (const [index, step] of steps.entries()) {
+      const expected = encodeModel(built, step.transport, auth)
+      if (!Bun.deepEquals(expected, step.model))
+        throw new Error(
+          `capture: cassette ${scenario.cassette} step ${index} was not built from ${scenario.provider!.package}(${scenario.provider!.modelID})`,
+        )
+    }
+  }
   return {
     cassette: scenario.cassette,
     protocol: scenario.protocol,

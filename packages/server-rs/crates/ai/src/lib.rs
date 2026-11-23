@@ -6,8 +6,11 @@ pub mod json;
 pub mod prepare;
 pub mod protocols;
 pub mod provider_error;
+pub mod providers;
 pub mod route;
 pub mod schema;
+
+pub use providers::{ProviderPackages, RuntimeModel, Settings};
 
 pub use route::auth::{Auth, Credential};
 pub use route::client::LlmClient;

@@ -25,14 +25,16 @@ type ExportedError = {
   retryable: boolean
 }
 
-const allowedGroups = new Set([
-  "anthropic-messages",
-  "openai-chat",
-  "open-responses",
-  "openai-responses-websocket",
-  "gemini",
-  "bedrock-converse",
-])
+export const GROUPS: Record<string, { protocols: string[] }> = {
+  "anthropic-messages": { protocols: ["anthropic-messages"] },
+  "openai-chat": { protocols: ["openai-chat"] },
+  "open-responses": { protocols: ["open-responses", "openai-responses"] },
+  "openai-responses-websocket": { protocols: ["openai-responses"] },
+  gemini: { protocols: ["gemini"] },
+  "bedrock-converse": { protocols: ["bedrock-converse"] },
+}
+
+export const EXPECTED_CASSETTES = 51
 
 const exporter = `${tree}/exporter`
 await mkdir(exporter, { recursive: true })
@@ -42,7 +44,8 @@ for (const name of ["capture", "scenarios", "errors"])
 const scenarios = await run<ScenarioOutput>("scenarios")
 const errors = await run<Array<ExportedError>>("errors")
 
-if (scenarios.cassettes.length !== 51) fail(`expected 51 cassettes, got ${scenarios.cassettes.length}`)
+if (scenarios.cassettes.length !== EXPECTED_CASSETTES)
+  fail(`expected ${EXPECTED_CASSETTES} cassettes, got ${scenarios.cassettes.length}`)
 const names = new Set<string>()
 const index: Array<{ cassette: string; protocol: string; group: string }> = []
 for (const cassette of scenarios.cassettes) {
@@ -50,7 +53,10 @@ for (const cassette of scenarios.cassettes) {
   names.add(cassette.cassette)
   const group = scenarios.groups[cassette.cassette]
   if (group === undefined) fail(`cassette ${cassette.cassette} has no group`)
-  if (!allowedGroups.has(group)) fail(`cassette ${cassette.cassette} has unknown group ${group}`)
+  const definition = GROUPS[group]
+  if (definition === undefined) fail(`cassette ${cassette.cassette} has unknown group ${group}`)
+  if (!definition.protocols.includes(cassette.protocol))
+    fail(`cassette ${cassette.cassette} has protocol ${cassette.protocol} outside group ${group}`)
   index.push({ cassette: cassette.cassette, protocol: cassette.protocol, group })
 }
 index.sort((a, b) => (a.cassette < b.cassette ? -1 : 1))

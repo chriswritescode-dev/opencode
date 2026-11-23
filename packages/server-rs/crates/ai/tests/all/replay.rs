@@ -11,6 +11,7 @@ use opencode_ai::ExecutionContext;
 use opencode_ai::MapEnv;
 use opencode_ai::clock::FixedClock;
 use opencode_ai::id::SequenceIds;
+use opencode_ai::providers::{ProviderPackages, RuntimeModel, Settings};
 use opencode_ai::route::client::LlmClient;
 use opencode_ai::route::compile::StreamOptions;
 use opencode_ai::route::executor::{BoxFuture, ByteStream, HttpResponse, HttpSender, PreparedHttp, RequestExecutor};
@@ -20,17 +21,14 @@ use opencode_ai::route::transport::channel::{
 };
 use opencode_ai::schema::{AiError, LlmEvent, Recovery};
 
-use crate::corpus::{Cassette, ChannelOp, Exchange, Prepared, WebSocketRecord};
+use crate::corpus::{Cassette, ChannelOp, Exchange, Prepared, Step, WebSocketRecord};
 
 const CHUNKED_BODY_SIZE: usize = 7;
 
 pub async fn replay_cassette(cassette: &Cassette) {
     let registry = ProtocolRegistry::builtin();
     for (index, step) in cassette.steps.iter().enumerate() {
-        let descriptor: ModelDescriptor = serde_json::from_value(step.model.clone())
-            .unwrap_or_else(|error| panic!("{} step {index} model descriptor: {error}", cassette.name));
-        let model = Model::from_descriptor(descriptor, &registry)
-            .unwrap_or_else(|error| panic!("{} step {index} model: {}", cassette.name, error.message()));
+        let model = model_for_step(cassette, index, step, &registry);
         let exchanges = match step.exchanges.as_ref() {
             Some(exchanges) if !exchanges.is_empty() => exchanges.clone(),
             _ => panic!("{} step {index} exchanges: the step recorded no HTTP exchange", cassette.name),
@@ -64,6 +62,36 @@ pub async fn replay_cassette(cassette: &Cassette) {
             assert_outcome(cassette, index, &label, step.error.as_ref(), &recorded_events, items);
         }
     }
+}
+
+fn model_for_step(cassette: &Cassette, index: usize, step: &Step, registry: &ProtocolRegistry) -> Model {
+    let Some(provider) = step.provider.as_ref() else {
+        let descriptor: ModelDescriptor = serde_json::from_value(step.model.clone())
+            .unwrap_or_else(|error| panic!("{} step {index} model descriptor: {error}", cassette.name));
+        return Model::from_descriptor(descriptor, registry)
+            .unwrap_or_else(|error| panic!("{} step {index} model: {}", cassette.name, error.message()));
+    };
+    let settings = Settings::new(provider.settings.clone());
+    let runtime = ProviderPackages::builtin()
+        .model(&provider.package, &provider.model_id, &settings, &MapEnv::default())
+        .unwrap_or_else(|error| {
+            panic!("{} step {index} provider {}: {}", cassette.name, provider.package, error.message())
+        });
+    let RuntimeModel::Language(model) = runtime;
+    let actual = without_auth(
+        serde_json::to_value(model.descriptor())
+            .unwrap_or_else(|error| panic!("{} step {index} provider descriptor: {error}", cassette.name)),
+    );
+    let expected = without_auth(step.model.clone());
+    assert_eq!(actual, expected, "{} step {index} provider descriptor", cassette.name);
+    model
+}
+
+fn without_auth(mut descriptor: Value) -> Value {
+    if let Some(object) = descriptor.as_object_mut() {
+        object.remove("auth");
+    }
+    descriptor
 }
 
 pub async fn replay_group(group: &str) -> usize {
@@ -426,10 +454,7 @@ async fn replay_websocket_cassette(cassette: &Cassette) {
     let registry = ProtocolRegistry::builtin();
     let channel = Arc::new(ReplayChannelExecutor::new(cassette));
     for (index, step) in cassette.steps.iter().enumerate() {
-        let descriptor: ModelDescriptor = serde_json::from_value(step.model.clone())
-            .unwrap_or_else(|error| panic!("{} step {index} model descriptor: {error}", cassette.name));
-        let model = Model::from_descriptor(descriptor, &registry)
-            .unwrap_or_else(|error| panic!("{} step {index} model: {}", cassette.name, error.message()));
+        let model = model_for_step(cassette, index, step, &registry);
         let recorded_events = match step.events.as_ref() {
             Some(events) => events.clone(),
             None if step.error.is_some() => Vec::new(),

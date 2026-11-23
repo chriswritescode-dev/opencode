@@ -324,7 +324,7 @@ pub struct SigV4Source {
     pub service: String,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "lowercase", rename_all_fields = "camelCase")]
 pub enum AuthDescriptor {
     Bearer {
