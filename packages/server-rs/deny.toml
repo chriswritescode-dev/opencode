@@ -1,7 +1,7 @@
 # `cargo deny check` for the server's dependency tree, on every target. `licenses`, `bans` and `sources` read only
 # the lock file and the crates cargo has fetched (`bun run check:deny`); `advisories` fetches the RustSec database
-# (`bun run check:advisories`). The binary has no runtime dependencies yet, so the licence check covers the whole
-# `Cargo.lock` tree the tests build.
+# (`bun run check:advisories`). The same licence list covers the crate's runtime crates (hyper, tokio, ring, rustix
+# and the rest) and the test-only crates.
 
 [advisories]
 # A vulnerability fails, and so does a crate marked unmaintained, unsound or yanked: each is read, then ignored here
@@ -11,7 +11,7 @@ yanked = "deny"
 ignore = []
 
 [licenses]
-# The binary has no runtime dependencies yet, so without this only the workspace crate itself would be checked.
+# Development-only crates are included, so the licence check covers the test tree too.
 include-dev = true
 # The licences the tree needs today, each with the crates that need it. A crate passes when these satisfy its
 # expression: `MIT OR Apache-2.0` needs either, `Apache-2.0 AND ISC` both.

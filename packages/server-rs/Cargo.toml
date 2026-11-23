@@ -22,14 +22,25 @@ undocumented_unsafe_blocks = "deny"
 
 [workspace.dependencies]
 opencode-contract = { path = "crates/contract" }
+opencode-http = { path = "crates/http" }
 opencode-server = { path = "crates/server" }
 opencode-api-types = { path = "../cli-rs/crates/api-types" }
 opencode-local = { path = "../cli-rs/crates/local" }
 opencode-util = { path = "../cli-rs/crates/util" }
 opencode-service = { path = "../cli-rs/crates/service" }
+base64 = "0.23"
+bytes = "1"
+http = "1"
+http-body-util = "0.1"
+hyper = { version = "1", features = ["server", "client", "http1"] }
+hyper-util = { version = "0.1", features = ["tokio"] }
+rand = "0.10"
 regex-lite = "0.1"
+ring = "0.17"
+rustix = { version = "1", features = ["system", "process", "fs"] }
 serde_json = { version = "1", features = ["float_roundtrip", "preserve_order", "raw_value"] }
-tokio = { version = "1.53", features = ["macros", "rt"] }
+subtle = "2"
+tokio = { version = "1.53", features = ["macros", "rt", "rt-multi-thread", "net", "time", "signal", "io-util", "io-std", "sync", "process", "fs"] }
 url = "2"
 
 [profile.dev]
