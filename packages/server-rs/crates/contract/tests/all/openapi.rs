@@ -30,6 +30,24 @@ fn the_document_is_the_pinned_upstream_one() {
     assert_eq!(document["components"]["schemas"].as_object().unwrap().len(), 527);
 }
 
+fn operation_ids(document: &Value) -> BTreeSet<&str> {
+    document["paths"]
+        .as_object()
+        .unwrap()
+        .values()
+        .flat_map(|item| item.as_object().unwrap().values())
+        .filter_map(|operation| operation["operationId"].as_str())
+        .collect()
+}
+
+#[test]
+fn the_served_document_matches_the_pinned_operations() {
+    assert!(!opencode_contract::SERVED_OPENAPI_JSON.contains('\n'));
+    let served: Value = serde_json::from_str(opencode_contract::SERVED_OPENAPI_JSON).unwrap();
+    assert_eq!(served["info"]["title"].as_str(), Some("opencode HttpApi"));
+    assert_eq!(operation_ids(&served), operation_ids(&document()));
+}
+
 #[test]
 fn the_document_keeps_what_the_newer_checkout_removed() {
     let document = document();
