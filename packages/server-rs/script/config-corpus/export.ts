@@ -28,7 +28,7 @@ import { Effect, Layer, Logger, Option, Schema } from "effect"
 import { parse, type ParseError } from "jsonc-parser"
 import os from "node:os"
 import path from "node:path"
-import { chmod, mkdir, mkdtemp, realpath, rm, symlink, writeFile } from "node:fs/promises"
+import { chmod, mkdir, mkdtemp, readFile, realpath, rm, stat, symlink, writeFile } from "node:fs/promises"
 
 const options = { errors: "all", onExcessProperty: "ignore" } as const
 const decodeInfo = Schema.decodeUnknownOption(Info, options)
@@ -39,6 +39,7 @@ else if (area === "normalize") exportNormalize()
 else if (area === "substitute") await exportSubstitute()
 else if (area === "discover") await exportDiscover()
 else if (area === "load") await exportLoad()
+else if (area === "update") await exportUpdate()
 else {
   console.error(`corpus: unknown area ${area ?? ""}`)
   process.exit(1)
@@ -2156,6 +2157,184 @@ async function exportLoad() {
           },
           statements: result.statements,
           decisions: result.decisions,
+        })}`,
+      )
+    } finally {
+      console.log = log
+      if (previousFlags === undefined) delete process.env.OPENCODE_FLAGS
+      else process.env.OPENCODE_FLAGS = previousFlags
+      await rm(root, { recursive: true, force: true })
+    }
+  }
+  process.stdout.write(`{\n${lines.join(",\n")}\n}\n`)
+}
+
+type UpdateCase = {
+  files?: Record<string, string>
+  patch: { shell: string | null }
+}
+
+async function exportUpdate() {
+  const cases: Record<string, UpdateCase> = {
+    "create-when-neither": { patch: { shell: "added" } },
+    "json-only": { files: { "opencode.json": `{"shell":"old"}\n` }, patch: { shell: "new" } },
+    "both-jsonc-wins": {
+      files: { "opencode.json": `{"shell":"json"}\n`, "opencode.jsonc": `{"shell":"jsonc"}\n` },
+      patch: { shell: "both" },
+    },
+    "jsonc-comments-and-trailing-comma": {
+      files: { "opencode.jsonc": `// top comment\n{\n  // shell comment\n  "shell": "old",\n}\n` },
+      patch: { shell: "commented" },
+    },
+    "jsonc-tabs": {
+      files: { "opencode.jsonc": `{\n\t"shell": "old",\n\t"username": "user"\n}\n` },
+      patch: { shell: "tabbed" },
+    },
+    crlf: {
+      files: { "opencode.json": `{\r\n  "shell": "old",\r\n  "username": "user"\r\n}\r\n` },
+      patch: { shell: "windows" },
+    },
+    "missing-trailing-newline": { files: { "opencode.json": `{"shell":"old"}` }, patch: { shell: "newline" } },
+    "replace-shell-not-last": {
+      files: { "opencode.json": `{"username": "user", "shell": "old"}\n` },
+      patch: { shell: "later" },
+    },
+    "remove-shell": {
+      files: { "opencode.json": `{"shell": "old", "username": "user"}\n` },
+      patch: { shell: null },
+    },
+    "remove-absent-shell": { files: { "opencode.json": `{"username":"user"}\n` }, patch: { shell: null } },
+    "empty-object": { files: { "opencode.json": `{}` }, patch: { shell: "empty" } },
+    "empty-object-newline": { files: { "opencode.json": `{}\n` }, patch: { shell: "empty-newline" } },
+    "comments-only": { files: { "opencode.jsonc": `// only a comment\n` }, patch: { shell: "comment-only" } },
+    "empty-string-shell": { files: { "opencode.json": `{"shell":"old"}\n` }, patch: { shell: "" } },
+    "unicode-shell": { files: { "opencode.json": `{"shell":"old"}\n` }, patch: { shell: "sh -c 'echo héllo'" } },
+    "jsonc-array-neighbour": {
+      files: { "opencode.jsonc": `{\n  "instructions": ["a.md"],\n  "shell": "old"\n}\n` },
+      patch: { shell: "array" },
+    },
+    "remove-from-jsonc-comments": {
+      files: { "opencode.jsonc": `{\n  // keep\n  "shell": "old",\n  "username": "u"\n}\n` },
+      patch: { shell: null },
+    },
+    "crlf-remove": { files: { "opencode.json": `{\r\n  "shell": "old"\r\n}\r\n` }, patch: { shell: null } },
+  }
+
+  const encodeEntry = Schema.encodeSync(Entry)
+  const log = console.log
+  const lines: string[] = []
+
+  for (const name of Object.keys(cases).sort()) {
+    const item = cases[name]!
+    const root = await realpath(await mkdtemp(path.join(os.tmpdir(), "opencode-update-")))
+    const previousFlags = process.env.OPENCODE_FLAGS
+    try {
+      const home = path.join(root, "home")
+      const globalConfig = path.join(root, "global")
+      const directory = path.join(root, "project")
+      await mkdir(home, { recursive: true })
+      await mkdir(globalConfig, { recursive: true })
+      await mkdir(directory, { recursive: true })
+      for (const [file, content] of Object.entries(item.files ?? {})) {
+        await writeFile(path.join(globalConfig, file), content)
+      }
+
+      const credentialNode = makeGlobalNode({
+        service: Credential.Service,
+        layer: Layer.succeed(
+          Credential.Service,
+          Credential.Service.of({
+            refresh: () => Effect.die("unused"),
+            all: () => Effect.succeed([]),
+            list: () => Effect.succeed([]),
+            get: () => Effect.succeed(undefined),
+            create: () => Effect.die("unused"),
+            activate: () => Effect.die("unused"),
+            update: () => Effect.die("unused"),
+            remove: () => Effect.die("unused"),
+          }),
+        ),
+        deps: [],
+      })
+      const wellknownNode = makeGlobalNode({
+        service: WellKnown.Service,
+        layer: Layer.succeed(
+          WellKnown.Service,
+          WellKnown.Service.of({
+            entries: () => Effect.succeed([]),
+            snapshot: () => [],
+            refresh: () => Effect.succeed(false),
+            add: () => Effect.die("unused"),
+            remove: () => Effect.die("unused"),
+            resolve: () => Effect.succeed([]),
+            cached: () => Effect.succeed([]),
+            clearCached: () => Effect.void,
+          }),
+        ),
+        deps: [],
+      })
+
+      const locationLayer = Layer.succeed(
+        Location.Service,
+        Location.Service.of({
+          directory: AbsolutePath.make(directory),
+          workspaceID: undefined,
+          project: {
+            id: Project.ID.make("global"),
+            directory: AbsolutePath.make(directory),
+            canonical: AbsolutePath.make(directory),
+          },
+        }),
+      )
+      const watcher = Watcher.testLayer
+      process.env.OPENCODE_FLAGS = ""
+      const built = AppNodeBuilder.build(LayerNode.group([Config.node, Bus.node]), [
+        Config.node.replace(Config.configured({ system: false })),
+        Location.node.replace(locationLayer),
+        Global.node.replace(Global.layerWith({ config: globalConfig, home })),
+        Credential.node.replace(credentialNode),
+        WellKnown.node.replace(wellknownNode),
+        App.node.replace(App.layer({ channel: "unknown" })),
+        Watcher.node.replace(watcher),
+      ])
+      const program = Effect.gen(function* () {
+        const config = yield* Config.Service
+        yield* config.update!({ shell: item.patch.shell })
+        yield* Effect.sleep("300 millis")
+        return yield* config.entries()
+      })
+      console.log = () => {}
+      const layer = Layer.provide(Layer.mergeAll(built, watcher), Layer.succeed(FlagResolve.Overrides, ""))
+      const loaded = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+      const rel = (value: string) => path.relative(root, value).split(path.sep).join("/")
+      const entries = loaded.map((entry) => {
+        const wire = JSON.parse(JSON.stringify(encodeEntry(entry))) as Record<string, unknown>
+        if (typeof wire.path === "string") wire.path = rel(wire.path)
+        const origin = entryOrigin(entry)
+        return origin ? { ...wire, origin } : wire
+      })
+      const written =
+        (
+          await Promise.all(
+            ["opencode.json", "opencode.jsonc"].map(async (file) => {
+              const target = path.join(globalConfig, file)
+              return (await stat(target)
+                .then((value) => value.isFile())
+                .catch(() => false))
+                ? target
+                : undefined
+            }),
+          )
+        )
+          .filter((file): file is string => file !== undefined)
+          .at(-1) ?? path.join(globalConfig, "opencode.jsonc")
+      lines.push(
+        `${JSON.stringify(name)}:${JSON.stringify({
+          files: item.files ?? {},
+          patch: item.patch,
+          file: rel(written),
+          text: await readFile(written, "utf8"),
+          entries,
         })}`,
       )
     } finally {

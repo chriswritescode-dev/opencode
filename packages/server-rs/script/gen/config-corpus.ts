@@ -2,7 +2,7 @@ import { mkdir } from "node:fs/promises"
 import { upstreamWorkspace } from "../upstream"
 
 const root = new URL("../..", import.meta.url).pathname
-const areas = ["flags", "normalize", "substitute", "discover", "load"]
+const areas = ["flags", "normalize", "substitute", "discover", "load", "update"]
 const corpusRoot = `${root}target/config-corpus`
 const corpusHome = `${corpusRoot}/home`
 const source = `${root}script/config-corpus/export.ts`

@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use opencode_config::discovery::{Sources, discover};
-use opencode_config::entry::{Document, Entry, Origin};
+use opencode_config::entry::{Document, Origin};
 use opencode_config::load::{FlagInputs, LoadDeps, load};
 use opencode_config::options::{ConfigLocation, ConfigOptions, SystemOption};
 use opencode_config::paths::GlobalPaths;
@@ -15,7 +15,7 @@ use opencode_contract::generated::{ConfigEntryDocumentInfo, ConfigEntryDocumentI
 use opencode_util::temp::TempDir;
 use serde_json::{Map, Value, json};
 
-use crate::support::area;
+use crate::support::{area, entries_view, relative};
 
 #[tokio::test]
 async fn every_load_case_matches_the_pinned_typescript() {
@@ -238,22 +238,6 @@ fn config_options(root: &Path, value: &Value) -> ConfigOptions {
     }
 }
 
-fn entries_view(root: &Path, entries: &[Entry]) -> Vec<Value> {
-    entries
-        .iter()
-        .map(|entry| {
-            let mut object = wire_object(&entry.to_wire());
-            if let Some(path) = object.get("path").and_then(Value::as_str) {
-                object.insert("path".to_owned(), Value::String(relative(root, Path::new(path))));
-            }
-            if let Entry::Document(document) = entry {
-                object.insert("origin".to_owned(), origin_view(&document.origin));
-            }
-            Value::Object(object)
-        })
-        .collect()
-}
-
 fn compatibility_view(root: &Path, sources: &Sources) -> Value {
     json!({
         "claude": directory_list(root, &sources.claude),
@@ -265,42 +249,6 @@ fn directory_list(root: &Path, paths: &[PathBuf]) -> Vec<String> {
     paths.iter().filter(|path| path.is_dir()).map(|path| relative(root, path)).collect()
 }
 
-fn origin_view(origin: &Origin) -> Value {
-    match origin {
-        Origin::File => json!({ "kind": "file" }),
-        Origin::Managed => json!({ "kind": "managed" }),
-        Origin::WellKnown { integration_id } => {
-            json!({ "kind": "wellknown", "integrationID": integration_id })
-        }
-        Origin::Integration { integration_id, connection, organization } => {
-            let mut value = json!({
-                "kind": "integration",
-                "integrationID": integration_id,
-                "connection": connection,
-            });
-            if let Some(organization) = organization {
-                value["organization"] = json!(organization);
-            }
-            value
-        }
-    }
-}
-
-fn wire_object<T: Encode>(value: &T) -> Map<String, Value> {
-    serde_json::from_str::<Value>(&encode_json(value))
-        .expect("the wire encoding is JSON")
-        .as_object()
-        .cloned()
-        .expect("the wire encoding is a JSON object")
-}
-
 fn encode_value<T: Encode>(value: &T) -> Value {
     serde_json::from_str(&encode_json(value)).expect("the wire encoding is JSON")
-}
-
-fn relative(root: &Path, path: &Path) -> String {
-    path.strip_prefix(root)
-        .unwrap_or_else(|_| panic!("{} is outside {}", path.display(), root.display()))
-        .to_string_lossy()
-        .replace('\\', "/")
 }

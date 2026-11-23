@@ -4,11 +4,13 @@ use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
 use opencode_contract::generated::ConfigEntryDocumentInfo;
+use opencode_contract::generated::requests::ConfigPatch;
+use opencode_local::jsonc::{Segment, modify};
 use opencode_util::path::{Flavor, realpath};
 use serde_json::Value;
 use tokio::sync::{Mutex, broadcast, mpsc};
 
-use crate::discovery::{Sources, discover};
+use crate::discovery::{NAMES, Sources, discover};
 use crate::entry::{Document, Entry, Origin};
 use crate::flag::{self, FlagState};
 use crate::load::{FlagInputs, LoadDeps, load};
@@ -58,6 +60,7 @@ struct Inner {
     deps: ServiceDeps,
     state: RwLock<State>,
     reload_lock: Mutex<()>,
+    update_lock: Mutex<()>,
     updates: broadcast::Sender<WatchUpdate>,
     updated: broadcast::Sender<()>,
     requests: mpsc::UnboundedSender<()>,
@@ -93,6 +96,7 @@ impl ConfigService {
                 integrations: BTreeMap::new(),
             }),
             reload_lock: Mutex::new(()),
+            update_lock: Mutex::new(()),
             updates: updates.clone(),
             updated,
             requests,
@@ -161,6 +165,29 @@ impl ConfigService {
         if entries.iter().any(|entry| entry.integration_id == integration_id) {
             self.reload().await;
         }
+    }
+
+    pub async fn update(&self, patch: &ConfigPatch) {
+        let _guard = self.inner.update_lock.lock().await;
+        let directory = {
+            let state = self.inner.state.read().expect("the config state lock is never poisoned");
+            state.sources.global.clone().unwrap_or_else(|| self.inner.paths.config.clone())
+        };
+        let file = NAMES
+            .iter()
+            .map(|name| directory.join(name))
+            .rfind(|path| path.is_file())
+            .unwrap_or_else(|| directory.join("opencode.jsonc"));
+        let text = std::fs::read_to_string(&file).unwrap_or_else(|_| "{}\n".to_owned());
+        let value = patch.shell.as_ref().map(|shell| Value::String(shell.clone()));
+        let mut updated = modify(&text, &[Segment::Key("shell".to_owned())], value.as_ref())
+            .expect("editing the global config never fails");
+        if !updated.ends_with('\n') {
+            updated.push('\n');
+        }
+        std::fs::create_dir_all(&directory).expect("the global config directory is writable");
+        std::fs::write(&file, updated).expect("the global config file is writable");
+        self.request_reload();
     }
 
     pub fn flags(&self) -> Vec<(&'static str, FlagState)> {
