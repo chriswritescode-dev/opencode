@@ -145,7 +145,7 @@ async function block(_ctx: Context, params: JsonValue): Promise<Outcome> {
 
 async function allocate(_ctx: Context, params: JsonValue): Promise<Outcome> {
   const mb = numberAt(params, "mb", 0)
-  retained.push(new Uint8Array(mb * 1024 * 1024))
+  retained.push(new Uint8Array(mb * 1024 * 1024).fill(1))
   return { value: { mb } }
 }
 

@@ -9,3 +9,5 @@ pub mod frame;
 pub mod protocol;
 #[cfg(unix)]
 pub mod spawn;
+#[cfg(unix)]
+pub mod supervisor;

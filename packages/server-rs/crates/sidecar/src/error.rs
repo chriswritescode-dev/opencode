@@ -57,3 +57,16 @@ impl fmt::Display for SidecarError {
 }
 
 impl std::error::Error for SidecarError {}
+
+impl SidecarError {
+    /// The connection's own report that the sidecar process's input or output ended. The supervisor replaces it with
+    /// the process's own reason once the child has been reaped.
+    pub(crate) fn ended() -> Self {
+        SidecarError::Exited { status: None, signal: None, stderr: Vec::new() }
+    }
+
+    /// Whether this is [`SidecarError::ended`] rather than a real child exit.
+    pub(crate) fn is_ended(&self) -> bool {
+        matches!(self, SidecarError::Exited { status: None, signal: None, stderr } if stderr.is_empty())
+    }
+}

@@ -7,4 +7,6 @@ mod protocol;
 #[cfg(unix)]
 mod spawn;
 #[cfg(unix)]
+mod supervisor;
+#[cfg(unix)]
 mod support;

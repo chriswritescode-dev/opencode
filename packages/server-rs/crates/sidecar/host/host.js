@@ -599,7 +599,7 @@ async function block(_ctx, params) {
 }
 async function allocate(_ctx, params) {
   const mb = numberAt(params, "mb", 0);
-  retained.push(new Uint8Array(mb * 1024 * 1024));
+  retained.push(new Uint8Array(mb * 1024 * 1024).fill(1));
   return { value: { mb } };
 }
 async function print(_ctx, params) {

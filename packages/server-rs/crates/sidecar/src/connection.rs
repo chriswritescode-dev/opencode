@@ -20,7 +20,7 @@ use opencode_util::lock;
 
 use crate::config::Limits;
 use crate::error::SidecarError;
-use crate::frame::{self, Frame, FrameError};
+use crate::frame::{self, Broken, Frame, FrameError};
 use crate::protocol::{LocationRef, Message, RemoteError};
 
 pub type BoxFuture<T> = Pin<Box<dyn Future<Output = T> + Send>>;
@@ -196,7 +196,7 @@ impl Connection {
         }
         match reply.await {
             Ok(outcome) => outcome,
-            Err(_) => Err(SidecarError::ProtocolBroken("the sidecar connection ended".to_owned())),
+            Err(_) => Err(SidecarError::ended()),
         }
     }
 
@@ -365,10 +365,7 @@ impl Inner {
             .acquire_many_owned(permits)
             .await
             .map_err(|_| SidecarError::ProtocolBroken("the sidecar connection closed".to_owned()))?;
-        self.frames
-            .send(Framed { bytes: frame, permit })
-            .await
-            .map_err(|_| SidecarError::ProtocolBroken("the sidecar connection closed".to_owned()))
+        self.frames.send(Framed { bytes: frame, permit }).await.map_err(|_| SidecarError::ended())
     }
 
     /// `pending` is taken before `dead`, always: a `fail` that takes them in the other order could miss a call
@@ -597,13 +594,17 @@ async fn read_frames(mut read: OwnedReadHalf, inner: Weak<Inner>, max_frame: usi
             }
             Ok(None) => {
                 if let Some(inner) = inner.upgrade() {
-                    inner.fail(SidecarError::ProtocolBroken("the sidecar connection ended".to_owned()));
+                    inner.fail(SidecarError::ended());
                 }
                 return;
             }
             Err(error) => {
+                let reason = match error {
+                    Broken::Io(_) | Broken::Truncated { .. } => SidecarError::ended(),
+                    error => SidecarError::ProtocolBroken(error.to_string()),
+                };
                 if let Some(inner) = inner.upgrade() {
-                    inner.fail(SidecarError::ProtocolBroken(error.to_string()));
+                    inner.fail(reason);
                 }
                 return;
             }
@@ -613,9 +614,9 @@ async fn read_frames(mut read: OwnedReadHalf, inner: Weak<Inner>, max_frame: usi
 
 async fn write_frames(mut write: OwnedWriteHalf, mut queued: mpsc::Receiver<Framed>, inner: Weak<Inner>) {
     while let Some(Framed { bytes, permit }) = queued.recv().await {
-        if let Err(error) = write.write_all(&bytes).await {
+        if write.write_all(&bytes).await.is_err() {
             if let Some(inner) = inner.upgrade() {
-                inner.fail(SidecarError::ProtocolBroken(format!("the sidecar connection ended: {error}")));
+                inner.fail(SidecarError::ended());
             }
             return;
         }
