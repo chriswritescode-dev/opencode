@@ -160,11 +160,12 @@ function listDelta(fromValues: ReadonlyArray<string>, toValues: ReadonlyArray<st
 
 function eventTypes(schemas: Record<string, SchemaObject>, name: string) {
   const schema = schemas[name]
-  return schema === undefined ? [] : collectEventTypes(schemas, schema, new Set([name]))
+  return schema === undefined ? [] : collectEventTypes(schemas, name, schema, new Set([name]))
 }
 
 function collectEventTypes(
   schemas: Record<string, SchemaObject>,
+  label: string,
   schema: SchemaObject,
   seen: ReadonlySet<string>,
 ): Array<string> {
@@ -173,12 +174,26 @@ function collectEventTypes(
       const name = member.$ref === undefined ? undefined : refName(member.$ref)
       if (name === undefined || seen.has(name)) return []
       const target = schemas[name]
-      return target === undefined ? [] : collectEventTypes(schemas, target, new Set([...seen, name]))
+      return target === undefined ? [] : collectEventTypes(schemas, name, target, new Set([...seen, name]))
     })
   const type = schema.properties?.type
-  if (type === undefined || type.pattern !== undefined) return []
+  if (type === undefined) return []
+  if (type.pattern !== undefined) {
+    const value = patternEventType(type.pattern)
+    if (value === undefined)
+      fail(`drift-report: ${label} has an unsupported type pattern ${JSON.stringify(type.pattern)}`)
+    return [value]
+  }
   const value = type.enum === undefined ? type.const : type.enum[0]
-  return typeof value === "string" ? [value] : []
+  if (typeof value !== "string") fail(`drift-report: ${label} has no literal event type`)
+  return [value]
+}
+
+function patternEventType(pattern: string) {
+  const match = /^\^(.*)\\\.\[\\s\\S\]\*\?\$$/.exec(pattern)
+  if (match === null) return undefined
+  const literal = match[1].replaceAll("\\.", ".")
+  return `${literal}.\${string}`
 }
 
 function refName(ref: string) {

@@ -1,6 +1,7 @@
 use opencode_api_types::js::decode_component;
-use opencode_contract::codec::DecodeError;
+use opencode_contract::codec::{DecodeError, decode_json, encode_json};
 use opencode_contract::generated::operations::REQUEST_SLOTS;
+use opencode_contract::generated::requests::ArtifactCreateInput;
 use opencode_contract::request::{RawRequest, location_directory, parse_query, wildcard};
 use serde_json::Value;
 use std::collections::{BTreeMap, BTreeSet};
@@ -114,6 +115,16 @@ fn every_invalid_request_is_rejected() {
         }
     }
     assert!(rejected > 0, "the request corpus has no invalid samples");
+}
+
+#[test]
+fn a_null_helper_optional_request_field_is_rejected() {
+    let result = decode_json::<ArtifactCreateInput>(r#"{"title":"t","files":{},"entry":null}"#);
+    assert!(result.is_err(), "expected the null helper optional to be rejected, got {result:?}");
+
+    let accepted = decode_json::<ArtifactCreateInput>(r#"{"title":"t","files":{}}"#)
+        .unwrap_or_else(|error| panic!("absent helper optional failed: {error}"));
+    assert_eq!(encode_json(&accepted), r#"{"title":"t","files":{}}"#);
 }
 
 fn query_request(query: &str) -> RawRequest {

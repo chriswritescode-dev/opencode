@@ -81,7 +81,7 @@ pub struct BlobID(pub String);
 impl crate::codec::Decode for BlobID {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let value = <String as crate::codec::Decode>::decode(value, path)?;
-        if !crate::checks::is_pattern(value.as_str(), "^blob_[0-9a-f]{12}[0-9A-Za-z]{14}$") {
+        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_0) {
             return Err(path.at("expected a string matching the RegExp ^blob_[0-9a-f]{12}[0-9A-Za-z]{14}$"));
         }
         Ok(Self(value))
@@ -153,7 +153,7 @@ pub struct GenerateVideoID(pub String);
 impl crate::codec::Decode for GenerateVideoID {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let value = <String as crate::codec::Decode>::decode(value, path)?;
-        if !crate::checks::is_pattern(value.as_str(), "^video_[0-9a-f]{12}[0-9A-Za-z]{14}$") {
+        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_1) {
             return Err(path.at("expected a string matching the RegExp ^video_[0-9a-f]{12}[0-9A-Za-z]{14}$"));
         }
         Ok(Self(value))

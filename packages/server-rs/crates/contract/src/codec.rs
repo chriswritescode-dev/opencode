@@ -42,6 +42,14 @@ impl Path {
         self.segments.pop();
     }
 
+    pub fn mark(&self) -> usize {
+        self.segments.len()
+    }
+
+    pub fn truncate(&mut self, mark: usize) {
+        self.segments.truncate(mark);
+    }
+
     pub fn at(&self, reason: impl Into<String>) -> DecodeError {
         DecodeError { path: self.render(), reason: reason.into() }
     }
@@ -250,9 +258,6 @@ fn decode_optional_present<T>(
     let Some(value) = object.get(key) else {
         return Ok(None);
     };
-    if value.is_null() {
-        return Ok(None);
-    }
     path.push_key(key);
     let decoded = decode(value, path);
     path.pop();
@@ -265,6 +270,40 @@ fn write_element<T: Encode + ?Sized>(out: &mut String, first: &mut bool, value: 
     }
     *first = false;
     value.encode(out);
+}
+
+fn index_key(key: &str) -> Option<u32> {
+    let value = key.parse::<u32>().ok()?;
+    (value != u32::MAX && value.to_string() == key).then_some(value)
+}
+
+fn write_object<'a, T: Encode + 'a>(out: &mut String, entries: impl Iterator<Item = (&'a str, &'a T)>) {
+    let mut entries: Vec<(&str, &T)> = entries.collect();
+    entries.sort_by_key(|(key, _)| index_key(key).map_or((1, 0), |value| (0, value)));
+    out.push('{');
+    let mut first = true;
+    for (key, value) in entries {
+        write_value(out, &mut first, key, value);
+    }
+    out.push('}');
+}
+
+pub fn write_struct_object<'a>(
+    out: &mut String,
+    declared: &'a [(&'a str, Option<&'a dyn Encode>)],
+    rest: impl IntoIterator<Item = (&'a str, Option<&'a dyn Encode>)>,
+) {
+    let mut entries: Vec<(&str, Option<&dyn Encode>)> = declared.to_vec();
+    entries.extend(rest);
+    entries.sort_by_key(|(key, _)| index_key(key).map_or((1, 0), |value| (0, value)));
+    out.push('{');
+    let mut first = true;
+    for (key, value) in entries {
+        if let Some(value) = value {
+            write_value(out, &mut first, key, value);
+        }
+    }
+    out.push('}');
 }
 
 impl Decode for String {
@@ -327,14 +366,7 @@ impl Encode for Value {
                 }
                 out.push(']');
             }
-            Value::Object(entries) => {
-                out.push('{');
-                let mut first = true;
-                for (key, value) in entries {
-                    write_value(out, &mut first, key, value);
-                }
-                out.push('}');
-            }
+            Value::Object(entries) => write_object(out, entries.iter().map(|(key, value)| (key.as_str(), value))),
         }
     }
 }
@@ -400,12 +432,7 @@ impl<T: Decode> Decode for JsonMap<T> {
 
 impl<T: Encode> Encode for JsonMap<T> {
     fn encode(&self, out: &mut String) {
-        out.push('{');
-        let mut first = true;
-        for (key, value) in &self.0 {
-            write_value(out, &mut first, key, value);
-        }
-        out.push('}');
+        write_object(out, self.0.iter().map(|(key, value)| (key.as_str(), value)));
     }
 }
 

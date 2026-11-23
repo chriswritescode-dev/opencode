@@ -109,8 +109,7 @@ async function schemaRoot(name: string, schema: Schema.Top): Promise<Root> {
       continue
     }
     if (valid.length === 3) continue
-    const decoded = Schema.decodeUnknownSync(codec)(JSON.parse(JSON.stringify(encoded)))
-    const input = canonical(codec, encoded, decoded)
+    const input = JSON.stringify(encoded)
     Schema.decodeUnknownSync(codec)(JSON.parse(input))
     valid.push({ input, expected: input })
   }
@@ -139,7 +138,7 @@ async function schemaRoot(name: string, schema: Schema.Top): Promise<Root> {
   const excessInput = JSON.stringify(excess)
   const decoded = Schema.decodeUnknownExit(codec)(excess)
   if (decoded._tag === "Success") {
-    const expected = canonical(codec, Schema.encodeUnknownSync(codec)(decoded.value), decoded.value)
+    const expected = JSON.stringify(Schema.encodeUnknownSync(codec)(decoded.value))
     if (expected !== excessInput) valid.push({ input: excessInput, expected })
   }
 
@@ -151,6 +150,7 @@ async function schemaRoot(name: string, schema: Schema.Top): Promise<Root> {
     add(candidate)
   }
   for (const key of keys) add(withValue(key, replacement(first[key])))
+  for (const key of keys) add(withValue(key, null))
   for (const key of keys) {
     const value = first[key]
     if (typeof value === "string") add(withValue(key, `${value}!`))
@@ -196,27 +196,6 @@ function replacement(value: unknown): unknown {
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)
-}
-
-function canonical(codec: JsonCodec, encoded: unknown, decoded: unknown) {
-  const stripped = JSON.stringify(withoutNullOptionals(encoded, decoded))
-  return decodes(codec, stripped) ? stripped : JSON.stringify(encoded)
-}
-
-function decodes(codec: JsonCodec, input: string) {
-  return Schema.decodeUnknownExit(codec)(JSON.parse(input))._tag === "Success"
-}
-
-function withoutNullOptionals(encoded: unknown, decoded: unknown): unknown {
-  if (Array.isArray(encoded) && Array.isArray(decoded))
-    return encoded.map((value, index) => withoutNullOptionals(value, decoded[index]))
-  if (!isObject(encoded) || !isObject(decoded)) return encoded
-  const result: Record<string, unknown> = {}
-  for (const [key, value] of Object.entries(encoded)) {
-    if (value === null && (!(key in decoded) || decoded[key] === undefined)) continue
-    result[key] = withoutNullOptionals(value, decoded[key])
-  }
-  return result
 }
 
 function hasLoneSurrogate(value: unknown): boolean {

@@ -21,8 +21,8 @@ export function decodeSlot(
   const lines = typed.propertySignatures.map((property) => {
     const key = String(property.name)
     const match = wire.propertySignatures.find((candidate) => String(candidate.name) === key)
-    if (match === undefined) throw new Error(`request: ${slot}.${key} has no wire property`)
-    return field(key, property.type, match.type, references)
+    if (match === undefined) throw new Error(`request: ${typeName}.${key} has no wire property`)
+    return field(key, property.type, match.type, references, typeName)
   })
   const mutates = typed.propertySignatures.some((property) => {
     const shape = strip(property.type, references.typed)
@@ -42,21 +42,21 @@ function source(slot: "params" | "query" | "headers") {
   return "crate::request::value_pairs(&raw.headers)"
 }
 
-function field(key: string, typed: R, wire: R, references: SlotReferences): string {
+function field(key: string, typed: R, wire: R, references: SlotReferences, root: string): string {
   const literal = JSON.stringify(key)
   const values = `crate::request::field_values(&parsed, ${literal})`
   const shape = strip(typed, references.typed)
-  if (shape.core === undefined) throw new Error(`request: ${key} is only null or absent`)
+  if (shape.core === undefined) throw new Error(`request: ${root}.${key} is only null or absent`)
   const core = unwrap(shape.core, references.typed)
   if (core._tag === "Objects") {
-    if (!shape.optional) throw new Error(`request: ${key} is a required nested object`)
+    if (!shape.optional) throw new Error(`request: ${root}.${key} is a required nested object`)
     return `    if ${values}.is_some() {
         path.push_key(${literal});
         return Err(path.at("expected an object"));
     }`
   }
   if (core._tag === "Arrays") {
-    const element = arrayElement(core, wire, references)
+    const element = arrayElement(core, wire, references, root, key)
     return `    if let Some(values) = ${values} {
         path.push_key(${literal});
         let value = {
@@ -72,7 +72,7 @@ function field(key: string, typed: R, wire: R, references: SlotReferences): stri
         object.insert(${literal}.to_owned(), value);
     }`
   }
-  const value = singleValue(core, wire, references, "text", shape.nullable)
+  const value = singleValue(core, wire, references, "text", shape.nullable, root, key)
   return `    if let Some(values) = ${values} {
         path.push_key(${literal});
         let text = crate::request::single(values, &path)?;
@@ -86,14 +86,16 @@ function arrayElement(
   typed: SchemaRepresentation.Arrays,
   wire: R,
   references: SlotReferences,
+  root: string,
+  key: string,
 ): (text: string) => string {
   if (typed.elements.length !== 0 || typed.rest.length !== 1) {
-    throw new Error("request: a request array is neither a Vec nor a tuple")
+    throw new Error(`request: ${root}.${key} is neither a Vec nor a tuple`)
   }
   const element = typed.rest[0]!
   const wireElement = arrayWireElement(wire, references.wire)
-  if (wireElement === undefined) throw new Error("request: the wire form of a request array has no array")
-  return (text) => singleValue(unwrap(element, references.typed), wireElement, references, text, false)
+  if (wireElement === undefined) throw new Error(`request: ${root}.${key} wire form has no array`)
+  return (text) => singleValue(unwrap(element, references.typed), wireElement, references, text, false, root, `${key}[]`)
 }
 
 function arrayWireElement(wire: R, refs: Refs): R | undefined {
@@ -107,50 +109,116 @@ function arrayWireElement(wire: R, refs: Refs): R | undefined {
   return undefined
 }
 
-function singleValue(typed: R, wire: R, references: SlotReferences, text: string, nullable: boolean): string {
+function singleValue(
+  typed: R,
+  wire: R,
+  references: SlotReferences,
+  text: string,
+  nullable: boolean,
+  root: string,
+  key: string,
+): string {
   const resolved = unwrap(typed, references.typed)
   const wireResolved = unwrap(wire, references.wire)
+  const nullValue = (value: string) => {
+    if (!hasNullLiteral(wireResolved, references.wire)) {
+      throw new Error(`request: ${root}.${key} is nullable but its wire form has no null literal`)
+    }
+    return nullOr(text, value)
+  }
   if (resolved._tag === "Union") {
     if (!stringLike(resolved, references.typed) || !stringLike(wireResolved, references.wire)) {
-      throw new Error(`request: unsupported request union ${describe(resolved)}`)
+      throw new Error(`request: ${root}.${key} has unsupported union ${describe(resolved)}`)
     }
-    return stringValue(text, nullable)
+    return nullable ? nullValue(stringLiteral(text)) : stringLiteral(text)
   }
   if (resolved._tag === "Number") {
-    if (!stringLike(wireResolved, references.wire)) {
-      throw new Error(`request: a number field has wire ${describe(wireResolved)}`)
+    if (!numberWire(dropNull(wireResolved, references.wire), references.wire)) {
+      throw new Error(`request: ${root}.${key} has number wire ${describe(wireResolved)}`)
     }
     return nullable
-      ? nullOr(text, `crate::request::number_value(${text}, &path)?`)
+      ? nullValue(`crate::request::number_value(${text}, &path)?`)
       : `crate::request::number_value(${text}, &path)?`
   }
   if (resolved._tag === "Boolean") {
-    const values = literals(wireResolved, references.wire)
-    if (values === undefined || !values.includes("true") || !values.includes("false")) {
-      throw new Error(`request: a boolean field has wire ${describe(wireResolved)}`)
+    if (!booleanWire(dropNull(wireResolved, references.wire), references.wire)) {
+      throw new Error(`request: ${root}.${key} has boolean wire ${describe(wireResolved)}`)
     }
     return nullable
-      ? nullOr(text, `crate::request::boolean_value(${text}, &path)?`)
+      ? nullValue(`crate::request::boolean_value(${text}, &path)?`)
       : `crate::request::boolean_value(${text}, &path)?`
   }
   if (resolved._tag === "String" || resolved._tag === "TemplateLiteral") {
     if (!stringLike(wireResolved, references.wire)) {
-      throw new Error(`request: a string field has wire ${describe(wireResolved)}`)
+      throw new Error(`request: ${root}.${key} has string wire ${describe(wireResolved)}`)
     }
-    return stringValue(text, nullable)
+    return nullable ? nullValue(stringLiteral(text)) : stringLiteral(text)
   }
   if (resolved._tag === "Literal" && typeof resolved.literal === "string") {
     if (!stringLike(wireResolved, references.wire)) {
-      throw new Error(`request: a literal field has wire ${describe(wireResolved)}`)
+      throw new Error(`request: ${root}.${key} has literal wire ${describe(wireResolved)}`)
     }
-    return stringValue(text, nullable)
+    return nullable ? nullValue(stringLiteral(text)) : stringLiteral(text)
   }
-  throw new Error(`request: unsupported request value ${describe(resolved)}`)
+  throw new Error(`request: ${root}.${key} has unsupported value ${describe(resolved)}`)
 }
 
-function stringValue(text: string, nullable: boolean) {
-  const value = `serde_json::Value::String(${text}.to_owned())`
-  return nullable ? nullOr(text, value) : value
+function stringLiteral(text: string) {
+  return `serde_json::Value::String(${text}.to_owned())`
+}
+
+function dropNull(r: R, refs: Refs): R {
+  const resolved = unwrap(r, refs)
+  if (resolved._tag !== "Union") return resolved
+  const types = resolved.types.filter((member) => {
+    const current = unwrap(member, refs)
+    return current._tag !== "Null" && !(current._tag === "Literal" && current.literal === "null")
+  })
+  return { ...resolved, types }
+}
+
+function hasNullLiteral(r: R, refs: Refs): boolean {
+  const resolved = unwrap(r, refs)
+  if (resolved._tag === "Literal") return resolved.literal === "null"
+  if (resolved._tag !== "Union") return false
+  return resolved.types.some((member) => hasNullLiteral(member, refs))
+}
+
+function booleanWire(r: R, refs: Refs): boolean {
+  const values = literals(collapse(r, refs), refs)
+  if (values === undefined) return false
+  const set = new Set(values)
+  return set.size === 2 && set.has("true") && set.has("false")
+}
+
+const numberAnnotations = new Set([
+  "a string that will be decoded as a number",
+  "a string that will be decoded as a finite number",
+])
+
+function numberWire(r: R, refs: Refs): boolean {
+  const resolved = collapse(r, refs)
+  if (resolved._tag === "String") return numberStringWire(resolved)
+  if (resolved._tag !== "Union") return false
+  const string = resolved.types.find((member) => unwrap(member, refs)._tag === "String")
+  if (string === undefined) return false
+  const stringResolved = unwrap(string, refs)
+  if (stringResolved._tag !== "String" || !numberStringWire(stringResolved)) return false
+  const values = new Set(
+    resolved.types
+      .filter((member) => member !== string)
+      .flatMap((member) => literals(member, refs) ?? []),
+  )
+  return values.size === 3 && ["Infinity", "-Infinity", "NaN"].every((value) => values.has(value))
+}
+
+function numberStringWire(r: SchemaRepresentation.String): boolean {
+  const expected = r.annotations?.expected
+  if (typeof expected === "string" && numberAnnotations.has(expected)) return true
+  return (
+    r.checks.length > 0 &&
+    r.checks.every((check) => check._tag === "Filter" && check.representation?.id === "effect/schema/isStringFinite")
+  )
 }
 
 function nullOr(text: string, value: string) {
@@ -218,6 +286,14 @@ function strip(r: R, refs: Refs): { optional: boolean; nullable: boolean; core: 
   if (members.length === 1) return { optional, nullable, core: members[0] }
   if (members.length === 0) return { optional, nullable, core: undefined }
   return { optional, nullable, core: optional || nullable ? ({ ...resolved, types: members } as R) : resolved }
+}
+
+function collapse(r: R, refs: Refs): R {
+  const resolved = unwrap(r, refs)
+  if (resolved._tag !== "Union") return resolved
+  const members = resolved.types.filter((member) => !absent.has(unwrap(member, refs)._tag))
+  if (members.length !== 1) return resolved
+  return collapse(members[0]!, refs)
 }
 
 function unwrap(r: R, refs: Refs): R {

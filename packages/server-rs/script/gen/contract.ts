@@ -331,6 +331,7 @@ const errorsFile = `${root}crates/contract/src/generated/errors.rs`
 const routesFile = `${root}crates/contract/src/generated/routes.rs`
 const operationsFile = `${root}crates/contract/src/generated/operations.rs`
 const requestsFile = `${root}crates/contract/src/generated/requests.rs`
+const patternsFile = `${root}crates/contract/src/generated/patterns.rs`
 const modFile = `${root}crates/contract/src/generated/mod.rs`
 await mkdir(`${root}crates/contract/src/generated`, { recursive: true })
 
@@ -420,6 +421,10 @@ await Bun.write(
   `${header()}\n#![allow(clippy::all, clippy::pedantic)]\nuse serde_json::Value;\n\n${requestTypes.items().join("\n\n")}\n`,
 )
 await Bun.write(
+  patternsFile,
+  `${header()}\n#![allow(clippy::all, clippy::pedantic)]\n\n${types.patternStatics().join("\n\n")}\n`,
+)
+await Bun.write(
   idsFile,
   `${header()}\n#![allow(clippy::all, clippy::pedantic)]\nuse serde_json::Value;\n\n${types.items("ids").join("\n\n")}\n`,
 )
@@ -489,11 +494,14 @@ await Bun.write(
 mod errors;
 mod events;
 mod ids;
+mod patterns;
 pub mod operations;
 pub mod requests;
 mod routes;
 mod types;
 
+#[doc(hidden)]
+pub use patterns::compile_all_patterns;
 pub use errors::{ApiError, ERROR_STATUS};
 pub use events::{DurableEvent, PublicEvent, SessionLogItem, DURABLE_EVENTS, PUBLIC_EVENT_TYPES};
 pub use ids::*;
@@ -521,6 +529,7 @@ const format = Bun.spawnSync(
     eventsFile,
     errorsFile,
     requestsFile,
+    patternsFile,
     routesFile,
     operationsFile,
   ],

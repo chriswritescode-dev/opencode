@@ -15,12 +15,12 @@ export async function pin() {
 
 export async function upstreamTree(commit?: string) {
   const revision = commit ?? (await pin())
+  await requireVersions(revision)
   const directory = `${root}target/upstream/${revision}`
   if (await Bun.file(`${directory}/.complete`).exists()) return directory
   await rm(directory, { recursive: true, force: true })
   await mkdir(directory, { recursive: true })
   await extract(revision, directory)
-  await requireVersions(revision)
   await link(directory)
   await Bun.write(`${directory}/.complete`, "")
   return directory

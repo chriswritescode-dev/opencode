@@ -1,9 +1,3 @@
-use std::collections::HashMap;
-use std::sync::{LazyLock, Mutex};
-
-static PATTERNS: LazyLock<Mutex<HashMap<&'static str, Option<regex_lite::Regex>>>> =
-    LazyLock::new(|| Mutex::new(HashMap::new()));
-
 pub fn is_int(value: f64) -> bool {
     value.is_finite() && value.fract() == 0.0 && value.abs() <= 9_007_199_254_740_991.0
 }
@@ -48,12 +42,8 @@ pub fn is_max_items<T>(value: &[T], maximum: usize) -> bool {
     value.len() <= maximum
 }
 
-pub fn is_pattern(value: &str, pattern: &'static str) -> bool {
-    let mut patterns = PATTERNS.lock().unwrap_or_else(|error| error.into_inner());
-    match patterns.entry(pattern).or_insert_with(|| regex_lite::Regex::new(pattern).ok()) {
-        Some(compiled) => compiled.is_match(value),
-        None => false,
-    }
+pub fn is_pattern(value: &str, pattern: &regex_lite::Regex) -> bool {
+    pattern.is_match(value)
 }
 
 pub fn is_starting_with(value: &str, prefix: &str) -> bool {

@@ -30,8 +30,8 @@ The Rust replacement for the TypeScript OpenCode server process, the `opencode-s
   `target/upstream/<commit>` from `git archive` at the commit in `upstream-pin`; they never read the working tree,
   which can be newer.
 - `bun run drift:report <commit>` from this package compares the pin with a target commit and reports changed
-  operations, component schemas, events, durable members and migrations. Its `git diff` pathspecs are relative to
-  the working directory, so run it from `packages/server-rs` or prefix paths with `:/`.
+  operations, component schemas, events, durable members and migrations. Its `git` commands run from the
+  repository top level, so it works from any directory.
 
 ## Checks
 

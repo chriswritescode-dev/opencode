@@ -14,6 +14,7 @@ on:
       - packages/cli-rs/crates/api-types/**
       - packages/cli-rs/crates/api/**
       - packages/cli-rs/crates/service/**
+      - packages/cli-rs/script/rust/types.ts
       - .github/workflows/check-server-rs.yml
   push:
     branches: [dev]
@@ -29,6 +30,7 @@ on:
       - packages/cli-rs/crates/api-types/**
       - packages/cli-rs/crates/api/**
       - packages/cli-rs/crates/service/**
+      - packages/cli-rs/script/rust/types.ts
       - .github/workflows/check-server-rs.yml
   workflow_dispatch:
 

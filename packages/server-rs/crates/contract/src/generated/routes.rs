@@ -61,7 +61,7 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Json,
         success_status: 200,
         wildcard: false,
-        errors: &[("UnauthorizedError", 401), ("InvalidRequestError", 400)],
+        errors: &[("LocationNotFoundError", 404), ("UnauthorizedError", 401), ("InvalidRequestError", 400)],
     },
     Route {
         operation_id: "location.reload",
@@ -91,7 +91,7 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Json,
         success_status: 200,
         wildcard: false,
-        errors: &[("UnauthorizedError", 401), ("InvalidRequestError", 400)],
+        errors: &[("LocationNotFoundError", 404), ("UnauthorizedError", 401), ("InvalidRequestError", 400)],
     },
     Route {
         operation_id: "agent.get",
@@ -106,7 +106,12 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Json,
         success_status: 200,
         wildcard: false,
-        errors: &[("AgentNotFoundError", 404), ("UnauthorizedError", 401), ("InvalidRequestError", 400)],
+        errors: &[
+            ("AgentNotFoundError", 404),
+            ("LocationNotFoundError", 404),
+            ("UnauthorizedError", 401),
+            ("InvalidRequestError", 400),
+        ],
     },
     Route {
         operation_id: "plugin.list",
@@ -121,7 +126,7 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Json,
         success_status: 200,
         wildcard: false,
-        errors: &[("UnauthorizedError", 401), ("InvalidRequestError", 400)],
+        errors: &[("LocationNotFoundError", 404), ("UnauthorizedError", 401), ("InvalidRequestError", 400)],
     },
     Route {
         operation_id: "plugin.gui",
@@ -136,7 +141,12 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Json,
         success_status: 200,
         wildcard: false,
-        errors: &[("PluginNotFoundError", 404), ("UnauthorizedError", 401), ("InvalidRequestError", 400)],
+        errors: &[
+            ("PluginNotFoundError", 404),
+            ("LocationNotFoundError", 404),
+            ("UnauthorizedError", 401),
+            ("InvalidRequestError", 400),
+        ],
     },
     Route {
         operation_id: "plugin.check",
@@ -151,7 +161,7 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Json,
         success_status: 200,
         wildcard: false,
-        errors: &[("InvalidRequestError", 400), ("UnauthorizedError", 401)],
+        errors: &[("InvalidRequestError", 400), ("LocationNotFoundError", 404), ("UnauthorizedError", 401)],
     },
     Route {
         operation_id: "plugin.update",
@@ -166,7 +176,12 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Empty,
         success_status: 204,
         wildcard: false,
-        errors: &[("InvalidRequestError", 400), ("ServiceUnavailableError", 503), ("UnauthorizedError", 401)],
+        errors: &[
+            ("InvalidRequestError", 400),
+            ("ServiceUnavailableError", 503),
+            ("LocationNotFoundError", 404),
+            ("UnauthorizedError", 401),
+        ],
     },
     Route {
         operation_id: "session.list",
@@ -400,6 +415,7 @@ pub static ROUTES: [Route; 178] = [
             ("ConflictError", 409),
             ("InvalidRequestError", 400),
             ("SessionNotFoundError", 404),
+            ("LocationNotFoundError", 404),
             ("UnauthorizedError", 401),
         ],
     },
@@ -419,9 +435,10 @@ pub static ROUTES: [Route; 178] = [
         errors: &[
             ("SessionNotFoundError", 404),
             ("CommandNotFoundError", 404),
+            ("LocationNotFoundError", 404),
             ("CommandExecutionError", 500),
-            ("UnauthorizedError", 401),
             ("InvalidRequestError", 400),
+            ("UnauthorizedError", 401),
         ],
     },
     Route {
@@ -440,8 +457,9 @@ pub static ROUTES: [Route; 178] = [
         errors: &[
             ("SessionNotFoundError", 404),
             ("SkillNotFoundError", 404),
-            ("UnauthorizedError", 401),
+            ("LocationNotFoundError", 404),
             ("InvalidRequestError", 400),
+            ("UnauthorizedError", 401),
         ],
     },
     Route {
@@ -477,7 +495,12 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Empty,
         success_status: 204,
         wildcard: false,
-        errors: &[("SessionNotFoundError", 404), ("UnauthorizedError", 401), ("InvalidRequestError", 400)],
+        errors: &[
+            ("SessionNotFoundError", 404),
+            ("LocationNotFoundError", 404),
+            ("InvalidRequestError", 400),
+            ("UnauthorizedError", 401),
+        ],
     },
     Route {
         operation_id: "session.compact",
@@ -535,10 +558,11 @@ pub static ROUTES: [Route; 178] = [
         errors: &[
             ("MessageNotFoundError", 404),
             ("SessionNotFoundError", 404),
+            ("LocationNotFoundError", 404),
             ("SessionBusyError", 409),
             ("UnknownError", 500),
-            ("UnauthorizedError", 401),
             ("InvalidRequestError", 400),
+            ("UnauthorizedError", 401),
         ],
     },
     Route {
@@ -556,10 +580,11 @@ pub static ROUTES: [Route; 178] = [
         wildcard: false,
         errors: &[
             ("SessionNotFoundError", 404),
+            ("LocationNotFoundError", 404),
             ("SessionBusyError", 409),
             ("UnknownError", 500),
-            ("UnauthorizedError", 401),
             ("InvalidRequestError", 400),
+            ("UnauthorizedError", 401),
         ],
     },
     Route {
@@ -739,9 +764,10 @@ pub static ROUTES: [Route; 178] = [
         wildcard: false,
         errors: &[
             ("SessionNotFoundError", 404),
+            ("LocationNotFoundError", 404),
             ("ServiceUnavailableError", 503),
-            ("UnauthorizedError", 401),
             ("InvalidRequestError", 400),
+            ("UnauthorizedError", 401),
         ],
     },
     Route {
@@ -822,7 +848,12 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Data,
         success_status: 200,
         wildcard: false,
-        errors: &[("SessionNotFoundError", 404), ("UnauthorizedError", 401), ("InvalidRequestError", 400)],
+        errors: &[
+            ("SessionNotFoundError", 404),
+            ("LocationNotFoundError", 404),
+            ("InvalidRequestError", 400),
+            ("UnauthorizedError", 401),
+        ],
     },
     Route {
         operation_id: "session.form.create",
@@ -839,6 +870,7 @@ pub static ROUTES: [Route; 178] = [
         wildcard: false,
         errors: &[
             ("SessionNotFoundError", 404),
+            ("LocationNotFoundError", 404),
             ("ConflictError", 409),
             ("InvalidRequestError", 400),
             ("UnauthorizedError", 401),
@@ -860,8 +892,9 @@ pub static ROUTES: [Route; 178] = [
         errors: &[
             ("SessionNotFoundError", 404),
             ("FormNotFoundError", 404),
-            ("UnauthorizedError", 401),
+            ("LocationNotFoundError", 404),
             ("InvalidRequestError", 400),
+            ("UnauthorizedError", 401),
         ],
     },
     Route {
@@ -880,9 +913,10 @@ pub static ROUTES: [Route; 178] = [
         errors: &[
             ("SessionNotFoundError", 404),
             ("FormNotFoundError", 404),
+            ("LocationNotFoundError", 404),
             ("FormAlreadySettledError", 409),
-            ("UnauthorizedError", 401),
             ("InvalidRequestError", 400),
+            ("UnauthorizedError", 401),
         ],
     },
     Route {
@@ -901,6 +935,7 @@ pub static ROUTES: [Route; 178] = [
         errors: &[
             ("SessionNotFoundError", 404),
             ("FormNotFoundError", 404),
+            ("LocationNotFoundError", 404),
             ("FormAlreadySettledError", 409),
             ("FormInvalidAnswerError", 400),
             ("InvalidRequestError", 400),
@@ -971,7 +1006,12 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Json,
         success_status: 200,
         wildcard: false,
-        errors: &[("ServiceUnavailableError", 503), ("UnauthorizedError", 401), ("InvalidRequestError", 400)],
+        errors: &[
+            ("ServiceUnavailableError", 503),
+            ("LocationNotFoundError", 404),
+            ("UnauthorizedError", 401),
+            ("InvalidRequestError", 400),
+        ],
     },
     Route {
         operation_id: "model.default",
@@ -986,7 +1026,12 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Json,
         success_status: 200,
         wildcard: false,
-        errors: &[("ServiceUnavailableError", 503), ("UnauthorizedError", 401), ("InvalidRequestError", 400)],
+        errors: &[
+            ("ServiceUnavailableError", 503),
+            ("LocationNotFoundError", 404),
+            ("UnauthorizedError", 401),
+            ("InvalidRequestError", 400),
+        ],
     },
     Route {
         operation_id: "experimental.generate.text",
@@ -1183,7 +1228,12 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Json,
         success_status: 200,
         wildcard: false,
-        errors: &[("ServiceUnavailableError", 503), ("UnauthorizedError", 401), ("InvalidRequestError", 400)],
+        errors: &[
+            ("ServiceUnavailableError", 503),
+            ("LocationNotFoundError", 404),
+            ("UnauthorizedError", 401),
+            ("InvalidRequestError", 400),
+        ],
     },
     Route {
         operation_id: "provider.get",
@@ -1200,6 +1250,7 @@ pub static ROUTES: [Route; 178] = [
         wildcard: false,
         errors: &[
             ("ProviderNotFoundError", 404),
+            ("LocationNotFoundError", 404),
             ("ServiceUnavailableError", 503),
             ("UnauthorizedError", 401),
             ("InvalidRequestError", 400),
@@ -1218,7 +1269,7 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Json,
         success_status: 200,
         wildcard: false,
-        errors: &[("UnauthorizedError", 401), ("InvalidRequestError", 400)],
+        errors: &[("LocationNotFoundError", 404), ("UnauthorizedError", 401), ("InvalidRequestError", 400)],
     },
     Route {
         operation_id: "integration.get",
@@ -1233,7 +1284,12 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Json,
         success_status: 200,
         wildcard: false,
-        errors: &[("IntegrationNotFoundError", 404), ("UnauthorizedError", 401), ("InvalidRequestError", 400)],
+        errors: &[
+            ("IntegrationNotFoundError", 404),
+            ("LocationNotFoundError", 404),
+            ("UnauthorizedError", 401),
+            ("InvalidRequestError", 400),
+        ],
     },
     Route {
         operation_id: "experimental.integration.wellknown.add",
@@ -1248,7 +1304,7 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Empty,
         success_status: 204,
         wildcard: false,
-        errors: &[("InvalidRequestError", 400), ("UnauthorizedError", 401)],
+        errors: &[("InvalidRequestError", 400), ("LocationNotFoundError", 404), ("UnauthorizedError", 401)],
     },
     Route {
         operation_id: "integration.connect.key",
@@ -1263,7 +1319,12 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Empty,
         success_status: 204,
         wildcard: false,
-        errors: &[("IntegrationNotFoundError", 404), ("InvalidRequestError", 400), ("UnauthorizedError", 401)],
+        errors: &[
+            ("IntegrationNotFoundError", 404),
+            ("LocationNotFoundError", 404),
+            ("InvalidRequestError", 400),
+            ("UnauthorizedError", 401),
+        ],
     },
     Route {
         operation_id: "integration.connect.external",
@@ -1278,7 +1339,12 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Empty,
         success_status: 204,
         wildcard: false,
-        errors: &[("IntegrationNotFoundError", 404), ("InvalidRequestError", 400), ("UnauthorizedError", 401)],
+        errors: &[
+            ("IntegrationNotFoundError", 404),
+            ("LocationNotFoundError", 404),
+            ("InvalidRequestError", 400),
+            ("UnauthorizedError", 401),
+        ],
     },
     Route {
         operation_id: "integration.oauth.connect",
@@ -1293,7 +1359,7 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Json,
         success_status: 200,
         wildcard: false,
-        errors: &[("InvalidRequestError", 400), ("UnauthorizedError", 401)],
+        errors: &[("InvalidRequestError", 400), ("LocationNotFoundError", 404), ("UnauthorizedError", 401)],
     },
     Route {
         operation_id: "integration.oauth.status",
@@ -1311,6 +1377,7 @@ pub static ROUTES: [Route; 178] = [
         errors: &[
             ("IntegrationNotFoundError", 404),
             ("IntegrationAttemptNotFoundError", 404),
+            ("LocationNotFoundError", 404),
             ("UnauthorizedError", 401),
             ("InvalidRequestError", 400),
         ],
@@ -1328,7 +1395,7 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Empty,
         success_status: 204,
         wildcard: false,
-        errors: &[("UnauthorizedError", 401), ("InvalidRequestError", 400)],
+        errors: &[("LocationNotFoundError", 404), ("UnauthorizedError", 401), ("InvalidRequestError", 400)],
     },
     Route {
         operation_id: "integration.oauth.complete",
@@ -1346,6 +1413,7 @@ pub static ROUTES: [Route; 178] = [
         errors: &[
             ("IntegrationNotFoundError", 404),
             ("IntegrationAttemptNotFoundError", 404),
+            ("LocationNotFoundError", 404),
             ("InvalidRequestError", 400),
             ("UnauthorizedError", 401),
         ],
@@ -1366,6 +1434,7 @@ pub static ROUTES: [Route; 178] = [
         errors: &[
             ("IntegrationNotFoundError", 404),
             ("IntegrationMethodNotFoundError", 404),
+            ("LocationNotFoundError", 404),
             ("InvalidRequestError", 400),
             ("UnauthorizedError", 401),
         ],
@@ -1386,6 +1455,7 @@ pub static ROUTES: [Route; 178] = [
         errors: &[
             ("IntegrationNotFoundError", 404),
             ("IntegrationAttemptNotFoundError", 404),
+            ("LocationNotFoundError", 404),
             ("UnauthorizedError", 401),
             ("InvalidRequestError", 400),
         ],
@@ -1403,7 +1473,7 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Empty,
         success_status: 204,
         wildcard: false,
-        errors: &[("UnauthorizedError", 401), ("InvalidRequestError", 400)],
+        errors: &[("LocationNotFoundError", 404), ("UnauthorizedError", 401), ("InvalidRequestError", 400)],
     },
     Route {
         operation_id: "mcp.list",
@@ -1418,7 +1488,7 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Json,
         success_status: 200,
         wildcard: false,
-        errors: &[("UnauthorizedError", 401), ("InvalidRequestError", 400)],
+        errors: &[("LocationNotFoundError", 404), ("UnauthorizedError", 401), ("InvalidRequestError", 400)],
     },
     Route {
         operation_id: "experimental.mcp.add",
@@ -1433,7 +1503,7 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Empty,
         success_status: 204,
         wildcard: false,
-        errors: &[("UnauthorizedError", 401), ("InvalidRequestError", 400)],
+        errors: &[("LocationNotFoundError", 404), ("UnauthorizedError", 401), ("InvalidRequestError", 400)],
     },
     Route {
         operation_id: "experimental.mcp.remove",
@@ -1448,7 +1518,12 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Empty,
         success_status: 204,
         wildcard: false,
-        errors: &[("McpServerNotFoundError", 404), ("UnauthorizedError", 401), ("InvalidRequestError", 400)],
+        errors: &[
+            ("McpServerNotFoundError", 404),
+            ("LocationNotFoundError", 404),
+            ("UnauthorizedError", 401),
+            ("InvalidRequestError", 400),
+        ],
     },
     Route {
         operation_id: "experimental.mcp.connect",
@@ -1463,7 +1538,12 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Empty,
         success_status: 204,
         wildcard: false,
-        errors: &[("McpServerNotFoundError", 404), ("UnauthorizedError", 401), ("InvalidRequestError", 400)],
+        errors: &[
+            ("McpServerNotFoundError", 404),
+            ("LocationNotFoundError", 404),
+            ("UnauthorizedError", 401),
+            ("InvalidRequestError", 400),
+        ],
     },
     Route {
         operation_id: "experimental.mcp.disconnect",
@@ -1478,7 +1558,12 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Empty,
         success_status: 204,
         wildcard: false,
-        errors: &[("McpServerNotFoundError", 404), ("UnauthorizedError", 401), ("InvalidRequestError", 400)],
+        errors: &[
+            ("McpServerNotFoundError", 404),
+            ("LocationNotFoundError", 404),
+            ("UnauthorizedError", 401),
+            ("InvalidRequestError", 400),
+        ],
     },
     Route {
         operation_id: "mcp.resource.catalog",
@@ -1493,7 +1578,7 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Json,
         success_status: 200,
         wildcard: false,
-        errors: &[("UnauthorizedError", 401), ("InvalidRequestError", 400)],
+        errors: &[("LocationNotFoundError", 404), ("UnauthorizedError", 401), ("InvalidRequestError", 400)],
     },
     Route {
         operation_id: "experimental.mcp.client.token",
@@ -1508,7 +1593,12 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Json,
         success_status: 200,
         wildcard: false,
-        errors: &[("ForbiddenError", 403), ("UnauthorizedError", 401), ("InvalidRequestError", 400)],
+        errors: &[
+            ("ForbiddenError", 403),
+            ("LocationNotFoundError", 404),
+            ("UnauthorizedError", 401),
+            ("InvalidRequestError", 400),
+        ],
     },
     Route {
         operation_id: "experimental.mcp.client",
@@ -1648,7 +1738,7 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Json,
         success_status: 200,
         wildcard: false,
-        errors: &[("UnauthorizedError", 401), ("InvalidRequestError", 400)],
+        errors: &[("LocationNotFoundError", 404), ("UnauthorizedError", 401), ("InvalidRequestError", 400)],
     },
     Route {
         operation_id: "permission.request.list",
@@ -1663,7 +1753,7 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Json,
         success_status: 200,
         wildcard: false,
-        errors: &[("UnauthorizedError", 401), ("InvalidRequestError", 400)],
+        errors: &[("LocationNotFoundError", 404), ("UnauthorizedError", 401), ("InvalidRequestError", 400)],
     },
     Route {
         operation_id: "permission.saved.list",
@@ -1678,7 +1768,7 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Data,
         success_status: 200,
         wildcard: false,
-        errors: &[("UnauthorizedError", 401), ("InvalidRequestError", 400)],
+        errors: &[("LocationNotFoundError", 404), ("UnauthorizedError", 401), ("InvalidRequestError", 400)],
     },
     Route {
         operation_id: "permission.saved.update",
@@ -1728,7 +1818,12 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Data,
         success_status: 200,
         wildcard: false,
-        errors: &[("SessionNotFoundError", 404), ("UnauthorizedError", 401), ("InvalidRequestError", 400)],
+        errors: &[
+            ("SessionNotFoundError", 404),
+            ("LocationNotFoundError", 404),
+            ("InvalidRequestError", 400),
+            ("UnauthorizedError", 401),
+        ],
     },
     Route {
         operation_id: "session.permission.list",
@@ -1766,8 +1861,9 @@ pub static ROUTES: [Route; 178] = [
         errors: &[
             ("SessionNotFoundError", 404),
             ("PermissionNotFoundError", 404),
-            ("UnauthorizedError", 401),
+            ("LocationNotFoundError", 404),
             ("InvalidRequestError", 400),
+            ("UnauthorizedError", 401),
         ],
     },
     Route {
@@ -1786,8 +1882,9 @@ pub static ROUTES: [Route; 178] = [
         errors: &[
             ("SessionNotFoundError", 404),
             ("PermissionNotFoundError", 404),
-            ("UnauthorizedError", 401),
+            ("LocationNotFoundError", 404),
             ("InvalidRequestError", 400),
+            ("UnauthorizedError", 401),
         ],
     },
     Route {
@@ -1803,7 +1900,12 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Binary,
         success_status: 200,
         wildcard: true,
-        errors: &[("FileNotFoundError", 404), ("UnauthorizedError", 401), ("InvalidRequestError", 400)],
+        errors: &[
+            ("FileNotFoundError", 404),
+            ("LocationNotFoundError", 404),
+            ("UnauthorizedError", 401),
+            ("InvalidRequestError", 400),
+        ],
     },
     Route {
         operation_id: "fs.list",
@@ -1818,7 +1920,12 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Json,
         success_status: 200,
         wildcard: false,
-        errors: &[("FileNotFoundError", 404), ("UnauthorizedError", 401), ("InvalidRequestError", 400)],
+        errors: &[
+            ("FileNotFoundError", 404),
+            ("LocationNotFoundError", 404),
+            ("UnauthorizedError", 401),
+            ("InvalidRequestError", 400),
+        ],
     },
     Route {
         operation_id: "fs.find",
@@ -1833,7 +1940,7 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Json,
         success_status: 200,
         wildcard: false,
-        errors: &[("UnauthorizedError", 401), ("InvalidRequestError", 400)],
+        errors: &[("LocationNotFoundError", 404), ("UnauthorizedError", 401), ("InvalidRequestError", 400)],
     },
     Route {
         operation_id: "experimental.fs.write",
@@ -1848,7 +1955,7 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Json,
         success_status: 200,
         wildcard: false,
-        errors: &[("UnauthorizedError", 401), ("InvalidRequestError", 400)],
+        errors: &[("LocationNotFoundError", 404), ("UnauthorizedError", 401), ("InvalidRequestError", 400)],
     },
     Route {
         operation_id: "experimental.fs.watch",
@@ -1865,6 +1972,7 @@ pub static ROUTES: [Route; 178] = [
         wildcard: false,
         errors: &[
             ("FileNotFoundError", 404),
+            ("LocationNotFoundError", 404),
             ("ServiceUnavailableError", 503),
             ("UnauthorizedError", 401),
             ("InvalidRequestError", 400),
@@ -1883,7 +1991,7 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Empty,
         success_status: 204,
         wildcard: false,
-        errors: &[("UnauthorizedError", 401), ("InvalidRequestError", 400)],
+        errors: &[("LocationNotFoundError", 404), ("UnauthorizedError", 401), ("InvalidRequestError", 400)],
     },
     Route {
         operation_id: "command.list",
@@ -1898,7 +2006,7 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Json,
         success_status: 200,
         wildcard: false,
-        errors: &[("UnauthorizedError", 401), ("InvalidRequestError", 400)],
+        errors: &[("LocationNotFoundError", 404), ("UnauthorizedError", 401), ("InvalidRequestError", 400)],
     },
     Route {
         operation_id: "skill.list",
@@ -1913,7 +2021,7 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Json,
         success_status: 200,
         wildcard: false,
-        errors: &[("UnauthorizedError", 401), ("InvalidRequestError", 400)],
+        errors: &[("LocationNotFoundError", 404), ("UnauthorizedError", 401), ("InvalidRequestError", 400)],
     },
     Route {
         operation_id: "rpc.call",
@@ -1932,6 +2040,7 @@ pub static ROUTES: [Route; 178] = [
             ("RpcError", 400),
             ("InvalidRequestError", 400),
             ("RpcInternalError", 500),
+            ("LocationNotFoundError", 404),
             ("UnauthorizedError", 401),
         ],
     },
@@ -1963,7 +2072,7 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Json,
         success_status: 200,
         wildcard: false,
-        errors: &[("UnauthorizedError", 401), ("InvalidRequestError", 400)],
+        errors: &[("LocationNotFoundError", 404), ("UnauthorizedError", 401), ("InvalidRequestError", 400)],
     },
     Route {
         operation_id: "pty.create",
@@ -1978,7 +2087,7 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Json,
         success_status: 200,
         wildcard: false,
-        errors: &[("UnauthorizedError", 401), ("InvalidRequestError", 400)],
+        errors: &[("LocationNotFoundError", 404), ("UnauthorizedError", 401), ("InvalidRequestError", 400)],
     },
     Route {
         operation_id: "pty.get",
@@ -1993,7 +2102,12 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Json,
         success_status: 200,
         wildcard: false,
-        errors: &[("PtyNotFoundError", 404), ("UnauthorizedError", 401), ("InvalidRequestError", 400)],
+        errors: &[
+            ("PtyNotFoundError", 404),
+            ("LocationNotFoundError", 404),
+            ("UnauthorizedError", 401),
+            ("InvalidRequestError", 400),
+        ],
     },
     Route {
         operation_id: "pty.update",
@@ -2008,7 +2122,12 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Json,
         success_status: 200,
         wildcard: false,
-        errors: &[("PtyNotFoundError", 404), ("UnauthorizedError", 401), ("InvalidRequestError", 400)],
+        errors: &[
+            ("PtyNotFoundError", 404),
+            ("LocationNotFoundError", 404),
+            ("UnauthorizedError", 401),
+            ("InvalidRequestError", 400),
+        ],
     },
     Route {
         operation_id: "pty.remove",
@@ -2023,7 +2142,12 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Empty,
         success_status: 204,
         wildcard: false,
-        errors: &[("PtyNotFoundError", 404), ("UnauthorizedError", 401), ("InvalidRequestError", 400)],
+        errors: &[
+            ("PtyNotFoundError", 404),
+            ("LocationNotFoundError", 404),
+            ("UnauthorizedError", 401),
+            ("InvalidRequestError", 400),
+        ],
     },
     Route {
         operation_id: "pty.connect.token",
@@ -2041,6 +2165,7 @@ pub static ROUTES: [Route; 178] = [
         errors: &[
             ("ForbiddenError", 403),
             ("PtyNotFoundError", 404),
+            ("LocationNotFoundError", 404),
             ("UnauthorizedError", 401),
             ("InvalidRequestError", 400),
         ],
@@ -2684,7 +2809,7 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Json,
         success_status: 200,
         wildcard: false,
-        errors: &[("UnauthorizedError", 401), ("InvalidRequestError", 400)],
+        errors: &[("LocationNotFoundError", 404), ("UnauthorizedError", 401), ("InvalidRequestError", 400)],
     },
     Route {
         operation_id: "shell.create",
@@ -2699,7 +2824,7 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Json,
         success_status: 200,
         wildcard: false,
-        errors: &[("UnauthorizedError", 401), ("InvalidRequestError", 400)],
+        errors: &[("LocationNotFoundError", 404), ("UnauthorizedError", 401), ("InvalidRequestError", 400)],
     },
     Route {
         operation_id: "shell.get",
@@ -2714,7 +2839,12 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Json,
         success_status: 200,
         wildcard: false,
-        errors: &[("ShellNotFoundError", 404), ("UnauthorizedError", 401), ("InvalidRequestError", 400)],
+        errors: &[
+            ("ShellNotFoundError", 404),
+            ("LocationNotFoundError", 404),
+            ("UnauthorizedError", 401),
+            ("InvalidRequestError", 400),
+        ],
     },
     Route {
         operation_id: "shell.remove",
@@ -2729,7 +2859,7 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Empty,
         success_status: 204,
         wildcard: false,
-        errors: &[("UnauthorizedError", 401), ("InvalidRequestError", 400)],
+        errors: &[("LocationNotFoundError", 404), ("UnauthorizedError", 401), ("InvalidRequestError", 400)],
     },
     Route {
         operation_id: "shell.output",
@@ -2744,7 +2874,12 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Json,
         success_status: 200,
         wildcard: false,
-        errors: &[("ShellNotFoundError", 404), ("UnauthorizedError", 401), ("InvalidRequestError", 400)],
+        errors: &[
+            ("ShellNotFoundError", 404),
+            ("LocationNotFoundError", 404),
+            ("UnauthorizedError", 401),
+            ("InvalidRequestError", 400),
+        ],
     },
     Route {
         operation_id: "reference.list",
@@ -2759,7 +2894,7 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Json,
         success_status: 200,
         wildcard: false,
-        errors: &[("UnauthorizedError", 401), ("InvalidRequestError", 400)],
+        errors: &[("LocationNotFoundError", 404), ("UnauthorizedError", 401), ("InvalidRequestError", 400)],
     },
     Route {
         operation_id: "worktree.list",
@@ -2854,6 +2989,7 @@ pub static ROUTES: [Route; 178] = [
             ("InvalidRequestError", 400),
             ("VcsInitNotSupportedError", 501),
             ("ServiceUnavailableError", 503),
+            ("LocationNotFoundError", 404),
             ("UnauthorizedError", 401),
         ],
     },
@@ -2870,7 +3006,7 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Json,
         success_status: 200,
         wildcard: false,
-        errors: &[("UnauthorizedError", 401), ("InvalidRequestError", 400)],
+        errors: &[("LocationNotFoundError", 404), ("UnauthorizedError", 401), ("InvalidRequestError", 400)],
     },
     Route {
         operation_id: "vcs.base",
@@ -2885,7 +3021,12 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Json,
         success_status: 200,
         wildcard: false,
-        errors: &[("ServiceUnavailableError", 503), ("UnauthorizedError", 401), ("InvalidRequestError", 400)],
+        errors: &[
+            ("ServiceUnavailableError", 503),
+            ("LocationNotFoundError", 404),
+            ("UnauthorizedError", 401),
+            ("InvalidRequestError", 400),
+        ],
     },
     Route {
         operation_id: "vcs.status",
@@ -2900,7 +3041,7 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Json,
         success_status: 200,
         wildcard: false,
-        errors: &[("UnauthorizedError", 401), ("InvalidRequestError", 400)],
+        errors: &[("LocationNotFoundError", 404), ("UnauthorizedError", 401), ("InvalidRequestError", 400)],
     },
     Route {
         operation_id: "vcs.branch.list",
@@ -2915,7 +3056,7 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Json,
         success_status: 200,
         wildcard: false,
-        errors: &[("UnauthorizedError", 401), ("InvalidRequestError", 400)],
+        errors: &[("LocationNotFoundError", 404), ("UnauthorizedError", 401), ("InvalidRequestError", 400)],
     },
     Route {
         operation_id: "vcs.diff",
@@ -2930,7 +3071,12 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Json,
         success_status: 200,
         wildcard: false,
-        errors: &[("ServiceUnavailableError", 503), ("UnauthorizedError", 401), ("InvalidRequestError", 400)],
+        errors: &[
+            ("ServiceUnavailableError", 503),
+            ("LocationNotFoundError", 404),
+            ("UnauthorizedError", 401),
+            ("InvalidRequestError", 400),
+        ],
     },
     Route {
         operation_id: "debug.heapDump",
@@ -3005,7 +3151,12 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Json,
         success_status: 200,
         wildcard: false,
-        errors: &[("ServiceUnavailableError", 503), ("UnauthorizedError", 401), ("InvalidRequestError", 400)],
+        errors: &[
+            ("ServiceUnavailableError", 503),
+            ("LocationNotFoundError", 404),
+            ("UnauthorizedError", 401),
+            ("InvalidRequestError", 400),
+        ],
     },
     Route {
         operation_id: "websearch.query",
@@ -3020,7 +3171,12 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Json,
         success_status: 200,
         wildcard: false,
-        errors: &[("InvalidRequestError", 400), ("ServiceUnavailableError", 503), ("UnauthorizedError", 401)],
+        errors: &[
+            ("InvalidRequestError", 400),
+            ("ServiceUnavailableError", 503),
+            ("LocationNotFoundError", 404),
+            ("UnauthorizedError", 401),
+        ],
     },
     Route {
         operation_id: "experimental.usage.limits",
@@ -3035,7 +3191,12 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Json,
         success_status: 200,
         wildcard: false,
-        errors: &[("ServiceUnavailableError", 503), ("UnauthorizedError", 401), ("InvalidRequestError", 400)],
+        errors: &[
+            ("ServiceUnavailableError", 503),
+            ("LocationNotFoundError", 404),
+            ("UnauthorizedError", 401),
+            ("InvalidRequestError", 400),
+        ],
     },
     Route {
         operation_id: "config.get",
@@ -3050,7 +3211,7 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Json,
         success_status: 200,
         wildcard: false,
-        errors: &[("UnauthorizedError", 401), ("InvalidRequestError", 400)],
+        errors: &[("LocationNotFoundError", 404), ("UnauthorizedError", 401), ("InvalidRequestError", 400)],
     },
     Route {
         operation_id: "config.shells",
@@ -3065,7 +3226,7 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Json,
         success_status: 200,
         wildcard: false,
-        errors: &[("UnauthorizedError", 401), ("InvalidRequestError", 400)],
+        errors: &[("LocationNotFoundError", 404), ("UnauthorizedError", 401), ("InvalidRequestError", 400)],
     },
     Route {
         operation_id: "experimental.config.update",
@@ -3080,6 +3241,6 @@ pub static ROUTES: [Route; 178] = [
         success: SuccessKind::Empty,
         success_status: 204,
         wildcard: false,
-        errors: &[("UnauthorizedError", 401), ("InvalidRequestError", 400)],
+        errors: &[("LocationNotFoundError", 404), ("UnauthorizedError", 401), ("InvalidRequestError", 400)],
     },
 ];

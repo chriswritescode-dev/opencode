@@ -5,10 +5,17 @@ import { upstreamTree } from "../upstream"
 const tree = await upstreamTree()
 
 const protocol = await import(`${tree}/packages/protocol/src/api.ts`)
+const protocolErrors = await import(`${tree}/packages/protocol/src/errors.ts`)
 
-class LocationMiddleware extends HttpApiMiddleware.Service<LocationMiddleware>()("@opencode/server-rs/Location", {}) {}
-class FormMiddleware extends HttpApiMiddleware.Service<FormMiddleware>()("@opencode/server-rs/Form", {}) {}
-class SessionMiddleware extends HttpApiMiddleware.Service<SessionMiddleware>()("@opencode/server-rs/Session", {}) {}
+class LocationMiddleware extends HttpApiMiddleware.Service<LocationMiddleware>()("@opencode/server-rs/Location", {
+  error: [protocolErrors.LocationNotFoundError],
+}) {}
+class FormMiddleware extends HttpApiMiddleware.Service<FormMiddleware>()("@opencode/server-rs/Form", {
+  error: [protocolErrors.InvalidRequestError, protocolErrors.SessionNotFoundError, protocolErrors.LocationNotFoundError],
+}) {}
+class SessionMiddleware extends HttpApiMiddleware.Service<SessionMiddleware>()("@opencode/server-rs/Session", {
+  error: [protocolErrors.InvalidRequestError, protocolErrors.SessionNotFoundError, protocolErrors.LocationNotFoundError],
+}) {}
 
 const api = protocol.makeDefaultApi({
   locationMiddleware: LocationMiddleware,

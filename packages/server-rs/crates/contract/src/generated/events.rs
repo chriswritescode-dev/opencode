@@ -838,10 +838,16 @@ pub enum SessionLogItem {
 
 impl crate::codec::Decode for SessionLogItem {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <SessionEventDurable as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <SessionEventDurable as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Durable(member));
         }
-        if let Ok(member) = <EventLogSynced as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventLogSynced as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Synced(member));
         }
         Err(path.at("no member matched"))

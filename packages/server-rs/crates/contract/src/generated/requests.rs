@@ -25,13 +25,13 @@ impl crate::codec::Encode for ServerConnectParams {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct LocationQueryLocation {
-    pub directory: Option<String>,
+    pub directory: Option<Option<String>>,
 }
 
 impl crate::codec::Decode for LocationQueryLocation {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let object = crate::codec::as_object(value, path)?;
-        Ok(Self { directory: crate::codec::decode_optional(object, "directory", path)? })
+        Ok(Self { directory: crate::codec::decode_optional_nullable(object, "directory", path)? })
     }
 }
 
@@ -39,20 +39,20 @@ impl crate::codec::Encode for LocationQueryLocation {
     fn encode(&self, out: &mut String) {
         out.push('{');
         let mut first = true;
-        crate::codec::write_optional(out, &mut first, "directory", &self.directory);
+        crate::codec::write_optional_nullable(out, &mut first, "directory", &self.directory);
         out.push('}');
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct LocationQuery {
-    pub location: Option<LocationQueryLocation>,
+    pub location: Option<Option<LocationQueryLocation>>,
 }
 
 impl crate::codec::Decode for LocationQuery {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let object = crate::codec::as_object(value, path)?;
-        Ok(Self { location: crate::codec::decode_optional(object, "location", path)? })
+        Ok(Self { location: crate::codec::decode_optional_nullable(object, "location", path)? })
     }
 }
 
@@ -60,7 +60,7 @@ impl crate::codec::Encode for LocationQuery {
     fn encode(&self, out: &mut String) {
         out.push('{');
         let mut first = true;
-        crate::codec::write_optional(out, &mut first, "location", &self.location);
+        crate::codec::write_optional_nullable(out, &mut first, "location", &self.location);
         out.push('}');
     }
 }
@@ -103,13 +103,13 @@ impl crate::codec::Encode for AgentGetParams {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct PluginGuiQueryLocation {
-    pub directory: Option<String>,
+    pub directory: Option<Option<String>>,
 }
 
 impl crate::codec::Decode for PluginGuiQueryLocation {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let object = crate::codec::as_object(value, path)?;
-        Ok(Self { directory: crate::codec::decode_optional(object, "directory", path)? })
+        Ok(Self { directory: crate::codec::decode_optional_nullable(object, "directory", path)? })
     }
 }
 
@@ -117,7 +117,7 @@ impl crate::codec::Encode for PluginGuiQueryLocation {
     fn encode(&self, out: &mut String) {
         out.push('{');
         let mut first = true;
-        crate::codec::write_optional(out, &mut first, "directory", &self.directory);
+        crate::codec::write_optional_nullable(out, &mut first, "directory", &self.directory);
         out.push('}');
     }
 }
@@ -139,7 +139,7 @@ impl crate::codec::Encode for PluginID {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct PluginGuiQuery {
-    pub location: Option<PluginGuiQueryLocation>,
+    pub location: Option<Option<PluginGuiQueryLocation>>,
     pub id: PluginID,
 }
 
@@ -147,7 +147,7 @@ impl crate::codec::Decode for PluginGuiQuery {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let object = crate::codec::as_object(value, path)?;
         Ok(Self {
-            location: crate::codec::decode_optional(object, "location", path)?,
+            location: crate::codec::decode_optional_nullable(object, "location", path)?,
             id: crate::codec::decode_field(object, "id", path)?,
         })
     }
@@ -157,7 +157,7 @@ impl crate::codec::Encode for PluginGuiQuery {
     fn encode(&self, out: &mut String) {
         out.push('{');
         let mut first = true;
-        crate::codec::write_optional(out, &mut first, "location", &self.location);
+        crate::codec::write_optional_nullable(out, &mut first, "location", &self.location);
         crate::codec::write_value(out, &mut first, "id", &self.id);
         out.push('}');
     }
@@ -272,22 +272,22 @@ impl crate::codec::Encode for SessionsCursor {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SessionsQuery {
-    pub limit: Option<f64>,
-    pub order: Option<SessionsQueryOrder>,
-    pub search: Option<String>,
+    pub limit: Option<Option<f64>>,
+    pub order: Option<Option<SessionsQueryOrder>>,
+    pub search: Option<Option<String>>,
     pub parent_id: Option<Option<SessionID>>,
-    pub archived: Option<bool>,
-    pub directory: Option<AbsolutePath>,
-    pub project: Option<ProjectID>,
-    pub subpath: Option<RelativePath>,
-    pub cursor: Option<SessionsCursor>,
+    pub archived: Option<Option<bool>>,
+    pub directory: Option<Option<AbsolutePath>>,
+    pub project: Option<Option<ProjectID>>,
+    pub subpath: Option<Option<RelativePath>>,
+    pub cursor: Option<Option<SessionsCursor>>,
 }
 
 impl crate::codec::Decode for SessionsQuery {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let object = crate::codec::as_object(value, path)?;
         Ok(Self {
-            limit: crate::codec::decode_optional_checked(object, "limit", path, |value: &f64, path| {
+            limit: crate::codec::decode_optional_nullable_checked(object, "limit", path, |value: &f64, path| {
                 if !crate::checks::is_int(*value) {
                     return Err(path.at("expected an integer"));
                 }
@@ -296,14 +296,14 @@ impl crate::codec::Decode for SessionsQuery {
                 }
                 Ok(())
             })?,
-            order: crate::codec::decode_optional(object, "order", path)?,
-            search: crate::codec::decode_optional(object, "search", path)?,
+            order: crate::codec::decode_optional_nullable(object, "order", path)?,
+            search: crate::codec::decode_optional_nullable(object, "search", path)?,
             parent_id: crate::codec::decode_optional_nullable(object, "parentID", path)?,
-            archived: crate::codec::decode_optional(object, "archived", path)?,
-            directory: crate::codec::decode_optional(object, "directory", path)?,
-            project: crate::codec::decode_optional(object, "project", path)?,
-            subpath: crate::codec::decode_optional(object, "subpath", path)?,
-            cursor: crate::codec::decode_optional(object, "cursor", path)?,
+            archived: crate::codec::decode_optional_nullable(object, "archived", path)?,
+            directory: crate::codec::decode_optional_nullable(object, "directory", path)?,
+            project: crate::codec::decode_optional_nullable(object, "project", path)?,
+            subpath: crate::codec::decode_optional_nullable(object, "subpath", path)?,
+            cursor: crate::codec::decode_optional_nullable(object, "cursor", path)?,
         })
     }
 }
@@ -312,15 +312,15 @@ impl crate::codec::Encode for SessionsQuery {
     fn encode(&self, out: &mut String) {
         out.push('{');
         let mut first = true;
-        crate::codec::write_optional(out, &mut first, "limit", &self.limit);
-        crate::codec::write_optional(out, &mut first, "order", &self.order);
-        crate::codec::write_optional(out, &mut first, "search", &self.search);
+        crate::codec::write_optional_nullable(out, &mut first, "limit", &self.limit);
+        crate::codec::write_optional_nullable(out, &mut first, "order", &self.order);
+        crate::codec::write_optional_nullable(out, &mut first, "search", &self.search);
         crate::codec::write_optional_nullable(out, &mut first, "parentID", &self.parent_id);
-        crate::codec::write_optional(out, &mut first, "archived", &self.archived);
-        crate::codec::write_optional(out, &mut first, "directory", &self.directory);
-        crate::codec::write_optional(out, &mut first, "project", &self.project);
-        crate::codec::write_optional(out, &mut first, "subpath", &self.subpath);
-        crate::codec::write_optional(out, &mut first, "cursor", &self.cursor);
+        crate::codec::write_optional_nullable(out, &mut first, "archived", &self.archived);
+        crate::codec::write_optional_nullable(out, &mut first, "directory", &self.directory);
+        crate::codec::write_optional_nullable(out, &mut first, "project", &self.project);
+        crate::codec::write_optional_nullable(out, &mut first, "subpath", &self.subpath);
+        crate::codec::write_optional_nullable(out, &mut first, "cursor", &self.cursor);
         out.push('}');
     }
 }
@@ -358,22 +358,22 @@ impl crate::codec::Encode for ExperimentalSessionStatsQueryTools {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExperimentalSessionStatsQuery {
-    pub from: Option<f64>,
-    pub to: Option<f64>,
-    pub project: Option<ProjectID>,
-    pub timezone: Option<String>,
-    pub tools: Option<ExperimentalSessionStatsQueryTools>,
+    pub from: Option<Option<f64>>,
+    pub to: Option<Option<f64>>,
+    pub project: Option<Option<ProjectID>>,
+    pub timezone: Option<Option<String>>,
+    pub tools: Option<Option<ExperimentalSessionStatsQueryTools>>,
 }
 
 impl crate::codec::Decode for ExperimentalSessionStatsQuery {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let object = crate::codec::as_object(value, path)?;
         Ok(Self {
-            from: crate::codec::decode_optional(object, "from", path)?,
-            to: crate::codec::decode_optional(object, "to", path)?,
-            project: crate::codec::decode_optional(object, "project", path)?,
-            timezone: crate::codec::decode_optional(object, "timezone", path)?,
-            tools: crate::codec::decode_optional(object, "tools", path)?,
+            from: crate::codec::decode_optional_nullable(object, "from", path)?,
+            to: crate::codec::decode_optional_nullable(object, "to", path)?,
+            project: crate::codec::decode_optional_nullable(object, "project", path)?,
+            timezone: crate::codec::decode_optional_nullable(object, "timezone", path)?,
+            tools: crate::codec::decode_optional_nullable(object, "tools", path)?,
         })
     }
 }
@@ -382,11 +382,11 @@ impl crate::codec::Encode for ExperimentalSessionStatsQuery {
     fn encode(&self, out: &mut String) {
         out.push('{');
         let mut first = true;
-        crate::codec::write_optional(out, &mut first, "from", &self.from);
-        crate::codec::write_optional(out, &mut first, "to", &self.to);
-        crate::codec::write_optional(out, &mut first, "project", &self.project);
-        crate::codec::write_optional(out, &mut first, "timezone", &self.timezone);
-        crate::codec::write_optional(out, &mut first, "tools", &self.tools);
+        crate::codec::write_optional_nullable(out, &mut first, "from", &self.from);
+        crate::codec::write_optional_nullable(out, &mut first, "to", &self.to);
+        crate::codec::write_optional_nullable(out, &mut first, "project", &self.project);
+        crate::codec::write_optional_nullable(out, &mut first, "timezone", &self.timezone);
+        crate::codec::write_optional_nullable(out, &mut first, "tools", &self.tools);
         out.push('}');
     }
 }
@@ -414,13 +414,13 @@ impl crate::codec::Encode for ExperimentalSessionExportParams {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExperimentalSessionExportQuery {
-    pub sanitize: Option<bool>,
+    pub sanitize: Option<Option<bool>>,
 }
 
 impl crate::codec::Decode for ExperimentalSessionExportQuery {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let object = crate::codec::as_object(value, path)?;
-        Ok(Self { sanitize: crate::codec::decode_optional(object, "sanitize", path)? })
+        Ok(Self { sanitize: crate::codec::decode_optional_nullable(object, "sanitize", path)? })
     }
 }
 
@@ -428,7 +428,7 @@ impl crate::codec::Encode for ExperimentalSessionExportQuery {
     fn encode(&self, out: &mut String) {
         out.push('{');
         let mut first = true;
-        crate::codec::write_optional(out, &mut first, "sanitize", &self.sanitize);
+        crate::codec::write_optional_nullable(out, &mut first, "sanitize", &self.sanitize);
         out.push('}');
     }
 }
@@ -853,18 +853,18 @@ impl crate::codec::Encode for SessionMessageID {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SessionDiffQuery {
-    pub from: Option<SessionMessageID>,
-    pub to: Option<SessionMessageID>,
-    pub context: Option<f64>,
+    pub from: Option<Option<SessionMessageID>>,
+    pub to: Option<Option<SessionMessageID>>,
+    pub context: Option<Option<f64>>,
 }
 
 impl crate::codec::Decode for SessionDiffQuery {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let object = crate::codec::as_object(value, path)?;
         Ok(Self {
-            from: crate::codec::decode_optional(object, "from", path)?,
-            to: crate::codec::decode_optional(object, "to", path)?,
-            context: crate::codec::decode_optional_checked(object, "context", path, |value: &f64, path| {
+            from: crate::codec::decode_optional_nullable(object, "from", path)?,
+            to: crate::codec::decode_optional_nullable(object, "to", path)?,
+            context: crate::codec::decode_optional_nullable_checked(object, "context", path, |value: &f64, path| {
                 if !crate::checks::is_int(*value) {
                     return Err(path.at("expected an integer"));
                 }
@@ -881,9 +881,9 @@ impl crate::codec::Encode for SessionDiffQuery {
     fn encode(&self, out: &mut String) {
         out.push('{');
         let mut first = true;
-        crate::codec::write_optional(out, &mut first, "from", &self.from);
-        crate::codec::write_optional(out, &mut first, "to", &self.to);
-        crate::codec::write_optional(out, &mut first, "context", &self.context);
+        crate::codec::write_optional_nullable(out, &mut first, "from", &self.from);
+        crate::codec::write_optional_nullable(out, &mut first, "to", &self.to);
+        crate::codec::write_optional_nullable(out, &mut first, "context", &self.context);
         out.push('}');
     }
 }
@@ -988,7 +988,7 @@ pub struct InstructionEntryKey(pub String);
 impl crate::codec::Decode for InstructionEntryKey {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let value = <String as crate::codec::Decode>::decode(value, path)?;
-        if !crate::checks::is_pattern(value.as_str(), "^[a-z0-9][a-z0-9._-]*$") {
+        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_4) {
             return Err(path.at("expected a string matching the RegExp ^[a-z0-9][a-z0-9._-]*$"));
         }
         Ok(Self(value))
@@ -1119,16 +1119,16 @@ impl crate::codec::Encode for EventSeq {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExperimentalSessionLogQuery {
-    pub after: Option<EventSeq>,
-    pub follow: Option<bool>,
+    pub after: Option<Option<EventSeq>>,
+    pub follow: Option<Option<bool>>,
 }
 
 impl crate::codec::Decode for ExperimentalSessionLogQuery {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let object = crate::codec::as_object(value, path)?;
         Ok(Self {
-            after: crate::codec::decode_optional(object, "after", path)?,
-            follow: crate::codec::decode_optional(object, "follow", path)?,
+            after: crate::codec::decode_optional_nullable(object, "after", path)?,
+            follow: crate::codec::decode_optional_nullable(object, "follow", path)?,
         })
     }
 }
@@ -1137,8 +1137,8 @@ impl crate::codec::Encode for ExperimentalSessionLogQuery {
     fn encode(&self, out: &mut String) {
         out.push('{');
         let mut first = true;
-        crate::codec::write_optional(out, &mut first, "after", &self.after);
-        crate::codec::write_optional(out, &mut first, "follow", &self.follow);
+        crate::codec::write_optional_nullable(out, &mut first, "after", &self.after);
+        crate::codec::write_optional_nullable(out, &mut first, "follow", &self.follow);
         out.push('}');
     }
 }
@@ -1166,13 +1166,13 @@ impl crate::codec::Encode for SessionInterruptParams {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SessionInterruptQuery {
-    pub resume: Option<bool>,
+    pub resume: Option<Option<bool>>,
 }
 
 impl crate::codec::Decode for SessionInterruptQuery {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let object = crate::codec::as_object(value, path)?;
-        Ok(Self { resume: crate::codec::decode_optional(object, "resume", path)? })
+        Ok(Self { resume: crate::codec::decode_optional_nullable(object, "resume", path)? })
     }
 }
 
@@ -1180,7 +1180,7 @@ impl crate::codec::Encode for SessionInterruptQuery {
     fn encode(&self, out: &mut String) {
         out.push('{');
         let mut first = true;
-        crate::codec::write_optional(out, &mut first, "resume", &self.resume);
+        crate::codec::write_optional_nullable(out, &mut first, "resume", &self.resume);
         out.push('}');
     }
 }
@@ -1373,13 +1373,13 @@ impl crate::codec::Encode for SessionFormCancelParams {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SessionFormCancelQuery {
-    pub message: Option<String>,
+    pub message: Option<Option<String>>,
 }
 
 impl crate::codec::Decode for SessionFormCancelQuery {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let object = crate::codec::as_object(value, path)?;
-        Ok(Self { message: crate::codec::decode_optional(object, "message", path)? })
+        Ok(Self { message: crate::codec::decode_optional_nullable(object, "message", path)? })
     }
 }
 
@@ -1387,7 +1387,7 @@ impl crate::codec::Encode for SessionFormCancelQuery {
     fn encode(&self, out: &mut String) {
         out.push('{');
         let mut first = true;
-        crate::codec::write_optional(out, &mut first, "message", &self.message);
+        crate::codec::write_optional_nullable(out, &mut first, "message", &self.message);
         out.push('}');
     }
 }
@@ -1540,17 +1540,17 @@ impl crate::codec::Encode for SessionMessagesQueryType {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SessionMessagesQuery {
-    pub limit: Option<f64>,
-    pub order: Option<SessionMessagesQueryOrder>,
-    pub cursor: Option<String>,
-    pub r#type: Option<SessionMessagesQueryType>,
+    pub limit: Option<Option<f64>>,
+    pub order: Option<Option<SessionMessagesQueryOrder>>,
+    pub cursor: Option<Option<String>>,
+    pub r#type: Option<Option<SessionMessagesQueryType>>,
 }
 
 impl crate::codec::Decode for SessionMessagesQuery {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let object = crate::codec::as_object(value, path)?;
         Ok(Self {
-            limit: crate::codec::decode_optional_checked(object, "limit", path, |value: &f64, path| {
+            limit: crate::codec::decode_optional_nullable_checked(object, "limit", path, |value: &f64, path| {
                 if !crate::checks::is_int(*value) {
                     return Err(path.at("expected an integer"));
                 }
@@ -1562,9 +1562,9 @@ impl crate::codec::Decode for SessionMessagesQuery {
                 }
                 Ok(())
             })?,
-            order: crate::codec::decode_optional(object, "order", path)?,
-            cursor: crate::codec::decode_optional(object, "cursor", path)?,
-            r#type: crate::codec::decode_optional(object, "type", path)?,
+            order: crate::codec::decode_optional_nullable(object, "order", path)?,
+            cursor: crate::codec::decode_optional_nullable(object, "cursor", path)?,
+            r#type: crate::codec::decode_optional_nullable(object, "type", path)?,
         })
     }
 }
@@ -1573,23 +1573,23 @@ impl crate::codec::Encode for SessionMessagesQuery {
     fn encode(&self, out: &mut String) {
         out.push('{');
         let mut first = true;
-        crate::codec::write_optional(out, &mut first, "limit", &self.limit);
-        crate::codec::write_optional(out, &mut first, "order", &self.order);
-        crate::codec::write_optional(out, &mut first, "cursor", &self.cursor);
-        crate::codec::write_optional(out, &mut first, "type", &self.r#type);
+        crate::codec::write_optional_nullable(out, &mut first, "limit", &self.limit);
+        crate::codec::write_optional_nullable(out, &mut first, "order", &self.order);
+        crate::codec::write_optional_nullable(out, &mut first, "cursor", &self.cursor);
+        crate::codec::write_optional_nullable(out, &mut first, "type", &self.r#type);
         out.push('}');
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ModelListQueryLocation {
-    pub directory: Option<String>,
+    pub directory: Option<Option<String>>,
 }
 
 impl crate::codec::Decode for ModelListQueryLocation {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let object = crate::codec::as_object(value, path)?;
-        Ok(Self { directory: crate::codec::decode_optional(object, "directory", path)? })
+        Ok(Self { directory: crate::codec::decode_optional_nullable(object, "directory", path)? })
     }
 }
 
@@ -1597,7 +1597,7 @@ impl crate::codec::Encode for ModelListQueryLocation {
     fn encode(&self, out: &mut String) {
         out.push('{');
         let mut first = true;
-        crate::codec::write_optional(out, &mut first, "directory", &self.directory);
+        crate::codec::write_optional_nullable(out, &mut first, "directory", &self.directory);
         out.push('}');
     }
 }
@@ -1713,19 +1713,34 @@ pub enum ModelType {
 
 impl crate::codec::Decode for ModelType {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <ModelTypeString as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <ModelTypeString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) = <ModelTypeString2 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <ModelTypeString2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
-        if let Ok(member) = <ModelTypeString3 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <ModelTypeString3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String3(member));
         }
-        if let Ok(member) = <ModelTypeString4 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <ModelTypeString4 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String4(member));
         }
-        if let Ok(member) = <String as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <String as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String5(member));
         }
         Err(path.at("no member matched"))
@@ -1746,16 +1761,16 @@ impl crate::codec::Encode for ModelType {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ModelListQuery {
-    pub location: Option<ModelListQueryLocation>,
-    pub types: Option<Vec<ModelType>>,
+    pub location: Option<Option<ModelListQueryLocation>>,
+    pub types: Option<Option<Vec<ModelType>>>,
 }
 
 impl crate::codec::Decode for ModelListQuery {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let object = crate::codec::as_object(value, path)?;
         Ok(Self {
-            location: crate::codec::decode_optional(object, "location", path)?,
-            types: crate::codec::decode_optional(object, "types", path)?,
+            location: crate::codec::decode_optional_nullable(object, "location", path)?,
+            types: crate::codec::decode_optional_nullable(object, "types", path)?,
         })
     }
 }
@@ -1764,8 +1779,8 @@ impl crate::codec::Encode for ModelListQuery {
     fn encode(&self, out: &mut String) {
         out.push('{');
         let mut first = true;
-        crate::codec::write_optional(out, &mut first, "location", &self.location);
-        crate::codec::write_optional(out, &mut first, "types", &self.types);
+        crate::codec::write_optional_nullable(out, &mut first, "location", &self.location);
+        crate::codec::write_optional_nullable(out, &mut first, "types", &self.types);
         out.push('}');
     }
 }
@@ -1776,7 +1791,7 @@ pub struct GenerateVideoID(pub String);
 impl crate::codec::Decode for GenerateVideoID {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let value = <String as crate::codec::Decode>::decode(value, path)?;
-        if !crate::checks::is_pattern(value.as_str(), "^video_[0-9a-f]{12}[0-9A-Za-z]{14}$") {
+        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_1) {
             return Err(path.at("expected a string matching the RegExp ^video_[0-9a-f]{12}[0-9A-Za-z]{14}$"));
         }
         Ok(Self(value))
@@ -2197,13 +2212,13 @@ impl crate::codec::Encode for ExperimentalMcpDisconnectParams {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExperimentalMcpClientTokenQueryLocation {
-    pub directory: Option<String>,
+    pub directory: Option<Option<String>>,
 }
 
 impl crate::codec::Decode for ExperimentalMcpClientTokenQueryLocation {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let object = crate::codec::as_object(value, path)?;
-        Ok(Self { directory: crate::codec::decode_optional(object, "directory", path)? })
+        Ok(Self { directory: crate::codec::decode_optional_nullable(object, "directory", path)? })
     }
 }
 
@@ -2211,14 +2226,14 @@ impl crate::codec::Encode for ExperimentalMcpClientTokenQueryLocation {
     fn encode(&self, out: &mut String) {
         out.push('{');
         let mut first = true;
-        crate::codec::write_optional(out, &mut first, "directory", &self.directory);
+        crate::codec::write_optional_nullable(out, &mut first, "directory", &self.directory);
         out.push('}');
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExperimentalMcpClientTokenQuery {
-    pub location: Option<ExperimentalMcpClientTokenQueryLocation>,
+    pub location: Option<Option<ExperimentalMcpClientTokenQueryLocation>>,
     pub name: String,
 }
 
@@ -2226,9 +2241,9 @@ impl crate::codec::Decode for ExperimentalMcpClientTokenQuery {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let object = crate::codec::as_object(value, path)?;
         Ok(Self {
-            location: crate::codec::decode_optional(object, "location", path)?,
+            location: crate::codec::decode_optional_nullable(object, "location", path)?,
             name: crate::codec::decode_field_checked(object, "name", path, |value: &String, path| {
-                if crate::checks::is_pattern(value.as_str(), "^[a-zA-Z0-9_-]+$") {
+                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_16) {
                     Ok(())
                 } else {
                     Err(path.at("expected a string matching the RegExp ^[a-zA-Z0-9_-]+$"))
@@ -2242,7 +2257,7 @@ impl crate::codec::Encode for ExperimentalMcpClientTokenQuery {
     fn encode(&self, out: &mut String) {
         out.push('{');
         let mut first = true;
-        crate::codec::write_optional(out, &mut first, "location", &self.location);
+        crate::codec::write_optional_nullable(out, &mut first, "location", &self.location);
         crate::codec::write_value(out, &mut first, "name", &self.name);
         out.push('}');
     }
@@ -2250,13 +2265,13 @@ impl crate::codec::Encode for ExperimentalMcpClientTokenQuery {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExperimentalMcpClientTokenHeaders {
-    pub x_opencode_ticket: Option<String>,
+    pub x_opencode_ticket: Option<Option<String>>,
 }
 
 impl crate::codec::Decode for ExperimentalMcpClientTokenHeaders {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let object = crate::codec::as_object(value, path)?;
-        Ok(Self { x_opencode_ticket: crate::codec::decode_optional(object, "x-opencode-ticket", path)? })
+        Ok(Self { x_opencode_ticket: crate::codec::decode_optional_nullable(object, "x-opencode-ticket", path)? })
     }
 }
 
@@ -2264,20 +2279,20 @@ impl crate::codec::Encode for ExperimentalMcpClientTokenHeaders {
     fn encode(&self, out: &mut String) {
         out.push('{');
         let mut first = true;
-        crate::codec::write_optional(out, &mut first, "x-opencode-ticket", &self.x_opencode_ticket);
+        crate::codec::write_optional_nullable(out, &mut first, "x-opencode-ticket", &self.x_opencode_ticket);
         out.push('}');
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExperimentalMcpClientQueryLocation {
-    pub directory: Option<String>,
+    pub directory: Option<Option<String>>,
 }
 
 impl crate::codec::Decode for ExperimentalMcpClientQueryLocation {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let object = crate::codec::as_object(value, path)?;
-        Ok(Self { directory: crate::codec::decode_optional(object, "directory", path)? })
+        Ok(Self { directory: crate::codec::decode_optional_nullable(object, "directory", path)? })
     }
 }
 
@@ -2285,31 +2300,31 @@ impl crate::codec::Encode for ExperimentalMcpClientQueryLocation {
     fn encode(&self, out: &mut String) {
         out.push('{');
         let mut first = true;
-        crate::codec::write_optional(out, &mut first, "directory", &self.directory);
+        crate::codec::write_optional_nullable(out, &mut first, "directory", &self.directory);
         out.push('}');
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExperimentalMcpClientQuery {
-    pub location: Option<ExperimentalMcpClientQueryLocation>,
+    pub location: Option<Option<ExperimentalMcpClientQueryLocation>>,
     pub name: String,
-    pub ticket: Option<String>,
+    pub ticket: Option<Option<String>>,
 }
 
 impl crate::codec::Decode for ExperimentalMcpClientQuery {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let object = crate::codec::as_object(value, path)?;
         Ok(Self {
-            location: crate::codec::decode_optional(object, "location", path)?,
+            location: crate::codec::decode_optional_nullable(object, "location", path)?,
             name: crate::codec::decode_field_checked(object, "name", path, |value: &String, path| {
-                if crate::checks::is_pattern(value.as_str(), "^[a-zA-Z0-9_-]+$") {
+                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_16) {
                     Ok(())
                 } else {
                     Err(path.at("expected a string matching the RegExp ^[a-zA-Z0-9_-]+$"))
                 }
             })?,
-            ticket: crate::codec::decode_optional(object, "ticket", path)?,
+            ticket: crate::codec::decode_optional_nullable(object, "ticket", path)?,
         })
     }
 }
@@ -2318,9 +2333,9 @@ impl crate::codec::Encode for ExperimentalMcpClientQuery {
     fn encode(&self, out: &mut String) {
         out.push('{');
         let mut first = true;
-        crate::codec::write_optional(out, &mut first, "location", &self.location);
+        crate::codec::write_optional_nullable(out, &mut first, "location", &self.location);
         crate::codec::write_value(out, &mut first, "name", &self.name);
-        crate::codec::write_optional(out, &mut first, "ticket", &self.ticket);
+        crate::codec::write_optional_nullable(out, &mut first, "ticket", &self.ticket);
         out.push('}');
     }
 }
@@ -2405,13 +2420,13 @@ impl crate::codec::Encode for CredentialRemoveParams {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ProjectListQuery {
-    pub archived: Option<bool>,
+    pub archived: Option<Option<bool>>,
 }
 
 impl crate::codec::Decode for ProjectListQuery {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let object = crate::codec::as_object(value, path)?;
-        Ok(Self { archived: crate::codec::decode_optional(object, "archived", path)? })
+        Ok(Self { archived: crate::codec::decode_optional_nullable(object, "archived", path)? })
     }
 }
 
@@ -2419,7 +2434,7 @@ impl crate::codec::Encode for ProjectListQuery {
     fn encode(&self, out: &mut String) {
         out.push('{');
         let mut first = true;
-        crate::codec::write_optional(out, &mut first, "archived", &self.archived);
+        crate::codec::write_optional_nullable(out, &mut first, "archived", &self.archived);
         out.push('}');
     }
 }
@@ -2447,13 +2462,13 @@ impl crate::codec::Encode for ProjectUpdateParams {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct PermissionSavedListQuery {
-    pub project_id: Option<ProjectID>,
+    pub project_id: Option<Option<ProjectID>>,
 }
 
 impl crate::codec::Decode for PermissionSavedListQuery {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let object = crate::codec::as_object(value, path)?;
-        Ok(Self { project_id: crate::codec::decode_optional(object, "projectID", path)? })
+        Ok(Self { project_id: crate::codec::decode_optional_nullable(object, "projectID", path)? })
     }
 }
 
@@ -2461,7 +2476,7 @@ impl crate::codec::Encode for PermissionSavedListQuery {
     fn encode(&self, out: &mut String) {
         out.push('{');
         let mut first = true;
-        crate::codec::write_optional(out, &mut first, "projectID", &self.project_id);
+        crate::codec::write_optional_nullable(out, &mut first, "projectID", &self.project_id);
         out.push('}');
     }
 }
@@ -2638,13 +2653,13 @@ impl crate::codec::Encode for SessionPermissionReplyParams {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FsListQueryLocation {
-    pub directory: Option<String>,
+    pub directory: Option<Option<String>>,
 }
 
 impl crate::codec::Decode for FsListQueryLocation {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let object = crate::codec::as_object(value, path)?;
-        Ok(Self { directory: crate::codec::decode_optional(object, "directory", path)? })
+        Ok(Self { directory: crate::codec::decode_optional_nullable(object, "directory", path)? })
     }
 }
 
@@ -2652,23 +2667,23 @@ impl crate::codec::Encode for FsListQueryLocation {
     fn encode(&self, out: &mut String) {
         out.push('{');
         let mut first = true;
-        crate::codec::write_optional(out, &mut first, "directory", &self.directory);
+        crate::codec::write_optional_nullable(out, &mut first, "directory", &self.directory);
         out.push('}');
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FsListQuery {
-    pub location: Option<FsListQueryLocation>,
-    pub path: Option<String>,
+    pub location: Option<Option<FsListQueryLocation>>,
+    pub path: Option<Option<String>>,
 }
 
 impl crate::codec::Decode for FsListQuery {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let object = crate::codec::as_object(value, path)?;
         Ok(Self {
-            location: crate::codec::decode_optional(object, "location", path)?,
-            path: crate::codec::decode_optional(object, "path", path)?,
+            location: crate::codec::decode_optional_nullable(object, "location", path)?,
+            path: crate::codec::decode_optional_nullable(object, "path", path)?,
         })
     }
 }
@@ -2677,21 +2692,21 @@ impl crate::codec::Encode for FsListQuery {
     fn encode(&self, out: &mut String) {
         out.push('{');
         let mut first = true;
-        crate::codec::write_optional(out, &mut first, "location", &self.location);
-        crate::codec::write_optional(out, &mut first, "path", &self.path);
+        crate::codec::write_optional_nullable(out, &mut first, "location", &self.location);
+        crate::codec::write_optional_nullable(out, &mut first, "path", &self.path);
         out.push('}');
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FsFindQueryLocation {
-    pub directory: Option<String>,
+    pub directory: Option<Option<String>>,
 }
 
 impl crate::codec::Decode for FsFindQueryLocation {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let object = crate::codec::as_object(value, path)?;
-        Ok(Self { directory: crate::codec::decode_optional(object, "directory", path)? })
+        Ok(Self { directory: crate::codec::decode_optional_nullable(object, "directory", path)? })
     }
 }
 
@@ -2699,7 +2714,7 @@ impl crate::codec::Encode for FsFindQueryLocation {
     fn encode(&self, out: &mut String) {
         out.push('{');
         let mut first = true;
-        crate::codec::write_optional(out, &mut first, "directory", &self.directory);
+        crate::codec::write_optional_nullable(out, &mut first, "directory", &self.directory);
         out.push('}');
     }
 }
@@ -2734,20 +2749,20 @@ impl crate::codec::Encode for FsFindQueryType {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FsFindQuery {
-    pub location: Option<FsFindQueryLocation>,
+    pub location: Option<Option<FsFindQueryLocation>>,
     pub query: String,
-    pub r#type: Option<FsFindQueryType>,
-    pub limit: Option<f64>,
+    pub r#type: Option<Option<FsFindQueryType>>,
+    pub limit: Option<Option<f64>>,
 }
 
 impl crate::codec::Decode for FsFindQuery {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let object = crate::codec::as_object(value, path)?;
         Ok(Self {
-            location: crate::codec::decode_optional(object, "location", path)?,
+            location: crate::codec::decode_optional_nullable(object, "location", path)?,
             query: crate::codec::decode_field(object, "query", path)?,
-            r#type: crate::codec::decode_optional(object, "type", path)?,
-            limit: crate::codec::decode_optional_checked(object, "limit", path, |value: &f64, path| {
+            r#type: crate::codec::decode_optional_nullable(object, "type", path)?,
+            limit: crate::codec::decode_optional_nullable_checked(object, "limit", path, |value: &f64, path| {
                 if !crate::checks::is_int(*value) {
                     return Err(path.at("expected an integer"));
                 }
@@ -2764,23 +2779,23 @@ impl crate::codec::Encode for FsFindQuery {
     fn encode(&self, out: &mut String) {
         out.push('{');
         let mut first = true;
-        crate::codec::write_optional(out, &mut first, "location", &self.location);
+        crate::codec::write_optional_nullable(out, &mut first, "location", &self.location);
         crate::codec::write_value(out, &mut first, "query", &self.query);
-        crate::codec::write_optional(out, &mut first, "type", &self.r#type);
-        crate::codec::write_optional(out, &mut first, "limit", &self.limit);
+        crate::codec::write_optional_nullable(out, &mut first, "type", &self.r#type);
+        crate::codec::write_optional_nullable(out, &mut first, "limit", &self.limit);
         out.push('}');
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExperimentalFsWriteQueryLocation {
-    pub directory: Option<String>,
+    pub directory: Option<Option<String>>,
 }
 
 impl crate::codec::Decode for ExperimentalFsWriteQueryLocation {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let object = crate::codec::as_object(value, path)?;
-        Ok(Self { directory: crate::codec::decode_optional(object, "directory", path)? })
+        Ok(Self { directory: crate::codec::decode_optional_nullable(object, "directory", path)? })
     }
 }
 
@@ -2788,14 +2803,14 @@ impl crate::codec::Encode for ExperimentalFsWriteQueryLocation {
     fn encode(&self, out: &mut String) {
         out.push('{');
         let mut first = true;
-        crate::codec::write_optional(out, &mut first, "directory", &self.directory);
+        crate::codec::write_optional_nullable(out, &mut first, "directory", &self.directory);
         out.push('}');
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExperimentalFsWriteQuery {
-    pub location: Option<ExperimentalFsWriteQueryLocation>,
+    pub location: Option<Option<ExperimentalFsWriteQueryLocation>>,
     pub path: String,
 }
 
@@ -2803,7 +2818,7 @@ impl crate::codec::Decode for ExperimentalFsWriteQuery {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let object = crate::codec::as_object(value, path)?;
         Ok(Self {
-            location: crate::codec::decode_optional(object, "location", path)?,
+            location: crate::codec::decode_optional_nullable(object, "location", path)?,
             path: crate::codec::decode_field(object, "path", path)?,
         })
     }
@@ -2813,7 +2828,7 @@ impl crate::codec::Encode for ExperimentalFsWriteQuery {
     fn encode(&self, out: &mut String) {
         out.push('{');
         let mut first = true;
-        crate::codec::write_optional(out, &mut first, "location", &self.location);
+        crate::codec::write_optional_nullable(out, &mut first, "location", &self.location);
         crate::codec::write_value(out, &mut first, "path", &self.path);
         out.push('}');
     }
@@ -5321,6 +5336,25 @@ impl crate::codec::Encode for EventSubscribeQueryTypesItemString99 {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct EventSubscribeQueryTypesItemString100(pub String);
+
+impl crate::codec::Decode for EventSubscribeQueryTypesItemString100 {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let value = <String as crate::codec::Decode>::decode(value, path)?;
+        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_7) {
+            return Err(path.at("expected a string matching the template literal"));
+        }
+        Ok(Self(value))
+    }
+}
+
+impl crate::codec::Encode for EventSubscribeQueryTypesItemString100 {
+    fn encode(&self, out: &mut String) {
+        <String as crate::codec::Encode>::encode(&self.0, out);
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum EventSubscribeQueryTypesItem {
     String(EventSubscribeQueryTypesItemString),
     String2(EventSubscribeQueryTypesItemString2),
@@ -5421,309 +5455,609 @@ pub enum EventSubscribeQueryTypesItem {
     String97(EventSubscribeQueryTypesItemString97),
     String98(EventSubscribeQueryTypesItemString98),
     String99(EventSubscribeQueryTypesItemString99),
-    String100(String),
+    String100(EventSubscribeQueryTypesItemString100),
 }
 
 impl crate::codec::Decode for EventSubscribeQueryTypesItem {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <EventSubscribeQueryTypesItemString as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString2 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString3 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String3(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString4 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString4 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String4(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString5 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString5 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String5(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString6 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString6 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String6(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString7 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString7 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String7(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString8 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString8 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String8(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString9 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString9 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String9(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString10 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString10 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String10(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString11 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString11 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String11(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString12 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString12 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String12(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString13 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString13 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String13(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString14 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString14 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String14(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString15 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString15 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String15(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString16 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString16 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String16(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString17 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString17 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String17(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString18 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString18 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String18(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString19 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString19 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String19(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString20 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString20 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String20(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString21 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString21 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String21(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString22 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString22 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String22(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString23 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString23 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String23(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString24 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString24 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String24(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString25 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString25 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String25(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString26 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString26 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String26(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString27 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString27 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String27(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString28 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString28 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String28(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString29 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString29 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String29(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString30 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString30 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String30(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString31 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString31 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String31(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString32 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString32 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String32(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString33 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString33 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String33(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString34 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString34 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String34(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString35 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString35 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String35(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString36 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString36 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String36(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString37 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString37 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String37(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString38 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString38 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String38(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString39 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString39 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String39(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString40 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString40 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String40(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString41 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString41 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String41(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString42 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString42 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String42(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString43 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString43 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String43(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString44 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString44 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String44(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString45 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString45 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String45(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString46 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString46 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String46(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString47 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString47 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String47(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString48 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString48 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String48(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString49 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString49 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String49(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString50 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString50 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String50(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString51 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString51 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String51(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString52 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString52 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String52(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString53 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString53 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String53(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString54 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString54 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String54(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString55 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString55 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String55(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString56 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString56 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String56(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString57 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString57 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String57(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString58 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString58 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String58(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString59 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString59 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String59(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString60 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString60 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String60(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString61 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString61 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String61(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString62 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString62 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String62(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString63 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString63 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String63(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString64 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString64 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String64(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString65 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString65 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String65(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString66 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString66 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String66(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString67 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString67 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String67(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString68 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString68 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String68(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString69 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString69 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String69(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString70 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString70 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String70(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString71 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString71 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String71(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString72 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString72 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String72(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString73 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString73 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String73(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString74 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString74 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String74(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString75 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString75 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String75(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString76 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString76 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String76(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString77 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString77 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String77(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString78 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString78 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String78(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString79 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString79 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String79(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString80 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString80 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String80(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString81 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString81 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String81(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString82 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString82 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String82(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString83 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString83 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String83(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString84 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString84 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String84(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString85 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString85 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String85(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString86 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString86 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String86(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString87 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString87 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String87(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString88 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString88 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String88(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString89 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString89 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String89(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString90 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString90 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String90(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString91 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString91 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String91(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString92 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString92 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String92(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString93 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString93 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String93(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString94 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString94 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String94(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString95 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString95 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String95(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString96 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString96 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String96(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString97 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString97 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String97(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString98 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString98 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String98(member));
         }
-        if let Ok(member) = <EventSubscribeQueryTypesItemString99 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString99 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String99(member));
         }
-        if let Ok(member) = <String as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString100 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String100(member));
         }
         Err(path.at("no member matched"))
@@ -5832,20 +6166,22 @@ impl crate::codec::Encode for EventSubscribeQueryTypesItem {
             Self::String97(value) => <EventSubscribeQueryTypesItemString97 as crate::codec::Encode>::encode(value, out),
             Self::String98(value) => <EventSubscribeQueryTypesItemString98 as crate::codec::Encode>::encode(value, out),
             Self::String99(value) => <EventSubscribeQueryTypesItemString99 as crate::codec::Encode>::encode(value, out),
-            Self::String100(value) => <String as crate::codec::Encode>::encode(value, out),
+            Self::String100(value) => {
+                <EventSubscribeQueryTypesItemString100 as crate::codec::Encode>::encode(value, out)
+            }
         }
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct EventSubscribeQuery {
-    pub types: Option<Vec<EventSubscribeQueryTypesItem>>,
+    pub types: Option<Option<Vec<EventSubscribeQueryTypesItem>>>,
 }
 
 impl crate::codec::Decode for EventSubscribeQuery {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let object = crate::codec::as_object(value, path)?;
-        Ok(Self { types: crate::codec::decode_optional(object, "types", path)? })
+        Ok(Self { types: crate::codec::decode_optional_nullable(object, "types", path)? })
     }
 }
 
@@ -5853,7 +6189,7 @@ impl crate::codec::Encode for EventSubscribeQuery {
     fn encode(&self, out: &mut String) {
         out.push('{');
         let mut first = true;
-        crate::codec::write_optional(out, &mut first, "types", &self.types);
+        crate::codec::write_optional_nullable(out, &mut first, "types", &self.types);
         out.push('}');
     }
 }
@@ -5963,13 +6299,13 @@ impl crate::codec::Encode for PtyConnectTokenParams {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct PtyConnectTokenHeaders {
-    pub x_opencode_ticket: Option<String>,
+    pub x_opencode_ticket: Option<Option<String>>,
 }
 
 impl crate::codec::Decode for PtyConnectTokenHeaders {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let object = crate::codec::as_object(value, path)?;
-        Ok(Self { x_opencode_ticket: crate::codec::decode_optional(object, "x-opencode-ticket", path)? })
+        Ok(Self { x_opencode_ticket: crate::codec::decode_optional_nullable(object, "x-opencode-ticket", path)? })
     }
 }
 
@@ -5977,7 +6313,7 @@ impl crate::codec::Encode for PtyConnectTokenHeaders {
     fn encode(&self, out: &mut String) {
         out.push('{');
         let mut first = true;
-        crate::codec::write_optional(out, &mut first, "x-opencode-ticket", &self.x_opencode_ticket);
+        crate::codec::write_optional_nullable(out, &mut first, "x-opencode-ticket", &self.x_opencode_ticket);
         out.push('}');
     }
 }
@@ -6051,13 +6387,13 @@ impl crate::codec::Encode for PersistentPtyReadLines {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExperimentalPersistentPtyReadQuery {
-    pub lines: Option<PersistentPtyReadLines>,
+    pub lines: Option<Option<PersistentPtyReadLines>>,
 }
 
 impl crate::codec::Decode for ExperimentalPersistentPtyReadQuery {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let object = crate::codec::as_object(value, path)?;
-        Ok(Self { lines: crate::codec::decode_optional(object, "lines", path)? })
+        Ok(Self { lines: crate::codec::decode_optional_nullable(object, "lines", path)? })
     }
 }
 
@@ -6065,7 +6401,7 @@ impl crate::codec::Encode for ExperimentalPersistentPtyReadQuery {
     fn encode(&self, out: &mut String) {
         out.push('{');
         let mut first = true;
-        crate::codec::write_optional(out, &mut first, "lines", &self.lines);
+        crate::codec::write_optional_nullable(out, &mut first, "lines", &self.lines);
         out.push('}');
     }
 }
@@ -6219,13 +6555,13 @@ impl crate::codec::Encode for ExperimentalPersistentPtyConnectTokenParams {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExperimentalPersistentPtyConnectTokenHeaders {
-    pub x_opencode_ticket: Option<String>,
+    pub x_opencode_ticket: Option<Option<String>>,
 }
 
 impl crate::codec::Decode for ExperimentalPersistentPtyConnectTokenHeaders {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let object = crate::codec::as_object(value, path)?;
-        Ok(Self { x_opencode_ticket: crate::codec::decode_optional(object, "x-opencode-ticket", path)? })
+        Ok(Self { x_opencode_ticket: crate::codec::decode_optional_nullable(object, "x-opencode-ticket", path)? })
     }
 }
 
@@ -6233,7 +6569,7 @@ impl crate::codec::Encode for ExperimentalPersistentPtyConnectTokenHeaders {
     fn encode(&self, out: &mut String) {
         out.push('{');
         let mut first = true;
-        crate::codec::write_optional(out, &mut first, "x-opencode-ticket", &self.x_opencode_ticket);
+        crate::codec::write_optional_nullable(out, &mut first, "x-opencode-ticket", &self.x_opencode_ticket);
         out.push('}');
     }
 }
@@ -6265,7 +6601,7 @@ pub struct MediaHash(pub String);
 impl crate::codec::Decode for MediaHash {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let value = <String as crate::codec::Decode>::decode(value, path)?;
-        if !crate::checks::is_pattern(value.as_str(), "^[0-9a-f]{64}$") {
+        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_17) {
             return Err(path.at("expected a string matching the RegExp ^[0-9a-f]{64}$"));
         }
         Ok(Self(value))
@@ -6305,7 +6641,7 @@ pub struct BlobID(pub String);
 impl crate::codec::Decode for BlobID {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let value = <String as crate::codec::Decode>::decode(value, path)?;
-        if !crate::checks::is_pattern(value.as_str(), "^blob_[0-9a-f]{12}[0-9A-Za-z]{14}$") {
+        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_0) {
             return Err(path.at("expected a string matching the RegExp ^blob_[0-9a-f]{12}[0-9A-Za-z]{14}$"));
         }
         Ok(Self(value))
@@ -6341,16 +6677,16 @@ impl crate::codec::Encode for ExperimentalBlobGetParams {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct AutomationListQuery {
-    pub session_id: Option<SessionID>,
-    pub directory: Option<String>,
+    pub session_id: Option<Option<SessionID>>,
+    pub directory: Option<Option<String>>,
 }
 
 impl crate::codec::Decode for AutomationListQuery {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let object = crate::codec::as_object(value, path)?;
         Ok(Self {
-            session_id: crate::codec::decode_optional(object, "sessionID", path)?,
-            directory: crate::codec::decode_optional(object, "directory", path)?,
+            session_id: crate::codec::decode_optional_nullable(object, "sessionID", path)?,
+            directory: crate::codec::decode_optional_nullable(object, "directory", path)?,
         })
     }
 }
@@ -6359,8 +6695,8 @@ impl crate::codec::Encode for AutomationListQuery {
     fn encode(&self, out: &mut String) {
         out.push('{');
         let mut first = true;
-        crate::codec::write_optional(out, &mut first, "sessionID", &self.session_id);
-        crate::codec::write_optional(out, &mut first, "directory", &self.directory);
+        crate::codec::write_optional_nullable(out, &mut first, "sessionID", &self.session_id);
+        crate::codec::write_optional_nullable(out, &mut first, "directory", &self.directory);
         out.push('}');
     }
 }
@@ -6470,13 +6806,13 @@ impl crate::codec::Encode for ExperimentalAutomationDeleteParams {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExperimentalArtifactsListQueryLocation {
-    pub directory: Option<String>,
+    pub directory: Option<Option<String>>,
 }
 
 impl crate::codec::Decode for ExperimentalArtifactsListQueryLocation {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let object = crate::codec::as_object(value, path)?;
-        Ok(Self { directory: crate::codec::decode_optional(object, "directory", path)? })
+        Ok(Self { directory: crate::codec::decode_optional_nullable(object, "directory", path)? })
     }
 }
 
@@ -6484,7 +6820,7 @@ impl crate::codec::Encode for ExperimentalArtifactsListQueryLocation {
     fn encode(&self, out: &mut String) {
         out.push('{');
         let mut first = true;
-        crate::codec::write_optional(out, &mut first, "directory", &self.directory);
+        crate::codec::write_optional_nullable(out, &mut first, "directory", &self.directory);
         out.push('}');
     }
 }
@@ -6514,18 +6850,18 @@ impl crate::codec::Encode for ArtifactProviderID {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExperimentalArtifactsListQuery {
-    pub location: Option<ExperimentalArtifactsListQueryLocation>,
-    pub session_id: Option<SessionID>,
-    pub provider: Option<ArtifactProviderID>,
+    pub location: Option<Option<ExperimentalArtifactsListQueryLocation>>,
+    pub session_id: Option<Option<SessionID>>,
+    pub provider: Option<Option<ArtifactProviderID>>,
 }
 
 impl crate::codec::Decode for ExperimentalArtifactsListQuery {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let object = crate::codec::as_object(value, path)?;
         Ok(Self {
-            location: crate::codec::decode_optional(object, "location", path)?,
-            session_id: crate::codec::decode_optional(object, "sessionID", path)?,
-            provider: crate::codec::decode_optional(object, "provider", path)?,
+            location: crate::codec::decode_optional_nullable(object, "location", path)?,
+            session_id: crate::codec::decode_optional_nullable(object, "sessionID", path)?,
+            provider: crate::codec::decode_optional_nullable(object, "provider", path)?,
         })
     }
 }
@@ -6534,9 +6870,9 @@ impl crate::codec::Encode for ExperimentalArtifactsListQuery {
     fn encode(&self, out: &mut String) {
         out.push('{');
         let mut first = true;
-        crate::codec::write_optional(out, &mut first, "location", &self.location);
-        crate::codec::write_optional(out, &mut first, "sessionID", &self.session_id);
-        crate::codec::write_optional(out, &mut first, "provider", &self.provider);
+        crate::codec::write_optional_nullable(out, &mut first, "location", &self.location);
+        crate::codec::write_optional_nullable(out, &mut first, "sessionID", &self.session_id);
+        crate::codec::write_optional_nullable(out, &mut first, "provider", &self.provider);
         out.push('}');
     }
 }
@@ -6717,20 +7053,20 @@ impl crate::codec::Encode for JobStatus {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct JobListQuery {
-    pub session_id: Option<SessionID>,
-    pub kind: Option<JobKind>,
-    pub status: Option<JobStatus>,
-    pub descendants: Option<bool>,
+    pub session_id: Option<Option<SessionID>>,
+    pub kind: Option<Option<JobKind>>,
+    pub status: Option<Option<JobStatus>>,
+    pub descendants: Option<Option<bool>>,
 }
 
 impl crate::codec::Decode for JobListQuery {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let object = crate::codec::as_object(value, path)?;
         Ok(Self {
-            session_id: crate::codec::decode_optional(object, "sessionID", path)?,
-            kind: crate::codec::decode_optional(object, "kind", path)?,
-            status: crate::codec::decode_optional(object, "status", path)?,
-            descendants: crate::codec::decode_optional(object, "descendants", path)?,
+            session_id: crate::codec::decode_optional_nullable(object, "sessionID", path)?,
+            kind: crate::codec::decode_optional_nullable(object, "kind", path)?,
+            status: crate::codec::decode_optional_nullable(object, "status", path)?,
+            descendants: crate::codec::decode_optional_nullable(object, "descendants", path)?,
         })
     }
 }
@@ -6739,10 +7075,10 @@ impl crate::codec::Encode for JobListQuery {
     fn encode(&self, out: &mut String) {
         out.push('{');
         let mut first = true;
-        crate::codec::write_optional(out, &mut first, "sessionID", &self.session_id);
-        crate::codec::write_optional(out, &mut first, "kind", &self.kind);
-        crate::codec::write_optional(out, &mut first, "status", &self.status);
-        crate::codec::write_optional(out, &mut first, "descendants", &self.descendants);
+        crate::codec::write_optional_nullable(out, &mut first, "sessionID", &self.session_id);
+        crate::codec::write_optional_nullable(out, &mut first, "kind", &self.kind);
+        crate::codec::write_optional_nullable(out, &mut first, "status", &self.status);
+        crate::codec::write_optional_nullable(out, &mut first, "descendants", &self.descendants);
         out.push('}');
     }
 }
@@ -6852,13 +7188,13 @@ impl crate::codec::Encode for ShellOutputParams {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ShellOutputQueryLocation {
-    pub directory: Option<String>,
+    pub directory: Option<Option<String>>,
 }
 
 impl crate::codec::Decode for ShellOutputQueryLocation {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let object = crate::codec::as_object(value, path)?;
-        Ok(Self { directory: crate::codec::decode_optional(object, "directory", path)? })
+        Ok(Self { directory: crate::codec::decode_optional_nullable(object, "directory", path)? })
     }
 }
 
@@ -6866,24 +7202,24 @@ impl crate::codec::Encode for ShellOutputQueryLocation {
     fn encode(&self, out: &mut String) {
         out.push('{');
         let mut first = true;
-        crate::codec::write_optional(out, &mut first, "directory", &self.directory);
+        crate::codec::write_optional_nullable(out, &mut first, "directory", &self.directory);
         out.push('}');
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ShellOutputQuery {
-    pub location: Option<ShellOutputQueryLocation>,
-    pub cursor: Option<f64>,
-    pub limit: Option<f64>,
+    pub location: Option<Option<ShellOutputQueryLocation>>,
+    pub cursor: Option<Option<f64>>,
+    pub limit: Option<Option<f64>>,
 }
 
 impl crate::codec::Decode for ShellOutputQuery {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let object = crate::codec::as_object(value, path)?;
         Ok(Self {
-            location: crate::codec::decode_optional(object, "location", path)?,
-            cursor: crate::codec::decode_optional_checked(object, "cursor", path, |value: &f64, path| {
+            location: crate::codec::decode_optional_nullable(object, "location", path)?,
+            cursor: crate::codec::decode_optional_nullable_checked(object, "cursor", path, |value: &f64, path| {
                 if !crate::checks::is_int(*value) {
                     return Err(path.at("expected an integer"));
                 }
@@ -6892,7 +7228,7 @@ impl crate::codec::Decode for ShellOutputQuery {
                 }
                 Ok(())
             })?,
-            limit: crate::codec::decode_optional_checked(object, "limit", path, |value: &f64, path| {
+            limit: crate::codec::decode_optional_nullable_checked(object, "limit", path, |value: &f64, path| {
                 if !crate::checks::is_int(*value) {
                     return Err(path.at("expected an integer"));
                 }
@@ -6909,9 +7245,9 @@ impl crate::codec::Encode for ShellOutputQuery {
     fn encode(&self, out: &mut String) {
         out.push('{');
         let mut first = true;
-        crate::codec::write_optional(out, &mut first, "location", &self.location);
-        crate::codec::write_optional(out, &mut first, "cursor", &self.cursor);
-        crate::codec::write_optional(out, &mut first, "limit", &self.limit);
+        crate::codec::write_optional_nullable(out, &mut first, "location", &self.location);
+        crate::codec::write_optional_nullable(out, &mut first, "cursor", &self.cursor);
+        crate::codec::write_optional_nullable(out, &mut first, "limit", &self.limit);
         out.push('}');
     }
 }
@@ -6960,13 +7296,13 @@ impl crate::codec::Encode for WorktreeListQuery {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct VcsInitQueryLocation {
-    pub directory: Option<String>,
+    pub directory: Option<Option<String>>,
 }
 
 impl crate::codec::Decode for VcsInitQueryLocation {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let object = crate::codec::as_object(value, path)?;
-        Ok(Self { directory: crate::codec::decode_optional(object, "directory", path)? })
+        Ok(Self { directory: crate::codec::decode_optional_nullable(object, "directory", path)? })
     }
 }
 
@@ -6974,23 +7310,23 @@ impl crate::codec::Encode for VcsInitQueryLocation {
     fn encode(&self, out: &mut String) {
         out.push('{');
         let mut first = true;
-        crate::codec::write_optional(out, &mut first, "directory", &self.directory);
+        crate::codec::write_optional_nullable(out, &mut first, "directory", &self.directory);
         out.push('}');
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct VcsInitQuery {
-    pub location: Option<VcsInitQueryLocation>,
-    pub provider: Option<String>,
+    pub location: Option<Option<VcsInitQueryLocation>>,
+    pub provider: Option<Option<String>>,
 }
 
 impl crate::codec::Decode for VcsInitQuery {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let object = crate::codec::as_object(value, path)?;
         Ok(Self {
-            location: crate::codec::decode_optional(object, "location", path)?,
-            provider: crate::codec::decode_optional(object, "provider", path)?,
+            location: crate::codec::decode_optional_nullable(object, "location", path)?,
+            provider: crate::codec::decode_optional_nullable(object, "provider", path)?,
         })
     }
 }
@@ -6999,21 +7335,21 @@ impl crate::codec::Encode for VcsInitQuery {
     fn encode(&self, out: &mut String) {
         out.push('{');
         let mut first = true;
-        crate::codec::write_optional(out, &mut first, "location", &self.location);
-        crate::codec::write_optional(out, &mut first, "provider", &self.provider);
+        crate::codec::write_optional_nullable(out, &mut first, "location", &self.location);
+        crate::codec::write_optional_nullable(out, &mut first, "provider", &self.provider);
         out.push('}');
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct VcsBranchListQueryLocation {
-    pub directory: Option<String>,
+    pub directory: Option<Option<String>>,
 }
 
 impl crate::codec::Decode for VcsBranchListQueryLocation {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let object = crate::codec::as_object(value, path)?;
-        Ok(Self { directory: crate::codec::decode_optional(object, "directory", path)? })
+        Ok(Self { directory: crate::codec::decode_optional_nullable(object, "directory", path)? })
     }
 }
 
@@ -7021,25 +7357,25 @@ impl crate::codec::Encode for VcsBranchListQueryLocation {
     fn encode(&self, out: &mut String) {
         out.push('{');
         let mut first = true;
-        crate::codec::write_optional(out, &mut first, "directory", &self.directory);
+        crate::codec::write_optional_nullable(out, &mut first, "directory", &self.directory);
         out.push('}');
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct VcsBranchListQuery {
-    pub location: Option<VcsBranchListQueryLocation>,
-    pub search: Option<String>,
-    pub limit: Option<f64>,
+    pub location: Option<Option<VcsBranchListQueryLocation>>,
+    pub search: Option<Option<String>>,
+    pub limit: Option<Option<f64>>,
 }
 
 impl crate::codec::Decode for VcsBranchListQuery {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let object = crate::codec::as_object(value, path)?;
         Ok(Self {
-            location: crate::codec::decode_optional(object, "location", path)?,
-            search: crate::codec::decode_optional(object, "search", path)?,
-            limit: crate::codec::decode_optional_checked(object, "limit", path, |value: &f64, path| {
+            location: crate::codec::decode_optional_nullable(object, "location", path)?,
+            search: crate::codec::decode_optional_nullable(object, "search", path)?,
+            limit: crate::codec::decode_optional_nullable_checked(object, "limit", path, |value: &f64, path| {
                 if !crate::checks::is_int(*value) {
                     return Err(path.at("expected an integer"));
                 }
@@ -7056,22 +7392,22 @@ impl crate::codec::Encode for VcsBranchListQuery {
     fn encode(&self, out: &mut String) {
         out.push('{');
         let mut first = true;
-        crate::codec::write_optional(out, &mut first, "location", &self.location);
-        crate::codec::write_optional(out, &mut first, "search", &self.search);
-        crate::codec::write_optional(out, &mut first, "limit", &self.limit);
+        crate::codec::write_optional_nullable(out, &mut first, "location", &self.location);
+        crate::codec::write_optional_nullable(out, &mut first, "search", &self.search);
+        crate::codec::write_optional_nullable(out, &mut first, "limit", &self.limit);
         out.push('}');
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct VcsDiffQueryLocation {
-    pub directory: Option<String>,
+    pub directory: Option<Option<String>>,
 }
 
 impl crate::codec::Decode for VcsDiffQueryLocation {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let object = crate::codec::as_object(value, path)?;
-        Ok(Self { directory: crate::codec::decode_optional(object, "directory", path)? })
+        Ok(Self { directory: crate::codec::decode_optional_nullable(object, "directory", path)? })
     }
 }
 
@@ -7079,7 +7415,7 @@ impl crate::codec::Encode for VcsDiffQueryLocation {
     fn encode(&self, out: &mut String) {
         out.push('{');
         let mut first = true;
-        crate::codec::write_optional(out, &mut first, "directory", &self.directory);
+        crate::codec::write_optional_nullable(out, &mut first, "directory", &self.directory);
         out.push('}');
     }
 }
@@ -7145,21 +7481,21 @@ impl crate::codec::Encode for VcsUntracked {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct VcsDiffQuery {
-    pub location: Option<VcsDiffQueryLocation>,
+    pub location: Option<Option<VcsDiffQueryLocation>>,
     pub mode: VcsMode,
-    pub base: Option<String>,
-    pub context: Option<f64>,
-    pub untracked: Option<VcsUntracked>,
+    pub base: Option<Option<String>>,
+    pub context: Option<Option<f64>>,
+    pub untracked: Option<Option<VcsUntracked>>,
 }
 
 impl crate::codec::Decode for VcsDiffQuery {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let object = crate::codec::as_object(value, path)?;
         Ok(Self {
-            location: crate::codec::decode_optional(object, "location", path)?,
+            location: crate::codec::decode_optional_nullable(object, "location", path)?,
             mode: crate::codec::decode_field(object, "mode", path)?,
-            base: crate::codec::decode_optional(object, "base", path)?,
-            context: crate::codec::decode_optional_checked(object, "context", path, |value: &f64, path| {
+            base: crate::codec::decode_optional_nullable(object, "base", path)?,
+            context: crate::codec::decode_optional_nullable_checked(object, "context", path, |value: &f64, path| {
                 if !crate::checks::is_int(*value) {
                     return Err(path.at("expected an integer"));
                 }
@@ -7168,7 +7504,7 @@ impl crate::codec::Decode for VcsDiffQuery {
                 }
                 Ok(())
             })?,
-            untracked: crate::codec::decode_optional(object, "untracked", path)?,
+            untracked: crate::codec::decode_optional_nullable(object, "untracked", path)?,
         })
     }
 }
@@ -7177,24 +7513,24 @@ impl crate::codec::Encode for VcsDiffQuery {
     fn encode(&self, out: &mut String) {
         out.push('{');
         let mut first = true;
-        crate::codec::write_optional(out, &mut first, "location", &self.location);
+        crate::codec::write_optional_nullable(out, &mut first, "location", &self.location);
         crate::codec::write_value(out, &mut first, "mode", &self.mode);
-        crate::codec::write_optional(out, &mut first, "base", &self.base);
-        crate::codec::write_optional(out, &mut first, "context", &self.context);
-        crate::codec::write_optional(out, &mut first, "untracked", &self.untracked);
+        crate::codec::write_optional_nullable(out, &mut first, "base", &self.base);
+        crate::codec::write_optional_nullable(out, &mut first, "context", &self.context);
+        crate::codec::write_optional_nullable(out, &mut first, "untracked", &self.untracked);
         out.push('}');
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct DebugHeapDumpQuery {
-    pub directory: Option<String>,
+    pub directory: Option<Option<String>>,
 }
 
 impl crate::codec::Decode for DebugHeapDumpQuery {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let object = crate::codec::as_object(value, path)?;
-        Ok(Self { directory: crate::codec::decode_optional(object, "directory", path)? })
+        Ok(Self { directory: crate::codec::decode_optional_nullable(object, "directory", path)? })
     }
 }
 
@@ -7202,7 +7538,7 @@ impl crate::codec::Encode for DebugHeapDumpQuery {
     fn encode(&self, out: &mut String) {
         out.push('{');
         let mut first = true;
-        crate::codec::write_optional(out, &mut first, "directory", &self.directory);
+        crate::codec::write_optional_nullable(out, &mut first, "directory", &self.directory);
         out.push('}');
     }
 }
@@ -8815,22 +9151,40 @@ pub enum FormWhenValue {
 
 impl crate::codec::Decode for FormWhenValue {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <String as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <String as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) = <FormWhenValueNumber as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormWhenValueNumber as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) = <FormWhenValueString as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormWhenValueString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
-        if let Ok(member) = <FormWhenValueString2 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormWhenValueString2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String3(member));
         }
-        if let Ok(member) = <FormWhenValueString3 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormWhenValueString3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String4(member));
         }
-        if let Ok(member) = <bool as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <bool as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Bool(member));
         }
         Err(path.at("no member matched"))
@@ -9177,16 +9531,28 @@ pub enum FormNumberFieldMinimum {
 
 impl crate::codec::Decode for FormNumberFieldMinimum {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <FormNumberFieldMinimumNumber as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormNumberFieldMinimumNumber as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) = <FormNumberFieldMinimumString as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormNumberFieldMinimumString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) = <FormNumberFieldMinimumString2 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormNumberFieldMinimumString2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
-        if let Ok(member) = <FormNumberFieldMinimumString3 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormNumberFieldMinimumString3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String3(member));
         }
         Err(path.at("no member matched"))
@@ -9308,16 +9674,28 @@ pub enum FormNumberFieldMaximum {
 
 impl crate::codec::Decode for FormNumberFieldMaximum {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <FormNumberFieldMaximumNumber as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormNumberFieldMaximumNumber as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) = <FormNumberFieldMaximumString as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormNumberFieldMaximumString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) = <FormNumberFieldMaximumString2 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormNumberFieldMaximumString2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
-        if let Ok(member) = <FormNumberFieldMaximumString3 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormNumberFieldMaximumString3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String3(member));
         }
         Err(path.at("no member matched"))
@@ -9439,16 +9817,28 @@ pub enum FormNumberFieldDefault {
 
 impl crate::codec::Decode for FormNumberFieldDefault {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <FormNumberFieldDefaultNumber as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormNumberFieldDefaultNumber as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) = <FormNumberFieldDefaultString as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormNumberFieldDefaultString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) = <FormNumberFieldDefaultString2 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormNumberFieldDefaultString2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
-        if let Ok(member) = <FormNumberFieldDefaultString3 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormNumberFieldDefaultString3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String3(member));
         }
         Err(path.at("no member matched"))
@@ -9645,16 +10035,28 @@ pub enum FormIntegerFieldMinimum {
 
 impl crate::codec::Decode for FormIntegerFieldMinimum {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <FormIntegerFieldMinimumNumber as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormIntegerFieldMinimumNumber as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) = <FormIntegerFieldMinimumString as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormIntegerFieldMinimumString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) = <FormIntegerFieldMinimumString2 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormIntegerFieldMinimumString2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
-        if let Ok(member) = <FormIntegerFieldMinimumString3 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormIntegerFieldMinimumString3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String3(member));
         }
         Err(path.at("no member matched"))
@@ -9776,16 +10178,28 @@ pub enum FormIntegerFieldMaximum {
 
 impl crate::codec::Decode for FormIntegerFieldMaximum {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <FormIntegerFieldMaximumNumber as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormIntegerFieldMaximumNumber as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) = <FormIntegerFieldMaximumString as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormIntegerFieldMaximumString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) = <FormIntegerFieldMaximumString2 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormIntegerFieldMaximumString2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
-        if let Ok(member) = <FormIntegerFieldMaximumString3 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormIntegerFieldMaximumString3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String3(member));
         }
         Err(path.at("no member matched"))
@@ -9907,16 +10321,28 @@ pub enum FormIntegerFieldDefault {
 
 impl crate::codec::Decode for FormIntegerFieldDefault {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <FormIntegerFieldDefaultNumber as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormIntegerFieldDefaultNumber as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) = <FormIntegerFieldDefaultString as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormIntegerFieldDefaultString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) = <FormIntegerFieldDefaultString2 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormIntegerFieldDefaultString2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
-        if let Ok(member) = <FormIntegerFieldDefaultString3 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormIntegerFieldDefaultString3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String3(member));
         }
         Err(path.at("no member matched"))
@@ -10249,7 +10675,24 @@ impl crate::codec::Encode for FormField {
     }
 }
 
-pub type FormFields = Vec<FormField>;
+#[derive(Debug, Clone, PartialEq)]
+pub struct FormFields(pub Vec<FormField>);
+
+impl crate::codec::Decode for FormFields {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let value = <Vec<FormField> as crate::codec::Decode>::decode(value, path)?;
+        if !crate::checks::is_min_items(value.as_slice(), 1) {
+            return Err(path.at("expected more items"));
+        }
+        Ok(Self(value))
+    }
+}
+
+impl crate::codec::Encode for FormFields {
+    fn encode(&self, out: &mut String) {
+        <Vec<FormField> as crate::codec::Encode>::encode(&self.0, out);
+    }
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FormCreatePayload {
@@ -10390,25 +10833,46 @@ pub enum FormValue {
 
 impl crate::codec::Decode for FormValue {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <String as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <String as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) = <FormValueNumber as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormValueNumber as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) = <FormValueString as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormValueString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
-        if let Ok(member) = <FormValueString2 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormValueString2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String3(member));
         }
-        if let Ok(member) = <FormValueString3 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormValueString3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String4(member));
         }
-        if let Ok(member) = <bool as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <bool as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Bool(member));
         }
-        if let Ok(member) = <Vec<String> as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <Vec<String> as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Array(member));
         }
         Err(path.at("no member matched"))
@@ -10556,10 +11020,7 @@ pub struct PromptBase64(pub String);
 impl crate::codec::Decode for PromptBase64 {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let value = <String as crate::codec::Decode>::decode(value, path)?;
-        if !crate::checks::is_pattern(
-            value.as_str(),
-            "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$",
-        ) {
+        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_5) {
             return Err(path.at("expected a string matching the RegExp ^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$"));
         }
         Ok(Self(value))
@@ -10607,7 +11068,10 @@ pub struct GenerateImageAspect(pub String);
 impl crate::codec::Decode for GenerateImageAspect {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let value = <String as crate::codec::Decode>::decode(value, path)?;
-        if !crate::checks::is_pattern(value.as_str(), "^\\d+(?:\\.\\d+)?:\\d+(?:\\.\\d+)?$") {
+        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_18) {
+            return Err(path.at("expected a string matching the template literal"));
+        }
+        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_19) {
             return Err(path.at("expected a string matching the RegExp ^\\d+(?:\\.\\d+)?:\\d+(?:\\.\\d+)?$"));
         }
         Ok(Self(value))
@@ -10705,16 +11169,28 @@ pub enum GenerateImageResolution {
 
 impl crate::codec::Decode for GenerateImageResolution {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <GenerateImageResolutionString as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <GenerateImageResolutionString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) = <GenerateImageResolutionString2 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <GenerateImageResolutionString2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
-        if let Ok(member) = <GenerateImageResolutionString3 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <GenerateImageResolutionString3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String3(member));
         }
-        if let Ok(member) = <String as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <String as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String4(member));
         }
         Err(path.at("no member matched"))
@@ -10791,7 +11267,7 @@ impl crate::codec::Decode for GenerateImageFile {
         Ok(Self {
             data: crate::codec::decode_field(object, "data", path)?,
             mime: crate::codec::decode_field_checked(object, "mime", path, |value: &String, path| {
-                if crate::checks::is_pattern(value.as_str(), "^image\\/") {
+                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_20) {
                     Ok(())
                 } else {
                     Err(path.at("expected a string matching the RegExp ^image\\/"))
@@ -10846,10 +11322,16 @@ pub enum GenerateVideoAspect {
 
 impl crate::codec::Decode for GenerateVideoAspect {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <GenerateImageAspect as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <GenerateImageAspect as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) = <GenerateVideoAspectString as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <GenerateVideoAspectString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
         Err(path.at("no member matched"))
@@ -10976,19 +11458,34 @@ pub enum GenerateVideoResolution {
 
 impl crate::codec::Decode for GenerateVideoResolution {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <GenerateVideoResolutionString as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <GenerateVideoResolutionString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) = <GenerateVideoResolutionString2 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <GenerateVideoResolutionString2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
-        if let Ok(member) = <GenerateVideoResolutionString3 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <GenerateVideoResolutionString3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String3(member));
         }
-        if let Ok(member) = <GenerateVideoResolutionString4 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <GenerateVideoResolutionString4 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String4(member));
         }
-        if let Ok(member) = <String as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <String as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String5(member));
         }
         Err(path.at("no member matched"))
@@ -11367,10 +11864,16 @@ pub enum GenerateChoiceValue {
 
 impl crate::codec::Decode for GenerateChoiceValue {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <String as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <String as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) = <bool as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <bool as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Bool(member));
         }
         Err(path.at("no member matched"))
@@ -11750,16 +12253,28 @@ pub enum VoiceWebRTCTransportInputDcid {
 
 impl crate::codec::Decode for VoiceWebRTCTransportInputDcid {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <VoiceWebRTCTransportInputDcidNumber as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <VoiceWebRTCTransportInputDcidNumber as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) = <VoiceWebRTCTransportInputDcidString as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <VoiceWebRTCTransportInputDcidString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) = <VoiceWebRTCTransportInputDcidString2 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <VoiceWebRTCTransportInputDcidString2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
-        if let Ok(member) = <VoiceWebRTCTransportInputDcidString3 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <VoiceWebRTCTransportInputDcidString3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String3(member));
         }
         Err(path.at("no member matched"))
@@ -12348,11 +12863,16 @@ pub enum ExperimentalMcpAddBodyConfigRemoteOauth {
 
 impl crate::codec::Decode for ExperimentalMcpAddBodyConfigRemoteOauth {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <ExperimentalMcpAddBodyConfigRemoteOauthObject as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member = <ExperimentalMcpAddBodyConfigRemoteOauthObject as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Object(member));
         }
-        if let Ok(member) = <ExperimentalMcpAddBodyConfigRemoteOauthBool as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <ExperimentalMcpAddBodyConfigRemoteOauthBool as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Bool(member));
         }
         Err(path.at("no member matched"))
@@ -13724,10 +14244,16 @@ pub enum AutomationTarget {
 
 impl crate::codec::Decode for AutomationTarget {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <AutomationTargetObject as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <AutomationTargetObject as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Object(member));
         }
-        if let Ok(member) = <AutomationTargetObject2 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <AutomationTargetObject2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Object2(member));
         }
         Err(path.at("no member matched"))

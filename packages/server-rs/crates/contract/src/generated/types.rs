@@ -5453,7 +5453,7 @@ pub struct InstructionHash(pub String);
 impl crate::codec::Decode for InstructionHash {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let value = <String as crate::codec::Decode>::decode(value, path)?;
-        if !crate::checks::is_pattern(value.as_str(), "^[a-f0-9]{64}$") {
+        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_3) {
             return Err(path.at("expected a string matching the RegExp ^[a-f0-9]{64}$"));
         }
         Ok(Self(value))
@@ -5466,13 +5466,39 @@ impl crate::codec::Encode for InstructionHash {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct SessionForkedDataInstructions(pub crate::codec::JsonMap<InstructionHash>);
+
+impl crate::codec::Decode for SessionForkedDataInstructions {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        let mut entries = Vec::with_capacity(object.len());
+        for (key, item) in object {
+            if !crate::checks::is_pattern(key.as_str(), &crate::generated::patterns::PATTERN_2) {
+                continue;
+            }
+            path.push_key(key);
+            let decoded = <InstructionHash as crate::codec::Decode>::decode(item, path);
+            path.pop();
+            entries.push((key.clone(), decoded?));
+        }
+        Ok(Self(crate::codec::JsonMap(entries)))
+    }
+}
+
+impl crate::codec::Encode for SessionForkedDataInstructions {
+    fn encode(&self, out: &mut String) {
+        <crate::codec::JsonMap<InstructionHash> as crate::codec::Encode>::encode(&self.0, out);
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InstructionEntryKey(pub String);
 
 impl crate::codec::Decode for InstructionEntryKey {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let value = <String as crate::codec::Decode>::decode(value, path)?;
-        if !crate::checks::is_pattern(value.as_str(), "^[a-z0-9][a-z0-9._-]*$") {
+        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_4) {
             return Err(path.at("expected a string matching the RegExp ^[a-z0-9][a-z0-9._-]*$"));
         }
         Ok(Self(value))
@@ -5521,7 +5547,7 @@ pub struct SessionForkedData {
     pub session_id: SessionID,
     pub parent_id: SessionID,
     pub boundary: SessionForkBoundary,
-    pub instructions: Option<crate::codec::JsonMap<InstructionHash>>,
+    pub instructions: Option<SessionForkedDataInstructions>,
     pub instruction_entries: Option<InstructionEntrySnapshot>,
 }
 
@@ -5852,10 +5878,7 @@ pub struct PromptBase64(pub String);
 impl crate::codec::Decode for PromptBase64 {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let value = <String as crate::codec::Decode>::decode(value, path)?;
-        if !crate::checks::is_pattern(
-            value.as_str(),
-            "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$",
-        ) {
+        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_5) {
             return Err(path.at("expected a string matching the RegExp ^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$"));
         }
         Ok(Self(value))
@@ -7680,12 +7703,16 @@ pub enum SessionInstructionsUpdatedDataDeltaValue {
 
 impl crate::codec::Decode for SessionInstructionsUpdatedDataDeltaValue {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <InstructionHash as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <InstructionHash as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) =
-            <SessionInstructionsUpdatedDataDeltaValueString as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member = <SessionInstructionsUpdatedDataDeltaValueString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
         Err(path.at("no member matched"))
@@ -11114,7 +11141,7 @@ pub struct ToolFileContent {
     pub r#type: ToolFileContentType,
     pub uri: String,
     pub mime: String,
-    pub name: Option<String>,
+    pub name: Option<Option<String>>,
 }
 
 impl crate::codec::Decode for ToolFileContent {
@@ -11124,7 +11151,7 @@ impl crate::codec::Decode for ToolFileContent {
             r#type: crate::codec::decode_field(object, "type", path)?,
             uri: crate::codec::decode_field(object, "uri", path)?,
             mime: crate::codec::decode_field(object, "mime", path)?,
-            name: crate::codec::decode_optional(object, "name", path)?,
+            name: crate::codec::decode_optional_nullable(object, "name", path)?,
         })
     }
 }
@@ -11136,7 +11163,7 @@ impl crate::codec::Encode for ToolFileContent {
         crate::codec::write_value(out, &mut first, "type", &self.r#type);
         crate::codec::write_value(out, &mut first, "uri", &self.uri);
         crate::codec::write_value(out, &mut first, "mime", &self.mime);
-        crate::codec::write_optional(out, &mut first, "name", &self.name);
+        crate::codec::write_optional_nullable(out, &mut first, "name", &self.name);
         out.push('}');
     }
 }
@@ -11186,7 +11213,13 @@ impl crate::codec::Decode for SessionToolSuccessData {
             session_id: crate::codec::decode_field(object, "sessionID", path)?,
             assistant_message_id: crate::codec::decode_field(object, "assistantMessageID", path)?,
             id: crate::codec::decode_field(object, "id", path)?,
-            content: crate::codec::decode_field(object, "content", path)?,
+            content: crate::codec::decode_field_checked(object, "content", path, |value: &Vec<ToolContent>, path| {
+                if crate::checks::is_min_items(value.as_slice(), 1) {
+                    Ok(())
+                } else {
+                    Err(path.at("expected more items"))
+                }
+            })?,
             metadata: crate::codec::decode_optional(object, "metadata", path)?,
             executed: crate::codec::decode_field(object, "executed", path)?,
             native: crate::codec::decode_optional(object, "native", path)?,
@@ -11351,7 +11384,18 @@ impl crate::codec::Decode for SessionToolFailedData {
             assistant_message_id: crate::codec::decode_field(object, "assistantMessageID", path)?,
             id: crate::codec::decode_field(object, "id", path)?,
             error: crate::codec::decode_field(object, "error", path)?,
-            content: crate::codec::decode_optional(object, "content", path)?,
+            content: crate::codec::decode_optional_checked(
+                object,
+                "content",
+                path,
+                |value: &Vec<ToolContent>, path| {
+                    if crate::checks::is_min_items(value.as_slice(), 1) {
+                        Ok(())
+                    } else {
+                        Err(path.at("expected more items"))
+                    }
+                },
+            )?,
             metadata: crate::codec::decode_optional(object, "metadata", path)?,
             executed: crate::codec::decode_field(object, "executed", path)?,
             native: crate::codec::decode_optional(object, "native", path)?,
@@ -13426,7 +13470,7 @@ pub struct ProjectVcs(pub String);
 impl crate::codec::Decode for ProjectVcs {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let value = <String as crate::codec::Decode>::decode(value, path)?;
-        if !crate::checks::is_pattern(value.as_str(), "^[a-z][a-z0-9._-]*$") {
+        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_6) {
             return Err(path.at("expected a string matching the RegExp ^[a-z][a-z0-9._-]*$"));
         }
         Ok(Self(value))
@@ -15916,13 +15960,22 @@ pub enum FormWhenValue {
 
 impl crate::codec::Decode for FormWhenValue {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <String as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <String as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) = <f64 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <f64 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) = <bool as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <bool as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Bool(member));
         }
         Err(path.at("no member matched"))
@@ -16552,7 +16605,24 @@ impl crate::codec::Encode for FormField {
     }
 }
 
-pub type FormFields = Vec<FormField>;
+#[derive(Debug, Clone, PartialEq)]
+pub struct FormFields(pub Vec<FormField>);
+
+impl crate::codec::Decode for FormFields {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let value = <Vec<FormField> as crate::codec::Decode>::decode(value, path)?;
+        if !crate::checks::is_min_items(value.as_slice(), 1) {
+            return Err(path.at("expected more items"));
+        }
+        Ok(Self(value))
+    }
+}
+
+impl crate::codec::Encode for FormFields {
+    fn encode(&self, out: &mut String) {
+        <Vec<FormField> as crate::codec::Encode>::encode(&self.0, out);
+    }
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FormInfo {
@@ -16685,16 +16755,28 @@ pub enum FormValue {
 
 impl crate::codec::Decode for FormValue {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <String as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <String as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) = <f64 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <f64 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) = <bool as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <bool as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Bool(member));
         }
-        if let Ok(member) = <Vec<String> as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <Vec<String> as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Array(member));
         }
         Err(path.at("no member matched"))
@@ -17983,55 +18065,106 @@ pub enum TuiCommandExecuteDataCommand {
 
 impl crate::codec::Decode for TuiCommandExecuteDataCommand {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <TuiCommandExecuteDataCommandString as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <TuiCommandExecuteDataCommandString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) = <TuiCommandExecuteDataCommandString2 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <TuiCommandExecuteDataCommandString2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
-        if let Ok(member) = <TuiCommandExecuteDataCommandString3 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <TuiCommandExecuteDataCommandString3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String3(member));
         }
-        if let Ok(member) = <TuiCommandExecuteDataCommandString4 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <TuiCommandExecuteDataCommandString4 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String4(member));
         }
-        if let Ok(member) = <TuiCommandExecuteDataCommandString5 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <TuiCommandExecuteDataCommandString5 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String5(member));
         }
-        if let Ok(member) = <TuiCommandExecuteDataCommandString6 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <TuiCommandExecuteDataCommandString6 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String6(member));
         }
-        if let Ok(member) = <TuiCommandExecuteDataCommandString7 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <TuiCommandExecuteDataCommandString7 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String7(member));
         }
-        if let Ok(member) = <TuiCommandExecuteDataCommandString8 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <TuiCommandExecuteDataCommandString8 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String8(member));
         }
-        if let Ok(member) = <TuiCommandExecuteDataCommandString9 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <TuiCommandExecuteDataCommandString9 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String9(member));
         }
-        if let Ok(member) = <TuiCommandExecuteDataCommandString10 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <TuiCommandExecuteDataCommandString10 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String10(member));
         }
-        if let Ok(member) = <TuiCommandExecuteDataCommandString11 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <TuiCommandExecuteDataCommandString11 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String11(member));
         }
-        if let Ok(member) = <TuiCommandExecuteDataCommandString12 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <TuiCommandExecuteDataCommandString12 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String12(member));
         }
-        if let Ok(member) = <TuiCommandExecuteDataCommandString13 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <TuiCommandExecuteDataCommandString13 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String13(member));
         }
-        if let Ok(member) = <TuiCommandExecuteDataCommandString14 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <TuiCommandExecuteDataCommandString14 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String14(member));
         }
-        if let Ok(member) = <TuiCommandExecuteDataCommandString15 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <TuiCommandExecuteDataCommandString15 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String15(member));
         }
-        if let Ok(member) = <TuiCommandExecuteDataCommandString16 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <TuiCommandExecuteDataCommandString16 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String16(member));
         }
-        if let Ok(member) = <String as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <String as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String17(member));
         }
         Err(path.at("no member matched"))
@@ -18187,7 +18320,7 @@ pub struct TuiToastShowData {
     pub title: Option<String>,
     pub message: String,
     pub variant: TuiToastShowDataVariant,
-    pub duration: Option<f64>,
+    pub duration: Option<Option<f64>>,
 }
 
 impl crate::codec::Decode for TuiToastShowData {
@@ -18197,7 +18330,7 @@ impl crate::codec::Decode for TuiToastShowData {
             title: crate::codec::decode_optional(object, "title", path)?,
             message: crate::codec::decode_field(object, "message", path)?,
             variant: crate::codec::decode_field(object, "variant", path)?,
-            duration: crate::codec::decode_optional_checked(object, "duration", path, |value: &f64, path| {
+            duration: crate::codec::decode_optional_nullable_checked(object, "duration", path, |value: &f64, path| {
                 if !crate::checks::is_int(*value) {
                     return Err(path.at("expected an integer"));
                 }
@@ -18217,7 +18350,7 @@ impl crate::codec::Encode for TuiToastShowData {
         crate::codec::write_optional(out, &mut first, "title", &self.title);
         crate::codec::write_value(out, &mut first, "message", &self.message);
         crate::codec::write_value(out, &mut first, "variant", &self.variant);
-        crate::codec::write_optional(out, &mut first, "duration", &self.duration);
+        crate::codec::write_optional_nullable(out, &mut first, "duration", &self.duration);
         out.push('}');
     }
 }
@@ -18812,7 +18945,7 @@ pub struct ExperimentalMcpEventData {
     pub timestamp: String,
     pub data: serde_json::Value,
     pub cursor: Option<String>,
-    pub truncated: Option<bool>,
+    pub truncated: Option<Option<bool>>,
 }
 
 impl crate::codec::Decode for ExperimentalMcpEventData {
@@ -18826,7 +18959,7 @@ impl crate::codec::Decode for ExperimentalMcpEventData {
             timestamp: crate::codec::decode_field(object, "timestamp", path)?,
             data: crate::codec::decode_field(object, "data", path)?,
             cursor: crate::codec::decode_field::<Option<String>>(object, "cursor", path)?,
-            truncated: crate::codec::decode_optional(object, "truncated", path)?,
+            truncated: crate::codec::decode_optional_nullable(object, "truncated", path)?,
         })
     }
 }
@@ -18842,7 +18975,7 @@ impl crate::codec::Encode for ExperimentalMcpEventData {
         crate::codec::write_value(out, &mut first, "timestamp", &self.timestamp);
         crate::codec::write_value(out, &mut first, "data", &self.data);
         crate::codec::write_value(out, &mut first, "cursor", &self.cursor);
-        crate::codec::write_optional(out, &mut first, "truncated", &self.truncated);
+        crate::codec::write_optional_nullable(out, &mut first, "truncated", &self.truncated);
         out.push('}');
     }
 }
@@ -18891,7 +19024,7 @@ impl crate::codec::Encode for ExperimentalMcpEvent {
 pub struct V2EventRpc {
     pub id: EventID,
     pub created: f64,
-    pub metadata: Option<crate::codec::JsonMap<serde_json::Value>>,
+    pub metadata: Option<Option<crate::codec::JsonMap<serde_json::Value>>>,
     pub r#type: String,
     pub location: LocationPublicRef,
     pub data: crate::codec::JsonMap<serde_json::Value>,
@@ -18905,8 +19038,14 @@ impl crate::codec::Decode for V2EventRpc {
             created: crate::codec::decode_field_checked(object, "created", path, |value: &f64, path| {
                 if crate::checks::is_finite(*value) { Ok(()) } else { Err(path.at("expected a finite number")) }
             })?,
-            metadata: crate::codec::decode_optional(object, "metadata", path)?,
-            r#type: crate::codec::decode_field(object, "type", path)?,
+            metadata: crate::codec::decode_optional_nullable(object, "metadata", path)?,
+            r#type: crate::codec::decode_field_checked(object, "type", path, |value: &String, path| {
+                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_7) {
+                    Ok(())
+                } else {
+                    Err(path.at("expected a string matching the template literal"))
+                }
+            })?,
             location: crate::codec::decode_field(object, "location", path)?,
             data: crate::codec::decode_field(object, "data", path)?,
         })
@@ -18919,7 +19058,7 @@ impl crate::codec::Encode for V2EventRpc {
         let mut first = true;
         crate::codec::write_value(out, &mut first, "id", &self.id);
         crate::codec::write_value(out, &mut first, "created", &self.created);
-        crate::codec::write_optional(out, &mut first, "metadata", &self.metadata);
+        crate::codec::write_optional_nullable(out, &mut first, "metadata", &self.metadata);
         crate::codec::write_value(out, &mut first, "type", &self.r#type);
         crate::codec::write_value(out, &mut first, "location", &self.location);
         crate::codec::write_value(out, &mut first, "data", &self.data);
@@ -18971,8 +19110,8 @@ impl crate::codec::Encode for V2EventServerConnectedData {
 #[derive(Debug, Clone, PartialEq)]
 pub struct V2EventServerConnected {
     pub id: EventID,
-    pub metadata: Option<crate::codec::JsonMap<serde_json::Value>>,
-    pub location: Option<LocationPublicRef>,
+    pub metadata: Option<Option<crate::codec::JsonMap<serde_json::Value>>>,
+    pub location: Option<Option<LocationPublicRef>>,
     pub r#type: V2EventServerConnectedType,
     pub data: V2EventServerConnectedData,
 }
@@ -18982,8 +19121,8 @@ impl crate::codec::Decode for V2EventServerConnected {
         let object = crate::codec::as_object(value, path)?;
         Ok(Self {
             id: crate::codec::decode_field(object, "id", path)?,
-            metadata: crate::codec::decode_optional(object, "metadata", path)?,
-            location: crate::codec::decode_optional(object, "location", path)?,
+            metadata: crate::codec::decode_optional_nullable(object, "metadata", path)?,
+            location: crate::codec::decode_optional_nullable(object, "location", path)?,
             r#type: crate::codec::decode_field(object, "type", path)?,
             data: crate::codec::decode_field(object, "data", path)?,
         })
@@ -18995,8 +19134,8 @@ impl crate::codec::Encode for V2EventServerConnected {
         out.push('{');
         let mut first = true;
         crate::codec::write_value(out, &mut first, "id", &self.id);
-        crate::codec::write_optional(out, &mut first, "metadata", &self.metadata);
-        crate::codec::write_optional(out, &mut first, "location", &self.location);
+        crate::codec::write_optional_nullable(out, &mut first, "metadata", &self.metadata);
+        crate::codec::write_optional_nullable(out, &mut first, "location", &self.location);
         crate::codec::write_value(out, &mut first, "type", &self.r#type);
         crate::codec::write_value(out, &mut first, "data", &self.data);
         out.push('}');
@@ -19577,7 +19716,13 @@ impl crate::codec::Decode for SessionMessageToolStateCompleted {
         Ok(Self {
             status: crate::codec::decode_field(object, "status", path)?,
             input: crate::codec::decode_field(object, "input", path)?,
-            content: crate::codec::decode_field(object, "content", path)?,
+            content: crate::codec::decode_field_checked(object, "content", path, |value: &Vec<ToolContent>, path| {
+                if crate::checks::is_min_items(value.as_slice(), 1) {
+                    Ok(())
+                } else {
+                    Err(path.at("expected more items"))
+                }
+            })?,
             metadata: crate::codec::decode_optional(object, "metadata", path)?,
         })
     }
@@ -19636,7 +19781,18 @@ impl crate::codec::Decode for SessionMessageToolStateError {
             status: crate::codec::decode_field(object, "status", path)?,
             input: crate::codec::decode_field(object, "input", path)?,
             error: crate::codec::decode_field(object, "error", path)?,
-            content: crate::codec::decode_optional(object, "content", path)?,
+            content: crate::codec::decode_optional_checked(
+                object,
+                "content",
+                path,
+                |value: &Vec<ToolContent>, path| {
+                    if crate::checks::is_min_items(value.as_slice(), 1) {
+                        Ok(())
+                    } else {
+                        Err(path.at("expected more items"))
+                    }
+                },
+            )?,
             metadata: crate::codec::decode_optional(object, "metadata", path)?,
         })
     }
@@ -20118,10 +20274,16 @@ pub enum ProviderSettingsTimeout {
 
 impl crate::codec::Decode for ProviderSettingsTimeout {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <ProviderSettingsTimeoutNumber as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <ProviderSettingsTimeoutNumber as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) = <ProviderSettingsTimeoutBool as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <ProviderSettingsTimeoutBool as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Bool(member));
         }
         Err(path.at("no member matched"))
@@ -20189,10 +20351,16 @@ pub enum ProviderSettingsHeaderTimeout {
 
 impl crate::codec::Decode for ProviderSettingsHeaderTimeout {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <ProviderSettingsHeaderTimeoutNumber as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <ProviderSettingsHeaderTimeoutNumber as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) = <ProviderSettingsHeaderTimeoutBool as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <ProviderSettingsHeaderTimeoutBool as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Bool(member));
         }
         Err(path.at("no member matched"))
@@ -20260,10 +20428,16 @@ pub enum ProviderSettingsChunkTimeout {
 
 impl crate::codec::Decode for ProviderSettingsChunkTimeout {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <ProviderSettingsChunkTimeoutNumber as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <ProviderSettingsChunkTimeoutNumber as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) = <ProviderSettingsChunkTimeoutBool as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <ProviderSettingsChunkTimeoutBool as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Bool(member));
         }
         Err(path.at("no member matched"))
@@ -20404,7 +20578,10 @@ pub struct ProviderCacheTTL(pub String);
 impl crate::codec::Decode for ProviderCacheTTL {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let value = <String as crate::codec::Decode>::decode(value, path)?;
-        if !crate::checks::is_pattern(value.as_str(), "^\\d+(ms|s|m|h|d)$") {
+        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_8) {
+            return Err(path.at("expected a string matching the template literal"));
+        }
+        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_9) {
             return Err(path.at("expected a string matching the RegExp ^\\d+(ms|s|m|h|d)$"));
         }
         Ok(Self(value))
@@ -20450,10 +20627,16 @@ pub enum ProviderCacheWarmingObjectInterval {
 
 impl crate::codec::Decode for ProviderCacheWarmingObjectInterval {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <ProviderCacheWarmingObjectIntervalString as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <ProviderCacheWarmingObjectIntervalString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) = <String as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <String as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
         Err(path.at("no member matched"))
@@ -20505,10 +20688,16 @@ pub enum ProviderCacheWarming {
 
 impl crate::codec::Decode for ProviderCacheWarming {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <bool as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <bool as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Bool(member));
         }
-        if let Ok(member) = <ProviderCacheWarmingObject as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <ProviderCacheWarmingObject as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Object(member));
         }
         Err(path.at("no member matched"))
@@ -20690,20 +20879,20 @@ impl crate::codec::Decode for ProviderSettings {
 
 impl crate::codec::Encode for ProviderSettings {
     fn encode(&self, out: &mut String) {
-        out.push('{');
-        let mut first = true;
-        crate::codec::write_optional(out, &mut first, "timeout", &self.timeout);
-        crate::codec::write_optional(out, &mut first, "headerTimeout", &self.header_timeout);
-        crate::codec::write_optional(out, &mut first, "chunkTimeout", &self.chunk_timeout);
-        crate::codec::write_optional(out, &mut first, "compaction", &self.compaction);
-        crate::codec::write_optional(out, &mut first, "cache", &self.cache);
-        crate::codec::write_optional(out, &mut first, "transport", &self.transport);
-        crate::codec::write_optional(out, &mut first, "encoding", &self.encoding);
-        crate::codec::write_optional(out, &mut first, "tls", &self.tls);
-        for (key, value) in &self.rest.0 {
-            crate::codec::write_value(out, &mut first, key, value);
-        }
-        out.push('}');
+        crate::codec::write_struct_object(
+            out,
+            &[
+                ("timeout", self.timeout.as_ref().map(|value| value as &dyn crate::codec::Encode)),
+                ("headerTimeout", self.header_timeout.as_ref().map(|value| value as &dyn crate::codec::Encode)),
+                ("chunkTimeout", self.chunk_timeout.as_ref().map(|value| value as &dyn crate::codec::Encode)),
+                ("compaction", self.compaction.as_ref().map(|value| value as &dyn crate::codec::Encode)),
+                ("cache", self.cache.as_ref().map(|value| value as &dyn crate::codec::Encode)),
+                ("transport", self.transport.as_ref().map(|value| value as &dyn crate::codec::Encode)),
+                ("encoding", self.encoding.as_ref().map(|value| value as &dyn crate::codec::Encode)),
+                ("tls", self.tls.as_ref().map(|value| value as &dyn crate::codec::Encode)),
+            ],
+            self.rest.0.iter().map(|(key, value)| (key.as_str(), Some(value as &dyn crate::codec::Encode))),
+        );
     }
 }
 
@@ -23294,16 +23483,28 @@ pub enum SessionMessageShellExit {
 
 impl crate::codec::Decode for SessionMessageShellExit {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <SessionMessageShellExitNumber as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <SessionMessageShellExitNumber as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) = <SessionMessageShellExitString as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <SessionMessageShellExitString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) = <SessionMessageShellExitString2 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <SessionMessageShellExitString2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
-        if let Ok(member) = <SessionMessageShellExitString3 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <SessionMessageShellExitString3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String3(member));
         }
         Err(path.at("no member matched"))
@@ -23826,7 +24027,13 @@ impl crate::codec::Decode for SessionMessageToolStateCompleted1 {
         Ok(Self {
             status: crate::codec::decode_field(object, "status", path)?,
             input: crate::codec::decode_field(object, "input", path)?,
-            content: crate::codec::decode_field(object, "content", path)?,
+            content: crate::codec::decode_field_checked(object, "content", path, |value: &Vec<ToolContent1>, path| {
+                if crate::checks::is_min_items(value.as_slice(), 1) {
+                    Ok(())
+                } else {
+                    Err(path.at("expected more items"))
+                }
+            })?,
             metadata: crate::codec::decode_optional(object, "metadata", path)?,
         })
     }
@@ -23885,7 +24092,18 @@ impl crate::codec::Decode for SessionMessageToolStateError1 {
             status: crate::codec::decode_field(object, "status", path)?,
             input: crate::codec::decode_field(object, "input", path)?,
             error: crate::codec::decode_field(object, "error", path)?,
-            content: crate::codec::decode_optional(object, "content", path)?,
+            content: crate::codec::decode_optional_checked(
+                object,
+                "content",
+                path,
+                |value: &Vec<ToolContent1>, path| {
+                    if crate::checks::is_min_items(value.as_slice(), 1) {
+                        Ok(())
+                    } else {
+                        Err(path.at("expected more items"))
+                    }
+                },
+            )?,
             metadata: crate::codec::decode_optional(object, "metadata", path)?,
         })
     }
@@ -24846,37 +25064,70 @@ pub enum SessionMessageInfo {
 
 impl crate::codec::Decode for SessionMessageInfo {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <SessionMessageAgentSelected as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <SessionMessageAgentSelected as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::AgentSelected(member));
         }
-        if let Ok(member) = <SessionMessageModelSelected as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <SessionMessageModelSelected as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::ModelSelected(member));
         }
-        if let Ok(member) = <SessionMessageLocationSwitched as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <SessionMessageLocationSwitched as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::LocationSwitched(member));
         }
-        if let Ok(member) = <SessionMessageUser as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <SessionMessageUser as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::User(member));
         }
-        if let Ok(member) = <SessionMessageSynthetic as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <SessionMessageSynthetic as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Synthetic(member));
         }
-        if let Ok(member) = <SessionMessageSystem as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <SessionMessageSystem as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::System(member));
         }
-        if let Ok(member) = <SessionMessageSkill as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <SessionMessageSkill as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Skill(member));
         }
-        if let Ok(member) = <SessionMessageShell as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <SessionMessageShell as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Shell(member));
         }
-        if let Ok(member) = <SessionMessageAssistant as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <SessionMessageAssistant as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Assistant(member));
         }
-        if let Ok(member) = <SessionMessageCompaction as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <SessionMessageCompaction as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Compaction(member));
         }
-        if let Ok(member) = <SessionMessageIdle as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <SessionMessageIdle as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Idle(member));
         }
         Err(path.at("no member matched"))
@@ -24997,8 +25248,34 @@ impl crate::codec::Encode for SessionActive {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct SessionActiveResponseData(pub crate::codec::JsonMap<SessionActive>);
+
+impl crate::codec::Decode for SessionActiveResponseData {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        let mut entries = Vec::with_capacity(object.len());
+        for (key, item) in object {
+            if !crate::checks::is_starting_with(key.as_str(), "ses") {
+                continue;
+            }
+            path.push_key(key);
+            let decoded = <SessionActive as crate::codec::Decode>::decode(item, path);
+            path.pop();
+            entries.push((key.clone(), decoded?));
+        }
+        Ok(Self(crate::codec::JsonMap(entries)))
+    }
+}
+
+impl crate::codec::Encode for SessionActiveResponseData {
+    fn encode(&self, out: &mut String) {
+        <crate::codec::JsonMap<SessionActive> as crate::codec::Encode>::encode(&self.0, out);
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct SessionActiveResponse {
-    pub data: crate::codec::JsonMap<SessionActive>,
+    pub data: SessionActiveResponseData,
 }
 
 impl crate::codec::Decode for SessionActiveResponse {
@@ -25959,22 +26236,40 @@ pub enum FormWhen1Value {
 
 impl crate::codec::Decode for FormWhen1Value {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <String as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <String as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) = <FormWhen1ValueNumber as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormWhen1ValueNumber as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) = <FormWhen1ValueString as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormWhen1ValueString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
-        if let Ok(member) = <FormWhen1ValueString2 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormWhen1ValueString2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String3(member));
         }
-        if let Ok(member) = <FormWhen1ValueString3 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormWhen1ValueString3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String4(member));
         }
-        if let Ok(member) = <bool as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <bool as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Bool(member));
         }
         Err(path.at("no member matched"))
@@ -26292,16 +26587,28 @@ pub enum FormNumberField1Minimum {
 
 impl crate::codec::Decode for FormNumberField1Minimum {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <FormNumberField1MinimumNumber as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormNumberField1MinimumNumber as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) = <FormNumberField1MinimumString as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormNumberField1MinimumString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) = <FormNumberField1MinimumString2 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormNumberField1MinimumString2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
-        if let Ok(member) = <FormNumberField1MinimumString3 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormNumberField1MinimumString3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String3(member));
         }
         Err(path.at("no member matched"))
@@ -26423,16 +26730,28 @@ pub enum FormNumberField1Maximum {
 
 impl crate::codec::Decode for FormNumberField1Maximum {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <FormNumberField1MaximumNumber as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormNumberField1MaximumNumber as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) = <FormNumberField1MaximumString as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormNumberField1MaximumString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) = <FormNumberField1MaximumString2 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormNumberField1MaximumString2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
-        if let Ok(member) = <FormNumberField1MaximumString3 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormNumberField1MaximumString3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String3(member));
         }
         Err(path.at("no member matched"))
@@ -26554,16 +26873,28 @@ pub enum FormNumberField1Default {
 
 impl crate::codec::Decode for FormNumberField1Default {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <FormNumberField1DefaultNumber as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormNumberField1DefaultNumber as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) = <FormNumberField1DefaultString as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormNumberField1DefaultString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) = <FormNumberField1DefaultString2 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormNumberField1DefaultString2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
-        if let Ok(member) = <FormNumberField1DefaultString3 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormNumberField1DefaultString3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String3(member));
         }
         Err(path.at("no member matched"))
@@ -26760,16 +27091,28 @@ pub enum FormIntegerField1Minimum {
 
 impl crate::codec::Decode for FormIntegerField1Minimum {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <FormIntegerField1MinimumNumber as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormIntegerField1MinimumNumber as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) = <FormIntegerField1MinimumString as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormIntegerField1MinimumString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) = <FormIntegerField1MinimumString2 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormIntegerField1MinimumString2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
-        if let Ok(member) = <FormIntegerField1MinimumString3 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormIntegerField1MinimumString3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String3(member));
         }
         Err(path.at("no member matched"))
@@ -26891,16 +27234,28 @@ pub enum FormIntegerField1Maximum {
 
 impl crate::codec::Decode for FormIntegerField1Maximum {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <FormIntegerField1MaximumNumber as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormIntegerField1MaximumNumber as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) = <FormIntegerField1MaximumString as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormIntegerField1MaximumString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) = <FormIntegerField1MaximumString2 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormIntegerField1MaximumString2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
-        if let Ok(member) = <FormIntegerField1MaximumString3 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormIntegerField1MaximumString3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String3(member));
         }
         Err(path.at("no member matched"))
@@ -27022,16 +27377,28 @@ pub enum FormIntegerField1Default {
 
 impl crate::codec::Decode for FormIntegerField1Default {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <FormIntegerField1DefaultNumber as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormIntegerField1DefaultNumber as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) = <FormIntegerField1DefaultString as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormIntegerField1DefaultString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) = <FormIntegerField1DefaultString2 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormIntegerField1DefaultString2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
-        if let Ok(member) = <FormIntegerField1DefaultString3 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormIntegerField1DefaultString3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String3(member));
         }
         Err(path.at("no member matched"))
@@ -27306,7 +27673,24 @@ impl crate::codec::Encode for FormField1 {
     }
 }
 
-pub type FormFields1 = Vec<FormField1>;
+#[derive(Debug, Clone, PartialEq)]
+pub struct FormFields1(pub Vec<FormField1>);
+
+impl crate::codec::Decode for FormFields1 {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let value = <Vec<FormField1> as crate::codec::Decode>::decode(value, path)?;
+        if !crate::checks::is_min_items(value.as_slice(), 1) {
+            return Err(path.at("expected more items"));
+        }
+        Ok(Self(value))
+    }
+}
+
+impl crate::codec::Encode for FormFields1 {
+    fn encode(&self, out: &mut String) {
+        <Vec<FormField1> as crate::codec::Encode>::encode(&self.0, out);
+    }
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FormInfo1 {
@@ -27563,25 +27947,46 @@ pub enum FormValue1 {
 
 impl crate::codec::Decode for FormValue1 {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <String as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <String as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) = <FormValue1Number as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormValue1Number as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) = <FormValue1String as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormValue1String as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
-        if let Ok(member) = <FormValue1String2 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormValue1String2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String3(member));
         }
-        if let Ok(member) = <FormValue1String3 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <FormValue1String3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String4(member));
         }
-        if let Ok(member) = <bool as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <bool as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Bool(member));
         }
-        if let Ok(member) = <Vec<String> as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <Vec<String> as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Array(member));
         }
         Err(path.at("no member matched"))
@@ -27933,19 +28338,34 @@ pub enum ModelType {
 
 impl crate::codec::Decode for ModelType {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <ModelTypeString as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <ModelTypeString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) = <ModelTypeString2 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <ModelTypeString2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
-        if let Ok(member) = <ModelTypeString3 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <ModelTypeString3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String3(member));
         }
-        if let Ok(member) = <ModelTypeString4 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <ModelTypeString4 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String4(member));
         }
-        if let Ok(member) = <String as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <String as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String5(member));
         }
         Err(path.at("no member matched"))
@@ -28049,16 +28469,28 @@ pub enum ModelReasoningField {
 
 impl crate::codec::Decode for ModelReasoningField {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <ModelReasoningFieldString as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <ModelReasoningFieldString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) = <ModelReasoningFieldString2 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <ModelReasoningFieldString2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
-        if let Ok(member) = <ModelReasoningFieldString3 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <ModelReasoningFieldString3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String3(member));
         }
-        if let Ok(member) = <String as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <String as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String4(member));
         }
         Err(path.at("no member matched"))
@@ -28257,15 +28689,15 @@ impl crate::codec::Decode for ModelSettings {
 
 impl crate::codec::Encode for ModelSettings {
     fn encode(&self, out: &mut String) {
-        out.push('{');
-        let mut first = true;
-        crate::codec::write_optional(out, &mut first, "compaction", &self.compaction);
-        crate::codec::write_optional(out, &mut first, "cache", &self.cache);
-        crate::codec::write_optional(out, &mut first, "encoding", &self.encoding);
-        for (key, value) in &self.rest.0 {
-            crate::codec::write_value(out, &mut first, key, value);
-        }
-        out.push('}');
+        crate::codec::write_struct_object(
+            out,
+            &[
+                ("compaction", self.compaction.as_ref().map(|value| value as &dyn crate::codec::Encode)),
+                ("cache", self.cache.as_ref().map(|value| value as &dyn crate::codec::Encode)),
+                ("encoding", self.encoding.as_ref().map(|value| value as &dyn crate::codec::Encode)),
+            ],
+            self.rest.0.iter().map(|(key, value)| (key.as_str(), Some(value as &dyn crate::codec::Encode))),
+        );
     }
 }
 
@@ -28365,14 +28797,14 @@ impl crate::codec::Decode for ModelVariantSettings {
 
 impl crate::codec::Encode for ModelVariantSettings {
     fn encode(&self, out: &mut String) {
-        out.push('{');
-        let mut first = true;
-        crate::codec::write_optional(out, &mut first, "compaction", &self.compaction);
-        crate::codec::write_optional(out, &mut first, "encoding", &self.encoding);
-        for (key, value) in &self.rest.0 {
-            crate::codec::write_value(out, &mut first, key, value);
-        }
-        out.push('}');
+        crate::codec::write_struct_object(
+            out,
+            &[
+                ("compaction", self.compaction.as_ref().map(|value| value as &dyn crate::codec::Encode)),
+                ("encoding", self.encoding.as_ref().map(|value| value as &dyn crate::codec::Encode)),
+            ],
+            self.rest.0.iter().map(|(key, value)| (key.as_str(), Some(value as &dyn crate::codec::Encode))),
+        );
     }
 }
 
@@ -29342,10 +29774,16 @@ pub enum GenerateChoiceValue {
 
 impl crate::codec::Decode for GenerateChoiceValue {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <String as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <String as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) = <bool as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <bool as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Bool(member));
         }
         Err(path.at("no member matched"))
@@ -29995,16 +30433,28 @@ pub enum VoiceWebSocketTransportExpiresAt {
 
 impl crate::codec::Decode for VoiceWebSocketTransportExpiresAt {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <VoiceWebSocketTransportExpiresAtNumber as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <VoiceWebSocketTransportExpiresAtNumber as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) = <VoiceWebSocketTransportExpiresAtString as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <VoiceWebSocketTransportExpiresAtString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) = <VoiceWebSocketTransportExpiresAtString2 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <VoiceWebSocketTransportExpiresAtString2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
-        if let Ok(member) = <VoiceWebSocketTransportExpiresAtString3 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <VoiceWebSocketTransportExpiresAtString3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String3(member));
         }
         Err(path.at("no member matched"))
@@ -31091,24 +31541,32 @@ pub enum IntegrationOauthConnectResponseDataTimeCreated {
 
 impl crate::codec::Decode for IntegrationOauthConnectResponseDataTimeCreated {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) =
-            <IntegrationOauthConnectResponseDataTimeCreatedNumber as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member =
+            <IntegrationOauthConnectResponseDataTimeCreatedNumber as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) =
-            <IntegrationOauthConnectResponseDataTimeCreatedString as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member =
+            <IntegrationOauthConnectResponseDataTimeCreatedString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) =
-            <IntegrationOauthConnectResponseDataTimeCreatedString2 as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member =
+            <IntegrationOauthConnectResponseDataTimeCreatedString2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
-        if let Ok(member) =
-            <IntegrationOauthConnectResponseDataTimeCreatedString3 as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member =
+            <IntegrationOauthConnectResponseDataTimeCreatedString3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String3(member));
         }
         Err(path.at("no member matched"))
@@ -31238,24 +31696,32 @@ pub enum IntegrationOauthConnectResponseDataTimeExpires {
 
 impl crate::codec::Decode for IntegrationOauthConnectResponseDataTimeExpires {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) =
-            <IntegrationOauthConnectResponseDataTimeExpiresNumber as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member =
+            <IntegrationOauthConnectResponseDataTimeExpiresNumber as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) =
-            <IntegrationOauthConnectResponseDataTimeExpiresString as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member =
+            <IntegrationOauthConnectResponseDataTimeExpiresString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) =
-            <IntegrationOauthConnectResponseDataTimeExpiresString2 as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member =
+            <IntegrationOauthConnectResponseDataTimeExpiresString2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
-        if let Ok(member) =
-            <IntegrationOauthConnectResponseDataTimeExpiresString3 as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member =
+            <IntegrationOauthConnectResponseDataTimeExpiresString3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String3(member));
         }
         Err(path.at("no member matched"))
@@ -31500,24 +31966,28 @@ pub enum IntegrationAttemptStatusPendingTimeCreated {
 
 impl crate::codec::Decode for IntegrationAttemptStatusPendingTimeCreated {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) =
-            <IntegrationAttemptStatusPendingTimeCreatedNumber as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member = <IntegrationAttemptStatusPendingTimeCreatedNumber as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) =
-            <IntegrationAttemptStatusPendingTimeCreatedString as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member = <IntegrationAttemptStatusPendingTimeCreatedString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) =
-            <IntegrationAttemptStatusPendingTimeCreatedString2 as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member = <IntegrationAttemptStatusPendingTimeCreatedString2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
-        if let Ok(member) =
-            <IntegrationAttemptStatusPendingTimeCreatedString3 as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member = <IntegrationAttemptStatusPendingTimeCreatedString3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String3(member));
         }
         Err(path.at("no member matched"))
@@ -31647,24 +32117,28 @@ pub enum IntegrationAttemptStatusPendingTimeExpires {
 
 impl crate::codec::Decode for IntegrationAttemptStatusPendingTimeExpires {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) =
-            <IntegrationAttemptStatusPendingTimeExpiresNumber as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member = <IntegrationAttemptStatusPendingTimeExpiresNumber as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) =
-            <IntegrationAttemptStatusPendingTimeExpiresString as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member = <IntegrationAttemptStatusPendingTimeExpiresString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) =
-            <IntegrationAttemptStatusPendingTimeExpiresString2 as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member = <IntegrationAttemptStatusPendingTimeExpiresString2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
-        if let Ok(member) =
-            <IntegrationAttemptStatusPendingTimeExpiresString3 as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member = <IntegrationAttemptStatusPendingTimeExpiresString3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String3(member));
         }
         Err(path.at("no member matched"))
@@ -31871,24 +32345,28 @@ pub enum IntegrationAttemptStatusCompleteTimeCreated {
 
 impl crate::codec::Decode for IntegrationAttemptStatusCompleteTimeCreated {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) =
-            <IntegrationAttemptStatusCompleteTimeCreatedNumber as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member = <IntegrationAttemptStatusCompleteTimeCreatedNumber as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) =
-            <IntegrationAttemptStatusCompleteTimeCreatedString as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member = <IntegrationAttemptStatusCompleteTimeCreatedString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) =
-            <IntegrationAttemptStatusCompleteTimeCreatedString2 as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member = <IntegrationAttemptStatusCompleteTimeCreatedString2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
-        if let Ok(member) =
-            <IntegrationAttemptStatusCompleteTimeCreatedString3 as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member = <IntegrationAttemptStatusCompleteTimeCreatedString3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String3(member));
         }
         Err(path.at("no member matched"))
@@ -32018,24 +32496,28 @@ pub enum IntegrationAttemptStatusCompleteTimeExpires {
 
 impl crate::codec::Decode for IntegrationAttemptStatusCompleteTimeExpires {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) =
-            <IntegrationAttemptStatusCompleteTimeExpiresNumber as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member = <IntegrationAttemptStatusCompleteTimeExpiresNumber as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) =
-            <IntegrationAttemptStatusCompleteTimeExpiresString as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member = <IntegrationAttemptStatusCompleteTimeExpiresString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) =
-            <IntegrationAttemptStatusCompleteTimeExpiresString2 as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member = <IntegrationAttemptStatusCompleteTimeExpiresString2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
-        if let Ok(member) =
-            <IntegrationAttemptStatusCompleteTimeExpiresString3 as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member = <IntegrationAttemptStatusCompleteTimeExpiresString3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String3(member));
         }
         Err(path.at("no member matched"))
@@ -32242,24 +32724,28 @@ pub enum IntegrationAttemptStatusFailedTimeCreated {
 
 impl crate::codec::Decode for IntegrationAttemptStatusFailedTimeCreated {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) =
-            <IntegrationAttemptStatusFailedTimeCreatedNumber as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member = <IntegrationAttemptStatusFailedTimeCreatedNumber as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) =
-            <IntegrationAttemptStatusFailedTimeCreatedString as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member = <IntegrationAttemptStatusFailedTimeCreatedString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) =
-            <IntegrationAttemptStatusFailedTimeCreatedString2 as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member = <IntegrationAttemptStatusFailedTimeCreatedString2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
-        if let Ok(member) =
-            <IntegrationAttemptStatusFailedTimeCreatedString3 as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member = <IntegrationAttemptStatusFailedTimeCreatedString3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String3(member));
         }
         Err(path.at("no member matched"))
@@ -32389,24 +32875,28 @@ pub enum IntegrationAttemptStatusFailedTimeExpires {
 
 impl crate::codec::Decode for IntegrationAttemptStatusFailedTimeExpires {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) =
-            <IntegrationAttemptStatusFailedTimeExpiresNumber as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member = <IntegrationAttemptStatusFailedTimeExpiresNumber as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) =
-            <IntegrationAttemptStatusFailedTimeExpiresString as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member = <IntegrationAttemptStatusFailedTimeExpiresString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) =
-            <IntegrationAttemptStatusFailedTimeExpiresString2 as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member = <IntegrationAttemptStatusFailedTimeExpiresString2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
-        if let Ok(member) =
-            <IntegrationAttemptStatusFailedTimeExpiresString3 as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member = <IntegrationAttemptStatusFailedTimeExpiresString3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String3(member));
         }
         Err(path.at("no member matched"))
@@ -32616,24 +33106,28 @@ pub enum IntegrationAttemptStatusExpiredTimeCreated {
 
 impl crate::codec::Decode for IntegrationAttemptStatusExpiredTimeCreated {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) =
-            <IntegrationAttemptStatusExpiredTimeCreatedNumber as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member = <IntegrationAttemptStatusExpiredTimeCreatedNumber as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) =
-            <IntegrationAttemptStatusExpiredTimeCreatedString as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member = <IntegrationAttemptStatusExpiredTimeCreatedString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) =
-            <IntegrationAttemptStatusExpiredTimeCreatedString2 as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member = <IntegrationAttemptStatusExpiredTimeCreatedString2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
-        if let Ok(member) =
-            <IntegrationAttemptStatusExpiredTimeCreatedString3 as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member = <IntegrationAttemptStatusExpiredTimeCreatedString3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String3(member));
         }
         Err(path.at("no member matched"))
@@ -32763,24 +33257,28 @@ pub enum IntegrationAttemptStatusExpiredTimeExpires {
 
 impl crate::codec::Decode for IntegrationAttemptStatusExpiredTimeExpires {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) =
-            <IntegrationAttemptStatusExpiredTimeExpiresNumber as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member = <IntegrationAttemptStatusExpiredTimeExpiresNumber as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) =
-            <IntegrationAttemptStatusExpiredTimeExpiresString as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member = <IntegrationAttemptStatusExpiredTimeExpiresString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) =
-            <IntegrationAttemptStatusExpiredTimeExpiresString2 as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member = <IntegrationAttemptStatusExpiredTimeExpiresString2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
-        if let Ok(member) =
-            <IntegrationAttemptStatusExpiredTimeExpiresString3 as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member = <IntegrationAttemptStatusExpiredTimeExpiresString3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String3(member));
         }
         Err(path.at("no member matched"))
@@ -33027,16 +33525,28 @@ pub enum IntegrationCommandAttemptTimeCreated {
 
 impl crate::codec::Decode for IntegrationCommandAttemptTimeCreated {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <IntegrationCommandAttemptTimeCreatedNumber as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <IntegrationCommandAttemptTimeCreatedNumber as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) = <IntegrationCommandAttemptTimeCreatedString as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <IntegrationCommandAttemptTimeCreatedString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) = <IntegrationCommandAttemptTimeCreatedString2 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <IntegrationCommandAttemptTimeCreatedString2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
-        if let Ok(member) = <IntegrationCommandAttemptTimeCreatedString3 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <IntegrationCommandAttemptTimeCreatedString3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String3(member));
         }
         Err(path.at("no member matched"))
@@ -33166,16 +33676,28 @@ pub enum IntegrationCommandAttemptTimeExpires {
 
 impl crate::codec::Decode for IntegrationCommandAttemptTimeExpires {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <IntegrationCommandAttemptTimeExpiresNumber as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <IntegrationCommandAttemptTimeExpiresNumber as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) = <IntegrationCommandAttemptTimeExpiresString as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <IntegrationCommandAttemptTimeExpiresString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) = <IntegrationCommandAttemptTimeExpiresString2 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <IntegrationCommandAttemptTimeExpiresString2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
-        if let Ok(member) = <IntegrationCommandAttemptTimeExpiresString3 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <IntegrationCommandAttemptTimeExpiresString3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String3(member));
         }
         Err(path.at("no member matched"))
@@ -33408,24 +33930,32 @@ pub enum IntegrationCommandAttemptStatusPendingTimeCreated {
 
 impl crate::codec::Decode for IntegrationCommandAttemptStatusPendingTimeCreated {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) =
-            <IntegrationCommandAttemptStatusPendingTimeCreatedNumber as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member =
+            <IntegrationCommandAttemptStatusPendingTimeCreatedNumber as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) =
-            <IntegrationCommandAttemptStatusPendingTimeCreatedString as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member =
+            <IntegrationCommandAttemptStatusPendingTimeCreatedString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) =
-            <IntegrationCommandAttemptStatusPendingTimeCreatedString2 as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member =
+            <IntegrationCommandAttemptStatusPendingTimeCreatedString2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
-        if let Ok(member) =
-            <IntegrationCommandAttemptStatusPendingTimeCreatedString3 as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member =
+            <IntegrationCommandAttemptStatusPendingTimeCreatedString3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String3(member));
         }
         Err(path.at("no member matched"))
@@ -33555,24 +34085,32 @@ pub enum IntegrationCommandAttemptStatusPendingTimeExpires {
 
 impl crate::codec::Decode for IntegrationCommandAttemptStatusPendingTimeExpires {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) =
-            <IntegrationCommandAttemptStatusPendingTimeExpiresNumber as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member =
+            <IntegrationCommandAttemptStatusPendingTimeExpiresNumber as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) =
-            <IntegrationCommandAttemptStatusPendingTimeExpiresString as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member =
+            <IntegrationCommandAttemptStatusPendingTimeExpiresString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) =
-            <IntegrationCommandAttemptStatusPendingTimeExpiresString2 as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member =
+            <IntegrationCommandAttemptStatusPendingTimeExpiresString2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
-        if let Ok(member) =
-            <IntegrationCommandAttemptStatusPendingTimeExpiresString3 as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member =
+            <IntegrationCommandAttemptStatusPendingTimeExpiresString3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String3(member));
         }
         Err(path.at("no member matched"))
@@ -33782,24 +34320,32 @@ pub enum IntegrationCommandAttemptStatusCompleteTimeCreated {
 
 impl crate::codec::Decode for IntegrationCommandAttemptStatusCompleteTimeCreated {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) =
-            <IntegrationCommandAttemptStatusCompleteTimeCreatedNumber as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member =
+            <IntegrationCommandAttemptStatusCompleteTimeCreatedNumber as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) =
-            <IntegrationCommandAttemptStatusCompleteTimeCreatedString as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member =
+            <IntegrationCommandAttemptStatusCompleteTimeCreatedString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) =
-            <IntegrationCommandAttemptStatusCompleteTimeCreatedString2 as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member =
+            <IntegrationCommandAttemptStatusCompleteTimeCreatedString2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
-        if let Ok(member) =
-            <IntegrationCommandAttemptStatusCompleteTimeCreatedString3 as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member =
+            <IntegrationCommandAttemptStatusCompleteTimeCreatedString3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String3(member));
         }
         Err(path.at("no member matched"))
@@ -33929,24 +34475,32 @@ pub enum IntegrationCommandAttemptStatusCompleteTimeExpires {
 
 impl crate::codec::Decode for IntegrationCommandAttemptStatusCompleteTimeExpires {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) =
-            <IntegrationCommandAttemptStatusCompleteTimeExpiresNumber as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member =
+            <IntegrationCommandAttemptStatusCompleteTimeExpiresNumber as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) =
-            <IntegrationCommandAttemptStatusCompleteTimeExpiresString as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member =
+            <IntegrationCommandAttemptStatusCompleteTimeExpiresString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) =
-            <IntegrationCommandAttemptStatusCompleteTimeExpiresString2 as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member =
+            <IntegrationCommandAttemptStatusCompleteTimeExpiresString2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
-        if let Ok(member) =
-            <IntegrationCommandAttemptStatusCompleteTimeExpiresString3 as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member =
+            <IntegrationCommandAttemptStatusCompleteTimeExpiresString3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String3(member));
         }
         Err(path.at("no member matched"))
@@ -34153,24 +34707,32 @@ pub enum IntegrationCommandAttemptStatusFailedTimeCreated {
 
 impl crate::codec::Decode for IntegrationCommandAttemptStatusFailedTimeCreated {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) =
-            <IntegrationCommandAttemptStatusFailedTimeCreatedNumber as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member =
+            <IntegrationCommandAttemptStatusFailedTimeCreatedNumber as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) =
-            <IntegrationCommandAttemptStatusFailedTimeCreatedString as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member =
+            <IntegrationCommandAttemptStatusFailedTimeCreatedString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) =
-            <IntegrationCommandAttemptStatusFailedTimeCreatedString2 as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member =
+            <IntegrationCommandAttemptStatusFailedTimeCreatedString2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
-        if let Ok(member) =
-            <IntegrationCommandAttemptStatusFailedTimeCreatedString3 as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member =
+            <IntegrationCommandAttemptStatusFailedTimeCreatedString3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String3(member));
         }
         Err(path.at("no member matched"))
@@ -34300,24 +34862,32 @@ pub enum IntegrationCommandAttemptStatusFailedTimeExpires {
 
 impl crate::codec::Decode for IntegrationCommandAttemptStatusFailedTimeExpires {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) =
-            <IntegrationCommandAttemptStatusFailedTimeExpiresNumber as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member =
+            <IntegrationCommandAttemptStatusFailedTimeExpiresNumber as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) =
-            <IntegrationCommandAttemptStatusFailedTimeExpiresString as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member =
+            <IntegrationCommandAttemptStatusFailedTimeExpiresString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) =
-            <IntegrationCommandAttemptStatusFailedTimeExpiresString2 as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member =
+            <IntegrationCommandAttemptStatusFailedTimeExpiresString2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
-        if let Ok(member) =
-            <IntegrationCommandAttemptStatusFailedTimeExpiresString3 as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member =
+            <IntegrationCommandAttemptStatusFailedTimeExpiresString3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String3(member));
         }
         Err(path.at("no member matched"))
@@ -34527,24 +35097,32 @@ pub enum IntegrationCommandAttemptStatusExpiredTimeCreated {
 
 impl crate::codec::Decode for IntegrationCommandAttemptStatusExpiredTimeCreated {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) =
-            <IntegrationCommandAttemptStatusExpiredTimeCreatedNumber as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member =
+            <IntegrationCommandAttemptStatusExpiredTimeCreatedNumber as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) =
-            <IntegrationCommandAttemptStatusExpiredTimeCreatedString as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member =
+            <IntegrationCommandAttemptStatusExpiredTimeCreatedString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) =
-            <IntegrationCommandAttemptStatusExpiredTimeCreatedString2 as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member =
+            <IntegrationCommandAttemptStatusExpiredTimeCreatedString2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
-        if let Ok(member) =
-            <IntegrationCommandAttemptStatusExpiredTimeCreatedString3 as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member =
+            <IntegrationCommandAttemptStatusExpiredTimeCreatedString3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String3(member));
         }
         Err(path.at("no member matched"))
@@ -34674,24 +35252,32 @@ pub enum IntegrationCommandAttemptStatusExpiredTimeExpires {
 
 impl crate::codec::Decode for IntegrationCommandAttemptStatusExpiredTimeExpires {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) =
-            <IntegrationCommandAttemptStatusExpiredTimeExpiresNumber as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member =
+            <IntegrationCommandAttemptStatusExpiredTimeExpiresNumber as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) =
-            <IntegrationCommandAttemptStatusExpiredTimeExpiresString as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member =
+            <IntegrationCommandAttemptStatusExpiredTimeExpiresString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) =
-            <IntegrationCommandAttemptStatusExpiredTimeExpiresString2 as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member =
+            <IntegrationCommandAttemptStatusExpiredTimeExpiresString2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
-        if let Ok(member) =
-            <IntegrationCommandAttemptStatusExpiredTimeExpiresString3 as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member =
+            <IntegrationCommandAttemptStatusExpiredTimeExpiresString3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String3(member));
         }
         Err(path.at("no member matched"))
@@ -36691,16 +37277,28 @@ pub enum PersistentPtyHandoffExpiresAt {
 
 impl crate::codec::Decode for PersistentPtyHandoffExpiresAt {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <PersistentPtyHandoffExpiresAtNumber as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <PersistentPtyHandoffExpiresAtNumber as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) = <PersistentPtyHandoffExpiresAtString as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <PersistentPtyHandoffExpiresAtString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) = <PersistentPtyHandoffExpiresAtString2 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <PersistentPtyHandoffExpiresAtString2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
-        if let Ok(member) = <PersistentPtyHandoffExpiresAtString3 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <PersistentPtyHandoffExpiresAtString3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String3(member));
         }
         Err(path.at("no member matched"))
@@ -37285,10 +37883,16 @@ pub enum AutomationTarget {
 
 impl crate::codec::Decode for AutomationTarget {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <AutomationTargetObject as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <AutomationTargetObject as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Object(member));
         }
-        if let Ok(member) = <AutomationTargetObject2 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <AutomationTargetObject2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Object2(member));
         }
         Err(path.at("no member matched"))
@@ -38241,16 +38845,28 @@ pub enum MachineInfoConnectionRtt {
 
 impl crate::codec::Decode for MachineInfoConnectionRtt {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <MachineInfoConnectionRttNumber as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <MachineInfoConnectionRttNumber as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) = <MachineInfoConnectionRttString as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <MachineInfoConnectionRttString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) = <MachineInfoConnectionRttString2 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <MachineInfoConnectionRttString2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
-        if let Ok(member) = <MachineInfoConnectionRttString3 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <MachineInfoConnectionRttString3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String3(member));
         }
         Err(path.at("no member matched"))
@@ -39480,16 +40096,28 @@ pub enum DebugHeapDumpResponseMemoryRss {
 
 impl crate::codec::Decode for DebugHeapDumpResponseMemoryRss {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <DebugHeapDumpResponseMemoryRssNumber as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <DebugHeapDumpResponseMemoryRssNumber as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) = <DebugHeapDumpResponseMemoryRssString as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <DebugHeapDumpResponseMemoryRssString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) = <DebugHeapDumpResponseMemoryRssString2 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <DebugHeapDumpResponseMemoryRssString2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
-        if let Ok(member) = <DebugHeapDumpResponseMemoryRssString3 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <DebugHeapDumpResponseMemoryRssString3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String3(member));
         }
         Err(path.at("no member matched"))
@@ -39611,16 +40239,28 @@ pub enum DebugHeapDumpResponseMemoryHeapTotal {
 
 impl crate::codec::Decode for DebugHeapDumpResponseMemoryHeapTotal {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <DebugHeapDumpResponseMemoryHeapTotalNumber as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <DebugHeapDumpResponseMemoryHeapTotalNumber as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) = <DebugHeapDumpResponseMemoryHeapTotalString as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <DebugHeapDumpResponseMemoryHeapTotalString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) = <DebugHeapDumpResponseMemoryHeapTotalString2 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <DebugHeapDumpResponseMemoryHeapTotalString2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
-        if let Ok(member) = <DebugHeapDumpResponseMemoryHeapTotalString3 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <DebugHeapDumpResponseMemoryHeapTotalString3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String3(member));
         }
         Err(path.at("no member matched"))
@@ -39750,16 +40390,28 @@ pub enum DebugHeapDumpResponseMemoryHeapUsed {
 
 impl crate::codec::Decode for DebugHeapDumpResponseMemoryHeapUsed {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <DebugHeapDumpResponseMemoryHeapUsedNumber as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <DebugHeapDumpResponseMemoryHeapUsedNumber as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) = <DebugHeapDumpResponseMemoryHeapUsedString as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <DebugHeapDumpResponseMemoryHeapUsedString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) = <DebugHeapDumpResponseMemoryHeapUsedString2 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <DebugHeapDumpResponseMemoryHeapUsedString2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
-        if let Ok(member) = <DebugHeapDumpResponseMemoryHeapUsedString3 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <DebugHeapDumpResponseMemoryHeapUsedString3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String3(member));
         }
         Err(path.at("no member matched"))
@@ -39889,16 +40541,28 @@ pub enum DebugHeapDumpResponseMemoryExternal {
 
 impl crate::codec::Decode for DebugHeapDumpResponseMemoryExternal {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <DebugHeapDumpResponseMemoryExternalNumber as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <DebugHeapDumpResponseMemoryExternalNumber as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) = <DebugHeapDumpResponseMemoryExternalString as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <DebugHeapDumpResponseMemoryExternalString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) = <DebugHeapDumpResponseMemoryExternalString2 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <DebugHeapDumpResponseMemoryExternalString2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
-        if let Ok(member) = <DebugHeapDumpResponseMemoryExternalString3 as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <DebugHeapDumpResponseMemoryExternalString3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String3(member));
         }
         Err(path.at("no member matched"))
@@ -40028,22 +40692,28 @@ pub enum DebugHeapDumpResponseMemoryArrayBuffers {
 
 impl crate::codec::Decode for DebugHeapDumpResponseMemoryArrayBuffers {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <DebugHeapDumpResponseMemoryArrayBuffersNumber as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member = <DebugHeapDumpResponseMemoryArrayBuffersNumber as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) = <DebugHeapDumpResponseMemoryArrayBuffersString as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member = <DebugHeapDumpResponseMemoryArrayBuffersString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) =
-            <DebugHeapDumpResponseMemoryArrayBuffersString2 as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member = <DebugHeapDumpResponseMemoryArrayBuffersString2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
-        if let Ok(member) =
-            <DebugHeapDumpResponseMemoryArrayBuffersString3 as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member = <DebugHeapDumpResponseMemoryArrayBuffersString3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String3(member));
         }
         Err(path.at("no member matched"))
@@ -40350,15 +41020,22 @@ pub enum ExperimentalMigrationV1StatusResponse {
 
 impl crate::codec::Decode for ExperimentalMigrationV1StatusResponse {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <ExperimentalMigrationV1StatusResponseObject as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <ExperimentalMigrationV1StatusResponseObject as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Object(member));
         }
-        if let Ok(member) = <ExperimentalMigrationV1StatusResponseObject2 as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member = <ExperimentalMigrationV1StatusResponseObject2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Object2(member));
         }
-        if let Ok(member) = <ExperimentalMigrationV1StatusResponseObject3 as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member = <ExperimentalMigrationV1StatusResponseObject3 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Object3(member));
         }
         Err(path.at("no member matched"))
@@ -40902,7 +41579,7 @@ pub struct ConfigEntryDocumentInfoModelString(pub String);
 impl crate::codec::Decode for ConfigEntryDocumentInfoModelString {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let value = <String as crate::codec::Decode>::decode(value, path)?;
-        if !crate::checks::is_pattern(value.as_str(), "^[^/#]+\\/[^#]+(?:#[^#]+)?$") {
+        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_10) {
             return Err(path.at("expected a string matching the RegExp ^[^/#]+\\/[^#]+(?:#[^#]+)?$"));
         }
         Ok(Self(value))
@@ -40927,21 +41604,21 @@ impl crate::codec::Decode for ConfigEntryDocumentInfoModelObject {
         let object = crate::codec::as_object(value, path)?;
         Ok(Self {
             provider_id: crate::codec::decode_field_checked(object, "providerID", path, |value: &String, path| {
-                if crate::checks::is_pattern(value.as_str(), "^[^/#]+$") {
+                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_11) {
                     Ok(())
                 } else {
                     Err(path.at("expected a string matching the RegExp ^[^/#]+$"))
                 }
             })?,
             model: crate::codec::decode_field_checked(object, "model", path, |value: &String, path| {
-                if crate::checks::is_pattern(value.as_str(), "^[^#]+$") {
+                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_12) {
                     Ok(())
                 } else {
                     Err(path.at("expected a string matching the RegExp ^[^#]+$"))
                 }
             })?,
             variant: crate::codec::decode_optional_checked(object, "variant", path, |value: &String, path| {
-                if crate::checks::is_pattern(value.as_str(), "^[^#]+$") {
+                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_12) {
                     Ok(())
                 } else {
                     Err(path.at("expected a string matching the RegExp ^[^#]+$"))
@@ -40970,10 +41647,16 @@ pub enum ConfigEntryDocumentInfoModel {
 
 impl crate::codec::Decode for ConfigEntryDocumentInfoModel {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <ConfigEntryDocumentInfoModelString as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <ConfigEntryDocumentInfoModelString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) = <ConfigEntryDocumentInfoModelObject as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <ConfigEntryDocumentInfoModelObject as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Object(member));
         }
         Err(path.at("no member matched"))
@@ -41181,7 +41864,7 @@ pub struct ConfigEntryDocumentInfoAgentsValueModelString(pub String);
 impl crate::codec::Decode for ConfigEntryDocumentInfoAgentsValueModelString {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let value = <String as crate::codec::Decode>::decode(value, path)?;
-        if !crate::checks::is_pattern(value.as_str(), "^[^/#]+\\/[^#]+(?:#[^#]+)?$") {
+        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_10) {
             return Err(path.at("expected a string matching the RegExp ^[^/#]+\\/[^#]+(?:#[^#]+)?$"));
         }
         Ok(Self(value))
@@ -41206,21 +41889,21 @@ impl crate::codec::Decode for ConfigEntryDocumentInfoAgentsValueModelObject {
         let object = crate::codec::as_object(value, path)?;
         Ok(Self {
             provider_id: crate::codec::decode_field_checked(object, "providerID", path, |value: &String, path| {
-                if crate::checks::is_pattern(value.as_str(), "^[^/#]+$") {
+                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_11) {
                     Ok(())
                 } else {
                     Err(path.at("expected a string matching the RegExp ^[^/#]+$"))
                 }
             })?,
             model: crate::codec::decode_field_checked(object, "model", path, |value: &String, path| {
-                if crate::checks::is_pattern(value.as_str(), "^[^#]+$") {
+                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_12) {
                     Ok(())
                 } else {
                     Err(path.at("expected a string matching the RegExp ^[^#]+$"))
                 }
             })?,
             variant: crate::codec::decode_optional_checked(object, "variant", path, |value: &String, path| {
-                if crate::checks::is_pattern(value.as_str(), "^[^#]+$") {
+                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_12) {
                     Ok(())
                 } else {
                     Err(path.at("expected a string matching the RegExp ^[^#]+$"))
@@ -41249,12 +41932,16 @@ pub enum ConfigEntryDocumentInfoAgentsValueModel {
 
 impl crate::codec::Decode for ConfigEntryDocumentInfoAgentsValueModel {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <ConfigEntryDocumentInfoAgentsValueModelString as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member = <ConfigEntryDocumentInfoAgentsValueModelString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) = <ConfigEntryDocumentInfoAgentsValueModelObject as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member = <ConfigEntryDocumentInfoAgentsValueModelObject as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Object(member));
         }
         Err(path.at("no member matched"))
@@ -41356,7 +42043,7 @@ impl crate::codec::Decode for ConfigEntryDocumentInfoAgentsValue {
             mode: crate::codec::decode_optional(object, "mode", path)?,
             hidden: crate::codec::decode_optional(object, "hidden", path)?,
             color: crate::codec::decode_optional_checked(object, "color", path, |value: &String, path| {
-                if crate::checks::is_pattern(value.as_str(), "^#[0-9a-fA-F]{6}$") {
+                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_13) {
                     Ok(())
                 } else {
                     Err(path.at("expected a string matching the RegExp ^#[0-9a-fA-F]{6}$"))
@@ -41456,14 +42143,19 @@ pub enum ConfigEntryDocumentInfoFormatter {
 
 impl crate::codec::Decode for ConfigEntryDocumentInfoFormatter {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <bool as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <bool as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Bool(member));
         }
-        if let Ok(member) =
+        let mark = path.mark();
+        let member =
             <crate::codec::JsonMap<ConfigEntryDocumentInfoFormatterObjectValue> as crate::codec::Decode>::decode(
                 value, path,
-            )
-        {
+            );
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Object(member));
         }
         Err(path.at("no member matched"))
@@ -41572,11 +42264,16 @@ pub enum ConfigEntryDocumentInfoLspObjectValue {
 
 impl crate::codec::Decode for ConfigEntryDocumentInfoLspObjectValue {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <ConfigEntryDocumentInfoLspObjectValueObject as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <ConfigEntryDocumentInfoLspObjectValueObject as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Object(member));
         }
-        if let Ok(member) = <ConfigEntryDocumentInfoLspObjectValueObject2 as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member = <ConfigEntryDocumentInfoLspObjectValueObject2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Object2(member));
         }
         Err(path.at("no member matched"))
@@ -41604,12 +42301,17 @@ pub enum ConfigEntryDocumentInfoLsp {
 
 impl crate::codec::Decode for ConfigEntryDocumentInfoLsp {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <bool as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <bool as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Bool(member));
         }
-        if let Ok(member) =
-            <crate::codec::JsonMap<ConfigEntryDocumentInfoLspObjectValue> as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member =
+            <crate::codec::JsonMap<ConfigEntryDocumentInfoLspObjectValue> as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Object(member));
         }
         Err(path.at("no member matched"))
@@ -42074,14 +42776,18 @@ pub enum ConfigEntryDocumentInfoMcpServersValueRemoteOauth {
 
 impl crate::codec::Decode for ConfigEntryDocumentInfoMcpServersValueRemoteOauth {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) =
-            <ConfigEntryDocumentInfoMcpServersValueRemoteOauthObject as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member =
+            <ConfigEntryDocumentInfoMcpServersValueRemoteOauthObject as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Object(member));
         }
-        if let Ok(member) =
-            <ConfigEntryDocumentInfoMcpServersValueRemoteOauthBool as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member =
+            <ConfigEntryDocumentInfoMcpServersValueRemoteOauthBool as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Bool(member));
         }
         Err(path.at("no member matched"))
@@ -42297,7 +43003,7 @@ pub struct ConfigCompactionPercent(pub String);
 impl crate::codec::Decode for ConfigCompactionPercent {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let value = <String as crate::codec::Decode>::decode(value, path)?;
-        if !crate::checks::is_pattern(value.as_str(), "^([1-9]\\d?(\\.\\d+)?)%$") {
+        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_14) {
             return Err(path.at("expected a string matching the RegExp ^([1-9]\\d?(\\.\\d+)?)%$"));
         }
         Ok(Self(value))
@@ -42340,11 +43046,16 @@ pub enum ConfigEntryDocumentInfoCompactionBuffer {
 
 impl crate::codec::Decode for ConfigEntryDocumentInfoCompactionBuffer {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <ConfigCompactionPercent as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <ConfigCompactionPercent as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) = <ConfigEntryDocumentInfoCompactionBufferNumber as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member = <ConfigEntryDocumentInfoCompactionBufferNumber as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
         Err(path.at("no member matched"))
@@ -42400,7 +43111,7 @@ pub struct ConfigEntryDocumentInfoCommandsValueModelString(pub String);
 impl crate::codec::Decode for ConfigEntryDocumentInfoCommandsValueModelString {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let value = <String as crate::codec::Decode>::decode(value, path)?;
-        if !crate::checks::is_pattern(value.as_str(), "^[^/#]+\\/[^#]+(?:#[^#]+)?$") {
+        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_10) {
             return Err(path.at("expected a string matching the RegExp ^[^/#]+\\/[^#]+(?:#[^#]+)?$"));
         }
         Ok(Self(value))
@@ -42425,21 +43136,21 @@ impl crate::codec::Decode for ConfigEntryDocumentInfoCommandsValueModelObject {
         let object = crate::codec::as_object(value, path)?;
         Ok(Self {
             provider_id: crate::codec::decode_field_checked(object, "providerID", path, |value: &String, path| {
-                if crate::checks::is_pattern(value.as_str(), "^[^/#]+$") {
+                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_11) {
                     Ok(())
                 } else {
                     Err(path.at("expected a string matching the RegExp ^[^/#]+$"))
                 }
             })?,
             model: crate::codec::decode_field_checked(object, "model", path, |value: &String, path| {
-                if crate::checks::is_pattern(value.as_str(), "^[^#]+$") {
+                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_12) {
                     Ok(())
                 } else {
                     Err(path.at("expected a string matching the RegExp ^[^#]+$"))
                 }
             })?,
             variant: crate::codec::decode_optional_checked(object, "variant", path, |value: &String, path| {
-                if crate::checks::is_pattern(value.as_str(), "^[^#]+$") {
+                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_12) {
                     Ok(())
                 } else {
                     Err(path.at("expected a string matching the RegExp ^[^#]+$"))
@@ -42468,14 +43179,16 @@ pub enum ConfigEntryDocumentInfoCommandsValueModel {
 
 impl crate::codec::Decode for ConfigEntryDocumentInfoCommandsValueModel {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) =
-            <ConfigEntryDocumentInfoCommandsValueModelString as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member = <ConfigEntryDocumentInfoCommandsValueModelString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) =
-            <ConfigEntryDocumentInfoCommandsValueModelObject as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member = <ConfigEntryDocumentInfoCommandsValueModelObject as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Object(member));
         }
         Err(path.at("no member matched"))
@@ -42603,15 +43316,22 @@ pub enum ConfigEntryDocumentInfoReferencesValue {
 
 impl crate::codec::Decode for ConfigEntryDocumentInfoReferencesValue {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <String as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <String as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) = <ConfigEntryDocumentInfoReferencesValueObject as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member = <ConfigEntryDocumentInfoReferencesValueObject as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Object(member));
         }
-        if let Ok(member) = <ConfigEntryDocumentInfoReferencesValueObject2 as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member = <ConfigEntryDocumentInfoReferencesValueObject2 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Object2(member));
         }
         Err(path.at("no member matched"))
@@ -42690,12 +43410,17 @@ pub enum ConfigEntryDocumentInfoWebsearchObjectProvider {
 
 impl crate::codec::Decode for ConfigEntryDocumentInfoWebsearchObjectProvider {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) =
-            <ConfigEntryDocumentInfoWebsearchObjectProviderString as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member =
+            <ConfigEntryDocumentInfoWebsearchObjectProviderString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) = <WebSearchID as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <WebSearchID as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
         Err(path.at("no member matched"))
@@ -42742,10 +43467,16 @@ pub enum ConfigEntryDocumentInfoWebsearch {
 
 impl crate::codec::Decode for ConfigEntryDocumentInfoWebsearch {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <ConfigEntryDocumentInfoWebsearchBool as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <ConfigEntryDocumentInfoWebsearchBool as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Bool(member));
         }
-        if let Ok(member) = <ConfigEntryDocumentInfoWebsearchObject as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <ConfigEntryDocumentInfoWebsearchObject as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Object(member));
         }
         Err(path.at("no member matched"))
@@ -42795,10 +43526,16 @@ pub enum ConfigEntryDocumentInfoPluginsItem {
 
 impl crate::codec::Decode for ConfigEntryDocumentInfoPluginsItem {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <String as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <String as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) = <ConfigEntryDocumentInfoPluginsItemObject as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <ConfigEntryDocumentInfoPluginsItemObject as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Object(member));
         }
         Err(path.at("no member matched"))
@@ -42870,12 +43607,16 @@ pub enum ConfigEntryDocumentInfoWarmingObjectInterval {
 
 impl crate::codec::Decode for ConfigEntryDocumentInfoWarmingObjectInterval {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) =
-            <ConfigEntryDocumentInfoWarmingObjectIntervalString as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member = <ConfigEntryDocumentInfoWarmingObjectIntervalString as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) = <String as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <String as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String2(member));
         }
         Err(path.at("no member matched"))
@@ -42930,10 +43671,16 @@ pub enum ConfigEntryDocumentInfoWarming {
 
 impl crate::codec::Decode for ConfigEntryDocumentInfoWarming {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <bool as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <bool as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Bool(member));
         }
-        if let Ok(member) = <ConfigEntryDocumentInfoWarmingObject as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <ConfigEntryDocumentInfoWarmingObject as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Object(member));
         }
         Err(path.at("no member matched"))
@@ -43001,10 +43748,16 @@ pub enum ConfigProviderSettingsTimeout {
 
 impl crate::codec::Decode for ConfigProviderSettingsTimeout {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <ConfigProviderSettingsTimeoutNumber as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <ConfigProviderSettingsTimeoutNumber as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) = <ConfigProviderSettingsTimeoutBool as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <ConfigProviderSettingsTimeoutBool as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Bool(member));
         }
         Err(path.at("no member matched"))
@@ -43072,10 +43825,16 @@ pub enum ConfigProviderSettingsHeaderTimeout {
 
 impl crate::codec::Decode for ConfigProviderSettingsHeaderTimeout {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <ConfigProviderSettingsHeaderTimeoutNumber as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <ConfigProviderSettingsHeaderTimeoutNumber as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) = <ConfigProviderSettingsHeaderTimeoutBool as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <ConfigProviderSettingsHeaderTimeoutBool as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Bool(member));
         }
         Err(path.at("no member matched"))
@@ -43145,10 +43904,16 @@ pub enum ConfigProviderSettingsChunkTimeout {
 
 impl crate::codec::Decode for ConfigProviderSettingsChunkTimeout {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <ConfigProviderSettingsChunkTimeoutNumber as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <ConfigProviderSettingsChunkTimeoutNumber as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Number(member));
         }
-        if let Ok(member) = <ConfigProviderSettingsChunkTimeoutBool as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <ConfigProviderSettingsChunkTimeoutBool as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Bool(member));
         }
         Err(path.at("no member matched"))
@@ -43218,20 +43983,20 @@ impl crate::codec::Decode for ConfigProviderSettings {
 
 impl crate::codec::Encode for ConfigProviderSettings {
     fn encode(&self, out: &mut String) {
-        out.push('{');
-        let mut first = true;
-        crate::codec::write_optional(out, &mut first, "timeout", &self.timeout);
-        crate::codec::write_optional(out, &mut first, "headerTimeout", &self.header_timeout);
-        crate::codec::write_optional(out, &mut first, "chunkTimeout", &self.chunk_timeout);
-        crate::codec::write_optional(out, &mut first, "compaction", &self.compaction);
-        crate::codec::write_optional(out, &mut first, "cache", &self.cache);
-        crate::codec::write_optional(out, &mut first, "transport", &self.transport);
-        crate::codec::write_optional(out, &mut first, "encoding", &self.encoding);
-        crate::codec::write_optional(out, &mut first, "tls", &self.tls);
-        for (key, value) in &self.rest.0 {
-            crate::codec::write_value(out, &mut first, key, value);
-        }
-        out.push('}');
+        crate::codec::write_struct_object(
+            out,
+            &[
+                ("timeout", self.timeout.as_ref().map(|value| value as &dyn crate::codec::Encode)),
+                ("headerTimeout", self.header_timeout.as_ref().map(|value| value as &dyn crate::codec::Encode)),
+                ("chunkTimeout", self.chunk_timeout.as_ref().map(|value| value as &dyn crate::codec::Encode)),
+                ("compaction", self.compaction.as_ref().map(|value| value as &dyn crate::codec::Encode)),
+                ("cache", self.cache.as_ref().map(|value| value as &dyn crate::codec::Encode)),
+                ("transport", self.transport.as_ref().map(|value| value as &dyn crate::codec::Encode)),
+                ("encoding", self.encoding.as_ref().map(|value| value as &dyn crate::codec::Encode)),
+                ("tls", self.tls.as_ref().map(|value| value as &dyn crate::codec::Encode)),
+            ],
+            self.rest.0.iter().map(|(key, value)| (key.as_str(), Some(value as &dyn crate::codec::Encode))),
+        );
     }
 }
 
@@ -43267,15 +44032,15 @@ impl crate::codec::Decode for ConfigModelSettings {
 
 impl crate::codec::Encode for ConfigModelSettings {
     fn encode(&self, out: &mut String) {
-        out.push('{');
-        let mut first = true;
-        crate::codec::write_optional(out, &mut first, "compaction", &self.compaction);
-        crate::codec::write_optional(out, &mut first, "cache", &self.cache);
-        crate::codec::write_optional(out, &mut first, "encoding", &self.encoding);
-        for (key, value) in &self.rest.0 {
-            crate::codec::write_value(out, &mut first, key, value);
-        }
-        out.push('}');
+        crate::codec::write_struct_object(
+            out,
+            &[
+                ("compaction", self.compaction.as_ref().map(|value| value as &dyn crate::codec::Encode)),
+                ("cache", self.cache.as_ref().map(|value| value as &dyn crate::codec::Encode)),
+                ("encoding", self.encoding.as_ref().map(|value| value as &dyn crate::codec::Encode)),
+            ],
+            self.rest.0.iter().map(|(key, value)| (key.as_str(), Some(value as &dyn crate::codec::Encode))),
+        );
     }
 }
 
@@ -43506,14 +44271,14 @@ impl crate::codec::Decode for ConfigModelVariantSettings {
 
 impl crate::codec::Encode for ConfigModelVariantSettings {
     fn encode(&self, out: &mut String) {
-        out.push('{');
-        let mut first = true;
-        crate::codec::write_optional(out, &mut first, "compaction", &self.compaction);
-        crate::codec::write_optional(out, &mut first, "encoding", &self.encoding);
-        for (key, value) in &self.rest.0 {
-            crate::codec::write_value(out, &mut first, key, value);
-        }
-        out.push('}');
+        crate::codec::write_struct_object(
+            out,
+            &[
+                ("compaction", self.compaction.as_ref().map(|value| value as &dyn crate::codec::Encode)),
+                ("encoding", self.encoding.as_ref().map(|value| value as &dyn crate::codec::Encode)),
+            ],
+            self.rest.0.iter().map(|(key, value)| (key.as_str(), Some(value as &dyn crate::codec::Encode))),
+        );
     }
 }
 
@@ -43779,16 +44544,20 @@ pub enum ConfigEntryDocumentInfoProvidersValueModelsValueCost {
 
 impl crate::codec::Decode for ConfigEntryDocumentInfoProvidersValueModelsValueCost {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) =
-            <ConfigEntryDocumentInfoProvidersValueModelsValueCostObject as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member =
+            <ConfigEntryDocumentInfoProvidersValueModelsValueCostObject as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Object(member));
         }
-        if let Ok(member) =
+        let mark = path.mark();
+        let member =
             <Vec<ConfigEntryDocumentInfoProvidersValueModelsValueCostArrayItem> as crate::codec::Decode>::decode(
                 value, path,
-            )
-        {
+            );
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Array(member));
         }
         Err(path.at("no member matched"))
@@ -43877,7 +44646,7 @@ impl crate::codec::Decode for ConfigEntryDocumentInfoProvidersValueModelsValue {
                 "releaseDate",
                 path,
                 |value: &String, path| {
-                    if crate::checks::is_pattern(value.as_str(), "^\\d{4}-\\d{2}(-\\d{2})?$") {
+                    if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_15) {
                         Ok(())
                     } else {
                         Err(path.at("expected a string matching the RegExp ^\\d{4}-\\d{2}(-\\d{2})?$"))
@@ -43974,7 +44743,7 @@ pub struct ConfigEntryDocumentInfoExperimentalVideoGenerateObjectModelString(pub
 impl crate::codec::Decode for ConfigEntryDocumentInfoExperimentalVideoGenerateObjectModelString {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let value = <String as crate::codec::Decode>::decode(value, path)?;
-        if !crate::checks::is_pattern(value.as_str(), "^[^/#]+\\/[^#]+(?:#[^#]+)?$") {
+        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_10) {
             return Err(path.at("expected a string matching the RegExp ^[^/#]+\\/[^#]+(?:#[^#]+)?$"));
         }
         Ok(Self(value))
@@ -43999,21 +44768,21 @@ impl crate::codec::Decode for ConfigEntryDocumentInfoExperimentalVideoGenerateOb
         let object = crate::codec::as_object(value, path)?;
         Ok(Self {
             provider_id: crate::codec::decode_field_checked(object, "providerID", path, |value: &String, path| {
-                if crate::checks::is_pattern(value.as_str(), "^[^/#]+$") {
+                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_11) {
                     Ok(())
                 } else {
                     Err(path.at("expected a string matching the RegExp ^[^/#]+$"))
                 }
             })?,
             model: crate::codec::decode_field_checked(object, "model", path, |value: &String, path| {
-                if crate::checks::is_pattern(value.as_str(), "^[^#]+$") {
+                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_12) {
                     Ok(())
                 } else {
                     Err(path.at("expected a string matching the RegExp ^[^#]+$"))
                 }
             })?,
             variant: crate::codec::decode_optional_checked(object, "variant", path, |value: &String, path| {
-                if crate::checks::is_pattern(value.as_str(), "^[^#]+$") {
+                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_12) {
                     Ok(())
                 } else {
                     Err(path.at("expected a string matching the RegExp ^[^#]+$"))
@@ -44042,18 +44811,22 @@ pub enum ConfigEntryDocumentInfoExperimentalVideoGenerateObjectModel {
 
 impl crate::codec::Decode for ConfigEntryDocumentInfoExperimentalVideoGenerateObjectModel {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) =
+        let mark = path.mark();
+        let member =
             <ConfigEntryDocumentInfoExperimentalVideoGenerateObjectModelString as crate::codec::Decode>::decode(
                 value, path,
-            )
-        {
+            );
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) =
+        let mark = path.mark();
+        let member =
             <ConfigEntryDocumentInfoExperimentalVideoGenerateObjectModelObject as crate::codec::Decode>::decode(
                 value, path,
-            )
-        {
+            );
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Object(member));
         }
         Err(path.at("no member matched"))
@@ -44106,12 +44879,17 @@ pub enum ConfigEntryDocumentInfoExperimentalVideoGenerate {
 
 impl crate::codec::Decode for ConfigEntryDocumentInfoExperimentalVideoGenerate {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <bool as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <bool as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Bool(member));
         }
-        if let Ok(member) =
-            <ConfigEntryDocumentInfoExperimentalVideoGenerateObject as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member =
+            <ConfigEntryDocumentInfoExperimentalVideoGenerateObject as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Object(member));
         }
         Err(path.at("no member matched"))
@@ -44135,7 +44913,7 @@ pub struct ConfigEntryDocumentInfoExperimentalImageGenerateObjectModelString(pub
 impl crate::codec::Decode for ConfigEntryDocumentInfoExperimentalImageGenerateObjectModelString {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let value = <String as crate::codec::Decode>::decode(value, path)?;
-        if !crate::checks::is_pattern(value.as_str(), "^[^/#]+\\/[^#]+(?:#[^#]+)?$") {
+        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_10) {
             return Err(path.at("expected a string matching the RegExp ^[^/#]+\\/[^#]+(?:#[^#]+)?$"));
         }
         Ok(Self(value))
@@ -44160,21 +44938,21 @@ impl crate::codec::Decode for ConfigEntryDocumentInfoExperimentalImageGenerateOb
         let object = crate::codec::as_object(value, path)?;
         Ok(Self {
             provider_id: crate::codec::decode_field_checked(object, "providerID", path, |value: &String, path| {
-                if crate::checks::is_pattern(value.as_str(), "^[^/#]+$") {
+                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_11) {
                     Ok(())
                 } else {
                     Err(path.at("expected a string matching the RegExp ^[^/#]+$"))
                 }
             })?,
             model: crate::codec::decode_field_checked(object, "model", path, |value: &String, path| {
-                if crate::checks::is_pattern(value.as_str(), "^[^#]+$") {
+                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_12) {
                     Ok(())
                 } else {
                     Err(path.at("expected a string matching the RegExp ^[^#]+$"))
                 }
             })?,
             variant: crate::codec::decode_optional_checked(object, "variant", path, |value: &String, path| {
-                if crate::checks::is_pattern(value.as_str(), "^[^#]+$") {
+                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_12) {
                     Ok(())
                 } else {
                     Err(path.at("expected a string matching the RegExp ^[^#]+$"))
@@ -44203,18 +44981,22 @@ pub enum ConfigEntryDocumentInfoExperimentalImageGenerateObjectModel {
 
 impl crate::codec::Decode for ConfigEntryDocumentInfoExperimentalImageGenerateObjectModel {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) =
+        let mark = path.mark();
+        let member =
             <ConfigEntryDocumentInfoExperimentalImageGenerateObjectModelString as crate::codec::Decode>::decode(
                 value, path,
-            )
-        {
+            );
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) =
+        let mark = path.mark();
+        let member =
             <ConfigEntryDocumentInfoExperimentalImageGenerateObjectModelObject as crate::codec::Decode>::decode(
                 value, path,
-            )
-        {
+            );
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Object(member));
         }
         Err(path.at("no member matched"))
@@ -44267,12 +45049,17 @@ pub enum ConfigEntryDocumentInfoExperimentalImageGenerate {
 
 impl crate::codec::Decode for ConfigEntryDocumentInfoExperimentalImageGenerate {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <bool as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <bool as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Bool(member));
         }
-        if let Ok(member) =
-            <ConfigEntryDocumentInfoExperimentalImageGenerateObject as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member =
+            <ConfigEntryDocumentInfoExperimentalImageGenerateObject as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Object(member));
         }
         Err(path.at("no member matched"))
@@ -44323,12 +45110,17 @@ pub enum ConfigEntryDocumentInfoExperimentalLocationIdleTimeout {
 
 impl crate::codec::Decode for ConfigEntryDocumentInfoExperimentalLocationIdleTimeout {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        if let Ok(member) = <String as crate::codec::Decode>::decode(value, path) {
+        let mark = path.mark();
+        let member = <String as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::String(member));
         }
-        if let Ok(member) =
-            <ConfigEntryDocumentInfoExperimentalLocationIdleTimeoutBool as crate::codec::Decode>::decode(value, path)
-        {
+        let mark = path.mark();
+        let member =
+            <ConfigEntryDocumentInfoExperimentalLocationIdleTimeoutBool as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::Bool(member));
         }
         Err(path.at("no member matched"))

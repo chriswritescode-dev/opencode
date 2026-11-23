@@ -11,6 +11,14 @@ type Field = { type: string; decode: string; encode: string }
 type Condition = { condition: string; reason: string }
 type TagEntry = { exact: string | boolean } | { prefix: string }
 type Tag = { key: string; entries: Array<TagEntry> }
+type Pattern = { name: string; source: string }
+
+const FINITE_PATTERN = "[+-]?(?:\\d+(?:\\.\\d+)?|\\.\\d+)(?:[Ee][+-]?\\d+)?"
+const patterns = new Map<string, Pattern>()
+
+function escapePattern(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+}
 
 export class StrictTypes {
   private readonly output = new Map<string, Array<string>>([["types", []]])
@@ -31,6 +39,27 @@ export class StrictTypes {
 
   items(name = "types"): Array<string> {
     return this.output.get(name) ?? []
+  }
+
+  patternStatics(): Array<string> {
+    const names = [...patterns.values()].map((pattern) => pattern.name)
+    return [
+      ...[...patterns.values()].map(
+        (pattern) => `pub(super) static ${pattern.name}: std::sync::LazyLock<regex_lite::Regex> =
+    std::sync::LazyLock::new(|| {
+        regex_lite::Regex::new(${JSON.stringify(pattern.source)}).expect("invalid generated pattern")
+    });`,
+      ),
+      `pub static ALL_PATTERNS: [&std::sync::LazyLock<regex_lite::Regex>; ${names.length}] = [
+${names.map((name) => `    &${name},`).join("\n")}
+];`,
+      `#[doc(hidden)]
+pub fn compile_all_patterns() {
+    for pattern in ALL_PATTERNS {
+        std::sync::LazyLock::force(pattern);
+    }
+}`,
+    ]
   }
 
   type(r: R, hint: string): string {
@@ -62,7 +91,8 @@ export class StrictTypes {
 
   private render(r: R, hint: string): string {
     const checks = this.filters(checksOf(r))
-    if (checks.length > 0) return this.checked(r, checks, hint)
+    const implied = this.implied(r, this.accessor(this.tag(r)))
+    if (checks.length > 0 || implied.length > 0) return this.checked(r, checks, implied, hint)
     this.unchecked(r)
     switch (r._tag) {
       case "Reference":
@@ -110,19 +140,18 @@ export class StrictTypes {
     this.fail(r, `unsupported check ${checks[0]?.representation?.id ?? checks[0]?._tag ?? "check"}`)
   }
 
-  private checked(r: R, checks: ReadonlyArray<Check>, hint: string) {
-    const name = this.name(hint)
-    const inner = this.render(withoutChecks(r), `${hint}Value`)
-    const tag = this.tag(r)
-    const value =
-      tag === "String" || tag === "TemplateLiteral"
-        ? "value.as_str()"
-        : tag === "Arrays"
-          ? "value.as_slice()"
-          : tag === "Number"
-            ? "value"
-            : "*value"
-    const conditions = this.conditions(checks, r, value)
+  private checked(
+    r: R,
+    checks: ReadonlyArray<Check>,
+    implied: ReadonlyArray<Condition>,
+    hint: string,
+    name = this.name(hint),
+  ) {
+    const base = this.plain(r)
+    const inner = this.render(base, `${hint}Value`)
+    const tag = this.tag(base)
+    const value = this.accessor(tag)
+    const conditions = [...implied, ...this.conditions(checks, r, value)]
     this.push(`#[derive(Debug, Clone, PartialEq)]
 pub struct ${name}(pub ${inner});
 
@@ -139,6 +168,99 @@ impl crate::codec::Encode for ${name} {
     }
 }`)
     return name
+  }
+
+  private accessor(tag: string) {
+    if (tag === "String" || tag === "TemplateLiteral") return "value.as_str()"
+    if (tag === "Arrays") return "value.as_slice()"
+    if (tag === "Number") return "value"
+    return "*value"
+  }
+
+  private plain(r: R): R {
+    const value = withoutChecks(r)
+    if (value._tag === "TemplateLiteral") return { _tag: "String", checks: [] }
+    if (value._tag === "Arrays" && this.minimum(value) !== undefined) return { ...value, elements: [] }
+    return value
+  }
+
+  private minimum(r: SchemaRepresentation.Arrays) {
+    if (r.rest.length !== 1 || r.elements.length === 0) return undefined
+    if (!r.elements.every((element) => !element.isOptional && this.shape(element.type) === this.shape(r.rest[0]!))) {
+      return undefined
+    }
+    return r.elements.length
+  }
+
+  private implied(r: R, value: string): Array<Condition> {
+    if (r._tag === "Reference" || r._tag === "Suspend") return []
+    if (r._tag === "TemplateLiteral") {
+      const pattern = this.pattern(this.templatePattern(r), "", "TemplateLiteral")
+      return [
+        {
+          condition: `crate::checks::is_pattern(${value}, &crate::generated::patterns::${pattern})`,
+          reason: "expected a string matching the template literal",
+        },
+      ]
+    }
+    if (r._tag !== "Arrays") return []
+    const minimum = this.minimum(r)
+    if (minimum === undefined) return []
+    return [{ condition: `crate::checks::is_min_items(${value}, ${minimum})`, reason: "expected more items" }]
+  }
+
+  private pattern(source: string, flags: string, id: string) {
+    for (const flag of flags) {
+      if (!["i", "m", "s", "u"].includes(flag)) {
+        throw new Error(`strict: ${this.root} ${id}: unsupported RegExp flag ${flag}`)
+      }
+    }
+    const prefix = ["i", "m", "s"].filter((flag) => flags.includes(flag)).join("")
+    const key = prefix === "" ? source : `(?${prefix})${source}`
+    const existing = patterns.get(key)
+    if (existing !== undefined) return existing.name
+    const name = `PATTERN_${patterns.size}`
+    patterns.set(key, { name, source: key })
+    return name
+  }
+
+  private templatePattern(r: SchemaRepresentation.TemplateLiteral) {
+    const visiting = new Set<string>()
+    const part = (value: R): string => {
+      if (value._tag === "Reference") {
+        if (visiting.has(value.$ref)) {
+          throw new Error(`strict: ${this.root} TemplateLiteral: recursive reference ${value.$ref}`)
+        }
+        const target = this.references[value.$ref]
+        if (target === undefined) {
+          throw new Error(`strict: ${this.root} TemplateLiteral: unknown reference ${value.$ref}`)
+        }
+        visiting.add(value.$ref)
+        const source = part(target)
+        visiting.delete(value.$ref)
+        return source
+      }
+      switch (value._tag) {
+        case "Literal":
+          return escapePattern(String(value.literal))
+        case "String":
+          return "[\\s\\S]*?"
+        case "Number":
+          return FINITE_PATTERN
+        case "BigInt":
+          return "-?\\d+"
+        case "TemplateLiteral":
+          return value.parts.map(part).join("")
+        case "Union":
+          if (value.types.length === 0) {
+            throw new Error(`strict: ${this.root} TemplateLiteral: an empty union part`)
+          }
+          return `(?:${value.types.map(part).join("|")})`
+        default:
+          return this.fail(value, `unsupported TemplateLiteral part ${value._tag}`)
+      }
+    }
+    return `^${r.parts.map(part).join("")}$`
   }
 
   private flattenUnion(types: ReadonlyArray<R>): Array<R> {
@@ -208,6 +330,22 @@ impl crate::codec::Encode for ${name} {
       this.numberNewtype(name, resolved)
       return
     }
+    if (resolved._tag === "Objects") {
+      if (resolved.indexSignatures.length > 1) return this.fail(resolved, "more than one index signature")
+      const conditions = this.keyConditions(resolved.indexSignatures[0]?.parameter)
+      if (conditions.length > 0) {
+        this.record(resolved, name, name, conditions)
+        return
+      }
+    }
+    if (resolved._tag === "Arrays") {
+      const checks = this.filters(checksOf(resolved))
+      const implied = this.implied(resolved, "value.as_slice()")
+      if (checks.length > 0 || implied.length > 0) {
+        this.checked(resolved, checks, implied, name, name)
+        return
+      }
+    }
     this.push(`pub type ${name} = ${this.render(resolved, name)};`)
   }
 
@@ -249,7 +387,7 @@ impl crate::codec::Encode for ${name} {
     const trimmed =
       transform === "trim" || filters.some((filter) => filter.representation?.id === "effect/schema/isTrimmed")
     const checks = trimmed ? withoutTrim(r.checks) : r.checks
-    const conditions = this.conditions(checks, r, "value.as_str()")
+    const conditions = [...this.implied(r, "value.as_str()"), ...this.conditions(checks, r, "value.as_str()")]
     if (trimmed) {
       this.push(`#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ${name}(pub String);
@@ -298,13 +436,49 @@ impl crate::codec::Encode for ${name} {
     if (r.propertySignatures.length === 0 && r.indexSignatures.length > 0) {
       if (r.indexSignatures.length > 1) return this.fail(r, "more than one index signature")
       const index = r.indexSignatures[0]!
-      this.unchecked(index.parameter)
       if (!["String", "TemplateLiteral"].includes(this.tag(index.parameter)))
         return this.fail(r, "an index signature with a non-string key")
+      const conditions = this.keyConditions(index.parameter)
+      if (conditions.length > 0) return this.record(r, this.name(hint), hint, conditions)
       return `crate::codec::JsonMap<${this.render(index.type, `${hint}Value`)}>`
     }
     if (r.propertySignatures.length === 0) return this.objects(r, this.name(hint), hint)
     return this.objects(r, this.name(hint), hint)
+  }
+
+  private record(r: Objects, name: string, hint: string, conditions: ReadonlyArray<Condition>) {
+    const index = r.indexSignatures[0]!
+    const value = this.render(index.type, `${hint}Value`)
+    this.push(`#[derive(Debug, Clone, PartialEq)]
+pub struct ${name}(pub crate::codec::JsonMap<${value}>);
+
+impl crate::codec::Decode for ${name} {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        let mut entries = Vec::with_capacity(object.len());
+        for (key, item) in object {
+${this.guards(conditions, 12, true)}            path.push_key(key);
+            let decoded = <${value} as crate::codec::Decode>::decode(item, path);
+            path.pop();
+            entries.push((key.clone(), decoded?));
+        }
+        Ok(Self(crate::codec::JsonMap(entries)))
+    }
+}
+
+impl crate::codec::Encode for ${name} {
+    fn encode(&self, out: &mut String) {
+        <crate::codec::JsonMap<${value}> as crate::codec::Encode>::encode(&self.0, out);
+    }
+}`)
+    return name
+  }
+
+  private keyConditions(parameter: R | undefined): Array<Condition> {
+    if (parameter === undefined) return []
+    const key = this.deref(parameter)
+    if (!["String", "TemplateLiteral"].includes(key._tag)) return []
+    return [...this.implied(key, "key.as_str()"), ...this.conditions(checksOf(key), key, "key.as_str()")]
   }
 
   private objects(r: Objects, name: string, hint: string): string {
@@ -312,7 +486,6 @@ impl crate::codec::Encode for ${name} {
     if (r.indexSignatures.length > 1) return this.fail(r, "more than one index signature")
     const index = r.indexSignatures[0]
     if (index !== undefined) {
-      this.unchecked(index.parameter)
       if (!["String", "TemplateLiteral"].includes(this.tag(index.parameter)))
         return this.fail(r, "an index signature with a non-string key")
     }
@@ -337,7 +510,7 @@ impl crate::codec::Encode for ${name} {
     const used = new Set<string>()
     const lines: Array<string> = []
     const decodes: Array<string> = []
-    const encodes: Array<string> = []
+    const declared: Array<{ key: string; ident: string; encode: string }> = []
     const absent: Array<string> = []
     for (const property of r.propertySignatures) {
       const key = String(property.name)
@@ -349,8 +522,9 @@ impl crate::codec::Encode for ${name} {
       }
       lines.push(`    pub ${ident}: ${field.type},`)
       decodes.push(`            ${ident}: ${field.decode},`)
-      encodes.push(`        ${field.encode};`)
+      declared.push({ key, ident, encode: field.encode })
     }
+    const keyConditions = index === undefined ? [] : this.keyConditions(index.parameter)
     const rest =
       index === undefined
         ? undefined
@@ -362,9 +536,6 @@ impl crate::codec::Encode for ${name} {
     if (rest !== undefined) {
       lines.push(`    pub ${rest.ident}: crate::codec::JsonMap<${rest.type}>,`)
       decodes.push(`            ${rest.ident}: crate::codec::JsonMap(extras),`)
-      encodes.push(`        for (key, value) in &self.${rest.ident}.0 {
-            crate::codec::write_value(out, &mut first, key, value);
-        }`)
     }
     const extras =
       rest === undefined
@@ -374,12 +545,27 @@ impl crate::codec::Encode for ${name} {
             if matches!(key.as_str(), ${rest.keys}) {
                 continue;
             }
-            path.push_key(key);
+${keyConditions.length === 0 ? "" : this.guards(keyConditions, 12, true)}            path.push_key(key);
             let decoded = <${rest.type} as crate::codec::Decode>::decode(item, path);
             path.pop();
             extras.push((key.clone(), decoded?));
         }
 `
+    const encode =
+      rest === undefined
+        ? `        out.push('{');
+        let mut first = true;
+${declared.map((field) => `        ${field.encode};`).join("\n")}
+        out.push('}');`
+        : `        crate::codec::write_struct_object(
+            out,
+            &[
+${declared.map((field) => `                (${JSON.stringify(field.key)}, ${this.entry(field.ident, field.encode)}),`).join("\n")}
+            ],
+            self.${rest.ident}.0.iter().map(|(key, value)| {
+                (key.as_str(), Some(value as &dyn crate::codec::Encode))
+            }),
+        );`
     const rejected = absent
       .map((key) => `        crate::codec::reject_present(object, ${JSON.stringify(key)}, path)?;\n`)
       .join("")
@@ -399,13 +585,16 @@ ${decodes.join("\n")}
 
 impl crate::codec::Encode for ${name} {
     fn encode(&self, out: &mut String) {
-        out.push('{');
-        let mut first = true;
-${encodes.join("\n")}
-        out.push('}');
+${encode}
     }
 }`)
     return name
+  }
+
+  private entry(ident: string, encode: string) {
+    if (encode.startsWith("crate::codec::write_optional"))
+      return `self.${ident}.as_ref().map(|value| value as &dyn crate::codec::Encode)`
+    return `Some(&self.${ident} as &dyn crate::codec::Encode)`
   }
 
   private ident(key: string, used: Set<string>) {
@@ -422,8 +611,10 @@ ${encodes.join("\n")}
     const members = property.type._tag === "Union" ? this.flattenUnion(property.type.types) : [property.type]
     const present = members.filter((member) => !["Undefined", "Void", "Never"].includes(this.tag(member)))
     if (present.length === 0) return undefined
-    const optional = property.isOptional || members.some((member) => ["Undefined", "Void"].includes(this.tag(member)))
-    const nullable = present.some((member) => this.tag(member) === "Null")
+    const absent = property.isOptional
+    const triState =
+      present.some((member) => this.tag(member) === "Null") ||
+      members.some((member) => ["Undefined", "Void"].includes(this.tag(member)))
     const rest = present.filter((member) => this.tag(member) !== "Null")
     if (rest.length === 0) return this.fail(property.type, "a field that is only null")
     const single = rest.length === 1 ? rest[0]! : undefined
@@ -437,7 +628,7 @@ ${encodes.join("\n")}
       trimName ??
       (single === undefined
         ? this.render({ ...(property.type as SchemaRepresentation.Union), types: rest }, hint)
-        : this.render(withoutChecks(single), hint))
+        : this.render(this.plain(single), hint))
     const checkedValue = (() => {
       if (single === undefined) return "*value"
       const tag = this.tag(single)
@@ -445,11 +636,16 @@ ${encodes.join("\n")}
       if (tag === "Arrays") return "value.as_slice()"
       return "*value"
     })()
-    const conditions = single === undefined || trimmed ? [] : this.conditions(checksOf(single), single, checkedValue)
+    const conditions =
+      single === undefined
+        ? []
+        : trimmed
+          ? []
+          : [...this.implied(single, checkedValue), ...this.conditions(checksOf(single), single, checkedValue)]
     const closure = conditions.length > 0 ? this.closure(conditions, inner) : ""
     const checked = closure !== ""
 
-    if (optional && nullable) {
+    if (absent && triState) {
       return {
         type: `Option<Option<${inner}>>`,
         decode: checked
@@ -458,7 +654,7 @@ ${encodes.join("\n")}
         encode: `crate::codec::write_optional_nullable(out, &mut first, ${key}, &self.${ident})`,
       }
     }
-    if (optional) {
+    if (absent) {
       return {
         type: `Option<${inner}>`,
         decode: checked
@@ -467,7 +663,7 @@ ${encodes.join("\n")}
         encode: `crate::codec::write_optional(out, &mut first, ${key}, &self.${ident})`,
       }
     }
-    if (nullable) {
+    if (triState) {
       if (checked) return this.fail(source, "a required nullable checked field")
       return {
         type: `Option<${inner}>`,
@@ -731,13 +927,19 @@ ${variants.map((variant, index) => `            Self::${variant}(value) => <${ty
     const attempts = order
       .map(([variant, type]) =>
         oneOf
-          ? `        if let Ok(member) = <${type} as crate::codec::Decode>::decode(value, path) {
+          ? `        let mark = path.mark();
+        let member = <${type} as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             if matched.is_some() {
                 return Err(path.at("expected exactly one member to match"));
             }
             matched = Some(Self::${variant}(member));
         }`
-          : `        if let Ok(member) = <${type} as crate::codec::Decode>::decode(value, path) {
+          : `        let mark = path.mark();
+        let member = <${type} as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
             return Ok(Self::${variant}(member));
         }`,
       )
@@ -858,10 +1060,20 @@ ${order.map(([variant, type]) => `            Self::${variant}(value) => <${type
           ]
         case "effect/schema/isPattern": {
           const source = payload?.source
+          const flags = payload?.flags
           if (typeof source !== "string") {
             throw new Error(`strict: ${this.root} ${base._tag}: ${id} needs a string source`)
           }
-          return [one(`crate::checks::is_pattern(${value}, ${JSON.stringify(source)})`, "expected a matching value")]
+          if (typeof flags !== "string") {
+            throw new Error(`strict: ${this.root} ${base._tag}: ${id} needs string flags`)
+          }
+          const name = this.pattern(source, flags, String(id))
+          return [
+            one(
+              `crate::checks::is_pattern(${value}, &crate::generated::patterns::${name})`,
+              "expected a matching value",
+            ),
+          ]
         }
         case "effect/schema/isStartingWith":
           return [
@@ -881,15 +1093,16 @@ ${order.map(([variant, type]) => `            Self::${variant}(value) => <${type
     return checks.flatMap((check) => (check._tag === "FilterGroup" ? this.filters(check.checks) : [check]))
   }
 
-  private guard(condition: Condition, indent: string) {
+  private guard(condition: Condition, indent: string, skip = false) {
+    const failure = skip ? "continue;" : `return Err(path.at(${JSON.stringify(condition.reason)}));`
     return `${indent}if !${condition.condition} {
-${indent}    return Err(path.at(${JSON.stringify(condition.reason)}));
+${indent}    ${failure}
 ${indent}}`
   }
 
-  private guards(conditions: ReadonlyArray<Condition>, spaces: number) {
+  private guards(conditions: ReadonlyArray<Condition>, spaces: number, skip = false) {
     const indent = " ".repeat(spaces)
-    return `${conditions.map((condition) => this.guard(condition, indent)).join("\n")}\n`
+    return `${conditions.map((condition) => this.guard(condition, indent, skip)).join("\n")}\n`
   }
 
   private closure(conditions: ReadonlyArray<Condition>, type: string) {

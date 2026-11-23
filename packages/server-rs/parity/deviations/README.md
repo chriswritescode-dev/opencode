@@ -18,4 +18,6 @@ Each file has these paragraphs, in order:
 
 ## Current deviations
 
-None yet; the first is added by the task that needs it.
+- `OR-38-lone-surrogates.md`: the strict round-trip corpus skips samples with unpaired UTF-16 surrogates
+- `OR-38-request-bodies.md`: request bodies decode into the wire representation
+- `OR-38-request-non-finite-numbers.md`: non-finite numbers in string slots are rejected

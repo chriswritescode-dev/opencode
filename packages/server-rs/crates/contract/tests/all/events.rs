@@ -124,16 +124,35 @@ fn an_unknown_event_type_is_rejected() {
 }
 
 #[test]
-fn an_explicit_null_optional_field_is_absent() {
+fn an_explicit_null_helper_optional_field_is_rejected() {
     let corpus = corpus();
     let (input, _) = sample(&corpus, "session.created");
     let mut value: Value = serde_json::from_str(input).unwrap();
     value["data"]["parentID"] = Value::Null;
 
+    let result = decode_json::<PublicEvent>(&value.to_string());
+    assert!(result.is_err(), "expected the null helper optional to be rejected, got {result:?}");
+
+    value["data"].as_object_mut().unwrap().remove("parentID");
     let event: PublicEvent =
-        decode_json(&value.to_string()).unwrap_or_else(|error| panic!("null optional failed: {error}"));
+        decode_json(&value.to_string()).unwrap_or_else(|error| panic!("absent optional failed: {error}"));
     let encoded = encode_json(&event);
-    assert!(!encoded.contains("parentID"), "expected the null optional to encode as absent, got {encoded}");
+    assert!(!encoded.contains("parentID"), "expected the absent optional to stay absent, got {encoded}");
+}
+
+#[test]
+fn an_explicit_null_undefined_optional_field_is_preserved() {
+    let input = r#"{"id":"evt_1","metadata":null,"type":"server.connected","data":{}}"#;
+    let event: PublicEvent =
+        decode_json(input).unwrap_or_else(|error| panic!("null undefined optional failed: {error}"));
+    let encoded = encode_json(&event);
+    assert!(encoded.contains(r#""metadata":null"#), "expected the null undefined optional to stay null, got {encoded}");
+
+    let absent = r#"{"id":"evt_1","type":"server.connected","data":{}}"#;
+    let event: PublicEvent =
+        decode_json(absent).unwrap_or_else(|error| panic!("absent undefined optional failed: {error}"));
+    let encoded = encode_json(&event);
+    assert!(!encoded.contains("metadata"), "expected the absent undefined optional to stay absent, got {encoded}");
 }
 
 #[test]

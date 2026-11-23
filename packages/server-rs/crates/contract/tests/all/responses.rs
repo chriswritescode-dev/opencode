@@ -1,7 +1,9 @@
 use opencode_contract::SuccessKind;
+use opencode_contract::codec::{decode_json, encode_json};
 use opencode_contract::generated::ROUTES;
 use opencode_contract::generated::corpus_roots;
 use opencode_contract::generated::operations::OPERATION_ROUTES;
+use opencode_contract::generated::{ProviderSettings, SessionActiveResponse, SessionMessageInfo};
 use serde_json::Value;
 use std::collections::BTreeMap;
 
@@ -75,4 +77,24 @@ fn every_typed_response_round_trips() {
             assert!(result.is_err(), "{} accepted invalid input {input} as {result:?}", route.operation_id);
         }
     }
+}
+
+#[test]
+fn a_record_drops_keys_that_fail_their_key_schema() {
+    let input = r#"{"data":{"ses_abc":{"type":"running"},"xyz":{"type":"unknown"}}}"#;
+    let decoded = decode_json::<SessionActiveResponse>(input).unwrap();
+    assert_eq!(encode_json(&decoded), r#"{"data":{"ses_abc":{"type":"running"}}}"#);
+}
+
+#[test]
+fn a_struct_with_rest_writes_index_keys_first() {
+    let input = r#"{"b":1,"5":2,"timeout":3,"1":4}"#;
+    let decoded = decode_json::<ProviderSettings>(input).unwrap();
+    assert_eq!(encode_json(&decoded), r#"{"1":4,"5":2,"timeout":3,"b":1}"#);
+}
+
+#[test]
+fn a_failing_union_member_leaves_the_error_path_at_the_union() {
+    let error = decode_json::<SessionMessageInfo>(r#"{"unknown":true}"#).unwrap_err();
+    assert_eq!(error.path, "$");
 }

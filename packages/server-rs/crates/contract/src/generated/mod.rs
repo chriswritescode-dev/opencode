@@ -4,6 +4,7 @@ mod errors;
 mod events;
 mod ids;
 pub mod operations;
+mod patterns;
 pub mod requests;
 mod routes;
 mod types;
@@ -11,6 +12,8 @@ mod types;
 pub use errors::{ApiError, ERROR_STATUS};
 pub use events::{DURABLE_EVENTS, DurableEvent, PUBLIC_EVENT_TYPES, PublicEvent, SessionLogItem};
 pub use ids::*;
+#[doc(hidden)]
+pub use patterns::compile_all_patterns;
 pub use routes::ROUTES;
 pub use types::*;
 
