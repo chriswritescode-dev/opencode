@@ -29,6 +29,57 @@ Each scenario runs its `steps` in order. `http` and `ws` steps add an entry to `
   Templating (`{{work}}`, `{{root}}`, `{{<as>.<path>}}`) applies to `path`, query values and `send`.
 - Templating: `{{work}}`, `{{root}}` and `{{<as>.<dotted.path>}}` are replaced in paths, query values, header values and the string leaves of request bodies and `match` objects. An unresolved placeholder fails the scenario.
 
+## Adding a scenario
+
+A scenario is a `.scenario.ts` file under `parity/scenarios` that default-exports `defineScenario({ ... })`. Because the output directory and the deviation rules key off the file path, name it `<name>.scenario.ts`; the scenario name is that path below `parity/scenarios` without the suffix. `files`, `config`, `env` and `model` are optional and `steps` is required. Top-level `files` are written under `work` before the server starts, `config` deep-merges over the sandbox base config, and `env` adds string variables to both sides.
+
+```ts
+import { defineScenario } from "../lib/scenario"
+
+export default defineScenario({
+  files: { "hello.txt": "hello parity\n" },
+  config: { model: "anthropic-test/test-model" },
+  model: [
+    { tool: { id: "call_read", name: "read", input: { path: "{{work}}/hello.txt" } } },
+    { text: "done" },
+  ],
+  steps: [
+    { http: { method: "POST", path: "/api/session", body: {}, as: "session" } },
+    { http: { method: "POST", path: "/api/session/{{session.data.id}}/prompt", body: { text: "read hello.txt" } } },
+    { waitEvent: { type: "session.execution.succeeded" } },
+    { files: { "notes.txt": "written while the server runs\n" } },
+    { http: { method: "POST", path: "/api/pty", body: {}, as: "pty" } },
+    { ws: { path: "/api/pty/{{pty.data.id}}/connect", receive: 1 } },
+  ],
+})
+```
+
+Every step kind has a field reference in [Steps](#steps). In short:
+
+- `{ http: { ... } }` sends one request and saves its parsed body with `as`.
+- `{ waitEvent: { type, match? }, timeout? }` waits for a matching event without adding a captured step.
+- `{ files: { path: contents } }` writes files below `work` during the run without adding a captured step.
+- `{ ws: { path, send?, receive, ... } }` opens a WebSocket, sends text frames and captures `receive` frames.
+
+Templating resolves `{{work}}`, `{{root}}` and `{{<as>.<dotted.path>}}` in paths, query values, header values and the string leaves of request bodies and `match` objects; an unresolved placeholder fails the scenario.
+
+`model` scripts the responses of the endpoint described in [Scripted model](#scripted-model). Each entry is a text reply `{ text: "..." }`, one tool call `{ tool: { id, name, input } }`, or a recorded interaction replayed verbatim `{ cassette: "packages/ai/test/fixtures/recordings/.../<name>.json", interaction: 0 }`. Replies are consumed one per request and must all be used.
+
+Run one scenario by passing its file: `bun run parity --candidate ts scenarios/prompt-text.scenario.ts`. Before committing a new scenario, check that it is deterministic with `bun run parity --candidate ts --repeat 20 scenarios/<name>.scenario.ts`; both sides run the same TypeScript server, so a difference there is a harness or capture problem, not a candidate difference.
+
+Add a deviation only when the difference is intended and the owner has accepted it: create a file under `parity/deviations` whose `Accepted:` line names the owner and date and whose `parity` block lists the rules (see [Deviations](#deviations)). Until then the difference fails the scenario.
+
+## Testing a candidate
+
+`--candidate` accepts `ts` or the path to an executable that speaks the same stdio process contract as the TypeScript server. The harness starts it as `<candidate> serve --stdio --port 0` with the [sandbox environment](#sandbox-and-environment), so it must:
+
+- accept `serve --stdio --port 0` and serve the HTTP API on an ephemeral port;
+- read the password from `OPENCODE_PASSWORD` (`parity` during a run) and accept it through Basic auth and `auth_token`;
+- print one JSON line such as `{"url":"http://127.0.0.1:41234"}` as its first stdout line, before it serves requests;
+- exit when stdin closes; the harness closes stdin to stop it and escalates to `SIGTERM`, then `SIGKILL`, if it does not.
+
+A relative path is resolved from the current directory. `--reference` accepts the same forms and defaults to `ts`, which runs the TypeScript server from `packages/cli`.
+
 ## Sandbox and environment
 
 Each side pair gets a fresh random root created with `mkdtemp` under `PARITY_SANDBOX_DIR` (default `/tmp/opencode-parity`). The root contains fixed `home`, `home/.config`, `home/.local/share`, `home/.local/state`, `home/.cache`, `tmp` and `work` directories. The reference runs first, then `resetSandbox` removes the root and recreates those directories before the candidate runs, so neither side sees the other's state. Scenario `files` are written below `work`, the server runs with `work` as its working directory, and requests default to the `work` directory.
