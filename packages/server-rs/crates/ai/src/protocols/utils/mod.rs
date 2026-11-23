@@ -8,6 +8,7 @@ pub mod gateway_protocol;
 pub mod gemini_generate_content;
 pub mod lifecycle;
 pub mod media_input;
+pub mod media_type;
 pub mod mistral_tool_id;
 pub mod open_responses_options;
 pub mod partial_json;

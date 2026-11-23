@@ -4,6 +4,7 @@ use crate::Env;
 use crate::route::model::Model;
 use crate::schema::{AiError, AiErrorReason};
 
+pub mod alibaba;
 pub mod amazon_bedrock;
 pub mod amazon_bedrock_mantle;
 pub mod anthropic;
@@ -17,6 +18,7 @@ pub mod deepinfra;
 pub mod digitalocean;
 pub mod google;
 pub mod groq;
+pub mod meta;
 pub mod minimax;
 pub mod mistral;
 pub mod moonshot;
@@ -30,6 +32,7 @@ pub mod settings;
 pub mod togetherai;
 pub mod venice;
 pub mod vercel_ai_gateway;
+pub mod xai;
 pub mod zai;
 pub mod zai_coding_plan;
 
@@ -100,6 +103,10 @@ pub struct ProviderPackages {
 impl ProviderPackages {
     pub fn builtin() -> Self {
         let entries = BTreeMap::from([
+            ("@opencode/ai/providers/alibaba", alibaba::model as Entry),
+            ("@opencode/ai/providers/alibaba/chat", alibaba::model as Entry),
+            ("@opencode/ai/providers/alibaba/messages", alibaba::messages_model as Entry),
+            ("@opencode/ai/providers/alibaba/responses", alibaba::responses_model as Entry),
             ("@opencode/ai/providers/amazon-bedrock", amazon_bedrock::model as Entry),
             ("@opencode/ai/providers/amazon-bedrock/mantle", amazon_bedrock_mantle::model as Entry),
             ("@opencode/ai/providers/amazon-bedrock/mantle/chat", amazon_bedrock_mantle::chat_model as Entry),
@@ -119,6 +126,10 @@ impl ProviderPackages {
             ("@opencode/ai/providers/digitalocean/responses", digitalocean::responses_model as Entry),
             ("@opencode/ai/providers/google", google::model as Entry),
             ("@opencode/ai/providers/groq", groq::model as Entry),
+            ("@opencode/ai/providers/meta", meta::model as Entry),
+            ("@opencode/ai/providers/meta/chat", meta::chat_model as Entry),
+            ("@opencode/ai/providers/meta/messages", meta::messages_model as Entry),
+            ("@opencode/ai/providers/meta/responses", meta::model as Entry),
             ("@opencode/ai/providers/minimax", minimax::model as Entry),
             ("@opencode/ai/providers/minimax/messages", minimax::model as Entry),
             ("@opencode/ai/providers/minimax/chat", minimax::chat_model as Entry),
@@ -142,6 +153,7 @@ impl ProviderPackages {
             ("@opencode/ai/providers/vercel-ai-gateway/chat", vercel_ai_gateway::chat_model as Entry),
             ("@opencode/ai/providers/vercel-ai-gateway/messages", vercel_ai_gateway::messages_model as Entry),
             ("@opencode/ai/providers/vercel-ai-gateway/responses", vercel_ai_gateway::responses_model as Entry),
+            ("@opencode/ai/providers/xai", xai::model as Entry),
             ("@opencode/ai/providers/zai", zai::model as Entry),
             ("@opencode/ai/providers/zai/chat", zai::chat_model as Entry),
             ("@opencode/ai/providers/zai-coding-plan", zai_coding_plan::model as Entry),

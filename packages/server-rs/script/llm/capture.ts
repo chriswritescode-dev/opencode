@@ -185,6 +185,12 @@ const PROTOCOLS: Record<string, { readonly path: string; readonly transport: str
   "openai-responses": { path: "packages/ai/src/protocols/openai-responses.ts", transport: "http-json/sse" },
   gemini: { path: "packages/ai/src/protocols/gemini.ts", transport: "http-json/sse" },
   "bedrock-converse": { path: "packages/ai/src/protocols/bedrock-converse.ts", transport: "http-json" },
+  "alibaba-chat": { path: "packages/ai/src/protocols/alibaba-chat.ts", transport: "http-json/sse" },
+  "alibaba-messages": { path: "packages/ai/src/protocols/alibaba-messages.ts", transport: "http-json/sse" },
+  "alibaba-responses": { path: "packages/ai/src/protocols/alibaba-responses.ts", transport: "http-json/sse" },
+  "meta-messages": { path: "packages/ai/src/protocols/meta-messages.ts", transport: "http-json/sse" },
+  "meta-responses": { path: "packages/ai/src/protocols/meta-responses.ts", transport: "http-json/sse" },
+  "xai-responses": { path: "packages/ai/src/protocols/xai-responses.ts", transport: "http-json/sse" },
 }
 
 const TEXT_CONTENT_TYPES = new Set([

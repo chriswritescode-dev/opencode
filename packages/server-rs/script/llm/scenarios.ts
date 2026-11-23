@@ -11,6 +11,7 @@ const { ai, CacheHint, LLMEvent, Media, Message, SystemPart, ToolCallPart, ToolC
   await load("packages/ai/src/effect.ts")
 const { LLMClient } = await load("packages/ai/src/route.ts")
 const {
+  Alibaba,
   Anthropic,
   AnthropicCompatible,
   AmazonBedrock,
@@ -23,6 +24,7 @@ const {
   DigitalOcean,
   Google,
   Groq,
+  Meta,
   MiniMax,
   Mistral,
   Moonshot,
@@ -32,6 +34,7 @@ const {
   TogetherAI,
   VercelAIGateway,
   Venice,
+  XAI,
   ZAI,
 } = await load("packages/ai/src/providers.ts")
 const { toDefinitions, tool } = await load("packages/ai/src/tool.ts")
@@ -1470,6 +1473,615 @@ const chatVariantScenarios = [
     },
   }),
   ...minimaxScenarios,
+]
+
+const vendorVariant = (scenario: Scenario) => ({ group: "vendor-variants", scenario })
+
+const alibabaSettings = { region: "ap-southeast-1", apiKey: "fixture" }
+const metaSettings = { apiKey: "fixture" }
+const xaiSettings = { apiKey: "fixture" }
+
+const alibabaLoopPrompt =
+  "We have a budget of 38000 dollars for 219 trips costing 173 dollars each. Calculate whether that is affordable. If it is, use get_weather to look up the current weather in Paris. After receiving the result, report the weather in one short sentence."
+const metaLoopPrompt =
+  "Look up the current weather in Paris using lookup_weather before answering. After receiving the result, report Paris's weather in one short sentence."
+const metaMessagesLoopPrompt =
+  "Look up the current weather in Paris using lookup_weather. After receiving the result, report Paris's weather in one short sentence."
+const metaWeather = ToolDefinition.make({
+  name: "lookup_weather",
+  description: "Look up the current weather for a city",
+  inputSchema: {
+    type: "object",
+    properties: { city: { type: "string", enum: ["Paris"] } },
+    required: ["city"],
+    additionalProperties: false,
+  },
+})
+const metaMessagesWeather = ToolDefinition.make({
+  name: "lookup_weather",
+  description: "Look up current weather",
+  inputSchema: {
+    type: "object",
+    properties: { city: { type: "string", enum: ["Paris"] } },
+    required: ["city"],
+    additionalProperties: false,
+  },
+})
+
+const alibabaApi = {
+  chat: {
+    name: "chat",
+    protocol: "alibaba-chat",
+    package: "@opencode/ai/providers/alibaba",
+    model: (modelID: string) => Alibaba.configure(alibabaSettings).chat(modelID),
+  },
+  messages: {
+    name: "messages",
+    protocol: "alibaba-messages",
+    package: "@opencode/ai/providers/alibaba/messages",
+    model: (modelID: string) => Alibaba.configure(alibabaSettings).messages(modelID),
+  },
+  responses: {
+    name: "responses",
+    protocol: "alibaba-responses",
+    package: "@opencode/ai/providers/alibaba/responses",
+    model: (modelID: string) => Alibaba.configure(alibabaSettings).responses(modelID),
+  },
+} as const
+
+const metaApi = {
+  chat: {
+    name: "chat",
+    protocol: "openai-chat",
+    package: "@opencode/ai/providers/meta/chat",
+    model: (modelID: string) => Meta.configure(metaSettings).chat(modelID),
+  },
+  responses: {
+    name: "responses",
+    protocol: "meta-responses",
+    package: "@opencode/ai/providers/meta/responses",
+    model: (modelID: string) => Meta.configure(metaSettings).responses(modelID),
+  },
+  messages: {
+    name: "messages",
+    protocol: "meta-messages",
+    package: "@opencode/ai/providers/meta/messages",
+    model: (modelID: string) => Meta.configure(metaSettings).messages(modelID),
+  },
+} as const
+
+type AlibabaApi = (typeof alibabaApi)[keyof typeof alibabaApi]
+
+const alibabaEffortScenarios = (
+  api: AlibabaApi,
+  efforts: ReadonlyArray<string | undefined>,
+  effortKey: "reasoningEffort" | "effort",
+) =>
+  efforts.map((effort) =>
+    vendorVariant({
+      cassette: `alibaba-${api.name}/qwen-3-8-max-streams-${effort ?? "default"}-effort`,
+      protocol: api.protocol,
+      provider: { package: api.package, modelID: "qwen3.8-max", settings: alibabaSettings },
+      run: () =>
+        LLMClient.generate(
+          ai.request({
+            id: `recorded_alibaba_${api.name}_qwen_3_8_max_streams_${effort ?? "default"}_effort`,
+            model: api.model("qwen3.8-max"),
+            prompt: integerPrompt,
+            ...(effort === undefined ? {} : { providerOptions: { [effortKey]: effort } }),
+            maxTokens: 4096,
+          }),
+        ),
+    }),
+  )
+
+const alibabaThinkingScenarios = (api: AlibabaApi) =>
+  ([false, true] as const).map((enabled) =>
+    vendorVariant({
+      cassette: `alibaba-${api.name}/qwen-3-7-plus-streams-thinking-${enabled ? "enabled" : "disabled"}`,
+      protocol: api.protocol,
+      provider: { package: api.package, modelID: "qwen3.7-plus", settings: alibabaSettings },
+      run: () =>
+        LLMClient.generate(
+          ai.request({
+            id: `recorded_alibaba_${api.name}_qwen_3_7_plus_streams_thinking_${enabled ? "enabled" : "disabled"}`,
+            model: api.model("qwen3.7-plus"),
+            providerOptions:
+              api.name === "messages"
+                ? { thinking: { type: enabled ? "enabled" : "disabled", ...(enabled ? { budgetTokens: 1024 } : {}) } }
+                : api.name === "chat"
+                  ? { enableThinking: enabled, ...(enabled ? { thinkingBudget: 1024 } : {}) }
+                  : { enableThinking: enabled },
+            prompt: integerPrompt,
+            maxTokens: 4096,
+          }),
+        ),
+    }),
+  )
+
+const alibabaCapabilityScenarios = (api: AlibabaApi) => [
+  vendorVariant({
+    cassette: `alibaba-${api.name}/qwen-3-8-flash-reads-image-bytes`,
+    protocol: api.protocol,
+    provider: { package: api.package, modelID: "qwen3.8-flash", settings: alibabaSettings },
+    run: () =>
+      Effect.gen(function* () {
+        const image = yield* restroomImage()
+        yield* LLMClient.generate(
+          ai.request({
+            id: `recorded_alibaba_${api.name}_qwen_3_8_flash_reads_image_bytes`,
+            model: api.model("qwen3.8-flash"),
+            providerOptions: api.name === "messages" ? { thinking: { type: "disabled" } } : { enableThinking: false },
+            messages: [
+              Message.user([
+                { type: "text", text: "Read the three words in this image. Reply with only the words in order." },
+                { type: "media", media: Media.bytes(image, "image/png") },
+              ]),
+            ],
+            maxTokens: 4096,
+          }),
+        )
+      }),
+  }),
+  vendorVariant({
+    cassette: `alibaba-${api.name}/qwen-3-8-max-obeys-named-tool-choice`,
+    protocol: api.protocol,
+    provider: { package: api.package, modelID: "qwen3.8-max", settings: alibabaSettings },
+    run: () =>
+      LLMClient.generate(
+        ai.request({
+          id: `recorded_alibaba_${api.name}_qwen_3_8_max_obeys_named_tool_choice`,
+          model: api.model("qwen3.8-max"),
+          prompt: "Find the current weather in Paris.",
+          providerOptions: api.name === "messages" ? { thinking: { type: "disabled" } } : { reasoningEffort: "none" },
+          tools: [legacyChatWeather],
+          toolChoice: { type: "tool", name: "get_weather" },
+          maxTokens: 4096,
+        }),
+      ),
+  }),
+]
+
+const alibabaLoopScenarios = (api: AlibabaApi) => [
+  vendorVariant({
+    cassette: `alibaba-${api.name}/qwen-3-8-max-replays-reasoning-through-a-tool-loop-and-follow-up`,
+    protocol: api.protocol,
+    provider: { package: api.package, modelID: "qwen3.8-max", settings: alibabaSettings },
+    run: () =>
+      runThreeStepWeatherLoop(
+        ai.request({
+          id: `recorded_alibaba_${api.name}_qwen_3_8_max_tool_loop`,
+          model: api.model("qwen3.8-max"),
+          providerOptions:
+            api.name === "messages"
+              ? { effort: "medium" }
+              : api.name === "chat"
+                ? { reasoningEffort: "medium", preserveThinking: true, toolStream: true }
+                : { reasoningEffort: "medium", store: false },
+          prompt: alibabaLoopPrompt,
+          tools: [chatWeather],
+          maxTokens: 4096,
+        }),
+      ),
+  }),
+]
+
+const alibabaResponseExtraScenarios = [
+  vendorVariant({
+    cassette: "alibaba-chat/qwen-3-8-max-returns-a-json-object",
+    protocol: "alibaba-chat",
+    provider: { package: "@opencode/ai/providers/alibaba", modelID: "qwen3.8-max", settings: alibabaSettings },
+    run: () =>
+      LLMClient.generate(
+        ai.request({
+          id: "recorded_alibaba_chat_qwen_3_8_max_returns_a_json_object",
+          model: alibabaApi.chat.model("qwen3.8-max"),
+          prompt: 'Return a JSON object with one key "city" set to the capital city of France.',
+          providerOptions: { reasoningEffort: "none", responseFormat: { type: "json_object" } },
+          maxTokens: 1024,
+        }),
+      ),
+  }),
+  vendorVariant({
+    cassette: "alibaba-messages/qwen-3-8-max-follows-a-json-schema",
+    protocol: "alibaba-messages",
+    provider: {
+      package: "@opencode/ai/providers/alibaba/messages",
+      modelID: "qwen3.8-max",
+      settings: alibabaSettings,
+    },
+    run: () =>
+      LLMClient.generate(
+        ai.request({
+          id: "recorded_alibaba_messages_qwen_3_8_max_follows_a_json_schema",
+          model: alibabaApi.messages.model("qwen3.8-max"),
+          prompt: 'Return a JSON object with one key "city" set to the capital city of France.',
+          providerOptions: {
+            thinking: { type: "disabled" },
+            outputConfig: {
+              format: {
+                type: "json_schema",
+                schema: {
+                  type: "object",
+                  properties: { city: { type: "string" } },
+                  required: ["city"],
+                  additionalProperties: false,
+                },
+              },
+            },
+          },
+          maxTokens: 1024,
+        }),
+      ),
+  }),
+  vendorVariant({
+    cassette: "alibaba-responses/qwen-3-8-max-continues-a-stored-response",
+    protocol: "alibaba-responses",
+    provider: {
+      package: "@opencode/ai/providers/alibaba/responses",
+      modelID: "qwen3.8-max",
+      settings: alibabaSettings,
+    },
+    run: () =>
+      Effect.gen(function* () {
+        const first = yield* LLMClient.generate(
+          ai.request({
+            id: "recorded_alibaba_responses_qwen_3_8_max_continues_a_stored_response",
+            model: alibabaApi.responses.model("qwen3.8-max"),
+            prompt: "Remember the password word apricot. Reply OK.",
+            providerOptions: { store: true, reasoningEffort: "none" },
+            maxTokens: 1024,
+          }),
+        )
+        const id = first.events.find(LLMEvent.is.finish)?.providerMetadata?.alibaba?.responseId
+        yield* LLMClient.generate(
+          ai.request({
+            id: "recorded_alibaba_responses_qwen_3_8_max_continues_a_stored_response_follow_up",
+            model: alibabaApi.responses.model("qwen3.8-max"),
+            prompt: "What word did I ask you to remember? Reply with only the word.",
+            providerOptions: { previousResponseId: id, store: true, reasoningEffort: "none" },
+            maxTokens: 1024,
+          }),
+        )
+      }),
+  }),
+  vendorVariant({
+    cassette: "alibaba-responses/qwen-3-8-max-uses-hosted-web-search-and-extraction",
+    protocol: "alibaba-responses",
+    provider: {
+      package: "@opencode/ai/providers/alibaba/responses",
+      modelID: "qwen3.8-max",
+      settings: alibabaSettings,
+    },
+    run: () =>
+      LLMClient.generate(
+        ai.request({
+          id: "recorded_alibaba_responses_qwen_3_8_max_uses_hosted_web_search_and_extraction",
+          model: alibabaApi.responses.model("qwen3.8-max"),
+          prompt:
+            "Use web search to find Alibaba Cloud Model Studio's official documentation, then use web_extractor to read the page. Give a brief summary with the source URL.",
+          tools: [Alibaba.webSearch(), Alibaba.webExtractor()],
+          providerOptions: { reasoningEffort: "low", store: false },
+          maxTokens: 4096,
+        }),
+      ),
+  }),
+  vendorVariant({
+    cassette: "alibaba-responses/qwen-3-8-max-uses-hosted-code-interpreter",
+    protocol: "alibaba-responses",
+    provider: {
+      package: "@opencode/ai/providers/alibaba/responses",
+      modelID: "qwen3.8-max",
+      settings: alibabaSettings,
+    },
+    run: () =>
+      LLMClient.generate(
+        ai.request({
+          id: "recorded_alibaba_responses_qwen_3_8_max_uses_hosted_code_interpreter",
+          model: alibabaApi.responses.model("qwen3.8-max"),
+          prompt:
+            "Use the code interpreter to compute the SHA-256 hash of the UTF-8 string hello (no newline). Reply with only the hash.",
+          tools: [Alibaba.codeInterpreter()],
+          providerOptions: { reasoningEffort: "low" },
+          maxTokens: 4096,
+        }),
+      ),
+  }),
+]
+
+const metaEffortScenarios = (api: (typeof metaApi)["chat"] | (typeof metaApi)["responses"]) =>
+  [undefined, "minimal", "low", "medium", "high", "xhigh", "max"].map((effort) =>
+    vendorVariant({
+      cassette: `meta-${api.name}/streams-text-with-${effort ?? "default"}-reasoning`,
+      protocol: api.protocol,
+      provider: { package: api.package, modelID: "muse-spark-1.3", settings: metaSettings },
+      run: () =>
+        LLMClient.generate(
+          ai.request({
+            id: `recorded_meta_${api.name}_streams_text_with_${effort ?? "default"}_reasoning`,
+            model: api.model("muse-spark-1.3"),
+            prompt: integerPrompt,
+            ...(effort === undefined
+              ? {}
+              : {
+                  providerOptions:
+                    api.name === "responses" && effort === "high"
+                      ? { reasoningEffort: effort, reasoningSummary: "auto" }
+                      : { reasoningEffort: effort },
+                }),
+            maxTokens: 1024,
+          }),
+        ),
+    }),
+  )
+
+const metaLoopScenarios = (api: (typeof metaApi)["chat"] | (typeof metaApi)["responses"]) => [
+  vendorVariant({
+    cassette: `meta-${api.name}/${api.name === "responses" ? "replays-encrypted-reasoning-through-a-tool-loop" : "continues-a-generated-tool-call"}`,
+    protocol: api.protocol,
+    provider: { package: api.package, modelID: "muse-spark-1.3", settings: metaSettings },
+    run: () =>
+      Effect.gen(function* () {
+        const request = ai.request({
+          id: `recorded_meta_${api.name}_${api.name === "responses" ? "replays_encrypted_reasoning_through_a_tool_loop" : "continues_a_generated_tool_call"}`,
+          model: api.model("muse-spark-1.3"),
+          prompt: metaLoopPrompt,
+          tools: [metaWeather],
+          toolChoice: "auto",
+          providerOptions: { reasoningEffort: "low" },
+          maxTokens: 1024,
+        })
+        const first = yield* LLMClient.generate(request)
+        yield* LLMClient.generate({
+          ...request,
+          messages: [
+            ...request.messages,
+            first.message,
+            ...first.toolCalls.map((call: any) =>
+              Message.tool({ id: call.id, name: call.name, result: { condition: "sunny", temperature: "18C" } }),
+            ),
+          ],
+        })
+      }),
+  }),
+]
+
+const metaMessagesScenarios = [
+  ...(["adaptive", "enabled"] as const).map((mode) =>
+    vendorVariant({
+      cassette: `meta-messages/streams-text-with-${mode}-thinking`,
+      protocol: "meta-messages",
+      provider: { package: "@opencode/ai/providers/meta/messages", modelID: "muse-spark-1.3", settings: metaSettings },
+      run: () =>
+        LLMClient.generate(
+          ai.request({
+            id: `recorded_meta_messages_streams_text_with_${mode}_thinking`,
+            model: metaApi.messages.model("muse-spark-1.3"),
+            prompt: integerPrompt,
+            maxTokens: 2048,
+            providerOptions: {
+              thinking:
+                mode === "adaptive"
+                  ? { type: "adaptive", display: "omitted" }
+                  : { type: "enabled", budgetTokens: 1024, display: "omitted" },
+              effort: "low",
+            },
+          }),
+        ),
+    }),
+  ),
+  vendorVariant({
+    cassette: "meta-messages/replays-encrypted-thinking-through-a-tool-loop",
+    protocol: "meta-messages",
+    provider: { package: "@opencode/ai/providers/meta/messages", modelID: "muse-spark-1.3", settings: metaSettings },
+    run: () =>
+      Effect.gen(function* () {
+        const request = ai.request({
+          id: "recorded_meta_messages_replays_encrypted_thinking_through_a_tool_loop",
+          model: metaApi.messages.model("muse-spark-1.3"),
+          prompt: metaMessagesLoopPrompt,
+          tools: [metaMessagesWeather],
+          toolChoice: "auto",
+          maxTokens: 1024,
+          providerOptions: { effort: "low" },
+        })
+        const first = yield* LLMClient.generate(request)
+        yield* LLMClient.generate({
+          ...request,
+          toolChoice: ToolChoice.make("none"),
+          messages: [
+            ...request.messages,
+            first.message,
+            ...first.toolCalls.map((call: any) =>
+              Message.tool({ id: call.id, name: call.name, result: { condition: "sunny" } }),
+            ),
+          ],
+        })
+      }),
+  }),
+]
+
+const metaSearchScenarios = [
+  vendorVariant({
+    cassette: "meta-search/searches-and-replays-grounded-responses",
+    protocol: "meta-responses",
+    provider: { package: "@opencode/ai/providers/meta/responses", modelID: "muse-spark-1.3", settings: metaSettings },
+    run: () =>
+      Effect.gen(function* () {
+        const request = ai.request({
+          id: "recorded_meta_search_searches_and_replays_grounded_responses",
+          model: metaApi.responses.model("muse-spark-1.3"),
+          prompt:
+            "Use web search to find NASA's page identifying the first person to walk on the Moon. Answer in one sentence with a source citation.",
+          tools: [Meta.webSearch()],
+          maxTokens: 2048,
+          providerOptions: { reasoningEffort: "low", include: ["reasoning.encrypted_content", "web_search_call.results"] },
+        })
+        const first = yield* LLMClient.generate(request)
+        yield* LLMClient.generate({
+          ...request,
+          tools: [],
+          messages: [
+            ...request.messages,
+            first.message,
+            Message.user("Using the information already found, reply with just that person's surname."),
+          ],
+        })
+      }),
+  }),
+  vendorVariant({
+    cassette: "meta-search/searches-and-replays-grounded-messages",
+    protocol: "meta-messages",
+    provider: { package: "@opencode/ai/providers/meta/messages", modelID: "muse-spark-1.3", settings: metaSettings },
+    run: () =>
+      Effect.gen(function* () {
+        const request = ai.request({
+          id: "recorded_meta_search_searches_and_replays_grounded_messages",
+          model: metaApi.messages.model("muse-spark-1.3"),
+          prompt:
+            "Use web search to find NASA's page identifying the first person to walk on the Moon. Answer in one sentence with a source citation.",
+          tools: [Meta.webSearch()],
+          maxTokens: 2048,
+          providerOptions: { effort: "low" },
+        })
+        const first = yield* LLMClient.generate(request)
+        yield* LLMClient.generate({
+          ...request,
+          tools: [],
+          messages: [
+            ...request.messages,
+            first.message,
+            Message.user("Using the information already found, reply with just that person's surname."),
+          ],
+        })
+      }),
+  }),
+]
+
+const metaImageScenarios = [
+  vendorVariant({
+    cassette: "meta-images/replays-a-signed-image-handle-for-a-responses-edit",
+    protocol: "meta-responses",
+    provider: { package: "@opencode/ai/providers/meta/responses", modelID: "muse-image-1.0", settings: metaSettings },
+    run: () =>
+      Effect.gen(function* () {
+        const request = ai.request({
+          id: "recorded_meta_images_replays_a_signed_image_handle_for_a_responses_edit",
+          model: metaApi.responses.model("muse-image-1.0"),
+          prompt: "A simple flat black square centered on a plain white background. No text.",
+          tools: [
+            Meta.imageGeneration({
+              reasoningStrength: "low",
+              enableImageSearch: false,
+              enableWebSearch: false,
+              enableShell: false,
+              size: "1024x1024",
+            }),
+          ],
+          maxTokens: 4096,
+        })
+        const first = yield* LLMClient.generate(request)
+        yield* LLMClient.generate({
+          ...request,
+          messages: [
+            ...request.messages,
+            first.message,
+            Message.user("Change the square to blue. Keep the white background."),
+          ],
+        })
+      }),
+  }),
+]
+
+const xaiPdfScenarios = [
+  vendorVariant({
+    cassette: "pdf/xai-user-input",
+    protocol: "xai-responses",
+    provider: { package: "@opencode/ai/providers/xai", modelID: "grok-4.5", settings: xaiSettings },
+    run: () =>
+      LLMClient.generate(
+        ai.request({
+          id: "recorded_pdf_xai_user_input",
+          model: XAI.configure(xaiSettings).responses("grok-4.5"),
+          cache: "none",
+          maxTokens: 40,
+          temperature: 0,
+          messages: [
+            Message.user([
+              { type: "media", media: Media.base64(PDF, "application/pdf"), filename: "verification.pdf" },
+              { type: "text", text: pdfPrompt },
+            ]),
+          ],
+        }),
+      ),
+  }),
+  vendorVariant({
+    cassette: "pdf/xai-tool-result",
+    protocol: "xai-responses",
+    provider: { package: "@opencode/ai/providers/xai", modelID: "grok-4.5", settings: xaiSettings },
+    run: () =>
+      LLMClient.generate(
+        ai.request({
+          id: "recorded_pdf_xai_tool_result",
+          model: XAI.configure(xaiSettings).responses("grok-4.5"),
+          system: "Read the PDF returned by the tool and follow the user's response format exactly.",
+          cache: "none",
+          maxTokens: 40,
+          temperature: 0,
+          messages: [
+            Message.user(pdfPrompt),
+            Message.assistant([{ type: "tool-call", id: "call_pdf_1", name: readPdf.name, input: {} }]),
+            Message.tool({
+              id: "call_pdf_1",
+              name: readPdf.name,
+              resultType: "content",
+              result: [
+                { type: "text", text: "PDF read successfully" },
+                {
+                  type: "file",
+                  uri: `data:application/pdf;base64,${PDF}`,
+                  mime: "application/pdf",
+                  name: "verification.pdf",
+                },
+              ],
+            }),
+          ],
+          tools: [readPdf],
+        }),
+      ),
+  }),
+]
+
+const vendorVariantScenarios = [
+  ...alibabaEffortScenarios(
+    alibabaApi.chat,
+    [undefined, "none", "minimal", "low", "medium", "high", "xhigh", "max"],
+    "reasoningEffort",
+  ),
+  ...alibabaEffortScenarios(alibabaApi.messages, [undefined, "low", "medium", "high", "xhigh", "max"], "effort"),
+  ...alibabaEffortScenarios(
+    alibabaApi.responses,
+    [undefined, "none", "minimal", "low", "medium", "high", "xhigh", "max"],
+    "reasoningEffort",
+  ),
+  ...alibabaThinkingScenarios(alibabaApi.chat),
+  ...alibabaThinkingScenarios(alibabaApi.messages),
+  ...alibabaThinkingScenarios(alibabaApi.responses),
+  ...alibabaCapabilityScenarios(alibabaApi.chat),
+  ...alibabaCapabilityScenarios(alibabaApi.messages),
+  ...alibabaCapabilityScenarios(alibabaApi.responses),
+  ...alibabaLoopScenarios(alibabaApi.chat),
+  ...alibabaLoopScenarios(alibabaApi.messages),
+  ...alibabaLoopScenarios(alibabaApi.responses),
+  ...alibabaResponseExtraScenarios,
+  ...metaEffortScenarios(metaApi.chat),
+  ...metaEffortScenarios(metaApi.responses),
+  ...metaLoopScenarios(metaApi.chat),
+  ...metaLoopScenarios(metaApi.responses),
+  ...metaMessagesScenarios,
+  ...metaSearchScenarios,
+  ...metaImageScenarios,
+  ...xaiPdfScenarios,
 ]
 
 const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scenario }> = [
@@ -3374,6 +3986,7 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
     },
   },
   ...chatVariantScenarios,
+  ...vendorVariantScenarios,
 ]
 
 const cassettes = []

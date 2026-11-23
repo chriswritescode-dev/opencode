@@ -35,9 +35,20 @@ export const GROUPS: Record<string, { protocols: string[] }> = {
   "wrapped-core": { protocols: ["openai-chat", "anthropic-messages", "openai-responses", "open-responses"] },
   gateways: { protocols: ["openai-chat", "anthropic-messages", "openai-responses", "open-responses"] },
   "chat-variants": { protocols: ["openai-chat", "anthropic-messages", "open-responses"] },
+  "vendor-variants": {
+    protocols: [
+      "alibaba-chat",
+      "alibaba-messages",
+      "alibaba-responses",
+      "meta-messages",
+      "meta-responses",
+      "openai-chat",
+      "xai-responses",
+    ],
+  },
 }
 
-export const EXPECTED_CASSETTES = 171
+export const EXPECTED_CASSETTES = 237
 
 const exporter = `${tree}/exporter`
 await mkdir(exporter, { recursive: true })

@@ -1,0 +1,532 @@
+{
+  "cassette": "alibaba-chat/qwen-3-8-max-streams-default-effort",
+  "protocol": "alibaba-chat",
+  "routeId": "alibaba-chat",
+  "clockEpochMs": 1767323045000,
+  "steps": [
+    {
+      "model": {
+        "id": "qwen3.8-max",
+        "provider": "alibaba",
+        "route": {
+          "id": "alibaba-chat",
+          "protocol": "alibaba-chat",
+          "providerMetadataKey": "alibaba"
+        },
+        "endpoint": {
+          "baseURL": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+          "path": "/chat/completions"
+        },
+        "compatibility": {
+          "reasoningField": "reasoning_content",
+          "maxTokensField": "max_completion_tokens",
+          "zaiToolStream": false
+        },
+        "capabilities": {
+          "tools": {
+            "strict": false
+          }
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_alibaba_chat_qwen_3_8_max_streams_default_effort",
+        "maxTokens": 4096,
+        "system": [],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "What is 173 multiplied by 219? Reply with only the final integer."
+              }
+            ]
+          }
+        ],
+        "tools": []
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/alibaba",
+        "modelID": "qwen3.8-max",
+        "settings": {
+          "region": "ap-southeast-1",
+          "apiKey": "fixture"
+        }
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "275",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"qwen3.8-max\",\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"What is 173 multiplied by 219? Reply with only the final integer.\",\"cache_control\":{\"type\":\"ephemeral\"}}]}],\"stream\":true,\"stream_options\":{\"include_usage\":true},\"max_completion_tokens\":4096}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream;charset=utf-8"
+            },
+            "body": "data: {\"model\":\"qwen3.8-max\",\"id\":\"chatcmpl-3ee14aeb-8911-99e8-9c28-e71263682223\",\"created\":1790904185,\"object\":\"chat.completion.chunk\",\"usage\":null,\"choices\":[{\"logprobs\":null,\"index\":0,\"delta\":{\"content\":\"\",\"role\":\"assistant\",\"reasoning_content\":\"\"},\"finish_reason\":null}]}\n\ndata: {\"model\":\"qwen3.8-max\",\"id\":\"chatcmpl-3ee14aeb-8911-99e8-9c28-e71263682223\",\"choices\":[{\"delta\":{\"content\":\"\",\"reasoning_content\":\"We\"},\"index\":0,\"finish_reason\":null,\"logprobs\":null}],\"created\":1790904185,\"object\":\"chat.completion.chunk\",\"usage\":null}\n\ndata: {\"model\":\"qwen3.8-max\",\"id\":\"chatcmpl-3ee14aeb-8911-99e8-9c28-e71263682223\",\"choices\":[{\"delta\":{\"content\":\"\",\"reasoning_content\":\" need answer user\"},\"index\":0,\"finish_reason\":null,\"logprobs\":null}],\"created\":1790904185,\"object\":\"chat.completion.chunk\",\"usage\":null}\n\ndata: {\"model\":\"qwen3.8-max\",\"id\":\"chatcmpl-3ee14aeb-8911-99e8-9c28-e71263682223\",\"choices\":[{\"delta\":{\"content\":\"\",\"reasoning_content\":\"'s simple arithmetic\"},\"index\":0,\"finish_reason\":null,\"logprobs\":null}],\"created\":1790904185,\"object\":\"chat.completion.chunk\",\"usage\":null}\n\ndata: {\"model\":\"qwen3.8-max\",\"id\":\"chatcmpl-3ee14aeb-8911-99e8-9c28-e71263682223\",\"choices\":[{\"delta\":{\"content\":\"\",\"reasoning_content\":\": 17\"},\"index\":0,\"finish_reason\":null,\"logprobs\":null}],\"created\":1790904185,\"object\":\"chat.completion.chunk\",\"usage\":null}\n\ndata: {\"model\":\"qwen3.8-max\",\"id\":\"chatcmpl-3ee14aeb-8911-99e8-9c28-e71263682223\",\"choices\":[{\"delta\":{\"content\":\"\",\"reasoning_content\":\"3 * 2\"},\"index\":0,\"finish_reason\":null,\"logprobs\":null}],\"created\":1790904185,\"object\":\"chat.completion.chunk\",\"usage\":null}\n\ndata: {\"model\":\"qwen3.8-max\",\"id\":\"chatcmpl-3ee14aeb-8911-99e8-9c28-e71263682223\",\"choices\":[{\"delta\":{\"content\":\"\",\"reasoning_content\":\"19\"},\"index\":0,\"finish_reason\":null,\"logprobs\":null}],\"created\":1790904185,\"object\":\"chat.completion.chunk\",\"usage\":null}\n\ndata: {\"model\":\"qwen3.8-max\",\"id\":\"chatcmpl-3ee14aeb-8911-99e8-9c28-e71263682223\",\"choices\":[{\"delta\":{\"content\":\"\",\"reasoning_content\":\". Need final only\"},\"index\":0,\"finish_reason\":null,\"logprobs\":null}],\"created\":1790904185,\"object\":\"chat.completion.chunk\",\"usage\":null}\n\ndata: {\"model\":\"qwen3.8-max\",\"id\":\"chatcmpl-3ee14aeb-8911-99e8-9c28-e71263682223\",\"choices\":[{\"delta\":{\"content\":\"\",\"reasoning_content\":\" integer. Compute:\"},\"index\":0,\"finish_reason\":null,\"logprobs\":null}],\"created\":1790904185,\"object\":\"chat.completion.chunk\",\"usage\":null}\n\ndata: {\"model\":\"qwen3.8-max\",\"id\":\"chatcmpl-3ee14aeb-8911-99e8-9c28-e71263682223\",\"choices\":[{\"delta\":{\"content\":\"\",\"reasoning_content\":\" 173\"},\"index\":0,\"finish_reason\":null,\"logprobs\":null}],\"created\":1790904185,\"object\":\"chat.completion.chunk\",\"usage\":null}\n\ndata: {\"model\":\"qwen3.8-max\",\"id\":\"chatcmpl-3ee14aeb-8911-99e8-9c28-e71263682223\",\"choices\":[{\"delta\":{\"content\":\"\",\"reasoning_content\":\"*200\"},\"index\":0,\"finish_reason\":null,\"logprobs\":null}],\"created\":1790904185,\"object\":\"chat.completion.chunk\",\"usage\":null}\n\ndata: {\"model\":\"qwen3.8-max\",\"id\":\"chatcmpl-3ee14aeb-8911-99e8-9c28-e71263682223\",\"choices\":[{\"delta\":{\"content\":\"\",\"reasoning_content\":\"=346\"},\"index\":0,\"finish_reason\":null,\"logprobs\":null}],\"created\":1790904185,\"object\":\"chat.completion.chunk\",\"usage\":null}\n\ndata: {\"model\":\"qwen3.8-max\",\"id\":\"chatcmpl-3ee14aeb-8911-99e8-9c28-e71263682223\",\"choices\":[{\"delta\":{\"content\":\"\",\"reasoning_content\":\"00; *\"},\"index\":0,\"finish_reason\":null,\"logprobs\":null}],\"created\":1790904185,\"object\":\"chat.completion.chunk\",\"usage\":null}\n\ndata: {\"model\":\"qwen3.8-max\",\"id\":\"chatcmpl-3ee14aeb-8911-99e8-9c28-e71263682223\",\"choices\":[{\"delta\":{\"content\":\"\",\"reasoning_content\":\"19=1\"},\"index\":0,\"finish_reason\":null,\"logprobs\":null}],\"created\":1790904185,\"object\":\"chat.completion.chunk\",\"usage\":null}\n\ndata: {\"model\":\"qwen3.8-max\",\"id\":\"chatcmpl-3ee14aeb-8911-99e8-9c28-e71263682223\",\"choices\":[{\"delta\":{\"content\":\"\",\"reasoning_content\":\"73*2\"},\"index\":0,\"finish_reason\":null,\"logprobs\":null}],\"created\":1790904185,\"object\":\"chat.completion.chunk\",\"usage\":null}\n\ndata: {\"model\":\"qwen3.8-max\",\"id\":\"chatcmpl-3ee14aeb-8911-99e8-9c28-e71263682223\",\"choices\":[{\"delta\":{\"content\":\"\",\"reasoning_content\":\"0-17\"},\"index\":0,\"finish_reason\":null,\"logprobs\":null}],\"created\":1790904185,\"object\":\"chat.completion.chunk\",\"usage\":null}\n\ndata: {\"model\":\"qwen3.8-max\",\"id\":\"chatcmpl-3ee14aeb-8911-99e8-9c28-e71263682223\",\"choices\":[{\"delta\":{\"content\":\"\",\"reasoning_content\":\"3=34\"},\"index\":0,\"finish_reason\":null,\"logprobs\":null}],\"created\":1790904185,\"object\":\"chat.completion.chunk\",\"usage\":null}\n\ndata: {\"model\":\"qwen3.8-max\",\"id\":\"chatcmpl-3ee14aeb-8911-99e8-9c28-e71263682223\",\"choices\":[{\"delta\":{\"content\":\"\",\"reasoning_content\":\"60-1\"},\"index\":0,\"finish_reason\":null,\"logprobs\":null}],\"created\":1790904185,\"object\":\"chat.completion.chunk\",\"usage\":null}\n\ndata: {\"model\":\"qwen3.8-max\",\"id\":\"chatcmpl-3ee14aeb-8911-99e8-9c28-e71263682223\",\"choices\":[{\"delta\":{\"content\":\"\",\"reasoning_content\":\"73=3\"},\"index\":0,\"finish_reason\":null,\"logprobs\":null}],\"created\":1790904185,\"object\":\"chat.completion.chunk\",\"usage\":null}\n\ndata: {\"model\":\"qwen3.8-max\",\"id\":\"chatcmpl-3ee14aeb-8911-99e8-9c28-e71263682223\",\"choices\":[{\"delta\":{\"content\":\"\",\"reasoning_content\":\"287;\"},\"index\":0,\"finish_reason\":null,\"logprobs\":null}],\"created\":1790904185,\"object\":\"chat.completion.chunk\",\"usage\":null}\n\ndata: {\"model\":\"qwen3.8-max\",\"id\":\"chatcmpl-3ee14aeb-8911-99e8-9c28-e71263682223\",\"choices\":[{\"delta\":{\"content\":\"\",\"reasoning_content\":\" sum 37\"},\"index\":0,\"finish_reason\":null,\"logprobs\":null}],\"created\":1790904185,\"object\":\"chat.completion.chunk\",\"usage\":null}\n\ndata: {\"model\":\"qwen3.8-max\",\"id\":\"chatcmpl-3ee14aeb-8911-99e8-9c28-e71263682223\",\"choices\":[{\"delta\":{\"content\":\"\",\"reasoning_content\":\"88\"},\"index\":0,\"finish_reason\":null,\"logprobs\":null}],\"created\":1790904185,\"object\":\"chat.completion.chunk\",\"usage\":null}\n\ndata: {\"model\":\"qwen3.8-max\",\"id\":\"chatcmpl-3ee14aeb-8911-99e8-9c28-e71263682223\",\"choices\":[{\"delta\":{\"content\":\"\",\"reasoning_content\":\"7. Check:\"},\"index\":0,\"finish_reason\":null,\"logprobs\":null}],\"created\":1790904185,\"object\":\"chat.completion.chunk\",\"usage\":null}\n\ndata: {\"model\":\"qwen3.8-max\",\"id\":\"chatcmpl-3ee14aeb-8911-99e8-9c28-e71263682223\",\"choices\":[{\"delta\":{\"content\":\"\",\"reasoning_content\":\" 219\"},\"index\":0,\"finish_reason\":null,\"logprobs\":null}],\"created\":1790904185,\"object\":\"chat.completion.chunk\",\"usage\":null}\n\ndata: {\"model\":\"qwen3.8-max\",\"id\":\"chatcmpl-3ee14aeb-8911-99e8-9c28-e71263682223\",\"choices\":[{\"delta\":{\"content\":\"\",\"reasoning_content\":\"*173\"},\"index\":0,\"finish_reason\":null,\"logprobs\":null}],\"created\":1790904185,\"object\":\"chat.completion.chunk\",\"usage\":null}\n\ndata: {\"model\":\"qwen3.8-max\",\"id\":\"chatcmpl-3ee14aeb-8911-99e8-9c28-e71263682223\",\"choices\":[{\"delta\":{\"content\":\"\",\"reasoning_content\":\" = 21\"},\"index\":0,\"finish_reason\":null,\"logprobs\":null}],\"created\":1790904185,\"object\":\"chat.completion.chunk\",\"usage\":null}\n\ndata: {\"model\":\"qwen3.8-max\",\"id\":\"chatcmpl-3ee14aeb-8911-99e8-9c28-e71263682223\",\"choices\":[{\"delta\":{\"content\":\"\",\"reasoning_content\":\"9*(17\"},\"index\":0,\"finish_reason\":null,\"logprobs\":null}],\"created\":1790904185,\"object\":\"chat.completion.chunk\",\"usage\":null}\n\ndata: {\"model\":\"qwen3.8-max\",\"id\":\"chatcmpl-3ee14aeb-8911-99e8-9c28-e71263682223\",\"choices\":[{\"delta\":{\"content\":\"\",\"reasoning_content\":\"0+3)=\"},\"index\":0,\"finish_reason\":null,\"logprobs\":null}],\"created\":1790904185,\"object\":\"chat.completion.chunk\",\"usage\":null}\n\ndata: {\"model\":\"qwen3.8-max\",\"id\":\"chatcmpl-3ee14aeb-8911-99e8-9c28-e71263682223\",\"choices\":[{\"delta\":{\"content\":\"\",\"reasoning_content\":\"37\"},\"index\":0,\"finish_reason\":null,\"logprobs\":null}],\"created\":1790904185,\"object\":\"chat.completion.chunk\",\"usage\":null}\n\ndata: {\"model\":\"qwen3.8-max\",\"id\":\"chatcmpl-3ee14aeb-8911-99e8-9c28-e71263682223\",\"choices\":[{\"delta\":{\"content\":\"\",\"reasoning_content\":\"230+\"},\"index\":0,\"finish_reason\":null,\"logprobs\":null}],\"created\":1790904185,\"object\":\"chat.completion.chunk\",\"usage\":null}\n\ndata: {\"model\":\"qwen3.8-max\",\"id\":\"chatcmpl-3ee14aeb-8911-99e8-9c28-e71263682223\",\"choices\":[{\"delta\":{\"content\":\"\",\"reasoning_content\":\"657=\"},\"index\":0,\"finish_reason\":null,\"logprobs\":null}],\"created\":1790904185,\"object\":\"chat.completion.chunk\",\"usage\":null}\n\ndata: {\"model\":\"qwen3.8-max\",\"id\":\"chatcmpl-3ee14aeb-8911-99e8-9c28-e71263682223\",\"choices\":[{\"delta\":{\"content\":\"\",\"reasoning_content\":\"3788\"},\"index\":0,\"finish_reason\":null,\"logprobs\":null}],\"created\":1790904185,\"object\":\"chat.completion.chunk\",\"usage\":null}\n\ndata: {\"model\":\"qwen3.8-max\",\"id\":\"chatcmpl-3ee14aeb-8911-99e8-9c28-e71263682223\",\"choices\":[{\"delta\":{\"content\":\"\",\"reasoning_content\":\"7. Final only\"},\"index\":0,\"finish_reason\":null,\"logprobs\":null}],\"created\":1790904185,\"object\":\"chat.completion.chunk\",\"usage\":null}\n\ndata: {\"model\":\"qwen3.8-max\",\"id\":\"chatcmpl-3ee14aeb-8911-99e8-9c28-e71263682223\",\"choices\":[{\"delta\":{\"content\":\"\",\"reasoning_content\":\" integer.\"},\"index\":0,\"finish_reason\":null,\"logprobs\":null}],\"created\":1790904185,\"object\":\"chat.completion.chunk\",\"usage\":null}\n\ndata: {\"model\":\"qwen3.8-max\",\"id\":\"chatcmpl-3ee14aeb-8911-99e8-9c28-e71263682223\",\"choices\":[{\"delta\":{\"content\":\"378\",\"reasoning_content\":\"\"},\"index\":0,\"finish_reason\":null,\"logprobs\":null}],\"created\":1790904185,\"object\":\"chat.completion.chunk\",\"usage\":null}\n\ndata: {\"model\":\"qwen3.8-max\",\"id\":\"chatcmpl-3ee14aeb-8911-99e8-9c28-e71263682223\",\"choices\":[{\"delta\":{\"content\":\"87\",\"reasoning_content\":\"\"},\"index\":0,\"finish_reason\":null,\"logprobs\":null}],\"created\":1790904185,\"object\":\"chat.completion.chunk\",\"usage\":null}\n\ndata: {\"model\":\"qwen3.8-max\",\"id\":\"chatcmpl-3ee14aeb-8911-99e8-9c28-e71263682223\",\"choices\":[{\"delta\":{\"content\":\"\",\"reasoning_content\":\"\"},\"index\":0,\"finish_reason\":\"stop\",\"logprobs\":null}],\"created\":1790904185,\"object\":\"chat.completion.chunk\",\"usage\":null}\n\ndata: {\"choices\":[],\"created\":1790904185,\"id\":\"chatcmpl-3ee14aeb-8911-99e8-9c28-e71263682223\",\"model\":\"qwen3.8-max\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":127,\"completion_tokens_details\":{\"reasoning_tokens\":119,\"text_tokens\":127},\"prompt_tokens\":81,\"prompt_tokens_details\":{\"cache_creation\":{\"ephemeral_5m_input_tokens\":0},\"cache_creation_input_tokens\":0,\"cache_type\":\"ephemeral\",\"cache_write_tokens\":0,\"cached_tokens\":0,\"text_tokens\":81},\"total_tokens\":208}}\n\ndata: [DONE]\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "reasoning-start",
+          "id": "reasoning-0",
+          "providerMetadata": {
+            "alibaba": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "We",
+          "providerMetadata": {
+            "alibaba": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " need answer user",
+          "providerMetadata": {
+            "alibaba": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "'s simple arithmetic",
+          "providerMetadata": {
+            "alibaba": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ": 17",
+          "providerMetadata": {
+            "alibaba": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "3 * 2",
+          "providerMetadata": {
+            "alibaba": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "19",
+          "providerMetadata": {
+            "alibaba": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ". Need final only",
+          "providerMetadata": {
+            "alibaba": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " integer. Compute:",
+          "providerMetadata": {
+            "alibaba": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " 173",
+          "providerMetadata": {
+            "alibaba": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "*200",
+          "providerMetadata": {
+            "alibaba": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "=346",
+          "providerMetadata": {
+            "alibaba": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "00; *",
+          "providerMetadata": {
+            "alibaba": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "19=1",
+          "providerMetadata": {
+            "alibaba": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "73*2",
+          "providerMetadata": {
+            "alibaba": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "0-17",
+          "providerMetadata": {
+            "alibaba": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "3=34",
+          "providerMetadata": {
+            "alibaba": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "60-1",
+          "providerMetadata": {
+            "alibaba": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "73=3",
+          "providerMetadata": {
+            "alibaba": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "287;",
+          "providerMetadata": {
+            "alibaba": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " sum 37",
+          "providerMetadata": {
+            "alibaba": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "88",
+          "providerMetadata": {
+            "alibaba": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "7. Check:",
+          "providerMetadata": {
+            "alibaba": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " 219",
+          "providerMetadata": {
+            "alibaba": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "*173",
+          "providerMetadata": {
+            "alibaba": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " = 21",
+          "providerMetadata": {
+            "alibaba": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "9*(17",
+          "providerMetadata": {
+            "alibaba": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "0+3)=",
+          "providerMetadata": {
+            "alibaba": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "37",
+          "providerMetadata": {
+            "alibaba": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "230+",
+          "providerMetadata": {
+            "alibaba": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "657=",
+          "providerMetadata": {
+            "alibaba": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "3788",
+          "providerMetadata": {
+            "alibaba": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "7. Final only",
+          "providerMetadata": {
+            "alibaba": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " integer.",
+          "providerMetadata": {
+            "alibaba": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "text-start",
+          "id": "text-0"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "378"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "87"
+        },
+        {
+          "type": "reasoning-end",
+          "id": "reasoning-0",
+          "providerMetadata": {
+            "alibaba": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "text-end",
+          "id": "text-0"
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 81,
+            "outputTokens": 127,
+            "nonCachedInputTokens": 81,
+            "cacheReadInputTokens": 0,
+            "cacheWriteInputTokens": 0,
+            "reasoningTokens": 119,
+            "totalTokens": 208,
+            "providerMetadata": {
+              "alibaba": {
+                "prompt_tokens": 81,
+                "completion_tokens": 127,
+                "total_tokens": 208,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0,
+                  "cache_write_tokens": 0,
+                  "cache_creation": {
+                    "ephemeral_5m_input_tokens": 0
+                  },
+                  "cache_creation_input_tokens": 0,
+                  "cache_type": "ephemeral",
+                  "text_tokens": 81
+                },
+                "completion_tokens_details": {
+                  "reasoning_tokens": 119,
+                  "text_tokens": 127
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 81,
+            "outputTokens": 127,
+            "nonCachedInputTokens": 81,
+            "cacheReadInputTokens": 0,
+            "cacheWriteInputTokens": 0,
+            "reasoningTokens": 119,
+            "totalTokens": 208,
+            "providerMetadata": {
+              "alibaba": {
+                "prompt_tokens": 81,
+                "completion_tokens": 127,
+                "total_tokens": 208,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0,
+                  "cache_write_tokens": 0,
+                  "cache_creation": {
+                    "ephemeral_5m_input_tokens": 0
+                  },
+                  "cache_creation_input_tokens": 0,
+                  "cache_type": "ephemeral",
+                  "text_tokens": 81
+                },
+                "completion_tokens_details": {
+                  "reasoning_tokens": 119,
+                  "text_tokens": 127
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

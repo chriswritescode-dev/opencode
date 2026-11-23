@@ -1,0 +1,429 @@
+{
+  "cassette": "meta-chat/continues-a-generated-tool-call",
+  "protocol": "openai-chat",
+  "routeId": "meta-chat",
+  "clockEpochMs": 1767323045000,
+  "steps": [
+    {
+      "model": {
+        "id": "muse-spark-1.3",
+        "provider": "meta",
+        "route": {
+          "id": "meta-chat",
+          "protocol": "openai-chat",
+          "providerMetadataKey": "meta"
+        },
+        "endpoint": {
+          "baseURL": "https://api.meta.ai/v1",
+          "path": "/chat/completions"
+        },
+        "compatibility": {
+          "maxTokensField": "max_completion_tokens"
+        },
+        "capabilities": {
+          "promptCacheKey": true
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_meta_chat_continues_a_generated_tool_call",
+        "maxTokens": 1024,
+        "providerOptions": {
+          "reasoningEffort": "low"
+        },
+        "system": [],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Look up the current weather in Paris using lookup_weather before answering. After receiving the result, report Paris's weather in one short sentence."
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "tool",
+            "name": "lookup_weather",
+            "description": "Look up the current weather for a city",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "city": {
+                  "type": "string",
+                  "enum": [
+                    "Paris"
+                  ]
+                }
+              },
+              "required": [
+                "city"
+              ],
+              "additionalProperties": false
+            }
+          }
+        ],
+        "toolChoice": {
+          "type": "auto"
+        }
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/meta/chat",
+        "modelID": "muse-spark-1.3",
+        "settings": {
+          "apiKey": "fixture"
+        }
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://api.meta.ai/v1/chat/completions",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "620",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"muse-spark-1.3\",\"messages\":[{\"role\":\"user\",\"content\":\"Look up the current weather in Paris using lookup_weather before answering. After receiving the result, report Paris's weather in one short sentence.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"lookup_weather\",\"description\":\"Look up the current weather for a city\",\"parameters\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\",\"enum\":[\"Paris\"]}},\"required\":[\"city\"],\"additionalProperties\":false},\"strict\":false}}],\"tool_choice\":\"auto\",\"stream\":true,\"stream_options\":{\"include_usage\":true},\"max_completion_tokens\":1024,\"reasoning_effort\":\"low\"}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream"
+            },
+            "body": "data: {\"id\":\"chatcmpl-01a07cca-c092-7423-880d-204c05dc6645\",\"choices\":[{\"delta\":{\"content\":\"I'll look up the current weather in Paris now.\",\"role\":\"assistant\"},\"finish_reason\":null,\"index\":0}],\"created\":1788800057,\"model\":\"muse-spark-1.3\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"id\":\"chatcmpl-01a07cca-c092-7423-880d-204c05dc6645\",\"choices\":[{\"delta\":{\"tool_calls\":[{\"index\":0,\"id\":\"call_01a07ccac34671129bd9ef9a66fd3266\",\"type\":\"function\",\"function\":{\"name\":\"lookup_weather\",\"arguments\":\"\"}}]},\"finish_reason\":null,\"index\":0}],\"created\":1788800057,\"model\":\"muse-spark-1.3\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"id\":\"chatcmpl-01a07cca-c092-7423-880d-204c05dc6645\",\"choices\":[{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"{\\\"city\\\":\\\"Paris\\\"}\"}}]},\"finish_reason\":null,\"index\":0}],\"created\":1788800057,\"model\":\"muse-spark-1.3\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"id\":\"chatcmpl-01a07cca-c092-7423-880d-204c05dc6645\",\"choices\":[{\"delta\":{},\"finish_reason\":\"tool_calls\",\"index\":0}],\"created\":1788800057,\"model\":\"muse-spark-1.3\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":139,\"prompt_tokens\":570,\"total_tokens\":709,\"completion_tokens_details\":{\"reasoning_tokens\":70},\"prompt_tokens_details\":{\"cached_tokens\":497}}}\n\ndata: [DONE]\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "text-start",
+          "id": "text-0"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "I'll look up the current weather in Paris now."
+        },
+        {
+          "type": "tool-input-start",
+          "id": "call_01a07ccac34671129bd9ef9a66fd3266",
+          "name": "lookup_weather"
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "call_01a07ccac34671129bd9ef9a66fd3266",
+          "name": "lookup_weather",
+          "text": "{\"city\":\"Paris\"}",
+          "input": {
+            "city": "Paris"
+          }
+        },
+        {
+          "type": "tool-input-end",
+          "id": "call_01a07ccac34671129bd9ef9a66fd3266",
+          "name": "lookup_weather"
+        },
+        {
+          "type": "tool-call",
+          "id": "call_01a07ccac34671129bd9ef9a66fd3266",
+          "name": "lookup_weather",
+          "input": {
+            "city": "Paris"
+          }
+        },
+        {
+          "type": "text-end",
+          "id": "text-0"
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "tool-calls",
+            "raw": "tool_calls"
+          },
+          "usage": {
+            "inputTokens": 570,
+            "outputTokens": 139,
+            "nonCachedInputTokens": 73,
+            "cacheReadInputTokens": 497,
+            "reasoningTokens": 70,
+            "totalTokens": 709,
+            "providerMetadata": {
+              "meta": {
+                "prompt_tokens": 570,
+                "completion_tokens": 139,
+                "total_tokens": 709,
+                "prompt_tokens_details": {
+                  "cached_tokens": 497
+                },
+                "completion_tokens_details": {
+                  "reasoning_tokens": 70
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "tool-calls",
+            "raw": "tool_calls"
+          },
+          "usage": {
+            "inputTokens": 570,
+            "outputTokens": 139,
+            "nonCachedInputTokens": 73,
+            "cacheReadInputTokens": 497,
+            "reasoningTokens": 70,
+            "totalTokens": 709,
+            "providerMetadata": {
+              "meta": {
+                "prompt_tokens": 570,
+                "completion_tokens": 139,
+                "total_tokens": 709,
+                "prompt_tokens_details": {
+                  "cached_tokens": 497
+                },
+                "completion_tokens_details": {
+                  "reasoning_tokens": 70
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "model": {
+        "id": "muse-spark-1.3",
+        "provider": "meta",
+        "route": {
+          "id": "meta-chat",
+          "protocol": "openai-chat",
+          "providerMetadataKey": "meta"
+        },
+        "endpoint": {
+          "baseURL": "https://api.meta.ai/v1",
+          "path": "/chat/completions"
+        },
+        "compatibility": {
+          "maxTokensField": "max_completion_tokens"
+        },
+        "capabilities": {
+          "promptCacheKey": true
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_meta_chat_continues_a_generated_tool_call",
+        "maxTokens": 1024,
+        "providerOptions": {
+          "reasoningEffort": "low"
+        },
+        "system": [],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Look up the current weather in Paris using lookup_weather before answering. After receiving the result, report Paris's weather in one short sentence."
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "I'll look up the current weather in Paris now."
+              },
+              {
+                "type": "tool-call",
+                "id": "call_01a07ccac34671129bd9ef9a66fd3266",
+                "name": "lookup_weather",
+                "input": {
+                  "city": "Paris"
+                }
+              }
+            ]
+          },
+          {
+            "role": "tool",
+            "content": [
+              {
+                "type": "tool-result",
+                "id": "call_01a07ccac34671129bd9ef9a66fd3266",
+                "name": "lookup_weather",
+                "result": {
+                  "type": "json",
+                  "value": {
+                    "condition": "sunny",
+                    "temperature": "18C"
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "tool",
+            "name": "lookup_weather",
+            "description": "Look up the current weather for a city",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "city": {
+                  "type": "string",
+                  "enum": [
+                    "Paris"
+                  ]
+                }
+              },
+              "required": [
+                "city"
+              ],
+              "additionalProperties": false
+            }
+          }
+        ],
+        "toolChoice": {
+          "type": "auto"
+        }
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/meta/chat",
+        "modelID": "muse-spark-1.3",
+        "settings": {
+          "apiKey": "fixture"
+        }
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://api.meta.ai/v1/chat/completions",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "985",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"muse-spark-1.3\",\"messages\":[{\"role\":\"user\",\"content\":\"Look up the current weather in Paris using lookup_weather before answering. After receiving the result, report Paris's weather in one short sentence.\"},{\"role\":\"assistant\",\"content\":\"I'll look up the current weather in Paris now.\",\"tool_calls\":[{\"id\":\"call_01a07ccac34671129bd9ef9a66fd3266\",\"type\":\"function\",\"function\":{\"name\":\"lookup_weather\",\"arguments\":\"{\\\"city\\\":\\\"Paris\\\"}\"}}]},{\"role\":\"tool\",\"tool_call_id\":\"call_01a07ccac34671129bd9ef9a66fd3266\",\"content\":\"{\\\"condition\\\":\\\"sunny\\\",\\\"temperature\\\":\\\"18C\\\"}\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"lookup_weather\",\"description\":\"Look up the current weather for a city\",\"parameters\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\",\"enum\":[\"Paris\"]}},\"required\":[\"city\"],\"additionalProperties\":false},\"strict\":false}}],\"tool_choice\":\"auto\",\"stream\":true,\"stream_options\":{\"include_usage\":true},\"max_completion_tokens\":1024,\"reasoning_effort\":\"low\"}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream"
+            },
+            "body": "data: {\"id\":\"chatcmpl-01a07cca-c622-77e3-8e2c-9c52bac9acb5\",\"choices\":[{\"delta\":{\"content\":\"Paris is currently sunny with a\",\"role\":\"assistant\"},\"finish_reason\":null,\"index\":0}],\"created\":1788800058,\"model\":\"muse-spark-1.3\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"id\":\"chatcmpl-01a07cca-c622-77e3-8e2c-9c52bac9acb5\",\"choices\":[{\"delta\":{\"content\":\" temperature of 18°C\"},\"finish_reason\":null,\"index\":0}],\"created\":1788800058,\"model\":\"muse-spark-1.3\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"id\":\"chatcmpl-01a07cca-c622-77e3-8e2c-9c52bac9acb5\",\"choices\":[{\"delta\":{\"content\":\".\"},\"finish_reason\":null,\"index\":0}],\"created\":1788800058,\"model\":\"muse-spark-1.3\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"id\":\"chatcmpl-01a07cca-c622-77e3-8e2c-9c52bac9acb5\",\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1788800058,\"model\":\"muse-spark-1.3\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":91,\"prompt_tokens\":666,\"total_tokens\":757,\"completion_tokens_details\":{\"reasoning_tokens\":69},\"prompt_tokens_details\":{\"cached_tokens\":497}}}\n\ndata: [DONE]\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "text-start",
+          "id": "text-0"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "Paris is currently sunny with a"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " temperature of 18°C"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "."
+        },
+        {
+          "type": "text-end",
+          "id": "text-0"
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 666,
+            "outputTokens": 91,
+            "nonCachedInputTokens": 169,
+            "cacheReadInputTokens": 497,
+            "reasoningTokens": 69,
+            "totalTokens": 757,
+            "providerMetadata": {
+              "meta": {
+                "prompt_tokens": 666,
+                "completion_tokens": 91,
+                "total_tokens": 757,
+                "prompt_tokens_details": {
+                  "cached_tokens": 497
+                },
+                "completion_tokens_details": {
+                  "reasoning_tokens": 69
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 666,
+            "outputTokens": 91,
+            "nonCachedInputTokens": 169,
+            "cacheReadInputTokens": 497,
+            "reasoningTokens": 69,
+            "totalTokens": 757,
+            "providerMetadata": {
+              "meta": {
+                "prompt_tokens": 666,
+                "completion_tokens": 91,
+                "total_tokens": 757,
+                "prompt_tokens_details": {
+                  "cached_tokens": 497
+                },
+                "completion_tokens_details": {
+                  "reasoning_tokens": 69
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

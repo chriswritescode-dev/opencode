@@ -1,6 +1,216 @@
 {
   "cassettes": [
     {
+      "cassette": "alibaba-chat/qwen-3-7-plus-streams-thinking-disabled",
+      "protocol": "alibaba-chat",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-chat/qwen-3-7-plus-streams-thinking-enabled",
+      "protocol": "alibaba-chat",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-chat/qwen-3-8-flash-reads-image-bytes",
+      "protocol": "alibaba-chat",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-chat/qwen-3-8-max-obeys-named-tool-choice",
+      "protocol": "alibaba-chat",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-chat/qwen-3-8-max-replays-reasoning-through-a-tool-loop-and-follow-up",
+      "protocol": "alibaba-chat",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-chat/qwen-3-8-max-returns-a-json-object",
+      "protocol": "alibaba-chat",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-chat/qwen-3-8-max-streams-default-effort",
+      "protocol": "alibaba-chat",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-chat/qwen-3-8-max-streams-high-effort",
+      "protocol": "alibaba-chat",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-chat/qwen-3-8-max-streams-low-effort",
+      "protocol": "alibaba-chat",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-chat/qwen-3-8-max-streams-max-effort",
+      "protocol": "alibaba-chat",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-chat/qwen-3-8-max-streams-medium-effort",
+      "protocol": "alibaba-chat",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-chat/qwen-3-8-max-streams-minimal-effort",
+      "protocol": "alibaba-chat",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-chat/qwen-3-8-max-streams-none-effort",
+      "protocol": "alibaba-chat",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-chat/qwen-3-8-max-streams-xhigh-effort",
+      "protocol": "alibaba-chat",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-messages/qwen-3-7-plus-streams-thinking-disabled",
+      "protocol": "alibaba-messages",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-messages/qwen-3-7-plus-streams-thinking-enabled",
+      "protocol": "alibaba-messages",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-messages/qwen-3-8-flash-reads-image-bytes",
+      "protocol": "alibaba-messages",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-messages/qwen-3-8-max-follows-a-json-schema",
+      "protocol": "alibaba-messages",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-messages/qwen-3-8-max-obeys-named-tool-choice",
+      "protocol": "alibaba-messages",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-messages/qwen-3-8-max-replays-reasoning-through-a-tool-loop-and-follow-up",
+      "protocol": "alibaba-messages",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-messages/qwen-3-8-max-streams-default-effort",
+      "protocol": "alibaba-messages",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-messages/qwen-3-8-max-streams-high-effort",
+      "protocol": "alibaba-messages",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-messages/qwen-3-8-max-streams-low-effort",
+      "protocol": "alibaba-messages",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-messages/qwen-3-8-max-streams-max-effort",
+      "protocol": "alibaba-messages",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-messages/qwen-3-8-max-streams-medium-effort",
+      "protocol": "alibaba-messages",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-messages/qwen-3-8-max-streams-xhigh-effort",
+      "protocol": "alibaba-messages",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-responses/qwen-3-7-plus-streams-thinking-disabled",
+      "protocol": "alibaba-responses",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-responses/qwen-3-7-plus-streams-thinking-enabled",
+      "protocol": "alibaba-responses",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-responses/qwen-3-8-flash-reads-image-bytes",
+      "protocol": "alibaba-responses",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-responses/qwen-3-8-max-continues-a-stored-response",
+      "protocol": "alibaba-responses",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-responses/qwen-3-8-max-obeys-named-tool-choice",
+      "protocol": "alibaba-responses",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-responses/qwen-3-8-max-replays-reasoning-through-a-tool-loop-and-follow-up",
+      "protocol": "alibaba-responses",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-responses/qwen-3-8-max-streams-default-effort",
+      "protocol": "alibaba-responses",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-responses/qwen-3-8-max-streams-high-effort",
+      "protocol": "alibaba-responses",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-responses/qwen-3-8-max-streams-low-effort",
+      "protocol": "alibaba-responses",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-responses/qwen-3-8-max-streams-max-effort",
+      "protocol": "alibaba-responses",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-responses/qwen-3-8-max-streams-medium-effort",
+      "protocol": "alibaba-responses",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-responses/qwen-3-8-max-streams-minimal-effort",
+      "protocol": "alibaba-responses",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-responses/qwen-3-8-max-streams-none-effort",
+      "protocol": "alibaba-responses",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-responses/qwen-3-8-max-streams-xhigh-effort",
+      "protocol": "alibaba-responses",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-responses/qwen-3-8-max-uses-hosted-code-interpreter",
+      "protocol": "alibaba-responses",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-responses/qwen-3-8-max-uses-hosted-web-search-and-extraction",
+      "protocol": "alibaba-responses",
+      "group": "vendor-variants"
+    },
+    {
       "cassette": "anthropic-compatible-messages/minimax-m3-anthropic-compatible-text",
       "protocol": "anthropic-messages",
       "group": "anthropic-messages"
@@ -279,6 +489,116 @@
       "cassette": "groq-chat/streams-text-with-usage",
       "protocol": "openai-chat",
       "group": "chat-variants"
+    },
+    {
+      "cassette": "meta-chat/continues-a-generated-tool-call",
+      "protocol": "openai-chat",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "meta-chat/streams-text-with-default-reasoning",
+      "protocol": "openai-chat",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "meta-chat/streams-text-with-high-reasoning",
+      "protocol": "openai-chat",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "meta-chat/streams-text-with-low-reasoning",
+      "protocol": "openai-chat",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "meta-chat/streams-text-with-max-reasoning",
+      "protocol": "openai-chat",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "meta-chat/streams-text-with-medium-reasoning",
+      "protocol": "openai-chat",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "meta-chat/streams-text-with-minimal-reasoning",
+      "protocol": "openai-chat",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "meta-chat/streams-text-with-xhigh-reasoning",
+      "protocol": "openai-chat",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "meta-images/replays-a-signed-image-handle-for-a-responses-edit",
+      "protocol": "meta-responses",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "meta-messages/replays-encrypted-thinking-through-a-tool-loop",
+      "protocol": "meta-messages",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "meta-messages/streams-text-with-adaptive-thinking",
+      "protocol": "meta-messages",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "meta-messages/streams-text-with-enabled-thinking",
+      "protocol": "meta-messages",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "meta-responses/replays-encrypted-reasoning-through-a-tool-loop",
+      "protocol": "meta-responses",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "meta-responses/streams-text-with-default-reasoning",
+      "protocol": "meta-responses",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "meta-responses/streams-text-with-high-reasoning",
+      "protocol": "meta-responses",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "meta-responses/streams-text-with-low-reasoning",
+      "protocol": "meta-responses",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "meta-responses/streams-text-with-max-reasoning",
+      "protocol": "meta-responses",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "meta-responses/streams-text-with-medium-reasoning",
+      "protocol": "meta-responses",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "meta-responses/streams-text-with-minimal-reasoning",
+      "protocol": "meta-responses",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "meta-responses/streams-text-with-xhigh-reasoning",
+      "protocol": "meta-responses",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "meta-search/searches-and-replays-grounded-messages",
+      "protocol": "meta-messages",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "meta-search/searches-and-replays-grounded-responses",
+      "protocol": "meta-responses",
+      "group": "vendor-variants"
     },
     {
       "cassette": "minimax-chat/m3-continues-a-tool-loop-with-default-thinking",
@@ -649,6 +969,16 @@
       "cassette": "pdf/openai-user-input",
       "protocol": "openai-responses",
       "group": "open-responses"
+    },
+    {
+      "cassette": "pdf/xai-tool-result",
+      "protocol": "xai-responses",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "pdf/xai-user-input",
+      "protocol": "xai-responses",
+      "group": "vendor-variants"
     },
     {
       "cassette": "venice-chat/claude-opus-4-8-preserves-reasoning-through-a-tool-loop-and-follow-up",
