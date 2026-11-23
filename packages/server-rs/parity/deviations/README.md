@@ -21,3 +21,15 @@ Each file has these paragraphs, in order:
 - `OR-38-lone-surrogates.md`: the strict round-trip corpus skips samples with unpaired UTF-16 surrogates
 - `OR-38-request-bodies.md`: request bodies decode into the wire representation
 - `OR-38-request-non-finite-numbers.md`: non-finite numbers in string slots are rejected
+- `OR-44-aws-credentials.md`: Bedrock credentials come only from route configuration, not the AWS default chain
+- `OR-44-bedrock-output.md`: Bedrock frames, cache warnings and SigV4 output carry different wire details
+- `OR-44-compaction-execution.md`: compaction and checkpoint requests are built but never posted or decoded
+- `OR-44-gemini-continuation.md`: Gemini continuation does not resume dropped connections or reprepare headers
+- `OR-44-lenient-decoding.md`: provider options and stream frames decode leniently and errors name the protocol
+- `OR-44-lone-surrogates.md`: request strings cannot carry lone UTF-16 surrogates
+- `OR-44-request-encoding.md`: zstd and gzip request bodies are rejected instead of compressed
+- `OR-44-response-fold.md`: an unfinished attempt folds into a response without a finish reason
+- `OR-44-retry-after.md`: HTTP-date retry-after accepts a narrower format set and uses the injected clock
+- `OR-44-stream-error-bodies.md`: mid-stream error bodies are re-encoded instead of the original frame text
+- `OR-44-utf16-truncation.md`: id and name limits count Unicode scalars instead of UTF-16 code units
+- `OR-44-websocket-channel.md`: WebSocket failures omit readyState and OS codes, and the HTTP fallback is unused

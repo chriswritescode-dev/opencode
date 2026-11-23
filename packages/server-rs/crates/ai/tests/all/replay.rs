@@ -451,6 +451,36 @@ async fn replay_websocket_cassette(cassette: &Cassette) {
 }
 
 #[tokio::test]
+async fn every_in_scope_cassette_replays() {
+    let corpus = crate::corpus::Corpus::load();
+    assert_eq!(corpus.cassettes.len(), 51, "in-scope cassette count");
+    let groups = [
+        "anthropic-messages",
+        "bedrock-converse",
+        "gemini",
+        "open-responses",
+        "openai-chat",
+        "openai-responses-websocket",
+    ];
+    for cassette in &corpus.cassettes {
+        assert!(groups.contains(&cassette.group.as_str()), "{} has unexpected group {}", cassette.name, cassette.group);
+    }
+    for group in groups {
+        assert!(corpus.cassettes.iter().any(|cassette| cassette.group == group), "{group} has no cassettes");
+    }
+    let mut replayed = 0;
+    for cassette in &corpus.cassettes {
+        if cassette.group == "openai-responses-websocket" {
+            replay_websocket_cassette(cassette).await;
+        } else {
+            replay_cassette(cassette).await;
+        }
+        replayed += 1;
+    }
+    assert_eq!(replayed, 51, "replayed cassette count");
+}
+
+#[tokio::test]
 async fn responses_websocket_cassettes() {
     let corpus = crate::corpus::Corpus::load();
     let cassettes = corpus

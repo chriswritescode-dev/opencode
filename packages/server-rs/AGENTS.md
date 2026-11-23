@@ -26,6 +26,11 @@ The Rust replacement for the TypeScript OpenCode server process, the `opencode-s
 - The wire contract is the generated `opencode-contract` crate (`crates/contract`): the pinned OpenAPI document plus
   the generated route table, types, events, errors, request decoders and corpus. It is generated, never edited by
   hand.
+- The LLM layer is the `opencode-ai` crate (`crates/ai`), the model, request, executor and protocol port of
+  `packages/ai` at the pin. `script/gen/llm.ts` regenerates its cassette corpus from those pinned TypeScript sources
+  into `crates/ai/tests/corpus`, so the corpus is generated and never edited by hand;
+  `crates/ai/tests/all/replay.rs` replays it and is the parity check for the LLM layer. New protocols (OR-45) add
+  cassettes to `script/llm/scenarios.ts` and regenerate rather than editing the corpus by hand.
 - Generators read the pinned TypeScript sources through `script/upstream.ts`, which materializes
   `target/upstream/<commit>` from `git archive` at the commit in `upstream-pin`; they never read the working tree,
   which can be newer.

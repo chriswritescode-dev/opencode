@@ -16,10 +16,10 @@ named in the row needs it.
 | patch | `oc-tools` | Applying patches to files | `tool` | OR-51 | `packages/core/src/tool/plugin/patch.ts`, `packages/core/src/vcs/patch.ts` |
 | watcher | `oc-tools` | Filesystem watcher with debounce | `fs` | OR-51 | `packages/core/src/filesystem/watcher.ts` |
 | image helpers | `oc-tools` | Image decode, resize and format checks | `tool` | OR-51 | `packages/core/src/image.ts` |
-| SigV4 signing | `oc-llm` | AWS request signing | `ai` | OR-45 | `packages/ai/src/protocols/utils/bedrock-auth.ts` |
-| AWS event-stream framing | `oc-llm` | Binary event-stream encoding and decoding | `ai` | OR-45 | `packages/ai/src/protocols/bedrock-event-stream.ts` |
-| SSE framing | `oc-llm` | Server-sent event encoding and decoding | `ai` | OR-44 | `packages/ai/src/route/framing.ts` |
-| transports | `oc-llm` | HTTP and WebSocket transports | `ai` | OR-44 | `packages/ai/src/route/transport/*` |
+| SigV4 signing | `oc-llm` | AWS request signing | `ai` | OR-44 | `packages/ai/src/protocols/utils/bedrock-auth.ts`; OR-44 ported from the TypeScript at the pin and imported no first-attempt code |
+| AWS event-stream framing | `oc-llm` | Binary event-stream encoding and decoding | `ai` | OR-44 | `packages/ai/src/protocols/bedrock-event-stream.ts`; OR-44 ported from the TypeScript at the pin and imported no first-attempt code |
+| SSE framing | `oc-llm` | Server-sent event encoding and decoding | `ai` | OR-44 | `packages/ai/src/route/framing.ts`; OR-44 ported from the TypeScript at the pin and imported no first-attempt code |
+| transports | `oc-llm` | HTTP and WebSocket transports | `ai` | OR-44 | `packages/ai/src/route/transport/*`; OR-44 ported from the TypeScript at the pin and imported no first-attempt code |
 | file lock | `oc-core` | Cross-process lock directories | `config` | OR-42 | compare with `opencode_local::lock` first and prefer it when it already matches; `packages/util/src/flock.ts` |
 | OAuth callback page | `oc-core` | The local page shown after an OAuth redirect | `catalog` | OR-46 | `packages/core/src/oauth/page.ts` |
 | migration runner | `oc-storage` | Applies ordered migrations to SQLite | `storage` | OR-40 | `packages/core/src/database/migration.ts` |

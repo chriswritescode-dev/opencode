@@ -66,6 +66,7 @@ pub fn compile(
         _ => None,
     };
     let encoding = resolved.request.http.as_ref().and_then(|http| http.encoding.clone());
+    let body = parts.json_body.clone();
     let request = json_post(parts.url, parts.body_text, parts.headers, encoding)?;
     let prepared =
         HttpPrepared { request, framing: resolved.model.route.protocol.framing(), middleware: options.http.clone() };

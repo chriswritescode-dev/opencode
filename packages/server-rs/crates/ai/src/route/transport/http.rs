@@ -59,7 +59,7 @@ pub fn json_request_parts(
                 return Err(invalid_request("http.body can only overlay JSON object request bodies"));
             }
             let overlaid = json::deep_merge(&body, overlay);
-            let text = encode(&overlaid);
+            let text = json::encode_body(&overlaid);
             (overlaid, text)
         }
     };

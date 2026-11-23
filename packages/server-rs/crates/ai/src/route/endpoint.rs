@@ -114,13 +114,17 @@ pub fn set_query(url: &mut Url, key: &str, value: &str) {
     let mut pairs: Vec<(String, String)> =
         url.query_pairs().map(|(existing, value)| (existing.into_owned(), value.into_owned())).collect();
     let mut replaced = false;
-    for pair in &mut pairs {
-        if pair.0 == key {
-            pair.1 = value.to_string();
-            replaced = true;
-            break;
+    pairs.retain_mut(|pair| {
+        if pair.0 != key {
+            return true;
         }
-    }
+        if replaced {
+            return false;
+        }
+        pair.1 = value.to_string();
+        replaced = true;
+        true
+    });
     if !replaced {
         pairs.push((key.to_string(), value.to_string()));
     }

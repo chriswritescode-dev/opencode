@@ -9,6 +9,14 @@ pub mod provider_error;
 pub mod route;
 pub mod schema;
 
+pub use route::auth::{Auth, Credential};
+pub use route::client::LlmClient;
+pub use route::compile::StreamOptions;
+pub use route::executor::{HttpSender, Middleware, RequestExecutor};
+pub use route::model::{Model, ModelDescriptor, ProtocolRegistry, Route};
+pub use route::transport::channel::{ChannelExecutor, WebSocketInterceptor};
+pub use schema::*;
+
 use std::collections::BTreeMap;
 use std::sync::Arc;
 

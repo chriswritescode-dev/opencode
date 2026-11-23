@@ -15,7 +15,7 @@ use opencode_ai::route::compile::{StreamOptions, compile};
 use opencode_ai::route::endpoint::PathPart;
 use opencode_ai::route::executor::{BoxFuture, ByteStream, HttpResponse, HttpSender, PreparedHttp, RequestExecutor};
 use opencode_ai::route::model::{Model, ModelDescriptor, ProtocolRegistry, RouteTransport};
-use opencode_ai::schema::{AiError, FinishReason, LlmEvent, LlmRequest, StringMap};
+use opencode_ai::schema::{AiError, AiErrorReason, FinishReason, LlmEvent, LlmRequest, StringMap};
 use serde_json::{Value, json};
 
 #[test]
@@ -249,7 +249,8 @@ async fn gemini_continuation_resends_the_body_with_the_token() {
         "messages": [{"role": "user", "content": [{"type": "text", "text": "Say hi."}]}],
         "tools": [],
         "maxTokens": 16,
-        "temperature": 0
+        "temperature": 0,
+        "http": {"body": {"labels": {"a": "b"}}}
     }))
     .unwrap();
     let first = concat!(
@@ -279,6 +280,9 @@ async fn gemini_continuation_resends_the_body_with_the_token() {
     assert!(sender.responses.lock().expect("continuation responses").is_empty(), "both responses were consumed");
     let body: Value = serde_json::from_slice(&requests[1].body).expect("second request body");
     assert_eq!(body["continuationToken"], json!("tok"));
+    let first: Value = serde_json::from_slice(&requests[0].body).expect("first request body");
+    assert_eq!(first["labels"], json!({"a": "b"}), "the first request carries the http.body overlay");
+    assert_eq!(body["labels"], json!({"a": "b"}), "the continuation keeps the http.body overlay");
     let length = requests[1]
         .headers
         .iter()
@@ -300,5 +304,45 @@ async fn gemini_continuation_resends_the_body_with_the_token() {
             assert_eq!(reason.raw.as_deref(), Some("STOP"));
         }
         other => panic!("the stream did not finish: {other:?}"),
+    }
+}
+
+#[tokio::test]
+async fn gemini_non_json_frame_reports_the_route_id() {
+    let descriptor: ModelDescriptor = serde_json::from_value(json!({
+        "id": "gemini-3-pro",
+        "provider": "google",
+        "route": {"id": "gemini", "protocol": "gemini", "providerMetadataKey": "google"},
+        "endpoint": {"baseURL": "https://generativelanguage.googleapis.com/v1beta", "path": null},
+        "transport": "http",
+        "auth": {"type": "header", "name": "x-goog-api-key", "value": "fixture"}
+    }))
+    .unwrap();
+    let model = Model::from_descriptor(descriptor, &ProtocolRegistry::builtin()).unwrap();
+    let request: LlmRequest = serde_json::from_value(json!({
+        "system": [],
+        "messages": [{"role": "user", "content": [{"type": "text", "text": "Say hi."}]}],
+        "tools": []
+    }))
+    .unwrap();
+    let sender = Arc::new(ContinuationSender {
+        responses: Mutex::new(VecDeque::from([b"data: not-json\n\n".to_vec()])),
+        requests: Mutex::new(Vec::new()),
+    });
+    let clock = Arc::new(FixedClock::new(1_767_323_045_000));
+    let context = ExecutionContext::new(clock.clone(), Arc::new(SequenceIds::new()), Arc::new(MapEnv::default()));
+    let client = LlmClient::new(RequestExecutor::new(sender, None, clock), context);
+    let items =
+        client.stream(&model, request, StreamOptions::default()).collect::<Vec<Result<LlmEvent, AiError>>>().await;
+    match items.last() {
+        Some(Err(error)) => match &error.reason {
+            AiErrorReason::InvalidProviderOutput { message, body, route, .. } => {
+                assert_eq!(route.as_deref(), Some("gemini"));
+                assert_eq!(message, "Invalid google/gemini stream event");
+                assert_eq!(body.as_deref(), Some("not-json"));
+            }
+            other => panic!("expected invalid provider output, got {other:?}"),
+        },
+        other => panic!("expected the stream to fail, got {other:?}"),
     }
 }

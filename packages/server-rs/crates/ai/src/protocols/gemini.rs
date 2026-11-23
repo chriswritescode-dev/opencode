@@ -822,6 +822,7 @@ fn decode_part(input: &Value) -> Option<Part> {
 
 struct State {
     route: String,
+    route_id: String,
     provider_metadata_key: String,
     finish_reason: Option<String>,
     has_tool_calls: bool,
@@ -880,7 +881,7 @@ impl ProtocolState for State {
             Ok(event) => event,
             Err(_) => {
                 return Err(shared::event_error(
-                    &self.route,
+                    &self.route_id,
                     format!("Invalid {} stream event", self.route),
                     Some(frame),
                 ));
@@ -1132,6 +1133,7 @@ impl Protocol for Gemini {
         let model = &request.model;
         Box::new(State {
             route: format!("{}/{}", model.provider, model.route.id),
+            route_id: model.route.id.clone(),
             provider_metadata_key: model.route.provider_metadata_key.clone().unwrap_or_else(|| model.provider.clone()),
             finish_reason: None,
             has_tool_calls: false,

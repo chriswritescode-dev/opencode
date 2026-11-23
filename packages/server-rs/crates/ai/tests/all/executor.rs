@@ -6,11 +6,21 @@ use futures_util::{StreamExt, stream};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
 
+use opencode_ai::ExecutionContext;
+use opencode_ai::MapEnv;
 use opencode_ai::clock::{Clock, FixedClock};
+use opencode_ai::id::SequenceIds;
+use opencode_ai::json;
+use opencode_ai::route::auth::Auth;
+use opencode_ai::route::endpoint::{Endpoint, set_query};
 use opencode_ai::route::executor::{
     BoxFuture, ByteStream, HttpResponse, HttpSender, Middleware, Next, PreparedHttp, RequestExecutor, ReqwestSender,
 };
-use opencode_ai::schema::{AiError, AiErrorReason, HttpTimeout, RequestTimeout, TimeoutOptions, TransportOperation};
+use opencode_ai::route::transport::http::{BodyEncoder, JsonRequestInput, json_request_parts};
+use opencode_ai::schema::{
+    AiError, AiErrorReason, HttpOptions, HttpTimeout, LlmRequest, RequestTimeout, TimeoutOptions, TransportOperation,
+};
+use serde_json::{Value, json};
 
 const FIXED_EPOCH_MS: u64 = 1_767_323_045_000;
 
@@ -269,4 +279,51 @@ async fn reqwest_sender_streams_chunked_bodies() {
     .await;
     assert!(result.is_ok(), "streaming a chunked body timed out");
     server.await.expect("server task");
+}
+
+#[test]
+fn set_query_replaces_in_place_and_drops_duplicates() {
+    let mut url = url::Url::parse("https://h/p?a=1&b=2&a=4").expect("url");
+    set_query(&mut url, "a", "3");
+    assert_eq!(url.as_str(), "https://h/p?a=3&b=2");
+    let mut url = url::Url::parse("https://h/p?a=1&b=2").expect("url");
+    set_query(&mut url, "c", "3");
+    assert_eq!(url.as_str(), "https://h/p?a=1&b=2&c=3");
+}
+
+#[test]
+fn http_body_overlay_uses_the_json_encoder_instead_of_the_route_encoder() {
+    let context = ExecutionContext::new(clock(), Arc::new(SequenceIds::new()), Arc::new(MapEnv::default()));
+    let body = json!({"a": 1});
+    let encode_body: Option<BodyEncoder> = Some(Arc::new(|_: &Value| "sentinel".to_string()));
+    let parts = json_request_parts(
+        JsonRequestInput {
+            endpoint: Endpoint::new("https://api.test", "/v1/chat"),
+            request: LlmRequest::default(),
+            body: body.clone(),
+            auth: Auth::None,
+            encode_body: encode_body.clone(),
+            headers: None,
+        },
+        &context,
+    )
+    .expect("request parts");
+    assert_eq!(parts.body_text, "sentinel");
+    let request = LlmRequest {
+        http: Some(HttpOptions { body: Some(json!({"b": 2})), ..Default::default() }),
+        ..LlmRequest::default()
+    };
+    let parts = json_request_parts(
+        JsonRequestInput {
+            endpoint: Endpoint::new("https://api.test", "/v1/chat"),
+            request,
+            body,
+            auth: Auth::None,
+            encode_body,
+            headers: None,
+        },
+        &context,
+    )
+    .expect("request parts");
+    assert_eq!(parts.body_text, json::encode_body(&json!({"a": 1, "b": 2})));
 }

@@ -10,8 +10,8 @@ use opencode_ai::prepare::tool_schema::moonshot;
 use opencode_ai::prepare::tool_schema::tools;
 use opencode_ai::prepare::tool_updates::{ToolUpdateEncoding, ToolUpdateKind};
 use opencode_ai::prepare::{
-    apply_cache_policy, apply_effort_updates, normalize_tool_history, plan_tool_updates, resolve_effort_updates,
-    resolve_request_options, strip_effort_updates,
+    apply_cache_policy, apply_effort_updates, normalize_tool_history, plan_tool_updates, prepare,
+    resolve_effort_updates, resolve_request_options, strip_effort_updates,
 };
 use opencode_ai::route::auth::Auth;
 use opencode_ai::route::compile::{StreamOptions, compile};
@@ -977,6 +977,16 @@ fn cache_model() -> Model {
     model("anthropic-messages", "claude-sonnet-4-5", protocol())
 }
 
+fn auto_cache_request() -> LlmRequest {
+    LlmRequest {
+        tools: vec![tool("lookup")],
+        system: vec![system_part("You are concise.", None)],
+        messages: vec![user("hi")],
+        cache: Some(CachePolicy::Mode(CacheMode::Auto)),
+        ..LlmRequest::default()
+    }
+}
+
 #[test]
 fn cache_policy_direct_matches_typescript() {
     let request = LlmRequest {
@@ -1073,6 +1083,208 @@ fn cache_policy_walks_past_trailing_tools_marker() {
     let applied = apply_cache_policy(&cache_model(), request);
     assert_eq!(applied.messages[2], user_parts(vec![text_part_cached("latest", ephemeral())]));
     assert_eq!(applied.messages[3], marker);
+}
+
+#[test]
+fn cache_policy_skips_routes_without_inline_hint_support() {
+    for (route, id) in [("openai-chat", "gpt-4o-mini"), ("gemini", "gemini-2.5-flash")] {
+        let request = auto_cache_request();
+        assert_eq!(apply_cache_policy(&model(route, id, protocol()), request.clone()), request, "{route} {id}");
+    }
+}
+
+#[test]
+fn cache_policy_alibaba_chat_follows_qwen_heuristics() {
+    let qwen = model("alibaba-chat", "qwen3.8-max", protocol());
+    let applied = apply_cache_policy(&qwen, auto_cache_request());
+    assert_eq!(tool_cache(&applied.tools[0]), None);
+    assert_eq!(system_cache(&applied.system[0]), Some(&ephemeral()));
+    assert_eq!(part_cache(&contents(&applied.messages[0])[0]), Some(&ephemeral()));
+
+    for id in ["kimi-k3", "glm-5.2", "deepseek-v4-flash-0731", "MiniMax-M2.5"] {
+        let request = auto_cache_request();
+        assert_eq!(apply_cache_policy(&model("alibaba-chat", id, protocol()), request.clone()), request, "{id}");
+    }
+
+    let request = LlmRequest { cache: Some(CachePolicy::Mode(CacheMode::None)), ..auto_cache_request() };
+    assert_eq!(apply_cache_policy(&qwen, request.clone()), request);
+}
+
+#[test]
+fn cache_policy_gateway_routes_select_by_model_family() {
+    for route in ["openrouter", "vercel-ai-gateway-messages"] {
+        for id in ["anthropic/claude-sonnet-4-6", "~anthropic/claude-sonnet-4-6"] {
+            let applied = apply_cache_policy(&model(route, id, protocol()), auto_cache_request());
+            assert_eq!(tool_cache(&applied.tools[0]), Some(&ephemeral()), "{route} {id}");
+            assert_eq!(system_cache(&applied.system[0]), Some(&ephemeral()), "{route} {id}");
+            assert_eq!(part_cache(&contents(&applied.messages[0])[0]), Some(&ephemeral()), "{route} {id}");
+        }
+
+        let applied = apply_cache_policy(&model(route, "qwen/qwen3.8-max", protocol()), auto_cache_request());
+        assert_eq!(tool_cache(&applied.tools[0]), None, "{route} qwen");
+        assert_eq!(system_cache(&applied.system[0]), Some(&ephemeral()), "{route} qwen");
+        assert_eq!(part_cache(&contents(&applied.messages[0])[0]), Some(&ephemeral()), "{route} qwen");
+
+        let request = auto_cache_request();
+        assert_eq!(
+            apply_cache_policy(&model(route, "openai/gpt-4.1", protocol()), request.clone()),
+            request,
+            "{route} openai"
+        );
+    }
+}
+
+#[test]
+fn cache_policy_compatibility_format_overrides_route_allowlist() {
+    let anthropic_format =
+        with_compatibility(model("openai-chat", "gpt-4o-mini", protocol()), json!({ "cacheFormat": "anthropic" }));
+    let applied = apply_cache_policy(&anthropic_format, auto_cache_request());
+    assert_eq!(tool_cache(&applied.tools[0]), Some(&ephemeral()));
+    assert_eq!(system_cache(&applied.system[0]), Some(&ephemeral()));
+    assert_eq!(part_cache(&contents(&applied.messages[0])[0]), Some(&ephemeral()));
+
+    let alibaba_format =
+        with_compatibility(model("openai-chat", "gpt-4o-mini", protocol()), json!({ "cacheFormat": "alibaba" }));
+    let applied = apply_cache_policy(&alibaba_format, auto_cache_request());
+    assert_eq!(tool_cache(&applied.tools[0]), None);
+    assert_eq!(system_cache(&applied.system[0]), Some(&ephemeral()));
+    assert_eq!(part_cache(&contents(&applied.messages[0])[0]), Some(&ephemeral()));
+
+    let explicit = LlmRequest {
+        cache: Some(CachePolicy::Object(CachePolicyObject {
+            tools: Some(true),
+            system: Some(true),
+            messages: Some(CacheMessages::Tail { tail: serde_json::Number::from(1) }),
+            ttl: None,
+        })),
+        ..auto_cache_request()
+    };
+    let applied = apply_cache_policy(&alibaba_format, explicit);
+    assert_eq!(tool_cache(&applied.tools[0]), None);
+    assert_eq!(system_cache(&applied.system[0]), Some(&ephemeral()));
+    assert_eq!(part_cache(&contents(&applied.messages[0])[0]), Some(&ephemeral()));
+}
+
+#[test]
+fn cache_policy_stops_at_four_breakpoints_with_manual_hints() {
+    let request = LlmRequest {
+        tools: vec![tool("t1")],
+        system: vec![
+            system_part("Base agent", Some(ephemeral())),
+            system_part("Manual context", Some(ephemeral_ttl("1h"))),
+            system_part("Project instructions", Some(ephemeral())),
+        ],
+        messages: vec![user("hi")],
+        cache: Some(CachePolicy::Mode(CacheMode::Auto)),
+        ..LlmRequest::default()
+    };
+    let applied = apply_cache_policy(&cache_model(), request);
+    assert_eq!(tool_cache(&applied.tools[0]), Some(&ephemeral()));
+    assert_eq!(
+        applied.system.iter().map(|part| system_cache(part).is_some()).collect::<Vec<_>>(),
+        vec![true, true, true]
+    );
+    assert_eq!(system_cache(&applied.system[1]), Some(&ephemeral_ttl("1h")));
+    assert_eq!(part_cache(&contents(&applied.messages[0])[0]), None);
+    assert_eq!(apply_cache_policy(&cache_model(), applied.clone()), applied);
+}
+
+#[test]
+fn cache_policy_ttl_only_object_keeps_automatic_placement() {
+    let request = LlmRequest {
+        cache: Some(CachePolicy::Object(CachePolicyObject {
+            ttl: Some("1h".to_string()),
+            ..CachePolicyObject::default()
+        })),
+        ..auto_cache_request()
+    };
+    let applied = apply_cache_policy(&cache_model(), request);
+    assert_eq!(tool_cache(&applied.tools[0]), Some(&ephemeral_ttl("1h")));
+    assert_eq!(system_cache(&applied.system[0]), Some(&ephemeral_ttl("1h")));
+    assert_eq!(part_cache(&contents(&applied.messages[0])[0]), Some(&ephemeral_ttl("1h")));
+}
+
+#[test]
+fn cache_policy_messages_tail_two_marks_last_two_boundaries() {
+    let request = LlmRequest {
+        messages: vec![user("u1"), assistant(vec![text_part("a1")]), user("u2"), assistant(vec![text_part("a2")])],
+        cache: Some(CachePolicy::Object(CachePolicyObject {
+            messages: Some(CacheMessages::Tail { tail: serde_json::Number::from(2) }),
+            ..CachePolicyObject::default()
+        })),
+        ..LlmRequest::default()
+    };
+    let applied = apply_cache_policy(&cache_model(), request);
+    let caches = applied.messages.iter().map(|message| part_cache(&contents(message)[0]).cloned()).collect::<Vec<_>>();
+    assert_eq!(caches, vec![None, None, Some(ephemeral()), Some(ephemeral())]);
+}
+
+#[test]
+fn cache_policy_message_breakpoint_skips_trailing_markers() {
+    let latest_assistant = CachePolicy::Object(CachePolicyObject {
+        messages: Some(CacheMessages::Named("latest-assistant".to_string())),
+        ..CachePolicyObject::default()
+    });
+
+    let compaction = CompactionPart {
+        provider: "anthropic".to_string(),
+        id: None,
+        encrypted: None,
+        text: Some(Some("summary".to_string())),
+    };
+    let request = LlmRequest {
+        messages: vec![assistant(vec![tool_call("tc_1", "lookup"), ContentPart::Compaction(compaction.clone())])],
+        cache: Some(latest_assistant.clone()),
+        ..LlmRequest::default()
+    };
+    let applied = apply_cache_policy(&cache_model(), request);
+    match &contents(&applied.messages[0])[0] {
+        ContentPart::ToolCall(part) => {
+            assert_eq!(part.id, "tc_1");
+            assert_eq!(part.cache, Some(ephemeral()));
+        }
+        other => panic!("expected tool call, got {other:?}"),
+    }
+    assert_eq!(contents(&applied.messages[0])[1], ContentPart::Compaction(compaction));
+
+    let effort = EffortPart { effort: Some("low".to_string()), previous: Some("high".to_string()) };
+    let request = LlmRequest {
+        messages: vec![assistant(vec![tool_call("tc_2", "lookup"), ContentPart::Effort(effort.clone())])],
+        cache: Some(latest_assistant),
+        ..LlmRequest::default()
+    };
+    let applied = apply_cache_policy(&cache_model(), request);
+    match &contents(&applied.messages[0])[0] {
+        ContentPart::ToolCall(part) => {
+            assert_eq!(part.id, "tc_2");
+            assert_eq!(part.cache, Some(ephemeral()));
+        }
+        other => panic!("expected tool call, got {other:?}"),
+    }
+    assert_eq!(contents(&applied.messages[0])[1], ContentPart::Effort(effort));
+}
+
+#[test]
+fn cache_policy_prepare_dedupes_tools_before_counting_hints() {
+    let mut duplicate = tool("lookup");
+    if let ToolEntry::Tool(definition) = &mut duplicate {
+        definition.cache = Some(ephemeral());
+    }
+    let request = LlmRequest {
+        tools: vec![duplicate.clone(), duplicate],
+        system: vec![
+            system_part("Base agent", Some(ephemeral())),
+            system_part("Project instructions", Some(ephemeral())),
+        ],
+        messages: vec![user("Hello")],
+        cache: Some(CachePolicy::Mode(CacheMode::Auto)),
+        ..LlmRequest::default()
+    };
+    let prepared = prepare(&cache_model(), request);
+    assert_eq!(prepared.tools.len(), 1);
+    assert_eq!(tool_cache(&prepared.tools[0]), Some(&ephemeral()));
+    assert_eq!(prepared.system.iter().map(|part| system_cache(part).is_some()).collect::<Vec<_>>(), vec![true, true]);
+    assert_eq!(part_cache(&contents(&prepared.messages[0])[0]), Some(&ephemeral()));
 }
 
 #[test]
