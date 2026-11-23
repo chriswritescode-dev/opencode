@@ -14,6 +14,7 @@ fn auth_input(headers: Vec<(String, String)>) -> AuthInput {
         url: "https://api.example.test/v1/messages".to_string(),
         body: "{}".to_string(),
         headers,
+        now_ms: 1_767_323_045_000,
     }
 }
 
@@ -52,12 +53,10 @@ fn descriptors_render_their_headers() {
     }))
     .expect("sigv4 descriptor")
     .into();
-    match apply(&sigv4, Vec::new(), &env) {
-        Err(AiError { reason: AiErrorReason::UnsupportedOperation { operation, .. } }) => {
-            assert_eq!(operation, "sigv4")
-        }
-        other => panic!("expected unsupported operation, got {other:?}"),
-    }
+    let headers = apply(&sigv4, Vec::new(), &env).expect("sigv4 applies");
+    let authorization = header(&headers, "authorization").expect("authorization header");
+    assert!(authorization.starts_with("AWS4-HMAC-SHA256 Credential=fixture/"), "{authorization}");
+    assert_eq!(header(&headers, "x-amz-date"), Some("20260102T030405Z"));
 }
 
 #[test]
@@ -173,9 +172,11 @@ fn corpus_auth_descriptors_resolve() {
                     );
                 }
                 AuthDescriptor::Sigv4 { .. } => {
+                    let headers = result.unwrap_or_else(|error| panic!("{}: {error}", cassette.name));
+                    let authorization = header(&headers, "authorization").expect("authorization header");
                     assert!(
-                        matches!(result, Err(AiError { reason: AiErrorReason::UnsupportedOperation { .. } })),
-                        "{}: expected sigv4 to stay unsupported",
+                        authorization.starts_with("AWS4-HMAC-SHA256 Credential=fixture/"),
+                        "{}: {authorization}",
                         cassette.name
                     );
                 }

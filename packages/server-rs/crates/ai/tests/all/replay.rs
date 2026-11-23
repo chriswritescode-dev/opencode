@@ -486,6 +486,15 @@ async fn anthropic_messages_cassettes() {
 }
 
 #[tokio::test]
+async fn bedrock_converse_cassettes() {
+    let corpus = crate::corpus::Corpus::load();
+    let cassettes = corpus.cassettes.iter().filter(|cassette| cassette.group == "bedrock-converse").count();
+    assert_eq!(cassettes, 13, "bedrock-converse cassette count");
+    let steps = replay_group("bedrock-converse").await;
+    assert_eq!(steps, 17, "bedrock-converse step count");
+}
+
+#[tokio::test]
 async fn gemini_cassettes() {
     let corpus = crate::corpus::Corpus::load();
     let cassettes = corpus.cassettes.iter().filter(|cassette| cassette.group == "gemini").count();

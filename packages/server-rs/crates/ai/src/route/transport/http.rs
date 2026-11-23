@@ -3,7 +3,6 @@ use std::sync::Arc;
 use bytes::Bytes;
 use serde_json::Value;
 
-use crate::Env;
 use crate::json;
 use crate::route::auth::{Auth, AuthInput, set_header};
 use crate::route::endpoint::{Endpoint, EndpointInput, set_query};
@@ -37,7 +36,10 @@ pub struct HttpPrepared {
     pub middleware: Option<Middleware>,
 }
 
-pub fn json_request_parts(input: JsonRequestInput, env: &dyn Env) -> Result<JsonRequestParts, AiError> {
+pub fn json_request_parts(
+    input: JsonRequestInput,
+    context: &crate::ExecutionContext,
+) -> Result<JsonRequestParts, AiError> {
     let JsonRequestInput { endpoint, request, body, auth, encode_body, headers } = input;
     let encode = |value: &Value| match &encode_body {
         Some(encode_body) => encode_body(value),
@@ -68,8 +70,14 @@ pub fn json_request_parts(input: JsonRequestInput, env: &dyn Env) -> Result<Json
         }
     }
     let headers = auth.apply(
-        AuthInput { method: "POST".to_string(), url: url.clone(), body: body_text.clone(), headers: merged },
-        env,
+        AuthInput {
+            method: "POST".to_string(),
+            url: url.clone(),
+            body: body_text.clone(),
+            headers: merged,
+            now_ms: context.clock.now_ms(),
+        },
+        context.env.as_ref(),
     )?;
     Ok(JsonRequestParts { url, json_body, body_text, headers })
 }

@@ -57,7 +57,7 @@ pub fn compile(
             encode_body: None,
             headers: None,
         },
-        context.env.as_ref(),
+        context,
     )?;
     let channel = match options.web_socket {
         Some(_) if resolved.model.route.transport == RouteTransport::OpenAiResponsesChannel => {

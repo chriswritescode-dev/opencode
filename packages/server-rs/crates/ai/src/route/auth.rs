@@ -1,10 +1,25 @@
+use std::collections::BTreeMap;
+
 use serde::Deserialize;
 use serde_json::Value;
 
 use crate::Env;
+use crate::clock::utc_datetime;
 use crate::schema::{AiError, AiErrorReason};
 
 pub const DEFAULT_SIGV4_SERVICE: &str = "bedrock";
+
+const UNSIGNABLE_HEADERS: [&str; 9] = [
+    "authorization",
+    "content-type",
+    "content-length",
+    "user-agent",
+    "presigned-expires",
+    "expect",
+    "x-amzn-trace-id",
+    "range",
+    "connection",
+];
 
 #[derive(Debug, Clone)]
 pub enum Credential {
@@ -158,17 +173,153 @@ impl Auth {
                 Ok(headers) => Ok(headers),
                 Err(_) => second.apply(input, env),
             },
-            Auth::SigV4(_) => Err(AiError {
-                reason: AiErrorReason::UnsupportedOperation {
-                    message: "AWS SigV4 signing is not available yet".to_string(),
-                    body: None,
-                    http: None,
-                    operation: "sigv4".to_string(),
-                    provider: None,
-                    route: None,
-                },
-            }),
+            Auth::SigV4(source) => {
+                let headers = set_header(input.headers, "content-type", "application/json");
+                sign_sigv4(source, &input.method, &input.url, &input.body, headers, input.now_ms, "Bedrock Converse")
+            }
         }
+    }
+}
+
+fn sign_sigv4(
+    source: &SigV4Source,
+    method: &str,
+    url: &str,
+    body: &str,
+    headers: Vec<(String, String)>,
+    now_ms: u64,
+    name: &str,
+) -> Result<Vec<(String, String)>, AiError> {
+    sign_sigv4_request(source, method, url, body, headers, now_ms).map_err(|detail| sigv4_failure(name, detail))
+}
+
+fn sign_sigv4_request(
+    source: &SigV4Source,
+    method: &str,
+    url: &str,
+    body: &str,
+    headers: Vec<(String, String)>,
+    now_ms: u64,
+) -> Result<Vec<(String, String)>, String> {
+    let url = url::Url::parse(url).map_err(|error| error.to_string())?;
+    let host = sigv4_host(&url).ok_or_else(|| "url has no host".to_string())?;
+    let datetime = utc_datetime(now_ms as i64).amz();
+    let date = &datetime[..8];
+    let headers = set_header(headers, "x-amz-date", datetime.clone());
+    let headers = match &source.session_token {
+        Some(token) => set_header(headers, "x-amz-security-token", token.clone()),
+        None => headers,
+    };
+    let headers: Vec<(String, String)> =
+        headers.into_iter().filter(|(name, _)| !name.eq_ignore_ascii_case("host")).collect();
+    let signable = headers.iter().fold(BTreeMap::from([("host".to_string(), host)]), |mut signable, (name, value)| {
+        let name = name.to_lowercase();
+        if !UNSIGNABLE_HEADERS.contains(&name.as_str()) {
+            signable.insert(name, collapse_whitespace(value));
+        }
+        signable
+    });
+    let signed_headers = signable.keys().map(String::as_str).collect::<Vec<_>>().join(";");
+    let canonical_headers =
+        signable.iter().map(|(name, value)| format!("{name}:{value}")).collect::<Vec<_>>().join("\n");
+    let canonical_path = encode_rfc3986(&encode_uri_component(&collapse_slashes(url.path())).replace("%2F", "/"));
+    let canonical_query = canonical_query(&url);
+    let canonical_request = format!(
+        "{}\n{canonical_path}\n{canonical_query}\n{canonical_headers}\n\n{signed_headers}\n{}",
+        method.to_uppercase(),
+        sha256_hex(body.as_bytes())
+    );
+    let credential_string = format!("{date}/{}/{}/aws4_request", source.region, source.service);
+    let string_to_sign =
+        format!("AWS4-HMAC-SHA256\n{datetime}\n{credential_string}\n{}", sha256_hex(canonical_request.as_bytes()));
+    let signature = hex(&hmac_sha256(&sigv4_key(source, date), string_to_sign.as_bytes()));
+    let authorization = format!(
+        "AWS4-HMAC-SHA256 Credential={}/{credential_string}, SignedHeaders={signed_headers}, Signature={signature}",
+        source.access_key_id
+    );
+    Ok(set_header(headers, "authorization", authorization))
+}
+
+fn sigv4_host(url: &url::Url) -> Option<String> {
+    let host = url.host_str()?;
+    match url.port() {
+        Some(port) => Some(format!("{host}:{port}")),
+        None => Some(host.to_string()),
+    }
+}
+
+fn sigv4_key(source: &SigV4Source, date: &str) -> Vec<u8> {
+    let mut key = hmac_sha256(format!("AWS4{}", source.secret_access_key).as_bytes(), date.as_bytes());
+    for part in [source.region.as_str(), source.service.as_str(), "aws4_request"] {
+        key = hmac_sha256(&key, part.as_bytes());
+    }
+    key
+}
+
+fn canonical_query(url: &url::Url) -> String {
+    let mut pairs: Vec<(String, String)> = url
+        .query_pairs()
+        .filter(|(key, _)| !key.is_empty())
+        .map(|(key, value)| {
+            (encode_rfc3986(&encode_uri_component(&key)), encode_rfc3986(&encode_uri_component(&value)))
+        })
+        .collect();
+    pairs.sort();
+    pairs.iter().map(|(key, value)| format!("{key}={value}")).collect::<Vec<_>>().join("&")
+}
+
+fn collapse_whitespace(value: &str) -> String {
+    value.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+fn collapse_slashes(value: &str) -> String {
+    value.chars().fold(String::with_capacity(value.len()), |mut collapsed, character| {
+        if character != '/' || !collapsed.ends_with('/') {
+            collapsed.push(character);
+        }
+        collapsed
+    })
+}
+
+pub(crate) fn encode_uri_component(value: &str) -> String {
+    let mut encoded = String::with_capacity(value.len());
+    for byte in value.bytes() {
+        match byte {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'!' | b'~' | b'*' | b'\'' | b'(' | b')' => {
+                encoded.push(byte as char);
+            }
+            other => encoded.push_str(&format!("%{other:02X}")),
+        }
+    }
+    encoded
+}
+
+fn encode_rfc3986(value: &str) -> String {
+    value.replace('!', "%21").replace('\'', "%27").replace('(', "%28").replace(')', "%29").replace('*', "%2A")
+}
+
+fn hmac_sha256(key: &[u8], data: &[u8]) -> Vec<u8> {
+    let key = ring::hmac::Key::new(ring::hmac::HMAC_SHA256, key);
+    ring::hmac::sign(&key, data).as_ref().to_vec()
+}
+
+fn sha256_hex(bytes: &[u8]) -> String {
+    hex(ring::digest::digest(&ring::digest::SHA256, bytes).as_ref())
+}
+
+fn hex(bytes: &[u8]) -> String {
+    bytes.iter().map(|byte| format!("{byte:02x}")).collect()
+}
+
+fn sigv4_failure(name: &str, detail: String) -> AiError {
+    AiError {
+        reason: AiErrorReason::InvalidRequest {
+            message: format!("{name} SigV4 signing failed: {detail}"),
+            body: None,
+            http: None,
+            parameter: None,
+            classification: None,
+        },
     }
 }
 
@@ -178,6 +329,7 @@ pub struct AuthInput {
     pub url: String,
     pub body: String,
     pub headers: Vec<(String, String)>,
+    pub now_ms: u64,
 }
 
 #[derive(Debug, Clone)]
