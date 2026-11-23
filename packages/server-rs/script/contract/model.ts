@@ -17,7 +17,7 @@ class SessionMiddleware extends HttpApiMiddleware.Service<SessionMiddleware>()("
   error: [protocolErrors.InvalidRequestError, protocolErrors.SessionNotFoundError, protocolErrors.LocationNotFoundError],
 }) {}
 
-const api = protocol.makeDefaultApi({
+export const api = protocol.makeDefaultApi({
   locationMiddleware: LocationMiddleware,
   formLocationMiddleware: FormMiddleware,
   sessionLocationMiddleware: SessionMiddleware,

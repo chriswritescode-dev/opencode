@@ -1,14 +1,36 @@
-const VERSION: &str = match option_env!("OPENCODE_VERSION") {
+mod cli;
+mod env;
+mod probe;
+mod registration;
+mod serve;
+mod service;
+mod service_mode;
+mod shutdown;
+
+pub(crate) const VERSION: &str = match option_env!("OPENCODE_VERSION") {
     Some(version) => version,
     None => "local",
 };
 
+pub(crate) const CHANNEL: &str = match option_env!("OPENCODE_CHANNEL") {
+    Some(channel) => channel,
+    None => "local",
+};
+
 fn main() -> std::process::ExitCode {
-    let args: Vec<std::ffi::OsString> = std::env::args_os().skip(1).collect();
-    if args == [std::ffi::OsStr::new("--version")] {
-        println!("opencode-server v{VERSION}");
-        return std::process::ExitCode::SUCCESS;
+    let command = match cli::parse(std::env::args_os().skip(1)) {
+        Ok(command) => command,
+        Err(error) => {
+            error.report();
+            return std::process::ExitCode::from(1);
+        }
+    };
+    match command {
+        cli::Command::Version => {
+            println!("opencode-server v{VERSION}");
+            std::process::ExitCode::SUCCESS
+        }
+        cli::Command::Serve(args) => serve::run_serve(args, env::ServerEnv::from_process()),
+        cli::Command::Service(command) => service::run(command, env::ServerEnv::from_process()),
     }
-    eprintln!("usage: opencode-server --version");
-    std::process::ExitCode::from(2)
 }

@@ -20,7 +20,7 @@ type DocumentShape = {
 }
 
 type OperationEntry = { method: string; path: string; operation: unknown }
-type MigrationChange = { kind: "added" | "removed"; path: string }
+type MigrationChange = { kind: "added" | "removed" | "modified"; path: string }
 
 const args = process.argv.slice(2)
 const fromIndex = args.indexOf("--from")
@@ -54,6 +54,7 @@ const sessionLogDelta = listDelta(
 const migrationChanges = migrationsBetween(from, target)
 const migrationsAdded = migrationChanges.filter((change) => change.kind === "added").map((change) => change.path)
 const migrationsRemoved = migrationChanges.filter((change) => change.kind === "removed").map((change) => change.path)
+const migrationsModified = migrationChanges.filter((change) => change.kind === "modified").map((change) => change.path)
 
 const lines: Array<string> = ["# Upstream drift report", "", `- from: \`${from}\``, `- to: \`${target}\``]
 
@@ -87,10 +88,15 @@ section(
     ["Removed", sessionLogDelta.removed.map(code)],
   ],
 )
-section("Migrations", `${migrationsAdded.length} added, ${migrationsRemoved.length} removed`, [
-  ["Added", migrationsAdded.map(code)],
-  ["Removed", migrationsRemoved.map(code)],
-])
+section(
+  "Migrations",
+  `${migrationsAdded.length} added, ${migrationsRemoved.length} removed, ${migrationsModified.length} modified`,
+  [
+    ["Added", migrationsAdded.map(code)],
+    ["Removed", migrationsRemoved.map(code)],
+    ["Modified", migrationsModified.map(code)],
+  ],
+)
 
 console.log(lines.join("\n"))
 
@@ -217,6 +223,8 @@ function migrationChange([status, first, second]: Array<string | undefined>): Ar
   if (status === undefined || first === undefined) return []
   if (status === "A") return [{ kind: "added", path: first }]
   if (status === "D") return [{ kind: "removed", path: first }]
+  if (status === "M") return [{ kind: "modified", path: first }]
+  if (status.startsWith("C") && second !== undefined) return [{ kind: "added", path: second }]
   if (status.startsWith("R") && second !== undefined)
     return [
       { kind: "removed", path: first },

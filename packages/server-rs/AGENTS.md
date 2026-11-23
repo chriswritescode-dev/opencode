@@ -32,6 +32,10 @@ The Rust replacement for the TypeScript OpenCode server process, the `opencode-s
   `crates/ai/tests/all/replay.rs` replays it and is the parity check for the LLM layer. New protocols (OR-45) add
   cassettes to `script/llm/scenarios.ts` and regenerate rather than editing the corpus by hand; the expected
   cassette count and groups are fixed in `script/gen/llm.ts` and `replay.rs`, so update both with the scenarios.
+- `opencode-http` (`crates/http`) is the request pipeline: authentication, CORS, cross-site protection, compression,
+  dispatch, pairing and tickets.
+- `opencode-server` (`crates/server`) holds the binary's own modules: CLI parsing, the foreground, stdio and service
+  serve modes, registration, and the service commands.
 - Generators read the pinned TypeScript sources through `script/upstream.ts`, which materializes
   `target/upstream/<commit>` from `git archive` at the commit in `upstream-pin`; they never read the working tree,
   which can be newer.
@@ -48,6 +52,9 @@ Before merging, the whole package must pass:
 - `bun run cargo test --locked --workspace --no-fail-fast`
 - `bun run check:deny`
 - `bun run check:drift`
+- `bun run test:shell`, which needs `bun install` and a debug build of `opencode-server`
+
+`docs/coverage.md` is regenerated with `OPENCODE_UPDATE_COVERAGE=1`.
 
 Each crate keeps one integration test binary, `tests/all/main.rs`, with one module per area. Add tests as a module
 there, not as a new `tests/*.rs`.
@@ -64,3 +71,4 @@ there, not as a new `tests/*.rs`.
 - A new third-party dependency or licence needs `deny.toml` to pass and is recorded there with the crates that need
   it.
 - First-attempt code is copied only by the task that `docs/salvage.md` names for it.
+- The server reads its environment only through `ServerEnv`.

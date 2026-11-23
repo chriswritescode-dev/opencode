@@ -108,6 +108,13 @@ fn structs_with_rest_encode_declared_index_keys_with_the_rest() {
 }
 
 #[test]
+fn non_finite_numbers_encode_as_null() {
+    for value in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+        assert_eq!(opencode_contract::codec::encode_json(&value), "null", "value {value}");
+    }
+}
+
+#[test]
 fn every_generated_pattern_compiles() {
     opencode_contract::generated::compile_all_patterns();
 }
