@@ -1,3 +1,4 @@
+use std::io::Write;
 use std::time::Duration;
 
 pub const DEADLINE: Duration = Duration::from_secs(10);
@@ -43,11 +44,15 @@ where
     tokio::select! {
         () = cleanup => std::process::ExitCode::from(signal.exit_code()),
         () = tokio::time::sleep(DEADLINE) => {
-            eprintln!("shutdown did not finish within {} seconds; exiting.", DEADLINE.as_secs());
+            let _ = writeln!(
+                std::io::stderr(),
+                "shutdown did not finish within {} seconds; exiting.",
+                DEADLINE.as_secs()
+            );
             std::process::ExitCode::from(1)
         }
         again = watch.next() => {
-            eprintln!("received {} again during shutdown; exiting.", again.name());
+            let _ = writeln!(std::io::stderr(), "received {} again during shutdown; exiting.", again.name());
             std::process::ExitCode::from(1)
         }
     }

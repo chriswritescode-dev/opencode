@@ -4,35 +4,45 @@ use std::time::Duration;
 use opencode_local::registration::{self, Registration};
 use rustix::process::{Pid, Signal};
 
+use super::ensure::Pool;
+
 const POLL_INTERVAL: Duration = Duration::from_millis(50);
 const POLL_ATTEMPTS: usize = 100;
 
-pub async fn stop(file: &Path) {
+pub async fn stop(file: &Path) -> Result<(), String> {
     let Some(registration) = registration::read(file) else {
-        return;
+        return Ok(());
     };
-    terminate(file, &registration).await;
+    terminate(file, &registration, None).await
 }
 
-pub(crate) async fn terminate(file: &Path, registration: &Registration) {
-    if !registration::read(file).is_some_and(|current| current.same(registration)) {
-        return;
+pub(super) async fn terminate(file: &Path, registration: &Registration, pool: Option<&Pool>) -> Result<(), String> {
+    if !crate::registration::is_same(file, registration) {
+        return Ok(());
     }
-    if let Some(pid) = i32::try_from(registration.pid).ok().and_then(Pid::from_raw) {
-        let _ = rustix::process::kill_process(pid, Signal::TERM);
-        if !stopped(pid).await {
-            let _ = rustix::process::kill_process(pid, Signal::KILL);
-            let _ = stopped(pid).await;
+    signal(registration.pid, Signal::TERM);
+    if !stopped(registration.pid, pool).await {
+        signal(registration.pid, Signal::KILL);
+        if !stopped(registration.pid, pool).await {
+            return Err(format!("Server process {} is still running", registration.pid));
         }
     }
-    if registration::read(file).is_some_and(|latest| latest.same(registration)) {
-        let _ = std::fs::remove_file(file);
+    crate::registration::remove_if_same(file, registration);
+    Ok(())
+}
+
+fn signal(pid: u32, signal: Signal) {
+    if let Some(pid) = i32::try_from(pid).ok().and_then(Pid::from_raw) {
+        let _ = rustix::process::kill_process(pid, signal);
     }
 }
 
-async fn stopped(pid: Pid) -> bool {
+async fn stopped(pid: u32, pool: Option<&Pool>) -> bool {
+    let Some(raw) = i32::try_from(pid).ok().and_then(Pid::from_raw) else {
+        return true;
+    };
     for attempt in 0..=POLL_ATTEMPTS {
-        if rustix::process::test_kill_process(pid).is_err() {
+        if rustix::process::test_kill_process(raw).is_err() || pool.is_some_and(|pool| pool.exited(pid)) {
             return true;
         }
         if attempt < POLL_ATTEMPTS {

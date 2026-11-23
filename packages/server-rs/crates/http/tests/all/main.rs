@@ -20,16 +20,24 @@ use opencode_http::app::{App, Options};
 const UNAUTHORIZED_BODY: &str = r#"{"_tag":"UnauthorizedError","message":"Authentication required"}"#;
 
 fn app() -> Arc<App> {
-    app_with_cors(Vec::new())
+    make_app(Vec::new(), None)
 }
 
 fn app_with_cors(cors: Vec<String>) -> Arc<App> {
+    make_app(cors, None)
+}
+
+fn app_with_hostname(hostname: Option<&str>) -> Arc<App> {
+    make_app(Vec::new(), hostname)
+}
+
+fn make_app(cors: Vec<String>, hostname: Option<&str>) -> Arc<App> {
     App::new(Options {
         password: "pw".to_owned(),
         version: "test-version".to_owned(),
         cors,
         tmp: PathBuf::from("/tmp/opencode-http-test"),
-        hostname: None,
+        hostname: hostname.map(str::to_owned),
         urls: Arc::new(|| vec!["http://127.0.0.1:4096".to_owned()]),
     })
 }

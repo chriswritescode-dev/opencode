@@ -46,7 +46,7 @@ impl App {
         &self.tickets
     }
 
-    pub async fn handle(&self, request: Request<Bytes>) -> response::Response {
+    pub async fn handle<B>(&self, request: Request<B>) -> response::Response {
         if request.method() == http::Method::OPTIONS {
             return cors::preflight(&request, &self.options.cors);
         }
@@ -60,7 +60,7 @@ impl App {
         compression::apply(accept_encoding, response)
     }
 
-    async fn dispatch(&self, request: &Request<Bytes>) -> response::Response {
+    async fn dispatch<B>(&self, request: &Request<B>) -> response::Response {
         let state = self.status.current();
         let ready = state == State::Ready;
         if request.method() == http::Method::GET && request.uri().path() == "/api/info" && !ready {
@@ -75,7 +75,10 @@ impl App {
         if !ready {
             return unavailable(state);
         }
-        if request.method() == http::Method::GET && request.uri().path() == "/openapi.json" {
+        let method = request.method();
+        if (method == http::Method::GET || method == http::Method::HEAD)
+            && router::matches_static(request.uri().path(), "/openapi.json")
+        {
             return response::bytes(
                 StatusCode::OK,
                 "application/json",
@@ -103,12 +106,12 @@ impl App {
         }
     }
 
-    fn authorized(&self, request: &Request<Bytes>) -> bool {
+    fn authorized<B>(&self, request: &Request<B>) -> bool {
         auth::authorized(&auth::credential(request), &self.options.password)
             || auth::authorized_cookie(request, &self.options.password)
     }
 
-    fn connect(&self, request: &Request<Bytes>, matched: &router::Match) -> response::Response {
+    fn connect<B>(&self, request: &Request<B>, matched: &router::Match) -> response::Response {
         let browser = request
             .headers()
             .get(header::ACCEPT)
@@ -158,7 +161,7 @@ fn forbidden() -> response::Response {
     response::json(StatusCode::FORBIDDEN, &body)
 }
 
-fn exempt(request: &Request<Bytes>, ready: bool) -> bool {
+fn exempt<B>(request: &Request<B>, ready: bool) -> bool {
     let path = request.uri().path();
     if single_segment(path, "/auth/connect/", "") {
         return true;
@@ -179,7 +182,7 @@ fn single_segment(path: &str, prefix: &str, suffix: &str) -> bool {
     !rest.is_empty() && !rest.contains('/')
 }
 
-fn ticketed(request: &Request<Bytes>) -> bool {
+fn ticketed<B>(request: &Request<B>) -> bool {
     url::form_urlencoded::parse(request.uri().query().unwrap_or_default().as_bytes())
         .find(|(key, _)| key == "ticket")
         .is_some_and(|(_, value)| !value.is_empty())
@@ -204,11 +207,10 @@ fn info(options: &Options, state: State) -> response::Response {
 }
 
 fn server_info(options: &Options) -> response::Response {
-    let hostname = hostname();
     let info = ServerInfo {
         version: options.version.clone(),
         pid: f64::from(std::process::id()),
-        hostname: (!hostname.is_empty()).then_some(Some(hostname)),
+        hostname: options.hostname.clone().filter(|hostname| !hostname.is_empty()).map(Some),
         urls: (options.urls)(),
         paths: ServerInfoPaths { tmp: options.tmp.to_string_lossy().into_owned() },
         capabilities: Some(Some(ServerInfoCapabilities { persistent_pty: Some(Some(false)) })),
@@ -230,14 +232,4 @@ fn unavailable(state: State) -> response::Response {
     let mut response = response::json(StatusCode::SERVICE_UNAVAILABLE, &body);
     response.headers_mut().insert(header::RETRY_AFTER, HeaderValue::from_static("1"));
     response
-}
-
-#[cfg(unix)]
-fn hostname() -> String {
-    rustix::system::uname().nodename().to_string_lossy().into_owned()
-}
-
-#[cfg(not(unix))]
-fn hostname() -> String {
-    std::env::var("COMPUTERNAME").unwrap_or_default()
 }

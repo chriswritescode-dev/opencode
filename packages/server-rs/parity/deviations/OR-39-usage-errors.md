@@ -9,6 +9,10 @@ arguments print it, and unknown commands/flags print `unknown command: <name>` /
 with code 1.
 
 Reason: the Rust server has only the `serve` and `service` command trees and does not use Effect CLI.
-`crates/server/tests/all/serve.rs` and `crates/server/tests/all/service_commands.rs` cover the exit codes.
+`an_unknown_command_names_it_and_exits_one`, `an_unknown_serve_flag_names_it_and_exits_one`,
+`an_out_of_range_port_exits_one` and `no_arguments_prints_usage_and_exits_one` in
+`crates/server/tests/all/version.rs` cover the exit code and message, `service_and_stdio_together_exit_one` in
+`crates/server/tests/all/serve.rs` covers a fixed-line message, and `crates/server/tests/all/service_commands.rs`
+covers an unknown `service get` key.
 
 Accepted: pending owner

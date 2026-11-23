@@ -63,6 +63,14 @@ fn service_start_status_restart_and_stop_follow_the_registration() {
 }
 
 #[test]
+fn service_stop_without_a_registration_succeeds() {
+    let sandbox = Sandbox::new();
+    let output = run(&sandbox, &["service", "stop"]);
+    assert_eq!(output.status.code(), Some(0), "stop without a service: {output:?}");
+    assert_eq!(stdout(&output), "", "stop without a service printed output");
+}
+
+#[test]
 fn service_config_get_set_and_unset_match_the_cli() {
     let sandbox = Sandbox::new();
     let _guard = ServiceGuard::new(registration_file(&sandbox));

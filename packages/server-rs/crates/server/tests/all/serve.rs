@@ -93,6 +93,13 @@ fn a_second_signal_during_shutdown_exits_without_hanging() {
     let status = process.wait(Duration::from_secs(5));
     let code = status.code();
     assert!(matches!(code, Some(143) | Some(1)), "exit status {status:?} (code {code:?})");
+    if code == Some(1) {
+        let error = process.error_line();
+        assert!(
+            error.contains("received SIGTERM again during shutdown; exiting."),
+            "second-signal exit reported: {error:?}"
+        );
+    }
 }
 
 #[test]

@@ -1,6 +1,5 @@
 use base64::Engine;
 use base64::engine::general_purpose::{STANDARD, URL_SAFE_NO_PAD};
-use bytes::Bytes;
 use http::{HeaderValue, Request, StatusCode, header};
 use ring::hmac;
 use subtle::ConstantTimeEq;
@@ -19,7 +18,7 @@ pub struct Credential {
     pub password: String,
 }
 
-pub fn credential(request: &Request<Bytes>) -> Credential {
+pub fn credential<B>(request: &Request<B>) -> Credential {
     let token = form_urlencoded::parse(request.uri().query().unwrap_or_default().as_bytes())
         .find(|(key, _)| key.as_ref() == AUTH_TOKEN_QUERY)
         .filter(|(_, value)| !value.is_empty());
@@ -84,7 +83,7 @@ pub fn session_cookie_name(host: Option<&str>) -> String {
     }
 }
 
-pub fn authorized_cookie(request: &Request<Bytes>, password: &str) -> bool {
+pub fn authorized_cookie<B>(request: &Request<B>, password: &str) -> bool {
     let host = request.headers().get(header::HOST).and_then(|value| value.to_str().ok());
     let Some(token) = cookie_value(request, &session_cookie_name(host)) else {
         return false;
@@ -106,14 +105,14 @@ pub fn authorized_cookie(request: &Request<Bytes>, password: &str) -> bool {
     verify_session(token, password, crate::now_ms())
 }
 
-pub fn challenge(request: &Request<Bytes>) -> bool {
+pub fn challenge<B>(request: &Request<B>) -> bool {
     match request.headers().get("sec-fetch-mode") {
         Some(value) => value.to_str().ok() == Some("navigate"),
         None => true,
     }
 }
 
-pub fn unauthorized(request: &Request<Bytes>, message: &str) -> crate::response::Response {
+pub fn unauthorized<B>(request: &Request<B>, message: &str) -> crate::response::Response {
     let mut response = unauthorized_without_challenge(message);
     if challenge(request) {
         response.headers_mut().insert(header::WWW_AUTHENTICATE, HeaderValue::from_static(REALM));
@@ -141,7 +140,7 @@ fn url_host(url: &Url) -> String {
     }
 }
 
-fn cookie_value<'a>(request: &'a Request<Bytes>, name: &str) -> Option<&'a str> {
+fn cookie_value<'a, B>(request: &'a Request<B>, name: &str) -> Option<&'a str> {
     let header = request.headers().get(header::COOKIE)?.to_str().ok()?;
     header.split(';').find_map(|part| {
         let (key, value) = part.trim().split_once('=')?;

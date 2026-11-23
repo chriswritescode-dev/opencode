@@ -2,7 +2,7 @@ use http::StatusCode;
 use opencode_http::app::App;
 use serde_json::{Value, json};
 
-use crate::{UNAUTHORIZED_BODY, app, authorized, ready_app, request, text};
+use crate::{UNAUTHORIZED_BODY, app, authorized, request, text};
 
 const READY_KEYS: [&str; 6] = ["version", "pid", "hostname", "urls", "paths", "capabilities"];
 const UNAVAILABLE_KEYS: [&str; 4] = ["version", "pid", "urls", "paths"];
@@ -33,7 +33,8 @@ async fn unavailable_info(app: &App) -> String {
 
 #[tokio::test]
 async fn ready_info_has_the_typescript_key_order() {
-    let app = ready_app();
+    let app = crate::app_with_hostname(Some("build-machine"));
+    app.status().ready();
     let response = app.handle(authorized("GET", "/api/info")).await;
     assert_eq!(response.status(), StatusCode::OK);
     assert_eq!(response.headers().get("content-type").and_then(|value| value.to_str().ok()), Some("application/json"));
@@ -42,10 +43,23 @@ async fn ready_info_has_the_typescript_key_order() {
     let value: Value = serde_json::from_str(&body).expect("json");
     assert_eq!(value["version"], json!("test-version"));
     assert_eq!(value["pid"].as_u64(), Some(u64::from(std::process::id())));
+    assert_eq!(value["hostname"], json!("build-machine"));
     assert_eq!(value["urls"], json!(["http://127.0.0.1:4096"]));
     assert_eq!(value["paths"], json!({ "tmp": "/tmp/opencode-http-test" }));
     assert_eq!(value["capabilities"], json!({ "persistentPty": false }));
-    assert!(value["hostname"].as_str().is_some_and(|hostname| !hostname.is_empty()));
+}
+
+#[tokio::test]
+async fn missing_or_empty_hostname_omits_the_key() {
+    for hostname in [None, Some("")] {
+        let app = crate::app_with_hostname(hostname);
+        app.status().ready();
+        let response = app.handle(authorized("GET", "/api/info")).await;
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = text(response).await;
+        assert_keys_in_order(&body, &UNAVAILABLE_KEYS);
+        assert!(serde_json::from_str::<Value>(&body).expect("json").get("hostname").is_none());
+    }
 }
 
 #[tokio::test]

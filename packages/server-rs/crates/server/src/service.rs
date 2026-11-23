@@ -43,7 +43,7 @@ async fn execute(command: ServiceCommand, env: &mut ServerEnv) -> Result<(), Str
                 env.merge(configured);
             }
             if matches!(command, ServiceCommand::Restart) {
-                stop::stop(&files.file).await;
+                stop::stop(&files.file).await?;
             }
             println!("{}", ensure::ensure(&files, env).await?);
         }
@@ -57,7 +57,9 @@ async fn execute(command: ServiceCommand, env: &mut ServerEnv) -> Result<(), Str
             };
             println!("{}", found.as_deref().unwrap_or("stopped"));
         }
-        ServiceCommand::Stop => stop::stop(&files.file).await,
+        ServiceCommand::Stop => {
+            stop::stop(&files.file).await?;
+        }
         ServiceCommand::Get { key, name } => {
             let value = service_config.get(key.as_deref(), name.as_deref()).map_err(|error| error.to_string())?;
             println!("{value}");
@@ -65,14 +67,14 @@ async fn execute(command: ServiceCommand, env: &mut ServerEnv) -> Result<(), Str
         ServiceCommand::Set { key, value, nested } => {
             let edit = Edit::set(&key, &value, nested.as_deref()).map_err(|error| error.to_string())?;
             if edit.stops_service() {
-                stop::stop(&files.file).await;
+                stop::stop(&files.file).await?;
             }
             service_config.apply(&edit).map_err(|error| error.to_string())?;
         }
         ServiceCommand::Unset { key, name } => {
             let edit = Edit::unset(&key, name.as_deref()).map_err(|error| error.to_string())?;
             if edit.stops_service() {
-                stop::stop(&files.file).await;
+                stop::stop(&files.file).await?;
             }
             service_config.apply(&edit).map_err(|error| error.to_string())?;
         }

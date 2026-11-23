@@ -23,7 +23,8 @@ Each file has these paragraphs, in order:
 - `OR-38-request-non-finite-numbers.md`: non-finite numbers in string slots are rejected
 - `OR-39-not-implemented-operations.md`: only three operations are implemented and the rest answer 501
 - `OR-39-persistent-pty-capability.md`: server info always reports the persistent PTY capability as unavailable
+- `OR-39-port-owner.md`: a port-in-use message names no owning process
 - `OR-39-wildcard-urls.md`: a wildcard bind reports only one loopback URL in server info
 - `OR-39-remote-tunnel.md`: a `remote` service route prints a warning instead of starting a tunnel
-- `OR-39-logging.md`: log records go to stderr and no log file is written
+- `OR-39-logging.md`: diagnostic lines go to stderr and no log file is written
 - `OR-39-usage-errors.md`: malformed arguments print one fixed usage line and exit with code 1

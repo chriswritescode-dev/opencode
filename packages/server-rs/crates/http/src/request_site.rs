@@ -1,9 +1,8 @@
-use bytes::Bytes;
 use http::{Request, header};
 
 use crate::cors;
 
-pub fn rejected(request: &Request<Bytes>, extra: &[String]) -> bool {
+pub fn rejected<B>(request: &Request<B>, extra: &[String]) -> bool {
     let site = request.headers().get("sec-fetch-site").and_then(|value| value.to_str().ok());
     if !matches!(site, Some("cross-site" | "same-site")) {
         return false;

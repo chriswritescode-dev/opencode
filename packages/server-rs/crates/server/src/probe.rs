@@ -64,7 +64,8 @@ async fn fetch(registration: &Registration) -> Probe {
         return Probe::Missing;
     };
     let port = uri.port_u16().unwrap_or(80);
-    let Ok(stream) = TcpStream::connect((host, port)).await else {
+    let connect_host = host.strip_prefix('[').and_then(|host| host.strip_suffix(']')).unwrap_or(host);
+    let Ok(stream) = TcpStream::connect((connect_host, port)).await else {
         return Probe::Missing;
     };
     let Ok((mut sender, connection)) = hyper::client::conn::http1::handshake(TokioIo::new(stream)).await else {

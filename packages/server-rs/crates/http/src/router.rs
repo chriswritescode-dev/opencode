@@ -25,11 +25,25 @@ struct Candidate {
 }
 
 const WILDCARD: &str = "*";
+const MAX_PARAM_LENGTH: usize = 100;
 
 pub fn find(method: &http::Method, path: &str) -> Option<Match> {
-    let segments = path.strip_prefix('/')?.split('/').collect::<Vec<_>>();
+    let segments = segments(path)?;
     best(method, &segments)
         .or_else(|| if method == http::Method::HEAD { best(&http::Method::GET, &segments) } else { None })
+}
+
+pub fn matches_static(path: &str, route_path: &str) -> bool {
+    let Some(segments) = segments(path) else {
+        return false;
+    };
+    let expected = route_path.strip_prefix('/').unwrap_or(route_path).split('/').collect::<Vec<_>>();
+    segments.len() == expected.len()
+        && segments.iter().zip(expected).all(|(segment, expected)| segment.eq_ignore_ascii_case(expected))
+}
+
+fn segments(path: &str) -> Option<Vec<&str>> {
+    Some(path.strip_prefix('/')?.split('/').filter(|segment| !segment.is_empty()).collect())
 }
 
 fn best(method: &http::Method, segments: &[&str]) -> Option<Match> {
@@ -76,18 +90,18 @@ impl Template {
         for segment in &self.segments {
             match segment {
                 Segment::Static(value) => {
-                    if segments.get(index) != Some(value) {
+                    if !segments.get(index).is_some_and(|segment| segment.eq_ignore_ascii_case(value)) {
                         return None;
                     }
                     ranks.push(0);
                     index += 1;
                 }
                 Segment::Param(name) => {
-                    let value = *segments.get(index)?;
-                    if value.is_empty() {
+                    let value = decode(segments.get(index)?);
+                    if value.encode_utf16().count() > MAX_PARAM_LENGTH {
                         return None;
                     }
-                    params.push(((*name).to_owned(), decode(value)));
+                    params.push(((*name).to_owned(), value));
                     ranks.push(1);
                     index += 1;
                 }

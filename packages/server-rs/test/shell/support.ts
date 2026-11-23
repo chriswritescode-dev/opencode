@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs"
 import fs from "node:fs/promises"
+import net from "node:net"
 import os from "node:os"
 import path from "node:path"
 
@@ -25,9 +26,13 @@ export async function sandbox() {
   const data = path.join(root, "data")
   const state = path.join(root, "state")
   const serviceState = path.join(state, "opencode")
+  const serviceConfig = path.join(config, "opencode")
   await Promise.all(
-    [home, cache, config, data, state, serviceState].map((directory) => fs.mkdir(directory, { recursive: true })),
+    [home, cache, config, data, state, serviceState, serviceConfig].map((directory) =>
+      fs.mkdir(directory, { recursive: true }),
+    ),
   )
+  await fs.writeFile(path.join(serviceConfig, "service-local.json"), JSON.stringify({ port: await freePort() }))
   return {
     root,
     state: serviceState,
@@ -47,6 +52,18 @@ export async function sandbox() {
       await fs.rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
     },
   }
+}
+
+async function freePort() {
+  const probe = net.createServer()
+  await new Promise<void>((resolve, reject) => {
+    probe.once("error", reject)
+    probe.listen(0, "127.0.0.1", resolve)
+  })
+  const address = probe.address()
+  await new Promise<void>((resolve, reject) => probe.close((error) => (error ? reject(error) : resolve())))
+  if (address === null || typeof address === "string") throw new Error("the port probe reported no address")
+  return address.port
 }
 
 export async function startStdio(command: readonly string[], env: Record<string, string>) {

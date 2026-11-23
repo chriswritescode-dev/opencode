@@ -52,3 +52,13 @@ pub fn remove_if_owned(file: &Path, registration: &Registration) {
         let _ = std::fs::remove_file(file);
     }
 }
+
+pub fn is_same(file: &Path, registration: &Registration) -> bool {
+    opencode_local::registration::read(file).is_some_and(|found| found.same(registration))
+}
+
+pub fn remove_if_same(file: &Path, registration: &Registration) {
+    if is_same(file, registration) {
+        let _ = std::fs::remove_file(file);
+    }
+}

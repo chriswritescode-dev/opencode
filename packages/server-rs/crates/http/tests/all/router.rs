@@ -45,6 +45,48 @@ fn static_segments_win_over_parameters() {
 fn head_falls_back_to_get() {
     let found = find(&Method::HEAD, "/api/info").expect("server.info");
     assert_eq!(found.route.operation_id, "server.info");
+    let normalized = find(&Method::HEAD, "/API/INFO/").expect("server.info");
+    assert_eq!(normalized.route.operation_id, "server.info");
+}
+
+#[test]
+fn trailing_slashes_are_ignored() {
+    let found = find(&Method::GET, "/api/info/").expect("server.info");
+    assert_eq!(found.route.operation_id, "server.info");
+    let wildcard = find(&Method::GET, "/api/fs/read/a/b/").expect("fs.read");
+    assert_eq!(wildcard.params, vec![("*".to_owned(), "a/b".to_owned())]);
+}
+
+#[test]
+fn duplicate_slashes_are_collapsed() {
+    let found = find(&Method::GET, "/api//info").expect("server.info");
+    assert_eq!(found.route.operation_id, "server.info");
+    let nested = find(&Method::GET, "//api///session//value").expect("session.get");
+    assert_eq!(nested.route.operation_id, "session.get");
+    assert_eq!(nested.params, vec![("sessionID".to_owned(), "value".to_owned())]);
+}
+
+#[test]
+fn static_segments_are_case_insensitive_and_parameters_keep_case() {
+    let found = find(&Method::GET, "/API/Session/AbC").expect("session.get");
+    assert_eq!(found.route.operation_id, "session.get");
+    assert_eq!(found.params, vec![("sessionID".to_owned(), "AbC".to_owned())]);
+}
+
+#[test]
+fn parameters_at_the_length_limit_match() {
+    let limit = "a".repeat(100);
+    let found = find(&Method::GET, &format!("/api/session/{limit}")).expect("session.get");
+    assert_eq!(found.params, vec![("sessionID".to_owned(), limit)]);
+    let encoded = find(&Method::GET, &format!("/api/session/{}", "%61".repeat(100))).expect("session.get");
+    assert_eq!(encoded.params, vec![("sessionID".to_owned(), "a".repeat(100))]);
+}
+
+#[test]
+fn parameters_over_the_length_limit_do_not_match() {
+    let over = "a".repeat(101);
+    assert!(find(&Method::GET, &format!("/api/session/{over}")).is_none());
+    assert!(find(&Method::GET, &format!("/api/session/{}", "%61".repeat(101))).is_none());
 }
 
 #[test]
@@ -70,8 +112,8 @@ fn wildcards_capture_the_rest() {
 }
 
 #[test]
-fn empty_parameters_do_not_match() {
-    assert!(find(&Method::GET, "/api/session/").is_none());
+fn too_many_segments_do_not_match() {
+    assert!(find(&Method::GET, "/api/session/value/extra").is_none());
 }
 
 #[test]

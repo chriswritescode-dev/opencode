@@ -29,6 +29,32 @@ fn no_arguments_prints_usage_and_exits_one() {
     );
 }
 
+#[test]
+fn an_unknown_command_names_it_and_exits_one() {
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_opencode-server")).arg("bogus").output().unwrap();
+    assert_eq!(output.status.code(), Some(1), "{output:?}");
+    assert_eq!(String::from_utf8_lossy(&output.stderr), "unknown command: bogus\n", "{output:?}");
+}
+
+#[test]
+fn an_unknown_serve_flag_names_it_and_exits_one() {
+    let output =
+        std::process::Command::new(env!("CARGO_BIN_EXE_opencode-server")).args(["serve", "--bogus"]).output().unwrap();
+    assert_eq!(output.status.code(), Some(1), "{output:?}");
+    assert_eq!(String::from_utf8_lossy(&output.stderr), "unknown flag: --bogus\n", "{output:?}");
+}
+
+#[test]
+fn an_out_of_range_port_exits_one() {
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_opencode-server"))
+        .args(["serve", "--port", "70000"])
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(1), "{output:?}");
+    let error = String::from_utf8_lossy(&output.stderr);
+    assert!(error.contains("invalid port: 70000"), "stderr: {error:?}");
+}
+
 #[cfg(unix)]
 #[test]
 fn a_non_utf8_argument_prints_usage_and_exits_one() {

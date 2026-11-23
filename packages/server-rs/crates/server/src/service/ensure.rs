@@ -34,7 +34,7 @@ pub async fn ensure(files: &Files, env: &ServerEnv) -> Result<String, String> {
                 };
                 timeouts = Some((registration.clone(), count));
                 if count >= UNRESPONSIVE {
-                    super::stop::terminate(&files.file, registration).await;
+                    super::stop::terminate(&files.file, registration, Some(&pool)).await?;
                     pool.evict(registration.pid);
                     pool.recruit_now();
                     timeouts = None;
@@ -97,7 +97,7 @@ fn spawn(env: &ServerEnv) -> Result<Contender, String> {
     let mut stderr = child.stderr.take().ok_or_else(|| "Failed to start server: stderr is not piped".to_owned())?;
     let tail = Arc::new(Mutex::new(Vec::new()));
     let buffer = Arc::clone(&tail);
-    std::thread::spawn(move || {
+    let reader = std::thread::spawn(move || {
         let mut chunk = [0; 4096];
         while let Ok(read) = stderr.read(&mut chunk) {
             if read == 0 {
@@ -109,7 +109,13 @@ fn spawn(env: &ServerEnv) -> Result<Contender, String> {
             tail.drain(..excess);
         }
     });
-    Ok(Contender { pid: child.id(), child: Mutex::new(child), status: Mutex::new(None), stderr: tail })
+    Ok(Contender {
+        pid: child.id(),
+        child: Mutex::new(child),
+        status: Mutex::new(None),
+        stderr: tail,
+        reader: Mutex::new(Some(reader)),
+    })
 }
 
 struct Contender {
@@ -117,6 +123,7 @@ struct Contender {
     child: Mutex<Child>,
     status: Mutex<Option<ExitStatus>>,
     stderr: Arc<Mutex<Vec<u8>>>,
+    reader: Mutex<Option<std::thread::JoinHandle<()>>>,
 }
 
 impl Contender {
@@ -134,7 +141,19 @@ impl Contender {
     }
 
     fn finished(&self) -> bool {
-        self.status().is_some()
+        if self.status().is_none() {
+            return false;
+        }
+        let mut reader = self.reader.lock().unwrap();
+        let Some(handle) = reader.take() else {
+            return true;
+        };
+        if !handle.is_finished() {
+            *reader = Some(handle);
+            return false;
+        }
+        let _ = handle.join();
+        true
     }
 
     fn failure(&self) -> Option<String> {
@@ -181,7 +200,7 @@ fn signal(_: ExitStatus) -> Option<String> {
     None
 }
 
-struct Pool {
+pub(super) struct Pool {
     contenders: Vec<Contender>,
     failure: Option<String>,
     spawn_delay: Duration,
@@ -205,6 +224,10 @@ impl Pool {
         self.contenders.retain(|contender| contender.pid() != pid && !contender.finished());
         self.failure = None;
         self.last_spawn = None;
+    }
+
+    pub(super) fn exited(&self, pid: u32) -> bool {
+        self.contenders.iter().any(|contender| contender.pid() == pid && contender.status().is_some())
     }
 
     fn recruit_now(&mut self) {

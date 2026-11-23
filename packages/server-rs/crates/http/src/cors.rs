@@ -1,4 +1,3 @@
-use bytes::Bytes;
 use http::{HeaderMap, HeaderValue, Request, StatusCode, header};
 use url::Url;
 
@@ -35,7 +34,7 @@ pub fn is_allowed_request_origin(origin: Option<&str>, host: Option<&str>, extra
     is_allowed_cors_origin(Some(origin), extra)
 }
 
-pub fn preflight(request: &Request<Bytes>, extra: &[String]) -> response::Response {
+pub fn preflight<B>(request: &Request<B>, extra: &[String]) -> response::Response {
     let mut response = response::empty(StatusCode::NO_CONTENT);
     if let Some(origin) = allowed_origin(request.headers(), extra) {
         response.headers_mut().insert(header::ACCESS_CONTROL_ALLOW_ORIGIN, origin.clone());
@@ -52,7 +51,7 @@ pub fn preflight(request: &Request<Bytes>, extra: &[String]) -> response::Respon
     response
 }
 
-pub fn apply(request: &Request<Bytes>, mut response: response::Response, extra: &[String]) -> response::Response {
+pub fn apply<B>(request: &Request<B>, mut response: response::Response, extra: &[String]) -> response::Response {
     if let Some(origin) = allowed_origin(request.headers(), extra) {
         response.headers_mut().insert(header::ACCESS_CONTROL_ALLOW_ORIGIN, origin.clone());
     }

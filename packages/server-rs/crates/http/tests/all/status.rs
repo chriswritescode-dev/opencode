@@ -66,6 +66,34 @@ async fn openapi_is_served_verbatim() {
 }
 
 #[tokio::test]
+async fn openapi_answers_head_and_normalized_paths() {
+    let app = ready_app();
+    for (method, uri) in [("HEAD", "/openapi.json/"), ("GET", "/OpenAPI.JSON"), ("GET", "//openapi.json")] {
+        let response = app.handle(authorized(method, uri)).await;
+        assert_eq!(response.status(), StatusCode::OK, "{method} {uri}");
+    }
+}
+
+#[tokio::test]
+async fn every_implemented_operation_answers_a_sample_request() {
+    let app = ready_app();
+    for operation in opencode_http::app::IMPLEMENTED {
+        let (method, uri) = sample_request(operation).unwrap_or_else(|| panic!("no sample request for {operation}"));
+        let response = app.handle(authorized(method, uri)).await;
+        assert_ne!(response.status(), StatusCode::NOT_IMPLEMENTED, "{operation}");
+    }
+}
+
+fn sample_request(operation: &str) -> Option<(&'static str, &'static str)> {
+    match operation {
+        "server.info" => Some(("GET", "/api/info")),
+        "server.pair" => Some(("POST", "/api/pair")),
+        "server.connect" => Some(("GET", "/auth/connect/x")),
+        _ => None,
+    }
+}
+
+#[tokio::test]
 async fn unknown_paths_are_an_empty_404() {
     let app = ready_app();
     let response = app.handle(authorized("GET", "/api/service/stop")).await;

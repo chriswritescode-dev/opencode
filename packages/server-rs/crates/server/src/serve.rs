@@ -12,7 +12,7 @@ pub fn run_serve(args: Serve, env: ServerEnv) -> std::process::ExitCode {
     let runtime = match tokio::runtime::Builder::new_multi_thread().enable_all().build() {
         Ok(runtime) => runtime,
         Err(error) => {
-            eprintln!("error: {error}");
+            let _ = writeln!(std::io::stderr(), "error: {error}");
             return std::process::ExitCode::from(1);
         }
     };
@@ -21,33 +21,32 @@ pub fn run_serve(args: Serve, env: ServerEnv) -> std::process::ExitCode {
     match result {
         Ok(exit) => exit,
         Err(error) => {
-            eprintln!("error: {error}");
+            let _ = writeln!(std::io::stderr(), "error: {error}");
             std::process::ExitCode::from(1)
         }
     }
 }
 
 async fn serve(args: Serve, mut env: ServerEnv) -> std::io::Result<std::process::ExitCode> {
+    let mut watch = Watch::new()?;
     env.remove("OPENCODE_PTY_HANDOFF");
     if args.service {
-        return crate::service_mode::run(args, env).await;
+        return crate::service_mode::run(args, env, watch).await;
     }
     let environment_password = env.password();
     if args.stdio {
         env.remove("OPENCODE_PASSWORD");
         env.remove("OPENCODE_SERVER_PASSWORD");
     }
-    let hostname = args.hostname.unwrap_or_else(|| "127.0.0.1".to_owned());
+    let bind_hostname = args.hostname.unwrap_or_else(|| "127.0.0.1".to_owned());
     let tmp = opencode_local::paths::Paths::from_vars(|name| env.get(name).map(std::ffi::OsStr::to_os_string))?.tmp;
     std::fs::create_dir_all(&tmp)?;
     let tmp = std::fs::canonicalize(&tmp)?;
-    let listener = bind(&hostname, args.port).await?;
+    let listener = bind(&bind_hostname, args.port).await?;
     let address = listener.local_addr()?;
     let generated = environment_password.is_none();
-    let password = environment_password
-        .unwrap_or_else(|| base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(rand::random::<[u8; 32]>()));
-    let running = start(listener, tmp, password.clone(), hostname, args.cors).await?;
-    let mut watch = Watch::new()?;
+    let password = environment_password.unwrap_or_else(generate_password);
+    let running = start(listener, tmp, password.clone(), machine_hostname(&env), args.cors).await?;
     running.ready();
     if args.stdio {
         write_line(&serde_json::json!({ "url": format!("http://{address}") }).to_string())?;
@@ -114,6 +113,20 @@ pub(crate) async fn start(
         let _ = shutdown_receiver.await;
     }));
     Ok(Running { app, shutdown, server })
+}
+
+pub(crate) fn generate_password() -> String {
+    base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(rand::random::<[u8; 32]>())
+}
+
+#[cfg(unix)]
+pub(crate) fn machine_hostname(_: &ServerEnv) -> String {
+    rustix::system::uname().nodename().to_string_lossy().into_owned()
+}
+
+#[cfg(not(unix))]
+pub(crate) fn machine_hostname(env: &ServerEnv) -> String {
+    env.get("COMPUTERNAME").map(|value| value.to_string_lossy().into_owned()).unwrap_or_default()
 }
 
 async fn teardown_server(watch: &mut Watch, signal: Signal, running: Running) -> std::process::ExitCode {

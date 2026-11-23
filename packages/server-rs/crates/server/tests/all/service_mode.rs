@@ -84,6 +84,56 @@ fn two_contenders_elect_one_service_and_the_loser_exits_zero() {
 }
 
 #[test]
+fn ipv6_contenders_elect_one_service_and_the_loser_exits_zero() {
+    let Ok(held) = TcpListener::bind(("[::1]", 0)) else {
+        return;
+    };
+    let port = held.local_addr().expect("ipv6 free port address").port();
+    drop(held);
+
+    let sandbox = Sandbox::new();
+    write_config_hostname(&sandbox, "::1", port);
+    let first = start(&sandbox);
+    let second = start(&sandbox);
+
+    let registration_path = registration_file(&sandbox);
+    wait_for(&registration_path, Duration::from_secs(10));
+    let registration = read_json(&registration_path);
+    assert_eq!(string_field(&registration, "url"), format!("http://[::1]:{port}"), "registration: {registration}");
+    let registered =
+        registration["pid"].as_u64().unwrap_or_else(|| panic!("registration pid is not a number: {registration}"));
+    let (first_pid, second_pid) = (u64::from(first.pid()), u64::from(second.pid()));
+    assert!(
+        registered == first_pid || registered == second_pid,
+        "registered pid {registered} is neither {first_pid} nor {second_pid}"
+    );
+
+    let (mut winner, mut loser) = if registered == first_pid { (first, second) } else { (second, first) };
+    let status = loser.wait(Duration::from_secs(10));
+    assert_eq!(status.code(), Some(0), "loser exit status {status:?}");
+
+    winner.signal(Signal::TERM);
+    let status = winner.wait(Duration::from_secs(5));
+    assert_eq!(status.code(), Some(143), "winner exit status {status:?}");
+    assert!(!registration_path.exists(), "registration still exists: {}", registration_path.display());
+}
+
+#[test]
+fn sigterm_during_the_election_exits_with_143() {
+    let sandbox = Sandbox::new();
+    let held = TcpListener::bind("127.0.0.1:0").expect("bind a held port");
+    let port = held.local_addr().expect("held port address").port();
+    write_config(&sandbox, port);
+    let mut process = start(&sandbox);
+
+    std::thread::sleep(Duration::from_secs(2));
+    process.signal(Signal::TERM);
+    let status = process.wait(Duration::from_secs(5));
+    assert_eq!(status.code(), Some(143), "exit status {status:?}");
+    drop(held);
+}
+
+#[test]
 fn a_replaced_registration_makes_the_service_exit_zero() {
     let sandbox = Sandbox::new();
     let port = free_port();
@@ -171,10 +221,17 @@ fn registration_file(sandbox: &Sandbox) -> PathBuf {
 }
 
 fn write_config(sandbox: &Sandbox, port: u16) {
+    write_config_text(sandbox, &format!("{{\"port\":{port}}}"));
+}
+
+fn write_config_hostname(sandbox: &Sandbox, hostname: &str, port: u16) {
+    write_config_text(sandbox, &format!("{{\"hostname\":\"{hostname}\",\"port\":{port}}}"));
+}
+
+fn write_config_text(sandbox: &Sandbox, contents: &str) {
     let path = config_file(sandbox);
     std::fs::create_dir_all(path.parent().expect("config file parent")).unwrap();
-    std::fs::write(&path, format!("{{\"port\":{port}}}"))
-        .unwrap_or_else(|error| panic!("write {}: {error}", path.display()));
+    std::fs::write(&path, contents).unwrap_or_else(|error| panic!("write {}: {error}", path.display()));
 }
 
 fn wait_for(path: &Path, timeout: Duration) {

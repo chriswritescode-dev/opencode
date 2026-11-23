@@ -10,6 +10,6 @@ Rust: `crates/server/src/serve.rs:137-146` maps an unspecified bind address to l
 `crates/server/src/service_mode.rs`, so discovery uses the wildcard address while `/api/info` reports loopback.
 
 Reason: the interface scan is not ported yet and belongs with the paths/configuration task. The service still starts
-and registers, so only the reported URL list narrows.
+and registers, so only the reported URL list narrows. No check yet.
 
 Accepted: pending owner
