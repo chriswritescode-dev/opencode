@@ -2,6 +2,14 @@ import fs from "node:fs/promises"
 import path from "node:path"
 import { pathToFileURL } from "node:url"
 import { compareCaptures } from "./lib/compare"
+import {
+  coverageReport,
+  coverageSummary,
+  loadSurface,
+  writeCoverage,
+  type RequestRecord,
+  type RunCoverage,
+} from "./lib/coverage"
 import { deviationWarnings, explain, loadDeviations, type Deviation } from "./lib/deviations"
 import { runSide } from "./lib/drive"
 import { startModelEndpoint, type ModelEndpoint } from "./lib/model"
@@ -28,7 +36,12 @@ const referencePaths = [
 ]
 
 type Options = { reference: string; candidate: string; repeat: number; deviations: string; files: string[] }
-type Capture = { reference: unknown; candidate: unknown; differences: ReturnType<typeof compareCaptures> }
+type Capture = {
+  reference: unknown
+  candidate: unknown
+  differences: ReturnType<typeof compareCaptures>
+  coverage: { requests: RequestRecord[]; events: unknown[] }
+}
 
 async function main() {
   const options = parseArguments(Bun.argv.slice(2))
@@ -42,6 +55,7 @@ async function main() {
   let differencesFound = false
   let errorFound = false
   const matched = new Set<string>()
+  const coverageRuns: RunCoverage[] = []
   for (let repetition = 1; repetition <= options.repeat && !errorFound; repetition += 1) {
     let failed = false
     for (const entry of scenarios) {
@@ -55,6 +69,7 @@ async function main() {
         break
       }
       await writeOutputs(entry.name, outcome.capture)
+      coverageRuns.push({ name: entry.name, ...outcome.capture.coverage })
       const { explained, unexplained } = explain(outcome.capture.differences, entry.name, deviations)
       for (const item of explained) matched.add(item.id)
       if (unexplained.length === 0) {
@@ -74,6 +89,12 @@ async function main() {
     }
     console.log(`run ${repetition}/${options.repeat}`)
     if (failed) break
+  }
+  if (coverageRuns.length > 0) {
+    const surface = await loadSurface(repositoryRoot)
+    const coverage = coverageReport(surface, coverageRuns)
+    await writeCoverage(outputRoot, coverage)
+    console.log(coverageSummary(coverage))
   }
   if (options.files.length === 0 && !errorFound)
     for (const warning of deviationWarnings(deviations, matched)) console.log(warning)
@@ -233,27 +254,32 @@ async function captureScenario(scenario: Scenario, options: Options, candidateEn
   try {
     endpoint.load(replies, template)
     const referenceStarted = Date.now()
-    const reference = await runSide(scenario, options.reference, box, endpoint)
+    const referenceRun = await runSide(scenario, options.reference, box, endpoint)
     requireAllReplies(endpoint)
     const referenceEnd = Date.now()
     await resetSandbox(box.root)
     endpoint.load(replies, template)
     const candidateStarted = Date.now()
-    const candidate = await runSide(scenario, options.candidate, box, endpoint, candidateEnv)
+    const candidateRun = await runSide(scenario, options.candidate, box, endpoint, candidateEnv)
     requireAllReplies(endpoint)
     const candidateEnd = Date.now()
-    const referenceCapture = normalizeCapture(reference, {
+    const referenceCapture = normalizeCapture(referenceRun.capture, {
       root: box.root,
       start: referenceStarted,
       end: referenceEnd,
     })
-    const candidateCapture = normalizeCapture(candidate, {
+    const candidateCapture = normalizeCapture(candidateRun.capture, {
       root: box.root,
       start: candidateStarted,
       end: candidateEnd,
     })
     const differences = compareCaptures(referenceCapture, candidateCapture)
-    return { reference: referenceCapture, candidate: candidateCapture, differences } satisfies Capture
+    return {
+      reference: referenceCapture,
+      candidate: candidateCapture,
+      differences,
+      coverage: { requests: referenceRun.requests, events: referenceRun.capture.events },
+    } satisfies Capture
   } finally {
     try {
       await endpoint.stop()

@@ -1,6 +1,7 @@
 import fs from "node:fs/promises"
 import path from "node:path"
 import { dumpDatabases, listFiles, waitForSearchSettled, type DatabaseCapture } from "./capture"
+import type { RequestRecord } from "./coverage"
 import type { ModelEndpoint } from "./model"
 import { resolveSide, startServer, stopServer } from "./server"
 import { sandboxEnv, type Sandbox } from "./sandbox"
@@ -47,12 +48,13 @@ export async function runSide(
   sandbox: Sandbox,
   endpoint: ModelEndpoint,
   extraEnv?: Record<string, string>,
-): Promise<Capture> {
+): Promise<{ capture: Capture; requests: RequestRecord[] }> {
   const env = { ...(await sandboxEnv(sandbox.root, scenario.env, scenario.config, endpoint.url)), ...extraEnv }
   await writeFiles(sandbox, scenario.files ?? {})
   const server = await startServer(resolveSide(side), env, sandbox.work, side)
   const saved: Record<string, unknown> = {}
   const steps: (StepCapture | WsCapture)[] = []
+  const requests: RequestRecord[] = []
   const events: unknown[] = []
   const logs: Record<string, unknown[]> = {}
   const cursor: Cursor = { index: 0 }
@@ -72,7 +74,7 @@ export async function runSide(
     warmup = undefined
     stream = await openEventStream(server.url, side, events)
     for (const step of scenario.steps) {
-      const captured = await runStep(step, server.url, sandbox, saved, events, cursor)
+      const captured = await runStep(step, server.url, sandbox, saved, events, cursor, requests)
       if (captured !== undefined) steps.push(captured)
     }
     await waitForSearchSettled(sandbox.root)
@@ -88,7 +90,7 @@ export async function runSide(
   }
   const database = await dumpDatabases(sandbox.root)
   const files = await listFiles(sandbox.root)
-  return { steps, events, logs, model: endpoint.requests(), database, files }
+  return { capture: { steps, events, logs, model: endpoint.requests(), database, files }, requests }
 }
 
 export function parseSseFrames(text: string): unknown[] {
@@ -193,12 +195,13 @@ async function runStep(
   saved: Record<string, unknown>,
   events: unknown[],
   cursor: Cursor,
+  requests: RequestRecord[],
 ): Promise<StepCapture | WsCapture | undefined> {
   if ("files" in step) {
     await writeFiles(sandbox, step.files)
     return undefined
   }
-  if ("ws" in step) return runWsStep(step.ws, base, sandbox, saved)
+  if ("ws" in step) return runWsStep(step.ws, base, sandbox, saved, requests)
   if ("waitEvent" in step) {
     cursor.index = await waitForEvent(
       step.waitEvent,
@@ -209,12 +212,19 @@ async function runStep(
     )
     return undefined
   }
-  return runHttpStep(step.http, base, sandbox, saved)
+  return runHttpStep(step.http, base, sandbox, saved, requests)
 }
 
-async function runHttpStep(step: HttpStep, base: string, sandbox: Sandbox, saved: Record<string, unknown>) {
+async function runHttpStep(
+  step: HttpStep,
+  base: string,
+  sandbox: Sandbox,
+  saved: Record<string, unknown>,
+  requests: RequestRecord[],
+) {
   const template = { sandbox, saved }
   const url = new URL(base + interpolate(step.path, template))
+  requests.push({ protocol: "http", method: step.method.toUpperCase(), path: url.pathname })
   for (const [name, values] of Object.entries(step.query ?? {}))
     for (const value of Array.isArray(values) ? values : [values])
       url.searchParams.append(name, interpolate(value, template))
@@ -243,9 +253,11 @@ function runWsStep(
   base: string,
   sandbox: Sandbox,
   saved: Record<string, unknown>,
+  requests: RequestRecord[],
 ): Promise<WsCapture> {
   const template = { sandbox, saved }
   const url = new URL(base + interpolate(step.path, template))
+  requests.push({ protocol: "ws", method: "GET", path: url.pathname })
   for (const [name, values] of Object.entries(step.query ?? {}))
     for (const value of Array.isArray(values) ? values : [values])
       url.searchParams.append(name, interpolate(value, template))

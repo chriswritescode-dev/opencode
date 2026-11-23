@@ -11,7 +11,7 @@ Runs a scenario against the TypeScript reference server and a candidate server, 
 - `--repeat <n>` repeats every scenario `n` times and defaults to `1`; values must be positive integers. Repetition stops at the first repetition that reports a difference.
 - `--deviations <dir>` selects the deviation ledger and defaults to `packages/server-rs/parity/deviations`; tests use it to supply a temporary ledger.
 - Remaining positional arguments are scenario files. With none, every `parity/scenarios/*.scenario.ts` file runs in sorted order. A scenario name is its path relative to `parity/scenarios` without `.scenario.ts`, falling back to the basename for files outside that directory.
-- Each run writes `parity/out/<scenario>/reference.json`, `candidate.json` and `differences.json`. Each repetition overwrites the previous files.
+- Each run writes `parity/out/<scenario>/reference.json`, `candidate.json` and `differences.json`, and, once at least one scenario has been captured, `parity/out/coverage.md` and `parity/out/coverage.json`. Each repetition overwrites the previous files.
 - At startup the harness reads `packages/server-rs/upstream-pin`. When that commit exists in the clone and the TypeScript reference differs from it under the pinned source directories, a warning line names the number of changed files.
 
 ## Steps
@@ -104,6 +104,14 @@ A capture is `{ steps, events, logs, model, database, files }`.
 - `files`: every other file under the sandbox as relative path to contents, captured after the server has exited. Valid UTF-8 files store their text and other files store `sha256:<hex>`. Excluded are SQLite files and their `-wal`, `-shm` and `-journal` siblings (captured as `database` instead), `models.json` (written by the harness), and `home/.local/share/opencode/log/**` (log lines carry wall-clock times, run ids and process ids).
 
 Each run writes three files below `parity/out/<scenario>/`: `reference.json` and `candidate.json` hold the normalized captures, and `differences.json` holds the compared paths with their reference and candidate values.
+
+## Coverage
+
+After a run that captured at least one scenario, the harness writes `parity/out/coverage.md` and `parity/out/coverage.json` and prints one line: `coverage: operations <a>/<total>, events <b>/<total>, websockets <c>/<total>`.
+
+The surface is read from `packages/protocol/openapi.json` at the commit in `packages/server-rs/upstream-pin`. When that document cannot be read at the pin, the checkout copy is used and a warning names the pin. Operations are the OpenAPI HTTP operations, events are the `types` enum values of `GET /api/event` plus `server.connected` and the `rpc.*` pattern, and WebSocket routes are operations marked `x-websocket`.
+
+Coverage is measured per reference-side scenario. An `http` step covers the operation whose template matches its path without the query string, a `ws` step covers the matching WebSocket route, and captured event types cover their event, with any `rpc.` type covering `rpc.*`. Request paths that match no operation or WebSocket route are listed as unmatched.
 
 ## Deviations
 
