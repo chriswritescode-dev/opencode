@@ -746,6 +746,7 @@ dependencies = [
 name = "opencode-config"
 version = "0.1.0"
 dependencies = [
+ "opencode-api-types",
  "opencode-contract",
  "opencode-local",
  "opencode-util",

@@ -2,7 +2,7 @@ import { mkdir } from "node:fs/promises"
 import { upstreamWorkspace } from "../upstream"
 
 const root = new URL("../..", import.meta.url).pathname
-const areas = ["flags"]
+const areas = ["flags", "normalize"]
 const source = `${root}script/config-corpus/export.ts`
 const tree = await upstreamWorkspace()
 
