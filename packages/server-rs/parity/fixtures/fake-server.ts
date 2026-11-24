@@ -13,7 +13,8 @@ const server = Bun.serve({
     }
     if (request.method === "GET" && url.pathname === "/api/info")
       return Response.json({ version: process.env.FAKE_VERSION ?? "fake" })
-    if (request.method === "GET" && url.pathname === "/api/event") return eventStream()
+    if (request.method === "GET" && url.pathname === "/api/event")
+      return process.env.FAKE_REJECT_EVENTS === "1" ? new Response(null, { status: 503 }) : eventStream()
     if (request.method === "GET" && url.pathname === "/api/config") {
       scheduleWarmEvent()
       return Response.json({})

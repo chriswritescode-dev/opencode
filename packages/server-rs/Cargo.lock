@@ -835,10 +835,13 @@ dependencies = [
  "http-body-util",
  "hyper",
  "hyper-util",
+ "log",
  "opencode-api-types",
  "opencode-bus",
+ "opencode-config",
  "opencode-contract",
  "opencode-local",
+ "opencode-location",
  "opencode-session",
  "opencode-storage",
  "rand",
@@ -869,6 +872,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "opencode-location"
+version = "0.1.0"
+dependencies = [
+ "base64",
+ "futures-util",
+ "indexmap",
+ "log",
+ "opencode-contract",
+ "opencode-storage",
+ "ring",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "url",
+]
+
+[[package]]
 name = "opencode-server"
 version = "0.1.0"
 dependencies = [
@@ -879,6 +901,7 @@ dependencies = [
  "hyper-util",
  "indexmap",
  "opencode-api",
+ "opencode-config",
  "opencode-contract",
  "opencode-http",
  "opencode-local",

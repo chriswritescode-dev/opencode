@@ -6,6 +6,7 @@ use crate::response;
 pub enum Kind {
     Query,
     Params,
+    Body,
 }
 
 impl Kind {
@@ -13,6 +14,7 @@ impl Kind {
         match self {
             Kind::Query => "Query",
             Kind::Params => "Params",
+            Kind::Body => "Payload",
         }
     }
 }

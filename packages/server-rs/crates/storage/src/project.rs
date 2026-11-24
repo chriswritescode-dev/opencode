@@ -36,6 +36,15 @@ pub struct ProjectRow {
     pub commands: Option<Value>,
 }
 
+#[derive(Clone, Debug, Default)]
+pub struct ProjectMetadataUpdate<'a> {
+    pub canonical: Option<&'a str>,
+    pub name: Option<Option<&'a str>>,
+    pub icon_url_override: Option<Option<&'a str>>,
+    pub icon_color: Option<Option<&'a str>>,
+    pub commands: Option<Option<&'a Value>>,
+}
+
 pub fn get(db: &Connection, id: &str) -> Result<Option<ProjectRow>, StorageError> {
     let mut statement = db.prepare_cached(GET)?;
     let mut rows = statement.query(params![id])?;
@@ -70,6 +79,71 @@ pub fn upsert(db: &Connection, id: &str, canonical: &str, vcs: Option<&str>) -> 
             .execute(params![id, worktree, now])?,
     };
     Ok(())
+}
+
+pub fn update_metadata(
+    db: &Connection,
+    id: &str,
+    update: &ProjectMetadataUpdate<'_>,
+) -> Result<Option<ProjectRow>, StorageError> {
+    let worktree = update.canonical.map(column::to_driver_absolute).transpose()?;
+    let commands = update.commands.map(|commands| commands.map(serde_json::to_string).transpose()).transpose()?;
+    let changed = db
+        .prepare_cached(
+            "UPDATE project SET
+                 worktree = CASE WHEN ?3 THEN ?4 ELSE worktree END,
+                 name = CASE WHEN ?5 THEN ?6 ELSE name END,
+                 icon_url_override = CASE WHEN ?7 THEN ?8 ELSE icon_url_override END,
+                 icon_color = CASE WHEN ?9 THEN ?10 ELSE icon_color END,
+                 commands = CASE WHEN ?11 THEN ?12 ELSE commands END,
+                 time_updated = ?2
+             WHERE id = ?1",
+        )?
+        .execute(params![
+            id,
+            now_ms(),
+            worktree.is_some(),
+            worktree,
+            update.name.is_some(),
+            update.name.flatten(),
+            update.icon_url_override.is_some(),
+            update.icon_url_override.flatten(),
+            update.icon_color.is_some(),
+            update.icon_color.flatten(),
+            commands.is_some(),
+            commands,
+        ])?;
+    updated(db, id, changed)
+}
+
+pub fn set_archived(db: &Connection, id: &str, archived: Option<i64>) -> Result<Option<ProjectRow>, StorageError> {
+    let changed =
+        db.prepare_cached("UPDATE project SET time_archived = ?1 WHERE id = ?2")?.execute(params![archived, id])?;
+    updated(db, id, changed)
+}
+
+pub fn set_canonical(db: &Connection, id: &str, canonical: &str) -> Result<Option<ProjectRow>, StorageError> {
+    let worktree = column::to_driver_absolute(canonical)?;
+    let changed =
+        db.prepare_cached("UPDATE project SET worktree = ?1 WHERE id = ?2")?.execute(params![worktree, id])?;
+    updated(db, id, changed)
+}
+
+pub fn touch_active(db: &Connection, id: &str, at: i64) -> Result<Option<ProjectRow>, StorageError> {
+    let changed = db.prepare_cached("UPDATE project SET time_active = ?1 WHERE id = ?2")?.execute(params![at, id])?;
+    updated(db, id, changed)
+}
+
+pub fn set_icon_url(db: &Connection, id: &str, url: &str) -> Result<Option<ProjectRow>, StorageError> {
+    let changed = db.prepare_cached("UPDATE project SET icon_url = ?1 WHERE id = ?2")?.execute(params![url, id])?;
+    updated(db, id, changed)
+}
+
+fn updated(db: &Connection, id: &str, changed: usize) -> Result<Option<ProjectRow>, StorageError> {
+    if changed == 0 {
+        return Ok(None);
+    }
+    get(db, id)
 }
 
 fn collect(rows: &mut rusqlite::Rows<'_>) -> Result<Vec<ProjectRow>, StorageError> {

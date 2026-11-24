@@ -38,6 +38,77 @@ async fn reaps_finished_connections_and_stops_on_shutdown() {
 }
 
 #[tokio::test]
+async fn a_post_body_is_collected_on_the_real_listener() {
+    let listener = TcpListener::bind("127.0.0.1:0").await.expect("a listener");
+    let address = listener.local_addr().expect("a local address");
+    let app = ready_app();
+    let (sender, receiver) = oneshot::channel();
+    let task = tokio::spawn(opencode_http::serve::serve(listener, app, async move {
+        let _ = receiver.await;
+    }));
+    let body = r#"{"body":1}"#;
+    let request = format!(
+        "POST /api/pair HTTP/1.1\r\nHost: localhost\r\nAuthorization: Basic {}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+        crate::encoded("opencode", "pw"),
+        body.len(),
+    );
+    let mut stream = TcpStream::connect(address).await.expect("a connection");
+    stream.write_all(request.as_bytes()).await.expect("a request");
+    let mut response = String::new();
+    stream.read_to_string(&mut response).await.expect("a response");
+    assert!(response.starts_with("HTTP/1.1 200"), "{response}");
+    assert!(response.contains("\"code\""), "{response}");
+    sender.send(()).expect("a shutdown");
+    tokio::time::timeout(Duration::from_secs(5), task).await.expect("serve to stop").expect("a task");
+}
+
+#[tokio::test]
+async fn a_declared_body_above_the_cap_is_rejected() {
+    let listener = TcpListener::bind("127.0.0.1:0").await.expect("a listener");
+    let address = listener.local_addr().expect("a local address");
+    let app = ready_app();
+    let (sender, receiver) = oneshot::channel();
+    let task = tokio::spawn(opencode_http::serve::serve(listener, app, async move {
+        let _ = receiver.await;
+    }));
+    let request = format!(
+        "POST /api/pair HTTP/1.1\r\nHost: localhost\r\nAuthorization: Basic {}\r\nContent-Length: 134217729\r\nConnection: close\r\n\r\n{{}}",
+        crate::encoded("opencode", "pw"),
+    );
+    let mut stream = TcpStream::connect(address).await.expect("a connection");
+    stream.write_all(request.as_bytes()).await.expect("a request");
+    stream.shutdown().await.expect("a shutdown");
+    let mut response = String::new();
+    stream.read_to_string(&mut response).await.expect("a response");
+    assert!(response.starts_with("HTTP/1.1 413"), "{response}");
+    sender.send(()).expect("a shutdown");
+    tokio::time::timeout(Duration::from_secs(5), task).await.expect("serve to stop").expect("a task");
+}
+
+#[tokio::test]
+async fn an_unauthorized_request_is_answered_before_its_body_is_read() {
+    let listener = TcpListener::bind("127.0.0.1:0").await.expect("a listener");
+    let address = listener.local_addr().expect("a local address");
+    let app = ready_app();
+    let (sender, receiver) = oneshot::channel();
+    let task = tokio::spawn(opencode_http::serve::serve(listener, app, async move {
+        let _ = receiver.await;
+    }));
+    let request = "POST /api/pair HTTP/1.1\r\nHost: localhost\r\nContent-Length: 1048576\r\nConnection: close\r\n\r\n";
+    let mut stream = TcpStream::connect(address).await.expect("a connection");
+    stream.write_all(request.as_bytes()).await.expect("a request");
+    let mut response = String::new();
+    tokio::time::timeout(Duration::from_secs(5), stream.read_to_string(&mut response))
+        .await
+        .expect("a response without the body")
+        .expect("a response");
+    assert!(response.starts_with("HTTP/1.1 401"), "{response}");
+    assert!(response.contains(UNAUTHORIZED_BODY), "{response}");
+    sender.send(()).expect("a shutdown");
+    tokio::time::timeout(Duration::from_secs(5), task).await.expect("serve to stop").expect("a task");
+}
+
+#[tokio::test]
 async fn erroring_stream_aborts_the_connection() {
     let listener = TcpListener::bind("127.0.0.1:0").await.expect("a listener");
     let address = listener.local_addr().expect("a local address");

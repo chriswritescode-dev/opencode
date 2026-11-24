@@ -8,6 +8,7 @@ pub mod kv;
 pub mod migration;
 pub mod path;
 pub mod project;
+pub mod workspace;
 
 pub use database::Database;
 pub use error::StorageError;

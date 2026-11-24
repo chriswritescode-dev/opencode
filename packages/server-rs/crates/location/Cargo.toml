@@ -1,0 +1,33 @@
+[package]
+name = "opencode-location"
+description = "The per-Location service graph: transform registry, projects, environments and lifecycle."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+autotests = false
+
+[lints]
+workspace = true
+
+[dependencies]
+base64.workspace = true
+futures-util.workspace = true
+indexmap.workspace = true
+log.workspace = true
+opencode-contract.workspace = true
+opencode-storage.workspace = true
+ring.workspace = true
+rusqlite.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+url.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }
+
+[[test]]
+name = "all"
+path = "tests/all/main.rs"

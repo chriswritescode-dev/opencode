@@ -17,6 +17,7 @@ http-body-util.workspace = true
 hyper.workspace = true
 hyper-util.workspace = true
 indexmap.workspace = true
+opencode-config.workspace = true
 opencode-contract.workspace = true
 opencode-http.workspace = true
 opencode-local.workspace = true

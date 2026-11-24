@@ -19,6 +19,7 @@ fn ready_app_with_state() -> Arc<App> {
         hostname: None,
         urls: Arc::new(|| vec!["http://127.0.0.1:4096".to_owned()]),
         state: Some(Arc::new(state)),
+        services: Some(crate::services()),
     });
     app.status().ready();
     app
@@ -112,6 +113,16 @@ fn sample_request(operation: &str) -> Option<(&'static str, &'static str)> {
         "server.connect" => Some(("GET", "/auth/connect/x")),
         "event.subscribe" => Some(("GET", "/api/event")),
         "experimental.session.log" => Some(("GET", "/api/experimental/session/ses_test/log")),
+        "location.get" => Some(("GET", "/api/location")),
+        "location.reload" => Some(("POST", "/api/location/reload")),
+        "debug.heapDump" => Some(("POST", "/api/debug/heap-dump")),
+        "debug.location.list" => Some(("GET", "/api/debug/location")),
+        "debug.location.evict" => Some(("DELETE", "/api/debug/location")),
+        "project.list" => Some(("GET", "/api/project")),
+        "project.update" => Some(("PATCH", "/api/project/unknown")),
+        "config.get" => Some(("GET", "/api/config")),
+        "config.shells" => Some(("GET", "/api/config/shell")),
+        "experimental.config.update" => Some(("PATCH", "/api/experimental/config")),
         _ => None,
     }
 }
@@ -143,5 +154,15 @@ fn implemented_lists_the_ported_operations() {
     assert!(opencode_http::app::IMPLEMENTED.contains(&"server.connect"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"event.subscribe"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"experimental.session.log"));
-    assert_eq!(opencode_http::app::IMPLEMENTED.len(), 5);
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"location.get"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"location.reload"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"debug.heapDump"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"debug.location.list"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"debug.location.evict"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"project.list"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"project.update"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"config.get"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"config.shells"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"experimental.config.update"));
+    assert_eq!(opencode_http::app::IMPLEMENTED.len(), 15);
 }

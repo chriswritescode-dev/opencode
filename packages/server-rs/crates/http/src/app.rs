@@ -16,8 +16,23 @@ use crate::router;
 use crate::status::{State, Status};
 use crate::ticket::TicketStore;
 
-pub const IMPLEMENTED: &[&str] =
-    &["server.info", "server.pair", "server.connect", "event.subscribe", "experimental.session.log"];
+pub const IMPLEMENTED: &[&str] = &[
+    "server.info",
+    "server.pair",
+    "server.connect",
+    "event.subscribe",
+    "experimental.session.log",
+    "location.get",
+    "location.reload",
+    "debug.heapDump",
+    "debug.location.list",
+    "debug.location.evict",
+    "project.list",
+    "project.update",
+    "config.get",
+    "config.shells",
+    "experimental.config.update",
+];
 
 pub struct Options {
     pub password: String,
@@ -27,6 +42,7 @@ pub struct Options {
     pub hostname: Option<String>,
     pub urls: Arc<dyn Fn() -> Vec<String> + Send + Sync>,
     pub state: Option<Arc<crate::state::ServerState>>,
+    pub services: Option<Arc<crate::services::GlobalServices>>,
 }
 
 pub struct App {
@@ -49,7 +65,7 @@ impl App {
         &self.tickets
     }
 
-    pub async fn handle<B>(&self, request: Request<B>) -> response::Response {
+    pub async fn handle(&self, request: Request<Bytes>) -> response::Response {
         if request.method() == http::Method::OPTIONS {
             return cors::preflight(&request, &self.options.cors);
         }
@@ -63,20 +79,33 @@ impl App {
         compression::apply(accept_encoding, response)
     }
 
-    async fn dispatch<B>(&self, request: &Request<B>) -> response::Response {
+    pub fn admits<B>(&self, request: &Request<B>) -> bool {
+        request.method() != http::Method::OPTIONS
+            && !request_site::rejected(request, &self.options.cors)
+            && self.gate(request).is_none()
+    }
+
+    fn gate<B>(&self, request: &Request<B>) -> Option<response::Response> {
         let state = self.status.current();
         let ready = state == State::Ready;
         if request.method() == http::Method::GET && request.uri().path() == "/api/info" && !ready {
             if !self.authorized(request) {
-                return auth::unauthorized(request, "Authentication required");
+                return Some(auth::unauthorized(request, "Authentication required"));
             }
-            return info(&self.options, state);
+            return Some(info(&self.options, state));
         }
         if !exempt(request, ready) && !self.authorized(request) {
-            return auth::unauthorized(request, "Authentication required");
+            return Some(auth::unauthorized(request, "Authentication required"));
         }
         if !ready {
-            return unavailable(state);
+            return Some(unavailable(state));
+        }
+        None
+    }
+
+    async fn dispatch(&self, request: &Request<Bytes>) -> response::Response {
+        if let Some(response) = self.gate(request) {
+            return response;
         }
         let method = request.method();
         if (method == http::Method::GET || method == http::Method::HEAD)
@@ -91,6 +120,7 @@ impl App {
         let Some(found) = router::find(request.method(), request.uri().path()) else {
             return response::empty(StatusCode::NOT_FOUND);
         };
+        let raw = raw_request(request, found.params.clone());
         match found.route.operation_id {
             "server.info" => server_info(&self.options),
             "server.pair" => response::bytes(
@@ -100,31 +130,80 @@ impl App {
             ),
             "server.connect" => self.connect(request, &found),
             "event.subscribe" => match &self.options.state {
-                Some(state) => crate::handlers::event::subscribe(
-                    state,
-                    &RawRequest {
-                        path_params: found.params.clone(),
-                        query: request.uri().query().unwrap_or_default().to_owned(),
-                        headers: Vec::new(),
-                        body: Vec::new(),
-                    },
-                ),
+                Some(state) => crate::handlers::event::subscribe(state, &raw),
                 None => not_implemented(found.route.identifier),
             },
             "experimental.session.log" => match &self.options.state {
-                Some(state) => crate::handlers::session_log::log(
-                    state,
-                    &RawRequest {
-                        path_params: found.params.clone(),
-                        query: request.uri().query().unwrap_or_default().to_owned(),
-                        headers: Vec::new(),
-                        body: Vec::new(),
-                    },
-                ),
+                Some(state) => crate::handlers::session_log::log(state, &raw),
                 None => not_implemented(found.route.identifier),
+            },
+            "location.get" => crate::handlers::location::get(self, &raw).await,
+            "location.reload" => match self.services() {
+                Some(services) => crate::handlers::location::reload(services).await,
+                None => crate::services::services_unavailable(),
+            },
+            "debug.heapDump" => match self.services() {
+                Some(services) => crate::handlers::debug::heap_dump(services, &raw).await,
+                None => crate::services::services_unavailable(),
+            },
+            "debug.location.list" => match self.services() {
+                Some(services) => crate::handlers::debug::location_list(services).await,
+                None => crate::services::services_unavailable(),
+            },
+            "debug.location.evict" => match self.services() {
+                Some(services) => crate::handlers::debug::location_evict(services, &raw).await,
+                None => crate::services::services_unavailable(),
+            },
+            "project.list" => match self.services() {
+                Some(services) => crate::handlers::project::list(services, &raw).await,
+                None => crate::services::services_unavailable(),
+            },
+            "project.update" => match self.services() {
+                Some(services) => crate::handlers::project::update(services, &raw).await,
+                None => crate::services::services_unavailable(),
+            },
+            "config.get" => match self.location(&raw).await {
+                Ok(lease) => crate::handlers::config::get(&raw, &lease.config),
+                Err(response) => response,
+            },
+            "config.shells" => match self.location(&raw).await {
+                Ok(_lease) => match self.services() {
+                    Some(services) => crate::handlers::config::shells(services),
+                    None => crate::services::services_unavailable(),
+                },
+                Err(response) => response,
+            },
+            "experimental.config.update" => match self.location(&raw).await {
+                Ok(lease) => crate::handlers::config::update(&raw, &lease.config).await,
+                Err(response) => response,
             },
             _ => not_implemented(found.route.identifier),
         }
+    }
+
+    #[allow(clippy::result_large_err)]
+    pub async fn location(
+        &self,
+        request: &RawRequest,
+    ) -> Result<opencode_location::map::Lease<crate::services::LocationServices>, response::Response> {
+        let Some(services) = &self.options.services else {
+            return Err(crate::services::services_unavailable());
+        };
+        let reference = opencode_location::resolve::request_ref(request, &services.start_directory);
+        match services.locations.get(&reference).await {
+            Ok(lease) => Ok(lease),
+            Err(error) => Err(crate::services::location_error(error)),
+        }
+    }
+
+    pub async fn shutdown(&self) {
+        if let Some(services) = &self.options.services {
+            services.locations.shutdown_all().await;
+        }
+    }
+
+    pub fn services(&self) -> Option<&Arc<crate::services::GlobalServices>> {
+        self.options.services.as_ref()
     }
 
     fn authorized<B>(&self, request: &Request<B>) -> bool {
@@ -171,6 +250,19 @@ impl App {
             response.headers_mut().insert(header::SET_COOKIE, cookie);
         }
         response
+    }
+}
+
+fn raw_request(request: &Request<Bytes>, path_params: Vec<(String, String)>) -> RawRequest {
+    RawRequest {
+        path_params,
+        query: request.uri().query().unwrap_or_default().to_owned(),
+        headers: request
+            .headers()
+            .iter()
+            .map(|(name, value)| (name.as_str().to_owned(), String::from_utf8_lossy(value.as_bytes()).into_owned()))
+            .collect(),
+        body: request.body().to_vec(),
     }
 }
 
@@ -261,4 +353,27 @@ fn unavailable(state: State) -> response::Response {
     let mut response = response::json(StatusCode::SERVICE_UNAVAILABLE, &body);
     response.headers_mut().insert(header::RETRY_AFTER, HeaderValue::from_static("1"));
     response
+}
+
+#[cfg(test)]
+mod tests {
+    use bytes::Bytes;
+    use http::Request;
+
+    use super::raw_request;
+
+    #[test]
+    fn raw_request_carries_query_headers_body_and_params() {
+        let request = Request::builder()
+            .method("POST")
+            .uri("/api/pair?x=1")
+            .header("x-opencode-directory", "/tmp/x")
+            .body(Bytes::from_static(br#"{"a":1}"#))
+            .expect("a request");
+        let raw = raw_request(&request, vec![("id".to_owned(), "one".to_owned())]);
+        assert_eq!(raw.query, "x=1");
+        assert_eq!(raw.body, br#"{"a":1}"#.to_vec());
+        assert_eq!(raw.headers, vec![("x-opencode-directory".to_owned(), "/tmp/x".to_owned())]);
+        assert_eq!(raw.path_params, vec![("id".to_owned(), "one".to_owned())]);
+    }
 }

@@ -10,6 +10,8 @@ Runs a scenario against the TypeScript reference server and a candidate server, 
 - `--candidate <ts|path>` is required.
 - `--repeat <n>` repeats every scenario `n` times and defaults to `1`; values must be positive integers. Repetition stops at the first repetition that reports a difference.
 - `--deviations <dir>` selects the deviation ledger and defaults to `packages/server-rs/parity/deviations`; tests use it to supply a temporary ledger.
+- `--only <parts>` restricts the comparison to a comma list drawn from `steps,events,database,files,logs,model` and defaults to all six; see [Comparison modes](#comparison-modes).
+- `--tables <names>` is a comma list of table names that restricts the database comparison per database file; it requires `database` in `--only`.
 - Remaining positional arguments are scenario files. With none, every `parity/scenarios/*.scenario.ts` file runs in sorted order. A scenario name is its path relative to `parity/scenarios` without `.scenario.ts`, falling back to the basename for files outside that directory.
 - Each run writes `parity/out/<scenario>/reference.json`, `candidate.json` and `differences.json`, and, once at least one scenario has been captured, `parity/out/coverage.md` and `parity/out/coverage.json`. Each repetition overwrites the previous files.
 - At startup the harness reads `packages/server-rs/upstream-pin`. When that commit exists in the clone and the TypeScript reference differs from it under the pinned source directories, a warning line names the number of changed files.
@@ -168,6 +170,16 @@ After a run that captured at least one scenario, the harness writes `parity/out/
 The surface is read from `packages/protocol/openapi.json` at the commit in `packages/server-rs/upstream-pin`. When that document cannot be read at the pin, the checkout copy is used and a warning names the pin. Operations are the OpenAPI HTTP operations, events are the `types` enum values of `GET /api/event` plus `server.connected` and the `rpc.*` pattern, and WebSocket routes are operations marked `x-websocket`.
 
 Coverage is measured per reference-side scenario. An `http` step covers the operation whose template matches its path without the query string, a `ws` step covers the matching WebSocket route, and captured event types cover their event, with any `rpc.` type covering `rpc.*`. Request paths that match no operation or WebSocket route are listed as unmatched.
+
+## Comparison modes
+
+By default every part of the capture is compared: `steps`, `events`, `database`, `files`, `logs` and `model`.
+
+`--only <parts>` restricts what is compared to a comma list of those parts; omitting it selects all six, and repeated names are collapsed. It never changes what a scenario runs: every step, including `http`, `ws`, `files` and templating, still executes exactly as before. When `events` is not selected, neither side opens `/api/event` (not even the throwaway warm-up stream), the per-session log fetch is skipped so `logs` stays `{}`, and a scenario that contains a `waitEvent` step is refused before any sandbox is created with `FAIL <scenario>: scenario needs events` and exit 2. `logs` requires `events` because the log keys come from sessions discovered on the event stream, and selecting `logs` without `events` fails with exit 2.
+
+`--tables <names>` restricts the `database` comparison to those tables in every captured database file. It also filters the compared schema rows to those tables, including index rows, so an index whose `tbl_name` is not selected is dropped. A name that matches no captured table fails the scenario with exit 2 and `--tables <names> matched no table`, which catches a typo that would otherwise compare nothing.
+
+Coverage only counts the parts being compared. An uncompared section keeps `covered: false` and no scenarios, is marked `not compared` instead of `yes`/`no` in `coverage.md`, gains `"compared": false` in `coverage.json`, and prints `events not compared` (for example) instead of a fraction in the summary line. WebSocket routes are covered by `ws` steps, so that section is compared only when a compared step opened one; a run without WebSocket steps marks it `not compared`. The normalized `reference.json` and `candidate.json` captures are still written in full; only `differences.json` reflects the restricted comparison.
 
 ## Deviations
 

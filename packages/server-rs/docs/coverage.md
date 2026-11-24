@@ -1,14 +1,14 @@
 # Operation coverage
 
-Implemented: 5 of 178 operations
+Implemented: 15 of 178 operations
 
 | Operation | Method | Path | Stability | Status |
 | --- | --- | --- | --- | --- |
 | `server.info` | GET | `/api/info` | stable | implemented |
 | `server.pair` | POST | `/api/pair` | stable | implemented |
 | `server.connect` | GET | `/auth/connect/{code}` | stable | implemented |
-| `location.get` | GET | `/api/location` | stable | not implemented (501) |
-| `location.reload` | POST | `/api/location/reload` | stable | not implemented (501) |
+| `location.get` | GET | `/api/location` | stable | implemented |
+| `location.reload` | POST | `/api/location/reload` | stable | implemented |
 | `agent.list` | GET | `/api/agent` | stable | not implemented (501) |
 | `agent.get` | GET | `/api/agent/{agentID}` | stable | not implemented (501) |
 | `plugin.list` | GET | `/api/plugin` | stable | not implemented (501) |
@@ -96,8 +96,8 @@ Implemented: 5 of 178 operations
 | `credential.update` | PATCH | `/api/credential/{credentialID}` | stable | not implemented (501) |
 | `credential.remove` | DELETE | `/api/credential/{credentialID}` | stable | not implemented (501) |
 | `credential.activate` | POST | `/api/credential/{credentialID}/activate` | stable | not implemented (501) |
-| `project.list` | GET | `/api/project` | stable | not implemented (501) |
-| `project.update` | PATCH | `/api/project/{projectID}` | stable | not implemented (501) |
+| `project.list` | GET | `/api/project` | stable | implemented |
+| `project.update` | PATCH | `/api/project/{projectID}` | stable | implemented |
 | `form.list` | GET | `/api/form` | stable | not implemented (501) |
 | `permission.request.list` | GET | `/api/permission/request` | stable | not implemented (501) |
 | `permission.saved.list` | GET | `/api/permission/saved` | stable | not implemented (501) |
@@ -172,13 +172,13 @@ Implemented: 5 of 178 operations
 | `vcs.status` | GET | `/api/vcs/status` | stable | not implemented (501) |
 | `vcs.branch.list` | GET | `/api/vcs/branch` | stable | not implemented (501) |
 | `vcs.diff` | GET | `/api/vcs/diff` | stable | not implemented (501) |
-| `debug.heapDump` | POST | `/api/debug/heap-dump` | stable | not implemented (501) |
-| `debug.location.list` | GET | `/api/debug/location` | stable | not implemented (501) |
-| `debug.location.evict` | DELETE | `/api/debug/location` | stable | not implemented (501) |
+| `debug.heapDump` | POST | `/api/debug/heap-dump` | stable | implemented |
+| `debug.location.list` | GET | `/api/debug/location` | stable | implemented |
+| `debug.location.evict` | DELETE | `/api/debug/location` | stable | implemented |
 | `experimental.migration.v1.status` | GET | `/api/experimental/migration/v1` | experimental | not implemented (501) |
 | `websearch.providers` | GET | `/api/websearch/provider` | stable | not implemented (501) |
 | `websearch.query` | POST | `/api/websearch` | stable | not implemented (501) |
 | `experimental.usage.limits` | GET | `/api/experimental/usage/limits` | experimental | not implemented (501) |
-| `config.get` | GET | `/api/config` | stable | not implemented (501) |
-| `config.shells` | GET | `/api/config/shell` | stable | not implemented (501) |
-| `experimental.config.update` | PATCH | `/api/experimental/config` | experimental | not implemented (501) |
+| `config.get` | GET | `/api/config` | stable | implemented |
+| `config.shells` | GET | `/api/config/shell` | stable | implemented |
+| `experimental.config.update` | PATCH | `/api/experimental/config` | experimental | implemented |
