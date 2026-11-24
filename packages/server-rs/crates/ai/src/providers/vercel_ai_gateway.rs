@@ -3,11 +3,14 @@ use std::sync::Arc;
 use serde_json::{Map, Number, Value, json};
 
 use crate::Env;
+use crate::media::route::MediaEndpoint;
+use crate::protocols::openai_decisions::{self, OpenAiDecisions};
 use crate::protocols::shared::invalid_request;
 use crate::protocols::utils::gateway_protocol::{GatewayProtocol, Prepare, PreparedBody};
 use crate::protocols::{anthropic_messages, open_responses, openai_chat};
-use crate::providers::{RuntimeModel, Settings, language_model_with_route, open_responses_options};
+use crate::providers::{RuntimeModel, Settings, language_model_with_route, modality_options, open_responses_options};
 use crate::route::auth::{Auth, ProviderAuthOptions, api_key};
+use crate::route::decision::{DecisionRoute, DecisionRouteInput};
 use crate::route::endpoint::{Endpoint, PathPart};
 use crate::route::model::{Route, RouteTransport};
 use crate::schema::{AiError, LlmRequest, RequestOptions, StringMap, merge_request_options};
@@ -101,6 +104,22 @@ pub fn chat_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result
         options: settings.request_options(&DECLARED),
     };
     Ok(language_model_with_route(model_id, ID, route, Some(json!({ "reasoningField": "reasoning" })), None))
+}
+
+pub fn decision_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result<RuntimeModel, AiError> {
+    let (transport, provider_options) = modality_options(settings, &DECLARED);
+    let route = DecisionRoute::make(DecisionRouteInput {
+        id: openai_decisions::ID.to_string(),
+        provider: ID.to_string(),
+        protocol: Arc::new(OpenAiDecisions),
+        endpoint: MediaEndpoint::path(openai_decisions::PATH)
+            .with_base_url(settings.string("baseURL").unwrap_or(BASE_URL)),
+        auth: auth(settings),
+        headers: None,
+        provider_metadata_key: Some(ID.to_string()),
+        options: transport,
+    });
+    Ok(RuntimeModel::Decision(route.model(model_id, None, provider_options)))
 }
 
 fn auth(settings: &Settings) -> Auth {

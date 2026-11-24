@@ -11,6 +11,7 @@ use opencode_ai::ExecutionContext;
 use opencode_ai::MapEnv;
 use opencode_ai::clock::FixedClock;
 use opencode_ai::id::SequenceIds;
+use opencode_ai::modalities::decision::{DecisionClient, DecisionRequestInput};
 use opencode_ai::modalities::embedding::{EmbeddingClient, EmbeddingRequestInput};
 use opencode_ai::providers::{ProviderPackages, RuntimeModel, Settings};
 use opencode_ai::route::client::LlmClient;
@@ -196,6 +197,96 @@ fn assert_embedding_outcome(
                 panic!("{} step {index} embedding result: the step recorded no result", cassette.name);
             };
             assert_eq!(actual, *expected, "{} step {index} embedding result", cassette.name);
+        }
+    }
+}
+
+pub async fn replay_decision_cassette(cassette: &Cassette) {
+    for (index, step) in cassette.steps.iter().enumerate() {
+        let Some(provider) = step.provider.as_ref() else {
+            panic!("{} step {index} decision: the step recorded no provider", cassette.name);
+        };
+        assert_eq!(step.operation.as_deref(), Some("decision.generate"), "{} step {index} operation", cassette.name);
+        let settings = Settings::new(provider.settings.clone());
+        let runtime = ProviderPackages::builtin()
+            .decision(&provider.package, &provider.model_id, &settings, &MapEnv::default())
+            .unwrap_or_else(|error| {
+                panic!("{} step {index} provider {}: {}", cassette.name, provider.package, error.message())
+            });
+        let RuntimeModel::Decision(model) = runtime else {
+            panic!("{} step {index} decision: expected a decision model", cassette.name);
+        };
+        assert_eq!(model.id, step.model["id"], "{} step {index} decision model.id", cassette.name);
+        assert_eq!(model.provider, step.model["provider"], "{} step {index} decision model.provider", cassette.name);
+        assert_eq!(model.route.id, step.model["route"]["id"], "{} step {index} decision model.route.id", cassette.name);
+        let input: DecisionRequestInput = serde_json::from_value(step.request.clone())
+            .unwrap_or_else(|error| panic!("{} step {index} decision request: {error}", cassette.name));
+        let request = input.with_model(model);
+        let exchanges = match step.exchanges.as_ref() {
+            Some(exchanges) if !exchanges.is_empty() => exchanges.clone(),
+            _ => panic!("{} step {index} decision exchanges: the step recorded no HTTP exchange", cassette.name),
+        };
+        let sender = Arc::new(RecordedSender {
+            cassette: cassette.name.clone(),
+            step: index,
+            label: "decision".to_string(),
+            chunk: None,
+            exchanges: Mutex::new(VecDeque::from(exchanges)),
+        });
+        let clock = Arc::new(FixedClock::new(cassette.clock_epoch_ms));
+        let context = ExecutionContext::new(clock.clone(), Arc::new(SequenceIds::new()), Arc::new(MapEnv::default()));
+        let executor = RequestExecutor::new(sender.clone(), None, clock);
+        let outcome = DecisionClient::generate(request, &executor, &context).await;
+        sender.assert_consumed();
+        assert_decision_outcome(cassette, index, step.error.as_ref(), outcome);
+    }
+}
+
+pub async fn replay_decision_group(group: &str) -> usize {
+    let corpus = crate::corpus::Corpus::load();
+    let mut steps = 0;
+    for cassette in corpus.cassettes.iter().filter(|cassette| cassette.group == group) {
+        replay_decision_cassette(cassette).await;
+        steps += cassette.steps.len();
+    }
+    steps
+}
+
+fn assert_decision_outcome(
+    cassette: &Cassette,
+    index: usize,
+    recorded_error: Option<&crate::corpus::StepError>,
+    outcome: Result<opencode_ai::modalities::decision::DecisionResponse, AiError>,
+) {
+    match recorded_error {
+        Some(recorded) => {
+            let error = match outcome {
+                Err(error) => error,
+                Ok(_) => panic!("{} step {index} decision error: the generate call succeeded", cassette.name),
+            };
+            let reason = serde_json::to_value(&error.reason)
+                .unwrap_or_else(|failure| panic!("{} step {index} decision error.reason: {failure}", cassette.name));
+            assert_eq!(reason, recorded.reason, "{} step {index} decision error.reason", cassette.name);
+            assert_eq!(
+                error.is_retryable(),
+                recorded.retryable,
+                "{} step {index} decision error.retryable",
+                cassette.name
+            );
+        }
+        None => {
+            let response = match outcome {
+                Ok(response) => response,
+                Err(error) => {
+                    panic!("{} step {index} decision result: the generate call failed with {error}", cassette.name)
+                }
+            };
+            let actual = serde_json::to_value(&response)
+                .unwrap_or_else(|failure| panic!("{} step {index} decision result: {failure}", cassette.name));
+            let Some(expected) = cassette.steps[index].result.as_ref() else {
+                panic!("{} step {index} decision result: the step recorded no result", cassette.name);
+            };
+            assert_eq!(actual, *expected, "{} step {index} decision result", cassette.name);
         }
     }
 }
@@ -637,11 +728,12 @@ async fn replay_websocket_cassette(cassette: &Cassette) {
 #[tokio::test]
 async fn every_in_scope_cassette_replays() {
     let corpus = crate::corpus::Corpus::load();
-    assert_eq!(corpus.cassettes.len(), 255, "in-scope cassette count");
+    assert_eq!(corpus.cassettes.len(), 264, "in-scope cassette count");
     let groups = [
         "anthropic-messages",
         "bedrock-converse",
         "chat-variants",
+        "decisions",
         "embeddings",
         "gateways",
         "gemini",
@@ -662,6 +754,8 @@ async fn every_in_scope_cassette_replays() {
     for cassette in &corpus.cassettes {
         if cassette.group == "embeddings" {
             replay_embedding_cassette(cassette).await;
+        } else if cassette.group == "decisions" {
+            replay_decision_cassette(cassette).await;
         } else if cassette.group == "openai-responses-websocket" {
             replay_websocket_cassette(cassette).await;
         } else {
@@ -669,7 +763,16 @@ async fn every_in_scope_cassette_replays() {
         }
         replayed += 1;
     }
-    assert_eq!(replayed, 255, "replayed cassette count");
+    assert_eq!(replayed, 264, "replayed cassette count");
+}
+
+#[tokio::test]
+async fn decision_cassettes() {
+    let corpus = crate::corpus::Corpus::load();
+    let cassettes = corpus.cassettes.iter().filter(|cassette| cassette.group == "decisions").count();
+    assert_eq!(cassettes, 9, "decision cassette count");
+    let steps = replay_decision_group("decisions").await;
+    assert_eq!(steps, 9, "decision step count");
 }
 
 #[tokio::test]

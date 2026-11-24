@@ -4,10 +4,13 @@ use opencode_api_types::js::encode_component;
 use serde_json::Value;
 
 use crate::Env;
+use crate::media::route::MediaEndpoint;
+use crate::protocols::cloudflare_run_decisions::{self, CloudflareRunDecisions};
 use crate::protocols::{anthropic_messages, openai_chat, openai_responses};
 use crate::providers::cloudflare_shared;
-use crate::providers::{RuntimeModel, Settings, language_model_with_route, open_responses_options};
+use crate::providers::{RuntimeModel, Settings, language_model_with_route, modality_options, open_responses_options};
 use crate::route::auth::{ApiKey, Auth, ProviderAuthOptions, api_key};
+use crate::route::decision::{DecisionRoute, DecisionRouteInput};
 use crate::route::endpoint::{Endpoint, PathPart};
 use crate::route::model::{Route, RouteTransport};
 use crate::schema::{AiError, RequestOptions, StringMap, merge_request_options};
@@ -110,6 +113,23 @@ pub fn chat_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result
         options: merged_options(settings, None, headers(settings, Some(gateway_id.as_str()))),
     };
     Ok(language_model_with_route(model_id.strip_prefix("workers-ai/").unwrap_or(model_id), ID, route, None, None))
+}
+
+pub fn decision_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result<RuntimeModel, AiError> {
+    let (transport, provider_options) = modality_options(settings, &DECLARED);
+    let transport = transport.map(|options| RequestOptions { headers: None, ..options });
+    let gateway_id = gateway_id(settings);
+    let route = DecisionRoute::make(DecisionRouteInput {
+        id: cloudflare_run_decisions::ID.to_string(),
+        provider: ID.to_string(),
+        protocol: Arc::new(CloudflareRunDecisions),
+        endpoint: MediaEndpoint::path("").with_base_url(cloudflare_shared::run_base_url(settings, NAME)?),
+        auth: rest_auth(settings),
+        headers: Some(headers(settings, Some(gateway_id.as_str()))),
+        provider_metadata_key: Some(ID.to_string()),
+        options: transport,
+    });
+    Ok(RuntimeModel::Decision(route.model(model_id, None, provider_options)))
 }
 
 fn is_native(settings: &Settings) -> bool {

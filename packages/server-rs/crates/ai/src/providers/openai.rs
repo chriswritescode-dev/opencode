@@ -5,15 +5,17 @@ use serde_json::{Map, Value, json};
 use crate::Env;
 use crate::media::route::MediaEndpoint;
 use crate::protocols::openai_chat;
+use crate::protocols::openai_decisions::{self, OpenAiDecisions};
 use crate::protocols::openai_embeddings::{self, OpenAiEmbeddings};
 use crate::protocols::openai_responses;
 use crate::providers::open_responses_options;
 use crate::providers::openai_options;
-use crate::providers::{RuntimeModel, Settings, embedding_options, language_model};
+use crate::providers::{RuntimeModel, Settings, language_model, modality_options};
 use crate::route::auth::{Auth, ProviderAuthOptions, api_key};
+use crate::route::decision::{DecisionRoute, DecisionRouteInput};
 use crate::route::embedding::{EmbeddingRoute, EmbeddingRouteInput};
 use crate::route::endpoint::{Endpoint, PathPart};
-use crate::schema::{AiError, RequestOptions, StringMap, merge_request_options};
+use crate::schema::{AiError, ProviderOptions, RequestOptions, StringMap, merge_request_options};
 
 const ID: &str = "openai";
 const EMBEDDING_DECLARED: [&str; 5] = ["apiKey", "baseURL", "organization", "project", "queryParams"];
@@ -56,7 +58,7 @@ pub fn chat_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result
 }
 
 pub fn embedding_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result<RuntimeModel, AiError> {
-    let (transport, provider_options) = embedding_options(settings, &EMBEDDING_DECLARED);
+    let (transport, provider_options) = modality_options(settings, &EMBEDDING_DECLARED);
     let mut transport = transport.unwrap_or_default();
     let mut headers = StringMap::new();
     if let Some(organization) = settings.string("organization") {
@@ -90,6 +92,22 @@ pub fn embedding_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> R
     Ok(RuntimeModel::Embedding(route.model(model_id, provider_options)))
 }
 
+pub fn decision_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result<RuntimeModel, AiError> {
+    let (transport, provider_options) = decision_options(settings);
+    let route = DecisionRoute::make(DecisionRouteInput {
+        id: openai_decisions::ID.to_string(),
+        provider: ID.to_string(),
+        protocol: Arc::new(OpenAiDecisions),
+        endpoint: MediaEndpoint::path(openai_decisions::PATH)
+            .with_base_url(settings.string("baseURL").unwrap_or(openai_decisions::DEFAULT_BASE_URL)),
+        auth: auth(settings),
+        headers: None,
+        provider_metadata_key: Some("openai".to_string()),
+        options: transport,
+    });
+    Ok(RuntimeModel::Decision(route.model(model_id, None, provider_options)))
+}
+
 fn auth(settings: &Settings) -> Auth {
     api_key(ProviderAuthOptions { api_key: settings.api_key(), auth: None }, &["OPENAI_API_KEY"], |credential| {
         credential.bearer()
@@ -120,4 +138,27 @@ fn request_options(settings: &Settings) -> Option<RequestOptions> {
     }
     let merged = RequestOptions { headers: (!headers.is_empty()).then_some(headers), ..options.unwrap_or_default() };
     (merged != RequestOptions::default()).then_some(merged)
+}
+
+fn decision_options(settings: &Settings) -> (Option<RequestOptions>, Option<ProviderOptions>) {
+    let (transport, provider_options) = modality_options(settings, &EMBEDDING_DECLARED);
+    let mut transport = transport.unwrap_or_default();
+    let mut headers = transport.headers.take().unwrap_or_default();
+    if let Some(organization) = settings.string("organization") {
+        headers.insert("OpenAI-Organization".to_string(), organization.to_string());
+    }
+    if let Some(project) = settings.string("project") {
+        headers.insert("OpenAI-Project".to_string(), project.to_string());
+    }
+    if let Some(query) = settings.query_params() {
+        let mut http = transport.http.take().unwrap_or_default();
+        let mut merged = http.query.take().unwrap_or_default();
+        for (key, value) in query.iter() {
+            merged.insert(key.to_string(), value.to_string());
+        }
+        http.query = Some(merged);
+        transport.http = Some(http);
+    }
+    transport.headers = (!headers.is_empty()).then_some(headers);
+    ((transport != RequestOptions::default()).then_some(transport), provider_options)
 }

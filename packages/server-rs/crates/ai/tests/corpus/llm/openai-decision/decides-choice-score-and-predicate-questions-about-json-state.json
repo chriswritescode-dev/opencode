@@ -1,0 +1,175 @@
+{
+  "cassette": "openai-decision/decides-choice-score-and-predicate-questions-about-json-state",
+  "protocol": "openai-decisions",
+  "routeId": "openai-decisions",
+  "clockEpochMs": 1767323045000,
+  "steps": [
+    {
+      "model": {
+        "id": "gpt-6-luna",
+        "provider": "openai",
+        "route": {
+          "id": "openai-decisions"
+        }
+      },
+      "request": {
+        "input": [
+          {
+            "type": "json",
+            "value": {
+              "ticket": "I was charged twice for the same invoice. Please refund the duplicate payment today.",
+              "plan": "pro"
+            }
+          }
+        ],
+        "questions": [
+          {
+            "name": "department",
+            "type": "choice",
+            "instructions": "Which team should handle this support request?",
+            "choices": [
+              {
+                "value": "billing",
+                "description": "Payments, invoices, refunds, or failed charges"
+              },
+              {
+                "value": "technical",
+                "description": "Bugs, outages, or integrations"
+              },
+              {
+                "value": "sales",
+                "description": "Pricing, upgrades, or new accounts"
+              }
+            ]
+          },
+          {
+            "name": "urgency",
+            "type": "score",
+            "instructions": "How urgent is this support request?",
+            "levels": [
+              {
+                "label": "Can wait for normal support"
+              },
+              {
+                "label": "Needs prompt attention"
+              },
+              {
+                "label": "Actively blocking revenue"
+              }
+            ]
+          },
+          {
+            "name": "refund",
+            "type": "predicate",
+            "instructions": "Is the customer asking for a refund?"
+          }
+        ]
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/openai",
+        "modelID": "gpt-6-luna",
+        "settings": {
+          "apiKey": "fixture"
+        },
+        "kind": "decision"
+      },
+      "transport": "http",
+      "operation": "decision.generate",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://api.openai.com/v1/decisions",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "851",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"gpt-6-luna\",\"input\":[{\"role\":\"user\",\"content\":[{\"type\":\"input_json\",\"data\":{\"ticket\":\"I was charged twice for the same invoice. Please refund the duplicate payment today.\",\"plan\":\"pro\"}}]}],\"questions\":[{\"name\":\"department\",\"type\":\"choice\",\"instructions\":\"Which team should handle this support request?\",\"choices\":[{\"value\":\"billing\",\"description\":\"Payments, invoices, refunds, or failed charges\"},{\"value\":\"technical\",\"description\":\"Bugs, outages, or integrations\"},{\"value\":\"sales\",\"description\":\"Pricing, upgrades, or new accounts\"}]},{\"name\":\"urgency\",\"type\":\"score\",\"instructions\":\"How urgent is this support request?\",\"levels\":[{\"label\":\"Can wait for normal support\"},{\"label\":\"Needs prompt attention\"},{\"label\":\"Actively blocking revenue\"}]},{\"name\":\"refund\",\"type\":\"predicate\",\"instructions\":\"Is the customer asking for a refund?\"}]}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"gpt-6-luna\",\"answers\":[{\"type\":\"choice\",\"name\":\"department\",\"choice\":\"billing\",\"probabilities\":[{\"value\":\"billing\",\"probability\":1.0},{\"value\":\"technical\",\"probability\":0.0},{\"value\":\"sales\",\"probability\":0.0}],\"confidence\":1.0},{\"type\":\"score\",\"name\":\"urgency\",\"score\":1.04,\"probabilities\":[{\"value\":0,\"label\":\"Can wait for normal support\",\"probability\":0.01},{\"value\":1,\"label\":\"Needs prompt attention\",\"probability\":0.94},{\"value\":2,\"label\":\"Actively blocking revenue\",\"probability\":0.05}],\"confidence\":0.91},{\"type\":\"predicate\",\"name\":\"refund\",\"probability\":1.0}],\"usage\":{\"input_tokens\":430,\"input_tokens_details\":{\"cached_tokens\":0,\"cache_write_tokens\":0},\"output_tokens\":0,\"output_tokens_details\":{\"reasoning_tokens\":0},\"total_tokens\":430}}"
+          }
+        }
+      ],
+      "result": {
+        "answers": [
+          {
+            "name": "department",
+            "type": "choice",
+            "choice": "billing",
+            "probabilities": [
+              {
+                "value": "billing",
+                "probability": 1
+              },
+              {
+                "value": "technical",
+                "probability": 0
+              },
+              {
+                "value": "sales",
+                "probability": 0
+              }
+            ],
+            "confidence": 1
+          },
+          {
+            "name": "urgency",
+            "type": "score",
+            "score": 1.04,
+            "probabilities": [
+              {
+                "value": 0,
+                "label": "Can wait for normal support",
+                "probability": 0.01
+              },
+              {
+                "value": 1,
+                "label": "Needs prompt attention",
+                "probability": 0.94
+              },
+              {
+                "value": 2,
+                "label": "Actively blocking revenue",
+                "probability": 0.05
+              }
+            ],
+            "confidence": 0.91
+          },
+          {
+            "name": "refund",
+            "type": "predicate",
+            "probability": 1
+          }
+        ],
+        "usage": {
+          "inputTokens": 430,
+          "outputTokens": 0,
+          "totalTokens": 430
+        },
+        "providerMetadata": {
+          "openai": {
+            "model": "gpt-6-luna",
+            "usage": {
+              "input_tokens": 430,
+              "input_tokens_details": {
+                "cached_tokens": 0,
+                "cache_write_tokens": 0
+              },
+              "output_tokens": 0,
+              "output_tokens_details": {
+                "reasoning_tokens": 0
+              },
+              "total_tokens": 430
+            }
+          }
+        }
+      }
+    }
+  ]
+}

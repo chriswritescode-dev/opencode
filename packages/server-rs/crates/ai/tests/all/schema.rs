@@ -8,7 +8,7 @@ use crate::corpus::Corpus;
 #[test]
 fn corpus_schema_round_trips() {
     let corpus = Corpus::load();
-    assert_eq!(corpus.cassettes.len(), 255, "unexpected cassette count");
+    assert_eq!(corpus.cassettes.len(), 264, "unexpected cassette count");
     let mut steps = 0usize;
     for cassette in &corpus.cassettes {
         assert!(!cassette.protocol.is_empty(), "{}: empty protocol", cassette.name);

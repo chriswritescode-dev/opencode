@@ -3,6 +3,7 @@
 mod auth;
 mod compile;
 mod corpus;
+mod decision_route;
 mod event_stream;
 mod executor;
 mod framing;

@@ -18,6 +18,7 @@ const {
   AmazonBedrock,
   AmazonBedrockMantle,
   Azure,
+  Baseten,
   Cerebras,
   CloudflareAIGateway,
   CloudflareWorkersAI,
@@ -33,8 +34,10 @@ const {
   Moonshot,
   OpenAI,
   OpenAICompatible,
+  OpenCode,
   OpenRouter,
   TogetherAI,
+  TypeSafeAI,
   VercelAIGateway,
   Venice,
   XAI,
@@ -2488,6 +2491,227 @@ const embeddingScenarios = [
   }),
 ]
 
+const decisionQuestions = [
+  {
+    name: "department",
+    type: "choice",
+    instructions: "Which team should handle this support request?",
+    choices: [
+      { value: "billing", description: "Payments, invoices, refunds, or failed charges" },
+      { value: "technical", description: "Bugs, outages, or integrations" },
+      { value: "sales", description: "Pricing, upgrades, or new accounts" },
+    ],
+  },
+  {
+    name: "urgency",
+    type: "score",
+    instructions: "How urgent is this support request?",
+    levels: [
+      { label: "Can wait for normal support" },
+      { label: "Needs prompt attention" },
+      { label: "Actively blocking revenue" },
+    ],
+  },
+  { name: "refund", type: "predicate", instructions: "Is the customer asking for a refund?" },
+]
+const decisionTicket = "I was charged twice for the same invoice. Please refund the duplicate payment today."
+const decisionVariant = (scenario: Scenario) => ({ group: "decisions", scenario })
+
+const decisionScenarios = [
+  decisionVariant({
+    cassette: "baseten-decision/decides-choice-score-and-predicate-questions",
+    protocol: "baseten-system-one",
+    operation: "decision.generate",
+    provider: {
+      package: "@opencode/ai/providers/baseten/decisions",
+      modelID: "decision-models/baseten-elephant-9b-latest",
+      settings: { apiKey: "fixture" },
+      kind: "decision",
+    },
+    run: (context) => {
+      const model = Baseten.configure({ apiKey: "fixture" }).decision("decision-models/baseten-elephant-9b-latest")
+      const request = ai.decision.request({
+        model,
+        input: [{ type: "text", text: decisionTicket }],
+        questions: decisionQuestions,
+      })
+      return context.operation("decision.generate", request, ai.decision.generate(request))
+    },
+  }),
+  decisionVariant({
+    cassette: "cloudflare-ai-gateway-decision/decides-choice-score-and-predicate-questions",
+    protocol: "cloudflare-run-decisions",
+    operation: "decision.generate",
+    provider: {
+      package: "@opencode/ai/providers/cloudflare-ai-gateway/decisions",
+      modelID: "typesafe/jev",
+      settings: { accountId: "fixture-account", gatewayApiKey: "fixture" },
+      kind: "decision",
+    },
+    redact: {
+      url: (url) => url.replace(/\/client\/v4\/accounts\/[^/]+\//, "/client/v4/accounts/{account}/"),
+    },
+    run: (context) => {
+      const model = CloudflareAIGateway.configure({
+        accountId: "fixture-account",
+        gatewayApiKey: "fixture",
+      }).decision("typesafe/jev")
+      const request = ai.decision.request({
+        model,
+        input: [{ type: "text", text: decisionTicket }],
+        questions: decisionQuestions,
+      })
+      return context.operation("decision.generate", request, ai.decision.generate(request))
+    },
+  }),
+  decisionVariant({
+    cassette: "cloudflare-workers-ai-decision/decides-choice-score-and-predicate-questions",
+    protocol: "cloudflare-run-decisions",
+    operation: "decision.generate",
+    provider: {
+      package: "@opencode/ai/providers/cloudflare-workers-ai/decisions",
+      modelID: "@cf/cloudflare/clef",
+      settings: { accountId: "fixture-account", apiKey: "fixture" },
+      kind: "decision",
+    },
+    redact: {
+      url: (url) => url.replace(/\/client\/v4\/accounts\/[^/]+\//, "/client/v4/accounts/{account}/"),
+    },
+    run: (context) => {
+      const model = CloudflareWorkersAI.configure({
+        accountId: "fixture-account",
+        apiKey: "fixture",
+      }).decision("@cf/cloudflare/clef")
+      const request = ai.decision.request({
+        model,
+        input: [{ type: "text", text: decisionTicket }],
+        questions: decisionQuestions,
+      })
+      return context.operation("decision.generate", request, ai.decision.generate(request))
+    },
+  }),
+  decisionVariant({
+    cassette: "digitalocean-decision/decides-choice-score-and-predicate-questions",
+    protocol: "system-one",
+    operation: "decision.generate",
+    provider: {
+      package: "@opencode/ai/providers/digitalocean/decisions",
+      modelID: "typesafe-jev-1.13.0",
+      settings: { apiKey: "fixture" },
+      kind: "decision",
+    },
+    run: (context) => {
+      const model = DigitalOcean.configure({ apiKey: "fixture" }).decision("typesafe-jev-1.13.0")
+      const request = ai.decision.request({
+        model,
+        input: [{ type: "text", text: decisionTicket }],
+        questions: decisionQuestions,
+      })
+      return context.operation("decision.generate", request, ai.decision.generate(request))
+    },
+  }),
+  decisionVariant({
+    cassette: "google-decision/decides-choice-score-and-predicate-questions",
+    protocol: "google-decisions",
+    operation: "decision.generate",
+    provider: {
+      package: "@opencode/ai/providers/google/decisions",
+      modelID: "gemini-decision-1",
+      settings: { apiKey: "fixture" },
+      kind: "decision",
+    },
+    run: (context) => {
+      const model = Google.configure({ apiKey: "fixture" }).decision("gemini-decision-1")
+      const request = ai.decision.request({
+        model,
+        input: [{ type: "text", text: decisionTicket }],
+        questions: decisionQuestions,
+      })
+      return context.operation("decision.generate", request, ai.decision.generate(request))
+    },
+  }),
+  decisionVariant({
+    cassette: "openai-decision/decides-choice-score-and-predicate-questions-about-json-state",
+    protocol: "openai-decisions",
+    operation: "decision.generate",
+    provider: {
+      package: "@opencode/ai/providers/openai",
+      modelID: "gpt-6-luna",
+      settings: { apiKey: "fixture" },
+      kind: "decision",
+    },
+    run: (context) => {
+      const model = OpenAI.configure({ apiKey: "fixture" }).decision("gpt-6-luna")
+      const request = ai.decision.request({
+        model,
+        input: { ticket: decisionTicket, plan: "pro" },
+        questions: decisionQuestions,
+      })
+      return context.operation("decision.generate", request, ai.decision.generate(request))
+    },
+  }),
+  decisionVariant({
+    cassette: "opencode-decision/decides-choice-score-and-predicate-questions",
+    protocol: "system-one",
+    operation: "decision.generate",
+    provider: {
+      package: "@opencode/ai/providers/opencode/decisions",
+      modelID: "jev-1.13-free",
+      settings: { apiKey: "fixture" },
+      kind: "decision",
+    },
+    run: (context) => {
+      const model = OpenCode.configure({ apiKey: "fixture" }).decision("jev-1.13-free")
+      const request = ai.decision.request({
+        model,
+        input: [{ type: "text", text: decisionTicket }],
+        questions: decisionQuestions,
+      })
+      return context.operation("decision.generate", request, ai.decision.generate(request))
+    },
+  }),
+  decisionVariant({
+    cassette: "openrouter-decision/decides-choice-score-and-predicate-questions",
+    protocol: "system-one",
+    operation: "decision.generate",
+    provider: {
+      package: "@opencode/ai/providers/openrouter/decisions",
+      modelID: "typesafe/jev-1.13",
+      settings: { apiKey: "fixture" },
+      kind: "decision",
+    },
+    run: (context) => {
+      const model = OpenRouter.configure({ apiKey: "fixture" }).decision("typesafe/jev-1.13")
+      const request = ai.decision.request({
+        model,
+        input: [{ type: "text", text: decisionTicket }],
+        questions: decisionQuestions,
+      })
+      return context.operation("decision.generate", request, ai.decision.generate(request))
+    },
+  }),
+  decisionVariant({
+    cassette: "typesafe-decision/decides-choice-score-and-predicate-questions",
+    protocol: "system-one",
+    operation: "decision.generate",
+    provider: {
+      package: "@opencode/ai/providers/typesafe-ai/decisions",
+      modelID: "jev-latest",
+      settings: { apiKey: "fixture" },
+      kind: "decision",
+    },
+    run: (context) => {
+      const model = TypeSafeAI.configure({ apiKey: "fixture" }).decision("jev-latest")
+      const request = ai.decision.request({
+        model,
+        input: [{ type: "text", text: decisionTicket }],
+        questions: decisionQuestions,
+      })
+      return context.operation("decision.generate", request, ai.decision.generate(request))
+    },
+  }),
+]
+
 const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scenario }> = [
   {
     group: "anthropic-messages",
@@ -4393,6 +4617,7 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
   ...vendorVariantScenarios,
   ...nativeVendorScenarios,
   ...embeddingScenarios,
+  ...decisionScenarios,
 ]
 
 const cassettes = []

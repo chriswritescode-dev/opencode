@@ -7,7 +7,7 @@ use crate::media::route::MediaEndpoint;
 use crate::protocols::cohere_chat::{self, CohereChat};
 use crate::protocols::openai_chat::{self, OpenAiChat};
 use crate::protocols::openai_embeddings::{self, OpenAiEmbeddings};
-use crate::providers::{RuntimeModel, Settings, embedding_options, language_model, language_model_with_route};
+use crate::providers::{RuntimeModel, Settings, language_model, language_model_with_route, modality_options};
 use crate::route::auth::{Auth, ProviderAuthOptions, api_key};
 use crate::route::embedding::{EmbeddingRoute, EmbeddingRouteInput};
 use crate::route::endpoint::Endpoint;
@@ -60,7 +60,7 @@ pub fn chat_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result
 }
 
 pub fn embedding_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result<RuntimeModel, AiError> {
-    let (transport, provider_options) = embedding_options(settings, &DECLARED);
+    let (transport, provider_options) = modality_options(settings, &DECLARED);
     let route = EmbeddingRoute::make(EmbeddingRouteInput {
         id: openai_embeddings::ID.to_string(),
         provider: ID.to_string(),

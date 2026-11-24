@@ -10,7 +10,7 @@ use crate::protocols::alibaba_responses::AlibabaResponses;
 use crate::protocols::open_responses::PATH as RESPONSES_PATH;
 use crate::protocols::openai_embeddings::{self, OpenAiEmbeddings};
 use crate::protocols::shared::invalid_request;
-use crate::providers::{RuntimeModel, Settings, embedding_options, language_model_with_route};
+use crate::providers::{RuntimeModel, Settings, language_model_with_route, modality_options};
 use crate::route::auth::{Auth, ProviderAuthOptions, api_key};
 use crate::route::embedding::{EmbeddingRoute, EmbeddingRouteInput};
 use crate::route::endpoint::Endpoint;
@@ -80,7 +80,7 @@ pub fn responses_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> R
 }
 
 pub fn embedding_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result<RuntimeModel, AiError> {
-    let (transport, provider_options) = embedding_options(settings, &DECLARED);
+    let (transport, provider_options) = modality_options(settings, &DECLARED);
     let route = EmbeddingRoute::make(EmbeddingRouteInput {
         id: openai_embeddings::ID.to_string(),
         provider: ID.to_string(),

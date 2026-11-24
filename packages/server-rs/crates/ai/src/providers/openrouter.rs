@@ -4,12 +4,15 @@ use serde_json::{Map, Number, Value, json};
 
 use crate::Env;
 use crate::ExecutionContext;
+use crate::media::route::MediaEndpoint;
 use crate::protocols::open_responses::{self, OpenResponses, PATH as RESPONSES_PATH};
 use crate::protocols::openai_chat::{self, AssistantTransform, OpenAiChat, PATH as CHAT_PATH};
 use crate::protocols::shared;
+use crate::protocols::system_one::{self, SystemOne};
 use crate::protocols::utils::cache::CacheControl;
-use crate::providers::{RuntimeModel, Settings, language_model_with_route, open_responses_options};
+use crate::providers::{RuntimeModel, Settings, language_model_with_route, modality_options, open_responses_options};
 use crate::route::auth::{Auth, ProviderAuthOptions, api_key};
+use crate::route::decision::{DecisionRoute, DecisionRouteInput};
 use crate::route::endpoint::Endpoint;
 use crate::route::framing::Definition;
 use crate::route::model::{Model, ResolvedRequest, Route, RouteTransport};
@@ -137,6 +140,21 @@ pub fn responses_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> R
         options,
     };
     Ok(language_model_with_route(model_id, ID, route, None, None))
+}
+
+pub fn decision_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result<RuntimeModel, AiError> {
+    let (transport, provider_options) = modality_options(settings, &DECLARED);
+    let route = DecisionRoute::make(DecisionRouteInput {
+        id: system_one::ID.to_string(),
+        provider: ID.to_string(),
+        protocol: Arc::new(SystemOne),
+        endpoint: MediaEndpoint::path(system_one::PATH).with_base_url(settings.string("baseURL").unwrap_or(BASE_URL)),
+        auth: auth(settings),
+        headers: None,
+        provider_metadata_key: Some(METADATA_KEY.to_string()),
+        options: transport,
+    });
+    Ok(RuntimeModel::Decision(route.model(model_id, Some(json!({ "mediaInput": "state" })), provider_options)))
 }
 
 fn auth(settings: &Settings) -> Auth {

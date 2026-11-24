@@ -276,6 +276,11 @@
       "group": "wrapped-core"
     },
     {
+      "cassette": "baseten-decision/decides-choice-score-and-predicate-questions",
+      "protocol": "baseten-system-one",
+      "group": "decisions"
+    },
+    {
       "cassette": "bedrock-converse-cache/writes-then-reads-cachepoint-on-identical-second-call",
       "protocol": "bedrock-converse",
       "group": "bedrock-converse"
@@ -371,6 +376,11 @@
       "group": "openai-chat"
     },
     {
+      "cassette": "cloudflare-ai-gateway-decision/decides-choice-score-and-predicate-questions",
+      "protocol": "cloudflare-run-decisions",
+      "group": "decisions"
+    },
+    {
       "cassette": "cloudflare-ai-gateway/cloudflare-ai-gateway-claude-haiku-4-5-text",
       "protocol": "anthropic-messages",
       "group": "gateways"
@@ -399,6 +409,11 @@
       "cassette": "cloudflare-ai-gateway/cloudflare-ai-gateway-workers-ai-llama-3-1-8b-text",
       "protocol": "openai-chat",
       "group": "gateways"
+    },
+    {
+      "cassette": "cloudflare-workers-ai-decision/decides-choice-score-and-predicate-questions",
+      "protocol": "cloudflare-run-decisions",
+      "group": "decisions"
     },
     {
       "cassette": "cloudflare-workers-ai/cloudflare-workers-ai-gpt-oss-20b-tools-tool-call",
@@ -471,6 +486,11 @@
       "group": "chat-variants"
     },
     {
+      "cassette": "digitalocean-decision/decides-choice-score-and-predicate-questions",
+      "protocol": "system-one",
+      "group": "decisions"
+    },
+    {
       "cassette": "digitalocean-responses/calls-a-freeform-text-tool",
       "protocol": "open-responses",
       "group": "chat-variants"
@@ -494,6 +514,11 @@
       "cassette": "gemini/gemini-2-5-flash-image",
       "protocol": "gemini",
       "group": "gemini"
+    },
+    {
+      "cassette": "google-decision/decides-choice-score-and-predicate-questions",
+      "protocol": "google-decisions",
+      "group": "decisions"
     },
     {
       "cassette": "google-embedding/embeds-an-image-and-text-into-one-vector-each",
@@ -941,6 +966,11 @@
       "group": "openai-chat"
     },
     {
+      "cassette": "openai-decision/decides-choice-score-and-predicate-questions-about-json-state",
+      "protocol": "openai-decisions",
+      "group": "decisions"
+    },
+    {
       "cassette": "openai-embedding/embeds-text-with-requested-dimensions",
       "protocol": "openai-embeddings",
       "group": "embeddings"
@@ -994,6 +1024,16 @@
       "cassette": "openai-responses/openai-responses-gpt-5-5-tool-loop",
       "protocol": "openai-responses",
       "group": "open-responses"
+    },
+    {
+      "cassette": "opencode-decision/decides-choice-score-and-predicate-questions",
+      "protocol": "system-one",
+      "group": "decisions"
+    },
+    {
+      "cassette": "openrouter-decision/decides-choice-score-and-predicate-questions",
+      "protocol": "system-one",
+      "group": "decisions"
     },
     {
       "cassette": "openrouter-reasoning",
@@ -1069,6 +1109,11 @@
       "cassette": "pdf/xai-user-input",
       "protocol": "xai-responses",
       "group": "vendor-variants"
+    },
+    {
+      "cassette": "typesafe-decision/decides-choice-score-and-predicate-questions",
+      "protocol": "system-one",
+      "group": "decisions"
     },
     {
       "cassette": "venice-chat/claude-opus-4-8-preserves-reasoning-through-a-tool-loop-and-follow-up",

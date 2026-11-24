@@ -9,7 +9,7 @@ use crate::protocols::shared::invalid_request;
 use crate::protocols::{anthropic_messages, open_responses_channel, openai_chat, openai_embeddings, openai_responses};
 use crate::providers::open_responses_options;
 use crate::providers::openai_options;
-use crate::providers::{RuntimeModel, Settings, embedding_options, language_model_with_route};
+use crate::providers::{RuntimeModel, Settings, language_model_with_route, modality_options};
 use crate::route::auth::{Auth, ProviderAuthOptions, api_key};
 use crate::route::embedding::{EmbeddingRoute, EmbeddingRouteInput};
 use crate::route::endpoint::{Endpoint, PathPart, trim_base_url};
@@ -101,7 +101,7 @@ pub fn messages_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Re
 }
 
 pub fn embedding_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result<RuntimeModel, AiError> {
-    let (transport, provider_options) = embedding_options(settings, &DECLARED);
+    let (transport, provider_options) = modality_options(settings, &DECLARED);
     let endpoint = openai_endpoint(settings, model_id, openai_embeddings::PATH)?;
     let endpoint = MediaEndpoint {
         base_url: endpoint.base_url,

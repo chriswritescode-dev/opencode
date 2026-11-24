@@ -11,7 +11,7 @@ use crate::protocols::google_embed_content::GoogleVertexEmbedContent;
 use crate::protocols::google_vertex_predict_embeddings::{self, GoogleVertexPredictEmbeddings};
 use crate::protocols::shared::invalid_request;
 use crate::providers::google_vertex_shared::{self, OAuthInput};
-use crate::providers::{RuntimeModel, Settings, embedding_options, language_model_with_route};
+use crate::providers::{RuntimeModel, Settings, language_model_with_route, modality_options};
 use crate::route::auth::Auth;
 use crate::route::embedding::{EmbeddingProtocol, EmbeddingRoute, EmbeddingRouteInput};
 use crate::route::endpoint::{Endpoint, PathPart};
@@ -148,7 +148,7 @@ pub fn embedding_model(model_id: &str, settings: &Settings, env: &dyn Env) -> Re
             project.as_deref(),
         )?,
     };
-    let (transport, provider_options) = embedding_options(settings, &google_vertex_shared::CONNECTION_KEYS);
+    let (transport, provider_options) = modality_options(settings, &google_vertex_shared::CONNECTION_KEYS);
     if model_id.starts_with("gemini-embedding-2") {
         if api_key.is_some() && configured_base.is_none() {
             return Err(invalid_request(

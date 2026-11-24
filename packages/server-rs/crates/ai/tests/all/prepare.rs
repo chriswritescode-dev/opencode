@@ -1536,7 +1536,7 @@ fn compile_rejects_a_later_local_file_reference() {
 #[test]
 fn every_corpus_descriptor_requires_protocol() {
     let corpus = crate::corpus::Corpus::load();
-    assert_eq!(corpus.cassettes.len(), 255);
+    assert_eq!(corpus.cassettes.len(), 264);
     let registry = ProtocolRegistry::new();
     let mut steps = 0usize;
     for cassette in &corpus.cassettes {

@@ -61,9 +61,12 @@ export const GROUPS: Record<string, { protocols: string[] }> = {
   embeddings: {
     protocols: ["openai-embeddings", "google-embed-content", "google-vertex-predict-embeddings"],
   },
+  decisions: {
+    protocols: ["system-one", "baseten-system-one", "openai-decisions", "google-decisions", "cloudflare-run-decisions"],
+  },
 }
 
-export const EXPECTED_CASSETTES = 255
+export const EXPECTED_CASSETTES = 264
 const EXPECTED_ADC_CASES = 11
 
 const exporter = `${tree}/exporter`

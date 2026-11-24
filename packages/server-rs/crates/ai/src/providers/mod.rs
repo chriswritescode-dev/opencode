@@ -10,6 +10,7 @@ pub mod amazon_bedrock_mantle;
 pub mod anthropic;
 pub mod anthropic_compatible;
 pub mod azure;
+pub mod baseten;
 pub mod cerebras;
 pub mod cloudflare_ai_gateway;
 pub mod cloudflare_shared;
@@ -36,9 +37,11 @@ pub mod openai;
 pub mod openai_compatible;
 pub mod openai_compatible_responses;
 pub mod openai_options;
+pub mod opencode;
 pub mod openrouter;
 pub mod settings;
 pub mod togetherai;
+pub mod typesafe_ai;
 pub mod venice;
 pub mod vercel_ai_gateway;
 pub mod xai;
@@ -52,9 +55,10 @@ pub use settings::Settings;
 pub enum RuntimeModel {
     Language(Model),
     Embedding(crate::modalities::embedding::EmbeddingModel),
+    Decision(crate::modalities::decision::DecisionModel),
 }
 
-pub(crate) fn embedding_options(
+pub(crate) fn modality_options(
     settings: &Settings,
     declared: &[&str],
 ) -> (Option<crate::schema::RequestOptions>, Option<crate::schema::ProviderOptions>) {
@@ -119,6 +123,7 @@ pub type Entry = fn(&str, &Settings, &dyn Env) -> Result<RuntimeModel, AiError>;
 
 pub struct ProviderPackages {
     entries: BTreeMap<&'static str, Entry>,
+    decisions: BTreeMap<&'static str, Entry>,
 }
 
 impl ProviderPackages {
@@ -141,16 +146,22 @@ impl ProviderPackages {
             ("@opencode/ai/providers/azure/embeddings", azure::embedding_model as Entry),
             ("@opencode/ai/providers/azure/messages", azure::messages_model as Entry),
             ("@opencode/ai/providers/azure/responses", azure::responses_model as Entry),
+            ("@opencode/ai/providers/baseten", baseten::model as Entry),
+            ("@opencode/ai/providers/baseten/decisions", baseten::decision_model as Entry),
             ("@opencode/ai/providers/cerebras", cerebras::model as Entry),
             ("@opencode/ai/providers/cloudflare-ai-gateway", cloudflare_ai_gateway::model as Entry),
+            ("@opencode/ai/providers/cloudflare-ai-gateway/decisions", cloudflare_ai_gateway::decision_model as Entry),
             ("@opencode/ai/providers/cloudflare-workers-ai", cloudflare_workers_ai::model as Entry),
+            ("@opencode/ai/providers/cloudflare-workers-ai/decisions", cloudflare_workers_ai::decision_model as Entry),
             ("@opencode/ai/providers/cohere", cohere::model as Entry),
             ("@opencode/ai/providers/cohere/chat", cohere::chat_model as Entry),
             ("@opencode/ai/providers/cohere/embeddings", cohere::embedding_model as Entry),
             ("@opencode/ai/providers/deepinfra", deepinfra::model as Entry),
             ("@opencode/ai/providers/digitalocean", digitalocean::model as Entry),
+            ("@opencode/ai/providers/digitalocean/decisions", digitalocean::decision_model as Entry),
             ("@opencode/ai/providers/digitalocean/responses", digitalocean::responses_model as Entry),
             ("@opencode/ai/providers/google", google::model as Entry),
+            ("@opencode/ai/providers/google/decisions", google::decision_model as Entry),
             ("@opencode/ai/providers/google/embeddings", google::embedding_model as Entry),
             ("@opencode/ai/providers/google/interactions", google::interactions_model as Entry),
             ("@opencode/ai/providers/google-vertex", google_vertex::model as Entry),
@@ -181,15 +192,20 @@ impl ProviderPackages {
             ("@opencode/ai/providers/openai/embeddings", openai::embedding_model as Entry),
             ("@opencode/ai/providers/openai/responses", openai::model as Entry),
             ("@opencode/ai/providers/openai-compatible", openai_compatible::model as Entry),
+            ("@opencode/ai/providers/openai-compatible/decisions", openai_compatible::decision_model as Entry),
             ("@opencode/ai/providers/openai-compatible-responses", openai_compatible_responses::model as Entry),
+            ("@opencode/ai/providers/opencode/decisions", opencode::decision_model as Entry),
             ("@opencode/ai/providers/openrouter", openrouter::model as Entry),
+            ("@opencode/ai/providers/openrouter/decisions", openrouter::decision_model as Entry),
             ("@opencode/ai/providers/openrouter/responses", openrouter::responses_model as Entry),
             ("@opencode/ai/providers/togetherai", togetherai::model as Entry),
+            ("@opencode/ai/providers/typesafe-ai/decisions", typesafe_ai::decision_model as Entry),
             ("@opencode/ai/providers/venice", venice::model as Entry),
             ("@opencode/ai/providers/venice/responses", venice::responses_model as Entry),
             ("@opencode/ai/providers/vercel-ai-gateway", vercel_ai_gateway::model as Entry),
             ("@opencode/ai/providers/vercel-ai-gateway/chat", vercel_ai_gateway::chat_model as Entry),
             ("@opencode/ai/providers/vercel-ai-gateway/messages", vercel_ai_gateway::messages_model as Entry),
+            ("@opencode/ai/providers/vercel-ai-gateway/decisions", vercel_ai_gateway::decision_model as Entry),
             ("@opencode/ai/providers/vercel-ai-gateway/responses", vercel_ai_gateway::responses_model as Entry),
             ("@opencode/ai/providers/xai", xai::model as Entry),
             ("@opencode/ai/providers/zai", zai::model as Entry),
@@ -199,7 +215,24 @@ impl ProviderPackages {
             ("@opencode/ai/providers/zai-coding-plan/messages", zai_coding_plan::messages_model as Entry),
             ("@opencode/ai/providers/zai-coding-plan/responses", zai_coding_plan::responses_model as Entry),
         ]);
-        Self { entries }
+        let decisions = BTreeMap::from([
+            ("@opencode/ai/providers/baseten", baseten::decision_model as Entry),
+            ("@opencode/ai/providers/baseten/decisions", baseten::decision_model as Entry),
+            ("@opencode/ai/providers/cloudflare-ai-gateway/decisions", cloudflare_ai_gateway::decision_model as Entry),
+            ("@opencode/ai/providers/cloudflare-workers-ai/decisions", cloudflare_workers_ai::decision_model as Entry),
+            ("@opencode/ai/providers/digitalocean/decisions", digitalocean::decision_model as Entry),
+            ("@opencode/ai/providers/google/decisions", google::decision_model as Entry),
+            ("@opencode/ai/providers/openai", openai::decision_model as Entry),
+            ("@opencode/ai/providers/openai-compatible/decisions", openai_compatible::decision_model as Entry),
+            ("@opencode/ai/providers/opencode", opencode::decision_model as Entry),
+            ("@opencode/ai/providers/opencode/decisions", opencode::decision_model as Entry),
+            ("@opencode/ai/providers/openrouter", openrouter::decision_model as Entry),
+            ("@opencode/ai/providers/openrouter/decisions", openrouter::decision_model as Entry),
+            ("@opencode/ai/providers/typesafe-ai", typesafe_ai::decision_model as Entry),
+            ("@opencode/ai/providers/typesafe-ai/decisions", typesafe_ai::decision_model as Entry),
+            ("@opencode/ai/providers/vercel-ai-gateway/decisions", vercel_ai_gateway::decision_model as Entry),
+        ]);
+        Self { entries, decisions }
     }
 
     pub fn model(
@@ -210,6 +243,17 @@ impl ProviderPackages {
         env: &dyn Env,
     ) -> Result<RuntimeModel, AiError> {
         let entry = self.entries.get(specifier).ok_or_else(|| unknown_package(specifier))?;
+        entry(model_id, settings, env)
+    }
+
+    pub fn decision(
+        &self,
+        specifier: &str,
+        model_id: &str,
+        settings: &Settings,
+        env: &dyn Env,
+    ) -> Result<RuntimeModel, AiError> {
+        let entry = self.decisions.get(specifier).ok_or_else(|| unknown_package(specifier))?;
         entry(model_id, settings, env)
     }
 }
