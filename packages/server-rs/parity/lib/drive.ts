@@ -118,12 +118,15 @@ type EventStream = { close: () => Promise<void>; state: StreamState }
 
 async function openEventStream(base: string, side: string, events: unknown[]): Promise<EventStream> {
   const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(new Error(`no response within ${eventTimeout} ms`)), eventTimeout)
   const response = await fetch(new URL("/api/event", base), {
     headers: { authorization: `Basic ${credentials}` },
     signal: controller.signal,
-  }).catch((error: unknown) => {
-    throw new Error(`side ${side} event stream failed: ${message(error)}`)
   })
+    .catch((error: unknown) => {
+      throw new Error(`side ${side} event stream failed: ${message(error)}`)
+    })
+    .finally(() => clearTimeout(timer))
   if (!response.ok || response.body === null) {
     const status = response.status
     controller.abort()

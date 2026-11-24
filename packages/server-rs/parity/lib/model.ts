@@ -49,11 +49,12 @@ async function respond(request: Request, state: State): Promise<Response> {
   const accepted = request.method === "POST" && routes.has(pathname)
   const reply = accepted ? state.replies[state.consumed] : undefined
   if (reply !== undefined) state.consumed += 1
-  const body = await readBody(request)
-  state.log.push({ method: request.method, path: pathname, body })
+  const entry: ModelRequest = { method: request.method, path: pathname, body: undefined }
+  state.log.push(entry)
+  entry.body = await readBody(request)
   if (!accepted) return error(404, "not found")
   if (reply === undefined) return failure(state, "unscripted model request")
-  return encode(reply, pathname, body, state)
+  return encode(reply, pathname, entry.body, state)
 }
 
 async function encode(reply: Reply, pathname: string, body: unknown, state: State) {
