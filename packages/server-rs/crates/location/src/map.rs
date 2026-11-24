@@ -23,14 +23,22 @@ pub struct LocationMap<T: LocationServices> {
     inner: Arc<Inner<T>>,
 }
 
+impl<T: LocationServices> Clone for LocationMap<T> {
+    fn clone(&self) -> Self {
+        LocationMap { inner: self.inner.clone() }
+    }
+}
+
 impl<T: LocationServices> LocationMap<T> {
     pub fn new(
         boot: impl Fn(LocationRef) -> BoxFuture<'static, Result<Arc<T>, BootError>> + Send + Sync + 'static,
     ) -> Self {
+        let (shutdown, _) = watch::channel(false);
         LocationMap {
             inner: Arc::new(Inner {
                 boot: Box::new(boot),
                 state: Mutex::new(MapState { slots: IndexMap::new(), closed: false }),
+                shutdown,
             }),
         }
     }
@@ -98,7 +106,20 @@ impl<T: LocationServices> LocationMap<T> {
         self.inner.state.lock().await.slots.contains_key(&key)
     }
 
+    pub async fn services(&self, reference: &LocationRef) -> Option<Arc<T>> {
+        let key = reference.canonical();
+        match self.inner.state.lock().await.slots.get(&key) {
+            Some(Slot::Ready(entry)) => Some(entry.services.clone()),
+            _ => None,
+        }
+    }
+
+    pub fn shutdown_signal(&self) -> watch::Receiver<bool> {
+        self.inner.shutdown.subscribe()
+    }
+
     pub async fn shutdown_all(&self) {
+        self.inner.shutdown.send_replace(true);
         let ready = {
             let mut state = self.inner.state.lock().await;
             state.closed = true;
@@ -159,6 +180,7 @@ impl<T: LocationServices> Drop for Lease<T> {
 struct Inner<T: LocationServices> {
     boot: BootFn<T>,
     state: Mutex<MapState<T>>,
+    shutdown: watch::Sender<bool>,
 }
 
 struct MapState<T: LocationServices> {

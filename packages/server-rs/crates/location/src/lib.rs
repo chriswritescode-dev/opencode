@@ -1,3 +1,4 @@
+pub mod activity;
 pub mod environment;
 pub mod events;
 pub mod lifecycle;
