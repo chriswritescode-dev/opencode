@@ -1,5 +1,13 @@
+use std::convert::Infallible;
 use std::time::Duration;
 
+use bytes::Bytes;
+use http::{Request, StatusCode};
+use http_body_util::{BodyExt, Empty};
+use hyper::client::conn::http1 as client_http1;
+use hyper::server::conn::http1 as server_http1;
+use hyper::service::service_fn;
+use hyper_util::rt::TokioIo;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::oneshot;
@@ -27,4 +35,36 @@ async fn reaps_finished_connections_and_stops_on_shutdown() {
     }
     sender.send(()).expect("a shutdown");
     tokio::time::timeout(Duration::from_secs(5), task).await.expect("serve to stop").expect("a task");
+}
+
+#[tokio::test]
+async fn erroring_stream_aborts_the_connection() {
+    let listener = TcpListener::bind("127.0.0.1:0").await.expect("a listener");
+    let address = listener.local_addr().expect("a local address");
+    let server = tokio::spawn(async move {
+        let (stream, _) = listener.accept().await.expect("a connection");
+        let service = service_fn(|_request| async {
+            let body = futures_util::stream::unfold(0u8, |state| async move {
+                match state {
+                    0 => Some((Ok::<_, std::io::Error>(Bytes::from_static(b"data: one\n\n")), 1)),
+                    1 => {
+                        tokio::time::sleep(Duration::from_millis(50)).await;
+                        Some((Err(std::io::Error::other("stream failed")), 2))
+                    }
+                    _ => None,
+                }
+            });
+            Ok::<_, Infallible>(opencode_http::response::stream(StatusCode::OK, "text/event-stream", &[], body))
+        });
+        let _ = server_http1::Builder::new().serve_connection(TokioIo::new(stream), service).await;
+    });
+    let stream = TcpStream::connect(address).await.expect("a connection");
+    let (mut sender, connection) = client_http1::handshake(TokioIo::new(stream)).await.expect("a handshake");
+    tokio::spawn(connection);
+    let request =
+        Request::builder().uri("/").header("host", "localhost").body(Empty::<Bytes>::new()).expect("a request");
+    let response = sender.send_request(request).await.expect("a response");
+    assert_eq!(response.status(), StatusCode::OK);
+    assert!(response.into_body().collect().await.is_err(), "an erroring stream must abort the response");
+    server.await.expect("the server task");
 }

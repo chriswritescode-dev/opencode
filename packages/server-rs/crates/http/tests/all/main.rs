@@ -81,13 +81,13 @@ fn authorized(method: &str, uri: &str) -> Request<Bytes> {
     request_with(method, uri, &[("authorization", credential.as_str())])
 }
 
-async fn text(response: http::Response<http_body_util::Full<Bytes>>) -> String {
+async fn text(response: opencode_http::response::Response) -> String {
     use http_body_util::BodyExt;
     let bytes = response.into_body().collect().await.expect("a body").to_bytes();
     String::from_utf8(bytes.to_vec()).expect("utf-8")
 }
 
-async fn body(response: http::Response<http_body_util::Full<Bytes>>) -> Bytes {
+async fn body(response: opencode_http::response::Response) -> Bytes {
     use http_body_util::BodyExt;
     response.into_body().collect().await.expect("a body").to_bytes()
 }

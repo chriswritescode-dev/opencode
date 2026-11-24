@@ -1,8 +1,12 @@
 use std::collections::HashMap;
 use std::io::Write;
+use std::pin::Pin;
+use std::task::{Context, Poll};
 
 use bytes::Bytes;
+use futures_util::Stream;
 use http::{HeaderValue, header};
+use http_body::Body as _;
 use http_body_util::Full;
 
 use crate::response;
@@ -26,6 +30,115 @@ impl Algorithm {
     }
 }
 
+enum Encoder {
+    Brotli(Box<brotli::CompressorWriter<Vec<u8>>>),
+    Gzip(flate2::write::GzEncoder<Vec<u8>>),
+    Deflate(flate2::write::ZlibEncoder<Vec<u8>>),
+}
+
+impl Encoder {
+    fn new(algorithm: Algorithm) -> Self {
+        match algorithm {
+            Algorithm::Brotli => {
+                let params = brotli::enc::BrotliEncoderParams { quality: 4, ..Default::default() };
+                Encoder::Brotli(Box::new(brotli::CompressorWriter::with_params(Vec::new(), 4096, &params)))
+            }
+            Algorithm::Gzip => Encoder::Gzip(flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::new(6))),
+            Algorithm::Deflate => {
+                Encoder::Deflate(flate2::write::ZlibEncoder::new(Vec::new(), flate2::Compression::new(6)))
+            }
+        }
+    }
+
+    fn write_all(&mut self, chunk: &[u8]) -> std::io::Result<()> {
+        match self {
+            Encoder::Brotli(writer) => writer.write_all(chunk),
+            Encoder::Gzip(writer) => writer.write_all(chunk),
+            Encoder::Deflate(writer) => writer.write_all(chunk),
+        }
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        match self {
+            Encoder::Brotli(writer) => writer.flush(),
+            Encoder::Gzip(writer) => writer.flush(),
+            Encoder::Deflate(writer) => writer.flush(),
+        }
+    }
+
+    fn take(&mut self) -> Vec<u8> {
+        let output = match self {
+            Encoder::Brotli(writer) => writer.get_mut(),
+            Encoder::Gzip(writer) => writer.get_mut(),
+            Encoder::Deflate(writer) => writer.get_mut(),
+        };
+        std::mem::take(output)
+    }
+
+    fn finish(self) -> std::io::Result<Vec<u8>> {
+        match self {
+            Encoder::Brotli(mut writer) => {
+                writer.flush()?;
+                Ok(writer.into_inner())
+            }
+            Encoder::Gzip(writer) => writer.finish(),
+            Encoder::Deflate(writer) => writer.finish(),
+        }
+    }
+}
+
+struct CompressedStream {
+    upstream: response::ByteStream,
+    encoder: Option<Encoder>,
+}
+
+impl CompressedStream {
+    fn new(upstream: response::ByteStream, algorithm: Algorithm) -> Self {
+        CompressedStream { upstream, encoder: Some(Encoder::new(algorithm)) }
+    }
+}
+
+impl Stream for CompressedStream {
+    type Item = std::io::Result<Bytes>;
+
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        let this = self.get_mut();
+        loop {
+            if this.encoder.is_none() {
+                return Poll::Ready(None);
+            }
+            match this.upstream.as_mut().poll_next(cx) {
+                Poll::Pending => return Poll::Pending,
+                Poll::Ready(Some(Ok(chunk))) => {
+                    let encoder = this.encoder.as_mut().expect("an encoder");
+                    let flushed = encoder.write_all(&chunk).and_then(|()| encoder.flush());
+                    if let Err(error) = flushed {
+                        this.encoder = None;
+                        return Poll::Ready(Some(Err(error)));
+                    }
+                    let output = encoder.take();
+                    if output.is_empty() {
+                        continue;
+                    }
+                    return Poll::Ready(Some(Ok(Bytes::from(output))));
+                }
+                Poll::Ready(Some(Err(error))) => {
+                    this.encoder = None;
+                    return Poll::Ready(Some(Err(error)));
+                }
+                Poll::Ready(None) => {
+                    let encoder = this.encoder.take().expect("an encoder");
+                    return match encoder.finish() {
+                        Ok(output) if output.is_empty() => Poll::Ready(None),
+                        Ok(output) => Poll::Ready(Some(Ok(Bytes::from(output)))),
+                        Err(error) => Poll::Ready(Some(Err(error))),
+                    };
+                }
+            }
+        }
+    }
+}
+
 pub fn apply(accept_encoding: Option<&str>, mut response: response::Response) -> response::Response {
     let status = response.status().as_u16();
     if status < 200 || status == 204 || status == 206 || status == 304 {
@@ -37,8 +150,8 @@ pub fn apply(accept_encoding: Option<&str>, mut response: response::Response) ->
         }
         return response;
     }
-    let body = response.body().clone().into_inner().unwrap_or_default();
-    if body.is_empty() {
+    let length = response.body().size_hint().exact();
+    if length == Some(0) {
         return response;
     }
     let cache_control = response.headers().get(header::CACHE_CONTROL).and_then(|value| value.to_str().ok());
@@ -53,15 +166,26 @@ pub fn apply(accept_encoding: Option<&str>, mut response: response::Response) ->
         response::vary_with(&mut response, "Accept-Encoding");
         return response;
     };
-    if body.len() < MIN_SIZE {
+    if length.is_some_and(|length| length < MIN_SIZE as u64) {
         response::vary_with(&mut response, "Accept-Encoding");
         return response;
     }
-    let Ok(compressed) = compress(algorithm, &body) else {
-        response::vary_with(&mut response, "Accept-Encoding");
-        return response;
+    let body = std::mem::replace(response.body_mut(), response::Body::empty());
+    let compressed = match body {
+        response::Body::Full(full) => {
+            let body = full.into_inner().unwrap_or_default();
+            let Ok(compressed) = compress(algorithm, &body) else {
+                *response.body_mut() = response::Body::Full(Full::new(body));
+                response::vary_with(&mut response, "Accept-Encoding");
+                return response;
+            };
+            response::Body::Full(Full::new(compressed))
+        }
+        response::Body::Stream(upstream) => {
+            response::Body::Stream(Box::pin(CompressedStream::new(upstream, algorithm)))
+        }
     };
-    *response.body_mut() = Full::new(compressed);
+    *response.body_mut() = compressed;
     response.headers_mut().insert(header::CONTENT_ENCODING, HeaderValue::from_static(algorithm.as_str()));
     response.headers_mut().remove(header::CONTENT_LENGTH);
     response::vary_with(&mut response, "Accept-Encoding");
