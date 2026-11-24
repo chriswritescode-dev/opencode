@@ -526,7 +526,10 @@ pub async fn replay_video_cassette(cassette: &Cassette) {
                 Value::String(job.id.clone()),
                 Snapshot { id: job.id, status: Status::Running, reason: None, progress: None },
             );
-            let interval = Duration::from_millis(step.sleeps[0]);
+            let interval =
+                Duration::from_millis(step.sleeps.first().copied().unwrap_or_else(|| {
+                    panic!("{} step {index} {label} video step records no poll sleep", cassette.name)
+                }));
             let response = generation
                 .await_result(
                     &context,
