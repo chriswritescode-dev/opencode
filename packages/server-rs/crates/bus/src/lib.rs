@@ -7,6 +7,7 @@ mod lock;
 mod log;
 mod route;
 
+pub mod feed;
 pub mod sse;
 
 pub use bus::{

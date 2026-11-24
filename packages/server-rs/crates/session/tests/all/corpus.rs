@@ -4,10 +4,10 @@ use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use futures_util::StreamExt;
-use opencode_bus::sse::data_frame;
+use opencode_bus::feed::{EventFeed, FeedError, FeedSubscription, SUBSCRIBER_CAPACITY, frame};
 use opencode_bus::{
-    Bus, BusOptions, Definition, Event, ListenerHandle, LogInput, LogItem, PublishOptions, ReplayOptions,
-    SerializedEvent, versioned_type,
+    Bus, BusOptions, Definition, Event, LogInput, LogItem, PublishOptions, ReplayOptions, SerializedEvent,
+    versioned_type,
 };
 use opencode_contract::codec::encode_json;
 use opencode_contract::generated::{AbsolutePath, DURABLE_EVENTS, LocationRef, PUBLIC_EVENT_TYPES, WorkspaceID};
@@ -288,6 +288,85 @@ fn corpus_has_no_unexpected_errors() {
     }
 }
 
+#[test]
+fn feed_record() {
+    let corpus: Value = serde_json::from_str(CORPUS).expect("parse the events corpus");
+    let record = run_feed_record();
+    assert_field("feed", "feed", &record, &corpus["feed"]);
+}
+
+fn run_feed_record() -> Value {
+    let dir = TempDir::new();
+    let (database, _) = Database::open(DatabaseLocation::Memory, dir.path()).expect("open the database");
+    let bus = Bus::new(Arc::new(database), BusOptions { now: Some(Arc::new(|| 1000)), ..Default::default() });
+    let feed = EventFeed::new(&bus, 2);
+    let mut all = feed.subscribe(None);
+    let mut slow = feed.subscribe(None);
+    let mut filtered = feed.subscribe(Some(vec!["agent.updated".to_string()]));
+
+    let mut all_frames = Vec::new();
+    let mut filtered_frames = Vec::new();
+    for (id, r#type, data) in [
+        ("evt_feed_0", "test.internal", json!({ "value": "hidden" })),
+        ("evt_feed_1", "agent.updated", json!({})),
+        ("evt_feed_2", "model.updated", json!({})),
+        ("evt_feed_3", "provider.updated", json!({})),
+        ("evt_feed_4", "credential.updated", json!({})),
+        ("evt_feed_5", "integration.updated", json!({})),
+    ] {
+        bus.publish(
+            &Definition::ephemeral(r#type),
+            data,
+            PublishOptions { id: Some(id.to_string()), ..Default::default() },
+        )
+        .expect("publish the feed event");
+        drain_feed(&mut all, &mut all_frames);
+        drain_feed(&mut filtered, &mut filtered_frames);
+    }
+
+    let mut slow_frames = Vec::new();
+    let slow_outcome = loop {
+        match slow.try_recv() {
+            Some(Ok(frame)) => slow_frames.push(Value::String(frame)),
+            Some(Err(FeedError::SubscriberOverflow { capacity })) => {
+                break json!({ "tag": "EventFeed.SubscriberOverflow", "capacity": capacity });
+            }
+            Some(Err(error)) => panic!("the slow subscriber failed with {error}"),
+            None => break json!({ "tag": "end" }),
+        }
+    };
+
+    json!({
+        "capacity": 2,
+        "frames": { "all": all_frames, "slow": slow_frames, "filtered": filtered_frames },
+        "outcomes": {
+            "all": { "tag": "end" },
+            "slow": slow_outcome,
+            "filtered": { "tag": "end" },
+        },
+    })
+}
+
+fn drain_feed(subscription: &mut FeedSubscription, frames: &mut Vec<Value>) {
+    while let Some(item) = subscription.try_recv() {
+        match item {
+            Ok(frame) => frames.push(Value::String(frame)),
+            Err(error) => panic!("the feed subscriber failed with {error}"),
+        }
+    }
+}
+
+fn frame_types(key: &str) -> Vec<String> {
+    if key != "all" {
+        return key.split(',').map(str::to_string).collect();
+    }
+    PUBLIC_EVENT_TYPES
+        .iter()
+        .filter(|r#type| **r#type != "session.usage.updated")
+        .map(|r#type| (*r#type).to_string())
+        .collect()
+}
+
 async fn run_fixture(fixture: &Value, masks: &Masks) {
     let name = fixture["name"].as_str().expect("a fixture carries a name");
     let expected = match &fixture["error"] {
@@ -334,45 +413,23 @@ async fn run_fixture(fixture: &Value, masks: &Masks) {
         }
     }
 
-    let mut listeners: Vec<ListenerHandle> = Vec::new();
-    let mut frame_sets: Vec<(String, Arc<Mutex<Vec<String>>>)> = Vec::new();
-    let frames_expected = match expected {
-        Some(_) => None,
-        None => Some(fixture["frames"].as_object().unwrap_or_else(|| panic!("fixture {name} carries no frames"))),
-    };
-    for key in frames_expected.into_iter().flat_map(|frames| frames.keys()) {
-        let filter = (key != "all").then(|| key.split(',').map(str::to_string).collect::<Vec<_>>());
-        let frames = Arc::new(Mutex::new(Vec::new()));
-        let sink = frames.clone();
-        listeners.push(bus.listen(Box::new(move |event: &Event| {
-            let r#type = event.r#type();
-            if !PUBLIC_EVENT_TYPES.contains(&r#type) {
-                return Ok(());
-            }
-            if let Some(filter) = &filter
-                && !filter.iter().any(|candidate| candidate.as_str() == r#type)
-            {
-                return Ok(());
-            }
-            if r#type == "session.usage.updated" {
-                return Ok(());
-            }
-            sink.lock()
-                .expect("lock the frame sink")
-                .push(data_frame(&encode_json(&Value::Object(event.payload().clone()))));
-            Ok(())
-        })));
-        frame_sets.push((key.clone(), frames));
+    let feed = expected.is_none().then(|| EventFeed::new(&bus, SUBSCRIBER_CAPACITY));
+    let mut subscriptions: Vec<(String, FeedSubscription)> = Vec::new();
+    if let Some(feed) = &feed {
+        let frames = fixture["frames"].as_object().unwrap_or_else(|| panic!("fixture {name} carries no frames"));
+        for key in frames.keys() {
+            subscriptions.push((key.clone(), feed.subscribe(Some(frame_types(key)))));
+        }
     }
 
     let usage = Arc::new(Mutex::new(Vec::new()));
     let usage_sink = usage.clone();
-    listeners.push(bus.listen(Box::new(move |event: &Event| {
+    let _usage_listener = bus.listen(Box::new(move |event: &Event| {
         if event.r#type() == "session.usage.updated" {
             usage_sink.lock().expect("lock the usage sink").push(encode_json(event.data()));
         }
         Ok(())
-    })));
+    }));
 
     let steps = fixture["steps"].as_array().unwrap_or_else(|| panic!("fixture {name} carries no steps"));
     let mut failed = false;
@@ -489,7 +546,8 @@ async fn run_fixture(fixture: &Value, masks: &Masks) {
                     || matches!(&item, LogItem::Event(event)
                         if DURABLE_EVENTS.iter().any(|(r#type, ..)| *r#type == event.r#type()));
                 if keep {
-                    body.push_str(&data_frame(&item.json()));
+                    let value = serde_json::from_str::<Value>(&item.json()).expect("a log item is JSON");
+                    body.push_str(&frame(&value));
                 }
             }
             bodies.insert(after.map_or_else(|| "-1".to_string(), |value| value.to_string()), Value::String(body));
@@ -500,11 +558,20 @@ async fn run_fixture(fixture: &Value, masks: &Masks) {
     let snapshot = database.read(|connection| dump(connection, masks)).expect("dump the projected database");
 
     let frames = Value::Object(
-        frame_sets
-            .iter()
-            .map(|(key, sink)| {
-                let frames = sink.lock().expect("lock the frame sink");
-                (key.clone(), Value::Array(frames.iter().cloned().map(Value::String).collect()))
+        subscriptions
+            .iter_mut()
+            .map(|(key, subscription)| {
+                let mut frames = Vec::new();
+                while let Some(item) = subscription.try_recv() {
+                    match item {
+                        Ok(frame) => frames.push(Value::String(frame)),
+                        Err(FeedError::SubscriberOverflow { .. }) => {
+                            panic!("fixture {name}: subscriber {key} overflowed")
+                        }
+                        Err(error) => panic!("fixture {name}: subscriber {key} failed: {error}"),
+                    }
+                }
+                (key.clone(), Value::Array(frames))
             })
             .collect(),
     );

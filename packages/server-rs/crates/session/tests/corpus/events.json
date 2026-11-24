@@ -155301,5 +155301,36 @@
       ],
       "error": null
     }
-  ]
+  ],
+  "feed": {
+    "capacity": 2,
+    "frames": {
+      "all": [
+        "data: {\"id\":\"evt_feed_1\",\"created\":1000,\"type\":\"agent.updated\",\"data\":{}}\n\n",
+        "data: {\"id\":\"evt_feed_2\",\"created\":1000,\"type\":\"model.updated\",\"data\":{}}\n\n",
+        "data: {\"id\":\"evt_feed_3\",\"created\":1000,\"type\":\"provider.updated\",\"data\":{}}\n\n",
+        "data: {\"id\":\"evt_feed_4\",\"created\":1000,\"type\":\"credential.updated\",\"data\":{}}\n\n",
+        "data: {\"id\":\"evt_feed_5\",\"created\":1000,\"type\":\"integration.updated\",\"data\":{}}\n\n"
+      ],
+      "slow": [
+        "data: {\"id\":\"evt_feed_1\",\"created\":1000,\"type\":\"agent.updated\",\"data\":{}}\n\n",
+        "data: {\"id\":\"evt_feed_2\",\"created\":1000,\"type\":\"model.updated\",\"data\":{}}\n\n"
+      ],
+      "filtered": [
+        "data: {\"id\":\"evt_feed_1\",\"created\":1000,\"type\":\"agent.updated\",\"data\":{}}\n\n"
+      ]
+    },
+    "outcomes": {
+      "all": {
+        "tag": "end"
+      },
+      "filtered": {
+        "tag": "end"
+      },
+      "slow": {
+        "tag": "EventFeed.SubscriberOverflow",
+        "capacity": 2
+      }
+    }
+  }
 }

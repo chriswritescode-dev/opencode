@@ -103,6 +103,14 @@ export type FixtureRecord = {
   error: string | null
 }
 
+export type FeedOutcome = { tag: string; capacity?: number }
+
+export type FeedRecord = {
+  capacity: number
+  frames: Record<string, string[]>
+  outcomes: Record<string, FeedOutcome>
+}
+
 type BusEvent = { type: string; data: unknown }
 
 type SessionLogHandlers = { handle: (name: string, handler: () => unknown) => unknown }
@@ -112,9 +120,10 @@ const resolve = (name: string) => import(pathToFileURL(Bun.resolveSync(name, `${
 const load = (path: string) => import(pathToFileURL(`${tree}/packages/${path}`).href)
 
 const effect = await resolve("effect")
-const { Effect, Layer, Clock, References, Stream, Schema } = effect
+const { Effect, Layer, Clock, References, Stream, Schema, Deferred, Exit, Fiber, Option } = effect
 const { Database } = await load("core/src/database/database.ts")
 const { Bus } = await load("core/src/bus.ts")
+const { EventFeed } = await load("server/src/event-feed.ts")
 const { Flag } = await load("core/src/flag.ts")
 const { SessionBlob } = await load("core/src/session/blob.ts")
 const { SessionProjector } = await load("core/src/session/projector.ts")
@@ -259,6 +268,93 @@ export async function runFixtures(fixtures: Fixture[]): Promise<FixtureRecord[]>
   return records
 }
 
+export async function runFeed(): Promise<FeedRecord> {
+  const capacity = 2
+  const publicEvents = [
+    { id: "evt_feed_1", created: 1000, type: "agent.updated", data: {} },
+    { id: "evt_feed_2", created: 1000, type: "model.updated", data: {} },
+    { id: "evt_feed_3", created: 1000, type: "provider.updated", data: {} },
+    { id: "evt_feed_4", created: 1000, type: "credential.updated", data: {} },
+    { id: "evt_feed_5", created: 1000, type: "integration.updated", data: {} },
+  ]
+  const internal = { id: "evt_feed_0", created: 1000, type: "test.internal", data: { value: "hidden" } }
+  const frames: Record<string, string[]> = { all: [], slow: [], filtered: [] }
+  const outcomes: Record<string, FeedOutcome> = {}
+  const source = feedSource()
+
+  const program = Effect.gen(function* () {
+    const feed = yield* EventFeed.make(source.observe, { capacity })
+    const all = yield* feed.subscribe()
+    const slow = yield* feed.subscribe()
+    const filtered = yield* feed.subscribe(["agent.updated"])
+    const arrivals: Array<unknown> = []
+    for (let index = 0; index < publicEvents.length; index++) arrivals.push(yield* Deferred.make())
+    const allFiber = yield* all.pipe(
+      Stream.take(publicEvents.length),
+      Stream.runForEach((frame: string) => {
+        const index = frames.all.length
+        return Effect.sync(() => {
+          frames.all.push(frame)
+        }).pipe(Effect.andThen(Deferred.succeed(arrivals[index]!, undefined)))
+      }),
+      Effect.forkScoped,
+    )
+    const filteredFiber = yield* filtered.pipe(
+      Stream.take(1),
+      Stream.runForEach((frame: string) =>
+        Effect.sync(() => {
+          frames.filtered.push(frame)
+        }),
+      ),
+      Effect.forkScoped,
+    )
+
+    yield* source.publish(internal)
+    for (const [index, event] of publicEvents.entries()) {
+      yield* source.publish(event)
+      yield* Deferred.await(arrivals[index]!)
+    }
+
+    yield* Fiber.join(allFiber)
+    yield* Fiber.join(filteredFiber)
+    outcomes.all = { tag: "end" }
+    outcomes.filtered = { tag: "end" }
+
+    const slowExit = yield* slow.pipe(
+      Stream.runForEach((frame: string) =>
+        Effect.sync(() => {
+          frames.slow.push(frame)
+        }),
+      ),
+      Effect.exit,
+    )
+    if (Exit.isSuccess(slowExit)) {
+      outcomes.slow = { tag: "end" }
+    } else {
+      const error = Option.getOrUndefined(Exit.findErrorOption(slowExit)) as { _tag: string; capacity: number }
+      outcomes.slow = { tag: error._tag, capacity: error.capacity }
+    }
+
+    return { capacity, frames, outcomes }
+  })
+
+  return Effect.runPromise(program.pipe(Effect.scoped, Effect.provideService(References.MinimumLogLevel, "None")))
+}
+
+function feedSource() {
+  let subscriber: ((event: unknown) => unknown) | undefined
+  return {
+    observe: (next: (event: unknown) => unknown) =>
+      Effect.sync(() => {
+        subscriber = next
+        return Effect.sync(() => {
+          if (subscriber === next) subscriber = undefined
+        })
+      }),
+    publish: (event: unknown) => Effect.suspend(() => (subscriber ? subscriber(event) : Effect.void)),
+  }
+}
+
 async function runFixture(fixture: Fixture, masks: Record<string, string[]>): Promise<FixtureRecord> {
   const directory = await mkdtemp(join(tmpdir(), "opencode-events-corpus-"))
   const settings: Settings = {
@@ -311,7 +407,7 @@ async function runFixture(fixture: Fixture, masks: Record<string, string[]>): Pr
             if (!isOpenCodeEvent(event)) return
             if (filter && !filter.includes(event.type)) return
             if (event.type === "session.usage.updated") return
-            frames.get(keys[index]!)!.push(`data: ${JSON.stringify(event)}\n\n`)
+            frames.get(keys[index]!)!.push(EventFeed.frame(event))
           }),
         )
       }
