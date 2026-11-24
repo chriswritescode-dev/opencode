@@ -29,6 +29,9 @@ pub const IMPLEMENTED: &[&str] = &[
     "debug.location.evict",
     "project.list",
     "project.update",
+    "config.get",
+    "config.shells",
+    "experimental.config.update",
 ];
 
 pub struct Options {
@@ -145,6 +148,21 @@ impl App {
             "project.update" => match self.services() {
                 Some(services) => crate::handlers::project::update(services, &raw).await,
                 None => crate::services::services_unavailable(),
+            },
+            "config.get" => match self.location(&raw).await {
+                Ok(lease) => crate::handlers::config::get(&raw, &lease.config),
+                Err(response) => response,
+            },
+            "config.shells" => match self.location(&raw).await {
+                Ok(_lease) => match self.services() {
+                    Some(services) => crate::handlers::config::shells(services),
+                    None => crate::services::services_unavailable(),
+                },
+                Err(response) => response,
+            },
+            "experimental.config.update" => match self.location(&raw).await {
+                Ok(lease) => crate::handlers::config::update(&raw, &lease.config).await,
+                Err(response) => response,
             },
             _ => not_implemented(found.route.identifier),
         }

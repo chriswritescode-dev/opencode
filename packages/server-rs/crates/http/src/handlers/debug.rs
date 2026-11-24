@@ -171,7 +171,7 @@ fn civil_from_days(days: i64) -> (i64, u32, u32) {
     (if month <= 2 { year + 1 } else { year }, month, day)
 }
 
-fn error_reference() -> String {
+pub(crate) fn error_reference() -> String {
     let token = rand::random::<[u8; 4]>();
     let hex = token.iter().map(|byte| format!("{byte:02x}")).collect::<String>();
     format!("err_{hex}")

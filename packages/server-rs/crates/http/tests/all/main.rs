@@ -1,5 +1,6 @@
 mod auth;
 mod compression;
+mod config;
 mod cors;
 mod coverage;
 mod debug;

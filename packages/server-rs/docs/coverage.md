@@ -1,6 +1,6 @@
 # Operation coverage
 
-Implemented: 12 of 178 operations
+Implemented: 15 of 178 operations
 
 | Operation | Method | Path | Stability | Status |
 | --- | --- | --- | --- | --- |
@@ -179,6 +179,6 @@ Implemented: 12 of 178 operations
 | `websearch.providers` | GET | `/api/websearch/provider` | stable | not implemented (501) |
 | `websearch.query` | POST | `/api/websearch` | stable | not implemented (501) |
 | `experimental.usage.limits` | GET | `/api/experimental/usage/limits` | experimental | not implemented (501) |
-| `config.get` | GET | `/api/config` | stable | not implemented (501) |
-| `config.shells` | GET | `/api/config/shell` | stable | not implemented (501) |
-| `experimental.config.update` | PATCH | `/api/experimental/config` | experimental | not implemented (501) |
+| `config.get` | GET | `/api/config` | stable | implemented |
+| `config.shells` | GET | `/api/config/shell` | stable | implemented |
+| `experimental.config.update` | PATCH | `/api/experimental/config` | experimental | implemented |

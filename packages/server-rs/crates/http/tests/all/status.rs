@@ -120,6 +120,9 @@ fn sample_request(operation: &str) -> Option<(&'static str, &'static str)> {
         "debug.location.evict" => Some(("DELETE", "/api/debug/location")),
         "project.list" => Some(("GET", "/api/project")),
         "project.update" => Some(("PATCH", "/api/project/unknown")),
+        "config.get" => Some(("GET", "/api/config")),
+        "config.shells" => Some(("GET", "/api/config/shell")),
+        "experimental.config.update" => Some(("PATCH", "/api/experimental/config")),
         _ => None,
     }
 }
@@ -158,5 +161,8 @@ fn implemented_lists_the_ported_operations() {
     assert!(opencode_http::app::IMPLEMENTED.contains(&"debug.location.evict"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"project.list"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"project.update"));
-    assert_eq!(opencode_http::app::IMPLEMENTED.len(), 12);
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"config.get"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"config.shells"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"experimental.config.update"));
+    assert_eq!(opencode_http::app::IMPLEMENTED.len(), 15);
 }

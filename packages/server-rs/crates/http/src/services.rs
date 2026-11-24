@@ -41,6 +41,7 @@ pub struct GlobalServices {
     pub wellknown: Arc<WellKnown>,
     pub start_directory: String,
     pub events: tokio::sync::broadcast::Receiver<LocationEvent>,
+    pub environment: ConfigEnv,
 }
 
 pub struct LocationServices {
@@ -91,11 +92,25 @@ impl GlobalServices {
                 ..Default::default()
             },
         );
-        GlobalServices { database, paths, projects, locations, activity, wellknown, start_directory, events }
+        GlobalServices {
+            database,
+            paths,
+            projects,
+            locations,
+            activity,
+            wellknown,
+            start_directory,
+            events,
+            environment: config_env,
+        }
     }
 
     pub fn subscribe_events(&self) -> tokio::sync::broadcast::Receiver<LocationEvent> {
         self.events.resubscribe()
+    }
+
+    pub fn var(&self, name: &str) -> Option<OsString> {
+        (self.environment)(name)
     }
 }
 
