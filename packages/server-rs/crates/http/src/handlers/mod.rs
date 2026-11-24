@@ -1,5 +1,6 @@
 pub mod config;
 pub mod debug;
+pub mod defect;
 pub mod event;
 pub mod invalid;
 pub mod location;

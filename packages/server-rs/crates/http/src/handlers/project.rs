@@ -8,7 +8,7 @@ use opencode_contract::generated::{
 use opencode_contract::request::RawRequest;
 use opencode_location::project::{CommandsInput, IconInput, ProjectError, UpdateInput};
 
-use crate::handlers::invalid;
+use crate::handlers::{defect, invalid};
 use crate::response;
 use crate::services::GlobalServices;
 
@@ -23,7 +23,7 @@ pub async fn list(services: &GlobalServices, raw: &RawRequest) -> response::Resp
             let projects = projects.into_iter().map(contract_project).collect::<Vec<_>>();
             response::bytes(StatusCode::OK, "application/json", encode_json(&projects))
         }
-        Err(error) => unknown_error(error),
+        Err(error) => defect::response("failed to list projects", error),
     }
 }
 
@@ -54,7 +54,7 @@ pub async fn update(services: &GlobalServices, raw: &RawRequest) -> response::Re
                 message: format!("Project not found: {id}"),
             }),
         ),
-        Err(error) => unknown_error(error),
+        Err(error) => defect::response("failed to update project", error),
     }
 }
 
@@ -74,11 +74,4 @@ fn contract_project(project: opencode_location::project::Project) -> Project {
         },
         sandboxes: project.sandboxes,
     }
-}
-
-fn unknown_error(error: ProjectError) -> response::Response {
-    response::json(
-        StatusCode::INTERNAL_SERVER_ERROR,
-        &serde_json::json!({ "_tag": "UnknownError", "message": error.to_string() }),
-    )
 }

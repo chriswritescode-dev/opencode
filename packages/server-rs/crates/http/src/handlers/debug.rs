@@ -15,7 +15,7 @@ use opencode_contract::generated::{
 };
 use opencode_contract::request::RawRequest;
 
-use crate::handlers::invalid;
+use crate::handlers::{defect, invalid};
 use crate::response;
 use crate::services::GlobalServices;
 
@@ -40,7 +40,7 @@ pub async fn heap_dump(services: &GlobalServices, raw: &RawRequest) -> response:
     match written {
         Ok(report) => response::bytes(StatusCode::OK, "application/json", encode_json(&report)),
         Err(error) => {
-            let reference = error_reference();
+            let reference = defect::reference();
             log::error!("failed to write heap snapshot ref={reference}: {error}");
             response::bytes(
                 StatusCode::INTERNAL_SERVER_ERROR,
@@ -172,12 +172,6 @@ fn civil_from_days(days: i64) -> (i64, u32, u32) {
     let day = (day_of_year - (153 * month_position + 2) / 5 + 1) as u32;
     let month = if month_position < 10 { month_position + 3 } else { month_position - 9 } as u32;
     (if month <= 2 { year + 1 } else { year }, month, day)
-}
-
-pub(crate) fn error_reference() -> String {
-    let token = rand::random::<[u8; 4]>();
-    let hex = token.iter().map(|byte| format!("{byte:02x}")).collect::<String>();
-    format!("err_{hex}")
 }
 
 fn invalid_request(message: &str, field: &str) -> response::Response {

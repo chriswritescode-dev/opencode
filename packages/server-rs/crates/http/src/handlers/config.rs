@@ -4,10 +4,9 @@ use http::StatusCode;
 use opencode_config::service::ConfigService;
 use opencode_contract::codec::encode_json;
 use opencode_contract::generated::operations::{config_get, experimental_config_update};
-use opencode_contract::generated::{UnknownError, UnknownErrorTag};
 use opencode_contract::request::RawRequest;
 
-use crate::handlers::{debug, invalid};
+use crate::handlers::{defect, invalid};
 use crate::response;
 use crate::services::GlobalServices;
 
@@ -37,18 +36,6 @@ pub async fn update(raw: &RawRequest, config: &ConfigService) -> response::Respo
     };
     match opencode_config::handlers::experimental_config_update(config, body).await {
         Ok(()) => response::empty(StatusCode::NO_CONTENT),
-        Err(error) => {
-            let reference = debug::error_reference();
-            log::error!("failed to update config ref={reference}: {error}");
-            response::bytes(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "application/json",
-                encode_json(&UnknownError {
-                    tag: UnknownErrorTag::UnknownError,
-                    message: "Server failed to handle the request. Check server logs for details.".to_owned(),
-                    r#ref: Some(Some(reference)),
-                }),
-            )
-        }
+        Err(error) => defect::response("failed to update config", error),
     }
 }

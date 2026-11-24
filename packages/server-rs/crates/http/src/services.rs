@@ -234,10 +234,9 @@ pub fn location_error(error: BootError) -> response::Response {
                 service: Some(Some("location".to_owned())),
             }),
         ),
-        error @ (BootError::Project(_) | BootError::Panicked) => response::json(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            &serde_json::json!({ "_tag": "UnknownError", "message": error.to_string() }),
-        ),
+        error @ (BootError::Project(_) | BootError::Panicked) => {
+            crate::handlers::defect::response("failed to boot location", error)
+        }
     }
 }
 

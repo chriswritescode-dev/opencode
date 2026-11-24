@@ -133,17 +133,24 @@ pub(crate) async fn start(
         ),
         opencode_sidecar::connection::Handlers::default(),
     );
-    let paths =
-        opencode_config::paths::GlobalPaths::from_vars(|name| env.get(name).map(OsStr::to_os_string))?.acquire()?;
-    let start_directory = opencode_local::paths::current_dir()?.to_string_lossy().into_owned();
-    let config_env: opencode_http::services::ConfigEnv = {
-        let vars: HashMap<OsString, OsString> =
-            env.vars().map(|(name, value)| (name.to_os_string(), value.to_os_string())).collect();
-        Arc::new(move |name: &str| vars.get(OsStr::new(name)).cloned())
+    let services = match &state {
+        Some(state) => {
+            let paths = opencode_config::paths::GlobalPaths::from_vars(|name| env.get(name).map(OsStr::to_os_string))?
+                .acquire()?;
+            let start_directory = opencode_local::paths::current_dir()?.to_string_lossy().into_owned();
+            let vars: HashMap<OsString, OsString> =
+                env.vars().map(|(name, value)| (name.to_os_string(), value.to_os_string())).collect();
+            let config_env: opencode_http::services::ConfigEnv =
+                Arc::new(move |name: &str| vars.get(OsStr::new(name)).cloned());
+            Some(Arc::new(opencode_http::services::GlobalServices::new(
+                state.db.clone(),
+                paths,
+                start_directory,
+                config_env,
+            )))
+        }
+        None => None,
     };
-    let services = state.as_ref().map(|state| {
-        Arc::new(opencode_http::services::GlobalServices::new(state.db.clone(), paths, start_directory, config_env))
-    });
     let app = opencode_http::app::App::new(opencode_http::app::Options {
         password,
         version: crate::VERSION.to_owned(),
