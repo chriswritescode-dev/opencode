@@ -152,9 +152,11 @@ Relative and empty `PATH` entries are skipped: they are the working directory, s
 A project that happens to be the home directory or a filesystem root counts as no project, and a runtime there is
 accepted.
 
-The probe for candidates 2 to 4 runs `<binary> --version` in the binary's own directory with a cleared environment,
-`BUN_BE_BUN=1`, only the variables in `NAMES`, and a one-second timeout. It must exit successfully and print one
-`major.minor.patch` version (an optional `-` or `+` suffix allowed). Candidates 2 and 3 must answer 1.4.0 or newer,
+The probe for candidates 2 to 4 runs `<binary> -e 'process.stdout.write(Bun.version)'` in the binary's own
+directory with a cleared environment, `BUN_BE_BUN=1`, only the variables in `NAMES`, and a one-second timeout. It
+must exit successfully and print one `major.minor.patch` version (an optional `-` or `+` suffix allowed). Evaluating
+`Bun.version` instead of asking `--version` keeps an `opencode` that ignores `BUN_BE_BUN` and prints its own version,
+such as a native build, from passing as Bun. Candidates 2 and 3 must answer 1.4.0 or newer,
 `bun::OLDEST_BUN`; the `OPENCODE_BUN` override in 1 is not checked, and for a plain `bun` in 4 the probe is advisory:
 the binary is taken either way and the version is only recorded when it answers.
 

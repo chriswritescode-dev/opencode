@@ -63,12 +63,12 @@ async fn opencode(binary: &Path, vars: &impl Fn(&str) -> Option<OsString>) -> Op
     Some(Runtime { bun, opencode: true, version: Some(version) })
 }
 
-/// The version `binary --version` prints as Bun, when it prints one version alone within a second. It runs as the
+/// The version `binary` prints for `Bun.version`, when it prints one version alone within a second. It runs as the
 /// sidecar does, apart from any project: in the binary's directory, with the allowlisted environment.
 async fn bun_version(binary: &Path, vars: &impl Fn(&str) -> Option<OsString>) -> Option<String> {
     let mut command = tokio::process::Command::new(binary);
     command
-        .arg("--version")
+        .args(["-e", "process.stdout.write(Bun.version)"])
         .current_dir(binary.parent()?)
         .env_clear()
         .env("BUN_BE_BUN", "1")

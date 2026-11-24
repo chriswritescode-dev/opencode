@@ -103,6 +103,17 @@ async fn an_old_opencode_bun_is_not_taken() {
     assert_eq!(bun::find(&vars, &dir.path().join("project")).await, None);
 }
 
+#[tokio::test]
+async fn an_opencode_that_only_prints_its_own_version_is_not_taken() {
+    let dir = tempdir().expect("a directory");
+    let bin = dir.path().join("bin");
+    std::fs::create_dir_all(&bin).expect("a directory");
+    support::script(&bin, "opencode", "if [ \"$1\" = \"--version\" ]; then echo 2.3.0; else exit 1; fi");
+    let vars = support::lookup([("PATH", bin.into_os_string()), ("HOME", dir.path().join("home").into_os_string())]);
+
+    assert_eq!(bun::find(&vars, &dir.path().join("project")).await, None);
+}
+
 #[test]
 fn a_bun_on_the_path_is_found_when_the_directory_is_a_filesystem_root() {
     let dir = tempdir().expect("a directory");
