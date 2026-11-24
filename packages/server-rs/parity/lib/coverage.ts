@@ -5,7 +5,14 @@ export type Operation = { id: string; method: string; path: string }
 export type Surface = { operations: Operation[]; websockets: Operation[]; events: string[] }
 export type RequestRecord = { protocol: "http" | "ws"; method: string; path: string }
 export type RunCoverage = { name: string; requests: RequestRecord[]; events: unknown[] }
-export type CoverageItem = { id: string; method?: string; path?: string; covered: boolean; scenarios: string[] }
+export type CoverageItem = {
+  id: string
+  method?: string
+  path?: string
+  covered: boolean
+  scenarios: string[]
+  compared: boolean
+}
 export type Coverage = {
   operations: CoverageItem[]
   events: CoverageItem[]
@@ -126,13 +133,28 @@ function templatePattern(template: string) {
   return new RegExp(`^${pattern}$`)
 }
 
-export function coverageReport(surface: Surface, runs: RunCoverage[]): Coverage {
-  const operations = surface.operations.map(coverageItem)
-  const events = surface.events.map((event) => ({ id: event, covered: false, scenarios: [] as string[] }))
-  const websockets = surface.websockets.map(coverageItem)
+export function coverageReport(
+  surface: Surface,
+  runs: RunCoverage[],
+  compared: { operations: boolean; events: boolean; websockets: boolean } = {
+    operations: true,
+    events: true,
+    websockets: true,
+  },
+): Coverage {
+  const operations = surface.operations.map((operation) => coverageItem(operation, compared.operations))
+  const events = surface.events.map((event) => ({
+    id: event,
+    covered: false,
+    scenarios: [] as string[],
+    compared: compared.events,
+  }))
+  const websockets = surface.websockets.map((operation) => coverageItem(operation, compared.websockets))
   const unmatched: string[] = []
   for (const run of runs) {
     for (const request of run.requests) {
+      if (request.protocol === "http" && !compared.operations) continue
+      if (request.protocol === "ws" && !compared.websockets) continue
       const targets = request.protocol === "http" ? surface.operations : surface.websockets
       const list = request.protocol === "http" ? operations : websockets
       const matched = findMatch(targets, request.method, request.path)
@@ -143,6 +165,7 @@ export function coverageReport(surface: Surface, runs: RunCoverage[]): Coverage 
       const item = list.find((entry) => entry.id === matched.id)
       if (item !== undefined) addUnique(item.scenarios, run.name)
     }
+    if (!compared.events) continue
     for (const event of run.events) {
       if (!isRecord(event) || typeof event.type !== "string") continue
       const type = event.type
@@ -158,8 +181,8 @@ export function coverageReport(surface: Surface, runs: RunCoverage[]): Coverage 
   return { operations, events, websockets, unmatched }
 }
 
-function coverageItem(operation: Operation): CoverageItem {
-  return { id: operation.id, method: operation.method, path: operation.path, covered: false, scenarios: [] }
+function coverageItem(operation: Operation, compared: boolean): CoverageItem {
+  return { id: operation.id, method: operation.method, path: operation.path, covered: false, scenarios: [], compared }
 }
 
 function addUnique(values: string[], value: string) {
@@ -175,6 +198,7 @@ function coverageTotals(coverage: Coverage) {
 }
 
 function count(items: CoverageItem[]) {
+  if (items.some((item) => !item.compared)) return "not compared"
   return `${items.filter((item) => item.covered).length}/${items.length}`
 }
 
@@ -198,21 +222,21 @@ function renderMarkdown(coverage: Coverage) {
       "| covered | scenarios | operation |",
       "| --- | --- | --- |",
       ...coverage.operations.map((item) =>
-        row(mark(item.covered), item.scenarios.join(", "), `\`${item.method} ${item.path}\` (${item.id})`),
+        row(mark(item), item.scenarios.join(", "), `\`${item.method} ${item.path}\` (${item.id})`),
       ),
       "",
       "## Event types",
       "",
       "| covered | scenarios | event |",
       "| --- | --- | --- |",
-      ...coverage.events.map((item) => row(mark(item.covered), item.scenarios.join(", "), `\`${item.id}\``)),
+      ...coverage.events.map((item) => row(mark(item), item.scenarios.join(", "), `\`${item.id}\``)),
       "",
       "## WebSocket routes",
       "",
       "| covered | scenarios | websocket |",
       "| --- | --- | --- |",
       ...coverage.websockets.map((item) =>
-        row(mark(item.covered), item.scenarios.join(", "), `\`${item.method} ${item.path}\` (${item.id})`),
+        row(mark(item), item.scenarios.join(", "), `\`${item.method} ${item.path}\` (${item.id})`),
       ),
       "",
       "## Unmatched requests",
@@ -227,21 +251,34 @@ function row(...cells: string[]) {
   return `| ${cells.join(" | ")} |`
 }
 
-function mark(covered: boolean) {
-  return covered ? "yes" : "no"
+function mark(item: CoverageItem) {
+  if (!item.compared) return "not compared"
+  return item.covered ? "yes" : "no"
 }
 
 function coverageJSON(coverage: Coverage) {
   return {
     operations: coverage.operations.map(operationJSON),
-    events: coverage.events.map((item) => ({ id: item.id, covered: item.covered, scenarios: item.scenarios })),
+    events: coverage.events.map((item) => ({
+      id: item.id,
+      covered: item.covered,
+      scenarios: item.scenarios,
+      compared: item.compared,
+    })),
     websockets: coverage.websockets.map(operationJSON),
     unmatched: coverage.unmatched,
   }
 }
 
 function operationJSON(item: CoverageItem) {
-  return { id: item.id, method: item.method, path: item.path, covered: item.covered, scenarios: item.scenarios }
+  return {
+    id: item.id,
+    method: item.method,
+    path: item.path,
+    covered: item.covered,
+    scenarios: item.scenarios,
+    compared: item.compared,
+  }
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

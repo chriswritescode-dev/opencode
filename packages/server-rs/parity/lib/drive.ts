@@ -42,14 +42,17 @@ type Template = { sandbox: Sandbox; saved: Record<string, unknown> }
 type Cursor = { index: number }
 type StreamState = { ended: boolean; failure?: Error }
 
+const absentStream: StreamState = { ended: true }
+
 export async function runSide(
   scenario: Scenario,
   side: string,
   sandbox: Sandbox,
   endpoint: ModelEndpoint,
-  extraEnv?: Record<string, string>,
+  options?: { events?: boolean; env?: Record<string, string> },
 ): Promise<{ capture: Capture; requests: RequestRecord[] }> {
-  const env = { ...(await sandboxEnv(sandbox.root, scenario.env, scenario.config, endpoint.url)), ...extraEnv }
+  const env = { ...(await sandboxEnv(sandbox.root, scenario.env, scenario.config, endpoint.url)), ...options?.env }
+  const captureEvents = options?.events ?? true
   await writeFiles(sandbox, scenario.files ?? {})
   const server = await startServer(resolveSide(side), env, sandbox.work, side)
   const saved: Record<string, unknown> = {}
@@ -63,23 +66,34 @@ export async function runSide(
   let succeeded = false
   try {
     const warmupEvents: unknown[] = []
-    warmup = await openEventStream(server.url, side, warmupEvents)
+    if (captureEvents) warmup = await openEventStream(server.url, side, warmupEvents)
     const response = await fetch(new URL("/api/config", server.url), {
       headers: { authorization: `Basic ${credentials}`, "x-opencode-directory": sandbox.work },
       signal: AbortSignal.timeout(eventTimeout),
     })
     await response.body?.cancel()
     await waitForSearchSettled(sandbox.root)
-    await settleEvents(warmupEvents)
-    await warmup.close()
-    warmup = undefined
-    stream = await openEventStream(server.url, side, events)
+    if (captureEvents) {
+      await settleEvents(warmupEvents)
+      await warmup?.close()
+      warmup = undefined
+      stream = await openEventStream(server.url, side, events)
+    }
     for (const step of scenario.steps) {
-      const captured = await runStep(step, server.url, sandbox, saved, events, cursor, requests, stream.state)
+      const captured = await runStep(
+        step,
+        server.url,
+        sandbox,
+        saved,
+        events,
+        cursor,
+        requests,
+        stream?.state ?? absentStream,
+      )
       if (captured !== undefined) steps.push(captured)
     }
     await waitForSearchSettled(sandbox.root)
-    await settleEvents(events)
+    if (captureEvents) await settleEvents(events)
     for (const id of sessionIDs(events)) logs[id] = await fetchSessionLog(server.url, id)
     succeeded = true
   } finally {
@@ -342,8 +356,7 @@ async function waitForEvent(
   template: Template,
   state: StreamState,
 ): Promise<number> {
-  const match =
-    step.match === undefined ? undefined : (templateBody(step.match, template) as Record<string, unknown>)
+  const match = step.match === undefined ? undefined : (templateBody(step.match, template) as Record<string, unknown>)
   const deadline = Date.now() + timeout
   while (true) {
     const found = findEvent(events, step.type, match, cursor)

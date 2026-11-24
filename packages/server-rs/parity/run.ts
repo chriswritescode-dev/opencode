@@ -1,7 +1,7 @@
 import fs from "node:fs/promises"
 import path from "node:path"
 import { pathToFileURL } from "node:url"
-import { compareCaptures } from "./lib/compare"
+import { compareCaptures, PARTS, selectCapture, type Part } from "./lib/compare"
 import {
   coverageReport,
   coverageSummary,
@@ -25,7 +25,7 @@ const deviationsRoot = path.join(parityRoot, "deviations")
 const outputRoot = process.env.PARITY_OUT_DIR ? path.resolve(process.env.PARITY_OUT_DIR) : path.join(parityRoot, "out")
 const usage =
   "usage: bun run parity/run.ts --candidate <ts|path> [--reference <ts|path>] [--repeat <n>] " +
-  "[--deviations <dir>] [scenario...]"
+  "[--deviations <dir>] [--only <parts>] [--tables <names>] [scenario...]"
 const referencePaths = [
   "packages/cli/src",
   "packages/core/src",
@@ -38,10 +38,18 @@ const referencePaths = [
   "packages/codemode/src",
 ]
 
-type Options = { reference: string; candidate: string; repeat: number; deviations: string; files: string[] }
+type Options = {
+  reference: string
+  candidate: string
+  repeat: number
+  deviations: string
+  files: string[]
+  parts: Set<Part>
+  tables: string[] | undefined
+}
 type Capture = {
-  reference: unknown
-  candidate: unknown
+  reference: Record<string, unknown>
+  candidate: Record<string, unknown>
   differences: ReturnType<typeof compareCaptures>
   coverage: { requests: RequestRecord[]; events: unknown[] }
 }
@@ -56,6 +64,7 @@ async function main() {
   const files = await scenarioFiles(options.files)
   if (files.length === 0) usageError("no scenario files found")
   const scenarios = await loadScenarios(files)
+  requireEventScenarios(scenarios, options.parts)
   let differencesFound = false
   let errorFound = false
   const matched = new Set<string>()
@@ -96,7 +105,12 @@ async function main() {
   }
   if (coverageRuns.length > 0) {
     const surface = await loadSurface(repositoryRoot)
-    const coverage = coverageReport(surface, coverageRuns)
+    const comparedWebsockets = coverageRuns.some((run) => run.requests.some((request) => request.protocol === "ws"))
+    const coverage = coverageReport(surface, coverageRuns, {
+      operations: options.parts.has("steps"),
+      events: options.parts.has("events"),
+      websockets: options.parts.has("steps") && comparedWebsockets,
+    })
     await writeCoverage(outputRoot, coverage)
     console.log(coverageSummary(coverage))
   }
@@ -127,13 +141,17 @@ function parseArguments(argv: string[]): Options {
   let candidate: string | undefined
   let repeat = 1
   let deviations = deviationsRoot
+  let parts = new Set<Part>(PARTS)
+  let tables: string[] | undefined
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index]
     if (
       argument === "--reference" ||
       argument === "--candidate" ||
       argument === "--repeat" ||
-      argument === "--deviations"
+      argument === "--deviations" ||
+      argument === "--only" ||
+      argument === "--tables"
     ) {
       const value = argv[index + 1]
       if (value === undefined || value.startsWith("--")) usageError(`${argument} requires a value`)
@@ -142,13 +160,39 @@ function parseArguments(argv: string[]): Options {
       if (argument === "--candidate") candidate = value
       if (argument === "--repeat") repeat = parseRepeat(value)
       if (argument === "--deviations") deviations = value
+      if (argument === "--only") parts = parseParts(value)
+      if (argument === "--tables") tables = parseTables(value)
       continue
     }
     if (argument.startsWith("-")) usageError(`unknown flag ${argument}`)
     files.push(argument)
   }
   if (candidate === undefined) usageError("--candidate is required")
-  return { reference, candidate, repeat, deviations, files }
+  if (tables !== undefined && !parts.has("database")) usageError("--tables requires database in --only")
+  if (parts.has("logs") && !parts.has("events")) usageError("--only logs requires events")
+  return { reference, candidate, repeat, deviations, files, parts, tables }
+}
+
+function parseParts(value: string): Set<Part> {
+  const parts = new Set<Part>()
+  for (const part of value.split(",")) {
+    if (!isPart(part)) usageError(`--only must list parts from ${PARTS.join(", ")}, got ${value}`)
+    parts.add(part)
+  }
+  return parts
+}
+
+function isPart(value: string): value is Part {
+  return PARTS.some((part) => part === value)
+}
+
+function parseTables(value: string): string[] {
+  const names: string[] = []
+  for (const name of value.split(",")) {
+    if (name.length === 0) usageError(`--tables must be a comma list of table names, got ${value}`)
+    if (!names.includes(name)) names.push(name)
+  }
+  return names
 }
 
 function parseRepeat(value: string) {
@@ -254,8 +298,17 @@ async function loadScenario(file: string) {
   return scenario as Scenario
 }
 
+function requireEventScenarios(scenarios: { name: string; scenario: Scenario }[], parts: Set<Part>) {
+  if (parts.has("events")) return
+  const needsEvents = scenarios.find((entry) => entry.scenario.steps.some((step) => "waitEvent" in step))
+  if (needsEvents === undefined) return
+  console.error(`FAIL ${needsEvents.name}: scenario needs events`)
+  process.exit(2)
+}
+
 async function captureScenario(scenario: Scenario, options: Options, candidateEnv: Record<string, string>) {
   const box = await createSandbox()
+  const captureEvents = options.parts.has("events")
   try {
     const endpoint = await startModelEndpoint()
     try {
@@ -263,29 +316,36 @@ async function captureScenario(scenario: Scenario, options: Options, candidateEn
       const replies = scenario.model ?? []
       endpoint.load(replies, template)
       const referenceStarted = Date.now()
-      const referenceRun = await withModelFailure(endpoint, runSide(scenario, options.reference, box, endpoint))
+      const referenceRun = await withModelFailure(
+        endpoint,
+        runSide(scenario, options.reference, box, endpoint, { events: captureEvents }),
+      )
       requireAllReplies(endpoint)
       const referenceEnd = Date.now()
+      const referenceCapture = normalizeCapture(referenceRun.capture, {
+        root: box.root,
+        start: referenceStarted,
+        end: referenceEnd,
+      }) as Record<string, unknown>
+      requireMatchedTables(referenceCapture, options)
       await resetSandbox(box.root)
       endpoint.load(replies, template)
       const candidateStarted = Date.now()
       const candidateRun = await withModelFailure(
         endpoint,
-        runSide(scenario, options.candidate, box, endpoint, candidateEnv),
+        runSide(scenario, options.candidate, box, endpoint, { events: captureEvents, env: candidateEnv }),
       )
       requireAllReplies(endpoint)
       const candidateEnd = Date.now()
-      const referenceCapture = normalizeCapture(referenceRun.capture, {
-        root: box.root,
-        start: referenceStarted,
-        end: referenceEnd,
-      })
       const candidateCapture = normalizeCapture(candidateRun.capture, {
         root: box.root,
         start: candidateStarted,
         end: candidateEnd,
-      })
-      const differences = compareCaptures(referenceCapture, candidateCapture)
+      }) as Record<string, unknown>
+      const differences = compareCaptures(
+        selectCapture(referenceCapture, options.parts, options.tables),
+        selectCapture(candidateCapture, options.parts, options.tables),
+      )
       return {
         reference: referenceCapture,
         candidate: candidateCapture,
@@ -298,6 +358,19 @@ async function captureScenario(scenario: Scenario, options: Options, candidateEn
   } finally {
     await removeSandbox(box.root)
   }
+}
+
+function requireMatchedTables(reference: Record<string, unknown>, options: Options) {
+  const tables = options.tables
+  if (!options.parts.has("database") || tables === undefined) return
+  const databases = isObject(reference.database) ? Object.values(reference.database) : []
+  const matched = databases.some((entry) => {
+    if (!isObject(entry) || !isObject(entry.tables)) return false
+    const captured = entry.tables
+    return tables.some((table) => Object.hasOwn(captured, table))
+  })
+  if (matched) return
+  throw new Error(`--tables ${tables.join(",")} matched no table`)
 }
 
 function withModelFailure<T>(endpoint: ModelEndpoint, run: Promise<T>) {
@@ -332,6 +405,10 @@ async function writeJSON(file: string, value: unknown) {
 function format(value: unknown) {
   if (value === undefined) return "undefined"
   return JSON.stringify(value) ?? String(value)
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
 }
 
 function message(error: unknown) {
