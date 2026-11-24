@@ -1,0 +1,26 @@
+[package]
+name = "opencode-session"
+description = "Project durable session events into the session rows."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+autotests = false
+
+[lints]
+workspace = true
+
+[dependencies]
+opencode-bus.workspace = true
+opencode-contract.workspace = true
+opencode-storage.workspace = true
+rusqlite.workspace = true
+serde_json.workspace = true
+
+[dev-dependencies]
+futures-util = { workspace = true, features = ["async-await"] }
+tokio.workspace = true
+
+[[test]]
+name = "all"
+path = "tests/all/main.rs"

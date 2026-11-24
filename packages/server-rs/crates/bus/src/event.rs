@@ -37,6 +37,14 @@ impl Definition {
             .find(|(r#type, version, _)| format!("{type}.{version}") == versioned_type)
             .map(|(r#type, version, aggregate)| Definition::durable(r#type, version, aggregate))
     }
+
+    pub fn latest_durable(r#type: &str) -> Option<Definition> {
+        opencode_contract::generated::DURABLE_EVENTS
+            .iter()
+            .copied()
+            .find(|(candidate, _, _)| *candidate == r#type)
+            .map(|(r#type, version, aggregate)| Definition::durable(r#type, version, aggregate))
+    }
 }
 
 pub fn versioned_type(r#type: &str, version: u32) -> String {

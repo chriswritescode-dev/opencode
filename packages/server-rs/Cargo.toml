@@ -26,6 +26,7 @@ opencode-bus = { path = "crates/bus" }
 opencode-contract = { path = "crates/contract" }
 opencode-http = { path = "crates/http" }
 opencode-server = { path = "crates/server" }
+opencode-session = { path = "crates/session" }
 opencode-storage = { path = "crates/storage" }
 opencode-api-types = { path = "../cli-rs/crates/api-types" }
 opencode-api = { path = "../cli-rs/crates/api" }

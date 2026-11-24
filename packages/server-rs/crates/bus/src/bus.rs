@@ -24,16 +24,18 @@ type Listener = Arc<dyn Fn(&Event) -> Result<(), BusError> + Send + Sync>;
 type ListenerRegistration = Box<dyn Fn(&Event) -> Result<(), BusError> + Send + Sync>;
 type CommitHook = Box<dyn FnOnce(&Connection, i64) -> Result<(), BusError>>;
 type BeforeAggregateRead = Arc<dyn Fn(&str) + Send + Sync>;
+type Now = Arc<dyn Fn() -> i64 + Send + Sync>;
 
 pub struct BusOptions {
     pub persist: bool,
     pub log_read_page_size: usize,
     pub before_aggregate_read: Option<BeforeAggregateRead>,
+    pub now: Option<Now>,
 }
 
 impl Default for BusOptions {
     fn default() -> Self {
-        BusOptions { persist: false, log_read_page_size: 512, before_aggregate_read: None }
+        BusOptions { persist: false, log_read_page_size: 512, before_aggregate_read: None, now: None }
     }
 }
 
@@ -481,9 +483,10 @@ impl Bus {
     }
 
     fn make_payload(&self, definition: &Definition, data: Value, options: &PublishOptions) -> Event {
+        let created = self.options.now.as_ref().map_or_else(opencode_storage::id::now_ms, |now| now());
         let mut payload = Map::new();
         payload.insert("id".to_string(), Value::String(options.id.clone().unwrap_or_else(EventId::create)));
-        payload.insert("created".to_string(), Value::from(opencode_storage::id::now_ms()));
+        payload.insert("created".to_string(), Value::from(created));
         if let Some(metadata) = &options.metadata {
             payload.insert("metadata".to_string(), Value::Object(metadata.clone()));
         }

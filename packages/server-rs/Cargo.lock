@@ -883,6 +883,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "opencode-session"
+version = "0.1.0"
+dependencies = [
+ "futures-util",
+ "opencode-bus",
+ "opencode-contract",
+ "opencode-storage",
+ "rusqlite",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
 name = "opencode-storage"
 version = "0.1.0"
 dependencies = [
