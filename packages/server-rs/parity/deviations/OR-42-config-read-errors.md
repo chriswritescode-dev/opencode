@@ -15,3 +15,5 @@ fails (`:247-250`). `load` returns `Loaded` and has no error channel at all.
 
 Reason: the Rust load is infallible and shared by the whole process, so one unreadable file must not take down
 configuration. No corpus case covers a file that exists but cannot be read or resolved.
+
+Accepted: pending owner

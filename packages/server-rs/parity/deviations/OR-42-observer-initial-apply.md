@@ -14,3 +14,5 @@ contract is the only channel for the initial registration.
 Reason: Rust callers register through `apply`, which is the reload action itself, and the separate initial
 registration step has no place in that shape. The `observer::observe_sources_applies_the_initial_load_and_fires_for_a_directory_change`
 test covers the initial apply, so registering through `apply` must be idempotent in each domain loader.
+
+Accepted: pending owner

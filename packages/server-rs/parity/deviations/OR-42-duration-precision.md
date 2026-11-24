@@ -14,3 +14,5 @@ diagnostic and dropped, for `location_idle_timeout` (`:733-748`) and for the `wa
 
 Reason: exact parity would need a big-integer representation for no practical gain, and no realistic configuration
 gives these fields a value anywhere near that size.
+
+Accepted: pending owner

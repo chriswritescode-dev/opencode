@@ -13,3 +13,5 @@ subtrees, and every target holds its own inotify instance.
 
 Reason: `notify` has no native ignore list, and a shared, ignore-aware watcher belongs with the filesystem watcher
 port rather than the config crate. The shared watcher is deferred in the OR-42 review.
+
+Accepted: pending owner

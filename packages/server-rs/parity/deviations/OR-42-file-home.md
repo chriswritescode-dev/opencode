@@ -10,3 +10,5 @@ is `GlobalPaths.home` from the crate's path configuration. As OR-42's plan Phase
 
 Reason: the crate takes every path from the injected `GlobalPaths` so callers and tests can redirect them, and the
 two differ only when `OPENCODE_TEST_HOME` is set.
+
+Accepted: pending owner

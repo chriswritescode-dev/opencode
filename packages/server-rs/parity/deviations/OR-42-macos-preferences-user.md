@@ -12,3 +12,5 @@ Rust: `crates/config/src/discovery.rs` `preferences` takes the name from `std::e
 Reason: the preference path is macOS-only code, the crate has no passwd lookup dependency, and it cannot be
 validated in the Linux CI or the sandbox. The two differ only when `USER` is unset or overridden relative to the
 passwd entry.
+
+Accepted: pending owner

@@ -16,3 +16,5 @@ recognized value` at `["provider", "x"]` and yields no provider, where the pinne
 Reason: the Rust configuration load is shared by the whole process and one malformed legacy entry must not abort it,
 so the entry is still dropped but no longer silently. `script/gen/config-corpus.ts` exports a normalize case for this
 input, and that case is the parity check for the diagnostic.
+
+Accepted: pending owner

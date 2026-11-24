@@ -19,7 +19,8 @@ include-dev = true
 # expression: `MIT OR Apache-2.0` needs either, `Apache-2.0 AND ISC` both.
 allow = [
     # Most crates, the workspace's own, tokio, serde, flate2, crc32fast, adler2, simd-adler32, the brotli crates and
-    # the hyper/tower stack behind reqwest.
+    # the hyper/tower stack behind reqwest. rusqlite, libsqlite3-sys (which vendors the bundled SQLite) and hashlink
+    # are MIT too.
     "MIT",
     # ring (with ISC) and sync_wrapper; reqwest, rustls, tokio-tungstenite, flate2, crc32fast and most others offer it
     # beside MIT.
