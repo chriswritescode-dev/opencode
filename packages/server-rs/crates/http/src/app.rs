@@ -79,20 +79,33 @@ impl App {
         compression::apply(accept_encoding, response)
     }
 
-    async fn dispatch(&self, request: &Request<Bytes>) -> response::Response {
+    pub fn admits<B>(&self, request: &Request<B>) -> bool {
+        request.method() != http::Method::OPTIONS
+            && !request_site::rejected(request, &self.options.cors)
+            && self.gate(request).is_none()
+    }
+
+    fn gate<B>(&self, request: &Request<B>) -> Option<response::Response> {
         let state = self.status.current();
         let ready = state == State::Ready;
         if request.method() == http::Method::GET && request.uri().path() == "/api/info" && !ready {
             if !self.authorized(request) {
-                return auth::unauthorized(request, "Authentication required");
+                return Some(auth::unauthorized(request, "Authentication required"));
             }
-            return info(&self.options, state);
+            return Some(info(&self.options, state));
         }
         if !exempt(request, ready) && !self.authorized(request) {
-            return auth::unauthorized(request, "Authentication required");
+            return Some(auth::unauthorized(request, "Authentication required"));
         }
         if !ready {
-            return unavailable(state);
+            return Some(unavailable(state));
+        }
+        None
+    }
+
+    async fn dispatch(&self, request: &Request<Bytes>) -> response::Response {
+        if let Some(response) = self.gate(request) {
+            return response;
         }
         let method = request.method();
         if (method == http::Method::GET || method == http::Method::HEAD)

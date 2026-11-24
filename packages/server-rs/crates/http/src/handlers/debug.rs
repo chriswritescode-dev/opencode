@@ -34,7 +34,10 @@ pub async fn heap_dump(services: &GlobalServices, raw: &RawRequest) -> response:
     }
     let directory = requested.map_or_else(|| services.paths.log.clone(), PathBuf::from);
     let _guard = HEAP_DUMP_LOCK.lock().await;
-    match write_report(&directory) {
+    let written = tokio::task::spawn_blocking(move || write_report(&directory))
+        .await
+        .unwrap_or_else(|error| Err(std::io::Error::other(error)));
+    match written {
         Ok(report) => response::bytes(StatusCode::OK, "application/json", encode_json(&report)),
         Err(error) => {
             let reference = error_reference();

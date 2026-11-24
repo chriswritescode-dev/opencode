@@ -49,7 +49,11 @@ pub async fn serve(listener: TcpListener, app: Arc<App>, shutdown: impl Future<O
 }
 
 async fn dispatch(app: &App, request: http::Request<Incoming>) -> crate::response::Response {
+    let admitted = app.admits(&request);
     let (parts, body) = request.into_parts();
+    if !admitted {
+        return app.handle(http::Request::from_parts(parts, bytes::Bytes::new())).await;
+    }
     let declared = parts
         .headers
         .get(http::header::CONTENT_LENGTH)
