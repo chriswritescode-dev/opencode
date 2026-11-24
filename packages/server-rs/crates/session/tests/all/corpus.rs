@@ -5,8 +5,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use futures_util::StreamExt;
 use opencode_bus::sse::data_frame;
 use opencode_bus::{
-    Bus, BusError, BusOptions, Definition, Event, ListenerHandle, LogInput, LogItem, PublishOptions, ReplayOptions,
-    SerializedEvent,
+    Bus, BusOptions, Definition, Event, ListenerHandle, LogInput, LogItem, PublishOptions, ReplayOptions,
+    SerializedEvent, versioned_type,
 };
 use opencode_contract::codec::encode_json;
 use opencode_contract::generated::{AbsolutePath, DURABLE_EVENTS, LocationRef, PUBLIC_EVENT_TYPES, WorkspaceID};
@@ -132,6 +132,22 @@ async fn media() {
 }
 
 #[tokio::test]
+async fn fork_revert() {
+    let corpus: Value = serde_json::from_str(CORPUS).expect("parse the events corpus");
+    let masks: Masks = serde_json::from_value(corpus["masks"].clone()).expect("read the corpus masks");
+    let mut count = 0;
+    for fixture in corpus["fixtures"].as_array().expect("the corpus carries fixtures") {
+        let name = fixture["name"].as_str().expect("a fixture carries a name");
+        if fixture["group"].as_str().unwrap_or_else(|| panic!("fixture {name} carries no group")) != "fork-revert" {
+            continue;
+        }
+        run_fixture(fixture, &masks).await;
+        count += 1;
+    }
+    assert_eq!(count, 6, "the fork-revert group carries every ported fixture");
+}
+
+#[tokio::test]
 async fn inline_update_sets_time_updated() {
     let dir = TempDir::new();
     let (database, _) = Database::open(DatabaseLocation::Memory, dir.path()).expect("open the database");
@@ -190,30 +206,21 @@ async fn inline_update_sets_time_updated() {
     assert!(data.contains("\"content\":[]"), "the envelope stays empty while part rows hold the content");
 }
 
-#[tokio::test]
-async fn unported_durable_type_fails() {
+#[test]
+fn projector_registers_every_durable_type() {
     let dir = TempDir::new();
     let (database, _) = Database::open(DatabaseLocation::Memory, dir.path()).expect("open the database");
     let database = Arc::new(database);
-    let bus =
-        Bus::new(database.clone(), BusOptions { persist: true, now: Some(Arc::new(|| 0i64)), ..Default::default() });
+    let bus = Bus::new(database.clone(), BusOptions::default());
     let _projector = SessionProjector::register(&bus, &database, Arc::new(ProjectionSettings::default));
-
-    let definition = Definition::latest_durable("session.forked").expect("the manifest carries session.forked");
-    let error = bus
-        .publish(&definition, json!({ "sessionID": "ses_1" }), PublishOptions::default())
-        .expect_err("an unported durable type is rejected");
-    match error {
-        BusError::InvalidDurableEvent { message, .. } => {
-            assert_eq!(message, "not ported yet", "the projector reports the missing port");
-        }
-        other => panic!("expected an invalid durable event, got {other:?}"),
-    }
-
-    let events: i64 = database
-        .read(|connection| Ok(connection.query_row("SELECT COUNT(*) FROM event", [], |row| row.get(0))?))
-        .expect("count the event rows");
-    assert_eq!(events, 0, "the rejected publish rolls back the event row");
+    let mut registered = bus.projector_registrations();
+    registered.sort();
+    let mut expected = DURABLE_EVENTS
+        .iter()
+        .map(|(r#type, version, _)| (versioned_type(r#type, *version), 1usize))
+        .collect::<Vec<_>>();
+    expected.sort();
+    assert_eq!(registered, expected, "each durable event type is registered exactly once");
 }
 
 async fn run_fixture(fixture: &Value, masks: &Masks) {

@@ -8,14 +8,16 @@ use opencode_contract::generated::{
     SessionExecutionInterruptedDataReason, SessionExecutionStartedData, SessionExecutionSucceededData,
     SessionInstructionsUpdatedData, SessionInstructionsUpdatedDataDeltaValue, SessionMetadataUpdatedData,
     SessionModelSelectedData, SessionMovedData, SessionPermissionsData, SessionRenamedData, SessionRevertClearedData,
-    SessionRevertStagedData, SessionStepEndedData, SessionStepFailedData, SessionUnarchivedData,
-    SessionUsageRecordedData, SessionViewedData,
+    SessionRevertCommittedData, SessionRevertStagedData, SessionStepEndedData, SessionStepFailedData,
+    SessionUnarchivedData, SessionUsageRecordedData, SessionViewedData, WorktreeResolvedData,
 };
 use opencode_storage::Database;
+use opencode_util::path::Flavor;
 use rusqlite::types::Value;
-use rusqlite::{Connection, OptionalExtension};
+use rusqlite::{Connection, OptionalExtension, params, params_from_iter};
 
 use crate::blob;
+use crate::fork;
 use crate::history;
 use crate::inbox::{self, Delivered};
 use crate::instruction;
@@ -106,6 +108,7 @@ impl SessionProjector {
 fn project(settings: &dyn Fn() -> ProjectionSettings, connection: &Connection, event: &Event) -> Result<(), BusError> {
     match event.r#type() {
         "session.created" => project_created(connection, event),
+        "session.forked" => fork::project(connection, event, settings().fork_media),
         "session.agent.selected" => {
             run(connection, event, settings)?;
             project_agent_selected(connection, event)
@@ -227,11 +230,14 @@ fn project(settings: &dyn Fn() -> ProjectionSettings, connection: &Connection, e
         "session.execution.started" => project_execution_started(connection, event),
         "session.revert.staged" => project_revert_staged(connection, event),
         "session.revert.cleared" => project_revert_cleared(connection, event),
+        "session.revert.committed" => project_revert_committed(connection, event),
         "session.usage.recorded" => project_usage_recorded(connection, event),
         "session.deleted" => project_deleted(connection, event),
-        r#type => {
-            Err(BusError::InvalidDurableEvent { r#type: r#type.to_string(), message: "not ported yet".to_string() })
-        }
+        "worktree.resolved" => project_worktree_resolved(connection, event),
+        r#type => Err(BusError::InvalidDurableEvent {
+            r#type: r#type.to_string(),
+            message: format!("Unknown durable event type {}", r#type),
+        }),
     }
 }
 
@@ -811,6 +817,35 @@ fn project_revert_cleared(connection: &Connection, event: &Event) -> Result<(), 
     )
 }
 
+fn project_revert_committed(connection: &Connection, event: &Event) -> Result<(), BusError> {
+    let data: SessionRevertCommittedData = decode(event)?;
+    let boundary = connection
+        .query_row(
+            "SELECT seq FROM session_message WHERE session_id = ?1 AND id = ?2",
+            params![data.session_id.0, data.to.0],
+            |row| row.get::<_, i64>(0),
+        )
+        .optional()?;
+    let Some(boundary) = boundary else {
+        return Err(invalid(event, format!("Revert boundary message not found: {}", data.to.0)));
+    };
+    connection.execute(
+        "DELETE FROM session_message WHERE session_id = ?1 AND seq >= ?2",
+        params![data.session_id.0, boundary],
+    )?;
+    connection.execute(
+        "DELETE FROM session_inbox WHERE session_id = ?1 AND enqueued_seq >= ?2",
+        params![data.session_id.0, boundary],
+    )?;
+    set_session(
+        connection,
+        &data.session_id.0,
+        &[Assignment::Value("revert", Value::Null), Assignment::Value("time_updated", Value::Integer(event.created()))],
+    )?;
+    instruction::rewind(connection, &data.session_id.0, boundary)?;
+    blob::release_from(connection, &data.session_id.0, boundary)
+}
+
 fn project_usage_recorded(connection: &Connection, event: &Event) -> Result<(), BusError> {
     let data: SessionUsageRecordedData = decode(event)?;
     let tokens = TokenTotals {
@@ -932,4 +967,81 @@ fn project_idle(connection: &Connection, session_id: &str, created: i64, outcome
         rusqlite::params![created, outcome, session_id],
     )?;
     Ok(())
+}
+
+fn project_worktree_resolved(connection: &Connection, event: &Event) -> Result<(), BusError> {
+    let data: WorktreeResolvedData = decode(event)?;
+    let adopted = data.adopted.unwrap_or_default().into_iter().map(|project| project.0).collect::<Vec<_>>();
+    let mut candidates = Vec::new();
+    for candidate in std::iter::once(data.previous.0.clone())
+        .chain(std::iter::once("global".to_string()))
+        .chain(adopted.iter().cloned())
+    {
+        if candidate != data.project_id.0 && !candidates.contains(&candidate) {
+            candidates.push(candidate);
+        }
+    }
+    if candidates.is_empty() {
+        return Ok(());
+    }
+    let mut values = candidates.iter().cloned().map(Value::Text).collect::<Vec<_>>();
+    let mut sql = format!(
+        "SELECT s.id, s.directory, s.project_id, p.worktree FROM session_v2 s \
+         INNER JOIN project p ON s.project_id = p.id WHERE s.project_id IN ({}) AND s.workspace_id IS NULL AND (",
+        (1..=candidates.len()).map(|index| format!("?{index}")).collect::<Vec<_>>().join(", ")
+    );
+    if !adopted.is_empty() {
+        let first = values.len() + 1;
+        let placeholders =
+            (first..first + adopted.len()).map(|index| format!("?{index}")).collect::<Vec<_>>().join(", ");
+        values.extend(adopted.iter().cloned().map(Value::Text));
+        sql.push_str(&format!("s.project_id IN ({placeholders}) OR "));
+    }
+    let low = values.len() + 1;
+    let high = low + 1;
+    values.push(Value::Text(data.directory.0.clone()));
+    values.push(Value::Text(format!("{}\u{ffff}", data.directory.0)));
+    sql.push_str(&format!("(s.directory >= ?{low} AND s.directory <= ?{high}))"));
+    let rows = {
+        let mut statement = connection.prepare(&sql)?;
+        statement
+            .query_map(params_from_iter(values), |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, String>(2)?,
+                    row.get::<_, String>(3)?,
+                ))
+            })?
+            .collect::<Result<Vec<_>, _>>()?
+    };
+    let updates = rows
+        .into_iter()
+        .filter_map(|(session_id, directory, project_id, worktree)| {
+            let directory =
+                if adopted.contains(&project_id) { worktree } else { Flavor::NATIVE.resolve(&[&directory]) };
+            contains(&data.directory.0, &directory)
+                .then(|| (session_id, Flavor::NATIVE.relative(&data.directory.0, &directory).replace('\\', "/")))
+        })
+        .collect::<Vec<_>>();
+    for (session_id, path) in updates {
+        set_session(
+            connection,
+            &session_id,
+            &[
+                Assignment::Value("project_id", Value::Text(data.project_id.0.clone())),
+                Assignment::Value("path", Value::Text(path)),
+                Assignment::Keep("time_updated"),
+            ],
+        )?;
+    }
+    Ok(())
+}
+
+fn contains(parent: &str, child: &str) -> bool {
+    let relative = Flavor::NATIVE.relative(parent, child);
+    relative.is_empty()
+        || (!Flavor::NATIVE.is_absolute(&relative)
+            && relative != ".."
+            && !relative.starts_with(&format!("..{}", Flavor::NATIVE.sep())))
 }

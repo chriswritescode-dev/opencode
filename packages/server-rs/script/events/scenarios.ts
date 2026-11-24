@@ -4,6 +4,105 @@ const project = [
   `INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)`,
 ]
 
+const forkProjects = [
+  `INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)`,
+]
+
+const insertMessage = (
+  session: string,
+  id: string,
+  type: string,
+  seq: number,
+  created: number,
+  data: unknown,
+  updated = created,
+) =>
+  `INSERT INTO session_message (id, session_id, type, seq, time_created, time_updated, data) VALUES ('${id}', '${session}', '${type}', ${seq}, ${created}, ${updated}, '${JSON.stringify(data)}')`
+
+const insertPart = (
+  session: string,
+  message: string,
+  ordinal: number,
+  type: string,
+  callID: string | null,
+  created: number,
+  data: unknown,
+) =>
+  `INSERT INTO session_part (message_id, session_id, ordinal, type, call_id, time_created, time_updated, data) VALUES ('${message}', '${session}', ${ordinal}, '${type}', ${callID === null ? "NULL" : `'${callID}'`}, ${created}, ${created}, '${JSON.stringify(data)}')`
+
+const forkHistory = (session: string) => [
+  ...Array.from({ length: 520 }, (_, seq) =>
+    insertMessage(session, `msg_f${seq}`, "user", seq, 1000 + seq, {
+      time: { created: 1000 + seq },
+      text: `message ${seq}`,
+    }),
+  ),
+  insertMessage(session, "msg_f520", "assistant", 520, 1520, {
+    time: { created: 1520, completed: 1521 },
+    agent: "build",
+    model: { id: "gpt-5", providerID: "openai" },
+    content: [],
+  }),
+  insertPart(session, "msg_f520", 0, "text", null, 1520, { type: "text", text: "settled" }),
+  insertMessage(session, "msg_f521", "assistant", 521, 1521, {
+    time: { created: 1521 },
+    agent: "build",
+    model: { id: "gpt-5", providerID: "openai" },
+    content: [],
+  }),
+  insertMessage(session, "msg_f522", "shell", 522, 1522, {
+    time: { created: 1522, completed: 1523 },
+    status: "completed",
+    shellID: "sh_1",
+    command: "ls",
+    output: "ok",
+  }),
+  insertMessage(session, "msg_f523", "shell", 523, 1523, {
+    time: { created: 1523 },
+    status: "running",
+    shellID: "sh_2",
+    command: "sleep 10",
+  }),
+  insertMessage(session, "msg_f524", "compaction", 524, 1524, {
+    time: { created: 1524, completed: 1525 },
+    status: "completed",
+    reason: "auto",
+    text: "summary",
+    metadata: { keepID: "msg_f0" },
+  }),
+  insertMessage(session, "msg_f525", "compaction", 525, 1525, {
+    time: { created: 1525 },
+    status: "running",
+    reason: "auto",
+  }),
+  insertMessage(session, "msg_f526", "user", 526, 1526, { time: { created: 1526 }, text: "boundary" }),
+]
+
+const forkInstructions = { "config/one": "a".repeat(64) }
+
+const forkEntries = [
+  { key: "note", value: { hello: "world" }, removed: false },
+  { key: "gone", value: "old", removed: true },
+]
+
+const forkParent = [
+  `INSERT INTO session_v2 (id, project_id, slug, directory, title, version, time_created, time_updated) VALUES ('ses_parent', 'prj_1', 'parent', '/repo', 'Parent', '1', 1000, 1000)`,
+]
+
+const forkBoundary = (sessionID: string, id: string, type: "before" | "through", messageID: string) => ({
+  kind: "publish" as const,
+  id,
+  created: 9000,
+  type: "session.forked",
+  data: {
+    sessionID,
+    parentID: "ses_parent",
+    boundary: { type, messageID },
+    instructions: forkInstructions,
+    instructionEntries: forkEntries,
+  },
+})
+
 const created = () => ({
   kind: "publish" as const,
   id: "evt_1",
@@ -2621,6 +2720,153 @@ export const fixtures: Fixture[] = [
         created: 3000,
         type: "session.message.content.updated",
         data: { sessionID: "ses_1", messageID: "msg_2", content: [{ type: "text", text: "after" }] },
+      },
+    ],
+  },
+  {
+    name: "fork-before",
+    group: "fork-revert",
+    start: [...forkProjects, ...forkParent, ...forkHistory("ses_parent")],
+    logAfter: [0],
+    steps: [forkBoundary("ses_child_before", "evt_fork_before", "before", "msg_f526")],
+  },
+  {
+    name: "fork-through",
+    group: "fork-revert",
+    start: [...forkProjects, ...forkParent, ...forkHistory("ses_parent")],
+    logAfter: [0],
+    steps: [forkBoundary("ses_child_through", "evt_fork_through", "through", "msg_f526")],
+  },
+  {
+    name: "fork-media",
+    group: "fork-revert",
+    forkMedia: true,
+    start: [
+      ...forkProjects,
+      `INSERT INTO session_v2 (id, project_id, slug, directory, title, version, time_created, time_updated) VALUES ('ses_media', 'prj_1', 'media', '/repo', 'Media', '1', 1000, 1000)`,
+      insertMessage("ses_media", "msg_media_0", "user", 0, 1000, {
+        time: { created: 1000 },
+        text: "media",
+        files: [{ data: "aGk=", mime: "text/plain", source: { type: "inline" }, name: "note.txt" }],
+      }),
+      insertMessage("ses_media", "msg_media_1", "assistant", 1, 1001, {
+        time: { created: 1001, completed: 1002 },
+        agent: "build",
+        model: { id: "gpt-5", providerID: "openai" },
+        content: [],
+      }),
+      insertPart("ses_media", "msg_media_1", 0, "tool", "call_1", 1001, {
+        type: "tool",
+        id: "call_1",
+        name: "read",
+        state: {
+          status: "completed",
+          input: {},
+          content: [{ type: "file", uri: "data:image/png;base64,aGk=", mime: "image/png", name: "pic.png" }],
+        },
+        time: { created: 1001, completed: 1002 },
+      }),
+    ],
+    logAfter: [0],
+    steps: [
+      {
+        kind: "publish",
+        id: "evt_fork_media",
+        created: 9000,
+        type: "session.forked",
+        data: {
+          sessionID: "ses_child_media",
+          parentID: "ses_media",
+          boundary: { type: "through", messageID: "msg_media_1" },
+        },
+      },
+    ],
+  },
+  {
+    name: "fork-missing-parent",
+    group: "fork-revert",
+    start: forkProjects,
+    logAfter: [],
+    steps: [
+      {
+        kind: "publish",
+        id: "evt_fork_missing",
+        created: 9000,
+        type: "session.forked",
+        data: {
+          sessionID: "ses_child_missing",
+          parentID: "ses_missing",
+          boundary: { type: "before", messageID: "msg_missing" },
+        },
+      },
+    ],
+  },
+  {
+    name: "revert-committed",
+    group: "fork-revert",
+    start: [
+      ...project,
+      `INSERT INTO session_v2 (id, project_id, slug, directory, version, revert, time_created, time_updated) VALUES ('ses_1', 'prj_1', 'slug-1', '/repo', '1', '${JSON.stringify({ messageID: "msg_1" })}', 1000, 1000)`,
+      insertMessage("ses_1", "msg_1", "user", 0, 1000, { time: { created: 1000 }, text: "one" }),
+      insertMessage("ses_1", "msg_2", "assistant", 1, 1001, {
+        time: { created: 1001, completed: 1002 },
+        agent: "build",
+        model: { id: "gpt-5", providerID: "openai" },
+        content: [],
+      }),
+      insertMessage("ses_1", "msg_3", "user", 2, 1002, { time: { created: 1002 }, text: "three" }),
+      insertPart("ses_1", "msg_2", 0, "text", null, 1001, { type: "text", text: "part" }),
+      `INSERT INTO session_inbox (id, session_id, type, payload, delivery, enqueued_seq, time_created) VALUES ('msg_4', 'ses_1', 'user', '${JSON.stringify({ text: "queued" })}', 'queue', 1, 1001)`,
+      `INSERT INTO session_inbox (id, session_id, type, payload, delivery, enqueued_seq, time_created) VALUES ('msg_5', 'ses_1', 'user', '${JSON.stringify({ text: "later" })}', 'queue', 2, 1002)`,
+      `INSERT INTO instruction_state (session_id, epoch_start, through_seq, initial_values, current_values) VALUES ('ses_1', 0, 2, '{}', '{}')`,
+      `INSERT INTO blob (hash, mime, bytes, data, time_created) VALUES ('${"a".repeat(64)}', 'text/plain', 2, X'6869', 1)`,
+      `INSERT INTO blob (hash, mime, bytes, data, time_created) VALUES ('${"b".repeat(64)}', 'text/plain', 2, X'6f6b', 1)`,
+      `INSERT INTO blob_ref (session_id, message_id, hash, seq) VALUES ('ses_1', 'msg_1', '${"a".repeat(64)}', 0)`,
+      `INSERT INTO blob_ref (session_id, message_id, hash, seq) VALUES ('ses_1', 'msg_3', '${"b".repeat(64)}', 2)`,
+    ],
+    logAfter: [0],
+    steps: [
+      {
+        kind: "publish",
+        id: "evt_revert",
+        created: 5000,
+        type: "session.revert.committed",
+        data: { sessionID: "ses_1", to: "msg_2" },
+      },
+    ],
+  },
+  {
+    name: "worktree-resolved",
+    group: "fork-revert",
+    start: [
+      `INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)`,
+      `INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('global', '/global', '[]', 1, 2)`,
+      `INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_adopted', '/repo/adopted', '[]', 1, 2)`,
+      `INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_far', '/elsewhere/far', '[]', 1, 2)`,
+      `INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_new', '/repo', '[]', 1, 2)`,
+      `INSERT INTO session_v2 (id, project_id, slug, directory, version, workspace_id, time_created, time_updated) VALUES ('ses_previous', 'prj_1', 'previous', '/repo/pkg', '1', NULL, 1000, 1000)`,
+      `INSERT INTO session_v2 (id, project_id, slug, directory, version, workspace_id, time_created, time_updated) VALUES ('ses_root', 'prj_1', 'root', '/repo', '1', NULL, 1000, 1000)`,
+      `INSERT INTO session_v2 (id, project_id, slug, directory, version, workspace_id, time_created, time_updated) VALUES ('ses_global', 'global', 'global', '/repo/other', '1', NULL, 1000, 1000)`,
+      `INSERT INTO session_v2 (id, project_id, slug, directory, version, workspace_id, time_created, time_updated) VALUES ('ses_adopted', 'prj_adopted', 'adopted', '/ignored/path', '1', NULL, 1000, 1000)`,
+      `INSERT INTO session_v2 (id, project_id, slug, directory, version, workspace_id, time_created, time_updated) VALUES ('ses_far', 'prj_far', 'far', '/repo/far', '1', NULL, 1000, 1000)`,
+      `INSERT INTO session_v2 (id, project_id, slug, directory, version, workspace_id, time_created, time_updated) VALUES ('ses_workspace', 'prj_1', 'workspace', '/repo/ws', '1', 'wrk_1', 1000, 1000)`,
+      `INSERT INTO session_v2 (id, project_id, slug, directory, version, workspace_id, time_created, time_updated) VALUES ('ses_prefix', 'prj_1', 'prefix', '/repo2/pkg', '1', NULL, 1000, 1000)`,
+      `INSERT INTO session_v2 (id, project_id, slug, directory, version, workspace_id, time_created, time_updated) VALUES ('ses_outside', 'prj_1', 'outside', '/other/place', '1', NULL, 1000, 1000)`,
+      `INSERT INTO session_v2 (id, project_id, slug, directory, version, workspace_id, time_created, time_updated) VALUES ('ses_new', 'prj_new', 'new', '/repo/new', '1', NULL, 1000, 1000)`,
+    ],
+    logAfter: [],
+    steps: [
+      {
+        kind: "publish",
+        id: "evt_worktree",
+        created: 5000,
+        type: "worktree.resolved",
+        data: {
+          projectID: "prj_new",
+          directory: "/repo",
+          previous: "prj_1",
+          adopted: ["prj_adopted", "prj_far"],
+        },
       },
     ],
   },

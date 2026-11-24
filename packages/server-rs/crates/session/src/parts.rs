@@ -21,15 +21,15 @@ pub(crate) struct StoredPart {
 
 const ROWS_PER_INSERT: usize = 12;
 
-struct PartRow {
-    message_id: String,
-    session_id: String,
-    ordinal: i64,
-    r#type: String,
-    call_id: Option<String>,
-    time_created: i64,
-    time_updated: i64,
-    data: Value,
+pub(crate) struct PartRow {
+    pub message_id: String,
+    pub session_id: String,
+    pub ordinal: i64,
+    pub r#type: String,
+    pub call_id: Option<String>,
+    pub time_created: i64,
+    pub time_updated: i64,
+    pub data: Value,
 }
 
 pub(crate) fn prepare_assistant_parts(
@@ -291,7 +291,7 @@ fn call_id(part: &Value) -> Option<String> {
     part.get("id").and_then(Value::as_str).map(str::to_string)
 }
 
-fn insert_rows(connection: &Connection, rows: &[PartRow]) -> Result<(), BusError> {
+pub(crate) fn insert_rows(connection: &Connection, rows: &[PartRow]) -> Result<(), BusError> {
     for batch in rows.chunks(ROWS_PER_INSERT) {
         let mut values = Vec::with_capacity(batch.len() * 8);
         let placeholders = batch

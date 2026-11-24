@@ -264,7 +264,6 @@ pub(crate) fn externalize_part(connection: &Connection, media_blob: bool, part: 
     Ok(stored)
 }
 
-#[allow(dead_code)]
 fn split(data: &Value) -> Result<Split, BusError> {
     let mut pending = BTreeMap::new();
     let stored = if let Some(files) = data.get("files").and_then(Value::as_array) {
@@ -294,8 +293,7 @@ fn split_content(data: &Value, pending: &mut BTreeMap<String, Blob>) -> Value {
     data.clone()
 }
 
-#[allow(dead_code)]
-fn externalize_row(connection: &Connection, data: &Value) -> Result<Value, BusError> {
+pub(crate) fn externalize_row(connection: &Connection, data: &Value) -> Result<Value, BusError> {
     let result = split(data)?;
     if !result.moved {
         return Ok(data.clone());
@@ -365,7 +363,6 @@ pub(crate) fn release_message(connection: &Connection, session_id: &str, message
     Ok(())
 }
 
-#[allow(dead_code)]
 pub(crate) fn release_from(connection: &Connection, session_id: &str, seq: i64) -> Result<(), BusError> {
     let hashes = {
         let mut statement =

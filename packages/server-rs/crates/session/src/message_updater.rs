@@ -514,9 +514,10 @@ pub(crate) fn update(adapter: &dyn Adapter, event: &Event) -> Result<(), BusErro
                 .ok_or_else(|| invalid(event, "missing content"))?;
             adapter.replace_assistant_parts(&message_id, content)
         }
-        r#type => {
-            Err(BusError::InvalidDurableEvent { r#type: r#type.to_string(), message: "not ported yet".to_string() })
-        }
+        r#type => Err(BusError::InvalidDurableEvent {
+            r#type: r#type.to_string(),
+            message: format!("Unknown durable event type {}", r#type),
+        }),
     }
 }
 

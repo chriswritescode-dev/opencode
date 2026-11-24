@@ -229,6 +229,10 @@ impl Bus {
         projectors.entry(versioned_type.to_string()).or_default().push(Arc::from(projector));
     }
 
+    pub fn projector_registrations(&self) -> Vec<(String, usize)> {
+        lock(&self.projectors).iter().map(|(r#type, projectors)| (r#type.clone(), projectors.len())).collect()
+    }
+
     pub fn listen(&self, listener: ListenerRegistration) -> ListenerHandle {
         let id = self.next_listener_id.fetch_add(1, Ordering::Relaxed);
         lock(&self.listeners).push((id, Arc::from(listener)));

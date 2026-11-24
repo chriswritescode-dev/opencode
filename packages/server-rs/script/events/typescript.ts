@@ -80,6 +80,7 @@ const { SessionBlob } = await load("core/src/session/blob.ts")
 const { SessionProjector } = await load("core/src/session/projector.ts")
 const { SessionEvent } = await load("core/src/session/event.ts")
 const { Global } = await load("util/src/global.ts")
+const { Worktree } = await load("core/src/worktree.ts")
 const { LayerNode } = await load("util/src/effect/layer-node.ts")
 const drizzle = await resolve("drizzle-orm")
 const { ClientApi } = await load("protocol/src/client.ts")
@@ -202,7 +203,9 @@ async function runFixture(fixture: Fixture, masks: Record<string, string[]>): Pr
       for (const step of fixture.steps) {
         now = step.created
         if (step.kind === "publish") {
-          const definition = (SessionEvent.All.cases as Record<string, unknown>)[step.type]
+          const definition =
+            (SessionEvent.All.cases as Record<string, unknown>)[step.type] ??
+            (step.type === "worktree.resolved" ? Worktree.Event.Resolved : undefined)
           if (!definition) throw new Error(`unknown event type ${step.type}`)
           yield* bus.publish(definition, step.data, {
             id: step.id,

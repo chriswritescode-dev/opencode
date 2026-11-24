@@ -52,7 +52,6 @@ pub(crate) fn advance_epoch(connection: &Connection, session_id: &str, epoch_sta
     Ok(())
 }
 
-#[allow(dead_code)]
 pub(crate) fn rewind(connection: &Connection, session_id: &str, boundary: i64) -> Result<(), BusError> {
     connection.execute(
         "DELETE FROM instruction_state WHERE session_id = ?1 AND through_seq >= ?2",
@@ -61,7 +60,6 @@ pub(crate) fn rewind(connection: &Connection, session_id: &str, boundary: i64) -
     Ok(())
 }
 
-#[allow(dead_code)]
 pub(crate) fn initialize_entries(
     connection: &Connection,
     session_id: &str,
