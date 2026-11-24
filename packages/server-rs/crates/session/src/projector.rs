@@ -15,6 +15,7 @@ use rusqlite::{Connection, OptionalExtension};
 
 use crate::blob;
 use crate::history;
+use crate::inbox::{self, Delivered};
 use crate::message_updater::{self, Adapter};
 use crate::parts;
 use crate::settings::ProjectionSettings;
@@ -168,6 +169,13 @@ fn project(settings: &dyn Fn() -> ProjectionSettings, connection: &Connection, e
             let data: SessionExecutionSucceededData = decode(event)?;
             project_idle(connection, &data.session_id.0, event.created(), "succeeded")
         }
+        "session.inbox.enqueued" => {
+            inbox::admitted(connection, event)?;
+            touch(connection, event)
+        }
+        "session.inbox.delivered" => project_inbox_delivered(connection, event, settings),
+        "session.inbox.cancelled" => inbox::cancelled(connection, event),
+        "session.inbox.delivery.changed" => inbox::delivery_changed(connection, event),
         "session.execution.failed" => {
             run(connection, event, settings)?;
             let data: SessionExecutionFailedData = decode(event)?;
@@ -751,6 +759,47 @@ fn project_usage_recorded(connection: &Connection, event: &Event) -> Result<(), 
         cache_write: data.tokens.cache.write,
     };
     apply_usage(connection, &data.session_id.0, data.cost.0, &tokens, None)
+}
+
+fn project_inbox_delivered(
+    connection: &Connection,
+    event: &Event,
+    settings: &dyn Fn() -> ProjectionSettings,
+) -> Result<(), BusError> {
+    let adapter = ProjectorAdapter { connection, event, part_rows: settings().part_rows };
+    match inbox::delivered(connection, event)? {
+        Delivered::User { id, payload } => {
+            adapter.append_message(stored_message(event, &id, "user", &payload, &["files", "agents", "skills"])?)
+        }
+        Delivered::Synthetic { id, payload } => {
+            adapter.append_message(stored_message(event, &id, "synthetic", &payload, &["description"])?)
+        }
+        Delivered::Removed => Ok(()),
+    }
+}
+
+fn stored_message(
+    event: &Event,
+    id: &str,
+    r#type: &str,
+    payload: &serde_json::Value,
+    extra: &[&str],
+) -> Result<serde_json::Value, BusError> {
+    let mut message = serde_json::Map::new();
+    message.insert("id".to_string(), serde_json::Value::String(id.to_string()));
+    if let Some(metadata) = payload.get("metadata") {
+        message.insert("metadata".to_string(), metadata.clone());
+    }
+    message.insert("time".to_string(), serde_json::json!({ "created": event.created() }));
+    let text = payload.get("text").cloned().ok_or_else(|| invalid(event, "missing text"))?;
+    message.insert("text".to_string(), text);
+    for key in extra {
+        if let Some(value) = payload.get(*key) {
+            message.insert((*key).to_string(), value.clone());
+        }
+    }
+    message.insert("type".to_string(), serde_json::Value::String(r#type.to_string()));
+    Ok(serde_json::Value::Object(message))
 }
 
 fn touch(connection: &Connection, event: &Event) -> Result<(), BusError> {

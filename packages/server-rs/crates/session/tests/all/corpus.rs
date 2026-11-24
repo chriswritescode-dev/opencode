@@ -84,6 +84,22 @@ async fn inline() {
 }
 
 #[tokio::test]
+async fn inbox() {
+    let corpus: Value = serde_json::from_str(CORPUS).expect("parse the events corpus");
+    let masks: Masks = serde_json::from_value(corpus["masks"].clone()).expect("read the corpus masks");
+    let mut count = 0;
+    for fixture in corpus["fixtures"].as_array().expect("the corpus carries fixtures") {
+        let name = fixture["name"].as_str().expect("a fixture carries a name");
+        if fixture["group"].as_str().unwrap_or_else(|| panic!("fixture {name} carries no group")) != "inbox" {
+            continue;
+        }
+        run_fixture(fixture, &masks).await;
+        count += 1;
+    }
+    assert_eq!(count, 6, "the inbox group carries every ported fixture");
+}
+
+#[tokio::test]
 async fn inline_update_sets_time_updated() {
     let dir = TempDir::new();
     let (database, _) = Database::open(DatabaseLocation::Memory, dir.path()).expect("open the database");
@@ -151,8 +167,7 @@ async fn unported_durable_type_fails() {
         Bus::new(database.clone(), BusOptions { persist: true, now: Some(Arc::new(|| 0i64)), ..Default::default() });
     let _projector = SessionProjector::register(&bus, &database, Arc::new(ProjectionSettings::default));
 
-    let definition =
-        Definition::latest_durable("session.inbox.enqueued").expect("the manifest carries session.inbox.enqueued");
+    let definition = Definition::latest_durable("session.forked").expect("the manifest carries session.forked");
     let error = bus
         .publish(&definition, json!({ "sessionID": "ses_1" }), PublishOptions::default())
         .expect_err("an unported durable type is rejected");
@@ -171,11 +186,11 @@ async fn unported_durable_type_fails() {
 
 async fn run_fixture(fixture: &Value, masks: &Masks) {
     let name = fixture["name"].as_str().expect("a fixture carries a name");
-    match &fixture["error"] {
-        Value::Null => {}
-        Value::String(error) => panic!("fixture {name} could not be replayed: {error}"),
+    let expected = match &fixture["error"] {
+        Value::Null => None,
+        Value::String(error) => Some(error.as_str()),
         _ => panic!("fixture {name} carries an unexpected error value"),
-    }
+    };
 
     let dir = TempDir::new();
     let (database, _) = Database::open(DatabaseLocation::Memory, dir.path()).expect("open the database");
@@ -217,7 +232,11 @@ async fn run_fixture(fixture: &Value, masks: &Masks) {
 
     let mut listeners: Vec<ListenerHandle> = Vec::new();
     let mut frame_sets: Vec<(String, Arc<Mutex<Vec<String>>>)> = Vec::new();
-    for key in fixture["frames"].as_object().unwrap_or_else(|| panic!("fixture {name} carries no frames")).keys() {
+    let frames_expected = match expected {
+        Some(_) => None,
+        None => Some(fixture["frames"].as_object().unwrap_or_else(|| panic!("fixture {name} carries no frames"))),
+    };
+    for key in frames_expected.into_iter().flat_map(|frames| frames.keys()) {
         let filter = (key != "all").then(|| key.split(',').map(str::to_string).collect::<Vec<_>>());
         let frames = Arc::new(Mutex::new(Vec::new()));
         let sink = frames.clone();
@@ -252,10 +271,11 @@ async fn run_fixture(fixture: &Value, masks: &Masks) {
     })));
 
     let steps = fixture["steps"].as_array().unwrap_or_else(|| panic!("fixture {name} carries no steps"));
+    let mut failed = false;
     for (index, step) in steps.iter().enumerate() {
         let created = step["created"].as_i64().unwrap_or_else(|| panic!("fixture {name} step {index}: no created"));
         now.store(created, Ordering::Relaxed);
-        match step["kind"].as_str().unwrap_or_else(|| panic!("fixture {name} step {index}: no kind")) {
+        let result = match step["kind"].as_str().unwrap_or_else(|| panic!("fixture {name} step {index}: no kind")) {
             "publish" => {
                 let r#type = step["type"].as_str().unwrap_or_else(|| panic!("fixture {name} step {index}: no type"));
                 let definition = Definition::latest_durable(r#type)
@@ -268,8 +288,7 @@ async fn run_fixture(fixture: &Value, masks: &Masks) {
                     location: step["location"].as_object().map(|_| location(&step["location"], name, index)),
                     ..Default::default()
                 };
-                bus.publish(&definition, step["data"].clone(), options)
-                    .unwrap_or_else(|error| panic!("fixture {name} step {index}: publish failed: {error}"));
+                bus.publish(&definition, step["data"].clone(), options).map(|_| ())
             }
             "replay" => {
                 let event = SerializedEvent {
@@ -289,10 +308,29 @@ async fn run_fixture(fixture: &Value, masks: &Masks) {
                 let options =
                     ReplayOptions { publish: step["publish"].as_bool().unwrap_or(true), ..Default::default() };
                 bus.replay(event, options)
-                    .unwrap_or_else(|error| panic!("fixture {name} step {index}: replay failed: {error}"));
             }
             kind => panic!("fixture {name} step {index}: unknown step kind {kind}"),
+        };
+        if let Err(error) = result {
+            let Some(expected) = expected else {
+                panic!("fixture {name} step {index}: failed: {error}");
+            };
+            assert_eq!(
+                error.to_string(),
+                expected,
+                "fixture {name} step {index}: the failure carries the recorded error"
+            );
+            failed = true;
+            break;
         }
+    }
+
+    if let Some(expected) = expected {
+        assert!(failed, "fixture {name} records the error {expected:?} and the replay must reach it");
+        for field in ["dump", "frames", "usage", "log"] {
+            assert!(fixture[field].is_null(), "fixture {name} records no {field} once it fails");
+        }
+        return;
     }
 
     let mut sessions: Vec<String> = Vec::new();

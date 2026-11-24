@@ -19,6 +19,26 @@ pub(crate) fn release_session(connection: &Connection, session_id: &str) -> Resu
     Ok(())
 }
 
+pub(crate) fn release_message(connection: &Connection, session_id: &str, message_id: &str) -> Result<(), BusError> {
+    let hashes = {
+        let mut statement =
+            connection.prepare("DELETE FROM blob_ref WHERE session_id = ?1 AND message_id = ?2 RETURNING hash")?;
+        let hashes = statement.query_map(rusqlite::params![session_id, message_id], |row| row.get::<_, String>(0))?;
+        hashes.collect::<Result<Vec<_>, _>>()?
+    };
+    for hash in hashes {
+        connection.execute(
+            "DELETE FROM blob WHERE hash = ?1 AND NOT EXISTS (SELECT 1 FROM blob_ref WHERE blob_ref.hash = ?1)",
+            [hash],
+        )?;
+    }
+    Ok(())
+}
+
+pub(crate) fn externalize_payload(_connection: &Connection, payload: &Value) -> Result<Value, BusError> {
+    Ok(payload.clone())
+}
+
 pub(crate) fn externalize_part(_connection: &Connection, part: &Value) -> Result<Value, BusError> {
     Ok(part.clone())
 }

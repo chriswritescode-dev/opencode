@@ -305,7 +305,7 @@ async function runFixture(fixture: Fixture, masks: Record<string, string[]>): Pr
       frames: null,
       usage: null,
       log: null,
-      error: caught instanceof Error ? caught.message : String(caught),
+      error: caught instanceof Error ? caught.message || String(caught) : String(caught),
     })
   } finally {
     await rm(directory, { recursive: true, force: true })
