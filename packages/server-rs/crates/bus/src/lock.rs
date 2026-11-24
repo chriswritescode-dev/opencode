@@ -14,19 +14,48 @@ impl<K> Default for KeyedMutex<K> {
 
 impl<K: Clone + Eq + Hash> KeyedMutex<K> {
     pub fn with<T>(&self, key: K, f: impl FnOnce() -> T) -> T {
-        let entry = {
-            let mut entries = self.entries.lock().unwrap_or_else(|error| error.into_inner());
-            entries.entry(key.clone()).or_default().clone()
-        };
-        let value = {
-            let _guard = entry.lock().unwrap_or_else(|error| error.into_inner());
-            f()
-        };
-        let mut entries = self.entries.lock().unwrap_or_else(|error| error.into_inner());
-        if Arc::strong_count(&entry) == 2 {
-            entries.remove(&key);
+        let entry =
+            self.entries.lock().unwrap_or_else(|error| error.into_inner()).entry(key.clone()).or_default().clone();
+        let release = Release { mutex: self, key, entry };
+        let _guard = release.entry.lock().unwrap_or_else(|error| error.into_inner());
+        f()
+    }
+}
+
+struct Release<'a, K: Eq + Hash> {
+    mutex: &'a KeyedMutex<K>,
+    key: K,
+    entry: Arc<Mutex<()>>,
+}
+
+impl<K: Eq + Hash> Drop for Release<'_, K> {
+    fn drop(&mut self) {
+        let mut entries = self.mutex.entries.lock().unwrap_or_else(|error| error.into_inner());
+        if Arc::strong_count(&self.entry) == 2 {
+            entries.remove(&self.key);
         }
-        drop(entry);
-        value
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::panic::{AssertUnwindSafe, catch_unwind};
+
+    use super::KeyedMutex;
+
+    #[test]
+    fn a_released_key_leaves_no_entry() {
+        let mutex = KeyedMutex::default();
+        assert_eq!(mutex.with("a", || 1), 1);
+        assert!(mutex.entries.lock().unwrap().is_empty());
+    }
+
+    #[test]
+    fn a_panicking_holder_leaves_no_entry_and_the_key_stays_usable() {
+        let mutex = KeyedMutex::default();
+        let result = catch_unwind(AssertUnwindSafe(|| mutex.with("a", || panic!("holder failed"))));
+        assert!(result.is_err());
+        assert!(mutex.entries.lock().unwrap().is_empty());
+        assert_eq!(mutex.with("a", || 2), 2);
     }
 }
