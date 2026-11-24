@@ -1,6 +1,6 @@
 # Operation coverage
 
-Implemented: 3 of 178 operations
+Implemented: 4 of 178 operations
 
 | Operation | Method | Path | Stability | Status |
 | --- | --- | --- | --- | --- |
@@ -116,7 +116,7 @@ Implemented: 3 of 178 operations
 | `command.list` | GET | `/api/command` | stable | not implemented (501) |
 | `skill.list` | GET | `/api/skill` | stable | not implemented (501) |
 | `rpc.call` | POST | `/api/rpc/{rpcID}/{method}` | stable | not implemented (501) |
-| `event.subscribe` | GET | `/api/event` | stable | not implemented (501) |
+| `event.subscribe` | GET | `/api/event` | stable | implemented |
 | `pty.list` | GET | `/api/pty` | stable | not implemented (501) |
 | `pty.create` | POST | `/api/pty` | stable | not implemented (501) |
 | `pty.get` | GET | `/api/pty/{ptyID}` | stable | not implemented (501) |

@@ -1,7 +1,28 @@
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
+
 use http::StatusCode;
+use opencode_http::app::{App, Options};
+use opencode_http::state::ServerState;
 use opencode_http::status::{State, Status};
+use opencode_storage::DatabaseLocation;
 
 use crate::{app, authorized, ready_app, text};
+
+fn ready_app_with_state() -> Arc<App> {
+    let (state, _) = ServerState::open(DatabaseLocation::Memory, Path::new("/tmp")).expect("open the state");
+    let app = App::new(Options {
+        password: "pw".to_owned(),
+        version: "test-version".to_owned(),
+        cors: Vec::new(),
+        tmp: PathBuf::from("/tmp/opencode-http-test"),
+        hostname: None,
+        urls: Arc::new(|| vec!["http://127.0.0.1:4096".to_owned()]),
+        state: Some(Arc::new(state)),
+    });
+    app.status().ready();
+    app
+}
 
 fn retry_after(response: &opencode_http::response::Response) -> Option<&str> {
     response.headers().get("retry-after").and_then(|value| value.to_str().ok())
@@ -76,7 +97,7 @@ async fn openapi_answers_head_and_normalized_paths() {
 
 #[tokio::test]
 async fn every_implemented_operation_answers_a_sample_request() {
-    let app = ready_app();
+    let app = ready_app_with_state();
     for operation in opencode_http::app::IMPLEMENTED {
         let (method, uri) = sample_request(operation).unwrap_or_else(|| panic!("no sample request for {operation}"));
         let response = app.handle(authorized(method, uri)).await;
@@ -89,6 +110,7 @@ fn sample_request(operation: &str) -> Option<(&'static str, &'static str)> {
         "server.info" => Some(("GET", "/api/info")),
         "server.pair" => Some(("POST", "/api/pair")),
         "server.connect" => Some(("GET", "/auth/connect/x")),
+        "event.subscribe" => Some(("GET", "/api/event")),
         _ => None,
     }
 }
@@ -114,9 +136,10 @@ async fn unimplemented_routes_are_501() {
 }
 
 #[test]
-fn implemented_lists_server_info_pair_and_connect() {
+fn implemented_lists_the_ported_operations() {
     assert!(opencode_http::app::IMPLEMENTED.contains(&"server.info"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"server.pair"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"server.connect"));
-    assert_eq!(opencode_http::app::IMPLEMENTED.len(), 3);
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"event.subscribe"));
+    assert_eq!(opencode_http::app::IMPLEMENTED.len(), 4);
 }

@@ -4,6 +4,7 @@ use std::sync::Arc;
 use bytes::Bytes;
 use http::{HeaderValue, Request, StatusCode, header};
 use opencode_contract::generated::{PairingSession, ServerInfo, ServerInfoCapabilities, ServerInfoPaths};
+use opencode_contract::request::RawRequest;
 
 use crate::auth;
 use crate::compression;
@@ -15,7 +16,7 @@ use crate::router;
 use crate::status::{State, Status};
 use crate::ticket::TicketStore;
 
-pub const IMPLEMENTED: &[&str] = &["server.info", "server.pair", "server.connect"];
+pub const IMPLEMENTED: &[&str] = &["server.info", "server.pair", "server.connect", "event.subscribe"];
 
 pub struct Options {
     pub password: String,
@@ -24,6 +25,7 @@ pub struct Options {
     pub tmp: PathBuf,
     pub hostname: Option<String>,
     pub urls: Arc<dyn Fn() -> Vec<String> + Send + Sync>,
+    pub state: Option<Arc<crate::state::ServerState>>,
 }
 
 pub struct App {
@@ -96,13 +98,19 @@ impl App {
                 opencode_contract::codec::encode_json(&self.pairing.issue()),
             ),
             "server.connect" => self.connect(request, &found),
-            _ => {
-                let body = serde_json::json!({
-                    "_tag": "UnknownError",
-                    "message": format!("opencode-server does not implement {} yet", found.route.identifier),
-                });
-                response::json(StatusCode::NOT_IMPLEMENTED, &body)
-            }
+            "event.subscribe" => match &self.options.state {
+                Some(state) => crate::handlers::event::subscribe(
+                    state,
+                    &RawRequest {
+                        path_params: found.params.clone(),
+                        query: request.uri().query().unwrap_or_default().to_owned(),
+                        headers: Vec::new(),
+                        body: Vec::new(),
+                    },
+                ),
+                None => not_implemented(found.route.identifier),
+            },
+            _ => not_implemented(found.route.identifier),
         }
     }
 
@@ -151,6 +159,14 @@ impl App {
         }
         response
     }
+}
+
+fn not_implemented(identifier: &str) -> response::Response {
+    let body = serde_json::json!({
+        "_tag": "UnknownError",
+        "message": format!("opencode-server does not implement {identifier} yet"),
+    });
+    response::json(StatusCode::NOT_IMPLEMENTED, &body)
 }
 
 fn forbidden() -> response::Response {

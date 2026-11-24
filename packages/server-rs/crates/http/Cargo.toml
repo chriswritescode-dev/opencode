@@ -12,8 +12,11 @@ workspace = true
 
 [dependencies]
 opencode-api-types.workspace = true
+opencode-bus.workspace = true
 opencode-contract.workspace = true
 opencode-local.workspace = true
+opencode-session.workspace = true
+opencode-storage.workspace = true
 base64.workspace = true
 brotli.workspace = true
 bytes.workspace = true

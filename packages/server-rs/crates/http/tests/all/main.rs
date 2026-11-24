@@ -2,6 +2,7 @@ mod auth;
 mod compression;
 mod cors;
 mod coverage;
+mod event;
 mod info;
 mod pairing;
 mod request_site;
@@ -39,6 +40,7 @@ fn make_app(cors: Vec<String>, hostname: Option<&str>) -> Arc<App> {
         tmp: PathBuf::from("/tmp/opencode-http-test"),
         hostname: hostname.map(str::to_owned),
         urls: Arc::new(|| vec!["http://127.0.0.1:4096".to_owned()]),
+        state: None,
     })
 }
 
