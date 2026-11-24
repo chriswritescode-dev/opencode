@@ -155332,5 +155332,10 @@
         "capacity": 2
       }
     }
+  },
+  "failure": {
+    "status": 200,
+    "contentType": "text/event-stream",
+    "body": "data: {\"type\":\"log.synced\",\"aggregateID\":\"ses_test\",\"seq\":1}\n\nevent: effect/http-api/stream/failure\ndata: [{\"_tag\":\"Die\",\"defect\":{\"name\":\"Error\",\"message\":\"log reader failed\"}}]\n\n"
   }
 }

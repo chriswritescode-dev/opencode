@@ -8,6 +8,7 @@ mod pairing;
 mod request_site;
 mod router;
 mod serve;
+mod session_log;
 mod status;
 mod ticket;
 

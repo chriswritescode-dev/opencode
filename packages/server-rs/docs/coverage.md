@@ -1,6 +1,6 @@
 # Operation coverage
 
-Implemented: 4 of 178 operations
+Implemented: 5 of 178 operations
 
 | Operation | Method | Path | Stability | Status |
 | --- | --- | --- | --- | --- |
@@ -47,7 +47,7 @@ Implemented: 4 of 178 operations
 | `experimental.session.instructions.entry.put` | PUT | `/api/experimental/session/{sessionID}/instructions/entries/{key}` | experimental | not implemented (501) |
 | `experimental.session.instructions.entry.remove` | DELETE | `/api/experimental/session/{sessionID}/instructions/entries/{key}` | experimental | not implemented (501) |
 | `session.generate` | POST | `/api/session/{sessionID}/generate` | stable | not implemented (501) |
-| `experimental.session.log` | GET | `/api/experimental/session/{sessionID}/log` | experimental | not implemented (501) |
+| `experimental.session.log` | GET | `/api/experimental/session/{sessionID}/log` | experimental | implemented |
 | `session.interrupt` | POST | `/api/session/{sessionID}/interrupt` | stable | not implemented (501) |
 | `session.background` | POST | `/api/session/{sessionID}/background` | stable | not implemented (501) |
 | `session.message.get` | GET | `/api/session/{sessionID}/message/{messageID}` | stable | not implemented (501) |

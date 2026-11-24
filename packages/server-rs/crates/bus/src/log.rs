@@ -162,7 +162,10 @@ impl LogState {
 }
 
 impl Bus {
-    pub fn log(self: &Arc<Self>, input: LogInput) -> impl futures_util::Stream<Item = Result<LogItem, BusError>> {
+    pub fn log(
+        self: &Arc<Self>,
+        input: LogInput,
+    ) -> impl futures_util::Stream<Item = Result<LogItem, BusError>> + use<> {
         let cursor = input.after.unwrap_or(-1);
         let state = LogState {
             bus: Arc::clone(self),

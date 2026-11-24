@@ -16,7 +16,8 @@ use crate::router;
 use crate::status::{State, Status};
 use crate::ticket::TicketStore;
 
-pub const IMPLEMENTED: &[&str] = &["server.info", "server.pair", "server.connect", "event.subscribe"];
+pub const IMPLEMENTED: &[&str] =
+    &["server.info", "server.pair", "server.connect", "event.subscribe", "experimental.session.log"];
 
 pub struct Options {
     pub password: String,
@@ -100,6 +101,18 @@ impl App {
             "server.connect" => self.connect(request, &found),
             "event.subscribe" => match &self.options.state {
                 Some(state) => crate::handlers::event::subscribe(
+                    state,
+                    &RawRequest {
+                        path_params: found.params.clone(),
+                        query: request.uri().query().unwrap_or_default().to_owned(),
+                        headers: Vec::new(),
+                        body: Vec::new(),
+                    },
+                ),
+                None => not_implemented(found.route.identifier),
+            },
+            "experimental.session.log" => match &self.options.state {
+                Some(state) => crate::handlers::session_log::log(
                     state,
                     &RawRequest {
                         path_params: found.params.clone(),

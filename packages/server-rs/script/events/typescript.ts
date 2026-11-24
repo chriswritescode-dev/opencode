@@ -111,6 +111,8 @@ export type FeedRecord = {
   outcomes: Record<string, FeedOutcome>
 }
 
+export type FailureRecord = { status: number; contentType: string | null; body: string }
+
 type BusEvent = { type: string; data: unknown }
 
 type SessionLogHandlers = { handle: (name: string, handler: () => unknown) => unknown }
@@ -139,6 +141,7 @@ const { ClientApi } = await load("protocol/src/client.ts")
 const { Authorization } = await load("protocol/src/middleware/authorization.ts")
 const { SchemaErrorMiddleware } = await load("protocol/src/middleware/schema-error.ts")
 const { isOpenCodeEvent } = await load("protocol/src/groups/event.ts")
+const { Event } = await load("schema/src/event.ts")
 const { HttpRouter, HttpServer } = await import(
   pathToFileURL(Bun.resolveSync("effect/http", `${tree}/packages/core/src`)).href
 )
@@ -154,25 +157,37 @@ const schemaErrorLayer = HttpApiMiddleware.layerSchemaErrorTransform(SchemaError
   Effect.die(error),
 )
 
+function makeLogEndpoint(handle: (handlers: SessionLogHandlers) => unknown) {
+  return HttpRouter.toWebHandler(
+    HttpApiBuilder.layer(LogApi).pipe(
+      Layer.provide(HttpApiBuilder.group(LogApi, "server.session", handle)),
+      Layer.provide(schemaErrorLayer),
+      Layer.provide(
+        Layer.succeed(
+          Authorization,
+          Authorization.of((value: unknown) => value),
+        ),
+      ),
+      Layer.provide(HttpServer.layerServices),
+    ),
+    { disableLogger: true },
+  ).handler
+}
+
 let currentItems: unknown[] = []
-const logEndpoint = HttpRouter.toWebHandler(
-  HttpApiBuilder.layer(LogApi).pipe(
-    Layer.provide(
-      HttpApiBuilder.group(LogApi, "server.session", (handlers: SessionLogHandlers) =>
-        handlers.handle("session.log", () => Effect.succeed(Stream.fromIterable(currentItems))),
+const logEndpoint = makeLogEndpoint((handlers) =>
+  handlers.handle("session.log", () => Effect.succeed(Stream.fromIterable(currentItems))),
+)
+
+const failureEndpoint = makeLogEndpoint((handlers) =>
+  handlers.handle("session.log", () =>
+    Effect.succeed(
+      Stream.make({ type: "log.synced" as const, aggregateID: "ses_test", seq: Event.Seq.make(1) }).pipe(
+        Stream.concat(Stream.die(new Error("log reader failed"))),
       ),
     ),
-    Layer.provide(schemaErrorLayer),
-    Layer.provide(
-      Layer.succeed(
-        Authorization,
-        Authorization.of((value: unknown) => value),
-      ),
-    ),
-    Layer.provide(HttpServer.layerServices),
   ),
-  { disableLogger: true },
-).handler
+)
 
 const baseMasks: Record<string, string[]> = {
   migration: ["time_completed"],
@@ -339,6 +354,15 @@ export async function runFeed(): Promise<FeedRecord> {
   })
 
   return Effect.runPromise(program.pipe(Effect.scoped, Effect.provideService(References.MinimumLogLevel, "None")))
+}
+
+export async function runFailure(): Promise<FailureRecord> {
+  const response = await failureEndpoint(new Request("http://opencode.local/api/experimental/session/ses_test/log"))
+  return {
+    status: response.status,
+    contentType: response.headers.get("content-type"),
+    body: await response.text(),
+  }
 }
 
 function feedSource() {

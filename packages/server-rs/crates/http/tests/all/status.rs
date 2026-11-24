@@ -111,6 +111,7 @@ fn sample_request(operation: &str) -> Option<(&'static str, &'static str)> {
         "server.pair" => Some(("POST", "/api/pair")),
         "server.connect" => Some(("GET", "/auth/connect/x")),
         "event.subscribe" => Some(("GET", "/api/event")),
+        "experimental.session.log" => Some(("GET", "/api/experimental/session/ses_test/log")),
         _ => None,
     }
 }
@@ -141,5 +142,6 @@ fn implemented_lists_the_ported_operations() {
     assert!(opencode_http::app::IMPLEMENTED.contains(&"server.pair"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"server.connect"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"event.subscribe"));
-    assert_eq!(opencode_http::app::IMPLEMENTED.len(), 4);
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"experimental.session.log"));
+    assert_eq!(opencode_http::app::IMPLEMENTED.len(), 5);
 }
