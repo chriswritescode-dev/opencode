@@ -3,7 +3,7 @@ use base64::prelude::BASE64_STANDARD;
 use serde_json::{Map, Number, Value};
 
 use crate::protocols::utils::media_type::detect_media_type;
-use crate::schema::{MediaAsset, MediaInfo, MediaSource, ProviderMetadata};
+use crate::schema::{MediaAsset, MediaInfo, MediaSource, ProviderMetadata, StringMap};
 
 pub fn ref_id(asset: &MediaAsset, provider: &str) -> Option<String> {
     let MediaSource::Ref { provider: source_provider, id, .. } = &asset.source else {
@@ -79,7 +79,12 @@ pub fn decoded_asset(
         .map(str::to_string)
         .or_else(|| detect_media_type(&bytes).map(str::to_string))
         .unwrap_or_else(|| "application/octet-stream".to_string());
-    Ok(MediaAsset { source: MediaSource::Bytes { data: data.to_string(), media_type }, info, provider_metadata })
+    Ok(MediaAsset {
+        source: MediaSource::Bytes { data: data.to_string(), media_type },
+        info,
+        provider_metadata,
+        headers: None,
+    })
 }
 
 pub fn image_output(
@@ -98,6 +103,7 @@ pub fn image_output(
                 source: MediaSource::Base64 { data, media_type: media_type.unwrap_or(mime).to_string() },
                 info,
                 provider_metadata: None,
+                headers: None,
             });
         }
         if url.starts_with("data:") {
@@ -111,6 +117,7 @@ pub fn image_output(
             },
             info,
             provider_metadata: None,
+            headers: None,
         });
     }
     Err(format!("{label} has neither image data nor a URL"))
@@ -123,6 +130,7 @@ pub fn bytes_asset(bytes: &[u8]) -> MediaAsset {
         source: MediaSource::Bytes { data: BASE64_STANDARD.encode(bytes), media_type },
         info: None,
         provider_metadata: None,
+        headers: None,
     }
 }
 
@@ -135,6 +143,21 @@ pub fn expiring_url(url: &str, retention_ms: u64, now_ms: u64) -> MediaAsset {
         },
         info: None,
         provider_metadata: None,
+        headers: None,
+    }
+}
+
+pub fn url_asset(
+    url: &str,
+    media_type: Option<&str>,
+    expires_at: Option<Number>,
+    headers: Option<StringMap>,
+) -> MediaAsset {
+    MediaAsset {
+        source: MediaSource::Url { url: url.to_string(), media_type: media_type.map(str::to_string), expires_at },
+        info: None,
+        provider_metadata: None,
+        headers,
     }
 }
 
@@ -182,4 +205,23 @@ fn source_type(source: &MediaSource) -> &'static str {
 
 pub fn object(entries: Vec<(impl Into<String>, Value)>) -> Map<String, Value> {
     entries.into_iter().map(|(key, value)| (key.into(), value)).collect()
+}
+
+pub fn merge_body(
+    base: Map<String, Value>,
+    native: Option<&Map<String, Value>>,
+    http: Option<&crate::schema::HttpOptions>,
+) -> Map<String, Value> {
+    let http_body = http.and_then(|http| http.body.clone());
+    let merged = {
+        let mut items: Vec<&Map<String, Value>> = vec![&base];
+        if let Some(native) = native {
+            items.push(native);
+        }
+        if let Some(body) = http_body.as_ref() {
+            items.push(body);
+        }
+        crate::json::merge_records(items)
+    };
+    merged.unwrap_or(base)
 }

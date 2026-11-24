@@ -11,6 +11,7 @@ pub mod anthropic;
 pub mod anthropic_compatible;
 pub mod azure;
 pub mod baseten;
+pub mod byteplus;
 pub mod cerebras;
 pub mod cloudflare_ai_gateway;
 pub mod cloudflare_shared;
@@ -44,6 +45,7 @@ pub mod togetherai;
 pub mod typesafe_ai;
 pub mod venice;
 pub mod vercel_ai_gateway;
+pub mod volcengine;
 pub mod xai;
 pub mod zai;
 pub mod zai_coding_plan;
@@ -57,6 +59,7 @@ pub enum RuntimeModel {
     Embedding(crate::modalities::embedding::EmbeddingModel),
     Decision(crate::modalities::decision::DecisionModel),
     Image(crate::modalities::image::ImageModel),
+    Video(crate::modalities::video::VideoModel),
 }
 
 pub(crate) fn modality_options(
@@ -151,6 +154,7 @@ impl ProviderPackages {
             ("@opencode/ai/providers/azure/responses", azure::responses_model as Entry),
             ("@opencode/ai/providers/baseten", baseten::model as Entry),
             ("@opencode/ai/providers/baseten/decisions", baseten::decision_model as Entry),
+            ("@opencode/ai/providers/byteplus/videos", byteplus::video_model as Entry),
             ("@opencode/ai/providers/cerebras", cerebras::model as Entry),
             ("@opencode/ai/providers/cloudflare-ai-gateway", cloudflare_ai_gateway::model as Entry),
             ("@opencode/ai/providers/cloudflare-ai-gateway/decisions", cloudflare_ai_gateway::decision_model as Entry),
@@ -169,6 +173,7 @@ impl ProviderPackages {
             ("@opencode/ai/providers/google/embeddings", google::embedding_model as Entry),
             ("@opencode/ai/providers/google/images", google::image_model as Entry),
             ("@opencode/ai/providers/google/interactions", google::interactions_model as Entry),
+            ("@opencode/ai/providers/google/videos", google::video_model as Entry),
             ("@opencode/ai/providers/google-vertex", google_vertex::model as Entry),
             ("@opencode/ai/providers/google-vertex-messages", google_vertex_messages::model as Entry),
             ("@opencode/ai/providers/google-vertex/chat", google_vertex_chat::model as Entry),
@@ -190,6 +195,7 @@ impl ProviderPackages {
             ("@opencode/ai/providers/minimax/messages", minimax::model as Entry),
             ("@opencode/ai/providers/minimax/chat", minimax::chat_model as Entry),
             ("@opencode/ai/providers/minimax/responses", minimax::responses_model as Entry),
+            ("@opencode/ai/providers/minimax/videos", minimax::video_model as Entry),
             ("@opencode/ai/providers/mistral", mistral::model as Entry),
             ("@opencode/ai/providers/moonshot", moonshot::model as Entry),
             ("@opencode/ai/providers/moonshot/chat", moonshot::model as Entry),
@@ -208,10 +214,12 @@ impl ProviderPackages {
             ("@opencode/ai/providers/openrouter/decisions", openrouter::decision_model as Entry),
             ("@opencode/ai/providers/openrouter/images", openrouter::image_model as Entry),
             ("@opencode/ai/providers/openrouter/responses", openrouter::responses_model as Entry),
+            ("@opencode/ai/providers/openrouter/videos", openrouter::video_model as Entry),
             ("@opencode/ai/providers/togetherai", togetherai::model as Entry),
             ("@opencode/ai/providers/typesafe-ai/decisions", typesafe_ai::decision_model as Entry),
             ("@opencode/ai/providers/venice", venice::model as Entry),
             ("@opencode/ai/providers/venice/responses", venice::responses_model as Entry),
+            ("@opencode/ai/providers/volcengine/videos", volcengine::video_model as Entry),
             ("@opencode/ai/providers/vercel-ai-gateway", vercel_ai_gateway::model as Entry),
             ("@opencode/ai/providers/vercel-ai-gateway/chat", vercel_ai_gateway::chat_model as Entry),
             ("@opencode/ai/providers/vercel-ai-gateway/messages", vercel_ai_gateway::messages_model as Entry),
@@ -220,6 +228,7 @@ impl ProviderPackages {
             ("@opencode/ai/providers/vercel-ai-gateway/responses", vercel_ai_gateway::responses_model as Entry),
             ("@opencode/ai/providers/xai", xai::model as Entry),
             ("@opencode/ai/providers/xai/images", xai::image_model as Entry),
+            ("@opencode/ai/providers/xai/videos", xai::video_model as Entry),
             ("@opencode/ai/providers/zai", zai::model as Entry),
             ("@opencode/ai/providers/zai/chat", zai::chat_model as Entry),
             ("@opencode/ai/providers/zai/images", zai::image_model as Entry),

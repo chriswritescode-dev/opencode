@@ -4,11 +4,13 @@ use crate::Env;
 use crate::media::route::MediaEndpoint;
 use crate::modalities::embedding::EmbeddingRequest;
 use crate::modalities::image::ImageModel;
+use crate::modalities::video::VideoModel;
 use crate::protocols::gemini::{DEFAULT_BASE_URL, Gemini};
 use crate::protocols::google_decisions::{self, GoogleDecisions};
 use crate::protocols::google_embed_content::{self, GoogleEmbedContent};
 use crate::protocols::google_images;
 use crate::protocols::google_interactions::{self, GoogleInteractions};
+use crate::protocols::google_interactions_video;
 use crate::providers::{RuntimeModel, Settings, language_model, modality_options};
 use crate::route::auth::{Auth, ProviderAuthOptions, api_key};
 use crate::route::decision::{DecisionRoute, DecisionRouteInput};
@@ -93,6 +95,22 @@ pub fn image_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Resul
         provider_options,
     );
     Ok(RuntimeModel::Image(route))
+}
+
+pub fn video_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result<RuntimeModel, AiError> {
+    let (transport, provider_options) = modality_options(settings, &["apiKey", "baseURL"]);
+    let endpoint = MediaEndpoint::path(google_interactions_video::PATH)
+        .with_base_url(settings.string("baseURL").unwrap_or(google_interactions_video::DEFAULT_BASE_URL));
+    Ok(RuntimeModel::Video(VideoModel::queued(
+        model_id,
+        ID.to_string(),
+        google_interactions_video::protocol(),
+        endpoint,
+        auth(settings),
+        None,
+        transport,
+        provider_options,
+    )))
 }
 
 pub fn decision_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result<RuntimeModel, AiError> {

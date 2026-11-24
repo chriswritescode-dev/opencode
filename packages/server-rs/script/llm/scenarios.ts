@@ -1,7 +1,7 @@
 import "./capture.js"
 import { Effect, Schema, Stream } from "effect"
 import { HttpClientRequest } from "effect/http"
-import { capture, createLoader, multipartFixtures, type Scenario } from "./capture.js"
+import { capture, createLoader, multipartFixtures, type Scenario, type ScenarioContext } from "./capture.js"
 
 const tree = process.env.OPENCODE_UPSTREAM_TREE
 if (!tree) throw new Error("scenarios: OPENCODE_UPSTREAM_TREE is not set")
@@ -2961,6 +2961,134 @@ const imageScenarios = [
   }),
 ]
 
+const videoVariant = (scenario: Scenario) => ({ group: "video", scenario })
+const runVideoJob = (context: ScenarioContext, model: any, request: any, download: boolean) =>
+  Effect.gen(function* () {
+    const job = yield* ai.video.start(request)
+    let status = yield* ai.video.status(model, job.id)
+    while (status.status === "running") {
+      yield* context.sleep(10)
+      status = yield* ai.video.status(model, job.id)
+    }
+    const response = yield* ai.video.result(model, job.id)
+    if (download) yield* context.download(response.video)
+    return response
+  })
+const balloonPrompt = "A single red balloon drifting slowly upward against a clear blue sky."
+const videoScenarios = [
+  videoVariant({
+    cassette: "google-interactions-video/generates-a-video",
+    protocol: "google-interactions-video",
+    operation: "video.generate",
+    provider: {
+      package: "@opencode/ai/providers/google/videos",
+      modelID: "gemini-omni-1.2-flash",
+      settings: { apiKey: "fixture" },
+    },
+    run: (context) =>
+      Effect.gen(function* () {
+        const model = Google.configure({ apiKey: "fixture" }).video("gemini-omni-1.2-flash")
+        const request = ai.video.request({
+          model,
+          prompt: "A single red balloon drifting slowly upward against a clear blue sky. No dialogue.",
+          aspect: "16:9",
+          resolution: "360p",
+          duration: "3 seconds",
+        })
+        return yield* context.operation("video.generate", request, runVideoJob(context, model, request, true))
+      }),
+  }),
+  videoVariant({
+    cassette: "minimax-video/generates-an-h3-video",
+    protocol: "minimax-video",
+    operation: "video.generate",
+    provider: {
+      package: "@opencode/ai/providers/minimax/videos",
+      modelID: "MiniMax-H3-Lite",
+      settings: { apiKey: "fixture" },
+    },
+    run: (context) =>
+      Effect.gen(function* () {
+        const model = MiniMax.configure({ apiKey: "fixture" }).video("MiniMax-H3-Lite")
+        const request = ai.video.request({
+          model,
+          prompt: balloonPrompt,
+          aspect: "16:9",
+          resolution: "480p",
+          duration: "4 seconds",
+        })
+        return yield* context.operation("video.generate", request, runVideoJob(context, model, request, false))
+      }),
+  }),
+  videoVariant({
+    cassette: "minimax-video/generates-a-hailuo-video-from-a-first-frame",
+    protocol: "minimax-video",
+    operation: "video.generate",
+    provider: {
+      package: "@opencode/ai/providers/minimax/videos",
+      modelID: "MiniMax-Hailuo-02",
+      settings: { apiKey: "fixture" },
+    },
+    run: (context) =>
+      Effect.gen(function* () {
+        const model = MiniMax.configure({ apiKey: "fixture" }).video("MiniMax-Hailuo-02")
+        const request = ai.video.request({
+          model,
+          prompt: "The woman slowly turns her head and smiles.",
+          start:
+            "https://cdn.hailuoai.com/prod/2025-08-12-17/video_cover/1754990600020238321-411603868533342214-cover.jpg",
+          resolution: "512p",
+          duration: "6 seconds",
+        })
+        return yield* context.operation("video.generate", request, runVideoJob(context, model, request, false))
+      }),
+  }),
+  videoVariant({
+    cassette: "openrouter-video/generates-a-video",
+    protocol: "openrouter-video",
+    operation: "video.generate",
+    provider: {
+      package: "@opencode/ai/providers/openrouter/videos",
+      modelID: "x-ai/grok-imagine-video-1.5-lite",
+      settings: { apiKey: "fixture" },
+    },
+    run: (context) =>
+      Effect.gen(function* () {
+        const model = OpenRouter.configure({ apiKey: "fixture" }).video("x-ai/grok-imagine-video-1.5-lite")
+        const request = ai.video.request({
+          model,
+          prompt: balloonPrompt,
+          aspect: "16:9",
+          resolution: "480p",
+          duration: "1 second",
+        })
+        return yield* context.operation("video.generate", request, runVideoJob(context, model, request, true))
+      }),
+  }),
+  videoVariant({
+    cassette: "xai-video/generates-a-video",
+    protocol: "xai-video",
+    operation: "video.generate",
+    provider: {
+      package: "@opencode/ai/providers/xai/videos",
+      modelID: "grok-imagine-video-1.5",
+      settings: { apiKey: "fixture" },
+    },
+    run: (context) =>
+      Effect.gen(function* () {
+        const model = XAI.configure({ apiKey: "fixture" }).video("grok-imagine-video-1.5")
+        const request = ai.video.request({
+          model,
+          prompt: balloonPrompt,
+          aspect: "16:9",
+          resolution: "480p",
+          duration: "2 seconds",
+        })
+        return yield* context.operation("video.generate", request, runVideoJob(context, model, request, true))
+      }),
+  }),
+]
+
 const decisionQuestions = [
   {
     name: "department",
@@ -5089,6 +5217,7 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
   ...embeddingScenarios,
   ...decisionScenarios,
   ...imageScenarios,
+  ...videoScenarios,
 ]
 
 const cassettes = []

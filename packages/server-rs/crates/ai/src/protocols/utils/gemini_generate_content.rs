@@ -53,6 +53,7 @@ pub fn tool_media(item: &ToolContent) -> Option<MediaPart> {
                 },
                 info: None,
                 provider_metadata: None,
+                headers: None,
             },
             filename: name.clone(),
             cache: None,

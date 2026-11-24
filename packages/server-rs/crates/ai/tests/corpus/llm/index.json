@@ -571,6 +571,11 @@
       "group": "images"
     },
     {
+      "cassette": "google-interactions-video/generates-a-video",
+      "protocol": "google-interactions-video",
+      "group": "video"
+    },
+    {
       "cassette": "google-interactions/continues-tool-results-with-previous-interaction-id",
       "protocol": "google-interactions",
       "group": "native-vendors"
@@ -809,6 +814,16 @@
       "cassette": "minimax-responses/m3-streams-text-with-effort-none",
       "protocol": "open-responses",
       "group": "chat-variants"
+    },
+    {
+      "cassette": "minimax-video/generates-a-hailuo-video-from-a-first-frame",
+      "protocol": "minimax-video",
+      "group": "video"
+    },
+    {
+      "cassette": "minimax-video/generates-an-h3-video",
+      "protocol": "minimax-video",
+      "group": "video"
     },
     {
       "cassette": "mistral-chat-glm/streams-an-indexed-tool-call",
@@ -1146,6 +1161,11 @@
       "group": "chat-variants"
     },
     {
+      "cassette": "openrouter-video/generates-a-video",
+      "protocol": "openrouter-video",
+      "group": "video"
+    },
+    {
       "cassette": "pdf/anthropic-tool-result",
       "protocol": "anthropic-messages",
       "group": "anthropic-messages"
@@ -1324,6 +1344,11 @@
       "cassette": "xai-images/generates-an-image",
       "protocol": "xai-images",
       "group": "images"
+    },
+    {
+      "cassette": "xai-video/generates-a-video",
+      "protocol": "xai-video",
+      "group": "video"
     },
     {
       "cassette": "zai-chat/glm-4-5-calls-a-tool-without-streaming-arguments",

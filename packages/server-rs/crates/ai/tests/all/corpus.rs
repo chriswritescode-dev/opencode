@@ -63,6 +63,10 @@ pub struct Step {
     pub events: Option<Vec<serde_json::Value>>,
     #[serde(default)]
     pub result: Option<serde_json::Value>,
+    #[serde(default)]
+    pub sleeps: Vec<u64>,
+    #[serde(default)]
+    pub downloads: Vec<String>,
     pub error: Option<StepError>,
 }
 

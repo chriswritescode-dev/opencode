@@ -3,9 +3,11 @@ use std::sync::Arc;
 use crate::Env;
 use crate::media::route::MediaEndpoint;
 use crate::modalities::image::ImageModel;
+use crate::modalities::video::VideoModel;
 use crate::protocols::open_responses::PATH as RESPONSES_PATH;
 use crate::protocols::xai_images;
 use crate::protocols::xai_responses::XaiResponses;
+use crate::protocols::xai_video;
 use crate::providers::{RuntimeModel, Settings, language_model_with_route, open_responses_options};
 use crate::route::auth::{Auth, ProviderAuthOptions, api_key};
 use crate::route::endpoint::Endpoint;
@@ -51,6 +53,23 @@ pub fn image_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Resul
         provider_options,
     );
     Ok(RuntimeModel::Image(route))
+}
+
+pub fn video_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result<RuntimeModel, AiError> {
+    let (transport, provider_options) = crate::providers::modality_options(settings, &DECLARED);
+    let endpoint =
+        MediaEndpoint::function(Arc::new(|request: &crate::modalities::video::VideoRequest| xai_video::path(request)))
+            .with_base_url(base_url(settings));
+    Ok(RuntimeModel::Video(VideoModel::queued(
+        model_id,
+        ID.to_string(),
+        xai_video::protocol(),
+        endpoint,
+        auth(settings),
+        None,
+        transport,
+        provider_options,
+    )))
 }
 
 fn base_url(settings: &Settings) -> &str {

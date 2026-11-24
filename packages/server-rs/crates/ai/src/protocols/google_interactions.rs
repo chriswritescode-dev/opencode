@@ -147,7 +147,7 @@ fn is_http_url(url: &str) -> bool {
         || url.get(..8).is_some_and(|prefix| prefix.eq_ignore_ascii_case("https://"))
 }
 
-fn media_content(asset: &MediaAsset) -> Result<Value, AiError> {
+pub fn media_content(asset: &MediaAsset) -> Result<Value, AiError> {
     let media_type = shared::media_type(asset);
     let kind = shared::media_kind(&media_type);
     if !matches!(kind, "image" | "audio" | "video")

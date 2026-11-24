@@ -114,6 +114,79 @@ impl Identity {
             },
         }
     }
+
+    pub fn output(&self, text: &TextResponse) -> Output {
+        Output { identity: self.clone(), body: text.body.clone(), http: text.http.clone() }
+    }
+}
+
+pub struct Output {
+    pub identity: Identity,
+    pub body: String,
+    pub http: HttpContext,
+}
+
+impl Output {
+    pub fn json<T: DeserializeOwned>(&self) -> Result<T, AiError> {
+        serde_json::from_str(&self.body)
+            .map_err(|_| self.invalid(format!("{} returned an invalid response", self.identity.name)))
+    }
+
+    pub fn invalid(&self, message: impl Into<String>) -> AiError {
+        AiError {
+            reason: AiErrorReason::InvalidProviderOutput {
+                message: message.into(),
+                body: Some(self.body.clone()),
+                http: Some(self.http.clone()),
+                classification: None,
+                route: Some(self.identity.id.clone()),
+            },
+        }
+    }
+
+    pub fn ended(&self, reason: Reason, message: impl Into<String>, failure: Failure) -> AiError {
+        let message = message.into();
+        let body = Some(self.body.clone());
+        let http = Some(self.http.clone());
+        if reason != Reason::Failed {
+            return AiError {
+                reason: AiErrorReason::InvalidRequest { message, body, http, parameter: None, classification: None },
+            };
+        }
+        let reason = match failure {
+            Failure::InvalidRequest => {
+                AiErrorReason::InvalidRequest { message, body, http, parameter: None, classification: None }
+            }
+            Failure::Authentication => AiErrorReason::Authentication { message, body, http },
+            Failure::RateLimit => {
+                AiErrorReason::RateLimit { message, body, http, retry_after_ms: None, rate_limit: None }
+            }
+            Failure::ProviderInternal => AiErrorReason::ProviderInternal { message, body, http, retry_after_ms: None },
+        };
+        AiError { reason }
+    }
+
+    pub fn pending(&self, name: &str, token: &str) -> AiError {
+        AiError {
+            reason: AiErrorReason::InvalidRequest {
+                message: format!("{name} generation {token} has not finished; await it before reading the result"),
+                body: Some(self.body.clone()),
+                http: Some(self.http.clone()),
+                parameter: None,
+                classification: None,
+            },
+        }
+    }
+
+    pub fn content_policy(&self, message: impl Into<String>) -> AiError {
+        AiError {
+            reason: AiErrorReason::ContentPolicy {
+                message: message.into(),
+                body: Some(self.body.clone()),
+                http: Some(self.http.clone()),
+            },
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -171,7 +171,7 @@ async fn materialize_part(part: DecisionPart, executor: &RequestExecutor) -> Res
         .unwrap_or_else(|| "application/octet-stream".to_string());
     let source = MediaSource::Base64 { data: BASE64_STANDARD.encode(bytes), media_type };
     Ok(DecisionPart::Media {
-        media: MediaAsset { source, info: media.info, provider_metadata: media.provider_metadata },
+        media: MediaAsset { source, info: media.info, provider_metadata: media.provider_metadata, headers: None },
         filename,
     })
 }

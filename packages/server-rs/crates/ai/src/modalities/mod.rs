@@ -1,6 +1,7 @@
 pub mod decision;
 pub mod embedding;
 pub mod image;
+pub mod video;
 
 pub use decision::{
     ChoiceOption, ChoiceProbability, ChoiceValue, DecisionAnswer, DecisionClient, DecisionModel, DecisionPart,

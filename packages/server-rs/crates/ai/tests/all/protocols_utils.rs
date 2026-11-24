@@ -236,7 +236,7 @@ fn gemini_media_part_rejects_other_provider_refs() {
 }
 
 fn media_asset(source: MediaSource) -> MediaAsset {
-    MediaAsset { source, info: None, provider_metadata: None }
+    MediaAsset { source, info: None, provider_metadata: None, headers: None }
 }
 
 fn start_tool(tools: &mut tool_stream::State, key: i64, name: &str, text: &str) {

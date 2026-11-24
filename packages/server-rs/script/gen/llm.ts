@@ -76,9 +76,12 @@ export const GROUPS: Record<string, { protocols: string[] }> = {
       "zai-images",
     ],
   },
+  video: {
+    protocols: ["google-interactions-video", "minimax-video", "openrouter-video", "xai-video", "seedance-video"],
+  },
 }
 
-export const EXPECTED_CASSETTES = 286
+export const EXPECTED_CASSETTES = 291
 const EXPECTED_ADC_CASES = 11
 
 const exporter = `${tree}/exporter`

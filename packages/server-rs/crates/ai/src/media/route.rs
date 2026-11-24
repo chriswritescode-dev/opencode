@@ -468,7 +468,7 @@ pub fn read_with_retry<T: Send + 'static>(
     })
 }
 
-async fn read_text(response: HttpResponse, url: String) -> Result<TextResponse, AiError> {
+pub async fn read_text(response: HttpResponse, url: String) -> Result<TextResponse, AiError> {
     let status = response.status;
     let headers = response.headers;
     let mut body = response.body;
@@ -536,6 +536,7 @@ pub struct PollContext<Token> {
     pub token: Token,
     pub get: Arc<dyn Fn(String) -> BoxFuture<Result<CallResponse, AiError>> + Send + Sync>,
     pub credentials: Arc<dyn Fn(String) -> BoxFuture<Result<Option<StringMap>, AiError>> + Send + Sync>,
+    pub clock: Arc<dyn crate::clock::Clock>,
 }
 
 #[derive(Clone)]
@@ -561,7 +562,11 @@ pub trait QueuedProtocol<Request, Response, Token>: Send + Sync {
     fn status_path(&self, token: &Token) -> String;
     fn status_decode(&self, response: &TextResponse, context: &PollContext<Token>) -> Result<Snapshot, AiError>;
     fn result_path(&self, token: &Token) -> String;
-    fn result_decode(&self, response: &TextResponse, context: &PollContext<Token>) -> Result<Response, AiError>;
+    fn result_decode(
+        &self,
+        response: TextResponse,
+        context: PollContext<Token>,
+    ) -> BoxFuture<Result<Response, AiError>>;
     fn cancel(&self) -> Option<Cancel<Token>> {
         None
     }
@@ -769,7 +774,8 @@ where
             Box::pin(async move { transport.headers(&url, &exchange, &executor, &context) })
         })
     };
-    let poll_context = PollContext { token: token.clone(), get: get.clone(), credentials };
+    let poll_context =
+        PollContext { token: token.clone(), get: get.clone(), credentials, clock: context.clock.clone() };
     let status = {
         let get = get.clone();
         let protocol = protocol.clone();
@@ -800,7 +806,7 @@ where
             Box::pin(async move {
                 let called = get(path).await?;
                 let text = read_text(called.response, called.url).await?;
-                protocol.result_decode(&text, &poll_context)
+                protocol.result_decode(text, poll_context).await
             })
         })
     };

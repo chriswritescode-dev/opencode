@@ -948,6 +948,7 @@ impl ProtocolState for State {
                             source: MediaSource::Base64 { data, media_type: mime_type },
                             info: None,
                             provider_metadata: None,
+                            headers: None,
                         },
                         provider_metadata: signature_metadata(&self.provider_metadata_key, signature.as_deref()),
                     });

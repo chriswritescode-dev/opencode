@@ -241,7 +241,7 @@ fn tool_result_part(result: ToolResultValue) -> ToolResultPart {
 }
 
 fn media_asset(source: MediaSource) -> MediaAsset {
-    MediaAsset { source, info: None, provider_metadata: None }
+    MediaAsset { source, info: None, provider_metadata: None, headers: None }
 }
 
 fn media_part(media: MediaAsset) -> MediaPart {

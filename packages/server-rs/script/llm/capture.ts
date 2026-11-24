@@ -130,6 +130,8 @@ export interface CapturedStep {
   readonly events?: ReadonlyArray<unknown>
   readonly operation?: string
   readonly result?: unknown
+  readonly sleeps?: ReadonlyArray<number>
+  readonly downloads?: ReadonlyArray<string>
   readonly error?: { readonly reason: unknown; readonly retryable: boolean }
 }
 
@@ -157,6 +159,8 @@ export interface ScenarioContext {
     request: unknown,
     run: Effect.Effect<A, E, R>,
   ) => Effect.Effect<A, E, R>
+  readonly sleep: (millis: number) => Effect.Effect<void>
+  readonly download: (asset: any) => Effect.Effect<Uint8Array>
 }
 
 export interface Scenario {
@@ -188,6 +192,8 @@ interface StepRecord {
   events?: Array<unknown>
   operation?: string
   result?: unknown
+  sleeps?: Array<number>
+  downloads?: Array<string>
   error?: { reason: unknown; retryable: boolean }
   raw: Array<unknown>
 }
@@ -229,6 +235,14 @@ const PROTOCOLS: Record<string, { readonly path: string; readonly transport: str
   "minimax-images": { path: "packages/ai/src/protocols/minimax-images.ts", transport: "http-json" },
   "xai-images": { path: "packages/ai/src/protocols/xai-images.ts", transport: "http-json" },
   "zai-images": { path: "packages/ai/src/protocols/zai-images.ts", transport: "http-json" },
+  "google-interactions-video": {
+    path: "packages/ai/src/protocols/google-interactions-video.ts",
+    transport: "http-json",
+  },
+  "minimax-video": { path: "packages/ai/src/protocols/minimax-video.ts", transport: "http-json" },
+  "openrouter-video": { path: "packages/ai/src/protocols/openrouter-video.ts", transport: "http-json" },
+  "xai-video": { path: "packages/ai/src/protocols/xai-video.ts", transport: "http-json" },
+  "seedance-video": { path: "packages/ai/src/protocols/seedance-video.ts", transport: "http-json" },
 }
 
 const TEXT_CONTENT_TYPES = new Set([
@@ -389,6 +403,8 @@ export async function capture(tree: string, scenario: Scenario): Promise<Capture
     decisionClient,
     image,
     imageClient,
+    video,
+    videoClient,
   ] = await Promise.all([
     load("@opencode/http-recorder"),
     load("@effect/platform-node"),
@@ -401,6 +417,8 @@ export async function capture(tree: string, scenario: Scenario): Promise<Capture
     load("packages/ai/src/decision-client.ts"),
     load("packages/ai/src/image.ts"),
     load("packages/ai/src/image-client.ts"),
+    load("packages/ai/src/video.ts"),
+    load("packages/ai/src/video-client.ts"),
   ])
   const HttpRecorder = httpRecorder.HttpRecorder
   const { LLMClient, RequestExecutor, WebSocketTransport } = route
@@ -518,6 +536,30 @@ export async function capture(tree: string, scenario: Scenario): Promise<Capture
             : Array.from(value as Array<unknown>).map((event) => encode(image.ImageEvent, event)),
       }
     }
+    if (operation === "video.generate") {
+      return {
+        request: (request: any) => {
+          if (request.fetch !== undefined) throw new Error("capture: request.fetch is not captured")
+          return roundTrip({
+            prompt: request.prompt,
+            ...(request.start === undefined ? {} : { start: encode(media.AssetSchema, request.start) }),
+            ...(request.end === undefined ? {} : { end: encode(media.AssetSchema, request.end) }),
+            ...(request.references === undefined
+              ? {}
+              : { references: request.references.map((value: unknown) => encode(media.AssetSchema, value)) }),
+            ...(request.duration === undefined ? {} : { duration: request.duration }),
+            ...(request.aspect === undefined ? {} : { aspect: request.aspect }),
+            ...(request.resolution === undefined ? {} : { resolution: request.resolution }),
+            ...(request.sound === undefined ? {} : { sound: request.sound }),
+            ...(request.providerOptions === undefined ? {} : { providerOptions: request.providerOptions }),
+            ...(request.headers === undefined ? {} : { headers: request.headers }),
+            ...(request.timeout === undefined ? {} : { timeout: request.timeout }),
+            ...(request.http === undefined ? {} : { http: request.http }),
+          })
+        },
+        result: (value: unknown) => encode(video.VideoResponse, value),
+      }
+    }
     if (operation !== "embedding.generate")
       throw new Error(`capture: operation "${operation}" has no encoder in this phase`)
     return {
@@ -572,6 +614,23 @@ export async function capture(tree: string, scenario: Scenario): Promise<Capture
       return run.pipe(
         Effect.onExit((exit) => Effect.sync(() => finishOperation(step, exit, encoders.result))),
       ) as Effect.Effect<A, E, R>
+    })
+
+  const sleep = (millis: number): Effect.Effect<void> =>
+    Effect.sync(() => {
+      if (active === undefined) throw new Error("capture: sleep requires an active operation step")
+      if (active.sleeps === undefined) active.sleeps = []
+      active.sleeps.push(millis)
+    })
+
+  const download = (asset: any): Effect.Effect<Uint8Array> =>
+    Effect.suspend(() => {
+      if (active === undefined) throw new Error("capture: download requires an active operation step")
+      if (asset.source.type === "url") {
+        if (active.downloads === undefined) active.downloads = []
+        active.downloads.push(asset.source.url)
+      }
+      return asset.bytes()
     })
 
   const finish = (step: StepRecord, exit: Exit.Exit<unknown, unknown>) => {
@@ -732,12 +791,21 @@ export async function capture(tree: string, scenario: Scenario): Promise<Capture
   const embeddingService = embeddingClient.EmbeddingClient.layer.pipe(Layer.provide(capturing))
   const decisionService = decisionClient.DecisionClient.layer.pipe(Layer.provide(capturing))
   const imageService = imageClient.ImageClient.layer.pipe(Layer.provide(capturing))
-  const layer = Layer.mergeAll(wrapped, embeddingService, decisionService, imageService, webSocket, capturing)
+  const videoService = videoClient.VideoClient.layer.pipe(Layer.provide(capturing))
+  const layer = Layer.mergeAll(
+    wrapped,
+    embeddingService,
+    decisionService,
+    imageService,
+    videoService,
+    webSocket,
+    capturing,
+  )
 
   const program = Effect.gen(function* () {
     const channel = yield* makeChannel
     const executor = yield* RequestExecutor.Service
-    yield* scenario.run({ load, channel, executor, operation }) as Effect.Effect<void, unknown>
+    yield* scenario.run({ load, channel, executor, operation, sleep, download }) as Effect.Effect<void, unknown>
   })
 
   const exit = await Effect.runPromise(

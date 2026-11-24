@@ -6,8 +6,10 @@ use crate::Env;
 use crate::ExecutionContext;
 use crate::media::route::MediaEndpoint;
 use crate::modalities::image::ImageModel;
+use crate::modalities::video::VideoModel;
 use crate::protocols::anthropic_messages::{AnthropicMessagesPlain, PATH as MESSAGES_PATH};
 use crate::protocols::minimax_images;
+use crate::protocols::minimax_video;
 use crate::protocols::open_responses::{OpenResponses, PATH as RESPONSES_PATH};
 use crate::protocols::openai_chat::{self, OpenAiChat, PATH as CHAT_PATH};
 use crate::protocols::shared::invalid_request;
@@ -127,6 +129,34 @@ pub fn image_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Resul
         provider_options,
     );
     Ok(RuntimeModel::Image(route))
+}
+
+pub fn video_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result<RuntimeModel, AiError> {
+    let (transport, provider_options) = crate::providers::modality_options(settings, &DECLARED);
+    let base_url =
+        settings.string("baseURL").map(video_base_url).unwrap_or_else(|| minimax_video::DEFAULT_BASE_URL.to_string());
+    let hailuo = minimax_video::is_hailuo(model_id);
+    let endpoint = MediaEndpoint::path(if hailuo { minimax_video::HAILUO_PATH } else { minimax_video::PATH })
+        .with_base_url(base_url);
+    let protocol = if hailuo { minimax_video::hailuo_protocol() } else { minimax_video::h3_protocol() };
+    Ok(RuntimeModel::Video(VideoModel::queued(
+        model_id,
+        ID.to_string(),
+        protocol,
+        endpoint,
+        auth(settings),
+        None,
+        transport,
+        provider_options,
+    )))
+}
+
+fn video_base_url(base_url: &str) -> String {
+    let mut value = base_url.trim_end_matches('/');
+    if let Some(rest) = value.strip_suffix("/v1") {
+        value = rest;
+    }
+    value.trim_end_matches('/').to_string()
 }
 
 fn auth(settings: &Settings) -> Auth {

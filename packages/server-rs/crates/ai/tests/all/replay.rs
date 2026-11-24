@@ -1,5 +1,6 @@
 use std::collections::{BTreeMap, VecDeque};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
@@ -9,11 +10,14 @@ use serde_json::Value;
 
 use opencode_ai::ExecutionContext;
 use opencode_ai::MapEnv;
+use opencode_ai::Sleeper;
 use opencode_ai::clock::FixedClock;
 use opencode_ai::id::SequenceIds;
+use opencode_ai::media::generation::{AwaitOptions, Generation, Poll, Snapshot, Status};
 use opencode_ai::modalities::decision::{DecisionClient, DecisionRequestInput};
 use opencode_ai::modalities::embedding::{EmbeddingClient, EmbeddingRequestInput};
 use opencode_ai::modalities::image::{ImageClient, ImageEvent, ImageRequestInput};
+use opencode_ai::modalities::video::{VideoClient, VideoRequestInput, VideoResponse};
 use opencode_ai::providers::{ProviderPackages, RuntimeModel, Settings};
 use opencode_ai::route::client::LlmClient;
 use opencode_ai::route::compile::StreamOptions;
@@ -22,7 +26,7 @@ use opencode_ai::route::model::{Model, ModelDescriptor, ProtocolRegistry};
 use opencode_ai::route::transport::channel::{
     ChannelCheckpoint, ChannelExchange, ChannelExecution, ChannelExecutor, ChannelMode, ChannelObservation,
 };
-use opencode_ai::schema::{AiError, LlmEvent, Recovery};
+use opencode_ai::schema::{AiError, LlmEvent, MediaSource, Recovery};
 
 use crate::corpus::{Cassette, ChannelOp, Exchange, Prepared, Step, WebSocketRecord};
 
@@ -361,6 +365,155 @@ pub async fn replay_image_group(group: &str) -> usize {
     steps
 }
 
+pub async fn replay_video_cassette(cassette: &Cassette) {
+    for (index, step) in cassette.steps.iter().enumerate() {
+        let Some(provider) = step.provider.as_ref() else {
+            panic!("{} step {index} video: the step recorded no provider", cassette.name);
+        };
+        assert_eq!(
+            step.operation.as_deref(),
+            Some("video.generate"),
+            "{} step {index} video: unexpected operation",
+            cassette.name
+        );
+        let settings = Settings::new(provider.settings.clone());
+        let runtime = ProviderPackages::builtin()
+            .model(&provider.package, &provider.model_id, &settings, &MapEnv::default())
+            .unwrap_or_else(|error| {
+                panic!("{} step {index} provider {}: {}", cassette.name, provider.package, error.message())
+            });
+        let RuntimeModel::Video(model) = runtime else {
+            panic!("{} step {index} video: expected a video model", cassette.name);
+        };
+        assert_eq!(model.id, step.model["id"], "{} step {index} video model.id", cassette.name);
+        assert_eq!(model.provider, step.model["provider"], "{} step {index} video model.provider", cassette.name);
+        assert_eq!(model.route.id, step.model["route"]["id"], "{} step {index} video model.route.id", cassette.name);
+        let input: VideoRequestInput = serde_json::from_value(step.request.clone())
+            .unwrap_or_else(|error| panic!("{} step {index} video request: {error}", cassette.name));
+        let exchanges = match step.exchanges.as_ref() {
+            Some(exchanges) if !exchanges.is_empty() => exchanges.clone(),
+            _ => panic!("{} step {index} video exchanges: the step recorded no HTTP exchange", cassette.name),
+        };
+        for chunk in [None, Some(CHUNKED_BODY_SIZE)] {
+            let label = match chunk {
+                None => "single-chunk".to_string(),
+                Some(size) => format!("{size}-byte-chunk"),
+            };
+            let sender = Arc::new(RecordedSender {
+                cassette: cassette.name.clone(),
+                step: index,
+                label: label.clone(),
+                chunk,
+                exchanges: Mutex::new(VecDeque::from(exchanges.clone())),
+            });
+            let clock = Arc::new(FixedClock::new(cassette.clock_epoch_ms));
+            let sleeper = Arc::new(RecordingSleeper::default());
+            let context = ExecutionContext::with_sleeper(
+                clock.clone(),
+                Arc::new(SequenceIds::new()),
+                Arc::new(MapEnv::default()),
+                sleeper.clone(),
+            );
+            let executor = RequestExecutor::new(sender.clone(), None, clock);
+            let job = VideoClient::start(input.clone().with_model(model.clone()), &executor, &context)
+                .await
+                .unwrap_or_else(|error| panic!("{} step {index} {label} video start: {error}", cassette.name));
+            let route =
+                (model.route.attach)(model.transport.as_ref(), Value::String(job.id.clone()), &executor, &context)
+                    .await
+                    .unwrap_or_else(|error| panic!("{} step {index} {label} video attach: {error}", cassette.name));
+            let generation = Generation::new(
+                route,
+                Value::String(job.id.clone()),
+                Snapshot { id: job.id, status: Status::Running, reason: None, progress: None },
+            );
+            let interval = Duration::from_millis(step.sleeps[0]);
+            let response = generation
+                .await_result(
+                    &context,
+                    Some(AwaitOptions { poll: Some(Poll { interval: Some(interval), timeout: None }) }),
+                )
+                .await
+                .unwrap_or_else(|error| panic!("{} step {index} {label} video result: {error}", cassette.name));
+            let expected_sleeps = step.sleeps.iter().map(|millis| Duration::from_millis(*millis)).collect::<Vec<_>>();
+            assert_eq!(
+                sleeper.durations(),
+                expected_sleeps,
+                "{} step {index} {label} video sleep schedule",
+                cassette.name
+            );
+            let actual = serde_json::to_value(&response)
+                .unwrap_or_else(|failure| panic!("{} step {index} {label} video result: {failure}", cassette.name));
+            let expected = step.result.as_ref().unwrap_or_else(|| {
+                panic!("{} step {index} {label} video result: the step recorded no result", cassette.name)
+            });
+            assert_eq!(actual, *expected, "{} step {index} {label} video result", cassette.name);
+            for url in &step.downloads {
+                download_video_asset(&executor, &response, url, &cassette.name, index, &label).await;
+            }
+            sender.assert_consumed();
+        }
+    }
+}
+
+async fn download_video_asset(
+    executor: &RequestExecutor,
+    response: &VideoResponse,
+    url: &str,
+    cassette: &str,
+    index: usize,
+    label: &str,
+) {
+    let asset = response
+        .videos
+        .iter()
+        .find(|asset| matches!(&asset.source, MediaSource::Url { url: asset_url, .. } if asset_url == url))
+        .unwrap_or_else(|| panic!("{cassette} step {index} {label} video download: {url} is not a result asset"));
+    let headers = asset
+        .headers
+        .as_ref()
+        .map(|headers| headers.iter().map(|(name, value)| (name.to_string(), value.to_string())).collect())
+        .unwrap_or_default();
+    let mut downloaded = executor
+        .execute(PreparedHttp::new("GET", url, headers, Bytes::new()), None)
+        .await
+        .unwrap_or_else(|error| panic!("{cassette} step {index} {label} video download: {error}"));
+    let mut bytes = 0usize;
+    while let Some(chunk) = downloaded.body.next().await {
+        let chunk = chunk.unwrap_or_else(|error| panic!("{cassette} step {index} {label} video download: {error}"));
+        bytes += chunk.len();
+    }
+    assert!(bytes > 0, "{cassette} step {index} {label} video download: {url} returned no bytes");
+}
+
+pub async fn replay_video_group(group: &str) -> usize {
+    let corpus = crate::corpus::Corpus::load();
+    let mut steps = 0;
+    for cassette in corpus.cassettes.iter().filter(|cassette| cassette.group == group) {
+        replay_video_cassette(cassette).await;
+        steps += cassette.steps.len();
+    }
+    steps
+}
+
+#[derive(Default)]
+struct RecordingSleeper {
+    durations: Mutex<Vec<Duration>>,
+}
+
+impl RecordingSleeper {
+    fn durations(&self) -> Vec<Duration> {
+        self.durations.lock().expect("recorded sleeps").clone()
+    }
+}
+
+impl Sleeper for RecordingSleeper {
+    fn sleep(&self, duration: Duration) -> futures_util::future::BoxFuture<'static, ()> {
+        self.durations.lock().expect("recorded sleeps").push(duration);
+        Box::pin(async {})
+    }
+}
+
 fn assert_image_generate_outcome(
     cassette: &Cassette,
     index: usize,
@@ -586,6 +739,9 @@ fn assert_prepared(cassette: &str, step: usize, label: &str, prepared: &Prepared
         body_bytes(&prepared.body, prepared.body_encoding.as_deref(), cassette, step, label, "prepared.body");
     assert_eq!(headers, prepared.headers, "{cassette} step {step} {label} prepared.headers");
     assert_eq!(sent, recorded, "{cassette} step {step} {label} prepared.body bytes");
+    if sent.is_empty() {
+        return;
+    }
     let sent_json: Value = serde_json::from_slice(&sent)
         .unwrap_or_else(|error| panic!("{cassette} step {step} {label} prepared.body: {error}"));
     let recorded_json: Value = serde_json::from_slice(&recorded)
@@ -881,7 +1037,7 @@ async fn replay_websocket_cassette(cassette: &Cassette) {
 #[tokio::test]
 async fn every_in_scope_cassette_replays() {
     let corpus = crate::corpus::Corpus::load();
-    assert_eq!(corpus.cassettes.len(), 286, "in-scope cassette count");
+    assert_eq!(corpus.cassettes.len(), 291, "in-scope cassette count");
     let groups = [
         "anthropic-messages",
         "bedrock-converse",
@@ -896,6 +1052,7 @@ async fn every_in_scope_cassette_replays() {
         "openai-chat",
         "openai-responses-websocket",
         "vendor-variants",
+        "video",
         "wrapped-core",
     ];
     for cassette in &corpus.cassettes {
@@ -912,6 +1069,8 @@ async fn every_in_scope_cassette_replays() {
             replay_decision_cassette(cassette).await;
         } else if cassette.group == "images" {
             replay_image_cassette(cassette).await;
+        } else if cassette.group == "video" {
+            replay_video_cassette(cassette).await;
         } else if cassette.group == "openai-responses-websocket" {
             replay_websocket_cassette(cassette).await;
         } else {
@@ -919,7 +1078,7 @@ async fn every_in_scope_cassette_replays() {
         }
         replayed += 1;
     }
-    assert_eq!(replayed, 286, "replayed cassette count");
+    assert_eq!(replayed, 291, "replayed cassette count");
 }
 
 #[tokio::test]
@@ -929,6 +1088,15 @@ async fn image_cassettes() {
     assert_eq!(cassettes, 22, "image cassette count");
     let steps = replay_image_group("images").await;
     assert_eq!(steps, 22, "image step count");
+}
+
+#[tokio::test]
+async fn video_cassettes() {
+    let corpus = crate::corpus::Corpus::load();
+    let cassettes = corpus.cassettes.iter().filter(|cassette| cassette.group == "video").count();
+    assert_eq!(cassettes, 5, "video cassette count");
+    let steps = replay_video_group("video").await;
+    assert_eq!(steps, 5, "video step count");
 }
 
 #[tokio::test]

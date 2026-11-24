@@ -70,6 +70,7 @@ async fn decision_body(media_type: Option<&str>) -> Value {
                 },
                 info: None,
                 provider_metadata: None,
+                headers: None,
             },
             filename: None,
         }],
