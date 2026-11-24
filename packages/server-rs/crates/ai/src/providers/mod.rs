@@ -265,11 +265,16 @@ impl ProviderPackages {
         let decisions = BTreeMap::from([
             ("@opencode/ai/providers/baseten", baseten::decision_model as Entry),
             ("@opencode/ai/providers/baseten/decisions", baseten::decision_model as Entry),
+            ("@opencode/ai/providers/cloudflare-ai-gateway", cloudflare_ai_gateway::decision_model as Entry),
             ("@opencode/ai/providers/cloudflare-ai-gateway/decisions", cloudflare_ai_gateway::decision_model as Entry),
+            ("@opencode/ai/providers/cloudflare-workers-ai", cloudflare_workers_ai::decision_model as Entry),
             ("@opencode/ai/providers/cloudflare-workers-ai/decisions", cloudflare_workers_ai::decision_model as Entry),
+            ("@opencode/ai/providers/digitalocean", digitalocean::decision_model as Entry),
             ("@opencode/ai/providers/digitalocean/decisions", digitalocean::decision_model as Entry),
+            ("@opencode/ai/providers/google", google::decision_model as Entry),
             ("@opencode/ai/providers/google/decisions", google::decision_model as Entry),
             ("@opencode/ai/providers/openai", openai::decision_model as Entry),
+            ("@opencode/ai/providers/openai-compatible", openai_compatible::decision_model as Entry),
             ("@opencode/ai/providers/openai-compatible/decisions", openai_compatible::decision_model as Entry),
             ("@opencode/ai/providers/opencode", opencode::decision_model as Entry),
             ("@opencode/ai/providers/opencode/decisions", opencode::decision_model as Entry),
@@ -277,6 +282,7 @@ impl ProviderPackages {
             ("@opencode/ai/providers/openrouter/decisions", openrouter::decision_model as Entry),
             ("@opencode/ai/providers/typesafe-ai", typesafe_ai::decision_model as Entry),
             ("@opencode/ai/providers/typesafe-ai/decisions", typesafe_ai::decision_model as Entry),
+            ("@opencode/ai/providers/vercel-ai-gateway", vercel_ai_gateway::decision_model as Entry),
             ("@opencode/ai/providers/vercel-ai-gateway/decisions", vercel_ai_gateway::decision_model as Entry),
         ]);
         let extractions = BTreeMap::from([(

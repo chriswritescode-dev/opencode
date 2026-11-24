@@ -11,6 +11,7 @@ use crate::media::protocol::{Body, DecodeContext, Identity};
 use crate::media::route::{Mode, ResponseContext, StreamedProtocol};
 use crate::modalities::image::{MediaUsage, token_usage};
 use crate::modalities::speech::{SpeechEvent, SpeechRequest, SpeechVoice};
+use crate::protocols::utils::media_input::merge_body;
 use crate::protocols::utils::speech_stream as speech;
 use crate::protocols::utils::speech_stream::PcmEncoding;
 use crate::route::executor::ByteStream;
@@ -40,6 +41,12 @@ pub struct State {
     audio: speech::Audio,
     done: bool,
     usage: Option<MediaUsage>,
+}
+
+impl speech::AudioState for State {
+    fn audio_mut(&mut self) -> &mut speech::Audio {
+        &mut self.audio
+    }
 }
 
 impl StreamedProtocol<SpeechRequest, SpeechEvent, speech::Frame, State> for OpenAiSpeech {
@@ -78,9 +85,7 @@ impl StreamedProtocol<SpeechRequest, SpeechEvent, speech::Frame, State> for Open
         if request.mode == Mode::Stream && supports_sse(&request.model.id) {
             base.insert("stream_format".to_string(), Value::String("sse".to_string()));
         }
-        let options = request.provider_options.clone().unwrap_or_default();
-        let http = http_body(request);
-        let value = crate::json::merge_records([&base, &options, &http]).unwrap_or_default();
+        let value = merge_body(base, request.provider_options.as_ref(), request.http.as_ref());
         Ok(Body::Json { value, query: None })
     }
 
@@ -97,14 +102,7 @@ impl StreamedProtocol<SpeechRequest, SpeechEvent, speech::Frame, State> for Open
     }
 
     fn step(&self, state: State, frame: speech::Frame) -> Result<(State, Vec<SpeechEvent>), AiError> {
-        match frame {
-            speech::Frame::Text(frame) => self.on_event(state, &frame),
-            speech::Frame::Bytes(bytes) => {
-                let mut state = state;
-                let events = speech::delta(&mut state.audio, &bytes);
-                Ok((state, events))
-            }
-        }
+        speech::step(state, frame, |state, frame| self.on_event(state, frame))
     }
 
     fn finish(&self, state: &State, context: &ResponseContext<SpeechRequest>) -> Result<Vec<SpeechEvent>, AiError> {
@@ -222,10 +220,6 @@ fn token_number(
         None => Ok(None),
         Some(value) => value.as_f64().and_then(crate::protocols::shared::number_from_f64).map(Some).ok_or_else(invalid),
     }
-}
-
-fn http_body(request: &SpeechRequest) -> Map<String, Value> {
-    request.http.as_ref().and_then(|http| http.body.clone()).unwrap_or_default()
 }
 
 fn insert(target: &mut Map<String, Value>, key: &str, value: Option<Value>) {

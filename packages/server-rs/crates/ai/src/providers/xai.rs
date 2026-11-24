@@ -9,7 +9,7 @@ use crate::protocols::xai_images;
 use crate::protocols::xai_responses::XaiResponses;
 use crate::protocols::xai_video;
 use crate::providers::{RuntimeModel, Settings, language_model_with_route, open_responses_options};
-use crate::route::auth::{Auth, ProviderAuthOptions, api_key};
+use crate::route::auth::{Auth, ProviderAuthOptions, bearer};
 use crate::route::endpoint::Endpoint;
 use crate::route::model::{Route, RouteTransport};
 use crate::schema::{AiError, RequestOptions, merge_request_options};
@@ -77,9 +77,7 @@ fn base_url(settings: &Settings) -> &str {
 }
 
 fn auth(settings: &Settings) -> Auth {
-    api_key(ProviderAuthOptions { auth: None, api_key: settings.api_key() }, &["XAI_API_KEY"], |credential| {
-        credential.bearer()
-    })
+    bearer(ProviderAuthOptions { auth: None, api_key: settings.api_key() }, &["XAI_API_KEY"])
 }
 
 fn responses_options(settings: &Settings) -> Option<RequestOptions> {

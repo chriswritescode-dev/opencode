@@ -3,10 +3,11 @@ use std::sync::Arc;
 
 use futures_util::{Stream, StreamExt, stream};
 use serde::{Deserialize, Serialize};
-use serde_json::Number;
+use serde_json::{Number, Value};
 
 use crate::ExecutionContext;
 use crate::media::client::MediaRoute;
+use crate::media::generation::{AwaitOptions, Generation};
 use crate::media::route::{MediaEndpoint, MediaRequest, Mode, StreamedInput, StreamedProtocol};
 use crate::route::auth::Auth;
 use crate::route::executor::{BoxFuture, RequestExecutor};
@@ -297,6 +298,7 @@ pub struct SpeechClient;
 impl SpeechClient {
     pub fn generate(
         mut request: SpeechRequest,
+        options: Option<AwaitOptions>,
         executor: &RequestExecutor,
         context: &ExecutionContext,
     ) -> BoxFuture<Result<SpeechResponse, AiError>> {
@@ -309,7 +311,7 @@ impl SpeechClient {
                 MediaRoute::Inline(route) => route.generate(request, &executor, &context).await,
                 MediaRoute::Queued(route) => {
                     let generation = route.start.as_ref()(request, &executor, &context).await?;
-                    generation.await_result(&context, None).await
+                    generation.await_result(&context, options).await
                 }
                 MediaRoute::Stream(route) => (route.generate)(request, &executor, &context).await,
             }
@@ -318,6 +320,7 @@ impl SpeechClient {
 
     pub fn stream(
         mut request: SpeechRequest,
+        options: Option<AwaitOptions>,
         executor: &RequestExecutor,
         context: &ExecutionContext,
     ) -> Pin<Box<dyn Stream<Item = Result<SpeechEvent, AiError>> + Send>> {
@@ -334,8 +337,43 @@ impl SpeechClient {
                 let context = context.clone();
                 events_from(stream::once(async move {
                     let generation = started.await?;
-                    generation.await_result(&context, None).await
+                    generation.await_result(&context, options).await
                 }))
+            }
+        }
+    }
+
+    pub fn start(
+        mut request: SpeechRequest,
+        executor: &RequestExecutor,
+        context: &ExecutionContext,
+    ) -> BoxFuture<Result<Generation<SpeechResponse>, AiError>> {
+        request.mode = Mode::Generate;
+        let route = request.model.route.clone();
+        let executor = executor.clone();
+        let context = context.clone();
+        Box::pin(async move {
+            let MediaRoute::Queued(route) = route.as_ref() else {
+                return Err(crate::media::client::not_queued("speech", route.provider(), route.id(), "start"));
+            };
+            route.start.as_ref()(request, &executor, &context).await
+        })
+    }
+
+    pub fn resume(
+        request: &SpeechRequest,
+        token: Value,
+        executor: &RequestExecutor,
+        context: &ExecutionContext,
+    ) -> BoxFuture<Result<Generation<SpeechResponse>, AiError>> {
+        let route = request.model.route.clone();
+        let executor = executor.clone();
+        let context = context.clone();
+        match route.as_ref() {
+            MediaRoute::Queued(route) => route.resume.as_ref()(request, token, &executor, &context),
+            other => {
+                let error = crate::media::client::not_queued("speech", other.provider(), other.id(), "resume");
+                Box::pin(async move { Err(error) })
             }
         }
     }

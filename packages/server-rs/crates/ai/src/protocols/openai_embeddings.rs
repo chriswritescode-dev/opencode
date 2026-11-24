@@ -81,7 +81,7 @@ impl EmbeddingProtocol for OpenAiEmbeddings {
             .into_iter()
             .map(|(_, embedding)| match embedding {
                 ResponseEmbedding::Values(values) => Ok(values),
-                ResponseEmbedding::Base64(value) => decode_base64(identity, &value),
+                ResponseEmbedding::Base64(value) => decode_base64(identity, text, &value),
             })
             .collect::<Result<Vec<_>, _>>()?;
         let usage = output.usage.map(order_usage);
@@ -121,12 +121,17 @@ enum ResponseEmbedding {
     Base64(String),
 }
 
-fn decode_base64(identity: &Identity, value: &str) -> Result<Vec<f64>, AiError> {
-    let bytes = BASE64_STANDARD
-        .decode(value)
-        .map_err(|_| identity.invalid(format!("{NAME} returned an invalid base64 embedding"), None, None))?;
+fn decode_base64(identity: &Identity, text: &TextResponse, value: &str) -> Result<Vec<f64>, AiError> {
+    let invalid = || {
+        identity.invalid(
+            format!("{NAME} returned an invalid base64 embedding"),
+            Some(text.body.clone()),
+            Some(text.http.clone()),
+        )
+    };
+    let bytes = BASE64_STANDARD.decode(value).map_err(|_| invalid())?;
     if bytes.len() % 4 != 0 {
-        return Err(identity.invalid(format!("{NAME} returned an invalid base64 embedding"), None, None));
+        return Err(invalid());
     }
     Ok(bytes
         .as_chunks::<4>()

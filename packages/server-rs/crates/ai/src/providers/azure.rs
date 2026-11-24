@@ -130,11 +130,7 @@ pub fn image_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Resul
     let endpoint = MediaEndpoint {
         base_url: Some(base_url),
         path: Arc::new(|request: &crate::modalities::image::ImageRequest| {
-            if request.images.is_empty() {
-                crate::protocols::openai_images::PATH.to_string()
-            } else {
-                crate::protocols::openai_images::EDIT_PATH.to_string()
-            }
+            crate::protocols::openai_images::path(ImageInput::Edits, request)
         }),
         query,
     };

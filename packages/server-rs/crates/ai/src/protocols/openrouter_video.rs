@@ -135,7 +135,12 @@ impl QueuedProtocol<VideoRequest, VideoResponse, String> for OpenRouterVideo {
             if state == State::Running {
                 return Err(output.pending(NAME, &context.token));
             }
-            let detail = job.error.as_deref().map(|error| format!(": {error}")).unwrap_or_default();
+            let detail = job
+                .error
+                .as_deref()
+                .filter(|error| !error.is_empty())
+                .map(|error| format!(": {error}"))
+                .unwrap_or_default();
             if state == State::Failed {
                 let message = format!("{NAME} generation failed{detail}");
                 if job.error.as_deref().is_some_and(is_content_policy) {

@@ -251,7 +251,7 @@ async fn prepare(runtime: &RuntimeModel, clock: Arc<FixedClock>, context: &Execu
                 timeout: None,
                 http: None,
             };
-            let _ = ImageClient::generate(input.with_model(model.clone()), &executor, context).await;
+            let _ = ImageClient::generate(input.with_model(model.clone()), None, &executor, context).await;
         }
         RuntimeModel::Video(model) => {
             let input = VideoRequestInput {
@@ -284,7 +284,7 @@ async fn prepare(runtime: &RuntimeModel, clock: Arc<FixedClock>, context: &Execu
                 timeout: None,
                 http: None,
             };
-            let _ = SpeechClient::generate(input.with_model(model.clone()), &executor, context).await;
+            let _ = SpeechClient::generate(input.with_model(model.clone()), None, &executor, context).await;
         }
         RuntimeModel::Transcription(model) => {
             let input = TranscriptionRequestInput {

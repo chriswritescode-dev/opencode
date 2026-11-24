@@ -314,7 +314,7 @@ impl DecisionClient {
                 reason: AiErrorReason::InvalidProviderOutput {
                     route: Some(route.id.clone()),
                     message: "Decision answers do not match the requested questions".to_string(),
-                    body: None,
+                    body: serde_json::to_string(&response.answers).ok(),
                     http: None,
                     classification: None,
                 },

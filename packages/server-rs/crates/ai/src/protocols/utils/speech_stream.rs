@@ -50,6 +50,25 @@ pub fn delta(audio: &mut Audio, chunk: &[u8]) -> Vec<SpeechEvent> {
     vec![SpeechEvent::AudioDelta { chunk: BASE64_STANDARD.encode(chunk) }]
 }
 
+pub trait AudioState {
+    fn audio_mut(&mut self) -> &mut Audio;
+}
+
+pub fn step<State: AudioState>(
+    state: State,
+    frame: Frame,
+    on_record: impl FnOnce(State, &str) -> Result<(State, Vec<SpeechEvent>), AiError>,
+) -> Result<(State, Vec<SpeechEvent>), AiError> {
+    match frame {
+        Frame::Text(frame) => on_record(state, &frame),
+        Frame::Bytes(bytes) => {
+            let mut state = state;
+            let events = delta(state.audio_mut(), &bytes);
+            Ok((state, events))
+        }
+    }
+}
+
 pub fn timestamps(texts: &[String], starts: &[Number], ends: &[Number]) -> Vec<SpeechEvent> {
     if texts.is_empty() {
         return Vec::new();

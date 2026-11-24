@@ -13,11 +13,11 @@ use crate::protocols::open_responses::PATH as RESPONSES_PATH;
 use crate::protocols::openai_embeddings::{self, OpenAiEmbeddings};
 use crate::protocols::shared::invalid_request;
 use crate::providers::{RuntimeModel, Settings, language_model_with_route, modality_options};
-use crate::route::auth::{Auth, ProviderAuthOptions, api_key};
+use crate::route::auth::{Auth, ProviderAuthOptions, bearer};
 use crate::route::embedding::{EmbeddingRoute, EmbeddingRouteInput};
 use crate::route::endpoint::Endpoint;
 use crate::route::model::{Route, RouteTransport};
-use crate::schema::{AiError, LlmRequest};
+use crate::schema::{AiError, LlmRequest, ToolDefinition};
 
 pub const ID: &str = "alibaba";
 
@@ -26,6 +26,30 @@ const AUTH_ENV_VARS: [&str; 2] = ["DASHSCOPE_API_KEY", "ALIBABA_API_KEY"];
 const DECLARED: [&str; 4] = ["apiKey", "baseURL", "region", "workspaceID"];
 const CHAT_PATH: &str = "/chat/completions";
 const MESSAGES_PATH: &str = "/messages";
+
+pub fn web_search() -> ToolDefinition {
+    hosted_tool("web_search", "Search the web with Alibaba's hosted search tool.")
+}
+
+pub fn web_extractor() -> ToolDefinition {
+    hosted_tool("web_extractor", "Extract web page content with Alibaba's hosted tool.")
+}
+
+pub fn code_interpreter() -> ToolDefinition {
+    hosted_tool("code_interpreter", "Execute code with Alibaba's hosted interpreter.")
+}
+
+fn hosted_tool(name: &str, description: &str) -> ToolDefinition {
+    ToolDefinition {
+        name: name.to_string(),
+        description: description.to_string(),
+        input_schema: json!({ "type": "object", "properties": {} }),
+        output_schema: None,
+        freeform: None,
+        cache: None,
+        native: Some([("alibaba".to_string(), json!({ "type": name }))].into_iter().collect()),
+    }
+}
 
 pub fn model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result<RuntimeModel, AiError> {
     let route = Route {
@@ -140,9 +164,7 @@ fn region_host(region: &str) -> Option<&'static str> {
 }
 
 fn auth(settings: &Settings) -> Auth {
-    api_key(ProviderAuthOptions { auth: None, api_key: settings.api_key() }, &AUTH_ENV_VARS, |credential| {
-        credential.bearer()
-    })
+    bearer(ProviderAuthOptions { auth: None, api_key: settings.api_key() }, &AUTH_ENV_VARS)
 }
 
 fn anthropic_version(_request: &LlmRequest) -> Vec<(String, String)> {

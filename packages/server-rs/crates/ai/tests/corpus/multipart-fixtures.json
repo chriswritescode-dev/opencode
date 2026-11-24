@@ -96,6 +96,124 @@
       "file": null,
       "boundary": "----OpenCodeFixtureBoundary",
       "bodyBase64": "LS0tLS0tT3BlbkNvZGVGaXh0dXJlQm91bmRhcnktLQ0K"
+    },
+    {
+      "name": "line-breaks-and-quotes-in-fields",
+      "fields": {
+        "name\nnewline": "value\nnewline",
+        "name\rreturn": "value\rreturn",
+        "name\r\nboth": "value\r\nboth",
+        "name\"quote": "value\"quote",
+        "mixed": "a\nb\rc\r\nd"
+      },
+      "overlay": null,
+      "reserved": [],
+      "repeatArrays": null,
+      "file": null,
+      "boundary": "----OpenCodeFixtureBoundary",
+      "bodyBase64": "LS0tLS0tT3BlbkNvZGVGaXh0dXJlQm91bmRhcnkNCkNvbnRlbnQtRGlzcG9zaXRpb246IGZvcm0tZGF0YTsgbmFtZT0ibmFtZSUwRCUwQW5ld2xpbmUiDQoNCnZhbHVlDQpuZXdsaW5lDQotLS0tLS1PcGVuQ29kZUZpeHR1cmVCb3VuZGFyeQ0KQ29udGVudC1EaXNwb3NpdGlvbjogZm9ybS1kYXRhOyBuYW1lPSJuYW1lJTBEJTBBcmV0dXJuIg0KDQp2YWx1ZQ0KcmV0dXJuDQotLS0tLS1PcGVuQ29kZUZpeHR1cmVCb3VuZGFyeQ0KQ29udGVudC1EaXNwb3NpdGlvbjogZm9ybS1kYXRhOyBuYW1lPSJuYW1lJTBEJTBBYm90aCINCg0KdmFsdWUNCmJvdGgNCi0tLS0tLU9wZW5Db2RlRml4dHVyZUJvdW5kYXJ5DQpDb250ZW50LURpc3Bvc2l0aW9uOiBmb3JtLWRhdGE7IG5hbWU9Im5hbWUlMjJxdW90ZSINCg0KdmFsdWUicXVvdGUNCi0tLS0tLU9wZW5Db2RlRml4dHVyZUJvdW5kYXJ5DQpDb250ZW50LURpc3Bvc2l0aW9uOiBmb3JtLWRhdGE7IG5hbWU9Im1peGVkIg0KDQphDQpiDQpjDQpkDQotLS0tLS1PcGVuQ29kZUZpeHR1cmVCb3VuZGFyeS0tDQo="
+    },
+    {
+      "name": "line-breaks-and-quotes-in-filename",
+      "fields": {
+        "purpose": "fixture"
+      },
+      "overlay": null,
+      "reserved": [],
+      "repeatArrays": null,
+      "file": {
+        "name": "file\nname",
+        "filename": "we\nird\rna\r\nme\"q.bin",
+        "contentType": "image/PNG",
+        "bytesBase64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+      },
+      "boundary": "----OpenCodeFixtureBoundary",
+      "bodyBase64": "LS0tLS0tT3BlbkNvZGVGaXh0dXJlQm91bmRhcnkNCkNvbnRlbnQtRGlzcG9zaXRpb246IGZvcm0tZGF0YTsgbmFtZT0icHVycG9zZSINCg0KZml4dHVyZQ0KLS0tLS0tT3BlbkNvZGVGaXh0dXJlQm91bmRhcnkNCkNvbnRlbnQtRGlzcG9zaXRpb246IGZvcm0tZGF0YTsgbmFtZT0iZmlsZSUwRCUwQW5hbWUiOyBmaWxlbmFtZT0id2UlMEFpcmQlMERuYSUwRCUwQW1lJTIycS5iaW4iDQpDb250ZW50LVR5cGU6IGltYWdlL3BuZw0KDQqJUE5HDQoaCgAAAA1JSERSAAAAAQAAAAEIBgAAAB8VxIkAAAANSURBVHjaY/zPwFAPAASFAYCEqYwhAAAAAElFTkSuQmCCDQotLS0tLS1PcGVuQ29kZUZpeHR1cmVCb3VuZGFyeS0tDQo="
+    },
+    {
+      "name": "file-type-text-plain",
+      "fields": {
+        "purpose": "fixture"
+      },
+      "overlay": null,
+      "reserved": [],
+      "repeatArrays": null,
+      "file": {
+        "name": "file",
+        "filename": "blob",
+        "contentType": "text/plain",
+        "bytesBase64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+      },
+      "boundary": "----OpenCodeFixtureBoundary",
+      "bodyBase64": "LS0tLS0tT3BlbkNvZGVGaXh0dXJlQm91bmRhcnkNCkNvbnRlbnQtRGlzcG9zaXRpb246IGZvcm0tZGF0YTsgbmFtZT0icHVycG9zZSINCg0KZml4dHVyZQ0KLS0tLS0tT3BlbkNvZGVGaXh0dXJlQm91bmRhcnkNCkNvbnRlbnQtRGlzcG9zaXRpb246IGZvcm0tZGF0YTsgbmFtZT0iZmlsZSI7IGZpbGVuYW1lPSJibG9iIg0KQ29udGVudC1UeXBlOiB0ZXh0L3BsYWluO2NoYXJzZXQ9dXRmLTgNCg0KiVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg0KLS0tLS0tT3BlbkNvZGVGaXh0dXJlQm91bmRhcnktLQ0K"
+    },
+    {
+      "name": "file-type-application-json",
+      "fields": {
+        "purpose": "fixture"
+      },
+      "overlay": null,
+      "reserved": [],
+      "repeatArrays": null,
+      "file": {
+        "name": "file",
+        "filename": "blob",
+        "contentType": "application/json",
+        "bytesBase64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+      },
+      "boundary": "----OpenCodeFixtureBoundary",
+      "bodyBase64": "LS0tLS0tT3BlbkNvZGVGaXh0dXJlQm91bmRhcnkNCkNvbnRlbnQtRGlzcG9zaXRpb246IGZvcm0tZGF0YTsgbmFtZT0icHVycG9zZSINCg0KZml4dHVyZQ0KLS0tLS0tT3BlbkNvZGVGaXh0dXJlQm91bmRhcnkNCkNvbnRlbnQtRGlzcG9zaXRpb246IGZvcm0tZGF0YTsgbmFtZT0iZmlsZSI7IGZpbGVuYW1lPSJibG9iIg0KQ29udGVudC1UeXBlOiBhcHBsaWNhdGlvbi9qc29uO2NoYXJzZXQ9dXRmLTgNCg0KiVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg0KLS0tLS0tT3BlbkNvZGVGaXh0dXJlQm91bmRhcnktLQ0K"
+    },
+    {
+      "name": "file-type-audio-wav",
+      "fields": {
+        "purpose": "fixture"
+      },
+      "overlay": null,
+      "reserved": [],
+      "repeatArrays": null,
+      "file": {
+        "name": "file",
+        "filename": "blob",
+        "contentType": "audio/wav",
+        "bytesBase64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+      },
+      "boundary": "----OpenCodeFixtureBoundary",
+      "bodyBase64": "LS0tLS0tT3BlbkNvZGVGaXh0dXJlQm91bmRhcnkNCkNvbnRlbnQtRGlzcG9zaXRpb246IGZvcm0tZGF0YTsgbmFtZT0icHVycG9zZSINCg0KZml4dHVyZQ0KLS0tLS0tT3BlbkNvZGVGaXh0dXJlQm91bmRhcnkNCkNvbnRlbnQtRGlzcG9zaXRpb246IGZvcm0tZGF0YTsgbmFtZT0iZmlsZSI7IGZpbGVuYW1lPSJibG9iIg0KQ29udGVudC1UeXBlOiBhdWRpby93YXYNCg0KiVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg0KLS0tLS0tT3BlbkNvZGVGaXh0dXJlQm91bmRhcnktLQ0K"
+    },
+    {
+      "name": "file-type-octet-stream",
+      "fields": {
+        "purpose": "fixture"
+      },
+      "overlay": null,
+      "reserved": [],
+      "repeatArrays": null,
+      "file": {
+        "name": "file",
+        "filename": "blob",
+        "contentType": "application/octet-stream",
+        "bytesBase64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+      },
+      "boundary": "----OpenCodeFixtureBoundary",
+      "bodyBase64": "LS0tLS0tT3BlbkNvZGVGaXh0dXJlQm91bmRhcnkNCkNvbnRlbnQtRGlzcG9zaXRpb246IGZvcm0tZGF0YTsgbmFtZT0icHVycG9zZSINCg0KZml4dHVyZQ0KLS0tLS0tT3BlbkNvZGVGaXh0dXJlQm91bmRhcnkNCkNvbnRlbnQtRGlzcG9zaXRpb246IGZvcm0tZGF0YTsgbmFtZT0iZmlsZSI7IGZpbGVuYW1lPSJibG9iIg0KQ29udGVudC1UeXBlOiBhcHBsaWNhdGlvbi9vY3RldC1zdHJlYW0NCg0KiVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg0KLS0tLS0tT3BlbkNvZGVGaXh0dXJlQm91bmRhcnktLQ0K"
+    },
+    {
+      "name": "file-type-empty",
+      "fields": {
+        "purpose": "fixture"
+      },
+      "overlay": null,
+      "reserved": [],
+      "repeatArrays": null,
+      "file": {
+        "name": "file",
+        "filename": "blob",
+        "contentType": "",
+        "bytesBase64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+      },
+      "boundary": "----OpenCodeFixtureBoundary",
+      "bodyBase64": "LS0tLS0tT3BlbkNvZGVGaXh0dXJlQm91bmRhcnkNCkNvbnRlbnQtRGlzcG9zaXRpb246IGZvcm0tZGF0YTsgbmFtZT0icHVycG9zZSINCg0KZml4dHVyZQ0KLS0tLS0tT3BlbkNvZGVGaXh0dXJlQm91bmRhcnkNCkNvbnRlbnQtRGlzcG9zaXRpb246IGZvcm0tZGF0YTsgbmFtZT0iZmlsZSI7IGZpbGVuYW1lPSJibG9iIg0KQ29udGVudC1UeXBlOiBhcHBsaWNhdGlvbi9vY3RldC1zdHJlYW0NCg0KiVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg0KLS0tLS0tT3BlbkNvZGVGaXh0dXJlQm91bmRhcnktLQ0K"
     }
   ]
 }

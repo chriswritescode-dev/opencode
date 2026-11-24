@@ -76,14 +76,14 @@ pub fn query(route: &str, values: &Map<String, Value>) -> Result<Query, AiError>
     for (key, value) in values {
         let item = match value {
             Value::String(value) => QueryValue::One(value.clone()),
-            Value::Number(value) => QueryValue::One(value.to_string()),
+            Value::Number(value) => QueryValue::One(number_text(value)),
             Value::Bool(value) => QueryValue::One(value.to_string()),
             Value::Array(items) => QueryValue::Many(
                 items
                     .iter()
                     .map(|item| match item {
                         Value::String(value) => Ok(value.clone()),
-                        Value::Number(value) => Ok(value.to_string()),
+                        Value::Number(value) => Ok(number_text(value)),
                         Value::Bool(value) => Ok(value.to_string()),
                         _ => Err(invalid(key)),
                     })
@@ -94,6 +94,10 @@ pub fn query(route: &str, values: &Map<String, Value>) -> Result<Query, AiError>
         query.push((key.clone(), item));
     }
     Ok(query)
+}
+
+fn number_text(value: &Number) -> String {
+    value.as_f64().map(opencode_api_types::js::number_to_string).unwrap_or_else(|| value.to_string())
 }
 
 pub fn decoded_asset(

@@ -7,7 +7,7 @@ use crate::media::route::InlineProtocol;
 use crate::modalities::image::{ImageRequest, ImageResponse, token_usage};
 use crate::protocols::shared::number_from_f64;
 use crate::protocols::utils::gemini_generate_content::{content_filtered, media_part};
-use crate::protocols::utils::media_input::decoded_asset;
+use crate::protocols::utils::media_input::{decoded_asset, merge_body};
 use crate::schema::{AiError, AiErrorReason, ProviderId, ProviderMetadata};
 
 pub const ID: &str = "google-images";
@@ -45,7 +45,7 @@ fn body(request: &ImageRequest) -> Result<Body, AiError> {
     let mut base = Map::new();
     base.insert("contents".to_string(), Value::Array(contents));
     base.insert("generationConfig".to_string(), Value::Object(generation_config(request)));
-    let body = crate::json::merge_records([&base, &http_body(request)]).unwrap_or(base);
+    let body = merge_body(base, None, request.http.as_ref());
     Ok(Body::Json { value: body, query: None })
 }
 
@@ -260,8 +260,4 @@ fn insert_optional(target: &mut Map<String, Value>, key: &str, value: Option<&Va
 
 fn identity() -> Identity {
     Identity { id: ID.to_string(), name: NAME.to_string(), provider: ProviderId::from(PROVIDER) }
-}
-
-fn http_body(request: &ImageRequest) -> Map<String, Value> {
-    request.http.as_ref().and_then(|http| http.body.clone()).unwrap_or_default()
 }

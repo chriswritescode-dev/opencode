@@ -4,7 +4,7 @@ use crate::Env;
 use crate::protocols::open_responses::OpenResponses;
 use crate::protocols::venice_chat::{self, VeniceChat};
 use crate::providers::{RuntimeModel, Settings, language_model, open_responses_options};
-use crate::route::auth::{ProviderAuthOptions, api_key};
+use crate::route::auth::{ProviderAuthOptions, bearer};
 use crate::route::endpoint::{Endpoint, PathPart};
 use crate::schema::{AiError, RequestOptions, merge_request_options};
 
@@ -13,10 +13,7 @@ const BASE_URL: &str = "https://api.venice.ai/api/v1";
 
 pub fn model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result<RuntimeModel, AiError> {
     let base_url = settings.string("baseURL").unwrap_or(BASE_URL);
-    let auth =
-        api_key(ProviderAuthOptions { auth: None, api_key: settings.api_key() }, &["VENICE_API_KEY"], |credential| {
-            credential.bearer()
-        });
+    let auth = bearer(ProviderAuthOptions { auth: None, api_key: settings.api_key() }, &["VENICE_API_KEY"]);
     Ok(language_model(
         model_id,
         ID,
@@ -33,10 +30,7 @@ pub fn model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result<Runt
 
 pub fn responses_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result<RuntimeModel, AiError> {
     let base_url = settings.string("baseURL").unwrap_or(BASE_URL);
-    let auth =
-        api_key(ProviderAuthOptions { auth: None, api_key: settings.api_key() }, &["VENICE_API_KEY"], |credential| {
-            credential.bearer()
-        });
+    let auth = bearer(ProviderAuthOptions { auth: None, api_key: settings.api_key() }, &["VENICE_API_KEY"]);
     let base =
         RequestOptions { provider_options: Some(open_responses_options::defaults()), ..RequestOptions::default() };
     let extra = settings.request_options(&["apiKey", "baseURL", "queryParams"]);

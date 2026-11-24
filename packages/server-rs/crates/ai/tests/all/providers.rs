@@ -1,10 +1,16 @@
+use std::sync::{Arc, Mutex};
+
 use opencode_ai::MapEnv;
+use opencode_ai::modalities::embedding::{EmbeddingClient, EmbeddingRequestInput, EmbeddingValue};
 use opencode_ai::providers::google_vertex_shared::{self, ApiKeyInput};
+use opencode_ai::providers::meta::{UserLocation, WebSearchOptions};
+use opencode_ai::providers::openai::ImageGenerationOptions;
 use opencode_ai::providers::{ProviderPackages, RuntimeModel, Settings};
 use opencode_ai::route::auth::CredentialSource;
 use opencode_ai::route::compile::{Compiled, StreamOptions, compile};
+use opencode_ai::route::executor::{BoxFuture, HttpResponse, HttpSender, PreparedHttp, RequestExecutor};
 use opencode_ai::route::model::Model;
-use opencode_ai::schema::AiErrorReason;
+use opencode_ai::schema::{AiError, AiErrorReason, ToolDefinition};
 use serde_json::json;
 
 use crate::compile::{compile_model, compile_model_with_channel, headers};
@@ -651,4 +657,313 @@ fn google_adc_reports_a_missing_credential() {
         }
         other => panic!("expected authentication error, got {other:?}"),
     }
+}
+
+#[test]
+fn openai_query_params_reach_both_language_endpoints() {
+    for specifier in ["@opencode/ai/providers/openai", "@opencode/ai/providers/openai/chat"] {
+        let model = model(
+            specifier,
+            "gpt-5-mini",
+            json!({ "apiKey": "fixture", "queryParams": { "api-version": "2025-01-01" } }),
+        );
+        assert!(
+            model
+                .options
+                .as_ref()
+                .and_then(|options| options.provider_options.as_ref())
+                .is_none_or(|options| !options.contains_key("queryParams")),
+            "{specifier}: queryParams stayed in provider options"
+        );
+        let compiled = compile_model(&model);
+        assert!(
+            compiled.prepared.request.url.ends_with("?api-version=2025-01-01"),
+            "{specifier}: {}",
+            compiled.prepared.request.url
+        );
+    }
+}
+
+#[test]
+fn openai_media_headers_keep_caller_values_over_organization_and_project() {
+    let settings = from_value(json!({
+        "apiKey": "fixture",
+        "organization": "org",
+        "project": "project",
+        "headers": {
+            "OpenAI-Organization": "caller-org",
+            "OpenAI-Project": "caller-project",
+            "x-extra": "one"
+        }
+    }));
+    let RuntimeModel::Transcription(model) =
+        opencode_ai::providers::openai::transcription_model("whisper-1", &settings, &MapEnv::default())
+            .expect("transcription model")
+    else {
+        panic!("expected a transcription model");
+    };
+    let headers = model.transport.and_then(|transport| transport.headers).expect("transport headers");
+    assert_eq!(headers.get("OpenAI-Organization"), Some("caller-org"));
+    assert_eq!(headers.get("OpenAI-Project"), Some("caller-project"));
+    assert_eq!(headers.get("x-extra"), Some("one"));
+}
+
+#[test]
+fn google_vertex_tuned_embeddings_reject_express_mode_api_keys() {
+    for (settings, env) in [
+        (from_value(json!({ "apiKey": "key" })), MapEnv::default()),
+        (Settings::default(), MapEnv::new(vec![("GOOGLE_VERTEX_API_KEY".to_string(), "key".to_string())])),
+    ] {
+        let error = match ProviderPackages::builtin().model(
+            "@opencode/ai/providers/google-vertex/embeddings",
+            "endpoints/123",
+            &settings,
+            &env,
+        ) {
+            Ok(_) => panic!("tuned embedding model accepted an Express Mode key"),
+            Err(error) => error,
+        };
+        assert_eq!(error.message(), "Google Vertex tuned models do not support Express Mode API keys");
+    }
+}
+
+struct CaptureSender {
+    request: Mutex<Option<PreparedHttp>>,
+}
+
+impl HttpSender for CaptureSender {
+    fn send(&self, request: PreparedHttp) -> BoxFuture<Result<HttpResponse, AiError>> {
+        *self.request.lock().expect("capture lock") = Some(request);
+        Box::pin(async {
+            Err(AiError {
+                reason: AiErrorReason::ProviderInternal {
+                    message: "capture".to_string(),
+                    body: None,
+                    http: None,
+                    retry_after_ms: None,
+                },
+            })
+        })
+    }
+}
+
+#[tokio::test]
+async fn google_vertex_tuned_embeddings_leave_the_publishers_google_path() {
+    let settings = from_value(json!({ "project": "project", "location": "us-central1", "accessToken": "token" }));
+    let runtime = ProviderPackages::builtin()
+        .model("@opencode/ai/providers/google-vertex/embeddings", "endpoints/123", &settings, &MapEnv::default())
+        .expect("tuned embedding model");
+    let RuntimeModel::Embedding(model) = runtime else { panic!("expected an embedding model") };
+    let sender = Arc::new(CaptureSender { request: Mutex::new(None) });
+    let executor = RequestExecutor::new(sender.clone(), None, crate::compile::context().clock);
+    let input = EmbeddingRequestInput {
+        values: vec![EmbeddingValue::Text("fixture".to_string())],
+        dimensions: None,
+        input_type: None,
+        provider_options: None,
+        headers: None,
+        timeout: None,
+        http: None,
+    };
+    let _ = EmbeddingClient::generate(input.with_model(model), &executor, &crate::compile::context()).await;
+    let url = sender
+        .request
+        .lock()
+        .expect("capture lock")
+        .as_ref()
+        .map(|request| request.url.clone())
+        .expect("prepared request");
+    assert_eq!(
+        url,
+        "https://us-central1-aiplatform.googleapis.com/v1beta1/projects/project/locations/us-central1/endpoints/123:predict"
+    );
+}
+
+#[test]
+fn root_decision_specifiers_match_their_decisions_subpath() {
+    let settings = from_value(json!({
+        "apiKey": "fixture",
+        "accountId": "account",
+        "baseURL": "https://example.test/ai/v1"
+    }));
+    let env = MapEnv::default();
+    for (root, subpath) in [
+        ("@opencode/ai/providers/cloudflare-ai-gateway", "@opencode/ai/providers/cloudflare-ai-gateway/decisions"),
+        ("@opencode/ai/providers/cloudflare-workers-ai", "@opencode/ai/providers/cloudflare-workers-ai/decisions"),
+        ("@opencode/ai/providers/digitalocean", "@opencode/ai/providers/digitalocean/decisions"),
+        ("@opencode/ai/providers/google", "@opencode/ai/providers/google/decisions"),
+        ("@opencode/ai/providers/openai-compatible", "@opencode/ai/providers/openai-compatible/decisions"),
+        ("@opencode/ai/providers/vercel-ai-gateway", "@opencode/ai/providers/vercel-ai-gateway/decisions"),
+    ] {
+        assert_eq!(decision_identity(root, &settings, &env), decision_identity(subpath, &settings, &env), "{root}");
+    }
+}
+
+fn decision_identity(specifier: &str, settings: &Settings, env: &MapEnv) -> Result<(String, String), String> {
+    match ProviderPackages::builtin().decision(specifier, "fixture", settings, env) {
+        Ok(RuntimeModel::Decision(model)) => Ok((model.provider, model.route.id.clone())),
+        Ok(_) => panic!("{specifier}: expected a decision model"),
+        Err(error) => Err(error.message().to_string()),
+    }
+}
+
+fn tool_json(tool: &ToolDefinition) -> serde_json::Value {
+    let mut value = serde_json::to_value(tool).expect("tool json");
+    value.as_object_mut().expect("tool object").insert("type".to_string(), json!("tool"));
+    value
+}
+
+#[test]
+fn openai_image_generation_matches_the_hosted_tool_shape() {
+    assert_eq!(
+        tool_json(&opencode_ai::providers::openai::image_generation(ImageGenerationOptions::default())),
+        json!({
+            "type": "tool",
+            "name": "image_generation",
+            "description": "Generate or edit an image using OpenAI's hosted image generation tool.",
+            "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
+            "native": { "openai": { "type": "image_generation" } }
+        })
+    );
+
+    let recorded = opencode_ai::providers::openai::image_generation(ImageGenerationOptions {
+        action: Some("auto".to_string()),
+        output_compression: Some(10),
+        output_format: Some("jpeg".to_string()),
+        partial_images: Some(0),
+        quality: Some("low".to_string()),
+        size: Some("1024x1024".to_string()),
+        ..ImageGenerationOptions::default()
+    });
+    assert_eq!(
+        tool_json(&recorded),
+        json!({
+            "type": "tool",
+            "name": "image_generation",
+            "description": "Generate or edit an image using OpenAI's hosted image generation tool.",
+            "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
+            "native": { "openai": {
+                "type": "image_generation",
+                "action": "auto",
+                "output_compression": 10,
+                "output_format": "jpeg",
+                "partial_images": 0,
+                "quality": "low",
+                "size": "1024x1024"
+            } }
+        })
+    );
+
+    let configured = opencode_ai::providers::openai::image_generation(ImageGenerationOptions {
+        background: Some("transparent".to_string()),
+        input_fidelity: Some("high".to_string()),
+        ..ImageGenerationOptions::default()
+    });
+    assert_eq!(
+        tool_json(&configured)["native"],
+        json!({ "openai": { "type": "image_generation", "background": "transparent", "input_fidelity": "high" } })
+    );
+}
+
+#[test]
+fn meta_web_search_matches_the_hosted_tool_shape() {
+    assert_eq!(
+        tool_json(&opencode_ai::providers::meta::web_search(WebSearchOptions::default())),
+        json!({
+            "type": "tool",
+            "name": "web_search",
+            "description": "Search the web with Meta's hosted search tool.",
+            "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
+            "native": { "meta": { "type": "web_search" } }
+        })
+    );
+
+    let configured = opencode_ai::providers::meta::web_search(WebSearchOptions {
+        search_context_size: Some("high".to_string()),
+        user_location: Some(UserLocation {
+            city: Some("Paris".to_string()),
+            country: Some("FR".to_string()),
+            ..UserLocation::default()
+        }),
+    });
+    assert_eq!(
+        tool_json(&configured)["native"],
+        json!({ "meta": {
+            "type": "web_search",
+            "search_context_size": "high",
+            "user_location": { "type": "approximate", "city": "Paris", "country": "FR" }
+        } })
+    );
+}
+
+#[test]
+fn meta_image_generation_matches_the_hosted_tool_shape() {
+    assert_eq!(
+        tool_json(&opencode_ai::providers::meta::image_generation(
+            opencode_ai::providers::meta::ImageGenerationOptions::default()
+        )),
+        json!({
+            "type": "tool",
+            "name": "image_generation",
+            "description": "Generate or edit an image with Muse Image.",
+            "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
+            "native": { "meta": { "type": "image_generation" } }
+        })
+    );
+
+    let configured =
+        opencode_ai::providers::meta::image_generation(opencode_ai::providers::meta::ImageGenerationOptions {
+            size: Some("512x512".to_string()),
+            output_format: Some("png".to_string()),
+            reasoning_strength: Some("high".to_string()),
+            enable_image_search: Some(false),
+            enable_web_search: Some(true),
+            enable_shell: Some(false),
+        });
+    assert_eq!(
+        tool_json(&configured)["native"],
+        json!({ "meta": {
+            "type": "image_generation",
+            "size": "512x512",
+            "output_format": "png",
+            "reasoning_strength": "high",
+            "enable_image_search": false,
+            "enable_web_search": true,
+            "enable_shell": false
+        } })
+    );
+}
+
+#[test]
+fn alibaba_hosted_tools_match_the_recorded_shapes() {
+    assert_eq!(
+        tool_json(&opencode_ai::providers::alibaba::web_search()),
+        json!({
+            "type": "tool",
+            "name": "web_search",
+            "description": "Search the web with Alibaba's hosted search tool.",
+            "inputSchema": { "type": "object", "properties": {} },
+            "native": { "alibaba": { "type": "web_search" } }
+        })
+    );
+    assert_eq!(
+        tool_json(&opencode_ai::providers::alibaba::web_extractor()),
+        json!({
+            "type": "tool",
+            "name": "web_extractor",
+            "description": "Extract web page content with Alibaba's hosted tool.",
+            "inputSchema": { "type": "object", "properties": {} },
+            "native": { "alibaba": { "type": "web_extractor" } }
+        })
+    );
+    assert_eq!(
+        tool_json(&opencode_ai::providers::alibaba::code_interpreter()),
+        json!({
+            "type": "tool",
+            "name": "code_interpreter",
+            "description": "Execute code with Alibaba's hosted interpreter.",
+            "inputSchema": { "type": "object", "properties": {} },
+            "native": { "alibaba": { "type": "code_interpreter" } }
+        })
+    );
 }

@@ -221,7 +221,7 @@ fn lower_messages(request: &LlmRequest, metadata_key: &str) -> Result<Vec<Value>
     let mut steps = Vec::new();
     for message in &request.messages {
         if matches!(message, Message::System(_)) {
-            let part = shared::wrapped_system_update(ID, message)?;
+            let part = shared::wrapped_system_update("Google Interactions", message)?;
             let mut step = Map::new();
             step.insert("type".to_string(), Value::String("user_input".to_string()));
             step.insert("content".to_string(), Value::Array(vec![text_content(&part.text)]));
@@ -563,6 +563,7 @@ struct InteractionError {
 }
 
 struct Interaction {
+    raw: Value,
     id: Option<String>,
     status: String,
     usage: Option<RawUsage>,
@@ -683,7 +684,7 @@ fn decode_interaction(value: &Value) -> Option<Interaction> {
         }
         Some(_) => return None,
     };
-    Some(Interaction { id, status, usage, errors })
+    Some(Interaction { raw: value.clone(), id, status, usage, errors })
 }
 
 fn invalid_event(label: &str, frame: &str) -> AiError {
@@ -826,18 +827,7 @@ fn interaction_error_value(error: &InteractionError) -> Value {
 }
 
 fn interaction_value(interaction: &Interaction) -> Value {
-    let mut object = Map::new();
-    if let Some(id) = &interaction.id {
-        object.insert("id".to_string(), Value::String(id.clone()));
-    }
-    object.insert("status".to_string(), Value::String(interaction.status.clone()));
-    if let Some(usage) = &interaction.usage {
-        object.insert("usage".to_string(), usage.value());
-    }
-    if let Some(errors) = &interaction.errors {
-        object.insert("errors".to_string(), Value::Array(errors.iter().map(interaction_error_value).collect()));
-    }
-    Value::Object(object)
+    interaction.raw.clone()
 }
 
 fn error_event_value(error: Option<&Value>) -> Value {

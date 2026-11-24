@@ -64,10 +64,20 @@ pub struct Step {
     #[serde(default)]
     pub result: Option<serde_json::Value>,
     #[serde(default)]
+    pub poll: Option<Poll>,
+    #[serde(default)]
     pub sleeps: Vec<u64>,
     #[serde(default)]
     pub downloads: Vec<String>,
     pub error: Option<StepError>,
+}
+
+#[derive(Debug, Clone, Copy, serde::Deserialize)]
+pub struct Poll {
+    #[serde(default)]
+    pub interval: Option<u64>,
+    #[serde(default)]
+    pub timeout: Option<u64>,
 }
 
 #[derive(Debug, Clone, serde::Deserialize)]

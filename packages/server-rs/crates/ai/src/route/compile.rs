@@ -58,7 +58,7 @@ pub fn compile(
             body: body.clone(),
             auth: resolved.model.route.auth.clone(),
             encode_body: None,
-            headers: resolved.model.route.headers.clone(),
+            headers: None,
         },
         context,
     )?;

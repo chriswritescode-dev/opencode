@@ -5,9 +5,8 @@ use serde_json::{Map, Value};
 use crate::media::protocol::{Body, DecodeContext, Identity, TextResponse};
 use crate::media::route::InlineProtocol;
 use crate::modalities::image::{ImageRequest, ImageResponse};
-use crate::protocols::openai_images::shape;
-use crate::protocols::utils::image_sizing::{Limits, exact};
-use crate::protocols::utils::media_input::expiring_url;
+use crate::protocols::utils::image_sizing::{Limits, exact, shape};
+use crate::protocols::utils::media_input::{expiring_url, merge_body};
 use crate::schema::{AiError, ProviderId, ProviderMetadata};
 
 pub const ID: &str = "zai-images";
@@ -54,7 +53,7 @@ fn body(request: &ImageRequest) -> Result<Body, AiError> {
         base.insert("size".to_string(), Value::String(format!("{}x{}", size.width, size.height)));
     }
     let native = native_options(request.provider_options.as_ref());
-    let body = crate::json::merge_records([&base, &native, &http_body(request)]).unwrap_or(base);
+    let body = merge_body(base, Some(&native), request.http.as_ref());
     Ok(Body::Json { value: body, query: None })
 }
 
@@ -106,8 +105,4 @@ fn insert_optional(target: &mut Map<String, Value>, key: &str, value: Option<&Va
 
 fn identity() -> Identity {
     Identity { id: ID.to_string(), name: NAME.to_string(), provider: ProviderId::from(PROVIDER) }
-}
-
-fn http_body(request: &ImageRequest) -> Map<String, Value> {
-    request.http.as_ref().and_then(|http| http.body.clone()).unwrap_or_default()
 }

@@ -157,11 +157,7 @@ fn restore_hosted_tool_item(value: &Value) -> Option<Value> {
 }
 
 fn code_interpreter_input(item: &Value) -> Value {
-    let mut object = Map::new();
-    if let Some(code) = item.get("code").filter(|code| !code.is_null()) {
-        object.insert("code".to_string(), code.clone());
-    }
-    Value::Object(object)
+    responses_hosted_tools::fields_input(item, &["code"])
 }
 
 fn web_extractor_input(item: &Value) -> Value {

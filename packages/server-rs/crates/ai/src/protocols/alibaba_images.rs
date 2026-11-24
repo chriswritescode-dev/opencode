@@ -5,10 +5,9 @@ use serde_json::{Map, Value};
 use crate::media::protocol::{Body, DecodeContext, Identity, TextResponse};
 use crate::media::route::InlineProtocol;
 use crate::modalities::image::{ImageRequest, ImageResponse};
-use crate::protocols::openai_images::shape;
 use crate::protocols::shared::invalid_request;
-use crate::protocols::utils::image_sizing::{Limits, exact};
-use crate::protocols::utils::media_input::{expiring_url, media_reference};
+use crate::protocols::utils::image_sizing::{Limits, exact, shape};
+use crate::protocols::utils::media_input::{expiring_url, media_reference, merge_body};
 use crate::schema::{AiError, ProviderId, ProviderMetadata};
 
 pub const ID: &str = "alibaba-images";
@@ -59,7 +58,7 @@ fn body(request: &ImageRequest) -> Result<Body, AiError> {
     if !parameters.is_empty() {
         base.insert("parameters".to_string(), Value::Object(parameters));
     }
-    let body = crate::json::merge_records([&base, &http_body(request)]).unwrap_or(base);
+    let body = merge_body(base, None, request.http.as_ref());
     Ok(Body::Json { value: body, query: None })
 }
 
@@ -134,10 +133,6 @@ fn native_options(options: Option<&Map<String, Value>>) -> Map<String, Value> {
 
 fn identity() -> Identity {
     Identity { id: ID.to_string(), name: NAME.to_string(), provider: ProviderId::from(PROVIDER) }
-}
-
-fn http_body(request: &ImageRequest) -> Map<String, Value> {
-    request.http.as_ref().and_then(|http| http.body.clone()).unwrap_or_default()
 }
 
 fn object<const N: usize>(entries: [(&str, Value); N]) -> Value {

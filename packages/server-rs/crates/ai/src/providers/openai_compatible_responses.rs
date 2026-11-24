@@ -4,7 +4,7 @@ use crate::Env;
 use crate::protocols::open_responses;
 use crate::providers::open_responses_options;
 use crate::providers::{RuntimeModel, Settings, language_model};
-use crate::route::auth::{ProviderAuthOptions, api_key};
+use crate::route::auth::{ProviderAuthOptions, bearer};
 use crate::route::endpoint::{Endpoint, PathPart};
 use crate::schema::{AiError, AiErrorReason, RequestOptions, StringMap, merge_request_options};
 
@@ -16,8 +16,7 @@ pub fn model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result<Runt
     let Some(base_url) = settings.string("baseURL") else {
         return Err(missing_base_url());
     };
-    let auth =
-        api_key(ProviderAuthOptions { api_key: settings.api_key(), auth: None }, &[], |credential| credential.bearer());
+    let auth = bearer(ProviderAuthOptions { api_key: settings.api_key(), auth: None }, &[]);
     let defaults =
         RequestOptions { provider_options: Some(open_responses_options::defaults()), ..RequestOptions::default() };
     let settings_options = settings.request_options(&["apiKey", "baseURL", "provider"]);

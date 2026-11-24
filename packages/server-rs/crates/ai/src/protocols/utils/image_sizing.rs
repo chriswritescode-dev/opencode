@@ -1,4 +1,5 @@
 use crate::media::protocol::Identity;
+use crate::modalities::image::ImageRequest;
 use crate::schema::AiError;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -11,6 +12,10 @@ pub struct Size {
 pub struct Shape<'a> {
     pub aspect: Option<&'a str>,
     pub resolution: Option<&'a str>,
+}
+
+pub fn shape(request: &ImageRequest) -> Shape<'_> {
+    Shape { aspect: request.aspect.as_deref(), resolution: request.resolution.as_deref() }
 }
 
 #[derive(Debug, Clone, Copy, Default)]

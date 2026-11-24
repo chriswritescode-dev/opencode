@@ -241,12 +241,12 @@ impl VideoClient {
             let generation = route.start.as_ref()(request, &executor, &context).await?;
             let Some(id) = generation.token.as_str() else {
                 return Err(AiError {
-                    reason: AiErrorReason::InvalidRequest {
+                    reason: AiErrorReason::InvalidProviderOutput {
                         message: "The video route returned a token that is not a string".to_string(),
                         body: None,
                         http: None,
-                        parameter: None,
                         classification: None,
+                        route: Some(route.id.clone()),
                     },
                 });
             };

@@ -6,6 +6,7 @@ use crate::modalities::embedding::{
     EmbeddingInputType, EmbeddingRequest, EmbeddingResponse, EmbeddingUsage, EmbeddingValue,
 };
 use crate::protocols::utils::gemini_generate_content;
+use crate::protocols::utils::media_input::merge_body;
 use crate::route::embedding::EmbeddingProtocol;
 use crate::schema::{AiError, ProviderMetadata};
 
@@ -44,10 +45,7 @@ impl EmbeddingProtocol for GoogleEmbedContent {
             .collect::<Vec<_>>();
         let mut body = Map::new();
         body.insert("requests".to_string(), Value::Array(requests));
-        if let Some(overlay) = request.http.as_ref().and_then(|http| http.body.as_ref()) {
-            body = crate::json::merge_objects(&body, overlay);
-        }
-        Ok(body)
+        Ok(merge_body(body, None, request.http.as_ref()))
     }
 
     fn decode(
@@ -85,10 +83,7 @@ impl EmbeddingProtocol for GoogleVertexEmbedContent {
         if !fields.is_empty() {
             body.insert("embedContentConfig".to_string(), Value::Object(fields));
         }
-        if let Some(overlay) = request.http.as_ref().and_then(|http| http.body.as_ref()) {
-            body = crate::json::merge_objects(&body, overlay);
-        }
-        Ok(body)
+        Ok(merge_body(body, None, request.http.as_ref()))
     }
 
     fn decode(

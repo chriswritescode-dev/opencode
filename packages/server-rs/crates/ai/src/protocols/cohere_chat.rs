@@ -246,7 +246,7 @@ fn lower_message(role: &str, parts: &[ContentPart]) -> Result<Value, AiError> {
             }
             ContentPart::Media(part) if role == "user" => {
                 let media_type = shared::media_type(&part.media);
-                if !media_type.to_lowercase().starts_with("image/") {
+                if !media_type.starts_with("image/") {
                     return Err(unsupported_content(role));
                 }
                 let url = match shared::media_url(&part.media) {

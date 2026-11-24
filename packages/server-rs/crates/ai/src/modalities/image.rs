@@ -7,6 +7,7 @@ use serde_json::{Map, Number, Value};
 
 use crate::ExecutionContext;
 use crate::media::client::MediaRoute;
+use crate::media::generation::AwaitOptions;
 use crate::media::route::{InlineInput, InlineProtocol, MediaEndpoint, MediaRequest, StreamedInput, StreamedProtocol};
 use crate::route::auth::Auth;
 use crate::route::executor::{BoxFuture, RequestExecutor};
@@ -321,6 +322,7 @@ pub struct ImageClient;
 impl ImageClient {
     pub fn generate(
         request: ImageRequest,
+        options: Option<AwaitOptions>,
         executor: &RequestExecutor,
         context: &ExecutionContext,
     ) -> BoxFuture<Result<ImageResponse, AiError>> {
@@ -332,7 +334,7 @@ impl ImageClient {
                 MediaRoute::Inline(route) => route.generate(request, &executor, &context).await,
                 MediaRoute::Queued(route) => {
                     let generation = route.start.as_ref()(request, &executor, &context).await?;
-                    generation.await_result(&context, None).await
+                    generation.await_result(&context, options).await
                 }
                 MediaRoute::Stream(route) => (route.generate)(request, &executor, &context).await,
             }
@@ -341,6 +343,7 @@ impl ImageClient {
 
     pub fn stream(
         request: ImageRequest,
+        options: Option<AwaitOptions>,
         executor: &RequestExecutor,
         context: &ExecutionContext,
     ) -> Pin<Box<dyn Stream<Item = Result<ImageEvent, AiError>> + Send>> {
@@ -356,7 +359,7 @@ impl ImageClient {
                 let context = context.clone();
                 events_from(stream::once(async move {
                     let generation = started.await?;
-                    generation.await_result(&context, None).await
+                    generation.await_result(&context, options).await
                 }))
             }
         }
@@ -377,12 +380,12 @@ impl ImageClient {
             let generation = route.start.as_ref()(request, &executor, &context).await?;
             let Some(id) = generation.token.as_str() else {
                 return Err(AiError {
-                    reason: AiErrorReason::InvalidRequest {
+                    reason: AiErrorReason::InvalidProviderOutput {
                         message: "The image route returned a token that is not a string".to_string(),
                         body: None,
                         http: None,
-                        parameter: None,
                         classification: None,
+                        route: Some(route.id.clone()),
                     },
                 });
             };

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use futures_util::{StreamExt, stream};
+use futures_util::{StreamExt, TryStreamExt, stream};
 use serde_json::{Map, Value};
 
 use crate::ExecutionContext;
@@ -106,7 +106,7 @@ impl EmbeddingRoute {
 
     pub fn generate(
         &self,
-        request: EmbeddingRequest,
+        mut request: EmbeddingRequest,
         executor: &RequestExecutor,
         context: &ExecutionContext,
     ) -> BoxFuture<Result<EmbeddingResponse, AiError>> {
@@ -118,7 +118,8 @@ impl EmbeddingRoute {
             let Some(max_values) = max_values.filter(|max_values| request.values.len() > *max_values) else {
                 return inline.generate(request, &executor, &context).await;
             };
-            let chunks = request.values.chunks(max_values).map(|values| values.to_vec()).collect::<Vec<_>>();
+            let values = std::mem::take(&mut request.values);
+            let chunks = values.chunks(max_values).map(|values| values.to_vec()).collect::<Vec<_>>();
             let responses = stream::iter(chunks.into_iter().map(|values| {
                 let executor = executor.clone();
                 let context = context.clone();
@@ -127,9 +128,8 @@ impl EmbeddingRoute {
                 inline.generate(chunk, &executor, &context)
             }))
             .buffered(CONCURRENCY)
-            .collect::<Vec<Result<EmbeddingResponse, AiError>>>()
-            .await;
-            let responses = responses.into_iter().collect::<Result<Vec<_>, _>>()?;
+            .try_collect::<Vec<_>>()
+            .await?;
             Ok(merge(responses))
         })
     }

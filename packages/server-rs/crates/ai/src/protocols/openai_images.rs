@@ -9,8 +9,10 @@ use crate::media::protocol::{Body, DecodeContext, Identity};
 use crate::media::route::{Mode, ResponseContext, StreamedProtocol};
 use crate::modalities::image::{ImageEvent, ImageRequest};
 use crate::protocols::shared::{invalid_request, media_type};
-use crate::protocols::utils::image_sizing::{Limits, Shape, Size, fit, is_requested, nearest};
-use crate::protocols::utils::media_input::{decoded_asset, image_output, inline_bytes, media_info, media_reference};
+use crate::protocols::utils::image_sizing::{Limits, Size, fit, is_requested, nearest, shape};
+use crate::protocols::utils::media_input::{
+    decoded_asset, image_output, inline_bytes, media_info, media_reference, merge_body,
+};
 use crate::route::executor::ByteStream;
 use crate::schema::{AiError, ProviderId, ProviderMetadata};
 
@@ -27,6 +29,13 @@ pub enum ImageInput {
     Edits,
     JsonEdits,
     References,
+}
+
+pub fn path(image_input: ImageInput, request: &ImageRequest) -> String {
+    if image_input != ImageInput::References && !request.images.is_empty() {
+        return EDIT_PATH.to_string();
+    }
+    PATH.to_string()
 }
 
 pub type Sizing = Arc<dyn Fn(&ImageRequest) -> Option<Map<String, Value>> + Send + Sync>;
@@ -52,7 +61,7 @@ impl OpenAiImages {
 
     fn build_body(&self, request: &ImageRequest, mode: Mode) -> Result<Body, AiError> {
         let images = &request.images;
-        let mask = provider_mask(request);
+        let mask = provider_mask(request)?;
         if self.image_input == ImageInput::References && mask.is_some() {
             return Err(self
                 .identity()
@@ -93,7 +102,7 @@ impl OpenAiImages {
             fields.insert("partial_images".to_string(), partial);
         }
         let native = native_options(request.provider_options.as_ref());
-        let body = merged(&[&fields, &native, &http_body(request)]);
+        let body = merge_body(fields, Some(&native), request.http.as_ref());
 
         if self.image_input == ImageInput::References {
             let references = images
@@ -284,7 +293,8 @@ impl OpenAiImages {
         let data = object.get("b64_json").and_then(Value::as_str).ok_or_else(invalid)?;
         let format = object.get("output_format").and_then(Value::as_str).ok_or_else(invalid)?;
         let size = object.get("size").and_then(Value::as_str);
-        if let Some(index) = object.get("partial_image_index").and_then(Value::as_i64) {
+        if kind.ends_with(".partial_image") {
+            let index = object.get("partial_image_index").and_then(Value::as_i64).ok_or_else(invalid)?;
             let info = media_info(Some(format), size);
             let image = decoded_asset(
                 &format!("{NAME} partial image"),
@@ -416,16 +426,13 @@ fn square(edge: i64) -> Size {
     Size { width: edge, height: edge }
 }
 
-pub fn shape(request: &ImageRequest) -> Shape<'_> {
-    Shape { aspect: request.aspect.as_deref(), resolution: request.resolution.as_deref() }
-}
-
-fn provider_mask(request: &ImageRequest) -> Option<crate::schema::MediaAsset> {
-    request
-        .provider_options
-        .as_ref()
-        .and_then(|options| options.get("mask"))
-        .and_then(|value| serde_json::from_value(value.clone()).ok())
+fn provider_mask(request: &ImageRequest) -> Result<Option<crate::schema::MediaAsset>, AiError> {
+    let Some(value) = request.provider_options.as_ref().and_then(|options| options.get("mask")) else {
+        return Ok(None);
+    };
+    serde_json::from_value(value.clone())
+        .map(Some)
+        .map_err(|_| invalid_request("OpenAI providerOptions.mask is not a media asset"))
 }
 
 fn native_options(options: Option<&Map<String, Value>>) -> Map<String, Value> {
@@ -449,10 +456,6 @@ fn native_options(options: Option<&Map<String, Value>>) -> Map<String, Value> {
         native.remove("response_format");
     }
     native
-}
-
-fn http_body(request: &ImageRequest) -> Map<String, Value> {
-    request.http.as_ref().and_then(|http| http.body.clone()).unwrap_or_default()
 }
 
 fn merged(items: &[&Map<String, Value>]) -> Map<String, Value> {

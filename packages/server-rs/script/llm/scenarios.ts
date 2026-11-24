@@ -3314,6 +3314,7 @@ const audioRecording = {
 
 const transcriptionVariant = (scenario: Scenario) => ({ group: "transcription", scenario })
 const assemblyAISettings = { apiKey: "fixture", baseURL: "https://api.eu.assemblyai.com" }
+const assemblyAIPoll = { interval: 10, timeout: 15 * 60 * 1000 }
 const transcriptionScenarios = [
   transcriptionVariant({
     cassette: "openai-transcription/transcribes-with-a-language-hint",
@@ -3434,9 +3435,16 @@ const transcriptionScenarios = [
         return yield* context.operation(
           "transcription.generate",
           request,
-          ai.experimental.transcription.generate(request, {
-            poll: { interval: "10 millis", timeout: "15 minutes" },
+          Effect.gen(function* () {
+            let generation = yield* ai.experimental.transcription.start(request)
+            while (true) {
+              generation = yield* generation.refresh()
+              if (generation.status !== "running") break
+              yield* context.sleep(assemblyAIPoll.interval)
+            }
+            return yield* generation.result()
           }),
+          { poll: assemblyAIPoll },
         )
       }),
   }),

@@ -16,7 +16,7 @@ use crate::protocols::shared;
 use crate::protocols::system_one::{self, SystemOne};
 use crate::protocols::utils::cache::CacheControl;
 use crate::providers::{RuntimeModel, Settings, language_model_with_route, modality_options, open_responses_options};
-use crate::route::auth::{Auth, ProviderAuthOptions, api_key};
+use crate::route::auth::{Auth, ProviderAuthOptions, bearer};
 use crate::route::decision::{DecisionRoute, DecisionRouteInput};
 use crate::route::embedding::{EmbeddingRoute, EmbeddingRouteInput};
 use crate::route::endpoint::Endpoint;
@@ -168,8 +168,8 @@ pub fn embedding_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> R
 pub fn image_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result<RuntimeModel, AiError> {
     let (transport, provider_options) = modality_options(settings, &DECLARED);
     let base_url = settings.string("baseURL").unwrap_or(BASE_URL).to_string();
-    let endpoint = MediaEndpoint::function(std::sync::Arc::new(|_request: &crate::modalities::image::ImageRequest| {
-        crate::protocols::openai_images::PATH.to_string()
+    let endpoint = MediaEndpoint::function(std::sync::Arc::new(|request: &crate::modalities::image::ImageRequest| {
+        crate::protocols::openai_images::path(ImageInput::References, request)
     }))
     .with_base_url(base_url);
     Ok(RuntimeModel::Image(ImageModel::streamed(
@@ -237,9 +237,7 @@ pub fn decision_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Re
 }
 
 fn auth(settings: &Settings) -> Auth {
-    api_key(ProviderAuthOptions { auth: None, api_key: settings.api_key() }, &["OPENROUTER_API_KEY"], |credential| {
-        credential.bearer()
-    })
+    bearer(ProviderAuthOptions { auth: None, api_key: settings.api_key() }, &["OPENROUTER_API_KEY"])
 }
 
 fn endpoint(settings: &Settings, path: &str) -> Endpoint {

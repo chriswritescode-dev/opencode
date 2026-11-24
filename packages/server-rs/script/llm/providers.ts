@@ -1,7 +1,7 @@
 import "./capture.js"
 import { Cause, Context, Effect, Exit, Layer, Option } from "effect"
 import { FetchHttpClient, HttpClientRequest, HttpClientResponse } from "effect/http"
-import { createLoader, FIXED_EPOCH_MS } from "./capture.js"
+import { createLoader, FIXTURE_BOUNDARY, FIXED_EPOCH_MS, multipartBoundary, normalizeMultipart } from "./capture.js"
 
 const tree = process.env.OPENCODE_UPSTREAM_TREE
 if (!tree) throw new Error("providers: OPENCODE_UPSTREAM_TREE is not set")
@@ -37,7 +37,6 @@ type CasePlan = {
   env: Record<string, string>
 }
 
-const FIXTURE_BOUNDARY = "----OpenCodeFixtureBoundary"
 const FIXTURE_AUDIO = "UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA="
 
 const manifest = await Bun.file(`${tree}/packages/ai/package.json`).json()
@@ -328,6 +327,13 @@ function extras(path: string): Array<CasePlan> {
       env: {},
     })
   }
+  if (path === "openai") {
+    cases.push({
+      name: "query-params",
+      settings: { apiKey: "fixture", queryParams: { "api-version": "x" } },
+      env: {},
+    })
+  }
   if (root === "openai-compatible" || root === "openai-compatible-responses") {
     cases.push({
       name: "provider",
@@ -460,26 +466,14 @@ function capturePrepared(record: (typeof records)[number]): CapturedRequest {
       headers: record.headers,
       body: Buffer.from(record.bodyBytes).toString("base64"),
     }
-  const headers = Object.fromEntries(
-    Object.entries(record.headers).map(([name, value]) =>
-      name.toLowerCase() === "content-type" ? [name, value.replaceAll(boundary, FIXTURE_BOUNDARY)] : [name, value],
-    ),
-  )
-  const body = Buffer.from(record.bodyBytes).toString("latin1").replaceAll(boundary, FIXTURE_BOUNDARY)
+  const normalized = normalizeMultipart(record.headers, Buffer.from(record.bodyBytes).toString("latin1"))
   return {
     method: record.method,
     url: record.url,
-    headers,
-    body: Buffer.from(body, "latin1").toString("base64"),
+    headers: normalized.headers,
+    body: Buffer.from(normalized.body, "latin1").toString("base64"),
     boundary: FIXTURE_BOUNDARY,
   }
-}
-
-function multipartBoundary(contentType: string | undefined) {
-  if (contentType === undefined) return undefined
-  if (contentType.split(";", 1)[0]?.trim().toLowerCase() !== "multipart/form-data") return undefined
-  const match = /boundary=(?:"([^"]+)"|([^;]+))/i.exec(contentType)
-  return match?.[1] ?? match?.[2]?.trim()
 }
 
 async function run(plans: Array<CasePlan>, kind: Kind, modelID: string, module: Module, path: string) {
@@ -511,6 +505,7 @@ async function run(plans: Array<CasePlan>, kind: Kind, modelID: string, module: 
 function rejection(exit: Exit.Exit<unknown, unknown>) {
   if (Exit.isSuccess(exit)) return { message: "operation produced no request" }
   const cause = Option.getOrUndefined(Cause.findErrorOption(exit.cause))
+  if (cause === undefined) throw new Error(Cause.pretty(exit.cause))
   return { message: errorMessage(cause) }
 }
 

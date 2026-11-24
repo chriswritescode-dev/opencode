@@ -470,7 +470,6 @@ async fn hailuo_result(
 
 fn failed(output: &Output, name: &str, code: Option<&Value>, detail: Option<&str>) -> AiError {
     let code_text = code.and_then(code_text);
-    let detail = detail.map(str::trim).filter(|detail| !detail.is_empty());
     let message = format!(
         "{name} generation failed{}{}",
         code_text.as_deref().map(|code| format!(" ({code})")).unwrap_or_default(),

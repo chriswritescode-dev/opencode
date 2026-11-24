@@ -14,7 +14,7 @@ use crate::protocols::open_responses::{OpenResponses, PATH as RESPONSES_PATH};
 use crate::protocols::openai_chat::{self, OpenAiChat, PATH as CHAT_PATH};
 use crate::protocols::shared::invalid_request;
 use crate::providers::{RuntimeModel, Settings, language_model_with_route};
-use crate::route::auth::{Auth, ProviderAuthOptions, api_key};
+use crate::route::auth::{Auth, ProviderAuthOptions, bearer};
 use crate::route::endpoint::Endpoint;
 use crate::route::framing::Definition;
 use crate::route::model::{Model, ResolvedRequest, Route, RouteTransport};
@@ -160,9 +160,7 @@ fn video_base_url(base_url: &str) -> String {
 }
 
 fn auth(settings: &Settings) -> Auth {
-    api_key(ProviderAuthOptions { auth: None, api_key: settings.api_key() }, &["MINIMAX_API_KEY"], |credential| {
-        credential.bearer()
-    })
+    bearer(ProviderAuthOptions { auth: None, api_key: settings.api_key() }, &["MINIMAX_API_KEY"])
 }
 
 fn endpoint(settings: &Settings, base_url: &str, path: &str) -> Endpoint {

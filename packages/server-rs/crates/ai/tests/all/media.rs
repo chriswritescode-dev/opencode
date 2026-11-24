@@ -12,10 +12,17 @@ use opencode_ai::MapEnv;
 use opencode_ai::Sleeper;
 use opencode_ai::clock::{Clock, FixedClock};
 use opencode_ai::id::SequenceIds;
-use opencode_ai::media::generation::{Generation, GenerationRoute, Reason, Snapshot, Status};
+use opencode_ai::media::MediaRoute;
+use opencode_ai::media::generation::{AwaitOptions, Generation, GenerationRoute, Poll, Reason, Snapshot, Status};
 use opencode_ai::media::multipart::{AppendFieldsOptions, Form, RepeatArrays, append_fields};
-use opencode_ai::media::route::read_with_retry;
+use opencode_ai::media::route::{QueuedRoute, RouteKind, StreamedProtocol, read_with_retry};
+use opencode_ai::modalities::image::{
+    ImageClient, ImageEvent, ImageModel, ImageRequest, ImageRequestInput, ImageResponse,
+};
+use opencode_ai::modalities::realtime::RealtimeConnectInput;
+use opencode_ai::modalities::speech::{SpeechClient, SpeechModel, SpeechRequest, SpeechRequestInput, SpeechResponse};
 use opencode_ai::modalities::video::{VideoClient, VideoModel, VideoRequest, seconds};
+use opencode_ai::protocols::openai_images::{Frame, OpenAiImages, State};
 use opencode_ai::providers::{ProviderPackages, RuntimeModel, Settings};
 use opencode_ai::route::executor::{BoxFuture, ByteStream, HttpResponse, HttpSender, PreparedHttp, RequestExecutor};
 use opencode_ai::schema::{AiError, AiErrorReason, HttpOptions, MediaAsset, MediaSource, ProviderOptions, StringMap};
@@ -222,6 +229,31 @@ async fn generation_await_times_out() {
     assert!(durations.iter().all(|duration| *duration == Duration::from_secs(5)));
     assert!((119..=121).contains(&durations.len()), "{} sleeps", durations.len());
     assert!((599_000..=601_000).contains(&clock.now_ms()), "{}ms", clock.now_ms());
+}
+
+#[tokio::test(start_paused = true)]
+async fn generation_await_bounds_a_hung_refresh() {
+    let route = GenerationRoute::<()> {
+        status: Arc::new(|| Box::pin(futures_util::future::pending::<Result<Snapshot, AiError>>())),
+        result: Arc::new(|| Box::pin(async { Ok(()) })),
+        cancel: None,
+    };
+    let generation = Generation::new(
+        route,
+        json!(null),
+        Snapshot { id: "gen".to_string(), status: Status::Running, reason: None, progress: None },
+    );
+    let context =
+        ExecutionContext::new(Arc::new(FixedClock::new(0)), Arc::new(SequenceIds::new()), Arc::new(MapEnv::default()));
+    let options = Some(AwaitOptions { poll: Some(Poll { interval: None, timeout: Some(Duration::from_millis(50)) }) });
+    let error = generation.await_result(&context, options).await.unwrap_err();
+    match error.reason {
+        AiErrorReason::Timeout { message, timeout_ms, .. } => {
+            assert_eq!(message, "Generation gen did not finish within 50ms");
+            assert_eq!(timeout_ms, Some(50));
+        }
+        other => panic!("expected timeout, got {other:?}"),
+    }
 }
 
 const VOLCENGINE_VIDEOS: &str = "@opencode/ai/providers/volcengine/videos";
@@ -924,4 +956,262 @@ async fn video_protocols_reject_a_foreign_asset_as_invalid_request() {
         assert_eq!(error.message(), message);
         assert!(sender.recorded().is_empty());
     }
+}
+
+fn running_snapshot() -> Snapshot {
+    Snapshot { id: "job".to_string(), status: Status::Running, reason: None, progress: None }
+}
+
+fn queued_route<Request, Response>(id: &str, result: Response) -> QueuedRoute<Request, Response>
+where
+    Request: Send + 'static,
+    Response: Clone + Send + Sync + 'static,
+{
+    let route = Arc::new(GenerationRoute::<Response> {
+        status: Arc::new(|| Box::pin(async { Ok(running_snapshot()) })),
+        result: Arc::new(move || {
+            let result = result.clone();
+            Box::pin(async move { Ok(result) })
+        }),
+        cancel: None,
+    });
+    QueuedRoute {
+        kind: RouteKind::Queued,
+        id: id.to_string(),
+        provider: "test".to_string(),
+        protocol: "test".to_string(),
+        start: Arc::new({
+            let route = route.clone();
+            move |_, _, _| {
+                let route = route.as_ref().clone();
+                Box::pin(async move { Ok(Generation::new(route, json!("job"), running_snapshot())) })
+            }
+        }),
+        resume: Arc::new({
+            let route = route.clone();
+            move |_, _, _, _| {
+                let route = route.as_ref().clone();
+                Box::pin(async move { Ok(Generation::new(route, json!("job"), running_snapshot())) })
+            }
+        }),
+        attach: Arc::new(|_, _, _, _| Box::pin(async { Err(invalid_request()) })),
+    }
+}
+
+fn empty_image_response() -> ImageResponse {
+    ImageResponse { images: Vec::new(), usage: None, provider_metadata: None }
+}
+
+fn empty_speech_response() -> SpeechResponse {
+    SpeechResponse { audio: data_url("audio/mpeg", "aGk="), timestamps: None, usage: None, provider_metadata: None }
+}
+
+fn queued_image_request() -> ImageRequest {
+    let model = ImageModel {
+        id: "queued-image".to_string(),
+        provider: "test".into(),
+        route: Arc::new(MediaRoute::Queued(queued_route::<ImageRequest, ImageResponse>(
+            "queued-image",
+            empty_image_response(),
+        ))),
+        transport: None,
+        provider_options: None,
+    };
+    ImageRequest {
+        model,
+        prompt: "queued".to_string(),
+        images: Vec::new(),
+        n: None,
+        aspect: None,
+        resolution: None,
+        provider_options: None,
+        headers: None,
+        timeout: None,
+        http: None,
+    }
+}
+
+fn queued_speech_model() -> SpeechModel {
+    SpeechModel {
+        id: "queued-speech".to_string(),
+        provider: "test".into(),
+        route: Arc::new(MediaRoute::Queued(queued_route::<SpeechRequest, SpeechResponse>(
+            "queued-speech",
+            empty_speech_response(),
+        ))),
+        transport: None,
+        provider_options: None,
+    }
+}
+
+fn queued_speech_request() -> SpeechRequest {
+    SpeechRequestInput {
+        text: "queued".to_string(),
+        voice: None,
+        format: None,
+        speed: None,
+        language: None,
+        instructions: None,
+        timestamps: None,
+        provider_options: None,
+        headers: None,
+        timeout: None,
+        http: None,
+    }
+    .with_model(queued_speech_model())
+}
+
+fn immediate_timeout() -> Option<AwaitOptions> {
+    Some(AwaitOptions { poll: Some(Poll { interval: None, timeout: Some(Duration::ZERO) }) })
+}
+
+#[tokio::test]
+async fn image_and_speech_generate_thread_await_options_to_queued_routes() {
+    let sender = DynamicSender::new(|_, _| panic!("a queued generation reached the network"));
+    let (executor, context) = runtime(&sender);
+
+    let image = tokio::time::timeout(
+        Duration::from_secs(2),
+        ImageClient::generate(queued_image_request(), immediate_timeout(), &executor, &context),
+    )
+    .await
+    .expect("image generate ignored its await options")
+    .expect_err("the queued image status stays running");
+    assert_eq!(reason_tag(&image.reason), "Timeout");
+
+    let speech = tokio::time::timeout(
+        Duration::from_secs(2),
+        SpeechClient::generate(queued_speech_request(), immediate_timeout(), &executor, &context),
+    )
+    .await
+    .expect("speech generate ignored its await options")
+    .expect_err("the queued speech status stays running");
+    assert_eq!(reason_tag(&speech.reason), "Timeout");
+}
+
+#[tokio::test]
+async fn speech_start_and_resume_use_the_queued_route() {
+    let sender = DynamicSender::new(|_, _| panic!("a queued speech start reached the network"));
+    let (executor, context) = runtime(&sender);
+
+    let started = SpeechClient::start(queued_speech_request(), &executor, &context).await.expect("started");
+    assert_eq!(started.token, json!("job"));
+    assert_eq!(started.status, Status::Running);
+
+    let resumed =
+        SpeechClient::resume(&queued_speech_request(), json!("job"), &executor, &context).await.expect("resumed");
+    assert_eq!(resumed.token, json!("job"));
+}
+
+#[tokio::test]
+async fn image_start_rejects_an_inline_route_as_unsupported() {
+    let sender = DynamicSender::new(|_, _| panic!("an inline start reached the network"));
+    let (executor, context) = runtime(&sender);
+    let image_protocol = opencode_ai::protocols::minimax_images::protocol();
+    let image_model = ImageModel::inline(
+        "image-01",
+        "minimax".into(),
+        image_protocol,
+        opencode_ai::media::route::MediaEndpoint::path("/image_generation"),
+        opencode_ai::route::auth::Auth::headers(Vec::new()),
+        None,
+        None,
+        None,
+    );
+    let image = ImageClient::start(
+        ImageRequest {
+            model: image_model,
+            prompt: "inline".to_string(),
+            images: Vec::new(),
+            n: None,
+            aspect: None,
+            resolution: None,
+            provider_options: None,
+            headers: None,
+            timeout: None,
+            http: None,
+        },
+        &executor,
+        &context,
+    )
+    .await
+    .expect_err("an inline image route cannot start");
+    match image.reason {
+        AiErrorReason::UnsupportedOperation { operation, .. } => assert_eq!(operation, "image.start"),
+        other => panic!("expected an unsupported operation, got {other:?}"),
+    }
+}
+
+#[test]
+fn realtime_connect_input_debug_redacts_the_api_key() {
+    let input: RealtimeConnectInput = serde_json::from_value(json!({
+        "engine": { "id": "xai-realtime", "provider": "xai", "api": "realtime", "transports": ["websocket"] },
+        "model": "grok-realtime",
+        "apiKey": "sk-secret-value",
+        "transport": { "type": "websocket" }
+    }))
+    .expect("realtime connect input");
+    let debug = format!("{input:?}");
+    assert!(!debug.contains("sk-secret-value"), "{debug}");
+    assert!(debug.contains("<redacted>"), "{debug}");
+}
+
+#[test]
+fn openai_image_events_choose_partial_or_final_by_type() {
+    let protocol = OpenAiImages::default_protocol();
+    let completed = Frame::Event(
+        json!({
+            "type": "image_generation.completed",
+            "b64_json": "aGk=",
+            "output_format": "png",
+            "partial_image_index": 3
+        })
+        .to_string(),
+    );
+    let (_, events) = protocol.step(State::default(), completed).expect("completed event");
+    assert!(matches!(events.as_slice(), [ImageEvent::Image { index: 0, .. }]), "{events:?}");
+
+    let partial = Frame::Event(
+        json!({ "type": "image_generation.partial_image", "b64_json": "aGk=", "output_format": "png" }).to_string(),
+    );
+    let error = match protocol.step(State::default(), partial) {
+        Ok(_) => panic!("a partial event without an index must fail"),
+        Err(error) => error,
+    };
+    assert!(matches!(error.reason, AiErrorReason::InvalidProviderOutput { .. }));
+}
+
+#[tokio::test]
+async fn minimax_images_rejects_a_resolution_without_a_tier_instead_of_using_a_preset() {
+    let sender = DynamicSender::new(|_, _| panic!("a rejected resolution reached the network"));
+    let (executor, context) = runtime(&sender);
+    let settings = Settings::new(json!({ "apiKey": "test" }).as_object().expect("settings").clone());
+    let model = match ProviderPackages::builtin().model(
+        "@opencode/ai/providers/minimax/images",
+        "image-01",
+        &settings,
+        &MapEnv::default(),
+    ) {
+        Ok(RuntimeModel::Image(model)) => model,
+        Ok(_) => panic!("minimax images is not an image model"),
+        Err(error) => panic!("{}", error.message()),
+    };
+    let request = ImageRequestInput {
+        prompt: "a circle".to_string(),
+        images: Vec::new(),
+        n: None,
+        aspect: Some("1:1".to_string()),
+        resolution: Some("1024x1024".to_string()),
+        provider_options: None,
+        headers: None,
+        timeout: None,
+        http: None,
+    }
+    .with_model(model);
+
+    let error = ImageClient::generate(request, None, &executor, &context)
+        .await
+        .expect_err("an unparseable resolution must not fall back to a preset");
+    assert!(matches!(error.reason, AiErrorReason::UnsupportedOperation { .. }));
+    assert!(sender.recorded().is_empty());
 }

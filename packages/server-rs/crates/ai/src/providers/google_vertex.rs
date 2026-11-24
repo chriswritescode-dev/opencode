@@ -87,7 +87,13 @@ fn labels(options: Option<&Map<String, Value>>) -> Option<Map<String, Value>> {
     )
 }
 
-pub fn model(model_id: &str, settings: &Settings, env: &dyn Env) -> Result<RuntimeModel, AiError> {
+struct Connection {
+    base_url: String,
+    auth: Auth,
+    api_key: Option<String>,
+}
+
+fn connection(model_id: &str, settings: &Settings, env: &dyn Env) -> Result<Connection, AiError> {
     let api_key = google_vertex_shared::api_key(&google_vertex_shared::settings_api_key_input(settings), env)?;
     let endpoint_model = model_id.starts_with("endpoints/");
     if api_key.is_some() && endpoint_model {
@@ -113,12 +119,17 @@ pub fn model(model_id: &str, settings: &Settings, env: &dyn Env) -> Result<Runti
             project.as_deref(),
         )?,
     };
+    Ok(Connection { base_url, auth, api_key })
+}
+
+pub fn model(model_id: &str, settings: &Settings, env: &dyn Env) -> Result<RuntimeModel, AiError> {
+    let connection = connection(model_id, settings, env)?;
     let route = Route {
         id: ROUTE_ID.to_string(),
         protocol: Arc::new(VertexGemini),
         provider_metadata_key: Some(google_vertex_shared::METADATA_KEY.to_string()),
-        endpoint: Endpoint { base_url: Some(base_url), path: PathPart::Default, query: StringMap::new() },
-        auth,
+        endpoint: Endpoint { base_url: Some(connection.base_url), path: PathPart::Default, query: StringMap::new() },
+        auth: connection.auth,
         headers: Some(Arc::new(google_vertex_shared::request_type_header)),
         body: None,
         channel: None,
@@ -129,42 +140,18 @@ pub fn model(model_id: &str, settings: &Settings, env: &dyn Env) -> Result<Runti
 }
 
 pub fn image_model(model_id: &str, settings: &Settings, env: &dyn Env) -> Result<RuntimeModel, AiError> {
-    let api_key = google_vertex_shared::api_key(&google_vertex_shared::settings_api_key_input(settings), env)?;
-    let endpoint_model = model_id.starts_with("endpoints/");
-    if api_key.is_some() && endpoint_model {
-        return Err(invalid_request("Google Vertex tuned models do not support Express Mode API keys"));
-    }
-    let location = google_vertex_shared::location(settings.string("location"), env);
-    let project = google_vertex_shared::project(settings.string("project"), env);
-    let base_url = match settings.string("baseURL") {
-        Some(base_url) => base_url.to_string(),
-        None if api_key.is_some() => EXPRESS_BASE_URL.to_string(),
-        None => format!(
-            "https://{}/v1beta1/projects/{}/locations/{}{}",
-            google_vertex_shared::host(&location),
-            google_vertex_shared::require_project(project.as_deref())?,
-            location,
-            if endpoint_model { "" } else { "/publishers/google" }
-        ),
-    };
-    let auth = match &api_key {
-        Some(api_key) => Auth::headers([("x-goog-api-key".to_string(), api_key.clone())]),
-        None => google_vertex_shared::oauth(
-            &OAuthInput { access_token: settings.string("accessToken").map(str::to_string), auth: None },
-            project.as_deref(),
-        )?,
-    };
+    let connection = connection(model_id, settings, env)?;
     let (transport, provider_options) = modality_options(settings, &google_vertex_shared::CONNECTION_KEYS);
     let endpoint = MediaEndpoint::function(Arc::new(|request: &crate::modalities::image::ImageRequest| {
         google_images::path(&request.model.id)
     }))
-    .with_base_url(base_url);
+    .with_base_url(connection.base_url);
     Ok(RuntimeModel::Image(ImageModel::inline(
         model_id,
         "google".to_string(),
         google_images::protocol(),
         endpoint,
-        auth,
+        connection.auth,
         None,
         transport,
         provider_options,
@@ -172,30 +159,10 @@ pub fn image_model(model_id: &str, settings: &Settings, env: &dyn Env) -> Result
 }
 
 pub fn embedding_model(model_id: &str, settings: &Settings, env: &dyn Env) -> Result<RuntimeModel, AiError> {
-    let api_key = google_vertex_shared::api_key(&google_vertex_shared::settings_api_key_input(settings), env)?;
-    let location = google_vertex_shared::location(settings.string("location"), env);
-    let project = google_vertex_shared::project(settings.string("project"), env);
-    let configured_base = settings.string("baseURL");
-    let base_url = match configured_base {
-        Some(base_url) => base_url.to_string(),
-        None if api_key.is_some() => EXPRESS_BASE_URL.to_string(),
-        None => format!(
-            "https://{}/v1beta1/projects/{}/locations/{}/publishers/google",
-            google_vertex_shared::host(&location),
-            google_vertex_shared::require_project(project.as_deref())?,
-            location
-        ),
-    };
-    let auth = match &api_key {
-        Some(api_key) => Auth::headers([("x-goog-api-key".to_string(), api_key.clone())]),
-        None => google_vertex_shared::oauth(
-            &OAuthInput { access_token: settings.string("accessToken").map(str::to_string), auth: None },
-            project.as_deref(),
-        )?,
-    };
+    let connection = connection(model_id, settings, env)?;
     let (transport, provider_options) = modality_options(settings, &google_vertex_shared::CONNECTION_KEYS);
     if model_id.starts_with("gemini-embedding-2") {
-        if api_key.is_some() && configured_base.is_none() {
+        if connection.api_key.is_some() && settings.string("baseURL").is_none() {
             return Err(invalid_request(
                 "Google Vertex embedContent does not support Express Mode API keys; use project credentials",
             ));
@@ -203,13 +170,13 @@ pub fn embedding_model(model_id: &str, settings: &Settings, env: &dyn Env) -> Re
         let model = model_id.to_string();
         let endpoint =
             MediaEndpoint::function(Arc::new(move |_: &EmbeddingRequest| format!("/models/{model}:embedContent")))
-                .with_base_url(base_url);
+                .with_base_url(connection.base_url);
         let route = EmbeddingRoute::make(EmbeddingRouteInput {
             id: GoogleVertexEmbedContent.id().to_string(),
             provider: ID.to_string(),
             protocol: Arc::new(GoogleVertexEmbedContent),
             endpoint,
-            auth,
+            auth: connection.auth,
             headers: None,
             provider_metadata_key: Some(google_vertex_shared::METADATA_KEY.to_string()),
             options: transport,
@@ -224,13 +191,14 @@ pub fn embedding_model(model_id: &str, settings: &Settings, env: &dyn Env) -> Re
     };
     let max_values =
         if model_id.starts_with("gemini-embedding-001") { 1 } else { google_vertex_predict_embeddings::MAX_INSTANCES };
-    let endpoint = MediaEndpoint::function(Arc::new(move |_: &EmbeddingRequest| path.clone())).with_base_url(base_url);
+    let endpoint =
+        MediaEndpoint::function(Arc::new(move |_: &EmbeddingRequest| path.clone())).with_base_url(connection.base_url);
     let route = EmbeddingRoute::make(EmbeddingRouteInput {
         id: google_vertex_predict_embeddings::ID.to_string(),
         provider: ID.to_string(),
         protocol: Arc::new(GoogleVertexPredictEmbeddings),
         endpoint,
-        auth,
+        auth: connection.auth,
         headers: None,
         provider_metadata_key: Some(google_vertex_shared::METADATA_KEY.to_string()),
         options: transport,

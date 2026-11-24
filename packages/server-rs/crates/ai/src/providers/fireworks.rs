@@ -7,7 +7,7 @@ use crate::media::route::MediaEndpoint;
 use crate::protocols::openai_chat::OpenAiChat;
 use crate::protocols::openai_embeddings::{self, OpenAiEmbeddings};
 use crate::providers::{RuntimeModel, Settings, language_model, modality_options};
-use crate::route::auth::{Auth, ProviderAuthOptions, api_key};
+use crate::route::auth::{Auth, ProviderAuthOptions, bearer};
 use crate::route::embedding::{EmbeddingRoute, EmbeddingRouteInput};
 use crate::route::endpoint::Endpoint;
 use crate::schema::AiError;
@@ -52,7 +52,5 @@ pub fn embedding_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> R
 }
 
 fn auth(settings: &Settings) -> Auth {
-    api_key(ProviderAuthOptions { auth: None, api_key: settings.api_key() }, &["FIREWORKS_API_KEY"], |credential| {
-        credential.bearer()
-    })
+    bearer(ProviderAuthOptions { auth: None, api_key: settings.api_key() }, &["FIREWORKS_API_KEY"])
 }

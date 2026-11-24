@@ -7,7 +7,7 @@ use crate::protocols::open_responses::{self, OpenResponses};
 use crate::protocols::zai_chat::{self, ZaiChat};
 use crate::protocols::zai_messages::ZaiMessages;
 use crate::providers::{RuntimeModel, Settings, language_model_with_route};
-use crate::route::auth::{Auth, ProviderAuthOptions, api_key};
+use crate::route::auth::{Auth, ProviderAuthOptions, bearer};
 use crate::route::endpoint::Endpoint;
 use crate::route::model::{Route, RouteTransport};
 use crate::schema::{AiError, LlmRequest};
@@ -69,9 +69,7 @@ pub fn responses_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> R
 }
 
 fn auth(settings: &Settings) -> Auth {
-    api_key(ProviderAuthOptions { auth: None, api_key: settings.api_key() }, &["ZAI_API_KEY"], |credential| {
-        credential.bearer()
-    })
+    bearer(ProviderAuthOptions { auth: None, api_key: settings.api_key() }, &["ZAI_API_KEY"])
 }
 
 fn endpoint(settings: &Settings, base_url: &str, path: &str) -> Endpoint {

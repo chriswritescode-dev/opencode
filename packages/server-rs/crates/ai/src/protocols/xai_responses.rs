@@ -3,8 +3,11 @@ use std::sync::LazyLock;
 use serde_json::{Map, Value};
 
 use crate::ExecutionContext;
+use crate::prepare::flatten_tools;
 use crate::protocols::open_responses::{self, ProviderAdapter};
+use crate::protocols::openai_freeform;
 use crate::protocols::shared;
+use crate::protocols::utils::responses_compaction::{self, CompactRequest};
 use crate::protocols::utils::responses_hosted_tools::{self, Definition, Definitions};
 use crate::route::model::{Model, ResolvedRequest};
 use crate::route::protocol::{Frame, Protocol, ProtocolState};
@@ -102,6 +105,15 @@ impl Protocol for XaiResponses {
     fn new_state(&self, request: &ResolvedRequest, context: &ExecutionContext) -> Box<dyn ProtocolState> {
         Box::new(State { state: open_responses::initial(request, context, &ADAPTER) })
     }
+}
+
+pub fn compact_request(request: &LlmRequest, model: &Model) -> Result<CompactRequest, AiError> {
+    responses_compaction::compact_request_with(&ADAPTER, lower_tools, request, model)
+}
+
+fn lower_tools(request: &LlmRequest) -> Result<Vec<Value>, AiError> {
+    let custom = openai_freeform::tools(request);
+    open_responses::lower_tools(&flatten_tools(&request.tools), &ADAPTER, &custom)
 }
 
 fn lower_media(part: &MediaPart, _request: &LlmRequest) -> Option<Value> {

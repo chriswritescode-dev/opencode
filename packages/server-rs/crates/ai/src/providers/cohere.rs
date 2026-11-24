@@ -8,7 +8,7 @@ use crate::protocols::cohere_chat::{self, CohereChat};
 use crate::protocols::openai_chat::{self, OpenAiChat};
 use crate::protocols::openai_embeddings::{self, OpenAiEmbeddings};
 use crate::providers::{RuntimeModel, Settings, language_model, language_model_with_route, modality_options};
-use crate::route::auth::{Auth, ProviderAuthOptions, api_key};
+use crate::route::auth::{Auth, ProviderAuthOptions, bearer};
 use crate::route::embedding::{EmbeddingRoute, EmbeddingRouteInput};
 use crate::route::endpoint::Endpoint;
 use crate::route::model::{Route, RouteTransport};
@@ -77,7 +77,5 @@ pub fn embedding_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> R
 }
 
 fn auth(settings: &Settings) -> Auth {
-    api_key(ProviderAuthOptions { auth: None, api_key: settings.api_key() }, &["COHERE_API_KEY"], |credential| {
-        credential.bearer()
-    })
+    bearer(ProviderAuthOptions { auth: None, api_key: settings.api_key() }, &["COHERE_API_KEY"])
 }

@@ -61,7 +61,7 @@ impl Protocol for AlibabaMessages {
     }
 
     fn framing(&self) -> Definition {
-        AnthropicMessagesPlain::default().framing()
+        crate::route::framing::sse()
     }
 
     fn new_state(&self, request: &ResolvedRequest, context: &ExecutionContext) -> Box<dyn ProtocolState> {

@@ -6,10 +6,9 @@ use crate::media::multipart::{AppendFieldsOptions, Form, append_fields};
 use crate::media::protocol::{Body, DecodeContext, Identity, TextResponse};
 use crate::media::route::InlineProtocol;
 use crate::modalities::image::{ImageRequest, ImageResponse};
-use crate::protocols::openai_images::shape;
 use crate::protocols::shared::{invalid_request, media_type, require_inline_media};
-use crate::protocols::utils::image_sizing::{Limits, exact};
-use crate::protocols::utils::media_input::{bytes_asset, decoded_asset};
+use crate::protocols::utils::image_sizing::{Limits, exact, shape};
+use crate::protocols::utils::media_input::{bytes_asset, decoded_asset, merge_body};
 use crate::schema::{AiError, ProviderId, ProviderMetadata};
 
 pub const ID: &str = "cloudflare-workers-ai-images";
@@ -46,8 +45,7 @@ fn body(request: &ImageRequest) -> Result<Body, AiError> {
         fields.insert("height".to_string(), Value::from(size.height));
     }
     let provider_options = request.provider_options.clone().unwrap_or_default();
-    let http = http_body(request);
-    let native = crate::json::merge_records([&provider_options, &http]).unwrap_or_default();
+    let native = merge_body(provider_options, None, request.http.as_ref());
     let images = &request.images;
     if !request.model.id.starts_with(MULTIPART_MODEL_PREFIX) {
         if images.len() > 1 {
@@ -118,8 +116,4 @@ fn decode(text: &TextResponse, _context: &DecodeContext<ImageRequest>) -> Result
 
 fn identity() -> Identity {
     Identity { id: ID.to_string(), name: NAME.to_string(), provider: ProviderId::from(PROVIDER) }
-}
-
-fn http_body(request: &ImageRequest) -> Map<String, Value> {
-    request.http.as_ref().and_then(|http| http.body.clone()).unwrap_or_default()
 }

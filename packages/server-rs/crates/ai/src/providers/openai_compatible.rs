@@ -10,7 +10,7 @@ use crate::protocols::openai_embeddings::{self, OpenAiEmbeddings};
 use crate::protocols::openai_images::{self, ImageInput, OpenAiImages, pixel_size};
 use crate::protocols::system_one::{self, SystemOne};
 use crate::providers::{RuntimeModel, Settings, language_model, modality_options};
-use crate::route::auth::{Auth, ProviderAuthOptions, api_key};
+use crate::route::auth::{Auth, ProviderAuthOptions, bearer};
 use crate::route::decision::{DecisionRoute, DecisionRouteInput};
 use crate::route::embedding::{EmbeddingRoute, EmbeddingRouteInput};
 use crate::route::endpoint::{Endpoint, PathPart};
@@ -79,7 +79,7 @@ pub fn image_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Resul
     };
     let provider_options = merge_provider_options(&[defaults.as_ref(), provider_options.as_ref()]);
     let endpoint = MediaEndpoint::function(Arc::new(|request: &crate::modalities::image::ImageRequest| {
-        if request.images.is_empty() { openai_images::PATH.to_string() } else { openai_images::EDIT_PATH.to_string() }
+        openai_images::path(ImageInput::Edits, request)
     }))
     .with_base_url(base_url);
     Ok(RuntimeModel::Image(ImageModel::streamed(
@@ -114,7 +114,7 @@ pub fn decision_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Re
 }
 
 fn auth(settings: &Settings) -> Auth {
-    api_key(ProviderAuthOptions { api_key: settings.api_key(), auth: None }, &[], |credential| credential.bearer())
+    bearer(ProviderAuthOptions { api_key: settings.api_key(), auth: None }, &[])
 }
 
 fn missing_base_url() -> AiError {

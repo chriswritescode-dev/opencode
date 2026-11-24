@@ -9,7 +9,7 @@ use crate::modalities::decision::{DecisionRequest, DecisionResponse};
 use crate::protocols::openai_chat;
 use crate::protocols::system_one::{self, SystemOne};
 use crate::providers::{RuntimeModel, Settings, language_model, modality_options};
-use crate::route::auth::{ProviderAuthOptions, api_key};
+use crate::route::auth::{ProviderAuthOptions, bearer};
 use crate::route::decision::{DecisionProtocol, DecisionRoute, DecisionRouteInput};
 use crate::route::endpoint::Endpoint;
 use crate::schema::AiError;
@@ -54,10 +54,7 @@ impl DecisionProtocol for BasetenSystemOne {
 }
 
 pub fn model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result<RuntimeModel, AiError> {
-    let auth =
-        api_key(ProviderAuthOptions { auth: None, api_key: settings.api_key() }, &["BASETEN_API_KEY"], |credential| {
-            credential.bearer()
-        });
+    let auth = bearer(ProviderAuthOptions { auth: None, api_key: settings.api_key() }, &["BASETEN_API_KEY"]);
     Ok(language_model(
         model_id,
         ID,
@@ -74,10 +71,7 @@ pub fn model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result<Runt
 
 pub fn decision_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result<RuntimeModel, AiError> {
     let (transport, provider_options) = modality_options(settings, &DECLARED);
-    let auth =
-        api_key(ProviderAuthOptions { auth: None, api_key: settings.api_key() }, &["BASETEN_API_KEY"], |credential| {
-            credential.bearer()
-        });
+    let auth = bearer(ProviderAuthOptions { auth: None, api_key: settings.api_key() }, &["BASETEN_API_KEY"]);
     let route = DecisionRoute::make(DecisionRouteInput {
         id: BasetenSystemOne.id().to_string(),
         provider: ID.to_string(),

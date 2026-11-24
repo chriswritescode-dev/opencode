@@ -11,6 +11,7 @@ use opencode_ai::LlmClient;
 use opencode_ai::MapEnv;
 use opencode_ai::clock::FixedClock;
 use opencode_ai::id::SequenceIds;
+use opencode_ai::modalities::embedding::{EmbeddingClient, EmbeddingRequest, EmbeddingValue};
 use opencode_ai::providers::google_adc::{CredentialFiles, GoogleAdc, expand_cloud_sdk_config};
 use opencode_ai::providers::{ProviderPackages, RuntimeModel, Settings};
 use opencode_ai::route::auth::CredentialSource;
@@ -290,6 +291,77 @@ async fn google_adc_authorizes_the_vertex_chat_route() {
     let authorization =
         sent[1].headers.iter().find(|(name, _)| name == "authorization").map(|(_, value)| value.as_str());
     assert_eq!(authorization, Some("Bearer adc-e2e-token"));
+    drop(sent);
+
+    std::fs::remove_file(&path).expect("remove credential file");
+}
+
+#[tokio::test]
+async fn google_adc_authorizes_the_vertex_embedding_route() {
+    let path = std::env::temp_dir().join(format!(
+        "opencode-adc-embedding-{}-{}.json",
+        std::process::id(),
+        COUNTER.fetch_add(1, Ordering::SeqCst)
+    ));
+    std::fs::write(
+        &path,
+        r#"{"type":"authorized_user","client_id":"adc-client","client_secret":"adc-secret","refresh_token":"adc-refresh"}"#,
+    )
+    .expect("write credential file");
+    let env = MapEnv::new(vec![("GOOGLE_APPLICATION_CREDENTIALS".to_string(), path.to_string_lossy().into_owned())]);
+    let settings = Settings::new(
+        json!({
+            "project": "adc-project",
+            "location": "us-central1",
+            "baseURL": "https://vertex.example.test"
+        })
+        .as_object()
+        .expect("settings")
+        .clone(),
+    );
+    let runtime = ProviderPackages::builtin()
+        .model("@opencode/ai/providers/google-vertex/embeddings", "text-embedding-005", &settings, &env)
+        .expect("vertex embedding model");
+    let RuntimeModel::Embedding(model) = runtime else {
+        panic!("google-vertex/embeddings: expected an embedding model");
+    };
+    let sender = Arc::new(ScriptedSender::new(vec![
+        scripted(
+            200,
+            &[("content-type", "application/json")],
+            "{\"access_token\":\"adc-embedding-token\",\"expires_in\":3600,\"token_type\":\"Bearer\"}",
+        ),
+        scripted(
+            200,
+            &[("content-type", "application/json")],
+            "{\"predictions\":[{\"embeddings\":{\"values\":[0.1,0.2]}}]}",
+        ),
+    ]));
+    let clock = Arc::new(FixedClock::new(CLOCK_EPOCH_MS));
+    let context = ExecutionContext::new(clock.clone(), Arc::new(SequenceIds::new()), Arc::new(env));
+    let executor = RequestExecutor::new(sender.clone(), None, clock);
+    let request = EmbeddingRequest {
+        model,
+        values: vec![EmbeddingValue::Text("hello".to_string())],
+        dimensions: None,
+        input_type: None,
+        provider_options: None,
+        headers: None,
+        timeout: None,
+        http: None,
+    };
+    let response = EmbeddingClient::generate(request, &executor, &context).await.expect("embedding response");
+    assert_eq!(response.embeddings, vec![vec![0.1, 0.2]]);
+
+    let sent = sender.sent.lock().unwrap();
+    assert_eq!(sent.len(), 2, "ADC token request and embedding request");
+    assert_eq!(sent[0].method, "POST");
+    assert_eq!(sent[0].url, "https://oauth2.googleapis.com/token");
+    assert_eq!(sent[1].method, "POST");
+    assert_eq!(sent[1].url, "https://vertex.example.test/models/text-embedding-005:predict");
+    let authorization =
+        sent[1].headers.iter().find(|(name, _)| name == "authorization").map(|(_, value)| value.as_str());
+    assert_eq!(authorization, Some("Bearer adc-embedding-token"));
     drop(sent);
 
     std::fs::remove_file(&path).expect("remove credential file");

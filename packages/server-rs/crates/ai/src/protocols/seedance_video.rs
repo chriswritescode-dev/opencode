@@ -288,7 +288,7 @@ fn duration_seconds(task: &Task) -> Option<Number> {
         if fps != 0.0
             && let Some(frames) = frames.as_f64()
         {
-            return Number::from_f64(frames / fps);
+            return shared::number_from_f64(frames / fps);
         }
     }
     task.duration.clone()

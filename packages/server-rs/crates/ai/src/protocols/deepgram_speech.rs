@@ -3,10 +3,10 @@ use std::pin::Pin;
 use futures_util::Stream;
 use serde_json::{Map, Number, Value};
 
-use crate::media::protocol::{Body, DecodeContext, Identity, Query, QueryValue};
+use crate::media::protocol::{Body, DecodeContext, Identity, Query};
 use crate::media::route::{Mode, ResponseContext, StreamedProtocol};
 use crate::modalities::speech::{SpeechEvent, SpeechRequest};
-use crate::protocols::shared;
+use crate::protocols::utils::media_input;
 use crate::protocols::utils::speech_stream as speech;
 use crate::protocols::utils::speech_stream::{HeaderUsageKind, PcmEncoding};
 use crate::route::executor::ByteStream;
@@ -61,8 +61,7 @@ impl StreamedProtocol<SpeechRequest, SpeechEvent, speech::Frame, State> for Deep
         }
         let mut base = Map::new();
         base.insert("text".to_string(), Value::String(request.text.clone()));
-        let http = http_body(request);
-        let value = crate::json::merge_records([&base, &http]).unwrap_or_default();
+        let value = media_input::merge_body(base, None, request.http.as_ref());
         Ok(Body::Json { value, query: Some(query_parameters(request)?) })
     }
 
@@ -199,29 +198,7 @@ fn query_parameters(request: &SpeechRequest) -> Result<Query, AiError> {
     if let Some(speed) = &request.speed {
         values.insert("speed".to_string(), Value::Number(speed.clone()));
     }
-    values.into_iter().map(|(key, value)| query_value(&key, value)).collect()
-}
-
-fn query_value(key: &str, value: Value) -> Result<(String, QueryValue), AiError> {
-    let invalid = || shared::invalid_request(format!("{ID} cannot send \"{key}\" as a query parameter"));
-    let value = match value {
-        Value::String(value) => QueryValue::One(value),
-        Value::Number(value) => QueryValue::One(value.to_string()),
-        Value::Bool(value) => QueryValue::One(value.to_string()),
-        Value::Array(items) => QueryValue::Many(
-            items
-                .into_iter()
-                .map(|item| match item {
-                    Value::String(value) => Ok(value),
-                    Value::Number(value) => Ok(value.to_string()),
-                    Value::Bool(value) => Ok(value.to_string()),
-                    _ => Err(invalid()),
-                })
-                .collect::<Result<Vec<String>, AiError>>()?,
-        ),
-        _ => return Err(invalid()),
-    };
-    Ok((key.to_string(), value))
+    media_input::query(ID, &values)
 }
 
 fn provider_metadata(request_id: Option<&str>, model_name: Option<&str>) -> Option<ProviderMetadata> {
@@ -246,8 +223,4 @@ fn string_option(options: Option<&Map<String, Value>>, key: &str) -> Option<Stri
 
 fn identity() -> Identity {
     Identity { id: ID.to_string(), name: NAME.to_string(), provider: ProviderId::from(PROVIDER) }
-}
-
-fn http_body(request: &SpeechRequest) -> Map<String, Value> {
-    request.http.as_ref().and_then(|http| http.body.clone()).unwrap_or_default()
 }

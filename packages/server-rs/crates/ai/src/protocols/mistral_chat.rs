@@ -86,15 +86,9 @@ impl State {
         self.tools.iter().find(|(existing, _)| existing == key).map(|(_, tool)| tool)
     }
 
-    fn set_tool(&mut self, key: ToolKey, tool: tool_stream::PendingTool) {
-        match self.tools.iter_mut().find(|(existing, _)| *existing == key) {
-            Some(entry) => entry.1 = tool,
-            None => self.tools.push((key, tool)),
-        }
-    }
-
-    fn pending(&self, key: &ToolKey) -> Option<&PendingToolDelta> {
-        self.pending_tools.iter().find(|(existing, _)| existing == key).map(|(_, pending)| pending)
+    fn take_pending(&mut self, key: &ToolKey) -> Option<PendingToolDelta> {
+        let position = self.pending_tools.iter().position(|(existing, _)| existing == key)?;
+        Some(self.pending_tools.remove(position).1)
     }
 
     fn set_pending(&mut self, key: ToolKey, pending: PendingToolDelta) {
@@ -102,10 +96,6 @@ impl State {
             Some(entry) => entry.1 = pending,
             None => self.pending_tools.push((key, pending)),
         }
-    }
-
-    fn remove_pending(&mut self, key: &ToolKey) {
-        self.pending_tools.retain(|(existing, _)| existing != key);
     }
 
     fn ordered_tools(&self) -> Vec<&(ToolKey, tool_stream::PendingTool)> {
@@ -165,27 +155,25 @@ impl State {
             self.close_active(events);
         }
         let units = thinking_units(part.get("thinking"));
-        let (id, started) = match &self.active {
-            Some(active) => (active.id.clone(), false),
-            None => (format!("reasoning-{}", self.next_content), true),
+        let started = self.active.is_none();
+        let id = match &self.active {
+            Some(active) => active.id.clone(),
+            None => format!("reasoning-{}", self.next_content),
         };
-        let (previous, mut accumulated) = match &self.active {
-            Some(active) => (active.thinking.clone(), active.thinking_units.clone()),
-            None => (None, Vec::new()),
-        };
-        accumulated.extend(units.iter().cloned());
         let text = thinking_text(&units);
         self.lifecycle = if text.is_empty() {
             lifecycle::reasoning_start(self.lifecycle.clone(), events, &id, None)
         } else {
             lifecycle::reasoning_delta(self.lifecycle.clone(), events, &id, &text, None)
         };
-        self.active = Some(ActiveContent {
+        let active = self.active.get_or_insert_with(|| ActiveContent {
             kind: ActiveKind::Reasoning,
             id,
-            thinking: Some(merge_thinking(previous, part)),
-            thinking_units: accumulated,
+            thinking: None,
+            thinking_units: Vec::new(),
         });
+        active.thinking = Some(merge_thinking(active.thinking.take(), part));
+        active.thinking_units.extend(units);
         if started {
             self.next_content += 1;
         }
@@ -230,8 +218,9 @@ impl State {
 
     fn append_tool_delta(&mut self, key: &ToolKey, id: &str, name: &str, text: &str) -> Result<Vec<LlmEvent>, AiError> {
         let mut tools = tool_stream::State::new();
-        if let Some(existing) = self.tool(key) {
-            tools.insert(0, existing.clone());
+        let position = self.tools.iter().position(|(existing, _)| existing == key);
+        if let Some(position) = position {
+            tools.insert(0, self.tools.remove(position).1);
         }
         let outcome = tool_stream::append_or_start(
             ID,
@@ -241,7 +230,10 @@ impl State {
             MISSING_TOOL_NAME,
         )?;
         if let Some(updated) = tools.remove(&0) {
-            self.set_tool(key.clone(), updated);
+            match position {
+                Some(position) => self.tools.insert(position, (key.clone(), updated)),
+                None => self.tools.push((key.clone(), updated)),
+            }
         }
         Ok(outcome.events)
     }
@@ -273,19 +265,19 @@ impl State {
                     None => self.latest_tool_key.clone().unwrap_or(ToolKey::Missing(self.generated_tools)),
                 },
             };
-            let existing = self.tool(&key).cloned();
-            let pending = self.pending(&key).cloned();
-            let id = if existing.is_some() || pending.is_some() {
-                existing
-                    .as_ref()
-                    .map(|tool| tool.id.clone())
-                    .or_else(|| pending.as_ref().map(|pending| pending.id.clone()))
-                    .unwrap_or_default()
-            } else {
-                let source = provided_id.map(str::to_string).unwrap_or_else(|| format!("generated:{}", key.label()));
-                self.normalize_stream_tool_id(&source)
+            let pending = self.take_pending(&key);
+            let had_pending = pending.is_some();
+            let existing = self.tool(&key).map(|tool| (tool.id.clone(), tool.name.clone()));
+            let had_existing = existing.is_some();
+            let id = match existing.as_ref().map(|(id, _)| id).or_else(|| pending.as_ref().map(|pending| &pending.id)) {
+                Some(id) => id.clone(),
+                None => {
+                    let source =
+                        provided_id.map(str::to_string).unwrap_or_else(|| format!("generated:{}", key.label()));
+                    self.normalize_stream_tool_id(&source)
+                }
             };
-            let name = existing.as_ref().map(|tool| tool.name.clone()).or_else(|| {
+            let name = existing.as_ref().map(|(_, name)| name.clone()).or_else(|| {
                 delta
                     .get("function")
                     .and_then(|function| function.get("name"))
@@ -294,15 +286,12 @@ impl State {
                     .filter(|name| !name.is_empty())
                     .map(str::to_string)
             });
-            let text = format!(
-                "{}{}",
-                pending.as_ref().map(|pending| pending.input.as_str()).unwrap_or_default(),
-                tool_text(delta)
-            );
+            let mut text = pending.map(|pending| pending.input).unwrap_or_default();
+            text.push_str(&tool_text(delta));
             let Some(name) = name else {
                 self.set_pending(key.clone(), PendingToolDelta { id, input: text });
                 self.latest_tool_key = Some(key);
-                if provided_id.is_none() && pending.is_none() {
+                if provided_id.is_none() && !had_pending {
                     self.generated_tools += 1;
                 }
                 continue;
@@ -312,9 +301,8 @@ impl State {
                 self.lifecycle = lifecycle::step_start(self.lifecycle.clone(), events);
             }
             events.extend(outcome);
-            self.remove_pending(&key);
             self.latest_tool_key = Some(key);
-            if provided_id.is_none() && existing.is_none() && pending.is_none() {
+            if provided_id.is_none() && !had_existing && !had_pending {
                 self.generated_tools += 1;
             }
         }
@@ -690,7 +678,7 @@ fn lower_messages(request: &LlmRequest) -> Result<Vec<Value>, AiError> {
     for message in &request.messages {
         match message {
             Message::System(_) => {
-                let update = shared::wrapped_system_update(ID, message)?;
+                let update = shared::wrapped_system_update("Mistral Chat", message)?;
                 messages.push(message_object("user", Value::String(update.text)));
             }
             Message::User(message) => messages.push(lower_user(message)?),

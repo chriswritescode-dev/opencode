@@ -7,7 +7,7 @@ use crate::media::route::InlineProtocol;
 use crate::modalities::image::{ImageRequest, ImageResponse, token_usage};
 use crate::protocols::shared::invalid_request;
 use crate::protocols::utils::image_sizing::{Limits, Shape, Size, fit};
-use crate::protocols::utils::media_input::{image_output, media_info, media_reference};
+use crate::protocols::utils::media_input::{image_output, media_info, media_reference, merge_body};
 use crate::schema::{AiError, ProviderId, ProviderMetadata};
 
 pub const ID: &str = "meta-images";
@@ -86,7 +86,7 @@ fn body(request: &ImageRequest) -> Result<Body, AiError> {
                 .collect::<Map<String, Value>>()
         })
         .unwrap_or_default();
-    let body = crate::json::merge_records([&base, &native, &http_body(request)]).unwrap_or(base);
+    let body = merge_body(base, Some(&native), request.http.as_ref());
     Ok(Body::Json { value: body, query: None })
 }
 
@@ -106,7 +106,15 @@ fn decode(text: &TextResponse, context: &DecodeContext<ImageRequest>) -> Result<
         .as_ref()
         .and_then(|http| http.body.as_ref())
         .and_then(|body| body.get("output_format"))
-        .and_then(Value::as_str);
+        .and_then(Value::as_str)
+        .or_else(|| {
+            context
+                .request
+                .provider_options
+                .as_ref()
+                .and_then(|options| options.get("outputFormat"))
+                .and_then(Value::as_str)
+        });
     let format = decoded.get("output_format").and_then(Value::as_str).or(requested).unwrap_or("webp").to_string();
     let media_type = format!("image/{format}");
     let data = decoded.get("data").and_then(Value::as_array).cloned().unwrap_or_default();
@@ -147,8 +155,4 @@ fn decode(text: &TextResponse, context: &DecodeContext<ImageRequest>) -> Result<
     let mut provider_metadata = Map::new();
     provider_metadata.insert("meta".to_string(), Value::Object(metadata));
     Ok(ImageResponse { images, usage: usage.flatten(), provider_metadata: Some(provider_metadata as ProviderMetadata) })
-}
-
-fn http_body(request: &ImageRequest) -> Map<String, Value> {
-    request.http.as_ref().and_then(|http| http.body.clone()).unwrap_or_default()
 }

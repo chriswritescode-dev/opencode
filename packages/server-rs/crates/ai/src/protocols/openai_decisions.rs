@@ -6,11 +6,13 @@ use serde_json::{Map, Number, Value, json};
 use crate::media::protocol::{Identity, TextResponse};
 use crate::modalities::decision::{
     ChoiceProbability, ChoiceValue, DecisionAnswer, DecisionPart, DecisionQuestion, DecisionRequest, DecisionResponse,
-    DecisionUsage, ScoreProbability, normalized_number, usage_number, usage_total,
+    DecisionUsage, ScoreProbability, normalized_number,
 };
+use crate::protocols::open_responses;
 use crate::protocols::shared;
+use crate::protocols::utils::media_input;
 use crate::route::decision::DecisionProtocol;
-use crate::schema::{AiError, MediaAsset, MediaSource, ProviderOptions};
+use crate::schema::{AiError, MediaAsset, ProviderOptions};
 
 pub const ID: &str = "openai-decisions";
 pub const NAME: &str = "OpenAI Decisions";
@@ -115,16 +117,14 @@ impl DecisionProtocol for OpenAiDecisions {
         let ordered =
             request.questions.iter().filter_map(|question| by_name.get(question.name()).cloned()).collect::<Vec<_>>();
         let answers = if ordered.len() == answers.len() { ordered } else { answers };
-        let usage = output.usage.as_ref().map(|usage| DecisionUsage {
-            input_tokens: usage_number(usage, "input_tokens"),
-            output_tokens: usage_number(usage, "output_tokens"),
-            total_tokens: usage_total(
-                usage.get("input_tokens").and_then(Value::as_number),
-                usage.get("output_tokens").and_then(Value::as_number),
-                usage.get("total_tokens").and_then(Value::as_number),
-            ),
-            cost: usage_number(usage, "cost"),
-        });
+        let raw_usage = output.usage.as_ref().map(|usage| Value::Object(usage.clone()));
+        let usage =
+            open_responses::map_usage(raw_usage.as_ref(), provider_metadata_key, &[]).map(|usage| DecisionUsage {
+                input_tokens: usage.input_tokens.map(Number::from),
+                output_tokens: usage.output_tokens.map(Number::from),
+                total_tokens: usage.total_tokens.map(Number::from),
+                cost: usage.cost,
+            });
         let mut entry = Map::new();
         entry.insert("model".to_string(), Value::String(output.model));
         if let Some(usage) = output.usage {
@@ -202,21 +202,12 @@ fn media_part(request: &DecisionRequest, asset: &MediaAsset) -> Result<Value, Ai
             Some(request.model.route.id.clone()),
         ));
     }
-    Ok(json!({ "type": "input_image", "image_url": media_reference(asset, &format!("{NAME} image input"))? }))
-}
-
-fn media_reference(asset: &MediaAsset, label: &str) -> Result<String, AiError> {
-    if let Some(inline) = shared::inline_media(asset) {
-        return Ok(inline.data_url);
-    }
-    if let Some(url) = shared::media_url(asset) {
-        return Ok(url.to_string());
-    }
-    let got = match &asset.source {
-        MediaSource::Ref { provider, id, .. } => format!("; got {provider}:{id}"),
-        _ => String::new(),
-    };
-    Err(shared::invalid_request(format!("{label} accepts inline bytes, data URLs, http(s) URLs{got}")))
+    Ok(json!({
+        "type": "input_image",
+        "image_url": media_input::media_reference(asset, None, &format!("{NAME} image input"))
+            .map(media_input::MediaReference::value)
+            .map_err(shared::invalid_request)?
+    }))
 }
 
 fn question_value(question: &DecisionQuestion) -> Value {

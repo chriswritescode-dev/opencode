@@ -9,6 +9,7 @@ use crate::media::protocol::{Body, DecodeContext, Identity, QueryValue};
 use crate::media::route::{Mode, ResponseContext, StreamedProtocol};
 use crate::modalities::speech::{SpeechEvent, SpeechRequest};
 use crate::protocols::shared;
+use crate::protocols::utils::media_input::merge_body;
 use crate::protocols::utils::speech_stream as speech;
 use crate::protocols::utils::speech_stream::{HeaderUsageKind, PcmEncoding};
 use crate::route::executor::ByteStream;
@@ -39,6 +40,12 @@ pub fn path(request: &SpeechRequest) -> String {
     let stream = if request.mode == Mode::Stream { "/stream" } else { "" };
     let timestamps = if request.timestamps == Some(true) { "/with-timestamps" } else { "" };
     format!("{PATH}/{}{stream}{timestamps}", opencode_api_types::js::encode_component(&voice))
+}
+
+impl speech::AudioState for State {
+    fn audio_mut(&mut self) -> &mut speech::Audio {
+        &mut self.audio
+    }
 }
 
 impl StreamedProtocol<SpeechRequest, SpeechEvent, speech::Frame, State> for ElevenLabsSpeech {
@@ -72,8 +79,7 @@ impl StreamedProtocol<SpeechRequest, SpeechEvent, speech::Frame, State> for Elev
             }),
         );
         let native = native_options(request.provider_options.as_ref());
-        let http = http_body(request);
-        let value = crate::json::merge_records([&base, &native, &http]).unwrap_or_default();
+        let value = merge_body(base, Some(&native), request.http.as_ref());
         let query = vec![("output_format".to_string(), QueryValue::One(output_format(request)?))];
         Ok(Body::Json { value, query: Some(query) })
     }
@@ -94,14 +100,7 @@ impl StreamedProtocol<SpeechRequest, SpeechEvent, speech::Frame, State> for Elev
     }
 
     fn step(&self, state: State, frame: speech::Frame) -> Result<(State, Vec<SpeechEvent>), AiError> {
-        match frame {
-            speech::Frame::Text(frame) => on_record(state, &frame),
-            speech::Frame::Bytes(bytes) => {
-                let mut state = state;
-                let events = speech::delta(&mut state.audio, &bytes);
-                Ok((state, events))
-            }
-        }
+        speech::step(state, frame, on_record)
     }
 
     fn finish(&self, state: &State, context: &ResponseContext<SpeechRequest>) -> Result<Vec<SpeechEvent>, AiError> {
@@ -211,10 +210,6 @@ fn number_array(value: Option<&Value>) -> Option<Vec<Number>> {
 
 fn identity() -> Identity {
     Identity { id: ID.to_string(), name: NAME.to_string(), provider: ProviderId::from(PROVIDER) }
-}
-
-fn http_body(request: &SpeechRequest) -> Map<String, Value> {
-    request.http.as_ref().and_then(|http| http.body.clone()).unwrap_or_default()
 }
 
 fn insert(target: &mut Map<String, Value>, key: &str, value: Option<Value>) {

@@ -28,7 +28,11 @@ const ADAPTER: ProviderAdapter = ProviderAdapter {
 };
 
 static DEFINITIONS: LazyLock<Definitions> = LazyLock::new(|| {
-    let mut definitions = responses_hosted_tools::common();
+    let mut definitions = Definitions::new();
+    definitions.insert(
+        "web_search_call",
+        Definition { name: "web_search", input: responses_hosted_tools::action_input, result: None },
+    );
     definitions.insert(
         "image_generation_call",
         Definition { name: "image_generation", input: empty_input, result: Some(image_result) },

@@ -5,10 +5,9 @@ use serde_json::{Map, Value};
 use crate::media::protocol::{Body, DecodeContext, Identity, TextResponse};
 use crate::media::route::InlineProtocol;
 use crate::modalities::image::{ImageRequest, ImageResponse};
-use crate::protocols::openai_images::shape;
 use crate::protocols::shared::invalid_request;
-use crate::protocols::utils::image_sizing::{Limits, Size, exact, is_requested, nearest, tier};
-use crate::protocols::utils::media_input::{decoded_asset, expiring_url, media_reference};
+use crate::protocols::utils::image_sizing::{Limits, Size, exact, is_requested, nearest, shape, tier};
+use crate::protocols::utils::media_input::{decoded_asset, expiring_url, media_reference, merge_body};
 use crate::schema::{AiError, AiErrorReason, HttpContext, ProviderId, ProviderMetadata};
 
 pub const ID: &str = "minimax-images";
@@ -69,7 +68,7 @@ fn body(request: &ImageRequest) -> Result<Body, AiError> {
         base.insert(key, value);
     }
     let native = native_options(request.provider_options.as_ref());
-    let body = crate::json::merge_records([&base, &native, &http_body(request)]).unwrap_or(base);
+    let body = merge_body(base, Some(&native), request.http.as_ref());
     Ok(Body::Json { value: body, query: None })
 }
 
@@ -130,7 +129,7 @@ fn preset(request: &ImageRequest) -> Option<String> {
     if !presets(&request.model.id).iter().any(|(name, _)| name == aspect) {
         return None;
     }
-    if request.resolution.as_deref().and_then(tier).is_some_and(|tier| (tier - 1.0).abs() > f64::EPSILON) {
+    if request.resolution.as_deref().is_some_and(|resolution| tier(resolution) != Some(1.0)) {
         return None;
     }
     Some(aspect.to_string())
@@ -303,8 +302,4 @@ fn insert_optional(target: &mut Map<String, Value>, key: &str, value: Option<&Va
 
 fn identity() -> Identity {
     Identity { id: ID.to_string(), name: NAME.to_string(), provider: ProviderId::from(PROVIDER) }
-}
-
-fn http_body(request: &ImageRequest) -> Map<String, Value> {
-    request.http.as_ref().and_then(|http| http.body.clone()).unwrap_or_default()
 }

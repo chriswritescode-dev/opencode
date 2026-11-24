@@ -9,7 +9,7 @@ use crate::protocols::cloudflare_run_decisions::{self, CloudflareRunDecisions};
 use crate::protocols::{anthropic_messages, openai_chat, openai_responses};
 use crate::providers::cloudflare_shared;
 use crate::providers::{RuntimeModel, Settings, language_model_with_route, modality_options, open_responses_options};
-use crate::route::auth::{ApiKey, Auth, ProviderAuthOptions, api_key};
+use crate::route::auth::{ApiKey, Auth, ProviderAuthOptions, api_key, bearer};
 use crate::route::decision::{DecisionRoute, DecisionRouteInput};
 use crate::route::endpoint::{Endpoint, PathPart};
 use crate::route::model::{Route, RouteTransport};
@@ -150,9 +150,7 @@ fn passthrough_base(settings: &Settings, provider_path: &str) -> Result<String, 
 }
 
 fn rest_auth(settings: &Settings) -> Auth {
-    api_key(ProviderAuthOptions { auth: None, api_key: gateway_credential(settings) }, &AUTH_ENV_VARS, |credential| {
-        credential.bearer()
-    })
+    bearer(ProviderAuthOptions { auth: None, api_key: gateway_credential(settings) }, &AUTH_ENV_VARS)
 }
 
 fn passthrough_auth(settings: &Settings) -> Auth {

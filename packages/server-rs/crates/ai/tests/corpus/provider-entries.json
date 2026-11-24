@@ -8398,6 +8398,47 @@
       "error": null
     },
     {
+      "name": "openai:query-params",
+      "specifier": "@opencode/ai/providers/openai",
+      "modelID": "gpt-5.5",
+      "settings": {
+        "apiKey": "fixture",
+        "queryParams": {
+          "api-version": "x"
+        }
+      },
+      "env": {},
+      "kind": "language",
+      "routeId": "openai-responses",
+      "descriptor": {
+        "id": "gpt-5.5",
+        "provider": "openai",
+        "route": {
+          "id": "openai-responses",
+          "protocol": "openai-responses",
+          "providerMetadataKey": "openai"
+        },
+        "endpoint": {
+          "baseURL": "https://api.openai.com/v1",
+          "path": "/responses",
+          "query": {
+            "api-version": "x"
+          }
+        }
+      },
+      "prepared": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/responses?api-version=x",
+        "headers": {
+          "authorization": "Bearer fixture",
+          "content-length": "227",
+          "content-type": "application/json"
+        },
+        "body": "eyJtb2RlbCI6ImdwdC01LjUiLCJpbnB1dCI6W3sidHlwZSI6Im1lc3NhZ2UiLCJyb2xlIjoidXNlciIsImNvbnRlbnQiOlt7InR5cGUiOiJpbnB1dF90ZXh0IiwidGV4dCI6IkhpIn1dfV0sInN0cmVhbSI6dHJ1ZSwic3RvcmUiOmZhbHNlLCJpbmNsdWRlIjpbInJlYXNvbmluZy5lbmNyeXB0ZWRfY29udGVudCJdLCJyZWFzb25pbmciOnsiZWZmb3J0IjoibWVkaXVtIiwic3VtbWFyeSI6ImF1dG8ifX0="
+      },
+      "error": null
+    },
+    {
       "name": "openai-compatible:default",
       "specifier": "@opencode/ai/providers/openai-compatible",
       "modelID": "fixture-model",

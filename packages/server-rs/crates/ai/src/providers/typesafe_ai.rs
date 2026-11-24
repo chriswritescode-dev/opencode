@@ -4,7 +4,7 @@ use crate::Env;
 use crate::media::route::MediaEndpoint;
 use crate::protocols::system_one::{self, SystemOne};
 use crate::providers::{RuntimeModel, Settings, modality_options};
-use crate::route::auth::{ProviderAuthOptions, api_key};
+use crate::route::auth::{ProviderAuthOptions, bearer};
 use crate::route::decision::{DecisionRoute, DecisionRouteInput};
 use crate::schema::{AiError, StringMap};
 
@@ -15,10 +15,7 @@ const DECLARED: [&str; 2] = ["apiKey", "baseURL"];
 
 pub fn decision_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result<RuntimeModel, AiError> {
     let (transport, provider_options) = modality_options(settings, &DECLARED);
-    let auth =
-        api_key(ProviderAuthOptions { auth: None, api_key: settings.api_key() }, &["TYPESAFE_API_KEY"], |credential| {
-            credential.bearer()
-        });
+    let auth = bearer(ProviderAuthOptions { auth: None, api_key: settings.api_key() }, &["TYPESAFE_API_KEY"]);
     let route = DecisionRoute::make(DecisionRouteInput {
         id: system_one::ID.to_string(),
         provider: ID.to_string(),

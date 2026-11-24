@@ -41,7 +41,7 @@ impl Protocol for AlibabaChat {
             object.insert("enable_thinking".to_string(), Value::Bool(enable_thinking));
         }
         if let Some(budget) = options.thinking_budget {
-            let max_tokens = object.get("max_completion_tokens").and_then(Value::as_number);
+            let max_tokens = request.request.generation.max_tokens.as_ref();
             object.insert("thinking_budget".to_string(), Value::Number(fit_thinking_budget(&budget, max_tokens, 1)));
         }
         if let Some(preserve_thinking) = options.preserve_thinking {

@@ -117,23 +117,41 @@ impl<Response: 'static> Generation<Response> {
         let poll = options.and_then(|options| options.poll).unwrap_or_default();
         let interval = poll.interval.unwrap_or(Duration::from_secs(5));
         let timeout = poll.timeout.unwrap_or(Duration::from_secs(600));
-        let timeout_ms = timeout.as_millis().min(u128::from(u64::MAX)) as u64;
+        let timeout_ms = timeout.as_nanos().div_ceil(1_000_000).min(u128::from(u64::MAX)) as u64;
         let deadline = context.clock.now_ms().saturating_add(timeout_ms);
         if self.terminal() {
-            return self.result().await;
+            return within(self.result(), deadline, context, &self.id, timeout, timeout_ms).await;
         }
         loop {
             let now = context.clock.now_ms();
             if now >= deadline {
                 return Err(timeout_error(&self.id, timeout, timeout_ms));
             }
-            let current = self.refresh().await?;
+            let current = within(self.refresh(), deadline, context, &self.id, timeout, timeout_ms).await?;
             if current.terminal() {
-                return current.result().await;
+                return within(current.result(), deadline, context, &self.id, timeout, timeout_ms).await;
             }
-            let remaining = Duration::from_millis(deadline - now);
+            let remaining = Duration::from_millis(deadline.saturating_sub(context.clock.now_ms()));
             context.sleeper.sleep(interval.min(remaining)).await;
         }
+    }
+}
+
+async fn within<T>(
+    future: BoxFuture<Result<T, AiError>>,
+    deadline: u64,
+    context: &ExecutionContext,
+    id: &str,
+    timeout: Duration,
+    timeout_ms: u64,
+) -> Result<T, AiError> {
+    let now = context.clock.now_ms();
+    if now >= deadline {
+        return Err(timeout_error(id, timeout, timeout_ms));
+    }
+    match tokio::time::timeout(Duration::from_millis(deadline - now), future).await {
+        Ok(result) => result,
+        Err(_) => Err(timeout_error(id, timeout, timeout_ms)),
     }
 }
 
@@ -150,14 +168,33 @@ fn timeout_error(id: &str, timeout: Duration, timeout_ms: u64) -> AiError {
 
 fn format_duration(duration: Duration) -> String {
     let millis = duration.as_millis().min(u128::from(u64::MAX)) as u64;
-    if millis == 0 {
-        return "0ms".to_string();
+    let nanos = duration.subsec_nanos() % 1_000_000;
+    let mut pieces = Vec::new();
+    let days = millis / 86_400_000;
+    if days != 0 {
+        pieces.push(format!("{days}d"));
     }
-    if millis.is_multiple_of(60_000) {
-        return format!("{}m", millis / 60_000);
+    let hours = millis / 3_600_000 % 24;
+    if hours != 0 {
+        pieces.push(format!("{hours}h"));
     }
-    if millis.is_multiple_of(1_000) {
-        return format!("{}s", millis / 1_000);
+    let minutes = millis / 60_000 % 60;
+    if minutes != 0 {
+        pieces.push(format!("{minutes}m"));
     }
-    format!("{millis}ms")
+    let seconds = millis / 1_000 % 60;
+    if seconds != 0 {
+        pieces.push(format!("{seconds}s"));
+    }
+    let millis = millis % 1_000;
+    if millis != 0 {
+        pieces.push(format!("{millis}ms"));
+    }
+    if nanos != 0 {
+        pieces.push(format!("{nanos}ns"));
+    }
+    if pieces.is_empty() {
+        return "0".to_string();
+    }
+    pieces.join(" ")
 }

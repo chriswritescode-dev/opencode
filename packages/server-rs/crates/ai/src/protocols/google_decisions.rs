@@ -199,6 +199,7 @@ fn media_part(request: &DecisionRequest, asset: &MediaAsset, resolution: Option<
     }
     if let MediaSource::Url { url, .. } = &asset.source
         && url.to_lowercase().starts_with("https://")
+        && asset.headers.is_none()
     {
         block.insert("uri".to_string(), Value::String(url.clone()));
         return Ok(Value::Object(block));

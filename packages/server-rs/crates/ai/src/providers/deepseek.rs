@@ -5,7 +5,7 @@ use serde_json::json;
 use crate::Env;
 use crate::protocols::openai_chat::OpenAiChat;
 use crate::providers::{RuntimeModel, Settings, language_model};
-use crate::route::auth::{Auth, ProviderAuthOptions, api_key};
+use crate::route::auth::{Auth, ProviderAuthOptions, bearer};
 use crate::route::endpoint::Endpoint;
 use crate::schema::AiError;
 
@@ -32,7 +32,5 @@ pub fn model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result<Runt
 }
 
 fn auth(settings: &Settings) -> Auth {
-    api_key(ProviderAuthOptions { auth: None, api_key: settings.api_key() }, &["DEEPSEEK_API_KEY"], |credential| {
-        credential.bearer()
-    })
+    bearer(ProviderAuthOptions { auth: None, api_key: settings.api_key() }, &["DEEPSEEK_API_KEY"])
 }

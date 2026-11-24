@@ -1,24 +1,27 @@
 use std::pin::Pin;
+use std::sync::LazyLock;
 
 use futures_util::Stream;
+use regex_lite::Regex;
 use serde_json::{Map, Number, Value};
 
 use crate::media::protocol::{Body, DecodeContext, Identity};
 use crate::media::route::{Mode, ResponseContext, StreamedProtocol};
-use crate::modalities::image::{MediaUsage, token_usage};
 use crate::modalities::transcription::{
     TranscriptionEvent, TranscriptionRequest, TranscriptionSegment, TranscriptionWord,
 };
 use crate::protocols::shared::number_from_f64;
-use crate::protocols::utils::gemini_generate_content::{content_filtered, media_part};
+use crate::protocols::utils::gemini_generate_content;
 use crate::route::executor::ByteStream;
-use crate::schema::{AiError, AiErrorReason, ProviderId, ProviderMetadata};
+use crate::schema::{AiError, ProviderId};
 
 pub const ID: &str = "google-transcription";
 pub const NAME: &str = "Google Transcription";
 pub const DEFAULT_BASE_URL: &str = "https://generativelanguage.googleapis.com/v1beta";
 
 const PROVIDER: &str = "google";
+
+static SECONDS: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\d+(\.\d+)?s$").expect("seconds pattern compiles"));
 
 pub struct GoogleTranscription {
     provider: ProviderId,
@@ -33,10 +36,7 @@ pub struct State {
     text: String,
     segments: Vec<TranscriptionSegment>,
     words: Vec<TranscriptionWord>,
-    usage: Option<Map<String, Value>>,
-    finish_reason: Option<String>,
-    model_version: Option<String>,
-    response_id: Option<String>,
+    metadata: gemini_generate_content::Metadata,
 }
 
 struct Turn {
@@ -46,11 +46,7 @@ struct Turn {
 }
 
 pub fn path(request: &TranscriptionRequest) -> String {
-    if request.mode == Mode::Stream {
-        format!("/models/{}:streamGenerateContent?alt=sse", request.model.id)
-    } else {
-        format!("/models/{}:generateContent", request.model.id)
-    }
+    gemini_generate_content::path(&request.model.id, request.mode)
 }
 
 impl StreamedProtocol<TranscriptionRequest, TranscriptionEvent, String, State> for GoogleTranscription {
@@ -97,7 +93,7 @@ impl StreamedProtocol<TranscriptionRequest, TranscriptionEvent, String, State> f
         let mut body = Map::new();
         let contents = vec![serde_json::json!({
             "role": "user",
-            "parts": [media_part(ID, &request.audio)?],
+            "parts": [gemini_generate_content::media_part(ID, &request.audio)?],
         })];
         body.insert("contents".to_string(), Value::Array(contents));
         body.insert("generationConfig".to_string(), Value::Object(generation_config));
@@ -131,7 +127,7 @@ impl StreamedProtocol<TranscriptionRequest, TranscriptionEvent, String, State> f
         state: &State,
         _context: &ResponseContext<TranscriptionRequest>,
     ) -> Result<Vec<TranscriptionEvent>, AiError> {
-        if state.finish_reason.is_none() {
+        if state.metadata.finish_reason().is_none() {
             return Err(identity().incomplete());
         }
         Ok(vec![TranscriptionEvent::Finish {
@@ -140,33 +136,25 @@ impl StreamedProtocol<TranscriptionRequest, TranscriptionEvent, String, State> f
             words: (!state.words.is_empty()).then(|| state.words.clone()),
             language: None,
             duration_seconds: None,
-            usage: usage(state.usage.as_ref()),
-            provider_metadata: Some(provider_metadata(state)),
+            usage: state.metadata.usage(),
+            provider_metadata: Some(state.metadata.provider_metadata()),
         }])
     }
 }
 
-fn on_chunk(state: State, frame: &str) -> Result<(State, Vec<TranscriptionEvent>), AiError> {
+fn on_chunk(mut state: State, frame: &str) -> Result<(State, Vec<TranscriptionEvent>), AiError> {
     let identity = identity();
     let value: Value = serde_json::from_str(frame).map_err(|_| invalid(&identity, frame))?;
     let object = value.as_object().ok_or_else(|| invalid(&identity, frame))?;
-    if let Some(feedback) = object.get("promptFeedback").and_then(Value::as_object)
-        && let Some(reason) = feedback.get("blockReason").and_then(Value::as_str)
-    {
-        let message = match feedback.get("blockReasonMessage").and_then(Value::as_str) {
-            Some(message) => format!("{NAME} blocked the request ({reason}): {message}"),
-            None => format!("{NAME} blocked the request ({reason})"),
-        };
-        return Err(AiError {
-            reason: AiErrorReason::ContentPolicy { message, body: Some(frame.to_string()), http: None },
-        });
+    if let Some(blocked) = gemini_generate_content::blocked(NAME, object, frame) {
+        return Err(blocked);
     }
     let candidates = object.get("candidates").and_then(Value::as_array);
     let finish_reason = candidates
         .and_then(|candidates| candidates.first())
         .and_then(|candidate| candidate.get("finishReason"))
         .and_then(Value::as_str);
-    let mut state = track(state, object);
+    state.metadata.track(object);
     let mut turns = Vec::new();
     let parts = candidates
         .and_then(|candidates| candidates.first())
@@ -185,14 +173,10 @@ fn on_chunk(state: State, frame: &str) -> Result<(State, Vec<TranscriptionEvent>
     let text =
         turns.iter().map(|turn| turn.text.as_str()).filter(|text| !text.is_empty()).collect::<Vec<&str>>().join(" ");
     let delta = if text.is_empty() || state.text.is_empty() { text } else { format!(" {text}") };
-    if state.text.len() + delta.len() == 0 && content_filtered(finish_reason) {
-        return Err(AiError {
-            reason: AiErrorReason::ContentPolicy {
-                message: format!("{NAME} withheld its output ({})", finish_reason.unwrap_or_default()),
-                body: Some(frame.to_string()),
-                http: None,
-            },
-        });
+    if state.text.len() + delta.len() == 0
+        && let Some(withheld) = gemini_generate_content::withheld(NAME, finish_reason, frame)
+    {
+        return Err(withheld);
     }
     let mut events = Vec::new();
     if !delta.is_empty() {
@@ -236,74 +220,10 @@ fn turn(transcription: &Map<String, Value>, identity: &Identity, frame: &str) ->
 }
 
 fn seconds(value: Option<&Value>, identity: &Identity, frame: &str) -> Result<Number, AiError> {
-    let text = value.and_then(Value::as_str).ok_or_else(|| invalid(identity, frame))?;
-    let number = text.strip_suffix('s').unwrap_or(text).parse::<f64>().map_err(|_| invalid(identity, frame))?;
+    let text =
+        value.and_then(Value::as_str).filter(|text| SECONDS.is_match(text)).ok_or_else(|| invalid(identity, frame))?;
+    let number = text.trim_end_matches('s').parse::<f64>().map_err(|_| invalid(identity, frame))?;
     number_from_f64(number).ok_or_else(|| invalid(identity, frame))
-}
-
-fn track(mut state: State, object: &Map<String, Value>) -> State {
-    if let Some(usage) = object.get("usageMetadata").and_then(Value::as_object) {
-        state.usage = Some(usage.clone());
-    }
-    if let Some(reason) = object
-        .get("candidates")
-        .and_then(Value::as_array)
-        .and_then(|candidates| candidates.first())
-        .and_then(|candidate| candidate.get("finishReason"))
-        .and_then(Value::as_str)
-    {
-        state.finish_reason = Some(reason.to_string());
-    }
-    if let Some(version) = object.get("modelVersion").and_then(Value::as_str) {
-        state.model_version = Some(version.to_string());
-    }
-    if let Some(id) = object.get("responseId").and_then(Value::as_str) {
-        state.response_id = Some(id.to_string());
-    }
-    state
-}
-
-fn usage(state: Option<&Map<String, Value>>) -> Option<MediaUsage> {
-    let state = state?;
-    let input = state.get("promptTokenCount").and_then(Value::as_number).cloned();
-    let output = state.get("candidatesTokenCount").and_then(Value::as_number).cloned();
-    let reported = state.get("totalTokenCount").and_then(Value::as_number).cloned();
-    let total = reported.clone().or_else(|| {
-        if input.is_none() && output.is_none() {
-            return None;
-        }
-        number_from_f64(
-            input.as_ref().and_then(Number::as_f64).unwrap_or_default()
-                + output.as_ref().and_then(Number::as_f64).unwrap_or_default(),
-        )
-    });
-    let mut google = Map::new();
-    for (key, value) in
-        [("promptTokenCount", &input), ("candidatesTokenCount", &output), ("totalTokenCount", &reported)]
-    {
-        if let Some(value) = value {
-            google.insert(key.to_string(), Value::Number(value.clone()));
-        }
-    }
-    let mut details = Map::new();
-    details.insert("google".to_string(), Value::Object(google));
-    token_usage(input, output, total, Some(details))
-}
-
-fn provider_metadata(state: &State) -> ProviderMetadata {
-    let mut google = Map::new();
-    if let Some(finish_reason) = &state.finish_reason {
-        google.insert("finishReason".to_string(), Value::String(finish_reason.clone()));
-    }
-    if let Some(model_version) = &state.model_version {
-        google.insert("modelVersion".to_string(), Value::String(model_version.clone()));
-    }
-    if let Some(response_id) = &state.response_id {
-        google.insert("responseId".to_string(), Value::String(response_id.clone()));
-    }
-    let mut metadata = Map::new();
-    metadata.insert("google".to_string(), Value::Object(google));
-    metadata
 }
 
 fn identity() -> Identity {

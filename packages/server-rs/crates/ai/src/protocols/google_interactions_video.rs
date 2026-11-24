@@ -197,7 +197,7 @@ fn decode_result(
     for step in interaction.steps.iter().flatten().filter(|step| step.kind == "model_output") {
         for content in step.content.iter().flatten().filter(|content| content.kind == "video") {
             let media_type = content.mime_type.as_deref();
-            if let Some(data) = content.data.as_deref() {
+            if let Some(data) = content.data.as_deref().filter(|data| !data.is_empty()) {
                 videos.push(decoded_asset_labeled(&identity.output(response), videos.len(), data, media_type)?);
                 continue;
             }

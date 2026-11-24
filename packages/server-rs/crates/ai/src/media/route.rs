@@ -259,7 +259,7 @@ impl<Request> Transport<Request> {
         &self,
         method: &str,
         url: Url,
-        body: &Body,
+        body: Body,
         headers: Vec<(String, String)>,
         timeout: Option<RequestTimeout>,
         executor: &RequestExecutor,
@@ -268,7 +268,7 @@ impl<Request> Transport<Request> {
         let mut headers = headers;
         let (text, bytes, content_type, content_length) = match body {
             Body::Json { value, .. } => {
-                let text = json::encode_body(&Value::Object(value.clone()));
+                let text = json::encode_body(&Value::Object(value));
                 let bytes = text.as_bytes().to_vec();
                 (text, bytes, "application/json".to_string(), true)
             }
@@ -278,10 +278,9 @@ impl<Request> Transport<Request> {
                 let bytes = form.serialize(&boundary);
                 ("[multipart/form-data]".to_string(), bytes, format!("multipart/form-data; boundary={boundary}"), false)
             }
-            Body::Binary { bytes, content_type, .. } => {
-                (format!("[{content_type}]"), bytes.clone(), content_type.clone(), true)
-            }
+            Body::Binary { bytes, content_type, .. } => (format!("[{content_type}]"), bytes, content_type, true),
         };
+        self.auth.prepare(context, &executor.sender()).await?;
         let headers = self.auth.apply(
             AuthInput {
                 method: method.to_string(),
@@ -386,7 +385,7 @@ impl<Request: MediaRequest> Transport<Request> {
                         let url = transport.resolve_url(&path)?;
                         let target = url.to_string();
                         let response =
-                            transport.dispatch("POST", url, &body, headers, timeout, &executor, &context).await?;
+                            transport.dispatch("POST", url, body, headers, timeout, &executor, &context).await?;
                         read_text(response, target).await
                     })
                 });
@@ -407,7 +406,7 @@ impl<Request: MediaRequest> Transport<Request> {
             .map(|headers| headers.iter().map(|(name, value)| (name.to_string(), value.to_string())).collect())
             .unwrap_or_default();
         let response =
-            self.dispatch("POST", url.clone(), &body, headers, merged.timeout.clone(), &executor, &context).await?;
+            self.dispatch("POST", url.clone(), body, headers, merged.timeout.clone(), &executor, &context).await?;
         let exchange = Exchange { headers: merged.headers, timeout: merged.timeout, http: merged.http };
         Ok(Submitted {
             response,
@@ -422,11 +421,11 @@ impl<Request: MediaRequest> Transport<Request> {
         })
     }
 
-    fn headers(
+    async fn headers(
         &self,
         url: &str,
         exchange: &Exchange,
-        _executor: &RequestExecutor,
+        executor: &RequestExecutor,
         context: &ExecutionContext,
     ) -> Result<Option<StringMap>, AiError> {
         let Some(base) = self.endpoint.base_url.as_deref().and_then(|base| Url::parse(base).ok()) else {
@@ -441,6 +440,7 @@ impl<Request: MediaRequest> Transport<Request> {
             .as_ref()
             .map(|headers| headers.iter().map(|(name, value)| (name.to_string(), value.to_string())).collect())
             .unwrap_or_default();
+        self.auth.prepare(context, &executor.sender()).await?;
         let headers = self.auth.apply(
             AuthInput {
                 method: "GET".to_string(),
@@ -481,6 +481,7 @@ impl<Request: MediaRequest> Transport<Request> {
                 .as_ref()
                 .map(|headers| headers.iter().map(|(name, value)| (name.to_string(), value.to_string())).collect())
                 .unwrap_or_default();
+            transport.auth.prepare(&context, &executor.sender()).await?;
             let headers = transport.auth.apply(
                 AuthInput {
                     method: method.clone(),
@@ -830,7 +831,7 @@ where
             let exchange = exchange.clone();
             let executor = executor.clone();
             let context = context.clone();
-            Box::pin(async move { transport.headers(&url, &exchange, &executor, &context) })
+            Box::pin(async move { transport.headers(&url, &exchange, &executor, &context).await })
         })
     };
     let poll_context =

@@ -130,11 +130,11 @@ impl DecisionRoute {
 }
 
 async fn materialize(mut request: DecisionRequest, executor: &RequestExecutor) -> Result<DecisionRequest, AiError> {
-    let timed = executor.with_timeout(merged_timeout(&request));
+    let download = executor.with_timeout(merged_timeout(&request)).without_middleware();
     let input = std::mem::take(&mut request.input);
     let mut parts = Vec::with_capacity(input.len());
     for part in input {
-        parts.push(materialize_part(part, &timed).await?);
+        parts.push(materialize_part(part, &download).await?);
     }
     request.input = parts;
     Ok(request)
@@ -158,9 +158,13 @@ async fn materialize_part(part: DecisionPart, executor: &RequestExecutor) -> Res
     let MediaSource::Url { url, media_type, .. } = &media.source else {
         return Ok(DecisionPart::Media { media, filename });
     };
-    let url = url.clone();
-    let declared = media_type.clone();
-    let response = executor.execute(PreparedHttp::new("GET", url, Vec::new(), Bytes::new()), None).await?;
+    let (url, declared) = (url.clone(), media_type.clone());
+    let headers: Vec<(String, String)> = media
+        .headers
+        .as_ref()
+        .map(|headers| headers.iter().map(|(name, value)| (name.to_string(), value.to_string())).collect())
+        .unwrap_or_default();
+    let response = executor.execute(PreparedHttp::new("GET", url, headers, Bytes::new()), None).await?;
     let mut stream = response.body;
     let mut bytes = Vec::new();
     while let Some(chunk) = stream.next().await {

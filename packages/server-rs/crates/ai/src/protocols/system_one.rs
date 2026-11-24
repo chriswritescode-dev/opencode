@@ -188,7 +188,7 @@ fn place_media(request: &DecisionRequest, fallback: &str) -> Result<Map<String, 
                     other => Ok(plain(other).unwrap_or(Value::Null)),
                 })
                 .collect::<Result<Vec<_>, _>>()?;
-            body.insert("state".to_string(), state_value(items));
+            body.insert("state".to_string(), Value::Array(items));
         }
         "state.messages" => {
             let content = parts
@@ -248,7 +248,7 @@ fn place_media(request: &DecisionRequest, fallback: &str) -> Result<Map<String, 
                     other => items.extend(plain(other)),
                 }
             }
-            body.insert("state".to_string(), state_value(items));
+            body.insert("state".to_string(), Value::Array(items));
             body.insert("assets".to_string(), Value::Object(assets));
         }
     }

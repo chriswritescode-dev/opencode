@@ -128,6 +128,13 @@
           }
         }
       ],
+      "poll": {
+        "interval": 10,
+        "timeout": 900000
+      },
+      "sleeps": [
+        10
+      ],
       "result": {
         "text": "Hello from Open Code.",
         "segments": [

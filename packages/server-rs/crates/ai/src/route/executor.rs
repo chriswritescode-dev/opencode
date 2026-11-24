@@ -141,6 +141,10 @@ impl RequestExecutor {
         Self { sender: self.sender.clone(), middleware: self.middleware.clone(), timeout, clock: self.clock.clone() }
     }
 
+    pub fn without_middleware(&self) -> Self {
+        Self { sender: self.sender.clone(), middleware: None, timeout: self.timeout.clone(), clock: self.clock.clone() }
+    }
+
     pub fn sender(&self) -> Arc<dyn HttpSender> {
         self.sender.clone()
     }

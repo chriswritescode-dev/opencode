@@ -56,14 +56,7 @@ impl Protocol for GatewayProtocol {
     }
 
     fn new_state(&self, request: &ResolvedRequest, context: &ExecutionContext) -> Box<dyn ProtocolState> {
-        let inner = match (self.prepare)(&request.request) {
-            Ok(prepared) => {
-                let resolved = ResolvedRequest { request: prepared.request, model: request.model.clone() };
-                self.inner.new_state(&resolved, context)
-            }
-            Err(_) => self.inner.new_state(request, context),
-        };
-        Box::new(GatewayState { inner, gateway: None })
+        Box::new(GatewayState { inner: self.inner.new_state(request, context), gateway: None })
     }
 
     fn required_headers(&self, request: &LlmRequest) -> Vec<(String, String)> {
@@ -94,7 +87,9 @@ struct GatewayState {
 
 impl ProtocolState for GatewayState {
     fn step(&mut self, frame: Frame) -> Result<Vec<LlmEvent>, AiError> {
-        if let Ok(parsed) = serde_json::from_str(&frame) {
+        if frame.contains("\"gateway\"")
+            && let Ok(parsed) = serde_json::from_str(&frame)
+        {
             let records = gateway_records(&parsed);
             if !records.is_empty() {
                 let merged = match self.gateway.as_ref() {

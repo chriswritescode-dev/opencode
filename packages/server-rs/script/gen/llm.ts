@@ -123,6 +123,7 @@ export const GROUPS: Record<string, { protocols: string[] }> = {
 
 const EXPECTED_ADC_CASES = 11
 const EXPECTED_REALTIME_CASES = 8
+const EXPECTED_PROVIDER_ENTRY_CASES = 339
 
 const exporter = `${tree}/exporter`
 await mkdir(exporter, { recursive: true })
@@ -138,6 +139,8 @@ const providerEntries = await run<ExportedProviderEntries>("providers")
 if (adc.cases.length !== EXPECTED_ADC_CASES) fail(`expected ${EXPECTED_ADC_CASES} ADC cases, got ${adc.cases.length}`)
 if (realtime.cases.length !== EXPECTED_REALTIME_CASES)
   fail(`expected ${EXPECTED_REALTIME_CASES} realtime cases, got ${realtime.cases.length}`)
+if (providerEntries.cases.length !== EXPECTED_PROVIDER_ENTRY_CASES)
+  fail(`expected ${EXPECTED_PROVIDER_ENTRY_CASES} provider entry cases, got ${providerEntries.cases.length}`)
 
 const names = new Set<string>()
 const index: Array<{ cassette: string; protocol: string; group: string }> = []

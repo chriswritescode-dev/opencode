@@ -9,7 +9,7 @@ use crate::protocols::open_responses::{OpenResponses, PATH as RESPONSES_PATH};
 use crate::protocols::openai_chat::{self, OpenAiChat, PATH as CHAT_PATH};
 use crate::protocols::shared::invalid_request;
 use crate::providers::{RuntimeModel, Settings, language_model_with_route};
-use crate::route::auth::{Auth, ProviderAuthOptions, api_key};
+use crate::route::auth::{Auth, ProviderAuthOptions, bearer};
 use crate::route::endpoint::Endpoint;
 use crate::route::framing::Definition;
 use crate::route::model::{Model, ResolvedRequest, Route, RouteTransport};
@@ -124,9 +124,7 @@ pub fn responses_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> R
 }
 
 fn auth(settings: &Settings) -> Auth {
-    api_key(ProviderAuthOptions { auth: None, api_key: settings.api_key() }, &AUTH_ENV_VARS, |credential| {
-        credential.bearer()
-    })
+    bearer(ProviderAuthOptions { auth: None, api_key: settings.api_key() }, &AUTH_ENV_VARS)
 }
 
 fn endpoint(settings: &Settings, base_url: &str, path: &str) -> Endpoint {

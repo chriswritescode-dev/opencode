@@ -72,6 +72,7 @@ pub struct GoogleAdc {
     project: Option<String>,
     files: Arc<dyn CredentialFiles>,
     state: Arc<Mutex<Option<Session>>>,
+    refresh: Arc<tokio::sync::Mutex<()>>,
 }
 
 impl GoogleAdc {
@@ -80,7 +81,7 @@ impl GoogleAdc {
     }
 
     pub fn with_files(project: Option<String>, files: Arc<dyn CredentialFiles>) -> Self {
-        Self { project, files, state: Arc::new(Mutex::new(None)) }
+        Self { project, files, state: Arc::new(Mutex::new(None)), refresh: Arc::new(tokio::sync::Mutex::new(())) }
     }
 }
 
@@ -105,23 +106,32 @@ impl CredentialSource for GoogleAdc {
     }
 
     fn prepare(&self, context: &ExecutionContext, sender: &Arc<dyn HttpSender>) -> BoxFuture<Result<(), AiError>> {
-        let now_ms = context.clock.now_ms();
         let cached = self.state.lock().expect("Google ADC state lock poisoned").clone();
-        if let Some(session) = &cached
-            && session.token.as_ref().is_some_and(|token| fresh(token, now_ms))
+        if cached
+            .as_ref()
+            .is_some_and(|session| session.token.as_ref().is_some_and(|token| fresh(token, context.clock.now_ms())))
         {
             return Box::pin(async { Ok(()) });
         }
         let files = self.files.clone();
         let state = self.state.clone();
+        let refresh = self.refresh.clone();
         let context = context.clone();
         let sender = sender.clone();
         Box::pin(async move {
+            let _guard = refresh.lock().await;
+            let cached = state.lock().expect("Google ADC state lock poisoned").clone();
+            if cached
+                .as_ref()
+                .is_some_and(|session| session.token.as_ref().is_some_and(|token| fresh(token, context.clock.now_ms())))
+            {
+                return Ok(());
+            }
             let credential = match cached {
                 Some(session) => session.credential,
                 None => resolve(files.as_ref(), context.env.as_ref(), &sender).await?,
             };
-            let token = request_token(&credential, now_ms, &sender).await?;
+            let token = request_token(&credential, context.clock.now_ms(), &sender).await?;
             *state.lock().expect("Google ADC state lock poisoned") = Some(Session { credential, token: Some(token) });
             Ok(())
         })
@@ -370,7 +380,7 @@ async fn token_from_response(
         .get("expires_in")
         .and_then(Value::as_f64)
         .filter(|seconds| seconds.is_finite())
-        .map(|seconds| expiry_base_ms + (seconds * 1000.0) as u64);
+        .map(|seconds| expiry_base_ms.saturating_add((seconds * 1000.0) as u64));
     Ok(CachedToken { access, expiry_ms })
 }
 

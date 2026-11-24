@@ -43,6 +43,10 @@ const FORBIDDEN_ENV_PREFIXES = [
   "VENICE_",
   "AI_GATEWAY_",
   "BEDROCK_",
+  "VERTEX_",
+  "GCP_",
+  "GCLOUD_",
+  "CLOUDSDK_",
 ]
 for (const name of Object.keys(process.env)) {
   if (FORBIDDEN_ENV_PREFIXES.some((prefix) => name.startsWith(prefix))) delete process.env[name]
@@ -130,9 +134,19 @@ export interface CapturedStep {
   readonly events?: ReadonlyArray<unknown>
   readonly operation?: string
   readonly result?: unknown
+  readonly poll?: PollOptions
   readonly sleeps?: ReadonlyArray<number>
   readonly downloads?: ReadonlyArray<string>
   readonly error?: { readonly reason: unknown; readonly retryable: boolean }
+}
+
+export interface PollOptions {
+  readonly interval?: number
+  readonly timeout?: number
+}
+
+export interface OperationOptions {
+  readonly poll?: PollOptions
 }
 
 export interface CapturedCassette {
@@ -158,6 +172,7 @@ export interface ScenarioContext {
     operation: string,
     request: unknown,
     run: Effect.Effect<A, E, R>,
+    options?: OperationOptions,
   ) => Effect.Effect<A, E, R>
   readonly sleep: (millis: number) => Effect.Effect<void>
   readonly download: (asset: any) => Effect.Effect<Uint8Array>
@@ -192,6 +207,7 @@ interface StepRecord {
   events?: Array<unknown>
   operation?: string
   result?: unknown
+  poll?: PollOptions
   sleeps?: Array<number>
   downloads?: Array<string>
   error?: { reason: unknown; retryable: boolean }
@@ -296,11 +312,34 @@ const isTextContentType = (contentType: string | undefined) => {
   )
 }
 
-const multipartBoundary = (contentType: string | undefined) => {
+export const FIXTURE_BOUNDARY = "----OpenCodeFixtureBoundary"
+
+export const multipartBoundary = (contentType: string | undefined) => {
   const type = contentType ?? ""
   if (type.split(";", 1)[0]?.trim().toLowerCase() !== "multipart/form-data") return undefined
   const match = /boundary=(?:"([^"]+)"|([^;]+))/i.exec(type)
   return match?.[1] ?? match?.[2]?.trim()
+}
+
+export const normalizeMultipart = (headers: Record<string, string>, body: string) => {
+  const contentType = Object.entries(headers).find(([name]) => name.toLowerCase() === "content-type")?.[1]
+  const boundary = multipartBoundary(contentType)
+  const bodyBoundary =
+    boundary !== undefined && body.startsWith(`--${boundary}`)
+      ? boundary
+      : /^--(.+?)(?:--)?\r\n/.exec(body)?.[1]
+  return {
+    headers:
+      boundary === undefined
+        ? headers
+        : Object.fromEntries(
+            Object.entries(headers).map(([name, value]) =>
+              name.toLowerCase() === "content-type" ? [name, value.replaceAll(boundary, FIXTURE_BOUNDARY)] : [name, value],
+            ),
+          ),
+    body: bodyBoundary === undefined ? body : body.replaceAll(bodyBoundary, FIXTURE_BOUNDARY),
+    multipart: boundary !== undefined,
+  }
 }
 
 const roundTrip = (value: unknown): any =>
@@ -356,7 +395,7 @@ const describeAuth = (provider: ProviderStep): AuthDescriptor => {
 
 const providerModel = async (load: Loader, tree: string, provider: ProviderStep) => {
   const settings = JSON.parse(JSON.stringify(provider.settings)) as Record<string, unknown>
-  if (JSON.stringify(settings) !== JSON.stringify(provider.settings))
+  if (!Bun.deepEquals(settings, provider.settings, true))
     throw new Error(`capture: provider settings for ${provider.package} do not survive JSON`)
   const manifest = await Bun.file(`${tree}/packages/ai/package.json`).json()
   const key = provider.package.replace(/^@opencode\/ai\//, "./")
@@ -390,14 +429,20 @@ const captureHttp = (request: any, next: any) =>
     const boundary = multipartBoundary(requestType)
     const headers = Object.fromEntries(web.headers.entries())
     // Multipart boundaries are random per request, so recordings replace them with a fixed token.
-    const normalized = boundary === undefined ? undefined : normalizeMultipart(boundary, headers, bodyBytes)
+    const normalized =
+      boundary === undefined
+        ? undefined
+        : normalizeMultipart(headers, Buffer.from(bodyBytes).toString("latin1"))
     const prepared: CapturedRequest = {
       method: web.method,
       url: web.url,
       headers: normalized?.headers ?? headers,
       body:
-        normalized?.body ??
-        (bodyText ? new TextDecoder().decode(bodyBytes) : Buffer.from(bodyBytes).toString("base64")),
+        normalized !== undefined
+          ? Buffer.from(normalized.body, "latin1").toString("base64")
+          : bodyText
+            ? new TextDecoder().decode(bodyBytes)
+            : Buffer.from(bodyBytes).toString("base64"),
       ...(bodyText ? {} : { bodyEncoding: "base64" as const }),
       ...(normalized === undefined ? {} : { boundary: FIXTURE_BOUNDARY }),
     }
@@ -421,6 +466,8 @@ const captureHttp = (request: any, next: any) =>
 export async function capture(tree: string, scenario: Scenario): Promise<CapturedCassette> {
   const registered = PROTOCOLS[scenario.protocol]
   if (registered === undefined) throw new Error(`capture: no protocol module is registered for "${scenario.protocol}"`)
+  if ((scenario.provider === undefined) === (scenario.descriptorOnly === undefined))
+    throw new Error(`capture: cassette ${scenario.cassette} must set exactly one of provider or descriptorOnly`)
 
   const load = createLoader(tree)
   const built = scenario.provider === undefined ? undefined : await providerModel(load, tree, scenario.provider)
@@ -707,7 +754,12 @@ export async function capture(tree: string, scenario: Scenario): Promise<Capture
     step.error = encodeError(error)
   }
 
-  const operation = <A, E, R>(name: string, request: any, run: Effect.Effect<A, E, R>): Effect.Effect<A, E, R> =>
+  const operation = <A, E, R>(
+    name: string,
+    request: any,
+    run: Effect.Effect<A, E, R>,
+    options?: OperationOptions,
+  ): Effect.Effect<A, E, R> =>
     Effect.suspend(() => {
       const encoders = operationEncoders(name)
       resetUUID()
@@ -719,6 +771,7 @@ export async function capture(tree: string, scenario: Scenario): Promise<Capture
         operation: name,
         exchanges: [],
         raw: [],
+        ...(options?.poll === undefined ? {} : { poll: options.poll }),
       }
       steps.push(step)
       active = step
@@ -960,17 +1013,6 @@ export async function capture(tree: string, scenario: Scenario): Promise<Capture
   }
 }
 
-function normalizeMultipart(boundary: string, headers: Record<string, string>, body: Uint8Array) {
-  const text = Buffer.from(body).toString("latin1").replaceAll(boundary, FIXTURE_BOUNDARY)
-  const normalized = Object.fromEntries(
-    Object.entries(headers).map(([name, value]) =>
-      name.toLowerCase() === "content-type" ? [name, value.replaceAll(boundary, FIXTURE_BOUNDARY)] : [name, value],
-    ),
-  )
-  return { headers: normalized, body: Buffer.from(text, "latin1").toString("base64") }
-}
-
-const FIXTURE_BOUNDARY = "----OpenCodeFixtureBoundary"
 const FIXTURE_FILE_BYTES =
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
 
@@ -1037,6 +1079,91 @@ const multipartFixtureInputs: ReadonlyArray<MultipartFixtureInput> = [
     overlay: null,
     reserved: [],
     file: null,
+  },
+  {
+    name: "line-breaks-and-quotes-in-fields",
+    fields: {
+      "name\nnewline": "value\nnewline",
+      "name\rreturn": "value\rreturn",
+      "name\r\nboth": "value\r\nboth",
+      'name"quote': 'value"quote',
+      mixed: "a\nb\rc\r\nd",
+    },
+    overlay: null,
+    reserved: [],
+    file: null,
+  },
+  {
+    name: "line-breaks-and-quotes-in-filename",
+    fields: { purpose: "fixture" },
+    overlay: null,
+    reserved: [],
+    file: {
+      name: "file\nname",
+      filename: 'we\nird\rna\r\nme"q.bin',
+      contentType: "image/PNG",
+      bytesBase64: FIXTURE_FILE_BYTES,
+    },
+  },
+  {
+    name: "file-type-text-plain",
+    fields: { purpose: "fixture" },
+    overlay: null,
+    reserved: [],
+    file: {
+      name: "file",
+      filename: "blob",
+      contentType: "text/plain",
+      bytesBase64: FIXTURE_FILE_BYTES,
+    },
+  },
+  {
+    name: "file-type-application-json",
+    fields: { purpose: "fixture" },
+    overlay: null,
+    reserved: [],
+    file: {
+      name: "file",
+      filename: "blob",
+      contentType: "application/json",
+      bytesBase64: FIXTURE_FILE_BYTES,
+    },
+  },
+  {
+    name: "file-type-audio-wav",
+    fields: { purpose: "fixture" },
+    overlay: null,
+    reserved: [],
+    file: {
+      name: "file",
+      filename: "blob",
+      contentType: "audio/wav",
+      bytesBase64: FIXTURE_FILE_BYTES,
+    },
+  },
+  {
+    name: "file-type-octet-stream",
+    fields: { purpose: "fixture" },
+    overlay: null,
+    reserved: [],
+    file: {
+      name: "file",
+      filename: "blob",
+      contentType: "application/octet-stream",
+      bytesBase64: FIXTURE_FILE_BYTES,
+    },
+  },
+  {
+    name: "file-type-empty",
+    fields: { purpose: "fixture" },
+    overlay: null,
+    reserved: [],
+    file: {
+      name: "file",
+      filename: "blob",
+      contentType: "",
+      bytesBase64: FIXTURE_FILE_BYTES,
+    },
   },
 ]
 

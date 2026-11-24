@@ -78,7 +78,7 @@ pub enum RealtimeTransport {
     },
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RealtimeConnectInput {
     pub engine: RealtimeEngine,
@@ -93,6 +93,22 @@ pub struct RealtimeConnectInput {
     #[serde(default)]
     pub session: Option<Map<String, Value>>,
     pub transport: RealtimeTransportInput,
+}
+
+impl std::fmt::Debug for RealtimeConnectInput {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("RealtimeConnectInput")
+            .field("engine", &self.engine)
+            .field("model", &self.model)
+            .field("api_key", &"<redacted>")
+            .field("base_url", &self.base_url)
+            .field("headers", &self.headers)
+            .field("timeout", &self.timeout)
+            .field("session", &self.session)
+            .field("transport", &self.transport)
+            .finish()
+    }
 }
 
 pub fn connect(

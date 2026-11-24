@@ -10,7 +10,7 @@ use crate::protocols::cloudflare_workers_ai_images;
 use crate::protocols::openai_chat;
 use crate::providers::cloudflare_shared;
 use crate::providers::{RuntimeModel, Settings, language_model_with_route, modality_options};
-use crate::route::auth::{Auth, ProviderAuthOptions, api_key};
+use crate::route::auth::{Auth, ProviderAuthOptions, bearer};
 use crate::route::decision::{DecisionRoute, DecisionRouteInput};
 use crate::route::endpoint::{Endpoint, PathPart};
 use crate::route::model::{Route, RouteTransport};
@@ -94,7 +94,5 @@ pub fn image_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Resul
 }
 
 fn auth(settings: &Settings) -> Auth {
-    api_key(ProviderAuthOptions { auth: None, api_key: settings.api_key() }, &AUTH_ENV_VARS, |credential| {
-        credential.bearer()
-    })
+    bearer(ProviderAuthOptions { auth: None, api_key: settings.api_key() }, &AUTH_ENV_VARS)
 }

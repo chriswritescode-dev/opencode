@@ -10,6 +10,7 @@ use crate::media::route::{Mode, ResponseContext, StreamedProtocol};
 use crate::modalities::speech::{SpeechEvent, SpeechRequest};
 use crate::protocols::shared;
 use crate::protocols::shared::number_from_f64;
+use crate::protocols::utils::media_input::merge_body;
 use crate::protocols::utils::speech_stream as speech;
 use crate::protocols::utils::speech_stream::PcmEncoding;
 use crate::provider_error::{ProviderFailure, classify_provider_failure};
@@ -47,6 +48,12 @@ pub fn uses_sse(request: &SpeechRequest) -> bool {
 
 pub fn path(request: &SpeechRequest) -> String {
     if uses_sse(request) { SSE_PATH.to_string() } else { BYTES_PATH.to_string() }
+}
+
+impl speech::AudioState for State {
+    fn audio_mut(&mut self) -> &mut speech::Audio {
+        &mut self.audio
+    }
 }
 
 impl StreamedProtocol<SpeechRequest, SpeechEvent, speech::Frame, State> for CartesiaSpeech {
@@ -98,8 +105,7 @@ impl StreamedProtocol<SpeechRequest, SpeechEvent, speech::Frame, State> for Cart
             base.insert("add_timestamps".to_string(), Value::Bool(true));
         }
         let native = native_options(request.provider_options.as_ref());
-        let http = http_body(request);
-        let value = crate::json::merge_records([&base, &native, &http]).unwrap_or_default();
+        let value = merge_body(base, Some(&native), request.http.as_ref());
         Ok(Body::Json { value, query: None })
     }
 
@@ -116,14 +122,7 @@ impl StreamedProtocol<SpeechRequest, SpeechEvent, speech::Frame, State> for Cart
     }
 
     fn step(&self, state: State, frame: speech::Frame) -> Result<(State, Vec<SpeechEvent>), AiError> {
-        match frame {
-            speech::Frame::Text(frame) => on_event(state, &frame),
-            speech::Frame::Bytes(bytes) => {
-                let mut state = state;
-                let events = speech::delta(&mut state.audio, &bytes);
-                Ok((state, events))
-            }
-        }
+        speech::step(state, frame, on_event)
     }
 
     fn finish(&self, state: &State, context: &ResponseContext<SpeechRequest>) -> Result<Vec<SpeechEvent>, AiError> {
@@ -276,10 +275,6 @@ fn number_array(value: Option<&Value>) -> Option<Vec<Number>> {
 
 fn identity() -> Identity {
     Identity { id: ID.to_string(), name: NAME.to_string(), provider: ProviderId::from(PROVIDER) }
-}
-
-fn http_body(request: &SpeechRequest) -> Map<String, Value> {
-    request.http.as_ref().and_then(|http| http.body.clone()).unwrap_or_default()
 }
 
 fn insert(target: &mut Map<String, Value>, key: &str, value: Option<Value>) {

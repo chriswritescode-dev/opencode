@@ -442,11 +442,11 @@ pub async fn replay_image_cassette(cassette: &Cassette) {
             let executor = RequestExecutor::new(sender.clone(), None, clock);
             let request = input.clone().with_model(model.clone());
             if operation == "image.generate" {
-                let outcome = ImageClient::generate(request, &executor, &context).await;
+                let outcome = ImageClient::generate(request, None, &executor, &context).await;
                 sender.assert_consumed();
                 assert_image_generate_outcome(cassette, index, &label, step, outcome);
             } else {
-                let items = ImageClient::stream(request, &executor, &context).collect::<Vec<_>>().await;
+                let items = ImageClient::stream(request, None, &executor, &context).collect::<Vec<_>>().await;
                 sender.assert_consumed();
                 assert_image_stream_outcome(cassette, index, &label, step, items);
             }
@@ -642,11 +642,11 @@ pub async fn replay_speech_cassette(cassette: &Cassette) {
             let executor = RequestExecutor::new(sender.clone(), None, clock);
             let request = input.clone().with_model(model.clone());
             if operation == "speech.generate" {
-                let outcome = SpeechClient::generate(request, &executor, &context).await;
+                let outcome = SpeechClient::generate(request, None, &executor, &context).await;
                 sender.assert_consumed();
                 assert_speech_generate_outcome(cassette, index, &label, step, outcome);
             } else {
-                let items = SpeechClient::stream(request, &executor, &context).collect::<Vec<_>>().await;
+                let items = SpeechClient::stream(request, None, &executor, &context).collect::<Vec<_>>().await;
                 sender.assert_consumed();
                 assert_speech_stream_outcome(cassette, index, &label, step, items);
             }
@@ -878,10 +878,10 @@ pub async fn replay_transcription_cassette(cassette: &Cassette) {
             );
             let executor = RequestExecutor::new(sender.clone(), None, clock);
             let request = input.clone().with_model(model.clone());
-            let options = Some(AwaitOptions {
+            let options = step.poll.map(|poll| AwaitOptions {
                 poll: Some(Poll {
-                    interval: Some(Duration::from_millis(10)),
-                    timeout: Some(Duration::from_secs(15 * 60)),
+                    interval: poll.interval.map(Duration::from_millis),
+                    timeout: poll.timeout.map(Duration::from_millis),
                 }),
             });
             if operation == "transcription.generate" {
@@ -894,6 +894,13 @@ pub async fn replay_transcription_cassette(cassette: &Cassette) {
                 sender.assert_consumed();
                 assert_transcription_stream_outcome(cassette, index, &label, step, items);
             }
+            let expected_sleeps = step.sleeps.iter().map(|millis| Duration::from_millis(*millis)).collect::<Vec<_>>();
+            assert_eq!(
+                sleeper.durations(),
+                expected_sleeps,
+                "{} step {index} {label} transcription sleep schedule",
+                cassette.name
+            );
         }
     }
 }

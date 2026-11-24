@@ -1,7 +1,7 @@
 import { Cause, Effect, Exit, Layer, Option, Redacted, Schema } from "effect"
 import { HttpClientRequest } from "effect/http"
 import * as TestClock from "effect/testing/TestClock"
-import { createLoader } from "./capture.js"
+import { createLoader, FIXTURE_BOUNDARY, normalizeMultipart } from "./capture.js"
 
 const tree = process.env.OPENCODE_UPSTREAM_TREE
 if (!tree) throw new Error("realtime: OPENCODE_UPSTREAM_TREE is not set")
@@ -13,7 +13,6 @@ const { AIErrorReason } = await load("packages/ai/src/schema/index.ts")
 const { handlerLayer, runtimeLayer } = await load("packages/ai/test/lib/http.ts")
 
 const CLOCK_EPOCH_MS = 1_760_000_000_000
-const FIXTURE_BOUNDARY = "----OpenCodeFixtureBoundary"
 
 type RecordedRequest = {
   method: string
@@ -33,35 +32,24 @@ type RealtimeInput = {
     | { type: "websocket" }
 }
 
-let active: Array<RecordedRequest> | undefined
-
-const boundaryOf = (contentType: string | null) => {
-  if (contentType === null) return undefined
-  if (contentType.split(";", 1)[0]?.trim().toLowerCase() !== "multipart/form-data") return undefined
-  const match = /boundary=(?:"([^"]+)"|([^;]+))/i.exec(contentType)
-  return match?.[1] ?? match?.[2]?.trim()
-}
-
 const IGNORED_HEADERS = new Set(["b3", "traceparent"])
+
+let active: Array<RecordedRequest> | undefined
 
 const record = (web: Request, body: string) => {
   if (active === undefined) throw new Error("realtime: a request arrived outside a case")
-  const boundary = boundaryOf(web.headers.get("content-type"))
-  const bodyBoundary = /^--([^\r\n]+)\r\n/.exec(body)?.[1]
   const headers: Record<string, string> = {}
   for (const [name, value] of web.headers.entries()) {
     if (IGNORED_HEADERS.has(name.toLowerCase())) continue
-    headers[name] = boundary !== undefined && name.toLowerCase() === "content-type"
-      ? value.replaceAll(boundary, FIXTURE_BOUNDARY)
-      : value
+    headers[name] = value
   }
-  const normalizedBody = bodyBoundary === undefined ? body : body.replaceAll(bodyBoundary, FIXTURE_BOUNDARY)
+  const normalized = normalizeMultipart(headers, body)
   active.push({
     method: web.method,
     url: web.url,
-    headers,
-    body: normalizedBody,
-    ...(boundary === undefined ? {} : { boundary: FIXTURE_BOUNDARY }),
+    headers: normalized.headers,
+    body: normalized.body,
+    ...(normalized.multipart ? { boundary: FIXTURE_BOUNDARY } : {}),
   })
 }
 
