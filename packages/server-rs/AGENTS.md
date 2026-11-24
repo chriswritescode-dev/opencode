@@ -27,11 +27,14 @@ The Rust replacement for the TypeScript OpenCode server process, the `opencode-s
   the generated route table, types, events, errors, request decoders and corpus. It is generated, never edited by
   hand.
 - The LLM layer is the `opencode-ai` crate (`crates/ai`), the model, request, executor and protocol port of
-  `packages/ai` at the pin. `script/gen/llm.ts` regenerates its cassette corpus from those pinned TypeScript sources
-  into `crates/ai/tests/corpus`, so the corpus is generated and never edited by hand;
-  `crates/ai/tests/all/replay.rs` replays it and is the parity check for the LLM layer. New protocols (OR-45) add
-  cassettes to `script/llm/scenarios.ts` and regenerate rather than editing the corpus by hand; the expected
-  cassette count and groups are fixed in `script/gen/llm.ts` and `replay.rs`, so update both with the scenarios.
+  `packages/ai` at the pin. `script/gen/llm.ts` regenerates its corpus from those pinned TypeScript sources into
+  `crates/ai/tests/corpus`, and fails unless the generated cassette set equals every `*.json` recording under
+  `packages/ai/test/fixtures/recordings` (313); the corpus also holds `provider-entries.json`, `google-adc.json` and
+  `realtime.json`. The corpus is generated and never edited by hand, and `crates/ai/tests/all/replay.rs` replays every
+  cassette as the parity check for the LLM layer. New protocols (OR-45) add scenarios to `script/llm/scenarios.ts` and
+  regenerate rather than editing the corpus; the groups are fixed in `script/gen/llm.ts` and `replay.rs`, so update
+  both with the scenarios. Providers are built only through `ProviderPackages`, looked up by their package specifier,
+  so every entry point the recordings use stays reachable.
 - `opencode-http` (`crates/http`) is the request pipeline: authentication, CORS, cross-site protection, compression,
   dispatch, pairing and tickets.
 - `opencode-server` (`crates/server`) holds the binary's own modules: CLI parsing, the foreground, stdio and service

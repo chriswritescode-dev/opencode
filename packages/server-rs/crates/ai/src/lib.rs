@@ -12,6 +12,15 @@ pub mod providers;
 pub mod route;
 pub mod schema;
 
+pub mod experimental {
+    pub use crate::modalities::extraction;
+    pub use crate::modalities::realtime;
+}
+
+pub use media::generation::Generation;
+pub use modalities::video::VideoClient;
+pub use modalities::{DecisionClient, EmbeddingClient, ImageClient, SpeechClient, TranscriptionClient};
+pub use providers::google_adc::GoogleAdc;
 pub use providers::{ProviderPackages, RuntimeModel, Settings};
 
 pub use route::auth::{Auth, Credential};

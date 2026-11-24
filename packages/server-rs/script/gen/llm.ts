@@ -121,7 +121,6 @@ export const GROUPS: Record<string, { protocols: string[] }> = {
   extraction: { protocols: ["cloudflare-run-extraction"] },
 }
 
-export const EXPECTED_CASSETTES = 313
 const EXPECTED_ADC_CASES = 11
 const EXPECTED_REALTIME_CASES = 8
 
@@ -140,8 +139,6 @@ if (adc.cases.length !== EXPECTED_ADC_CASES) fail(`expected ${EXPECTED_ADC_CASES
 if (realtime.cases.length !== EXPECTED_REALTIME_CASES)
   fail(`expected ${EXPECTED_REALTIME_CASES} realtime cases, got ${realtime.cases.length}`)
 
-if (scenarios.cassettes.length !== EXPECTED_CASSETTES)
-  fail(`expected ${EXPECTED_CASSETTES} cassettes, got ${scenarios.cassettes.length}`)
 const names = new Set<string>()
 const index: Array<{ cassette: string; protocol: string; group: string }> = []
 for (const cassette of scenarios.cassettes) {
@@ -155,6 +152,20 @@ for (const cassette of scenarios.cassettes) {
     fail(`cassette ${cassette.cassette} has protocol ${cassette.protocol} outside group ${group}`)
   index.push({ cassette: cassette.cassette, protocol: cassette.protocol, group })
 }
+const recordings = `${tree}/packages/ai/test/fixtures/recordings`
+const recorded = new Set(
+  Array.from(new Bun.Glob("**/*.json").scanSync({ cwd: recordings })).map((file) => file.slice(0, -".json".length)),
+)
+const missingRecordings = Array.from(names)
+  .filter((name) => !recorded.has(name))
+  .sort()
+const missingScenarios = Array.from(recorded)
+  .filter((name) => !names.has(name))
+  .sort()
+if (missingRecordings.length > 0 || missingScenarios.length > 0)
+  fail(
+    `recordings without a scenario: [${missingScenarios.join(", ")}]; scenarios without a recording: [${missingRecordings.join(", ")}]`,
+  )
 index.sort((a, b) => (a.cassette < b.cassette ? -1 : 1))
 
 await rm(`${output}/llm`, { recursive: true, force: true })

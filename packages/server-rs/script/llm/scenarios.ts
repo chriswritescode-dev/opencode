@@ -5305,7 +5305,7 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
             messages: [
               ...initial.messages,
               first.message,
-              ...first.toolCalls.map((call) =>
+              ...first.toolCalls.map((call: any) =>
                 Message.tool({ id: call.id, name: call.name, result: { condition: "sunny", temperatureC: 18 } }),
               ),
               Message.system("Reply in French in one short sentence."),

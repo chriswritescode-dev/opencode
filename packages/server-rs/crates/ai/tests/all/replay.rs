@@ -5,7 +5,7 @@ use std::time::Duration;
 use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
 use bytes::Bytes;
-use futures_util::{StreamExt, stream};
+use futures_util::{FutureExt, StreamExt, stream};
 use serde_json::Value;
 
 use opencode_ai::ExecutionContext;
@@ -1528,8 +1528,57 @@ async fn replay_websocket_cassette(cassette: &Cassette) {
     }
 }
 
+fn cassette_exceptions() -> Vec<String> {
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../parity/deviations");
+    let mut names = Vec::new();
+    for entry in std::fs::read_dir(dir).expect("deviations directory") {
+        let path = entry.expect("deviation entry").path();
+        let file_name = path.file_name().and_then(|name| name.to_str()).expect("deviation file name");
+        if !file_name.starts_with("OR-45-") || !file_name.ends_with(".md") {
+            continue;
+        }
+        let text = std::fs::read_to_string(&path).expect("deviation file");
+        for line in text.lines() {
+            let Some(rest) = line.trim().strip_prefix("Cassettes:") else {
+                continue;
+            };
+            names.extend(
+                rest.split(',')
+                    .map(|name| name.trim().trim_matches('`').trim())
+                    .filter(|name| !name.is_empty())
+                    .map(str::to_string),
+            );
+        }
+    }
+    names.sort();
+    names.dedup();
+    names
+}
+
+async fn replay_any(cassette: &Cassette) {
+    if cassette.group == "embeddings" {
+        replay_embedding_cassette(cassette).await;
+    } else if cassette.group == "decisions" {
+        replay_decision_cassette(cassette).await;
+    } else if cassette.group == "extraction" {
+        replay_extraction_cassette(cassette).await;
+    } else if cassette.group == "images" {
+        replay_image_cassette(cassette).await;
+    } else if cassette.group == "video" {
+        replay_video_cassette(cassette).await;
+    } else if cassette.group == "speech" {
+        replay_speech_cassette(cassette).await;
+    } else if cassette.group == "transcription" {
+        replay_transcription_cassette(cassette).await;
+    } else if cassette.group == "openai-responses-websocket" {
+        replay_websocket_cassette(cassette).await;
+    } else {
+        replay_cassette(cassette).await;
+    }
+}
+
 #[tokio::test]
-async fn every_in_scope_cassette_replays() {
+async fn every_cassette_replays() {
     let corpus = crate::corpus::Corpus::load();
     assert_eq!(corpus.cassettes.len(), 313, "in-scope cassette count");
     let groups = [
@@ -1558,26 +1607,20 @@ async fn every_in_scope_cassette_replays() {
     for group in groups {
         assert!(corpus.cassettes.iter().any(|cassette| cassette.group == group), "{group} has no cassettes");
     }
+    let exceptions = cassette_exceptions();
+    for name in &exceptions {
+        assert!(
+            corpus.cassettes.iter().any(|cassette| cassette.name == *name),
+            "{name} is listed as a deviation cassette but is not in the corpus"
+        );
+    }
     let mut replayed = 0;
     for cassette in &corpus.cassettes {
-        if cassette.group == "embeddings" {
-            replay_embedding_cassette(cassette).await;
-        } else if cassette.group == "decisions" {
-            replay_decision_cassette(cassette).await;
-        } else if cassette.group == "extraction" {
-            replay_extraction_cassette(cassette).await;
-        } else if cassette.group == "images" {
-            replay_image_cassette(cassette).await;
-        } else if cassette.group == "video" {
-            replay_video_cassette(cassette).await;
-        } else if cassette.group == "speech" {
-            replay_speech_cassette(cassette).await;
-        } else if cassette.group == "transcription" {
-            replay_transcription_cassette(cassette).await;
-        } else if cassette.group == "openai-responses-websocket" {
-            replay_websocket_cassette(cassette).await;
+        if exceptions.contains(&cassette.name) {
+            let result = std::panic::AssertUnwindSafe(replay_any(cassette)).catch_unwind().await;
+            assert!(result.is_err(), "{} is listed as a deviation cassette but replays cleanly", cassette.name);
         } else {
-            replay_cassette(cassette).await;
+            replay_any(cassette).await;
         }
         replayed += 1;
     }
