@@ -38,6 +38,8 @@ on `PASS <scenario> (<n> explained by <ids>)`. After a full run with no scenario
 explained nothing print `warning: deviation <id> matched nothing`, and files without an accepted line print
 `warning: deviation <id> is not accepted`.
 
+A deviation that excepts a recorded cassette from the replay gate also has a `Cassettes:` paragraph listing the cassette names separated by commas. `crates/ai/tests/all/replay.rs` fails when a listed cassette is missing or replays cleanly.
+
 ## Current deviations
 
 - `OR-38-lone-surrogates.md`: the strict round-trip corpus skips samples with unpaired UTF-16 surrogates
@@ -76,4 +78,18 @@ explained nothing print `warning: deviation <id> matched nothing`, and files wit
 - `OR-44-transport-codes.md`: HTTP transport error codes are Rust I/O kinds instead of Node errno names
 - `OR-44-utf16-truncation.md`: id and name limits count Unicode scalars instead of UTF-16 code units
 - `OR-44-websocket-channel.md`: WebSocket failures omit readyState and OS codes, and the HTTP fallback is unused
+- `OR-45-google-adc.md`: Google ADC supports authorized users, service accounts and the metadata server only
+- `OR-45-google-interactions-continuation.md`: Google Interactions continuation does not resume a continued or dropped stream
+- `OR-45-executor-stage-order.md`: credential resolution runs before request compilation, so a missing credential masks a request error
+- `OR-45-media-retry.md`: media read retries use a deterministic schedule and honour retry-after for every reason they retry
+- `OR-45-generation-progress.md`: queued media streams emit only terminal events, with no per-poll progress observation
+- `OR-45-media-route-internals.md`: queued media result decoders take an injected clock, and result assets carry download headers but no middleware
+- `OR-45-request-decoding.md`: modality request fields decode leniently
+- `OR-45-response-decoding.md`: media, realtime and decision responses decode leniently
+- `OR-45-multipart-numbers.md`: repeated-array numbers in multipart bodies use Rust formatting
+- `OR-45-decision-parity.md`: OpenAI decisions keeps unknown prompt-cache keys and names its inline route by protocol
+- `OR-45-provider-construction.md`: provider configuration failures differ in timing and error class
+- `OR-45-xai-responses-websocket.md`: xAI streams over HTTP only and has no chat route
+- `OR-45-extraction.md`: extraction validates requests less strictly and forwards provider options
+- `OR-45-corpus-normalisation.md`: the corpus normalises transport noise and replay skips some byte comparisons
 - `OR-61-sidecar-environment.md`: plugins run in a sidecar with an allowlisted environment instead of inside the server

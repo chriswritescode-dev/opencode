@@ -1,0 +1,166 @@
+{
+  "cassette": "cloudflare-ai-gateway-decision/decides-choice-score-and-predicate-questions",
+  "protocol": "cloudflare-run-decisions",
+  "routeId": "cloudflare-run-decisions",
+  "clockEpochMs": 1767323045000,
+  "steps": [
+    {
+      "model": {
+        "id": "typesafe/jev",
+        "provider": "cloudflare-ai-gateway",
+        "route": {
+          "id": "cloudflare-run-decisions"
+        }
+      },
+      "request": {
+        "input": [
+          {
+            "type": "text",
+            "text": "I was charged twice for the same invoice. Please refund the duplicate payment today."
+          }
+        ],
+        "questions": [
+          {
+            "name": "department",
+            "type": "choice",
+            "instructions": "Which team should handle this support request?",
+            "choices": [
+              {
+                "value": "billing",
+                "description": "Payments, invoices, refunds, or failed charges"
+              },
+              {
+                "value": "technical",
+                "description": "Bugs, outages, or integrations"
+              },
+              {
+                "value": "sales",
+                "description": "Pricing, upgrades, or new accounts"
+              }
+            ]
+          },
+          {
+            "name": "urgency",
+            "type": "score",
+            "instructions": "How urgent is this support request?",
+            "levels": [
+              {
+                "label": "Can wait for normal support"
+              },
+              {
+                "label": "Needs prompt attention"
+              },
+              {
+                "label": "Actively blocking revenue"
+              }
+            ]
+          },
+          {
+            "name": "refund",
+            "type": "predicate",
+            "instructions": "Is the customer asking for a refund?"
+          }
+        ]
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/cloudflare-ai-gateway/decisions",
+        "modelID": "typesafe/jev",
+        "settings": {
+          "accountId": "fixture-account",
+          "gatewayApiKey": "fixture"
+        },
+        "kind": "decision"
+      },
+      "transport": "http",
+      "operation": "decision.generate",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://api.cloudflare.com/client/v4/accounts/fixture-account/ai/run",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "cf-aig-gateway-id": "default",
+              "content-length": "655",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"typesafe/jev\",\"input\":{\"state\":\"I was charged twice for the same invoice. Please refund the duplicate payment today.\",\"questions\":{\"department\":{\"type\":\"choice\",\"instructions\":\"Which team should handle this support request?\",\"criteria\":{\"billing\":\"Payments, invoices, refunds, or failed charges\",\"technical\":\"Bugs, outages, or integrations\",\"sales\":\"Pricing, upgrades, or new accounts\"}},\"urgency\":{\"type\":\"score\",\"instructions\":\"How urgent is this support request?\",\"criteria\":[\"Can wait for normal support\",\"Needs prompt attention\",\"Actively blocking revenue\"]},\"refund\":{\"type\":\"noul\",\"instructions\":\"Is the customer asking for a refund?\"}}}}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": "{\"result\":{\"state\":\"Completed\",\"result\":{\"model\":\"jev-1.13.0\",\"answers\":{\"department\":{\"type\":\"choice\",\"choice\":\"billing\",\"probabilities\":{\"billing\":1,\"technical\":0,\"sales\":0},\"confidence\":1},\"urgency\":{\"type\":\"score\",\"score\":1.02,\"legend\":{\"0\":\"Can wait for normal support\",\"1\":\"Needs prompt attention\",\"2\":\"Actively blocking revenue\"},\"probabilities\":{\"0\":0,\"1\":0.97,\"2\":0.03},\"confidence\":0.95},\"refund\":{\"type\":\"noul\",\"noul\":0.99}},\"usage\":{\"input_tokens\":422,\"output_tokens\":69}}},\"success\":true,\"errors\":[],\"messages\":[]}"
+          }
+        }
+      ],
+      "result": {
+        "answers": [
+          {
+            "name": "department",
+            "type": "choice",
+            "choice": "billing",
+            "probabilities": [
+              {
+                "value": "billing",
+                "probability": 1
+              },
+              {
+                "value": "technical",
+                "probability": 0
+              },
+              {
+                "value": "sales",
+                "probability": 0
+              }
+            ],
+            "confidence": 1
+          },
+          {
+            "name": "urgency",
+            "type": "score",
+            "score": 1.02,
+            "probabilities": [
+              {
+                "value": 0,
+                "label": "Can wait for normal support",
+                "probability": 0
+              },
+              {
+                "value": 1,
+                "label": "Needs prompt attention",
+                "probability": 0.97
+              },
+              {
+                "value": 2,
+                "label": "Actively blocking revenue",
+                "probability": 0.03
+              }
+            ],
+            "confidence": 0.95
+          },
+          {
+            "name": "refund",
+            "type": "predicate",
+            "probability": 0.99
+          }
+        ],
+        "usage": {
+          "inputTokens": 422,
+          "outputTokens": 69,
+          "totalTokens": 491
+        },
+        "providerMetadata": {
+          "cloudflare-ai-gateway": {
+            "model": "jev-1.13.0",
+            "usage": {
+              "input_tokens": 422,
+              "output_tokens": 69
+            }
+          }
+        }
+      }
+    }
+  ]
+}

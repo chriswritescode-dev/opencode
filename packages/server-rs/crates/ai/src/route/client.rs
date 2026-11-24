@@ -38,25 +38,12 @@ impl LlmClient {
         request: LlmRequest,
         options: StreamOptions,
     ) -> Pin<Box<dyn Stream<Item = Result<LlmEvent, AiError>> + Send>> {
-        let web_socket = options.web_socket.clone();
-        let compiled = match compile(model, request, &options, &self.context) {
-            Ok(compiled) => compiled,
-            Err(error) => {
-                let item: Result<LlmEvent, AiError> = Err(error);
-                return Box::pin(stream::once(async move { item }));
-            }
-        };
-        let include_raw = compiled.resolved.request.include_raw == Some(true);
-        let stage = Stage::Execute(Box::new(ExecuteState {
+        let stage = Stage::Prepare(Box::new(PrepareState {
             executor: self.executor.clone(),
-            prepared: compiled.prepared,
-            body: compiled.body,
-            channel: compiled.channel,
-            web_socket,
-            resolved: compiled.resolved,
+            model: model.clone(),
+            request,
+            options,
             context: self.context.clone(),
-            include_raw,
-            route: format!("{}/{}", model.provider, model.route.id),
         }));
         Box::pin(stream::unfold(stage, advance))
     }
@@ -77,9 +64,18 @@ impl LlmClient {
 }
 
 enum Stage {
+    Prepare(Box<PrepareState>),
     Execute(Box<ExecuteState>),
     Read(Box<StreamState>),
     Done,
+}
+
+struct PrepareState {
+    executor: RequestExecutor,
+    model: Model,
+    request: LlmRequest,
+    options: StreamOptions,
+    context: ExecutionContext,
 }
 
 struct ExecuteState {
@@ -113,70 +109,105 @@ struct StreamState {
 }
 
 async fn advance(stage: Stage) -> Option<(Result<LlmEvent, AiError>, Stage)> {
-    match stage {
-        Stage::Execute(state) => {
-            let ExecuteState { executor, prepared, body, channel, web_socket, resolved, context, include_raw, route } =
-                *state;
-            let executor = executor.with_timeout(resolved.request.timeout.clone());
-            let continuation = prepared.clone();
-            let HttpPrepared { request, framing, middleware } = prepared;
-            let (frames, http, complete) = match (channel, web_socket) {
-                (Some(channel), Some(web_socket)) => {
-                    let ChannelPreparation { url, headers, rotate_after_ms, driver } = channel;
-                    let exchange = ChannelExchange {
-                        id: resolved.request.id.clone().unwrap_or_else(|| "request".to_string()),
-                        connect: WebSocketRequest { url, headers },
-                        rotate_after_ms,
-                        fallback: channel_fallback(
-                            executor.clone(),
-                            request.clone(),
-                            framing.clone(),
-                            middleware.clone(),
-                        ),
-                        driver,
-                    };
-                    let execution = match web_socket.execute(exchange).await {
-                        Ok(execution) => execution,
-                        Err(error) => return Some((Err(error), Stage::Done)),
-                    };
-                    (execution.frames, execution.http, Some(execution.complete))
+    let mut stage = stage;
+    loop {
+        match stage {
+            Stage::Prepare(state) => {
+                let PrepareState { executor, model, request, options, context } = *state;
+                if let Err(error) = model.route.auth.prepare(&context, &executor.sender()).await {
+                    return Some((Err(error), Stage::Done));
                 }
-                _ => {
-                    let url = request.url.clone();
-                    let response = match executor.execute(request, middleware).await {
-                        Ok(response) => response,
-                        Err(error) => return Some((Err(error), Stage::Done)),
-                    };
-                    let http = Some(response_http(url, &response));
-                    (framing.frame(response.body), http, None)
-                }
-            };
-            let protocol = resolved.model.route.protocol.new_state(&resolved, &context);
-            let mut state = Box::new(StreamState {
-                frames,
-                protocol,
-                http,
-                route,
-                include_raw,
-                pending: VecDeque::new(),
-                finished: false,
-                frames_done: false,
-                halted: false,
-                done: false,
-                complete,
-                executor,
-                prepared: continuation,
-                body,
-                continuation_checked: false,
-            });
-            let item = read_next(&mut state).await?;
-            Some((item, Stage::Read(state)))
+                let web_socket = options.web_socket.clone();
+                let compiled = match compile(&model, request, &options, &context) {
+                    Ok(compiled) => compiled,
+                    Err(error) => return Some((Err(error), Stage::Done)),
+                };
+                let include_raw = compiled.resolved.request.include_raw == Some(true);
+                stage = Stage::Execute(Box::new(ExecuteState {
+                    executor,
+                    prepared: compiled.prepared,
+                    body: compiled.body,
+                    channel: compiled.channel,
+                    web_socket,
+                    resolved: compiled.resolved,
+                    context,
+                    include_raw,
+                    route: format!("{}/{}", model.provider, model.route.id),
+                }));
+            }
+            Stage::Execute(state) => {
+                let ExecuteState {
+                    executor,
+                    prepared,
+                    body,
+                    channel,
+                    web_socket,
+                    resolved,
+                    context,
+                    include_raw,
+                    route,
+                } = *state;
+                let executor = executor.with_timeout(resolved.request.timeout.clone());
+                let continuation = prepared.clone();
+                let HttpPrepared { request, framing, middleware } = prepared;
+                let (frames, http, complete) = match (channel, web_socket) {
+                    (Some(channel), Some(web_socket)) => {
+                        let ChannelPreparation { url, headers, rotate_after_ms, driver } = channel;
+                        let exchange = ChannelExchange {
+                            id: resolved.request.id.clone().unwrap_or_else(|| "request".to_string()),
+                            connect: WebSocketRequest { url, headers },
+                            rotate_after_ms,
+                            fallback: channel_fallback(
+                                executor.clone(),
+                                request.clone(),
+                                framing.clone(),
+                                middleware.clone(),
+                            ),
+                            driver,
+                        };
+                        let execution = match web_socket.execute(exchange).await {
+                            Ok(execution) => execution,
+                            Err(error) => return Some((Err(error), Stage::Done)),
+                        };
+                        (execution.frames, execution.http, Some(execution.complete))
+                    }
+                    _ => {
+                        let url = request.url.clone();
+                        let response = match executor.execute(request, middleware).await {
+                            Ok(response) => response,
+                            Err(error) => return Some((Err(error), Stage::Done)),
+                        };
+                        let http = Some(response_http(url, &response));
+                        (framing.frame(response.body), http, None)
+                    }
+                };
+                let protocol = resolved.model.route.protocol.new_state(&resolved, &context);
+                let mut state = Box::new(StreamState {
+                    frames,
+                    protocol,
+                    http,
+                    route,
+                    include_raw,
+                    pending: VecDeque::new(),
+                    finished: false,
+                    frames_done: false,
+                    halted: false,
+                    done: false,
+                    complete,
+                    executor,
+                    prepared: continuation,
+                    body,
+                    continuation_checked: false,
+                });
+                let item = read_next(&mut state).await?;
+                return Some((item, Stage::Read(state)));
+            }
+            Stage::Read(mut state) => {
+                let item = read_next(&mut state).await?;
+                return Some((item, Stage::Read(state)));
+            }
+            Stage::Done => return None,
         }
-        Stage::Read(mut state) => {
-            let item = read_next(&mut state).await?;
-            Some((item, Stage::Read(state)))
-        }
-        Stage::Done => None,
     }
 }
 

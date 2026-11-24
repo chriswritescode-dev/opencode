@@ -345,6 +345,17 @@ impl ProtocolState for State {
     fn terminal(&self, frame: &Frame) -> bool {
         frame.as_str() == DONE
     }
+
+    fn latest_tool_index(&self) -> Option<i64> {
+        self.latest_tool_index
+    }
+
+    fn tool_id_at(&self, index: i64) -> Option<String> {
+        self.tools
+            .get(&index)
+            .map(|tool| tool.id.clone())
+            .or_else(|| self.pending_tools.get(&index).and_then(|tool| tool.id.clone()))
+    }
 }
 
 impl State {
@@ -680,10 +691,21 @@ pub fn from_request(request: &LlmRequest, model: &Model) -> Result<Value, AiErro
     from_request_with(request, model, None)
 }
 
+pub type AssistantTransform<'a> = dyn FnMut(&AssistantMessage, Map<String, Value>) -> Result<Value, AiError> + 'a;
+
 pub fn from_request_with(
     request: &LlmRequest,
     model: &Model,
     cache_control: Option<&mut CacheControl>,
+) -> Result<Value, AiError> {
+    from_request_with_assistant(request, model, cache_control, None)
+}
+
+pub fn from_request_with_assistant<'a>(
+    request: &LlmRequest,
+    model: &Model,
+    cache_control: Option<&'a mut CacheControl>,
+    assistant: Option<&'a mut AssistantTransform<'a>>,
 ) -> Result<Value, AiError> {
     let reasoning_field = model.compatibility_str("reasoningField");
     if let Some(field) = reasoning_field
@@ -723,6 +745,7 @@ pub fn from_request_with(
     };
     let mut lowering = Lowering {
         cache_control,
+        assistant,
         custom: openai_freeform::tools(request),
         provider_metadata_key,
         tool_call_id,
@@ -820,6 +843,7 @@ impl ToolCallId {
 
 struct Lowering<'a> {
     cache_control: Option<&'a mut CacheControl>,
+    assistant: Option<&'a mut AssistantTransform<'a>>,
     custom: BTreeMap<String, Custom>,
     provider_metadata_key: String,
     tool_call_id: ToolCallId,
@@ -1059,6 +1083,9 @@ fn lower_assistant_message(message: &AssistantMessage, lowering: &mut Lowering<'
         && field != "reasoning_details"
     {
         result.insert(field, Value::String(reasoning_text));
+    }
+    if let Some(transform) = lowering.assistant.as_mut() {
+        return transform(message, result);
     }
     Ok(Value::Object(result))
 }
@@ -1355,20 +1382,11 @@ fn known_reasoning_details(details: &[Value]) -> Vec<Value> {
 fn known_reasoning_detail(detail: &Value) -> Option<Value> {
     let object = detail.as_object()?;
     match object.get("type")?.as_str()? {
-        "reasoning.text" => {
-            optional_string(object, "text")?;
-            openrouter_detail_fields(object)?;
-            Some(detail.clone())
-        }
-        "reasoning.summary" => {
-            optional_string(object, "summary")?;
-            openrouter_detail_fields(object)?;
-            Some(detail.clone())
-        }
+        "reasoning.text" => normalized_reasoning_detail(object, "text"),
+        "reasoning.summary" => normalized_reasoning_detail(object, "summary"),
         "reasoning.encrypted" => {
             object.get("data")?.as_str()?;
-            openrouter_detail_fields(object)?;
-            Some(detail.clone())
+            normalized_reasoning_detail(object, "data")
         }
         "summary" => {
             let summary = object.get("summary")?.as_str()?;
@@ -1401,6 +1419,27 @@ fn openrouter_detail_fields(object: &Map<String, Value>) -> Option<()> {
     optional_string(object, "format")?;
     optional_number(object, "index")?;
     optional_nullable_string(object, "signature")
+}
+
+fn normalized_reasoning_detail(object: &Map<String, Value>, body: &str) -> Option<Value> {
+    optional_string(object, body)?;
+    openrouter_detail_fields(object)?;
+    let mut known = Map::new();
+    known.insert("type".to_string(), object.get("type")?.clone());
+    if let Some(value) = object.get(body) {
+        known.insert(body.to_string(), value.clone());
+    }
+    for field in ["id", "format", "index", "signature"] {
+        if let Some(value) = object.get(field) {
+            known.insert(field.to_string(), value.clone());
+        }
+    }
+    for (field, value) in object {
+        if field != "type" && field != body && !["id", "format", "index", "signature"].contains(&field.as_str()) {
+            known.insert(field.clone(), value.clone());
+        }
+    }
+    Some(Value::Object(known))
 }
 
 fn optional_string(object: &Map<String, Value>, key: &str) -> Option<()> {

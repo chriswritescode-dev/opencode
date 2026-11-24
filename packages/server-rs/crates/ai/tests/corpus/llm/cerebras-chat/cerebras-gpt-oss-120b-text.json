@@ -53,6 +53,13 @@
         ],
         "tools": []
       },
+      "provider": {
+        "package": "@opencode/ai/providers/cerebras",
+        "modelID": "gpt-oss-120b",
+        "settings": {
+          "apiKey": "fixture"
+        }
+      },
       "transport": "http",
       "exchanges": [
         {

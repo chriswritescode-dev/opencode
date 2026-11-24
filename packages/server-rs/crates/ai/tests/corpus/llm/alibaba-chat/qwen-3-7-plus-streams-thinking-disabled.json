@@ -1,0 +1,177 @@
+{
+  "cassette": "alibaba-chat/qwen-3-7-plus-streams-thinking-disabled",
+  "protocol": "alibaba-chat",
+  "routeId": "alibaba-chat",
+  "clockEpochMs": 1767323045000,
+  "steps": [
+    {
+      "model": {
+        "id": "qwen3.7-plus",
+        "provider": "alibaba",
+        "route": {
+          "id": "alibaba-chat",
+          "protocol": "alibaba-chat",
+          "providerMetadataKey": "alibaba"
+        },
+        "endpoint": {
+          "baseURL": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+          "path": "/chat/completions"
+        },
+        "compatibility": {
+          "reasoningField": "reasoning_content",
+          "maxTokensField": "max_completion_tokens",
+          "zaiToolStream": false
+        },
+        "capabilities": {
+          "tools": {
+            "strict": false
+          }
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_alibaba_chat_qwen_3_7_plus_streams_thinking_disabled",
+        "maxTokens": 4096,
+        "providerOptions": {
+          "enableThinking": false
+        },
+        "system": [],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "What is 173 multiplied by 219? Reply with only the final integer."
+              }
+            ]
+          }
+        ],
+        "tools": []
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/alibaba",
+        "modelID": "qwen3.7-plus",
+        "settings": {
+          "region": "ap-southeast-1",
+          "apiKey": "fixture"
+        }
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "300",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"qwen3.7-plus\",\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"What is 173 multiplied by 219? Reply with only the final integer.\",\"cache_control\":{\"type\":\"ephemeral\"}}]}],\"stream\":true,\"stream_options\":{\"include_usage\":true},\"max_completion_tokens\":4096,\"enable_thinking\":false}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream;charset=utf-8"
+            },
+            "body": "data: {\"model\":\"qwen3.7-plus\",\"id\":\"chatcmpl-e96a3356-bec9-98ad-bdbe-af00a15ee965\",\"created\":1790904216,\"object\":\"chat.completion.chunk\",\"usage\":null,\"choices\":[{\"logprobs\":null,\"index\":0,\"delta\":{\"content\":\"\",\"role\":\"assistant\"},\"finish_reason\":null}]}\n\ndata: {\"model\":\"qwen3.7-plus\",\"id\":\"chatcmpl-e96a3356-bec9-98ad-bdbe-af00a15ee965\",\"choices\":[{\"delta\":{\"content\":\"3\"},\"index\":0,\"finish_reason\":null,\"logprobs\":null}],\"created\":1790904216,\"object\":\"chat.completion.chunk\",\"usage\":null}\n\ndata: {\"model\":\"qwen3.7-plus\",\"id\":\"chatcmpl-e96a3356-bec9-98ad-bdbe-af00a15ee965\",\"choices\":[{\"delta\":{\"content\":\"7887\"},\"index\":0,\"finish_reason\":null,\"logprobs\":null}],\"created\":1790904216,\"object\":\"chat.completion.chunk\",\"usage\":null}\n\ndata: {\"model\":\"qwen3.7-plus\",\"id\":\"chatcmpl-e96a3356-bec9-98ad-bdbe-af00a15ee965\",\"choices\":[{\"delta\":{\"content\":\"\"},\"index\":0,\"finish_reason\":\"stop\",\"logprobs\":null}],\"created\":1790904216,\"object\":\"chat.completion.chunk\",\"usage\":null}\n\ndata: {\"choices\":[],\"created\":1790904216,\"id\":\"chatcmpl-e96a3356-bec9-98ad-bdbe-af00a15ee965\",\"model\":\"qwen3.7-plus\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":5,\"prompt_tokens\":32,\"prompt_tokens_details\":{\"cache_creation\":{\"ephemeral_5m_input_tokens\":0},\"cache_creation_input_tokens\":0,\"cache_type\":\"ephemeral\",\"cache_write_tokens\":0,\"cached_tokens\":0,\"text_tokens\":32},\"total_tokens\":37}}\n\ndata: [DONE]\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "text-start",
+          "id": "text-0"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "3"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "7887"
+        },
+        {
+          "type": "text-end",
+          "id": "text-0"
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 32,
+            "outputTokens": 5,
+            "nonCachedInputTokens": 32,
+            "cacheReadInputTokens": 0,
+            "cacheWriteInputTokens": 0,
+            "totalTokens": 37,
+            "providerMetadata": {
+              "alibaba": {
+                "prompt_tokens": 32,
+                "completion_tokens": 5,
+                "total_tokens": 37,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0,
+                  "cache_write_tokens": 0,
+                  "cache_creation": {
+                    "ephemeral_5m_input_tokens": 0
+                  },
+                  "cache_creation_input_tokens": 0,
+                  "cache_type": "ephemeral",
+                  "text_tokens": 32
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 32,
+            "outputTokens": 5,
+            "nonCachedInputTokens": 32,
+            "cacheReadInputTokens": 0,
+            "cacheWriteInputTokens": 0,
+            "totalTokens": 37,
+            "providerMetadata": {
+              "alibaba": {
+                "prompt_tokens": 32,
+                "completion_tokens": 5,
+                "total_tokens": 37,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0,
+                  "cache_write_tokens": 0,
+                  "cache_creation": {
+                    "ephemeral_5m_input_tokens": 0
+                  },
+                  "cache_creation_input_tokens": 0,
+                  "cache_type": "ephemeral",
+                  "text_tokens": 32
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

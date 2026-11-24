@@ -69,6 +69,13 @@
           }
         ]
       },
+      "provider": {
+        "package": "@opencode/ai/providers/google",
+        "modelID": "gemini-3.5-flash",
+        "settings": {
+          "apiKey": "fixture"
+        }
+      },
       "transport": "http",
       "exchanges": [
         {
@@ -268,6 +275,13 @@
             }
           }
         ]
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/google",
+        "modelID": "gemini-3.5-flash",
+        "settings": {
+          "apiKey": "fixture"
+        }
       },
       "transport": "http",
       "exchanges": [

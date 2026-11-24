@@ -1,0 +1,156 @@
+{
+  "cassette": "mistral-chat/streams-text-with-usage",
+  "protocol": "openai-chat",
+  "routeId": "mistral-chat",
+  "clockEpochMs": 1767323045000,
+  "steps": [
+    {
+      "model": {
+        "id": "mistral-small-latest",
+        "provider": "mistral",
+        "route": {
+          "id": "mistral-chat",
+          "protocol": "mistral-chat",
+          "providerMetadataKey": "mistral"
+        },
+        "endpoint": {
+          "baseURL": "https://api.mistral.ai/v1",
+          "path": "/chat/completions"
+        },
+        "options": {
+          "providerOptions": {
+            "reasoningEffort": "none"
+          }
+        },
+        "modelOptions": {
+          "providerOptions": {
+            "reasoningEffort": "none"
+          }
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_mistral_chat_streams_text_with_usage",
+        "maxTokens": 40,
+        "temperature": 0,
+        "system": [],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Reply with exactly one word: hello"
+              }
+            ]
+          }
+        ],
+        "tools": []
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/mistral",
+        "modelID": "mistral-small-latest",
+        "settings": {
+          "apiKey": "fixture",
+          "reasoningEffort": "none"
+        }
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://api.mistral.ai/v1/chat/completions",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "180",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"mistral-small-latest\",\"messages\":[{\"role\":\"user\",\"content\":\"Reply with exactly one word: hello\"}],\"stream\":true,\"max_tokens\":40,\"temperature\":0,\"reasoning_effort\":\"none\"}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream; charset=utf-8"
+            },
+            "body": "data: {\"id\":\"9a4d16bdddb74e5e89c2cf9e9b91e065\",\"object\":\"chat.completion.chunk\",\"created\":1788110325,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"9a4d16bdddb74e5e89c2cf9e9b91e065\",\"object\":\"chat.completion.chunk\",\"created\":1788110325,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"Hi\"},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopqrs\"}\n\ndata: {\"id\":\"9a4d16bdddb74e5e89c2cf9e9b91e065\",\"object\":\"chat.completion.chunk\",\"created\":1788110325,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"\"},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":22,\"total_tokens\":24,\"completion_tokens\":2,\"prompt_tokens_details\":{\"cached_tokens\":0},\"service_tier\":\"standard\"},\"p\":\"abcdefghijklmnopqrstuvwxyz0\"}\n\ndata: [DONE]\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "text-start",
+          "id": "text-0"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "Hi"
+        },
+        {
+          "type": "text-end",
+          "id": "text-0"
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 22,
+            "outputTokens": 2,
+            "nonCachedInputTokens": 22,
+            "cacheReadInputTokens": 0,
+            "totalTokens": 24,
+            "providerMetadata": {
+              "mistral": {
+                "prompt_tokens": 22,
+                "completion_tokens": 2,
+                "total_tokens": 24,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                },
+                "service_tier": "standard"
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 22,
+            "outputTokens": 2,
+            "nonCachedInputTokens": 22,
+            "cacheReadInputTokens": 0,
+            "totalTokens": 24,
+            "providerMetadata": {
+              "mistral": {
+                "prompt_tokens": 22,
+                "completion_tokens": 2,
+                "total_tokens": 24,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                },
+                "service_tier": "standard"
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,296 @@
+{
+  "cassette": "openrouter-responses/calls-a-freeform-text-tool",
+  "protocol": "open-responses",
+  "routeId": "openrouter-responses",
+  "clockEpochMs": 1767323045000,
+  "steps": [
+    {
+      "model": {
+        "id": "openai/gpt-5.4-mini",
+        "provider": "openrouter",
+        "route": {
+          "id": "openrouter-responses",
+          "protocol": "openrouter-responses",
+          "providerMetadataKey": "openrouter"
+        },
+        "endpoint": {
+          "baseURL": "https://openrouter.ai/api/v1",
+          "path": "/responses"
+        },
+        "options": {
+          "providerOptions": {
+            "store": false,
+            "include": [
+              "reasoning.encrypted_content"
+            ]
+          }
+        },
+        "modelOptions": {
+          "providerOptions": {
+            "store": false,
+            "include": [
+              "reasoning.encrypted_content"
+            ]
+          }
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_openrouter_responses_calls_a_freeform_text_tool",
+        "maxTokens": 256,
+        "system": [],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Use the run tool to execute exactly this code: print(1)"
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "tool",
+            "name": "run",
+            "description": "Run a Python snippet.",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "string"
+            },
+            "freeform": {
+              "type": "text"
+            }
+          }
+        ],
+        "toolChoice": {
+          "type": "required"
+        }
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/openrouter/responses",
+        "modelID": "openai/gpt-5.4-mini",
+        "settings": {
+          "apiKey": "fixture"
+        }
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://openrouter.ai/api/v1/responses",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "396",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"openai/gpt-5.4-mini\",\"input\":[{\"type\":\"message\",\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"Use the run tool to execute exactly this code: print(1)\"}]}],\"stream\":true,\"max_output_tokens\":256,\"store\":false,\"include\":[\"reasoning.encrypted_content\"],\"tools\":[{\"type\":\"custom\",\"name\":\"run\",\"description\":\"Run a Python snippet.\",\"format\":{\"type\":\"text\"}}],\"tool_choice\":\"required\"}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream"
+            },
+            "body": "data: {\"type\":\"response.created\",\"response\":{\"id\":\"gen-1793214750-mKxSP1x7cfTqz0InQBR1\",\"object\":\"response\",\"created_at\":1793214750,\"model\":\"openai/gpt-5.4-mini\",\"status\":\"in_progress\",\"completed_at\":null,\"output\":[],\"error\":null,\"incomplete_details\":null,\"tools\":[{\"type\":\"custom\",\"name\":\"run\",\"description\":\"Run a Python snippet.\",\"format\":{\"type\":\"text\"}}],\"tool_choice\":\"required\",\"parallel_tool_calls\":true,\"max_output_tokens\":256,\"temperature\":1,\"top_p\":1,\"presence_penalty\":0,\"frequency_penalty\":0,\"top_logprobs\":0,\"max_tool_calls\":null,\"metadata\":{},\"background\":false,\"previous_response_id\":null,\"service_tier\":\"auto\",\"truncation\":\"disabled\",\"store\":false,\"instructions\":null,\"text\":{\"format\":{\"type\":\"text\"}},\"reasoning\":null,\"safety_identifier\":null,\"prompt_cache_key\":null,\"prompt_cache_options\":null,\"usage\":null},\"sequence_number\":0}\n\ndata: {\"type\":\"response.in_progress\",\"response\":{\"id\":\"gen-1793214750-mKxSP1x7cfTqz0InQBR1\",\"object\":\"response\",\"created_at\":1793214750,\"model\":\"openai/gpt-5.4-mini\",\"status\":\"in_progress\",\"completed_at\":null,\"output\":[],\"error\":null,\"incomplete_details\":null,\"tools\":[{\"type\":\"custom\",\"name\":\"run\",\"description\":\"Run a Python snippet.\",\"format\":{\"type\":\"text\"}}],\"tool_choice\":\"required\",\"parallel_tool_calls\":true,\"max_output_tokens\":256,\"temperature\":1,\"top_p\":1,\"presence_penalty\":0,\"frequency_penalty\":0,\"top_logprobs\":0,\"max_tool_calls\":null,\"metadata\":{},\"background\":false,\"previous_response_id\":null,\"service_tier\":\"auto\",\"truncation\":\"disabled\",\"store\":false,\"instructions\":null,\"text\":{\"format\":{\"type\":\"text\"}},\"reasoning\":null,\"safety_identifier\":null,\"prompt_cache_key\":null,\"prompt_cache_options\":null,\"usage\":null},\"sequence_number\":1}\n\ndata: {\"type\":\"response.output_item.added\",\"output_index\":0,\"item\":{\"id\":\"ctc_tmp_aasptvj0fik\",\"type\":\"custom_tool_call\",\"status\":\"in_progress\",\"call_id\":\"call_jlLLytaby5F4w22U0yMR8kvU\",\"name\":\"run\",\"input\":\"\"},\"sequence_number\":2}\n\ndata: {\"type\":\"response.custom_tool_call_input.delta\",\"output_index\":0,\"item_id\":\"ctc_tmp_aasptvj0fik\",\"delta\":\"print\",\"sequence_number\":3}\n\ndata: {\"type\":\"response.custom_tool_call_input.delta\",\"output_index\":0,\"item_id\":\"ctc_tmp_aasptvj0fik\",\"delta\":\"(\",\"sequence_number\":4}\n\ndata: {\"type\":\"response.custom_tool_call_input.delta\",\"output_index\":0,\"item_id\":\"ctc_tmp_aasptvj0fik\",\"delta\":\"1\",\"sequence_number\":5}\n\ndata: {\"type\":\"response.custom_tool_call_input.delta\",\"output_index\":0,\"item_id\":\"ctc_tmp_aasptvj0fik\",\"delta\":\")\",\"sequence_number\":6}\n\ndata: {\"type\":\"response.custom_tool_call_input.done\",\"output_index\":0,\"item_id\":\"ctc_tmp_aasptvj0fik\",\"input\":\"print(1)\",\"sequence_number\":7}\n\ndata: {\"type\":\"response.output_item.done\",\"output_index\":0,\"item\":{\"id\":\"ctc_tmp_aasptvj0fik\",\"type\":\"custom_tool_call\",\"status\":\"completed\",\"call_id\":\"call_jlLLytaby5F4w22U0yMR8kvU\",\"name\":\"run\",\"input\":\"print(1)\"},\"sequence_number\":8}\n\ndata: {\"type\":\"response.completed\",\"response\":{\"id\":\"gen-1793214750-mKxSP1x7cfTqz0InQBR1\",\"object\":\"response\",\"created_at\":1793214750,\"model\":\"openai/gpt-5.4-mini\",\"status\":\"completed\",\"completed_at\":1793214751,\"output\":[{\"id\":\"ctc_tmp_aasptvj0fik\",\"type\":\"custom_tool_call\",\"status\":\"completed\",\"call_id\":\"call_jlLLytaby5F4w22U0yMR8kvU\",\"name\":\"run\",\"input\":\"print(1)\"}],\"error\":null,\"incomplete_details\":null,\"tools\":[{\"type\":\"custom\",\"name\":\"run\",\"description\":\"Run a Python snippet.\",\"format\":{\"type\":\"text\"}}],\"tool_choice\":\"required\",\"parallel_tool_calls\":true,\"max_output_tokens\":256,\"temperature\":1,\"top_p\":1,\"presence_penalty\":0,\"frequency_penalty\":0,\"top_logprobs\":0,\"max_tool_calls\":null,\"metadata\":{},\"background\":false,\"previous_response_id\":null,\"service_tier\":\"default\",\"truncation\":\"disabled\",\"store\":false,\"instructions\":null,\"text\":{\"format\":{\"type\":\"text\"}},\"reasoning\":{\"context\":\"current_turn\",\"effort\":\"none\",\"mode\":\"standard\",\"summary\":\"detailed\"},\"safety_identifier\":null,\"prompt_cache_key\":null,\"prompt_cache_options\":null,\"usage\":{\"input_tokens\":64,\"input_tokens_details\":{\"cached_tokens\":0},\"output_tokens\":14,\"output_tokens_details\":{\"reasoning_tokens\":0},\"total_tokens\":78,\"cost\":0.000111,\"is_byok\":false,\"cost_details\":{\"upstream_inference_cost\":0.000111,\"upstream_inference_input_cost\":0.000048,\"upstream_inference_output_cost\":0.000063}}},\"sequence_number\":9}\n\ndata: [DONE]\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "tool-input-start",
+          "id": "call_jlLLytaby5F4w22U0yMR8kvU",
+          "name": "run",
+          "providerMetadata": {
+            "openrouter": {
+              "itemId": "ctc_tmp_aasptvj0fik",
+              "custom": true
+            }
+          }
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "call_jlLLytaby5F4w22U0yMR8kvU",
+          "name": "run",
+          "text": "{\"code\":\"",
+          "input": {
+            "code": ""
+          }
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "call_jlLLytaby5F4w22U0yMR8kvU",
+          "name": "run",
+          "text": "print",
+          "input": {
+            "code": "print"
+          }
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "call_jlLLytaby5F4w22U0yMR8kvU",
+          "name": "run",
+          "text": "(",
+          "input": {
+            "code": "print("
+          }
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "call_jlLLytaby5F4w22U0yMR8kvU",
+          "name": "run",
+          "text": "1",
+          "input": {
+            "code": "print(1"
+          }
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "call_jlLLytaby5F4w22U0yMR8kvU",
+          "name": "run",
+          "text": ")",
+          "input": {
+            "code": "print(1)"
+          }
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "call_jlLLytaby5F4w22U0yMR8kvU",
+          "name": "run",
+          "text": "\"}",
+          "input": {
+            "code": "print(1)"
+          }
+        },
+        {
+          "type": "tool-input-end",
+          "id": "call_jlLLytaby5F4w22U0yMR8kvU",
+          "name": "run",
+          "providerMetadata": {
+            "openrouter": {
+              "itemId": "ctc_tmp_aasptvj0fik",
+              "custom": true
+            }
+          }
+        },
+        {
+          "type": "tool-call",
+          "id": "call_jlLLytaby5F4w22U0yMR8kvU",
+          "name": "run",
+          "input": {
+            "code": "print(1)"
+          },
+          "providerMetadata": {
+            "openrouter": {
+              "itemId": "ctc_tmp_aasptvj0fik",
+              "custom": true
+            }
+          }
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "tool-calls"
+          },
+          "usage": {
+            "inputTokens": 64,
+            "outputTokens": 14,
+            "nonCachedInputTokens": 64,
+            "cacheReadInputTokens": 0,
+            "reasoningTokens": 0,
+            "totalTokens": 78,
+            "cost": 0.000111,
+            "providerMetadata": {
+              "openrouter": {
+                "input_tokens": 64,
+                "input_tokens_details": {
+                  "cached_tokens": 0
+                },
+                "output_tokens": 14,
+                "output_tokens_details": {
+                  "reasoning_tokens": 0
+                },
+                "total_tokens": 78,
+                "cost": 0.000111,
+                "is_byok": false,
+                "cost_details": {
+                  "upstream_inference_cost": 0.000111,
+                  "upstream_inference_input_cost": 0.000048,
+                  "upstream_inference_output_cost": 0.000063
+                }
+              }
+            }
+          },
+          "providerMetadata": {
+            "openrouter": {
+              "responseId": "gen-1793214750-mKxSP1x7cfTqz0InQBR1",
+              "serviceTier": "default"
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "tool-calls"
+          },
+          "usage": {
+            "inputTokens": 64,
+            "outputTokens": 14,
+            "nonCachedInputTokens": 64,
+            "cacheReadInputTokens": 0,
+            "reasoningTokens": 0,
+            "totalTokens": 78,
+            "cost": 0.000111,
+            "providerMetadata": {
+              "openrouter": {
+                "input_tokens": 64,
+                "input_tokens_details": {
+                  "cached_tokens": 0
+                },
+                "output_tokens": 14,
+                "output_tokens_details": {
+                  "reasoning_tokens": 0
+                },
+                "total_tokens": 78,
+                "cost": 0.000111,
+                "is_byok": false,
+                "cost_details": {
+                  "upstream_inference_cost": 0.000111,
+                  "upstream_inference_input_cost": 0.000048,
+                  "upstream_inference_output_cost": 0.000063
+                }
+              }
+            }
+          },
+          "providerMetadata": {
+            "openrouter": {
+              "responseId": "gen-1793214750-mKxSP1x7cfTqz0InQBR1",
+              "serviceTier": "default"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

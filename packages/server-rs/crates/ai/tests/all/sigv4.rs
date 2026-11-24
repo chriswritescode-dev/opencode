@@ -1,6 +1,6 @@
 use opencode_ai::MapEnv;
 use opencode_ai::protocols::utils::bedrock_auth::{
-    AuthMode, Credentials, ResolveAuthInput, ResolveAuthOptions, resolve_auth, resolve_region,
+    AuthMode, Credentials, DEFAULT_SIGV4_NAME, ResolveAuthInput, ResolveAuthOptions, resolve_auth, resolve_region,
 };
 use opencode_ai::route::auth::{Auth, AuthDescriptor, AuthInput, SigV4Source};
 use opencode_ai::schema::AiErrorReason;
@@ -83,6 +83,7 @@ fn session_token_is_signed() {
         secret_access_key: "fixture".to_string(),
         session_token: Some("session".to_string()),
         service: "bedrock".to_string(),
+        name: DEFAULT_SIGV4_NAME.to_string(),
     });
     let headers = apply(
         &auth,
@@ -108,6 +109,7 @@ fn repeated_slashes_collapse_in_canonical_path() {
         secret_access_key: "fixture".to_string(),
         session_token: None,
         service: "bedrock".to_string(),
+        name: DEFAULT_SIGV4_NAME.to_string(),
     });
     let sign = |url: &str| {
         let headers = apply(
@@ -152,7 +154,7 @@ fn bedrock_auth_precedence() {
         credentials,
         profile: None,
     };
-    let options = |mode: Option<AuthMode>| ResolveAuthOptions { service: None, mode };
+    let options = |mode: Option<AuthMode>| ResolveAuthOptions { service: None, name: None, mode };
 
     let auth = resolve_auth(input(Some("explicit"), Some(credentials.clone())), "us-east-1", options(None), &env)
         .expect("bearer auth");

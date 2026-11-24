@@ -1,0 +1,164 @@
+{
+  "cassette": "baseten-decision/decides-choice-score-and-predicate-questions",
+  "protocol": "baseten-system-one",
+  "routeId": "baseten-system-one",
+  "clockEpochMs": 1767323045000,
+  "steps": [
+    {
+      "model": {
+        "id": "decision-models/baseten-elephant-9b-latest",
+        "provider": "baseten",
+        "route": {
+          "id": "baseten-system-one"
+        }
+      },
+      "request": {
+        "input": [
+          {
+            "type": "text",
+            "text": "I was charged twice for the same invoice. Please refund the duplicate payment today."
+          }
+        ],
+        "questions": [
+          {
+            "name": "department",
+            "type": "choice",
+            "instructions": "Which team should handle this support request?",
+            "choices": [
+              {
+                "value": "billing",
+                "description": "Payments, invoices, refunds, or failed charges"
+              },
+              {
+                "value": "technical",
+                "description": "Bugs, outages, or integrations"
+              },
+              {
+                "value": "sales",
+                "description": "Pricing, upgrades, or new accounts"
+              }
+            ]
+          },
+          {
+            "name": "urgency",
+            "type": "score",
+            "instructions": "How urgent is this support request?",
+            "levels": [
+              {
+                "label": "Can wait for normal support"
+              },
+              {
+                "label": "Needs prompt attention"
+              },
+              {
+                "label": "Actively blocking revenue"
+              }
+            ]
+          },
+          {
+            "name": "refund",
+            "type": "predicate",
+            "instructions": "Is the customer asking for a refund?"
+          }
+        ]
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/baseten/decisions",
+        "modelID": "decision-models/baseten-elephant-9b-latest",
+        "settings": {
+          "apiKey": "fixture"
+        },
+        "kind": "decision"
+      },
+      "transport": "http",
+      "operation": "decision.generate",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://inference.baseten.co/v1/systemone",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "675",
+              "content-type": "application/json"
+            },
+            "body": "{\"state\":\"I was charged twice for the same invoice. Please refund the duplicate payment today.\",\"questions\":{\"department\":{\"type\":\"choice\",\"instructions\":\"Which team should handle this support request?\",\"criteria\":{\"billing\":\"Payments, invoices, refunds, or failed charges\",\"technical\":\"Bugs, outages, or integrations\",\"sales\":\"Pricing, upgrades, or new accounts\"}},\"urgency\":{\"type\":\"score\",\"instructions\":\"How urgent is this support request?\",\"criteria\":[\"Can wait for normal support\",\"Needs prompt attention\",\"Actively blocking revenue\"]},\"refund\":{\"type\":\"noul\",\"instructions\":\"Is the customer asking for a refund?\"}},\"model\":\"decision-models/baseten-elephant-9b-latest\"}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"decision-models/baseten-elephant-9b-latest\",\"answers\":{\"department\":{\"type\":\"choice\",\"choice\":\"billing\",\"confidence\":0.9997229812976496,\"probabilities\":{\"billing\":0.9998153208650998,\"technical\":0.00008944141267722881,\"sales\":0.00009523772222293133}},\"urgency\":{\"type\":\"score\",\"score\":1.156654204662369,\"confidence\":0.4691558912829059,\"legend\":{\"0\":\"Can wait for normal support\",\"1\":\"Needs prompt attention\",\"2\":\"Actively blocking revenue\"},\"probabilities\":{\"0\":0.09862093390784693,\"1\":0.6461039275219373,\"2\":0.2552751385702158}},\"refund\":{\"type\":\"noul\",\"noul\":0.9935468732575079}},\"usage\":{\"input_tokens\":262,\"output_tokens\":3}}"
+          }
+        }
+      ],
+      "result": {
+        "answers": [
+          {
+            "name": "department",
+            "type": "choice",
+            "choice": "billing",
+            "probabilities": [
+              {
+                "value": "billing",
+                "probability": 0.9998153208650998
+              },
+              {
+                "value": "technical",
+                "probability": 0.00008944141267722881
+              },
+              {
+                "value": "sales",
+                "probability": 0.00009523772222293133
+              }
+            ],
+            "confidence": 0.9997229812976496
+          },
+          {
+            "name": "urgency",
+            "type": "score",
+            "score": 1.156654204662369,
+            "probabilities": [
+              {
+                "value": 0,
+                "label": "Can wait for normal support",
+                "probability": 0.09862093390784693
+              },
+              {
+                "value": 1,
+                "label": "Needs prompt attention",
+                "probability": 0.6461039275219373
+              },
+              {
+                "value": 2,
+                "label": "Actively blocking revenue",
+                "probability": 0.2552751385702158
+              }
+            ],
+            "confidence": 0.4691558912829059
+          },
+          {
+            "name": "refund",
+            "type": "predicate",
+            "probability": 0.9935468732575079
+          }
+        ],
+        "usage": {
+          "inputTokens": 262,
+          "outputTokens": 3,
+          "totalTokens": 265
+        },
+        "providerMetadata": {
+          "baseten": {
+            "model": "decision-models/baseten-elephant-9b-latest",
+            "usage": {
+              "input_tokens": 262,
+              "output_tokens": 3
+            }
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,2055 @@
+{
+  "cassette": "moonshot-chat/kimi-k3-preserves-reasoning-through-a-tool-loop-and-follow-up",
+  "protocol": "openai-chat",
+  "routeId": "moonshot-chat",
+  "clockEpochMs": 1767323045000,
+  "steps": [
+    {
+      "model": {
+        "id": "kimi-k3",
+        "provider": "moonshotai",
+        "route": {
+          "id": "moonshot-chat",
+          "protocol": "moonshot-chat",
+          "providerMetadataKey": "moonshot"
+        },
+        "endpoint": {
+          "baseURL": "https://api.moonshot.ai/v1",
+          "path": "/chat/completions"
+        },
+        "options": {
+          "providerOptions": {
+            "reasoningEffort": "low"
+          }
+        },
+        "modelOptions": {
+          "providerOptions": {
+            "reasoningEffort": "low"
+          }
+        },
+        "compatibility": {
+          "sanitizer": "moonshot",
+          "reasoningField": "reasoning_content",
+          "maxTokensField": "max_tokens"
+        },
+        "capabilities": {
+          "tools": {
+            "strict": false
+          },
+          "promptCacheKey": true
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_moonshot_chat_kimi-k3_tool_loop",
+        "maxTokens": 4096,
+        "system": [],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Use get_weather to look up the current weather in Paris. After receiving the result, report the weather in one short sentence."
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "tool",
+            "name": "get_weather",
+            "description": "Get the current weather in a city",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "city": {
+                  "type": "string",
+                  "enum": [
+                    "Paris"
+                  ]
+                }
+              },
+              "required": [
+                "city"
+              ],
+              "additionalProperties": false
+            }
+          }
+        ]
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/moonshot",
+        "modelID": "kimi-k3",
+        "settings": {
+          "apiKey": "fixture",
+          "reasoningEffort": "low"
+        }
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://api.moonshot.ai/v1/chat/completions",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "535",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"kimi-k3\",\"messages\":[{\"role\":\"user\",\"content\":\"Use get_weather to look up the current weather in Paris. After receiving the result, report the weather in one short sentence.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"get_weather\",\"description\":\"Get the current weather in a city\",\"parameters\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\",\"enum\":[\"Paris\"]}},\"required\":[\"city\"],\"additionalProperties\":false}}}],\"stream\":true,\"stream_options\":{\"include_usage\":true},\"max_tokens\":4096,\"reasoning_effort\":\"low\"}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream"
+            },
+            "body": "data: {\"id\":\"chatcmpl-2f2e0b5ab64c680a2db58ceb5\",\"object\":\"chat.completion.chunk\",\"created\":1788813317,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0b5ab64c680a2db58ceb5\",\"object\":\"chat.completion.chunk\",\"created\":1788813317,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"The\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0b5ab64c680a2db58ceb5\",\"object\":\"chat.completion.chunk\",\"created\":1788813317,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" user\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0b5ab64c680a2db58ceb5\",\"object\":\"chat.completion.chunk\",\"created\":1788813317,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" asks\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0b5ab64c680a2db58ceb5\",\"object\":\"chat.completion.chunk\",\"created\":1788813317,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" to\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0b5ab64c680a2db58ceb5\",\"object\":\"chat.completion.chunk\",\"created\":1788813317,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" use\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0b5ab64c680a2db58ceb5\",\"object\":\"chat.completion.chunk\",\"created\":1788813317,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" get\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0b5ab64c680a2db58ceb5\",\"object\":\"chat.completion.chunk\",\"created\":1788813317,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"_we\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0b5ab64c680a2db58ceb5\",\"object\":\"chat.completion.chunk\",\"created\":1788813317,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"ather\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0b5ab64c680a2db58ceb5\",\"object\":\"chat.completion.chunk\",\"created\":1788813317,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" for\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0b5ab64c680a2db58ceb5\",\"object\":\"chat.completion.chunk\",\"created\":1788813317,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" Paris\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0b5ab64c680a2db58ceb5\",\"object\":\"chat.completion.chunk\",\"created\":1788813317,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" and\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0b5ab64c680a2db58ceb5\",\"object\":\"chat.completion.chunk\",\"created\":1788813317,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" then\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0b5ab64c680a2db58ceb5\",\"object\":\"chat.completion.chunk\",\"created\":1788813317,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" report\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0b5ab64c680a2db58ceb5\",\"object\":\"chat.completion.chunk\",\"created\":1788813317,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" in\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0b5ab64c680a2db58ceb5\",\"object\":\"chat.completion.chunk\",\"created\":1788813317,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" one\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0b5ab64c680a2db58ceb5\",\"object\":\"chat.completion.chunk\",\"created\":1788813317,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" short\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0b5ab64c680a2db58ceb5\",\"object\":\"chat.completion.chunk\",\"created\":1788813317,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" sentence\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0b5ab64c680a2db58ceb5\",\"object\":\"chat.completion.chunk\",\"created\":1788813317,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\".\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0b5ab64c680a2db58ceb5\",\"object\":\"chat.completion.chunk\",\"created\":1788813317,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" Need\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0b5ab64c680a2db58ceb5\",\"object\":\"chat.completion.chunk\",\"created\":1788813317,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" call\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0b5ab64c680a2db58ceb5\",\"object\":\"chat.completion.chunk\",\"created\":1788813317,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" get\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0b5ab64c680a2db58ceb5\",\"object\":\"chat.completion.chunk\",\"created\":1788813317,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"_we\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0b5ab64c680a2db58ceb5\",\"object\":\"chat.completion.chunk\",\"created\":1788813317,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"ather\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0b5ab64c680a2db58ceb5\",\"object\":\"chat.completion.chunk\",\"created\":1788813317,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\".\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0b5ab64c680a2db58ceb5\",\"object\":\"chat.completion.chunk\",\"created\":1788813317,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" Then\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0b5ab64c680a2db58ceb5\",\"object\":\"chat.completion.chunk\",\"created\":1788813317,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" final\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0b5ab64c680a2db58ceb5\",\"object\":\"chat.completion.chunk\",\"created\":1788813317,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" one\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0b5ab64c680a2db58ceb5\",\"object\":\"chat.completion.chunk\",\"created\":1788813317,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" sentence\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0b5ab64c680a2db58ceb5\",\"object\":\"chat.completion.chunk\",\"created\":1788813317,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\".\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0b5ab64c680a2db58ceb5\",\"object\":\"chat.completion.chunk\",\"created\":1788813317,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" Ensure\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0b5ab64c680a2db58ceb5\",\"object\":\"chat.completion.chunk\",\"created\":1788813317,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" after\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0b5ab64c680a2db58ceb5\",\"object\":\"chat.completion.chunk\",\"created\":1788813317,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" receiving\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0b5ab64c680a2db58ceb5\",\"object\":\"chat.completion.chunk\",\"created\":1788813317,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" result\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0b5ab64c680a2db58ceb5\",\"object\":\"chat.completion.chunk\",\"created\":1788813317,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" report\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0b5ab64c680a2db58ceb5\",\"object\":\"chat.completion.chunk\",\"created\":1788813317,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\".\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0b5ab64c680a2db58ceb5\",\"object\":\"chat.completion.chunk\",\"created\":1788813317,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" Let's\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0b5ab64c680a2db58ceb5\",\"object\":\"chat.completion.chunk\",\"created\":1788813317,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" call\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0b5ab64c680a2db58ceb5\",\"object\":\"chat.completion.chunk\",\"created\":1788813317,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\".\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0b5ab64c680a2db58ceb5\",\"object\":\"chat.completion.chunk\",\"created\":1788813317,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":0,\"id\":\"get_weather_0\",\"type\":\"function\",\"function\":{\"name\":\"get_weather\",\"arguments\":\"\"}}]},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0b5ab64c680a2db58ceb5\",\"object\":\"chat.completion.chunk\",\"created\":1788813317,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"{\"}}]},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0b5ab64c680a2db58ceb5\",\"object\":\"chat.completion.chunk\",\"created\":1788813317,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\"city\\\": \\\"\"}}]},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0b5ab64c680a2db58ceb5\",\"object\":\"chat.completion.chunk\",\"created\":1788813317,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"Paris\"}}]},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0b5ab64c680a2db58ceb5\",\"object\":\"chat.completion.chunk\",\"created\":1788813317,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\"\"}}]},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0b5ab64c680a2db58ceb5\",\"object\":\"chat.completion.chunk\",\"created\":1788813317,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"}\"}}]},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0b5ab64c680a2db58ceb5\",\"object\":\"chat.completion.chunk\",\"created\":1788813317,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"tool_calls\",\"usage\":{\"prompt_tokens\":200,\"completion_tokens\":88,\"total_tokens\":288,\"completion_tokens_details\":{\"reasoning_tokens\":38},\"prompt_tokens_details\":{}}}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0b5ab64c680a2db58ceb5\",\"object\":\"chat.completion.chunk\",\"created\":1788813317,\"model\":\"kimi-k3\",\"choices\":[],\"usage\":{\"prompt_tokens\":200,\"completion_tokens\":88,\"total_tokens\":288,\"completion_tokens_details\":{\"reasoning_tokens\":38},\"prompt_tokens_details\":{}}}\n\ndata: [DONE]\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "reasoning-start",
+          "id": "reasoning-0",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "The",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " user",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " asks",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " to",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " use",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " get",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "_we",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "ather",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " for",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " Paris",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " and",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " then",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " report",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " in",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " one",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " short",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " sentence",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ".",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " Need",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " call",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " get",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "_we",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "ather",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ".",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " Then",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " final",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " one",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " sentence",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ".",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " Ensure",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " after",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " receiving",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " result",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " report",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ".",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " Let's",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " call",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ".",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "tool-input-start",
+          "id": "get_weather_0",
+          "name": "get_weather"
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "get_weather_0",
+          "name": "get_weather",
+          "text": "{",
+          "input": {}
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "get_weather_0",
+          "name": "get_weather",
+          "text": "\"city\": \"",
+          "input": {
+            "city": ""
+          }
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "get_weather_0",
+          "name": "get_weather",
+          "text": "Paris",
+          "input": {
+            "city": "Paris"
+          }
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "get_weather_0",
+          "name": "get_weather",
+          "text": "\"",
+          "input": {
+            "city": "Paris"
+          }
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "get_weather_0",
+          "name": "get_weather",
+          "text": "}",
+          "input": {
+            "city": "Paris"
+          }
+        },
+        {
+          "type": "reasoning-end",
+          "id": "reasoning-0",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "tool-input-end",
+          "id": "get_weather_0",
+          "name": "get_weather"
+        },
+        {
+          "type": "tool-call",
+          "id": "get_weather_0",
+          "name": "get_weather",
+          "input": {
+            "city": "Paris"
+          }
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "tool-calls",
+            "raw": "tool_calls"
+          },
+          "usage": {
+            "inputTokens": 200,
+            "outputTokens": 88,
+            "nonCachedInputTokens": 200,
+            "reasoningTokens": 38,
+            "totalTokens": 288,
+            "providerMetadata": {
+              "moonshot": {
+                "prompt_tokens": 200,
+                "completion_tokens": 88,
+                "total_tokens": 288,
+                "prompt_tokens_details": {},
+                "completion_tokens_details": {
+                  "reasoning_tokens": 38
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "tool-calls",
+            "raw": "tool_calls"
+          },
+          "usage": {
+            "inputTokens": 200,
+            "outputTokens": 88,
+            "nonCachedInputTokens": 200,
+            "reasoningTokens": 38,
+            "totalTokens": 288,
+            "providerMetadata": {
+              "moonshot": {
+                "prompt_tokens": 200,
+                "completion_tokens": 88,
+                "total_tokens": 288,
+                "prompt_tokens_details": {},
+                "completion_tokens_details": {
+                  "reasoning_tokens": 38
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "model": {
+        "id": "kimi-k3",
+        "provider": "moonshotai",
+        "route": {
+          "id": "moonshot-chat",
+          "protocol": "moonshot-chat",
+          "providerMetadataKey": "moonshot"
+        },
+        "endpoint": {
+          "baseURL": "https://api.moonshot.ai/v1",
+          "path": "/chat/completions"
+        },
+        "options": {
+          "providerOptions": {
+            "reasoningEffort": "low"
+          }
+        },
+        "modelOptions": {
+          "providerOptions": {
+            "reasoningEffort": "low"
+          }
+        },
+        "compatibility": {
+          "sanitizer": "moonshot",
+          "reasoningField": "reasoning_content",
+          "maxTokensField": "max_tokens"
+        },
+        "capabilities": {
+          "tools": {
+            "strict": false
+          },
+          "promptCacheKey": true
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_moonshot_chat_kimi-k3_tool_loop",
+        "maxTokens": 4096,
+        "system": [],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Use get_weather to look up the current weather in Paris. After receiving the result, report the weather in one short sentence."
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "reasoning",
+                "text": "The user asks to use get_weather for Paris and then report in one short sentence. Need call get_weather. Then final one sentence. Ensure after receiving result report. Let's call.",
+                "providerMetadata": {
+                  "moonshot": {
+                    "reasoningField": "reasoning_content"
+                  }
+                }
+              },
+              {
+                "type": "tool-call",
+                "id": "get_weather_0",
+                "name": "get_weather",
+                "input": {
+                  "city": "Paris"
+                }
+              }
+            ]
+          },
+          {
+            "role": "tool",
+            "content": [
+              {
+                "type": "tool-result",
+                "id": "get_weather_0",
+                "name": "get_weather",
+                "result": {
+                  "type": "json",
+                  "value": {
+                    "condition": "sunny",
+                    "temperature": "18C"
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "tool",
+            "name": "get_weather",
+            "description": "Get the current weather in a city",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "city": {
+                  "type": "string",
+                  "enum": [
+                    "Paris"
+                  ]
+                }
+              },
+              "required": [
+                "city"
+              ],
+              "additionalProperties": false
+            }
+          }
+        ]
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/moonshot",
+        "modelID": "kimi-k3",
+        "settings": {
+          "apiKey": "fixture",
+          "reasoningEffort": "low"
+        }
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://api.moonshot.ai/v1/chat/completions",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "1007",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"kimi-k3\",\"messages\":[{\"role\":\"user\",\"content\":\"Use get_weather to look up the current weather in Paris. After receiving the result, report the weather in one short sentence.\"},{\"role\":\"assistant\",\"content\":null,\"tool_calls\":[{\"id\":\"get_weather_0\",\"type\":\"function\",\"function\":{\"name\":\"get_weather\",\"arguments\":\"{\\\"city\\\":\\\"Paris\\\"}\"}}],\"reasoning_content\":\"The user asks to use get_weather for Paris and then report in one short sentence. Need call get_weather. Then final one sentence. Ensure after receiving result report. Let's call.\"},{\"role\":\"tool\",\"tool_call_id\":\"get_weather_0\",\"content\":\"{\\\"condition\\\":\\\"sunny\\\",\\\"temperature\\\":\\\"18C\\\"}\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"get_weather\",\"description\":\"Get the current weather in a city\",\"parameters\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\",\"enum\":[\"Paris\"]}},\"required\":[\"city\"],\"additionalProperties\":false}}}],\"stream\":true,\"stream_options\":{\"include_usage\":true},\"max_tokens\":4096,\"reasoning_effort\":\"low\"}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream"
+            },
+            "body": "data: {\"id\":\"chatcmpl-2f2e021b6fddf565540734cd8\",\"object\":\"chat.completion.chunk\",\"created\":1788813320,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e021b6fddf565540734cd8\",\"object\":\"chat.completion.chunk\",\"created\":1788813320,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"Need\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e021b6fddf565540734cd8\",\"object\":\"chat.completion.chunk\",\"created\":1788813320,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" final\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e021b6fddf565540734cd8\",\"object\":\"chat.completion.chunk\",\"created\":1788813320,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" one\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e021b6fddf565540734cd8\",\"object\":\"chat.completion.chunk\",\"created\":1788813320,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" short\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e021b6fddf565540734cd8\",\"object\":\"chat.completion.chunk\",\"created\":1788813320,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" sentence\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e021b6fddf565540734cd8\",\"object\":\"chat.completion.chunk\",\"created\":1788813320,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" reporting\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e021b6fddf565540734cd8\",\"object\":\"chat.completion.chunk\",\"created\":1788813320,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" weather\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e021b6fddf565540734cd8\",\"object\":\"chat.completion.chunk\",\"created\":1788813320,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\".\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e021b6fddf565540734cd8\",\"object\":\"chat.completion.chunk\",\"created\":1788813320,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" Result\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e021b6fddf565540734cd8\",\"object\":\"chat.completion.chunk\",\"created\":1788813320,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\":\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e021b6fddf565540734cd8\",\"object\":\"chat.completion.chunk\",\"created\":1788813320,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" sunny\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e021b6fddf565540734cd8\",\"object\":\"chat.completion.chunk\",\"created\":1788813320,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\",\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e021b6fddf565540734cd8\",\"object\":\"chat.completion.chunk\",\"created\":1788813320,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" \"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e021b6fddf565540734cd8\",\"object\":\"chat.completion.chunk\",\"created\":1788813320,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"18\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e021b6fddf565540734cd8\",\"object\":\"chat.completion.chunk\",\"created\":1788813320,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"C\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e021b6fddf565540734cd8\",\"object\":\"chat.completion.chunk\",\"created\":1788813320,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\".\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e021b6fddf565540734cd8\",\"object\":\"chat.completion.chunk\",\"created\":1788813320,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" Say\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e021b6fddf565540734cd8\",\"object\":\"chat.completion.chunk\",\"created\":1788813320,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\":\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e021b6fddf565540734cd8\",\"object\":\"chat.completion.chunk\",\"created\":1788813320,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" It\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e021b6fddf565540734cd8\",\"object\":\"chat.completion.chunk\",\"created\":1788813320,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"’s\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e021b6fddf565540734cd8\",\"object\":\"chat.completion.chunk\",\"created\":1788813320,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" sunny\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e021b6fddf565540734cd8\",\"object\":\"chat.completion.chunk\",\"created\":1788813320,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" in\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e021b6fddf565540734cd8\",\"object\":\"chat.completion.chunk\",\"created\":1788813320,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" Paris\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e021b6fddf565540734cd8\",\"object\":\"chat.completion.chunk\",\"created\":1788813320,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" with\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e021b6fddf565540734cd8\",\"object\":\"chat.completion.chunk\",\"created\":1788813320,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" a\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e021b6fddf565540734cd8\",\"object\":\"chat.completion.chunk\",\"created\":1788813320,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" temperature\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e021b6fddf565540734cd8\",\"object\":\"chat.completion.chunk\",\"created\":1788813320,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" of\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e021b6fddf565540734cd8\",\"object\":\"chat.completion.chunk\",\"created\":1788813320,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" \"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e021b6fddf565540734cd8\",\"object\":\"chat.completion.chunk\",\"created\":1788813320,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"18\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e021b6fddf565540734cd8\",\"object\":\"chat.completion.chunk\",\"created\":1788813320,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"°C\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e021b6fddf565540734cd8\",\"object\":\"chat.completion.chunk\",\"created\":1788813320,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\".\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e021b6fddf565540734cd8\",\"object\":\"chat.completion.chunk\",\"created\":1788813320,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" Ensure\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e021b6fddf565540734cd8\",\"object\":\"chat.completion.chunk\",\"created\":1788813320,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" one\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e021b6fddf565540734cd8\",\"object\":\"chat.completion.chunk\",\"created\":1788813320,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" sentence\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e021b6fddf565540734cd8\",\"object\":\"chat.completion.chunk\",\"created\":1788813320,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\".\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e021b6fddf565540734cd8\",\"object\":\"chat.completion.chunk\",\"created\":1788813320,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e021b6fddf565540734cd8\",\"object\":\"chat.completion.chunk\",\"created\":1788813320,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"It\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e021b6fddf565540734cd8\",\"object\":\"chat.completion.chunk\",\"created\":1788813320,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"’s\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e021b6fddf565540734cd8\",\"object\":\"chat.completion.chunk\",\"created\":1788813320,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\" sunny\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e021b6fddf565540734cd8\",\"object\":\"chat.completion.chunk\",\"created\":1788813320,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\" in\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e021b6fddf565540734cd8\",\"object\":\"chat.completion.chunk\",\"created\":1788813320,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\" Paris\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e021b6fddf565540734cd8\",\"object\":\"chat.completion.chunk\",\"created\":1788813320,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\" with\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e021b6fddf565540734cd8\",\"object\":\"chat.completion.chunk\",\"created\":1788813320,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\" a\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e021b6fddf565540734cd8\",\"object\":\"chat.completion.chunk\",\"created\":1788813320,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\" temperature\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e021b6fddf565540734cd8\",\"object\":\"chat.completion.chunk\",\"created\":1788813320,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\" of\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e021b6fddf565540734cd8\",\"object\":\"chat.completion.chunk\",\"created\":1788813320,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\" \"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e021b6fddf565540734cd8\",\"object\":\"chat.completion.chunk\",\"created\":1788813320,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"18\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e021b6fddf565540734cd8\",\"object\":\"chat.completion.chunk\",\"created\":1788813320,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"°C\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e021b6fddf565540734cd8\",\"object\":\"chat.completion.chunk\",\"created\":1788813320,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\".\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e021b6fddf565540734cd8\",\"object\":\"chat.completion.chunk\",\"created\":1788813320,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\",\"usage\":{\"prompt_tokens\":330,\"completion_tokens\":61,\"total_tokens\":391,\"completion_tokens_details\":{\"reasoning_tokens\":35},\"prompt_tokens_details\":{}}}]}\n\ndata: {\"id\":\"chatcmpl-2f2e021b6fddf565540734cd8\",\"object\":\"chat.completion.chunk\",\"created\":1788813320,\"model\":\"kimi-k3\",\"choices\":[],\"usage\":{\"prompt_tokens\":330,\"completion_tokens\":61,\"total_tokens\":391,\"completion_tokens_details\":{\"reasoning_tokens\":35},\"prompt_tokens_details\":{}}}\n\ndata: [DONE]\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "reasoning-start",
+          "id": "reasoning-0",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "Need",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " final",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " one",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " short",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " sentence",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " reporting",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " weather",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ".",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " Result",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ":",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " sunny",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ",",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " ",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "18",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "C",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ".",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " Say",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ":",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " It",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "’s",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " sunny",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " in",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " Paris",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " with",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " a",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " temperature",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " of",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " ",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "18",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "°C",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ".",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " Ensure",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " one",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " sentence",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ".",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "text-start",
+          "id": "text-0"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "It"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "’s"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " sunny"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " in"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " Paris"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " with"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " a"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " temperature"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " of"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " "
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "18"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "°C"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "."
+        },
+        {
+          "type": "reasoning-end",
+          "id": "reasoning-0",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "text-end",
+          "id": "text-0"
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 330,
+            "outputTokens": 61,
+            "nonCachedInputTokens": 330,
+            "reasoningTokens": 35,
+            "totalTokens": 391,
+            "providerMetadata": {
+              "moonshot": {
+                "prompt_tokens": 330,
+                "completion_tokens": 61,
+                "total_tokens": 391,
+                "prompt_tokens_details": {},
+                "completion_tokens_details": {
+                  "reasoning_tokens": 35
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 330,
+            "outputTokens": 61,
+            "nonCachedInputTokens": 330,
+            "reasoningTokens": 35,
+            "totalTokens": 391,
+            "providerMetadata": {
+              "moonshot": {
+                "prompt_tokens": 330,
+                "completion_tokens": 61,
+                "total_tokens": 391,
+                "prompt_tokens_details": {},
+                "completion_tokens_details": {
+                  "reasoning_tokens": 35
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "model": {
+        "id": "kimi-k3",
+        "provider": "moonshotai",
+        "route": {
+          "id": "moonshot-chat",
+          "protocol": "moonshot-chat",
+          "providerMetadataKey": "moonshot"
+        },
+        "endpoint": {
+          "baseURL": "https://api.moonshot.ai/v1",
+          "path": "/chat/completions"
+        },
+        "options": {
+          "providerOptions": {
+            "reasoningEffort": "low"
+          }
+        },
+        "modelOptions": {
+          "providerOptions": {
+            "reasoningEffort": "low"
+          }
+        },
+        "compatibility": {
+          "sanitizer": "moonshot",
+          "reasoningField": "reasoning_content",
+          "maxTokensField": "max_tokens"
+        },
+        "capabilities": {
+          "tools": {
+            "strict": false
+          },
+          "promptCacheKey": true
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_moonshot_chat_kimi-k3_tool_loop",
+        "maxTokens": 4096,
+        "system": [],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Use get_weather to look up the current weather in Paris. After receiving the result, report the weather in one short sentence."
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "reasoning",
+                "text": "The user asks to use get_weather for Paris and then report in one short sentence. Need call get_weather. Then final one sentence. Ensure after receiving result report. Let's call.",
+                "providerMetadata": {
+                  "moonshot": {
+                    "reasoningField": "reasoning_content"
+                  }
+                }
+              },
+              {
+                "type": "tool-call",
+                "id": "get_weather_0",
+                "name": "get_weather",
+                "input": {
+                  "city": "Paris"
+                }
+              }
+            ]
+          },
+          {
+            "role": "tool",
+            "content": [
+              {
+                "type": "tool-result",
+                "id": "get_weather_0",
+                "name": "get_weather",
+                "result": {
+                  "type": "json",
+                  "value": {
+                    "condition": "sunny",
+                    "temperature": "18C"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "reasoning",
+                "text": "Need final one short sentence reporting weather. Result: sunny, 18C. Say: It’s sunny in Paris with a temperature of 18°C. Ensure one sentence.",
+                "providerMetadata": {
+                  "moonshot": {
+                    "reasoningField": "reasoning_content"
+                  }
+                }
+              },
+              {
+                "type": "text",
+                "text": "It’s sunny in Paris with a temperature of 18°C."
+              }
+            ]
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "What temperature did the tool report? Reply with only the temperature."
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "tool",
+            "name": "get_weather",
+            "description": "Get the current weather in a city",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "city": {
+                  "type": "string",
+                  "enum": [
+                    "Paris"
+                  ]
+                }
+              },
+              "required": [
+                "city"
+              ],
+              "additionalProperties": false
+            }
+          }
+        ]
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/moonshot",
+        "modelID": "kimi-k3",
+        "settings": {
+          "apiKey": "fixture",
+          "reasoningEffort": "low"
+        }
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://api.moonshot.ai/v1/chat/completions",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "1358",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"kimi-k3\",\"messages\":[{\"role\":\"user\",\"content\":\"Use get_weather to look up the current weather in Paris. After receiving the result, report the weather in one short sentence.\"},{\"role\":\"assistant\",\"content\":null,\"tool_calls\":[{\"id\":\"get_weather_0\",\"type\":\"function\",\"function\":{\"name\":\"get_weather\",\"arguments\":\"{\\\"city\\\":\\\"Paris\\\"}\"}}],\"reasoning_content\":\"The user asks to use get_weather for Paris and then report in one short sentence. Need call get_weather. Then final one sentence. Ensure after receiving result report. Let's call.\"},{\"role\":\"tool\",\"tool_call_id\":\"get_weather_0\",\"content\":\"{\\\"condition\\\":\\\"sunny\\\",\\\"temperature\\\":\\\"18C\\\"}\"},{\"role\":\"assistant\",\"content\":\"It’s sunny in Paris with a temperature of 18°C.\",\"reasoning_content\":\"Need final one short sentence reporting weather. Result: sunny, 18C. Say: It’s sunny in Paris with a temperature of 18°C. Ensure one sentence.\"},{\"role\":\"user\",\"content\":\"What temperature did the tool report? Reply with only the temperature.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"get_weather\",\"description\":\"Get the current weather in a city\",\"parameters\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\",\"enum\":[\"Paris\"]}},\"required\":[\"city\"],\"additionalProperties\":false}}}],\"stream\":true,\"stream_options\":{\"include_usage\":true},\"max_tokens\":4096,\"reasoning_effort\":\"low\"}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream"
+            },
+            "body": "data: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"The\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" user\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" asks\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" what\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" temperature\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" tool\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" reported\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\",\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" reply\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" only\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" temperature\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\".\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" Tool\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" returned\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" \\\"\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"temperature\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"\\\":\\\"\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"18\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"C\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"\\\".\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" Need\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" final\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" only\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" \"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"18\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"C\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" maybe\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" no\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" degree\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" symbol\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\".\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" Ensure\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" only\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" temperature\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\".\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" Since\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" they\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" want\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" only\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" temperature\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\",\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" output\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" \"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"18\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"C\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\".\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" No\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" extra\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" words\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\".\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"18\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"C\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\",\"usage\":{\"prompt_tokens\":425,\"completion_tokens\":65,\"total_tokens\":490,\"cached_tokens\":256,\"completion_tokens_details\":{\"reasoning_tokens\":50},\"prompt_tokens_details\":{\"cached_tokens\":256}}}]}\n\ndata: {\"id\":\"chatcmpl-2f2e0f808196c7b8d61943f1e\",\"object\":\"chat.completion.chunk\",\"created\":1788813324,\"model\":\"kimi-k3\",\"choices\":[],\"usage\":{\"prompt_tokens\":425,\"completion_tokens\":65,\"total_tokens\":490,\"cached_tokens\":256,\"completion_tokens_details\":{\"reasoning_tokens\":50},\"prompt_tokens_details\":{\"cached_tokens\":256}}}\n\ndata: [DONE]\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "reasoning-start",
+          "id": "reasoning-0",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "The",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " user",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " asks",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " what",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " temperature",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " tool",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " reported",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ",",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " reply",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " only",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " temperature",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ".",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " Tool",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " returned",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " \"",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "temperature",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "\":\"",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "18",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "C",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "\".",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " Need",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " final",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " only",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " ",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "18",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "C",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " maybe",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " no",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " degree",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " symbol",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ".",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " Ensure",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " only",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " temperature",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ".",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " Since",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " they",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " want",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " only",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " temperature",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ",",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " output",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " ",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "18",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "C",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ".",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " No",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " extra",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " words",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ".",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "text-start",
+          "id": "text-0"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "18"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "C"
+        },
+        {
+          "type": "reasoning-end",
+          "id": "reasoning-0",
+          "providerMetadata": {
+            "moonshot": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "text-end",
+          "id": "text-0"
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 425,
+            "outputTokens": 65,
+            "nonCachedInputTokens": 169,
+            "cacheReadInputTokens": 256,
+            "reasoningTokens": 50,
+            "totalTokens": 490,
+            "providerMetadata": {
+              "moonshot": {
+                "prompt_tokens": 425,
+                "completion_tokens": 65,
+                "total_tokens": 490,
+                "cached_tokens": 256,
+                "prompt_tokens_details": {
+                  "cached_tokens": 256
+                },
+                "completion_tokens_details": {
+                  "reasoning_tokens": 50
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 425,
+            "outputTokens": 65,
+            "nonCachedInputTokens": 169,
+            "cacheReadInputTokens": 256,
+            "reasoningTokens": 50,
+            "totalTokens": 490,
+            "providerMetadata": {
+              "moonshot": {
+                "prompt_tokens": 425,
+                "completion_tokens": 65,
+                "total_tokens": 490,
+                "cached_tokens": 256,
+                "prompt_tokens_details": {
+                  "cached_tokens": 256
+                },
+                "completion_tokens_details": {
+                  "reasoning_tokens": 50
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

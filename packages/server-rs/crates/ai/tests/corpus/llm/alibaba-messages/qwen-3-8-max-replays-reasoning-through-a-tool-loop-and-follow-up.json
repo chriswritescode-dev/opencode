@@ -1,0 +1,933 @@
+{
+  "cassette": "alibaba-messages/qwen-3-8-max-replays-reasoning-through-a-tool-loop-and-follow-up",
+  "protocol": "alibaba-messages",
+  "routeId": "alibaba-messages",
+  "clockEpochMs": 1767323045000,
+  "steps": [
+    {
+      "model": {
+        "id": "qwen3.8-max",
+        "provider": "alibaba",
+        "route": {
+          "id": "alibaba-messages",
+          "protocol": "alibaba-messages",
+          "providerMetadataKey": "alibaba"
+        },
+        "endpoint": {
+          "baseURL": "https://dashscope-intl.aliyuncs.com/apps/anthropic/v1",
+          "path": "/messages"
+        },
+        "compatibility": {
+          "requireSignature": false
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_alibaba_messages_qwen_3_8_max_tool_loop",
+        "maxTokens": 4096,
+        "providerOptions": {
+          "effort": "medium"
+        },
+        "system": [],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "We have a budget of 38000 dollars for 219 trips costing 173 dollars each. Calculate whether that is affordable. If it is, use get_weather to look up the current weather in Paris. After receiving the result, report the weather in one short sentence."
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "tool",
+            "name": "get_weather",
+            "description": "Get the current weather in a city",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "city": {
+                  "type": "string",
+                  "enum": [
+                    "Paris"
+                  ]
+                }
+              },
+              "required": [
+                "city"
+              ],
+              "additionalProperties": false
+            }
+          }
+        ]
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/alibaba/messages",
+        "modelID": "qwen3.8-max",
+        "settings": {
+          "region": "ap-southeast-1",
+          "apiKey": "fixture"
+        }
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://dashscope-intl.aliyuncs.com/apps/anthropic/v1/messages",
+            "headers": {
+              "anthropic-version": "2023-06-01",
+              "authorization": "Bearer fixture",
+              "content-length": "702",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"qwen3.8-max\",\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"We have a budget of 38000 dollars for 219 trips costing 173 dollars each. Calculate whether that is affordable. If it is, use get_weather to look up the current weather in Paris. After receiving the result, report the weather in one short sentence.\",\"cache_control\":{\"type\":\"ephemeral\"}}]}],\"tools\":[{\"name\":\"get_weather\",\"description\":\"Get the current weather in a city\",\"input_schema\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\",\"enum\":[\"Paris\"]}},\"required\":[\"city\"],\"additionalProperties\":false},\"cache_control\":{\"type\":\"ephemeral\"}}],\"stream\":true,\"max_tokens\":4096,\"output_config\":{\"effort\":\"medium\"}}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream"
+            },
+            "body": "event:ping\ndata:{\"type\":\"ping\"}\n\nevent:message_start\ndata:{\"message\":{\"model\":\"qwen3.8-max\",\"id\":\"msg_91737fe2-1513-9c19-9477-fda7f3bb52b4\",\"role\":\"assistant\",\"type\":\"message\",\"content\":[],\"usage\":{\"input_tokens\":107,\"output_tokens\":0}},\"type\":\"message_start\"}\n\nevent:content_block_start\ndata:{\"type\":\"content_block_start\",\"content_block\":{\"type\":\"thinking\",\"signature\":\"\",\"thinking\":\"\"},\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\"2\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\"19 ×\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\" 173\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\" = 37\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\"887.\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\" ≤\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\" 380\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\"00, affordable\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\". Then call get\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\"_weather Paris\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\".\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"signature_delta\",\"signature\":\"\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_stop\ndata:{\"type\":\"content_block_stop\",\"index\":0}\n\nevent:content_block_start\ndata:{\"type\":\"content_block_start\",\"content_block\":{\"name\":\"get_weather\",\"input\":{},\"id\":\"toolu_4b23422a5a214d5897e91ff2\",\"type\":\"tool_use\"},\"index\":1}\n\nevent:content_block_delta\ndata:{\"delta\":{\"partial_json\":\"\",\"type\":\"input_json_delta\"},\"type\":\"content_block_delta\",\"index\":1}\n\nevent:content_block_delta\ndata:{\"delta\":{\"partial_json\":\"{\\\"city\\\": \\\"Paris\",\"type\":\"input_json_delta\"},\"type\":\"content_block_delta\",\"index\":1}\n\nevent:content_block_delta\ndata:{\"delta\":{\"partial_json\":\"\\\"\",\"type\":\"input_json_delta\"},\"type\":\"content_block_delta\",\"index\":1}\n\nevent:content_block_delta\ndata:{\"delta\":{\"partial_json\":\"}\",\"type\":\"input_json_delta\"},\"type\":\"content_block_delta\",\"index\":1}\n\nevent:content_block_stop\ndata:{\"type\":\"content_block_stop\",\"index\":1}\n\nevent:message_delta\ndata:{\"delta\":{\"stop_reason\":\"tool_use\"},\"type\":\"message_delta\",\"usage\":{\"cache_creation\":{\"ephemeral_5m_input_tokens\":0},\"output_tokens\":60,\"cache_creation_input_tokens\":0,\"input_tokens\":351,\"cache_read_input_tokens\":0,\"prompt_tokens_details\":{\"cached_tokens\":0}}}\n\nevent:message_stop\ndata:{\"type\":\"message_stop\"}\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "reasoning-start",
+          "id": "reasoning-0",
+          "providerMetadata": {
+            "alibaba": {
+              "signature": ""
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "2"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "19 ×"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " 173"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " = 37"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "887."
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " ≤"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " 380"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "00, affordable"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ". Then call get"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "_weather Paris"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "."
+        },
+        {
+          "type": "reasoning-end",
+          "id": "reasoning-0",
+          "providerMetadata": {
+            "alibaba": {
+              "signature": ""
+            }
+          }
+        },
+        {
+          "type": "tool-input-start",
+          "id": "toolu_4b23422a5a214d5897e91ff2",
+          "name": "get_weather"
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "toolu_4b23422a5a214d5897e91ff2",
+          "name": "get_weather",
+          "text": "{\"city\": \"Paris",
+          "input": {
+            "city": "Paris"
+          }
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "toolu_4b23422a5a214d5897e91ff2",
+          "name": "get_weather",
+          "text": "\"",
+          "input": {
+            "city": "Paris"
+          }
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "toolu_4b23422a5a214d5897e91ff2",
+          "name": "get_weather",
+          "text": "}",
+          "input": {
+            "city": "Paris"
+          }
+        },
+        {
+          "type": "tool-input-end",
+          "id": "toolu_4b23422a5a214d5897e91ff2",
+          "name": "get_weather"
+        },
+        {
+          "type": "tool-call",
+          "id": "toolu_4b23422a5a214d5897e91ff2",
+          "name": "get_weather",
+          "input": {
+            "city": "Paris"
+          }
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "tool-calls",
+            "raw": "tool_use"
+          },
+          "usage": {
+            "inputTokens": 351,
+            "outputTokens": 60,
+            "nonCachedInputTokens": 351,
+            "cacheReadInputTokens": 0,
+            "cacheWriteInputTokens": 0,
+            "totalTokens": 411,
+            "providerMetadata": {
+              "alibaba": {
+                "input_tokens": 351,
+                "output_tokens": 60,
+                "cache_creation_input_tokens": 0,
+                "cache_read_input_tokens": 0,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0
+                },
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "tool-calls",
+            "raw": "tool_use"
+          },
+          "usage": {
+            "inputTokens": 351,
+            "outputTokens": 60,
+            "nonCachedInputTokens": 351,
+            "cacheReadInputTokens": 0,
+            "cacheWriteInputTokens": 0,
+            "totalTokens": 411,
+            "providerMetadata": {
+              "alibaba": {
+                "input_tokens": 351,
+                "output_tokens": 60,
+                "cache_creation_input_tokens": 0,
+                "cache_read_input_tokens": 0,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0
+                },
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "model": {
+        "id": "qwen3.8-max",
+        "provider": "alibaba",
+        "route": {
+          "id": "alibaba-messages",
+          "protocol": "alibaba-messages",
+          "providerMetadataKey": "alibaba"
+        },
+        "endpoint": {
+          "baseURL": "https://dashscope-intl.aliyuncs.com/apps/anthropic/v1",
+          "path": "/messages"
+        },
+        "compatibility": {
+          "requireSignature": false
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_alibaba_messages_qwen_3_8_max_tool_loop",
+        "maxTokens": 4096,
+        "providerOptions": {
+          "effort": "medium"
+        },
+        "system": [],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "We have a budget of 38000 dollars for 219 trips costing 173 dollars each. Calculate whether that is affordable. If it is, use get_weather to look up the current weather in Paris. After receiving the result, report the weather in one short sentence."
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "reasoning",
+                "text": "219 × 173 = 37887. ≤ 38000, affordable. Then call get_weather Paris.",
+                "providerMetadata": {
+                  "alibaba": {
+                    "signature": ""
+                  }
+                }
+              },
+              {
+                "type": "tool-call",
+                "id": "toolu_4b23422a5a214d5897e91ff2",
+                "name": "get_weather",
+                "input": {
+                  "city": "Paris"
+                }
+              }
+            ]
+          },
+          {
+            "role": "tool",
+            "content": [
+              {
+                "type": "tool-result",
+                "id": "toolu_4b23422a5a214d5897e91ff2",
+                "name": "get_weather",
+                "result": {
+                  "type": "json",
+                  "value": {
+                    "condition": "sunny",
+                    "temperature": "18C"
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "tool",
+            "name": "get_weather",
+            "description": "Get the current weather in a city",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "city": {
+                  "type": "string",
+                  "enum": [
+                    "Paris"
+                  ]
+                }
+              },
+              "required": [
+                "city"
+              ],
+              "additionalProperties": false
+            }
+          }
+        ]
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/alibaba/messages",
+        "modelID": "qwen3.8-max",
+        "settings": {
+          "region": "ap-southeast-1",
+          "apiKey": "fixture"
+        }
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://dashscope-intl.aliyuncs.com/apps/anthropic/v1/messages",
+            "headers": {
+              "anthropic-version": "2023-06-01",
+              "authorization": "Bearer fixture",
+              "content-length": "1119",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"qwen3.8-max\",\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"We have a budget of 38000 dollars for 219 trips costing 173 dollars each. Calculate whether that is affordable. If it is, use get_weather to look up the current weather in Paris. After receiving the result, report the weather in one short sentence.\"}]},{\"role\":\"assistant\",\"content\":[{\"type\":\"thinking\",\"thinking\":\"219 × 173 = 37887. ≤ 38000, affordable. Then call get_weather Paris.\",\"signature\":\"\"},{\"type\":\"tool_use\",\"id\":\"toolu_4b23422a5a214d5897e91ff2\",\"name\":\"get_weather\",\"input\":{\"city\":\"Paris\"}}]},{\"role\":\"user\",\"content\":[{\"type\":\"tool_result\",\"tool_use_id\":\"toolu_4b23422a5a214d5897e91ff2\",\"content\":\"{\\\"condition\\\":\\\"sunny\\\",\\\"temperature\\\":\\\"18C\\\"}\",\"cache_control\":{\"type\":\"ephemeral\"}}]}],\"tools\":[{\"name\":\"get_weather\",\"description\":\"Get the current weather in a city\",\"input_schema\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\",\"enum\":[\"Paris\"]}},\"required\":[\"city\"],\"additionalProperties\":false},\"cache_control\":{\"type\":\"ephemeral\"}}],\"stream\":true,\"max_tokens\":4096,\"output_config\":{\"effort\":\"medium\"}}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream"
+            },
+            "body": "event:ping\ndata:{\"type\":\"ping\"}\n\nevent:message_start\ndata:{\"message\":{\"model\":\"qwen3.8-max\",\"id\":\"msg_0621b485-def4-9a5f-b285-e78a8fbec8fe\",\"role\":\"assistant\",\"type\":\"message\",\"content\":[],\"usage\":{\"input_tokens\":107,\"output_tokens\":0}},\"type\":\"message_start\"}\n\nevent:content_block_start\ndata:{\"type\":\"content_block_start\",\"content_block\":{\"type\":\"thinking\",\"signature\":\"\",\"thinking\":\"\"},\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\"Calc\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\"ulation: 2\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\"19 × \"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\"173 =\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\" 37,\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\"887 dollars\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\" ≤ 38\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\",000\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\" dollars, so it\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\"'s purch\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\"asable.\\n\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"signature_delta\",\"signature\":\"\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_stop\ndata:{\"type\":\"content_block_stop\",\"index\":0}\n\nevent:content_block_start\ndata:{\"type\":\"content_block_start\",\"content_block\":{\"type\":\"text\",\"text\":\"\"},\"index\":1}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"text_delta\",\"text\":\"Yes,\"},\"type\":\"content_block_delta\",\"index\":1}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"text_delta\",\"text\":\" it's affordable\"},\"type\":\"content_block_delta\",\"index\":1}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"text_delta\",\"text\":\": 21\"},\"type\":\"content_block_delta\",\"index\":1}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"text_delta\",\"text\":\"9 trips × $\"},\"type\":\"content_block_delta\",\"index\":1}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"text_delta\",\"text\":\"173 =\"},\"type\":\"content_block_delta\",\"index\":1}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"text_delta\",\"text\":\" $37,\"},\"type\":\"content_block_delta\",\"index\":1}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"text_delta\",\"text\":\"887,\"},\"type\":\"content_block_delta\",\"index\":1}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"text_delta\",\"text\":\" which is within the\"},\"type\":\"content_block_delta\",\"index\":1}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"text_delta\",\"text\":\" $38,\"},\"type\":\"content_block_delta\",\"index\":1}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"text_delta\",\"text\":\"000 budget\"},\"type\":\"content_block_delta\",\"index\":1}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"text_delta\",\"text\":\" (leaving $\"},\"type\":\"content_block_delta\",\"index\":1}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"text_delta\",\"text\":\"1\"},\"type\":\"content_block_delta\",\"index\":1}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"text_delta\",\"text\":\"13 to spare\"},\"type\":\"content_block_delta\",\"index\":1}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"text_delta\",\"text\":\"). Paris is currently\"},\"type\":\"content_block_delta\",\"index\":1}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"text_delta\",\"text\":\" sunny at\"},\"type\":\"content_block_delta\",\"index\":1}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"text_delta\",\"text\":\" 18°C\"},\"type\":\"content_block_delta\",\"index\":1}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"text_delta\",\"text\":\".\"},\"type\":\"content_block_delta\",\"index\":1}\n\nevent:content_block_stop\ndata:{\"type\":\"content_block_stop\",\"index\":1}\n\nevent:message_delta\ndata:{\"delta\":{\"stop_reason\":\"end_turn\"},\"type\":\"message_delta\",\"usage\":{\"cache_creation\":{\"ephemeral_5m_input_tokens\":0},\"output_tokens\":98,\"cache_creation_input_tokens\":0,\"input_tokens\":439,\"cache_read_input_tokens\":0,\"prompt_tokens_details\":{\"cached_tokens\":0}}}\n\nevent:message_stop\ndata:{\"type\":\"message_stop\"}\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "reasoning-start",
+          "id": "reasoning-0",
+          "providerMetadata": {
+            "alibaba": {
+              "signature": ""
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "Calc"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "ulation: 2"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "19 × "
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "173 ="
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " 37,"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "887 dollars"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " ≤ 38"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ",000"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " dollars, so it"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "'s purch"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "asable.\n"
+        },
+        {
+          "type": "reasoning-end",
+          "id": "reasoning-0",
+          "providerMetadata": {
+            "alibaba": {
+              "signature": ""
+            }
+          }
+        },
+        {
+          "type": "text-start",
+          "id": "text-1"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-1",
+          "text": "Yes,"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-1",
+          "text": " it's affordable"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-1",
+          "text": ": 21"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-1",
+          "text": "9 trips × $"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-1",
+          "text": "173 ="
+        },
+        {
+          "type": "text-delta",
+          "id": "text-1",
+          "text": " $37,"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-1",
+          "text": "887,"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-1",
+          "text": " which is within the"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-1",
+          "text": " $38,"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-1",
+          "text": "000 budget"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-1",
+          "text": " (leaving $"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-1",
+          "text": "1"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-1",
+          "text": "13 to spare"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-1",
+          "text": "). Paris is currently"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-1",
+          "text": " sunny at"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-1",
+          "text": " 18°C"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-1",
+          "text": "."
+        },
+        {
+          "type": "text-end",
+          "id": "text-1"
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "stop",
+            "raw": "end_turn"
+          },
+          "usage": {
+            "inputTokens": 439,
+            "outputTokens": 98,
+            "nonCachedInputTokens": 439,
+            "cacheReadInputTokens": 0,
+            "cacheWriteInputTokens": 0,
+            "totalTokens": 537,
+            "providerMetadata": {
+              "alibaba": {
+                "input_tokens": 439,
+                "output_tokens": 98,
+                "cache_creation_input_tokens": 0,
+                "cache_read_input_tokens": 0,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0
+                },
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "stop",
+            "raw": "end_turn"
+          },
+          "usage": {
+            "inputTokens": 439,
+            "outputTokens": 98,
+            "nonCachedInputTokens": 439,
+            "cacheReadInputTokens": 0,
+            "cacheWriteInputTokens": 0,
+            "totalTokens": 537,
+            "providerMetadata": {
+              "alibaba": {
+                "input_tokens": 439,
+                "output_tokens": 98,
+                "cache_creation_input_tokens": 0,
+                "cache_read_input_tokens": 0,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0
+                },
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "model": {
+        "id": "qwen3.8-max",
+        "provider": "alibaba",
+        "route": {
+          "id": "alibaba-messages",
+          "protocol": "alibaba-messages",
+          "providerMetadataKey": "alibaba"
+        },
+        "endpoint": {
+          "baseURL": "https://dashscope-intl.aliyuncs.com/apps/anthropic/v1",
+          "path": "/messages"
+        },
+        "compatibility": {
+          "requireSignature": false
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_alibaba_messages_qwen_3_8_max_tool_loop",
+        "maxTokens": 4096,
+        "providerOptions": {
+          "effort": "medium"
+        },
+        "system": [],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "We have a budget of 38000 dollars for 219 trips costing 173 dollars each. Calculate whether that is affordable. If it is, use get_weather to look up the current weather in Paris. After receiving the result, report the weather in one short sentence."
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "reasoning",
+                "text": "219 × 173 = 37887. ≤ 38000, affordable. Then call get_weather Paris.",
+                "providerMetadata": {
+                  "alibaba": {
+                    "signature": ""
+                  }
+                }
+              },
+              {
+                "type": "tool-call",
+                "id": "toolu_4b23422a5a214d5897e91ff2",
+                "name": "get_weather",
+                "input": {
+                  "city": "Paris"
+                }
+              }
+            ]
+          },
+          {
+            "role": "tool",
+            "content": [
+              {
+                "type": "tool-result",
+                "id": "toolu_4b23422a5a214d5897e91ff2",
+                "name": "get_weather",
+                "result": {
+                  "type": "json",
+                  "value": {
+                    "condition": "sunny",
+                    "temperature": "18C"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "reasoning",
+                "text": "Calculation: 219 × 173 = 37,887 dollars ≤ 38,000 dollars, so it's purchasable.\n",
+                "providerMetadata": {
+                  "alibaba": {
+                    "signature": ""
+                  }
+                }
+              },
+              {
+                "type": "text",
+                "text": "Yes, it's affordable: 219 trips × $173 = $37,887, which is within the $38,000 budget (leaving $113 to spare). Paris is currently sunny at 18°C."
+              }
+            ]
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "What temperature did the tool report? Reply with only the temperature."
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "tool",
+            "name": "get_weather",
+            "description": "Get the current weather in a city",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "city": {
+                  "type": "string",
+                  "enum": [
+                    "Paris"
+                  ]
+                }
+              },
+              "required": [
+                "city"
+              ],
+              "additionalProperties": false
+            }
+          }
+        ]
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/alibaba/messages",
+        "modelID": "qwen3.8-max",
+        "settings": {
+          "region": "ap-southeast-1",
+          "apiKey": "fixture"
+        }
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://dashscope-intl.aliyuncs.com/apps/anthropic/v1/messages",
+            "headers": {
+              "anthropic-version": "2023-06-01",
+              "authorization": "Bearer fixture",
+              "content-length": "1579",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"qwen3.8-max\",\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"We have a budget of 38000 dollars for 219 trips costing 173 dollars each. Calculate whether that is affordable. If it is, use get_weather to look up the current weather in Paris. After receiving the result, report the weather in one short sentence.\"}]},{\"role\":\"assistant\",\"content\":[{\"type\":\"thinking\",\"thinking\":\"219 × 173 = 37887. ≤ 38000, affordable. Then call get_weather Paris.\",\"signature\":\"\"},{\"type\":\"tool_use\",\"id\":\"toolu_4b23422a5a214d5897e91ff2\",\"name\":\"get_weather\",\"input\":{\"city\":\"Paris\"}}]},{\"role\":\"user\",\"content\":[{\"type\":\"tool_result\",\"tool_use_id\":\"toolu_4b23422a5a214d5897e91ff2\",\"content\":\"{\\\"condition\\\":\\\"sunny\\\",\\\"temperature\\\":\\\"18C\\\"}\"}]},{\"role\":\"assistant\",\"content\":[{\"type\":\"thinking\",\"thinking\":\"Calculation: 219 × 173 = 37,887 dollars ≤ 38,000 dollars, so it's purchasable.\\n\",\"signature\":\"\"},{\"type\":\"text\",\"text\":\"Yes, it's affordable: 219 trips × $173 = $37,887, which is within the $38,000 budget (leaving $113 to spare). Paris is currently sunny at 18°C.\"}]},{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"What temperature did the tool report? Reply with only the temperature.\",\"cache_control\":{\"type\":\"ephemeral\"}}]}],\"tools\":[{\"name\":\"get_weather\",\"description\":\"Get the current weather in a city\",\"input_schema\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\",\"enum\":[\"Paris\"]}},\"required\":[\"city\"],\"additionalProperties\":false},\"cache_control\":{\"type\":\"ephemeral\"}}],\"stream\":true,\"max_tokens\":4096,\"output_config\":{\"effort\":\"medium\"}}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream"
+            },
+            "body": "event:ping\ndata:{\"type\":\"ping\"}\n\nevent:message_start\ndata:{\"message\":{\"model\":\"qwen3.8-max\",\"id\":\"msg_810c014d-d6e0-9241-9a30-dfdbc122757c\",\"role\":\"assistant\",\"type\":\"message\",\"content\":[],\"usage\":{\"input_tokens\":177,\"output_tokens\":0}},\"type\":\"message_start\"}\n\nevent:content_block_start\ndata:{\"type\":\"content_block_start\",\"content_block\":{\"type\":\"thinking\",\"signature\":\"\",\"thinking\":\"\"},\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\"The\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\" tool reported the\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\" temperature as \\\"\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\"18C\\\".\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"signature_delta\",\"signature\":\"\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_stop\ndata:{\"type\":\"content_block_stop\",\"index\":0}\n\nevent:content_block_start\ndata:{\"type\":\"content_block_start\",\"content_block\":{\"type\":\"text\",\"text\":\"\"},\"index\":1}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"text_delta\",\"text\":\"1\"},\"type\":\"content_block_delta\",\"index\":1}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"text_delta\",\"text\":\"8C\"},\"type\":\"content_block_delta\",\"index\":1}\n\nevent:content_block_stop\ndata:{\"type\":\"content_block_stop\",\"index\":1}\n\nevent:message_delta\ndata:{\"delta\":{\"stop_reason\":\"end_turn\"},\"type\":\"message_delta\",\"usage\":{\"cache_creation\":{\"ephemeral_5m_input_tokens\":0},\"output_tokens\":17,\"cache_creation_input_tokens\":0,\"input_tokens\":562,\"cache_read_input_tokens\":0,\"prompt_tokens_details\":{\"cached_tokens\":0}}}\n\nevent:message_stop\ndata:{\"type\":\"message_stop\"}\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "reasoning-start",
+          "id": "reasoning-0",
+          "providerMetadata": {
+            "alibaba": {
+              "signature": ""
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "The"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " tool reported the"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " temperature as \""
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "18C\"."
+        },
+        {
+          "type": "reasoning-end",
+          "id": "reasoning-0",
+          "providerMetadata": {
+            "alibaba": {
+              "signature": ""
+            }
+          }
+        },
+        {
+          "type": "text-start",
+          "id": "text-1"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-1",
+          "text": "1"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-1",
+          "text": "8C"
+        },
+        {
+          "type": "text-end",
+          "id": "text-1"
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "stop",
+            "raw": "end_turn"
+          },
+          "usage": {
+            "inputTokens": 562,
+            "outputTokens": 17,
+            "nonCachedInputTokens": 562,
+            "cacheReadInputTokens": 0,
+            "cacheWriteInputTokens": 0,
+            "totalTokens": 579,
+            "providerMetadata": {
+              "alibaba": {
+                "input_tokens": 562,
+                "output_tokens": 17,
+                "cache_creation_input_tokens": 0,
+                "cache_read_input_tokens": 0,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0
+                },
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "stop",
+            "raw": "end_turn"
+          },
+          "usage": {
+            "inputTokens": 562,
+            "outputTokens": 17,
+            "nonCachedInputTokens": 562,
+            "cacheReadInputTokens": 0,
+            "cacheWriteInputTokens": 0,
+            "totalTokens": 579,
+            "providerMetadata": {
+              "alibaba": {
+                "input_tokens": 562,
+                "output_tokens": 17,
+                "cache_creation_input_tokens": 0,
+                "cache_read_input_tokens": 0,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0
+                },
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

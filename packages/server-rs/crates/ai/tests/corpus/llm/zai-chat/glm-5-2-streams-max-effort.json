@@ -1,0 +1,649 @@
+{
+  "cassette": "zai-chat/glm-5-2-streams-max-effort",
+  "protocol": "openai-chat",
+  "routeId": "zai-chat",
+  "clockEpochMs": 1767323045000,
+  "steps": [
+    {
+      "model": {
+        "id": "glm-5.2",
+        "provider": "zai",
+        "route": {
+          "id": "zai-chat",
+          "protocol": "zai-chat",
+          "providerMetadataKey": "zai"
+        },
+        "endpoint": {
+          "baseURL": "https://api.z.ai/api/paas/v4",
+          "path": "/chat/completions"
+        },
+        "options": {
+          "providerOptions": {
+            "reasoningEffort": "max"
+          }
+        },
+        "modelOptions": {
+          "providerOptions": {
+            "reasoningEffort": "max"
+          }
+        },
+        "compatibility": {
+          "reasoningField": "reasoning_content",
+          "maxTokensField": "max_tokens",
+          "zaiToolStream": false
+        },
+        "capabilities": {
+          "tools": {
+            "strict": false
+          }
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_zai_glm_5_2_streams_max_effort",
+        "maxTokens": 4096,
+        "system": [],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "What is 173 multiplied by 219? Reply with only the final integer."
+              }
+            ]
+          }
+        ],
+        "tools": []
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/zai",
+        "modelID": "glm-5.2",
+        "settings": {
+          "apiKey": "fixture",
+          "reasoningEffort": "max"
+        }
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://api.z.ai/api/paas/v4/chat/completions",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "223",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"glm-5.2\",\"messages\":[{\"role\":\"user\",\"content\":\"What is 173 multiplied by 219? Reply with only the final integer.\"}],\"stream\":true,\"stream_options\":{\"include_usage\":true},\"max_tokens\":4096,\"reasoning_effort\":\"max\"}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream;charset=UTF-8"
+            },
+            "body": "data: {\"id\":\"20260908085956cb8c58b604114f8f\",\"created\":1788829196,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"The\"}}]}\n\ndata: {\"id\":\"20260908085956cb8c58b604114f8f\",\"created\":1788829196,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" user wants to\"}}]}\n\ndata: {\"id\":\"20260908085956cb8c58b604114f8f\",\"created\":1788829196,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" calculate 173 * 219.\\n\"}}]}\n\ndata: {\"id\":\"20260908085956cb8c58b604114f8f\",\"created\":1788829196,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"I will compute this step\"}}]}\n\ndata: {\"id\":\"20260908085956cb8c58b604114f8f\",\"created\":1788829196,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" by step to ensure accuracy.\\n173\"}}]}\n\ndata: {\"id\":\"20260908085956cb8c58b604114f8f\",\"created\":1788829196,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" * 200 = 34\"}}]}\n\ndata: {\"id\":\"20260908085956cb8c58b604114f8f\",\"created\":1788829196,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"600\\n173 *\"}}]}\n\ndata: {\"id\":\"20260908085956cb8c58b604114f8f\",\"created\":1788829196,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" 10 = 1730\\n173\"}}]}\n\ndata: {\"id\":\"20260908085956cb8c58b604114f8f\",\"created\":1788829196,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" * 9 = 155\"}}]}\n\ndata: {\"id\":\"20260908085956cb8c58b604114f8f\",\"created\":1788829196,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"7\\nSo, 173 *\"}}]}\n\ndata: {\"id\":\"20260908085956cb8c58b604114f8f\",\"created\":1788829196,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" 219 = 34600\"}}]}\n\ndata: {\"id\":\"20260908085956cb8c58b604114f8f\",\"created\":1788829196,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" + 1730 + 1557\"}}]}\n\ndata: {\"id\":\"20260908085956cb8c58b604114f8f\",\"created\":1788829196,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" = 36330\"}}]}\n\ndata: {\"id\":\"20260908085956cb8c58b604114f8f\",\"created\":1788829196,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" + 1557 = 378\"}}]}\n\ndata: {\"id\":\"20260908085956cb8c58b604114f8f\",\"created\":1788829196,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"87.\\nLet me double check\"}}]}\n\ndata: {\"id\":\"20260908085956cb8c58b604114f8f\",\"created\":1788829196,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\".\\n  173\\n\"}}]}\n\ndata: {\"id\":\"20260908085956cb8c58b604114f8f\",\"created\":1788829196,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"x 219\\n-----\\n\"}}]}\n\ndata: {\"id\":\"20260908085956cb8c58b604114f8f\",\"created\":1788829196,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" 1557  (173 * \"}}]}\n\ndata: {\"id\":\"20260908085956cb8c58b604114f8f\",\"created\":1788829196,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"9)\\n 1730  (173\"}}]}\n\ndata: {\"id\":\"20260908085956cb8c58b604114f8f\",\"created\":1788829196,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" * 10)\\n34\"}}]}\n\ndata: {\"id\":\"20260908085956cb8c58b604114f8f\",\"created\":1788829196,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"600  (173 * 200\"}}]}\n\ndata: {\"id\":\"20260908085956cb8c58b604114f8f\",\"created\":1788829196,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\")\\n-----\\n37887\\n\\n\"}}]}\n\ndata: {\"id\":\"20260908085956cb8c58b604114f8f\",\"created\":1788829196,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"Let's do it another way:\\n173\"}}]}\n\ndata: {\"id\":\"20260908085956cb8c58b604114f8f\",\"created\":1788829196,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" * 219 = 173 *\"}}]}\n\ndata: {\"id\":\"20260908085956cb8c58b604114f8f\",\"created\":1788829196,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" (220 - 1) = \"}}]}\n\ndata: {\"id\":\"20260908085956cb8c58b604114f8f\",\"created\":1788829196,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"38060 - 173\"}}]}\n\ndata: {\"id\":\"20260908085956cb8c58b604114f8f\",\"created\":1788829196,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" = 37887.\\n\\n\"}}]}\n\ndata: {\"id\":\"20260908085956cb8c58b604114f8f\",\"created\":1788829196,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"Let's do it a\"}}]}\n\ndata: {\"id\":\"20260908085956cb8c58b604114f8f\",\"created\":1788829196,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" third way:\\n(170\"}}]}\n\ndata: {\"id\":\"20260908085956cb8c58b604114f8f\",\"created\":1788829196,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" + 3) * 2\"}}]}\n\ndata: {\"id\":\"20260908085956cb8c58b604114f8f\",\"created\":1788829196,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"19 = 170 * 219\"}}]}\n\ndata: {\"id\":\"20260908085956cb8c58b604114f8f\",\"created\":1788829196,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" + 3 * 219\"}}]}\n\ndata: {\"id\":\"20260908085956cb8c58b604114f8f\",\"created\":1788829196,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" = 37230\"}}]}\n\ndata: {\"id\":\"20260908085956cb8c58b604114f8f\",\"created\":1788829196,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" + 657 = 3\"}}]}\n\ndata: {\"id\":\"20260908085956cb8c58b604114f8f\",\"created\":1788829196,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"7887.\\n170 * 219\"}}]}\n\ndata: {\"id\":\"20260908085956cb8c58b604114f8f\",\"created\":1788829196,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" = 17 * 2\"}}]}\n\ndata: {\"id\":\"20260908085956cb8c58b604114f8f\",\"created\":1788829196,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"190 = 372\"}}]}\n\ndata: {\"id\":\"20260908085956cb8c58b604114f8f\",\"created\":1788829196,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"30. (17 * 2\"}}]}\n\ndata: {\"id\":\"20260908085956cb8c58b604114f8f\",\"created\":1788829196,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"19 = 3723).\\n\"}}]}\n\ndata: {\"id\":\"20260908085956cb8c58b604114f8f\",\"created\":1788829196,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"3 * 219 = 65\"}}]}\n\ndata: {\"id\":\"20260908085956cb8c58b604114f8f\",\"created\":1788829196,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"7.\\n37230 + 65\"}}]}\n\ndata: {\"id\":\"20260908085956cb8c58b604114f8f\",\"created\":1788829196,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"7 = 37887.\\n\\nAll\"}}]}\n\ndata: {\"id\":\"20260908085956cb8c58b604114f8f\",\"created\":1788829196,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" methods give the same result.\\n\"}}]}\n\ndata: {\"id\":\"20260908085956cb8c58b604114f8f\",\"created\":1788829196,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"The user requested \\\"only the final integer\"}}]}\n\ndata: {\"id\":\"20260908085956cb8c58b604114f8f\",\"created\":1788829196,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"\\\".\\nSo I will output \\\"\"}}]}\n\ndata: {\"id\":\"20260908085956cb8c58b604114f8f\",\"created\":1788829196,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"37887\\\".\"}}]}\n\ndata: {\"id\":\"20260908085956cb8c58b604114f8f\",\"created\":1788829196,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"37887\",\"reasoning_content\":\"\"}}]}\n\ndata: {\"id\":\"20260908085956cb8c58b604114f8f\",\"created\":1788829196,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}]}\n\ndata: {\"id\":\"20260908085956cb8c58b604114f8f\",\"created\":1788829196,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"finish_reason\":\"stop\",\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}],\"usage\":{\"prompt_tokens\":29,\"completion_tokens\":302,\"total_tokens\":331,\"prompt_tokens_details\":{\"cached_tokens\":0},\"completion_tokens_details\":{\"reasoning_tokens\":298}}}\n\ndata: [DONE]\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "reasoning-start",
+          "id": "reasoning-0",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "The",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " user wants to",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " calculate 173 * 219.\n",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "I will compute this step",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " by step to ensure accuracy.\n173",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " * 200 = 34",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "600\n173 *",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " 10 = 1730\n173",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " * 9 = 155",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "7\nSo, 173 *",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " 219 = 34600",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " + 1730 + 1557",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " = 36330",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " + 1557 = 378",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "87.\nLet me double check",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ".\n  173\n",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "x 219\n-----\n",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " 1557  (173 * ",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "9)\n 1730  (173",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " * 10)\n34",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "600  (173 * 200",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ")\n-----\n37887\n\n",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "Let's do it another way:\n173",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " * 219 = 173 *",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " (220 - 1) = ",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "38060 - 173",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " = 37887.\n\n",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "Let's do it a",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " third way:\n(170",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " + 3) * 2",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "19 = 170 * 219",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " + 3 * 219",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " = 37230",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " + 657 = 3",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "7887.\n170 * 219",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " = 17 * 2",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "190 = 372",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "30. (17 * 2",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "19 = 3723).\n",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "3 * 219 = 65",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "7.\n37230 + 65",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "7 = 37887.\n\nAll",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " methods give the same result.\n",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "The user requested \"only the final integer",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "\".\nSo I will output \"",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "37887\".",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "text-start",
+          "id": "text-0"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "37887"
+        },
+        {
+          "type": "reasoning-end",
+          "id": "reasoning-0",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "text-end",
+          "id": "text-0"
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 29,
+            "outputTokens": 302,
+            "nonCachedInputTokens": 29,
+            "cacheReadInputTokens": 0,
+            "reasoningTokens": 298,
+            "totalTokens": 331,
+            "providerMetadata": {
+              "zai": {
+                "prompt_tokens": 29,
+                "completion_tokens": 302,
+                "total_tokens": 331,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                },
+                "completion_tokens_details": {
+                  "reasoning_tokens": 298
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 29,
+            "outputTokens": 302,
+            "nonCachedInputTokens": 29,
+            "cacheReadInputTokens": 0,
+            "reasoningTokens": 298,
+            "totalTokens": 331,
+            "providerMetadata": {
+              "zai": {
+                "prompt_tokens": 29,
+                "completion_tokens": 302,
+                "total_tokens": 331,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                },
+                "completion_tokens_details": {
+                  "reasoning_tokens": 298
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

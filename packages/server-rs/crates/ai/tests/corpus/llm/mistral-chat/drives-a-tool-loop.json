@@ -1,0 +1,440 @@
+{
+  "cassette": "mistral-chat/drives-a-tool-loop",
+  "protocol": "openai-chat",
+  "routeId": "mistral-chat",
+  "clockEpochMs": 1767323045000,
+  "steps": [
+    {
+      "model": {
+        "id": "mistral-small-latest",
+        "provider": "mistral",
+        "route": {
+          "id": "mistral-chat",
+          "protocol": "mistral-chat",
+          "providerMetadataKey": "mistral"
+        },
+        "endpoint": {
+          "baseURL": "https://api.mistral.ai/v1",
+          "path": "/chat/completions"
+        },
+        "options": {
+          "providerOptions": {
+            "reasoningEffort": "none"
+          }
+        },
+        "modelOptions": {
+          "providerOptions": {
+            "reasoningEffort": "none"
+          }
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_mistral_chat_drives_a_tool_loop",
+        "maxTokens": 160,
+        "temperature": 0,
+        "system": [
+          {
+            "type": "text",
+            "text": "Call lookup_weather exactly once with Paris."
+          },
+          {
+            "type": "text",
+            "text": "After the tool result, describe the weather briefly."
+          }
+        ],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "What is the weather?"
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "tool",
+            "name": "lookup_weather",
+            "description": "Look up the current weather for a city",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "city": {
+                  "type": "string",
+                  "enum": [
+                    "Paris"
+                  ]
+                }
+              },
+              "required": [
+                "city"
+              ],
+              "additionalProperties": false
+            }
+          }
+        ],
+        "toolChoice": {
+          "type": "tool",
+          "name": "lookup_weather"
+        }
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/mistral",
+        "modelID": "mistral-small-latest",
+        "settings": {
+          "apiKey": "fixture",
+          "reasoningEffort": "none"
+        }
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://api.mistral.ai/v1/chat/completions",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "690",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"mistral-small-latest\",\"messages\":[{\"role\":\"system\",\"content\":[{\"type\":\"text\",\"text\":\"Call lookup_weather exactly once with Paris.\"},{\"type\":\"text\",\"text\":\"After the tool result, describe the weather briefly.\"}]},{\"role\":\"user\",\"content\":\"What is the weather?\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"lookup_weather\",\"description\":\"Look up the current weather for a city\",\"parameters\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\",\"enum\":[\"Paris\"]}},\"required\":[\"city\"],\"additionalProperties\":false},\"strict\":false}}],\"tool_choice\":{\"type\":\"function\",\"function\":{\"name\":\"lookup_weather\"}},\"stream\":true,\"max_tokens\":160,\"temperature\":0,\"reasoning_effort\":\"none\"}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream; charset=utf-8"
+            },
+            "body": "data: {\"id\":\"81417fdbfbeb4714ae737aab701cbee4\",\"object\":\"chat.completion.chunk\",\"created\":1791000589,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"81417fdbfbeb4714ae737aab701cbee4\",\"object\":\"chat.completion.chunk\",\"created\":1791000589,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"id\":\"EwgHkPRLW\",\"type\":\"function\",\"function\":{\"name\":\"lookup_weather\",\"arguments\":\"{\\\"city\\\": \\\"Paris\\\"}\"},\"index\":0}]},\"finish_reason\":\"tool_calls\"}],\"usage\":{\"prompt_tokens\":120,\"total_tokens\":132,\"completion_tokens\":12,\"prompt_tokens_details\":{\"cached_tokens\":0},\"service_tier\":\"standard\"},\"p\":\"abcdefghij\"}\n\ndata: [DONE]\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "tool-input-start",
+          "id": "EwgHkPRLW",
+          "name": "lookup_weather"
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "EwgHkPRLW",
+          "name": "lookup_weather",
+          "text": "{\"city\": \"Paris\"}",
+          "input": {
+            "city": "Paris"
+          }
+        },
+        {
+          "type": "tool-input-end",
+          "id": "EwgHkPRLW",
+          "name": "lookup_weather"
+        },
+        {
+          "type": "tool-call",
+          "id": "EwgHkPRLW",
+          "name": "lookup_weather",
+          "input": {
+            "city": "Paris"
+          }
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "tool-calls",
+            "raw": "tool_calls"
+          },
+          "usage": {
+            "inputTokens": 120,
+            "outputTokens": 12,
+            "nonCachedInputTokens": 120,
+            "cacheReadInputTokens": 0,
+            "totalTokens": 132,
+            "providerMetadata": {
+              "mistral": {
+                "prompt_tokens": 120,
+                "completion_tokens": 12,
+                "total_tokens": 132,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                },
+                "service_tier": "standard"
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "tool-calls",
+            "raw": "tool_calls"
+          },
+          "usage": {
+            "inputTokens": 120,
+            "outputTokens": 12,
+            "nonCachedInputTokens": 120,
+            "cacheReadInputTokens": 0,
+            "totalTokens": 132,
+            "providerMetadata": {
+              "mistral": {
+                "prompt_tokens": 120,
+                "completion_tokens": 12,
+                "total_tokens": 132,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                },
+                "service_tier": "standard"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "model": {
+        "id": "mistral-small-latest",
+        "provider": "mistral",
+        "route": {
+          "id": "mistral-chat",
+          "protocol": "mistral-chat",
+          "providerMetadataKey": "mistral"
+        },
+        "endpoint": {
+          "baseURL": "https://api.mistral.ai/v1",
+          "path": "/chat/completions"
+        },
+        "options": {
+          "providerOptions": {
+            "reasoningEffort": "none"
+          }
+        },
+        "modelOptions": {
+          "providerOptions": {
+            "reasoningEffort": "none"
+          }
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_mistral_chat_drives_a_tool_loop",
+        "maxTokens": 160,
+        "temperature": 0,
+        "system": [
+          {
+            "type": "text",
+            "text": "Call lookup_weather exactly once with Paris."
+          },
+          {
+            "type": "text",
+            "text": "After the tool result, describe the weather briefly."
+          }
+        ],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "What is the weather?"
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "tool-call",
+                "id": "EwgHkPRLW",
+                "name": "lookup_weather",
+                "input": {
+                  "city": "Paris"
+                }
+              }
+            ]
+          },
+          {
+            "role": "tool",
+            "content": [
+              {
+                "type": "tool-result",
+                "id": "EwgHkPRLW",
+                "name": "lookup_weather",
+                "result": {
+                  "type": "json",
+                  "value": {
+                    "condition": "sunny",
+                    "temperature": "18C"
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "tool",
+            "name": "lookup_weather",
+            "description": "Look up the current weather for a city",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "city": {
+                  "type": "string",
+                  "enum": [
+                    "Paris"
+                  ]
+                }
+              },
+              "required": [
+                "city"
+              ],
+              "additionalProperties": false
+            }
+          }
+        ],
+        "toolChoice": {
+          "type": "none"
+        }
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/mistral",
+        "modelID": "mistral-small-latest",
+        "settings": {
+          "apiKey": "fixture",
+          "reasoningEffort": "none"
+        }
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://api.mistral.ai/v1/chat/completions",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "927",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"mistral-small-latest\",\"messages\":[{\"role\":\"system\",\"content\":[{\"type\":\"text\",\"text\":\"Call lookup_weather exactly once with Paris.\"},{\"type\":\"text\",\"text\":\"After the tool result, describe the weather briefly.\"}]},{\"role\":\"user\",\"content\":\"What is the weather?\"},{\"role\":\"assistant\",\"content\":\"\",\"tool_calls\":[{\"id\":\"EwgHkPRLW\",\"type\":\"function\",\"function\":{\"name\":\"lookup_weather\",\"arguments\":\"{\\\"city\\\":\\\"Paris\\\"}\"}}]},{\"role\":\"tool\",\"tool_call_id\":\"EwgHkPRLW\",\"name\":\"lookup_weather\",\"content\":\"{\\\"condition\\\":\\\"sunny\\\",\\\"temperature\\\":\\\"18C\\\"}\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"lookup_weather\",\"description\":\"Look up the current weather for a city\",\"parameters\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\",\"enum\":[\"Paris\"]}},\"required\":[\"city\"],\"additionalProperties\":false},\"strict\":false}}],\"tool_choice\":\"none\",\"stream\":true,\"max_tokens\":160,\"temperature\":0,\"reasoning_effort\":\"none\"}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream; charset=utf-8"
+            },
+            "body": "data: {\"id\":\"a46eb8ccd1b947ca9d360c3446b295a5\",\"object\":\"chat.completion.chunk\",\"created\":1791000589,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"a46eb8ccd1b947ca9d360c3446b295a5\",\"object\":\"chat.completion.chunk\",\"created\":1791000589,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"The\"},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopqrstuvwxyz01234\"}\n\ndata: {\"id\":\"a46eb8ccd1b947ca9d360c3446b295a5\",\"object\":\"chat.completion.chunk\",\"created\":1791000589,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\" weather in Paris is\"},\"finish_reason\":null}],\"p\":\"abcdefghijkl\"}\n\ndata: {\"id\":\"a46eb8ccd1b947ca9d360c3446b295a5\",\"object\":\"chat.completion.chunk\",\"created\":1791000589,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\" currently sunny with a\"},\"finish_reason\":null}],\"p\":\"abcdefghijklmn\"}\n\ndata: {\"id\":\"a46eb8ccd1b947ca9d360c3446b295a5\",\"object\":\"chat.completion.chunk\",\"created\":1791000589,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\" temperature of 1\"},\"finish_reason\":null}],\"p\":\"abcdefghi\"}\n\ndata: {\"id\":\"a46eb8ccd1b947ca9d360c3446b295a5\",\"object\":\"chat.completion.chunk\",\"created\":1791000589,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"8°C\"},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopqrstuvwx\"}\n\ndata: {\"id\":\"a46eb8ccd1b947ca9d360c3446b295a5\",\"object\":\"chat.completion.chunk\",\"created\":1791000589,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\".\"},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":67,\"total_tokens\":84,\"completion_tokens\":17,\"prompt_tokens_details\":{\"cached_tokens\":0},\"service_tier\":\"standard\"},\"p\":\"abcdefghijklmnopqrs\"}\n\ndata: [DONE]\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "text-start",
+          "id": "text-0"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "The"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " weather in Paris is"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " currently sunny with a"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " temperature of 1"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "8°C"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "."
+        },
+        {
+          "type": "text-end",
+          "id": "text-0"
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 67,
+            "outputTokens": 17,
+            "nonCachedInputTokens": 67,
+            "cacheReadInputTokens": 0,
+            "totalTokens": 84,
+            "providerMetadata": {
+              "mistral": {
+                "prompt_tokens": 67,
+                "completion_tokens": 17,
+                "total_tokens": 84,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                },
+                "service_tier": "standard"
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 67,
+            "outputTokens": 17,
+            "nonCachedInputTokens": 67,
+            "cacheReadInputTokens": 0,
+            "totalTokens": 84,
+            "providerMetadata": {
+              "mistral": {
+                "prompt_tokens": 67,
+                "completion_tokens": 17,
+                "total_tokens": 84,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                },
+                "service_tier": "standard"
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

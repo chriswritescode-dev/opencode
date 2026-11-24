@@ -1,0 +1,185 @@
+{
+  "cassette": "alibaba-chat/qwen-3-8-max-returns-a-json-object",
+  "protocol": "alibaba-chat",
+  "routeId": "alibaba-chat",
+  "clockEpochMs": 1767323045000,
+  "steps": [
+    {
+      "model": {
+        "id": "qwen3.8-max",
+        "provider": "alibaba",
+        "route": {
+          "id": "alibaba-chat",
+          "protocol": "alibaba-chat",
+          "providerMetadataKey": "alibaba"
+        },
+        "endpoint": {
+          "baseURL": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+          "path": "/chat/completions"
+        },
+        "compatibility": {
+          "reasoningField": "reasoning_content",
+          "maxTokensField": "max_completion_tokens",
+          "zaiToolStream": false
+        },
+        "capabilities": {
+          "tools": {
+            "strict": false
+          }
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_alibaba_chat_qwen_3_8_max_returns_a_json_object",
+        "maxTokens": 1024,
+        "providerOptions": {
+          "reasoningEffort": "none",
+          "responseFormat": {
+            "type": "json_object"
+          }
+        },
+        "system": [],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Return a JSON object with one key \"city\" set to the capital city of France."
+              }
+            ]
+          }
+        ],
+        "tools": []
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/alibaba",
+        "modelID": "qwen3.8-max",
+        "settings": {
+          "region": "ap-southeast-1",
+          "apiKey": "fixture"
+        }
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "354",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"qwen3.8-max\",\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"Return a JSON object with one key \\\"city\\\" set to the capital city of France.\",\"cache_control\":{\"type\":\"ephemeral\"}}]}],\"stream\":true,\"stream_options\":{\"include_usage\":true},\"max_completion_tokens\":1024,\"reasoning_effort\":\"none\",\"response_format\":{\"type\":\"json_object\"}}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream;charset=utf-8"
+            },
+            "body": "data: {\"model\":\"qwen3.8-max\",\"id\":\"chatcmpl-8a907cb0-1885-92de-bde7-b81cdc64a55b\",\"created\":1790904226,\"object\":\"chat.completion.chunk\",\"usage\":null,\"choices\":[{\"logprobs\":null,\"index\":0,\"delta\":{\"content\":\"\",\"role\":\"assistant\"},\"finish_reason\":null}]}\n\ndata: {\"model\":\"qwen3.8-max\",\"id\":\"chatcmpl-8a907cb0-1885-92de-bde7-b81cdc64a55b\",\"choices\":[{\"delta\":{\"content\":\"{\\\"\"},\"index\":0,\"finish_reason\":null,\"logprobs\":null}],\"created\":1790904226,\"object\":\"chat.completion.chunk\",\"usage\":null}\n\ndata: {\"model\":\"qwen3.8-max\",\"id\":\"chatcmpl-8a907cb0-1885-92de-bde7-b81cdc64a55b\",\"choices\":[{\"delta\":{\"content\":\"city\\\":\"},\"index\":0,\"finish_reason\":null,\"logprobs\":null}],\"created\":1790904226,\"object\":\"chat.completion.chunk\",\"usage\":null}\n\ndata: {\"model\":\"qwen3.8-max\",\"id\":\"chatcmpl-8a907cb0-1885-92de-bde7-b81cdc64a55b\",\"choices\":[{\"delta\":{\"content\":\" \\\"Paris\\\"}\"},\"index\":0,\"finish_reason\":null,\"logprobs\":null}],\"created\":1790904226,\"object\":\"chat.completion.chunk\",\"usage\":null}\n\ndata: {\"model\":\"qwen3.8-max\",\"id\":\"chatcmpl-8a907cb0-1885-92de-bde7-b81cdc64a55b\",\"choices\":[{\"delta\":{\"content\":\"\"},\"index\":0,\"finish_reason\":\"stop\",\"logprobs\":null}],\"created\":1790904226,\"object\":\"chat.completion.chunk\",\"usage\":null}\n\ndata: {\"choices\":[],\"created\":1790904226,\"id\":\"chatcmpl-8a907cb0-1885-92de-bde7-b81cdc64a55b\",\"model\":\"qwen3.8-max\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":6,\"prompt_tokens\":32,\"prompt_tokens_details\":{\"cache_creation\":{\"ephemeral_5m_input_tokens\":0},\"cache_creation_input_tokens\":0,\"cache_type\":\"ephemeral\",\"cache_write_tokens\":0,\"cached_tokens\":0,\"text_tokens\":32},\"total_tokens\":38}}\n\ndata: [DONE]\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "text-start",
+          "id": "text-0"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "{\""
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "city\":"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " \"Paris\"}"
+        },
+        {
+          "type": "text-end",
+          "id": "text-0"
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 32,
+            "outputTokens": 6,
+            "nonCachedInputTokens": 32,
+            "cacheReadInputTokens": 0,
+            "cacheWriteInputTokens": 0,
+            "totalTokens": 38,
+            "providerMetadata": {
+              "alibaba": {
+                "prompt_tokens": 32,
+                "completion_tokens": 6,
+                "total_tokens": 38,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0,
+                  "cache_write_tokens": 0,
+                  "cache_creation": {
+                    "ephemeral_5m_input_tokens": 0
+                  },
+                  "cache_creation_input_tokens": 0,
+                  "cache_type": "ephemeral",
+                  "text_tokens": 32
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 32,
+            "outputTokens": 6,
+            "nonCachedInputTokens": 32,
+            "cacheReadInputTokens": 0,
+            "cacheWriteInputTokens": 0,
+            "totalTokens": 38,
+            "providerMetadata": {
+              "alibaba": {
+                "prompt_tokens": 32,
+                "completion_tokens": 6,
+                "total_tokens": 38,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0,
+                  "cache_write_tokens": 0,
+                  "cache_creation": {
+                    "ephemeral_5m_input_tokens": 0
+                  },
+                  "cache_creation_input_tokens": 0,
+                  "cache_type": "ephemeral",
+                  "text_tokens": 32
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

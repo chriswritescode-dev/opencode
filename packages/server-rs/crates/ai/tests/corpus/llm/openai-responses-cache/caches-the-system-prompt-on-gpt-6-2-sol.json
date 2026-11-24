@@ -65,6 +65,13 @@
         ],
         "tools": []
       },
+      "provider": {
+        "package": "@opencode/ai/providers/openai/responses",
+        "modelID": "gpt-6.2-sol",
+        "settings": {
+          "apiKey": "fixture"
+        }
+      },
       "transport": "http",
       "exchanges": [
         {
@@ -264,6 +271,13 @@
           }
         ],
         "tools": []
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/openai/responses",
+        "modelID": "gpt-6.2-sol",
+        "settings": {
+          "apiKey": "fixture"
+        }
       },
       "transport": "http",
       "exchanges": [

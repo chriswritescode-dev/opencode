@@ -1,0 +1,1306 @@
+{
+  "cassette": "mistral-chat/replays-native-reasoning",
+  "protocol": "openai-chat",
+  "routeId": "mistral-chat",
+  "clockEpochMs": 1767323045000,
+  "steps": [
+    {
+      "model": {
+        "id": "mistral-small-latest",
+        "provider": "mistral",
+        "route": {
+          "id": "mistral-chat",
+          "protocol": "mistral-chat",
+          "providerMetadataKey": "mistral"
+        },
+        "endpoint": {
+          "baseURL": "https://api.mistral.ai/v1",
+          "path": "/chat/completions"
+        },
+        "options": {
+          "providerOptions": {
+            "reasoningEffort": "high"
+          }
+        },
+        "modelOptions": {
+          "providerOptions": {
+            "reasoningEffort": "high"
+          }
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_mistral_chat_replays_native_reasoning",
+        "maxTokens": 512,
+        "temperature": 0,
+        "system": [],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Calculate 17 multiplied by 23. Think briefly, then reply with only the integer."
+              }
+            ]
+          }
+        ],
+        "tools": []
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/mistral",
+        "modelID": "mistral-small-latest",
+        "settings": {
+          "apiKey": "fixture",
+          "reasoningEffort": "high"
+        }
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://api.mistral.ai/v1/chat/completions",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "226",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"mistral-small-latest\",\"messages\":[{\"role\":\"user\",\"content\":\"Calculate 17 multiplied by 23. Think briefly, then reply with only the integer.\"}],\"stream\":true,\"max_tokens\":512,\"temperature\":0,\"reasoning_effort\":\"high\"}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream; charset=utf-8"
+            },
+            "body": "data: {\"id\":\"2adec71befd044299e24147a4e54e6f1\",\"object\":\"chat.completion.chunk\",\"created\":1788110325,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"2adec71befd044299e24147a4e54e6f1\",\"object\":\"chat.completion.chunk\",\"created\":1788110325,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"\"},\"finish_reason\":null}],\"p\":\"abcde\"}\n\ndata: {\"id\":\"2adec71befd044299e24147a4e54e6f1\",\"object\":\"chat.completion.chunk\",\"created\":1788110325,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\"Okay, I\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopqrstuvwxyz01234\"}\n\ndata: {\"id\":\"2adec71befd044299e24147a4e54e6f1\",\"object\":\"chat.completion.chunk\",\"created\":1788110325,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\" need to calculate \"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopqrstuvwxyz\"}\n\ndata: {\"id\":\"2adec71befd044299e24147a4e54e6f1\",\"object\":\"chat.completion.chunk\",\"created\":1788110325,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\"17 multiplied by\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopqrstuv\"}\n\ndata: {\"id\":\"2adec71befd044299e24147a4e54e6f1\",\"object\":\"chat.completion.chunk\",\"created\":1788110325,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\" 23.\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopqrstuvw\"}\n\ndata: {\"id\":\"2adec71befd044299e24147a4e54e6f1\",\"object\":\"chat.completion.chunk\",\"created\":1788110325,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\" Let me think about\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopqrstuvwxy\"}\n\ndata: {\"id\":\"2adec71befd044299e24147a4e54e6f1\",\"object\":\"chat.completion.chunk\",\"created\":1788110325,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\" how\"}]}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopqrstuvwxyz01\"}\n\ndata: {\"id\":\"2adec71befd044299e24147a4e54e6f1\",\"object\":\"chat.completion.chunk\",\"created\":1788110325,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\" to do this efficiently\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopqr\"}\n\ndata: {\"id\":\"2adec71befd044299e24147a4e54e6f1\",\"object\":\"chat.completion.chunk\",\"created\":1788110325,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\".\\n\\nFirst, I\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopqrstuvwxyz01\"}\n\ndata: {\"id\":\"2adec71befd044299e24147a4e54e6f1\",\"object\":\"chat.completion.chunk\",\"created\":1788110325,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\" recall that multiplication\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopqrstuvwxyz012345678\"}\n\ndata: {\"id\":\"2adec71befd044299e24147a4e54e6f1\",\"object\":\"chat.completion.chunk\",\"created\":1788110325,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\" can\"}]}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopqrstu\"}\n\ndata: {\"id\":\"2adec71befd044299e24147a4e54e6f1\",\"object\":\"chat.completion.chunk\",\"created\":1788110325,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\" be broken down using\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopqrstuvwxyz01\"}\n\ndata: {\"id\":\"2adec71befd044299e24147a4e54e6f1\",\"object\":\"chat.completion.chunk\",\"created\":1788110325,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\" the distributive property\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghijklm\"}\n\ndata: {\"id\":\"2adec71befd044299e24147a4e54e6f1\",\"object\":\"chat.completion.chunk\",\"created\":1788110325,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\" of\"}]}]},\"finish_reason\":null}],\"p\":\"abc\"}\n\ndata: {\"id\":\"2adec71befd044299e24147a4e54e6f1\",\"object\":\"chat.completion.chunk\",\"created\":1788110325,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\" multiplication over addition.\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdef\"}\n\ndata: {\"id\":\"2adec71befd044299e24147a4e54e6f1\",\"object\":\"chat.completion.chunk\",\"created\":1788110325,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\" So, I\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopqrstuvwxyz0123456\"}\n\ndata: {\"id\":\"2adec71befd044299e24147a4e54e6f1\",\"object\":\"chat.completion.chunk\",\"created\":1788110325,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\" can think\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdef\"}\n\ndata: {\"id\":\"2adec71befd044299e24147a4e54e6f1\",\"object\":\"chat.completion.chunk\",\"created\":1788110325,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\" of 2\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopqrstuvwxyz0123456\"}\n\ndata: {\"id\":\"2adec71befd044299e24147a4e54e6f1\",\"object\":\"chat.completion.chunk\",\"created\":1788110325,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\"3 as 2\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"a\"}\n\ndata: {\"id\":\"2adec71befd044299e24147a4e54e6f1\",\"object\":\"chat.completion.chunk\",\"created\":1788110325,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\"0 + 3\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopqrstuvw\"}\n\ndata: {\"id\":\"2adec71befd044299e24147a4e54e6f1\",\"object\":\"chat.completion.chunk\",\"created\":1788110325,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\".\\n\\n\"}]}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopqrstuvwxyz01234\"}\n\ndata: {\"id\":\"2adec71befd044299e24147a4e54e6f1\",\"object\":\"chat.completion.chunk\",\"created\":1788110325,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\"Now\"}]}]},\"finish_reason\":null}],\"p\":\"ab\"}\n\ndata: {\"id\":\"2adec71befd044299e24147a4e54e6f1\",\"object\":\"chat.completion.chunk\",\"created\":1788110325,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\", I can multiply\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopqrstuvwx\"}\n\ndata: {\"id\":\"2adec71befd044299e24147a4e54e6f1\",\"object\":\"chat.completion.chunk\",\"created\":1788110325,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\" 17 by\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghijk\"}\n\ndata: {\"id\":\"2adec71befd044299e24147a4e54e6f1\",\"object\":\"chat.completion.chunk\",\"created\":1788110325,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\" \"}]}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopqrstuvwxyz01234567\"}\n\ndata: {\"id\":\"2adec71befd044299e24147a4e54e6f1\",\"object\":\"chat.completion.chunk\",\"created\":1788110325,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\"20 and \"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmno\"}\n\ndata: {\"id\":\"2adec71befd044299e24147a4e54e6f1\",\"object\":\"chat.completion.chunk\",\"created\":1788110325,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\"17 by \"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghijkl\"}\n\ndata: {\"id\":\"2adec71befd044299e24147a4e54e6f1\",\"object\":\"chat.completion.chunk\",\"created\":1788110325,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\"3 separately\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopqrstuvwx\"}\n\ndata: {\"id\":\"2adec71befd044299e24147a4e54e6f1\",\"object\":\"chat.completion.chunk\",\"created\":1788110325,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\", and then add\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdef\"}\n\ndata: {\"id\":\"2adec71befd044299e24147a4e54e6f1\",\"object\":\"chat.completion.chunk\",\"created\":1788110325,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\" the results.\\n\\n1\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcd\"}\n\ndata: {\"id\":\"2adec71befd044299e24147a4e54e6f1\",\"object\":\"chat.completion.chunk\",\"created\":1788110325,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\". 17\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopqrst\"}\n\ndata: {\"id\":\"2adec71befd044299e24147a4e54e6f1\",\"object\":\"chat.completion.chunk\",\"created\":1788110325,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\" × 20\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmn\"}\n\ndata: {\"id\":\"2adec71befd044299e24147a4e54e6f1\",\"object\":\"chat.completion.chunk\",\"created\":1788110325,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\" = 34\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopqrst\"}\n\ndata: {\"id\":\"2adec71befd044299e24147a4e54e6f1\",\"object\":\"chat.completion.chunk\",\"created\":1788110325,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\"0\\n2.\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghij\"}\n\ndata: {\"id\":\"2adec71befd044299e24147a4e54e6f1\",\"object\":\"chat.completion.chunk\",\"created\":1788110325,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\" 17 ×\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopqrstuvw\"}\n\ndata: {\"id\":\"2adec71befd044299e24147a4e54e6f1\",\"object\":\"chat.completion.chunk\",\"created\":1788110325,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\" 3 = \"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopqrstuvwxyz01234567\"}\n\ndata: {\"id\":\"2adec71befd044299e24147a4e54e6f1\",\"object\":\"chat.completion.chunk\",\"created\":1788110325,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\"51\\n\\n\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"ab\"}\n\ndata: {\"id\":\"2adec71befd044299e24147a4e54e6f1\",\"object\":\"chat.completion.chunk\",\"created\":1788110325,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\"Now, add these\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghijkl\"}\n\ndata: {\"id\":\"2adec71befd044299e24147a4e54e6f1\",\"object\":\"chat.completion.chunk\",\"created\":1788110325,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\" two results together:\\n\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopqrstuvwxyz0123456\"}\n\ndata: {\"id\":\"2adec71befd044299e24147a4e54e6f1\",\"object\":\"chat.completion.chunk\",\"created\":1788110325,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\"340 +\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopqrstuvwxyz012345\"}\n\ndata: {\"id\":\"2adec71befd044299e24147a4e54e6f1\",\"object\":\"chat.completion.chunk\",\"created\":1788110325,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\" 51 =\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopqrstuvwx\"}\n\ndata: {\"id\":\"2adec71befd044299e24147a4e54e6f1\",\"object\":\"chat.completion.chunk\",\"created\":1788110325,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\" 3\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopqrstuvwxy\"}\n\ndata: {\"id\":\"2adec71befd044299e24147a4e54e6f1\",\"object\":\"chat.completion.chunk\",\"created\":1788110325,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\"91\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopqrstuvwxyz0\"}\n\ndata: {\"id\":\"2adec71befd044299e24147a4e54e6f1\",\"object\":\"chat.completion.chunk\",\"created\":1788110325,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\"\\n\\nSo, \"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopqrstuvwx\"}\n\ndata: {\"id\":\"2adec71befd044299e24147a4e54e6f1\",\"object\":\"chat.completion.chunk\",\"created\":1788110325,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\"17 multiplied by\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopqrstuvwxyz01234567\"}\n\ndata: {\"id\":\"2adec71befd044299e24147a4e54e6f1\",\"object\":\"chat.completion.chunk\",\"created\":1788110325,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\" 23 is\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmnop\"}\n\ndata: {\"id\":\"2adec71befd044299e24147a4e54e6f1\",\"object\":\"chat.completion.chunk\",\"created\":1788110325,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\" 391\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopqrst\"}\n\ndata: {\"id\":\"2adec71befd044299e24147a4e54e6f1\",\"object\":\"chat.completion.chunk\",\"created\":1788110325,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\".\"}],\"closed\":true},{\"type\":\"text\",\"text\":\"3\"}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopqrstuvwxyz01234\"}\n\ndata: {\"id\":\"2adec71befd044299e24147a4e54e6f1\",\"object\":\"chat.completion.chunk\",\"created\":1788110325,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"91\"},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":35,\"total_tokens\":195,\"completion_tokens\":160,\"prompt_tokens_details\":{\"cached_tokens\":0},\"service_tier\":\"standard\"},\"p\":\"abc\"}\n\ndata: [DONE]\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "reasoning-start",
+          "id": "reasoning-0"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "Okay, I"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " need to calculate "
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "17 multiplied by"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " 23."
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " Let me think about"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " how"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " to do this efficiently"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ".\n\nFirst, I"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " recall that multiplication"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " can"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " be broken down using"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " the distributive property"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " of"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " multiplication over addition."
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " So, I"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " can think"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " of 2"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "3 as 2"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "0 + 3"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ".\n\n"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "Now"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ", I can multiply"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " 17 by"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " "
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "20 and "
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "17 by "
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "3 separately"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ", and then add"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " the results.\n\n1"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ". 17"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " × 20"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " = 34"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "0\n2."
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " 17 ×"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " 3 = "
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "51\n\n"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "Now, add these"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " two results together:\n"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "340 +"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " 51 ="
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " 3"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "91"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "\n\nSo, "
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "17 multiplied by"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " 23 is"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " 391"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "."
+        },
+        {
+          "type": "reasoning-end",
+          "id": "reasoning-0",
+          "text": "Okay, I need to calculate 17 multiplied by 23. Let me think about how to do this efficiently.\n\nFirst, I recall that multiplication can be broken down using the distributive property of multiplication over addition. So, I can think of 23 as 20 + 3.\n\nNow, I can multiply 17 by 20 and 17 by 3 separately, and then add the results.\n\n1. 17 × 20 = 340\n2. 17 × 3 = 51\n\nNow, add these two results together:\n340 + 51 = 391\n\nSo, 17 multiplied by 23 is 391.",
+          "providerMetadata": {
+            "mistral": {
+              "thinking": {
+                "type": "thinking",
+                "thinking": [
+                  {
+                    "type": "text",
+                    "text": "Okay, I"
+                  },
+                  {
+                    "type": "text",
+                    "text": " need to calculate "
+                  },
+                  {
+                    "type": "text",
+                    "text": "17 multiplied by"
+                  },
+                  {
+                    "type": "text",
+                    "text": " 23."
+                  },
+                  {
+                    "type": "text",
+                    "text": " Let me think about"
+                  },
+                  {
+                    "type": "text",
+                    "text": " how"
+                  },
+                  {
+                    "type": "text",
+                    "text": " to do this efficiently"
+                  },
+                  {
+                    "type": "text",
+                    "text": ".\n\nFirst, I"
+                  },
+                  {
+                    "type": "text",
+                    "text": " recall that multiplication"
+                  },
+                  {
+                    "type": "text",
+                    "text": " can"
+                  },
+                  {
+                    "type": "text",
+                    "text": " be broken down using"
+                  },
+                  {
+                    "type": "text",
+                    "text": " the distributive property"
+                  },
+                  {
+                    "type": "text",
+                    "text": " of"
+                  },
+                  {
+                    "type": "text",
+                    "text": " multiplication over addition."
+                  },
+                  {
+                    "type": "text",
+                    "text": " So, I"
+                  },
+                  {
+                    "type": "text",
+                    "text": " can think"
+                  },
+                  {
+                    "type": "text",
+                    "text": " of 2"
+                  },
+                  {
+                    "type": "text",
+                    "text": "3 as 2"
+                  },
+                  {
+                    "type": "text",
+                    "text": "0 + 3"
+                  },
+                  {
+                    "type": "text",
+                    "text": ".\n\n"
+                  },
+                  {
+                    "type": "text",
+                    "text": "Now"
+                  },
+                  {
+                    "type": "text",
+                    "text": ", I can multiply"
+                  },
+                  {
+                    "type": "text",
+                    "text": " 17 by"
+                  },
+                  {
+                    "type": "text",
+                    "text": " "
+                  },
+                  {
+                    "type": "text",
+                    "text": "20 and "
+                  },
+                  {
+                    "type": "text",
+                    "text": "17 by "
+                  },
+                  {
+                    "type": "text",
+                    "text": "3 separately"
+                  },
+                  {
+                    "type": "text",
+                    "text": ", and then add"
+                  },
+                  {
+                    "type": "text",
+                    "text": " the results.\n\n1"
+                  },
+                  {
+                    "type": "text",
+                    "text": ". 17"
+                  },
+                  {
+                    "type": "text",
+                    "text": " × 20"
+                  },
+                  {
+                    "type": "text",
+                    "text": " = 34"
+                  },
+                  {
+                    "type": "text",
+                    "text": "0\n2."
+                  },
+                  {
+                    "type": "text",
+                    "text": " 17 ×"
+                  },
+                  {
+                    "type": "text",
+                    "text": " 3 = "
+                  },
+                  {
+                    "type": "text",
+                    "text": "51\n\n"
+                  },
+                  {
+                    "type": "text",
+                    "text": "Now, add these"
+                  },
+                  {
+                    "type": "text",
+                    "text": " two results together:\n"
+                  },
+                  {
+                    "type": "text",
+                    "text": "340 +"
+                  },
+                  {
+                    "type": "text",
+                    "text": " 51 ="
+                  },
+                  {
+                    "type": "text",
+                    "text": " 3"
+                  },
+                  {
+                    "type": "text",
+                    "text": "91"
+                  },
+                  {
+                    "type": "text",
+                    "text": "\n\nSo, "
+                  },
+                  {
+                    "type": "text",
+                    "text": "17 multiplied by"
+                  },
+                  {
+                    "type": "text",
+                    "text": " 23 is"
+                  },
+                  {
+                    "type": "text",
+                    "text": " 391"
+                  },
+                  {
+                    "type": "text",
+                    "text": "."
+                  }
+                ],
+                "closed": true
+              }
+            }
+          }
+        },
+        {
+          "type": "text-start",
+          "id": "text-1"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-1",
+          "text": "3"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-1",
+          "text": "91"
+        },
+        {
+          "type": "text-end",
+          "id": "text-1"
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 35,
+            "outputTokens": 160,
+            "nonCachedInputTokens": 35,
+            "cacheReadInputTokens": 0,
+            "totalTokens": 195,
+            "providerMetadata": {
+              "mistral": {
+                "prompt_tokens": 35,
+                "completion_tokens": 160,
+                "total_tokens": 195,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                },
+                "service_tier": "standard"
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 35,
+            "outputTokens": 160,
+            "nonCachedInputTokens": 35,
+            "cacheReadInputTokens": 0,
+            "totalTokens": 195,
+            "providerMetadata": {
+              "mistral": {
+                "prompt_tokens": 35,
+                "completion_tokens": 160,
+                "total_tokens": 195,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                },
+                "service_tier": "standard"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "model": {
+        "id": "mistral-small-latest",
+        "provider": "mistral",
+        "route": {
+          "id": "mistral-chat",
+          "protocol": "mistral-chat",
+          "providerMetadataKey": "mistral"
+        },
+        "endpoint": {
+          "baseURL": "https://api.mistral.ai/v1",
+          "path": "/chat/completions"
+        },
+        "options": {
+          "providerOptions": {
+            "reasoningEffort": "high"
+          }
+        },
+        "modelOptions": {
+          "providerOptions": {
+            "reasoningEffort": "high"
+          }
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_mistral_chat_replays_native_reasoning",
+        "maxTokens": 256,
+        "temperature": 0,
+        "system": [],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Calculate 17 multiplied by 23. Think briefly, then reply with only the integer."
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "reasoning",
+                "text": "Okay, I need to calculate 17 multiplied by 23. Let me think about how to do this efficiently.\n\nFirst, I recall that multiplication can be broken down using the distributive property of multiplication over addition. So, I can think of 23 as 20 + 3.\n\nNow, I can multiply 17 by 20 and 17 by 3 separately, and then add the results.\n\n1. 17 × 20 = 340\n2. 17 × 3 = 51\n\nNow, add these two results together:\n340 + 51 = 391\n\nSo, 17 multiplied by 23 is 391.",
+                "providerMetadata": {
+                  "mistral": {
+                    "thinking": {
+                      "type": "thinking",
+                      "thinking": [
+                        {
+                          "type": "text",
+                          "text": "Okay, I"
+                        },
+                        {
+                          "type": "text",
+                          "text": " need to calculate "
+                        },
+                        {
+                          "type": "text",
+                          "text": "17 multiplied by"
+                        },
+                        {
+                          "type": "text",
+                          "text": " 23."
+                        },
+                        {
+                          "type": "text",
+                          "text": " Let me think about"
+                        },
+                        {
+                          "type": "text",
+                          "text": " how"
+                        },
+                        {
+                          "type": "text",
+                          "text": " to do this efficiently"
+                        },
+                        {
+                          "type": "text",
+                          "text": ".\n\nFirst, I"
+                        },
+                        {
+                          "type": "text",
+                          "text": " recall that multiplication"
+                        },
+                        {
+                          "type": "text",
+                          "text": " can"
+                        },
+                        {
+                          "type": "text",
+                          "text": " be broken down using"
+                        },
+                        {
+                          "type": "text",
+                          "text": " the distributive property"
+                        },
+                        {
+                          "type": "text",
+                          "text": " of"
+                        },
+                        {
+                          "type": "text",
+                          "text": " multiplication over addition."
+                        },
+                        {
+                          "type": "text",
+                          "text": " So, I"
+                        },
+                        {
+                          "type": "text",
+                          "text": " can think"
+                        },
+                        {
+                          "type": "text",
+                          "text": " of 2"
+                        },
+                        {
+                          "type": "text",
+                          "text": "3 as 2"
+                        },
+                        {
+                          "type": "text",
+                          "text": "0 + 3"
+                        },
+                        {
+                          "type": "text",
+                          "text": ".\n\n"
+                        },
+                        {
+                          "type": "text",
+                          "text": "Now"
+                        },
+                        {
+                          "type": "text",
+                          "text": ", I can multiply"
+                        },
+                        {
+                          "type": "text",
+                          "text": " 17 by"
+                        },
+                        {
+                          "type": "text",
+                          "text": " "
+                        },
+                        {
+                          "type": "text",
+                          "text": "20 and "
+                        },
+                        {
+                          "type": "text",
+                          "text": "17 by "
+                        },
+                        {
+                          "type": "text",
+                          "text": "3 separately"
+                        },
+                        {
+                          "type": "text",
+                          "text": ", and then add"
+                        },
+                        {
+                          "type": "text",
+                          "text": " the results.\n\n1"
+                        },
+                        {
+                          "type": "text",
+                          "text": ". 17"
+                        },
+                        {
+                          "type": "text",
+                          "text": " × 20"
+                        },
+                        {
+                          "type": "text",
+                          "text": " = 34"
+                        },
+                        {
+                          "type": "text",
+                          "text": "0\n2."
+                        },
+                        {
+                          "type": "text",
+                          "text": " 17 ×"
+                        },
+                        {
+                          "type": "text",
+                          "text": " 3 = "
+                        },
+                        {
+                          "type": "text",
+                          "text": "51\n\n"
+                        },
+                        {
+                          "type": "text",
+                          "text": "Now, add these"
+                        },
+                        {
+                          "type": "text",
+                          "text": " two results together:\n"
+                        },
+                        {
+                          "type": "text",
+                          "text": "340 +"
+                        },
+                        {
+                          "type": "text",
+                          "text": " 51 ="
+                        },
+                        {
+                          "type": "text",
+                          "text": " 3"
+                        },
+                        {
+                          "type": "text",
+                          "text": "91"
+                        },
+                        {
+                          "type": "text",
+                          "text": "\n\nSo, "
+                        },
+                        {
+                          "type": "text",
+                          "text": "17 multiplied by"
+                        },
+                        {
+                          "type": "text",
+                          "text": " 23 is"
+                        },
+                        {
+                          "type": "text",
+                          "text": " 391"
+                        },
+                        {
+                          "type": "text",
+                          "text": "."
+                        }
+                      ],
+                      "closed": true
+                    }
+                  }
+                }
+              },
+              {
+                "type": "text",
+                "text": "391"
+              }
+            ]
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Reply with exactly: Done."
+              }
+            ]
+          }
+        ],
+        "tools": []
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/mistral",
+        "modelID": "mistral-small-latest",
+        "settings": {
+          "apiKey": "fixture",
+          "reasoningEffort": "high"
+        }
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://api.mistral.ai/v1/chat/completions",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "2071",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"mistral-small-latest\",\"messages\":[{\"role\":\"user\",\"content\":\"Calculate 17 multiplied by 23. Think briefly, then reply with only the integer.\"},{\"role\":\"assistant\",\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\"Okay, I\"},{\"type\":\"text\",\"text\":\" need to calculate \"},{\"type\":\"text\",\"text\":\"17 multiplied by\"},{\"type\":\"text\",\"text\":\" 23.\"},{\"type\":\"text\",\"text\":\" Let me think about\"},{\"type\":\"text\",\"text\":\" how\"},{\"type\":\"text\",\"text\":\" to do this efficiently\"},{\"type\":\"text\",\"text\":\".\\n\\nFirst, I\"},{\"type\":\"text\",\"text\":\" recall that multiplication\"},{\"type\":\"text\",\"text\":\" can\"},{\"type\":\"text\",\"text\":\" be broken down using\"},{\"type\":\"text\",\"text\":\" the distributive property\"},{\"type\":\"text\",\"text\":\" of\"},{\"type\":\"text\",\"text\":\" multiplication over addition.\"},{\"type\":\"text\",\"text\":\" So, I\"},{\"type\":\"text\",\"text\":\" can think\"},{\"type\":\"text\",\"text\":\" of 2\"},{\"type\":\"text\",\"text\":\"3 as 2\"},{\"type\":\"text\",\"text\":\"0 + 3\"},{\"type\":\"text\",\"text\":\".\\n\\n\"},{\"type\":\"text\",\"text\":\"Now\"},{\"type\":\"text\",\"text\":\", I can multiply\"},{\"type\":\"text\",\"text\":\" 17 by\"},{\"type\":\"text\",\"text\":\" \"},{\"type\":\"text\",\"text\":\"20 and \"},{\"type\":\"text\",\"text\":\"17 by \"},{\"type\":\"text\",\"text\":\"3 separately\"},{\"type\":\"text\",\"text\":\", and then add\"},{\"type\":\"text\",\"text\":\" the results.\\n\\n1\"},{\"type\":\"text\",\"text\":\". 17\"},{\"type\":\"text\",\"text\":\" × 20\"},{\"type\":\"text\",\"text\":\" = 34\"},{\"type\":\"text\",\"text\":\"0\\n2.\"},{\"type\":\"text\",\"text\":\" 17 ×\"},{\"type\":\"text\",\"text\":\" 3 = \"},{\"type\":\"text\",\"text\":\"51\\n\\n\"},{\"type\":\"text\",\"text\":\"Now, add these\"},{\"type\":\"text\",\"text\":\" two results together:\\n\"},{\"type\":\"text\",\"text\":\"340 +\"},{\"type\":\"text\",\"text\":\" 51 =\"},{\"type\":\"text\",\"text\":\" 3\"},{\"type\":\"text\",\"text\":\"91\"},{\"type\":\"text\",\"text\":\"\\n\\nSo, \"},{\"type\":\"text\",\"text\":\"17 multiplied by\"},{\"type\":\"text\",\"text\":\" 23 is\"},{\"type\":\"text\",\"text\":\" 391\"},{\"type\":\"text\",\"text\":\".\"}],\"closed\":true},{\"type\":\"text\",\"text\":\"391\"}]},{\"role\":\"user\",\"content\":\"Reply with exactly: Done.\"}],\"stream\":true,\"max_tokens\":256,\"temperature\":0,\"reasoning_effort\":\"high\"}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream; charset=utf-8"
+            },
+            "body": "data: {\"id\":\"85fb25e234e14be794158b3514f61ea5\",\"object\":\"chat.completion.chunk\",\"created\":1788110327,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"85fb25e234e14be794158b3514f61ea5\",\"object\":\"chat.completion.chunk\",\"created\":1788110327,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"\"},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopqrstuvwxyz01\"}\n\ndata: {\"id\":\"85fb25e234e14be794158b3514f61ea5\",\"object\":\"chat.completion.chunk\",\"created\":1788110327,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\"The\"}]}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopqrstuvwxyz0\"}\n\ndata: {\"id\":\"85fb25e234e14be794158b3514f61ea5\",\"object\":\"chat.completion.chunk\",\"created\":1788110327,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\" user wants\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopqr\"}\n\ndata: {\"id\":\"85fb25e234e14be794158b3514f61ea5\",\"object\":\"chat.completion.chunk\",\"created\":1788110327,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\" me to calculate \"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopqrstuv\"}\n\ndata: {\"id\":\"85fb25e234e14be794158b3514f61ea5\",\"object\":\"chat.completion.chunk\",\"created\":1788110327,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\"17 multiplied by\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopqrstuvwxy\"}\n\ndata: {\"id\":\"85fb25e234e14be794158b3514f61ea5\",\"object\":\"chat.completion.chunk\",\"created\":1788110327,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\" 23 and\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghijk\"}\n\ndata: {\"id\":\"85fb25e234e14be794158b3514f61ea5\",\"object\":\"chat.completion.chunk\",\"created\":1788110327,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\" then reply with only\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopq\"}\n\ndata: {\"id\":\"85fb25e234e14be794158b3514f61ea5\",\"object\":\"chat.completion.chunk\",\"created\":1788110327,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\" the integer result\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghij\"}\n\ndata: {\"id\":\"85fb25e234e14be794158b3514f61ea5\",\"object\":\"chat.completion.chunk\",\"created\":1788110327,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\". I\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abc\"}\n\ndata: {\"id\":\"85fb25e234e14be794158b3514f61ea5\",\"object\":\"chat.completion.chunk\",\"created\":1788110327,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\"'ve already done\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopqrstuvwxyz0123456789\"}\n\ndata: {\"id\":\"85fb25e234e14be794158b3514f61ea5\",\"object\":\"chat.completion.chunk\",\"created\":1788110327,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\" the\"}]}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopqrstuvwx\"}\n\ndata: {\"id\":\"85fb25e234e14be794158b3514f61ea5\",\"object\":\"chat.completion.chunk\",\"created\":1788110327,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\" calculation and got \"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopq\"}\n\ndata: {\"id\":\"85fb25e234e14be794158b3514f61ea5\",\"object\":\"chat.completion.chunk\",\"created\":1788110327,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\"391.\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopqrstuvwxyz0\"}\n\ndata: {\"id\":\"85fb25e234e14be794158b3514f61ea5\",\"object\":\"chat.completion.chunk\",\"created\":1788110327,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\" Now, the\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmnop\"}\n\ndata: {\"id\":\"85fb25e234e14be794158b3514f61ea5\",\"object\":\"chat.completion.chunk\",\"created\":1788110327,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\" user is\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"ab\"}\n\ndata: {\"id\":\"85fb25e234e14be794158b3514f61ea5\",\"object\":\"chat.completion.chunk\",\"created\":1788110327,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\" asking me to reply\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcde\"}\n\ndata: {\"id\":\"85fb25e234e14be794158b3514f61ea5\",\"object\":\"chat.completion.chunk\",\"created\":1788110327,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\" with exactly\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopqrstuvwxyz\"}\n\ndata: {\"id\":\"85fb25e234e14be794158b3514f61ea5\",\"object\":\"chat.completion.chunk\",\"created\":1788110327,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\" \\\"Done.\\\"\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefg\"}\n\ndata: {\"id\":\"85fb25e234e14be794158b3514f61ea5\",\"object\":\"chat.completion.chunk\",\"created\":1788110327,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\" after providing\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"a\"}\n\ndata: {\"id\":\"85fb25e234e14be794158b3514f61ea5\",\"object\":\"chat.completion.chunk\",\"created\":1788110327,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\" the result\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"ab\"}\n\ndata: {\"id\":\"85fb25e234e14be794158b3514f61ea5\",\"object\":\"chat.completion.chunk\",\"created\":1788110327,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\".\\n\\nSo, I\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghij\"}\n\ndata: {\"id\":\"85fb25e234e14be794158b3514f61ea5\",\"object\":\"chat.completion.chunk\",\"created\":1788110327,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\" should\"}]}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmn\"}\n\ndata: {\"id\":\"85fb25e234e14be794158b3514f61ea5\",\"object\":\"chat.completion.chunk\",\"created\":1788110327,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\" first provide\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopqr\"}\n\ndata: {\"id\":\"85fb25e234e14be794158b3514f61ea5\",\"object\":\"chat.completion.chunk\",\"created\":1788110327,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\" the result\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopqrstuvwxyz012\"}\n\ndata: {\"id\":\"85fb25e234e14be794158b3514f61ea5\",\"object\":\"chat.completion.chunk\",\"created\":1788110327,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\" of the multiplication\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"a\"}\n\ndata: {\"id\":\"85fb25e234e14be794158b3514f61ea5\",\"object\":\"chat.completion.chunk\",\"created\":1788110327,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\", which is \"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopq\"}\n\ndata: {\"id\":\"85fb25e234e14be794158b3514f61ea5\",\"object\":\"chat.completion.chunk\",\"created\":1788110327,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\"391,\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghijk\"}\n\ndata: {\"id\":\"85fb25e234e14be794158b3514f61ea5\",\"object\":\"chat.completion.chunk\",\"created\":1788110327,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\" and then follow\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopqrstuvwxyz012345678\"}\n\ndata: {\"id\":\"85fb25e234e14be794158b3514f61ea5\",\"object\":\"chat.completion.chunk\",\"created\":1788110327,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\" it\"}]}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopqrstuv\"}\n\ndata: {\"id\":\"85fb25e234e14be794158b3514f61ea5\",\"object\":\"chat.completion.chunk\",\"created\":1788110327,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\" up\"}]}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopqrstuvwxyz01234\"}\n\ndata: {\"id\":\"85fb25e234e14be794158b3514f61ea5\",\"object\":\"chat.completion.chunk\",\"created\":1788110327,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\" with \\\"\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghijkl\"}\n\ndata: {\"id\":\"85fb25e234e14be794158b3514f61ea5\",\"object\":\"chat.completion.chunk\",\"created\":1788110327,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\"Done.\\\" as\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopqrstuv\"}\n\ndata: {\"id\":\"85fb25e234e14be794158b3514f61ea5\",\"object\":\"chat.completion.chunk\",\"created\":1788110327,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\" per\"}]}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopqrstuvwxyz0123\"}\n\ndata: {\"id\":\"85fb25e234e14be794158b3514f61ea5\",\"object\":\"chat.completion.chunk\",\"created\":1788110327,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\" the user\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopqrstuvwxyz0123456\"}\n\ndata: {\"id\":\"85fb25e234e14be794158b3514f61ea5\",\"object\":\"chat.completion.chunk\",\"created\":1788110327,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\"'s instruction.\"}],\"closed\":true}]},\"finish_reason\":null}],\"p\":\"a\"}\n\ndata: {\"id\":\"85fb25e234e14be794158b3514f61ea5\",\"object\":\"chat.completion.chunk\",\"created\":1788110327,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"3\"},\"finish_reason\":null}],\"p\":\"abcdefghijklmnopqrstu\"}\n\ndata: {\"id\":\"85fb25e234e14be794158b3514f61ea5\",\"object\":\"chat.completion.chunk\",\"created\":1788110327,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"91\\n\"},\"finish_reason\":null}],\"p\":\"abcdefg\"}\n\ndata: {\"id\":\"85fb25e234e14be794158b3514f61ea5\",\"object\":\"chat.completion.chunk\",\"created\":1788110327,\"model\":\"mistral-small-latest\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"Done.\"},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":203,\"total_tokens\":302,\"completion_tokens\":99,\"prompt_tokens_details\":{\"cached_tokens\":0},\"service_tier\":\"standard\"},\"p\":\"abcdefghijklmnopqrstuv\"}\n\ndata: [DONE]\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "reasoning-start",
+          "id": "reasoning-0"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "The"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " user wants"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " me to calculate "
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "17 multiplied by"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " 23 and"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " then reply with only"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " the integer result"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ". I"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "'ve already done"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " the"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " calculation and got "
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "391."
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " Now, the"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " user is"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " asking me to reply"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " with exactly"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " \"Done.\""
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " after providing"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " the result"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ".\n\nSo, I"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " should"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " first provide"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " the result"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " of the multiplication"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ", which is "
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "391,"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " and then follow"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " it"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " up"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " with \""
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "Done.\" as"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " per"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " the user"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "'s instruction."
+        },
+        {
+          "type": "reasoning-end",
+          "id": "reasoning-0",
+          "text": "The user wants me to calculate 17 multiplied by 23 and then reply with only the integer result. I've already done the calculation and got 391. Now, the user is asking me to reply with exactly \"Done.\" after providing the result.\n\nSo, I should first provide the result of the multiplication, which is 391, and then follow it up with \"Done.\" as per the user's instruction.",
+          "providerMetadata": {
+            "mistral": {
+              "thinking": {
+                "type": "thinking",
+                "thinking": [
+                  {
+                    "type": "text",
+                    "text": "The"
+                  },
+                  {
+                    "type": "text",
+                    "text": " user wants"
+                  },
+                  {
+                    "type": "text",
+                    "text": " me to calculate "
+                  },
+                  {
+                    "type": "text",
+                    "text": "17 multiplied by"
+                  },
+                  {
+                    "type": "text",
+                    "text": " 23 and"
+                  },
+                  {
+                    "type": "text",
+                    "text": " then reply with only"
+                  },
+                  {
+                    "type": "text",
+                    "text": " the integer result"
+                  },
+                  {
+                    "type": "text",
+                    "text": ". I"
+                  },
+                  {
+                    "type": "text",
+                    "text": "'ve already done"
+                  },
+                  {
+                    "type": "text",
+                    "text": " the"
+                  },
+                  {
+                    "type": "text",
+                    "text": " calculation and got "
+                  },
+                  {
+                    "type": "text",
+                    "text": "391."
+                  },
+                  {
+                    "type": "text",
+                    "text": " Now, the"
+                  },
+                  {
+                    "type": "text",
+                    "text": " user is"
+                  },
+                  {
+                    "type": "text",
+                    "text": " asking me to reply"
+                  },
+                  {
+                    "type": "text",
+                    "text": " with exactly"
+                  },
+                  {
+                    "type": "text",
+                    "text": " \"Done.\""
+                  },
+                  {
+                    "type": "text",
+                    "text": " after providing"
+                  },
+                  {
+                    "type": "text",
+                    "text": " the result"
+                  },
+                  {
+                    "type": "text",
+                    "text": ".\n\nSo, I"
+                  },
+                  {
+                    "type": "text",
+                    "text": " should"
+                  },
+                  {
+                    "type": "text",
+                    "text": " first provide"
+                  },
+                  {
+                    "type": "text",
+                    "text": " the result"
+                  },
+                  {
+                    "type": "text",
+                    "text": " of the multiplication"
+                  },
+                  {
+                    "type": "text",
+                    "text": ", which is "
+                  },
+                  {
+                    "type": "text",
+                    "text": "391,"
+                  },
+                  {
+                    "type": "text",
+                    "text": " and then follow"
+                  },
+                  {
+                    "type": "text",
+                    "text": " it"
+                  },
+                  {
+                    "type": "text",
+                    "text": " up"
+                  },
+                  {
+                    "type": "text",
+                    "text": " with \""
+                  },
+                  {
+                    "type": "text",
+                    "text": "Done.\" as"
+                  },
+                  {
+                    "type": "text",
+                    "text": " per"
+                  },
+                  {
+                    "type": "text",
+                    "text": " the user"
+                  },
+                  {
+                    "type": "text",
+                    "text": "'s instruction."
+                  }
+                ],
+                "closed": true
+              }
+            }
+          }
+        },
+        {
+          "type": "text-start",
+          "id": "text-1"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-1",
+          "text": "3"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-1",
+          "text": "91\n"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-1",
+          "text": "Done."
+        },
+        {
+          "type": "text-end",
+          "id": "text-1"
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 203,
+            "outputTokens": 99,
+            "nonCachedInputTokens": 203,
+            "cacheReadInputTokens": 0,
+            "totalTokens": 302,
+            "providerMetadata": {
+              "mistral": {
+                "prompt_tokens": 203,
+                "completion_tokens": 99,
+                "total_tokens": 302,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                },
+                "service_tier": "standard"
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 203,
+            "outputTokens": 99,
+            "nonCachedInputTokens": 203,
+            "cacheReadInputTokens": 0,
+            "totalTokens": 302,
+            "providerMetadata": {
+              "mistral": {
+                "prompt_tokens": 203,
+                "completion_tokens": 99,
+                "total_tokens": 302,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                },
+                "service_tier": "standard"
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

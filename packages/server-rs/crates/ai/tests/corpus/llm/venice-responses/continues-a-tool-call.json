@@ -108,6 +108,13 @@
           }
         ]
       },
+      "provider": {
+        "package": "@opencode/ai/providers/venice/responses",
+        "modelID": "openai-gpt-54-mini",
+        "settings": {
+          "apiKey": "fixture"
+        }
+      },
       "transport": "http",
       "exchanges": [
         {
@@ -463,6 +470,13 @@
             }
           }
         ]
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/venice/responses",
+        "modelID": "openai-gpt-54-mini",
+        "settings": {
+          "apiKey": "fixture"
+        }
       },
       "transport": "http",
       "exchanges": [

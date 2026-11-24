@@ -51,6 +51,15 @@
         ],
         "tools": []
       },
+      "provider": {
+        "package": "@opencode/ai/providers/amazon-bedrock",
+        "modelID": "us.amazon.nova-2-lite-v1:0",
+        "settings": {
+          "apiKey": "fixture",
+          "region": "us-east-1",
+          "effort": "low"
+        }
+      },
       "transport": "http",
       "exchanges": [
         {

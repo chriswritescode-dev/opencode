@@ -1,0 +1,113 @@
+{
+  "cassette": "zai-chat/glm-5-3-rejects-disabled-thinking",
+  "protocol": "openai-chat",
+  "routeId": "zai-chat",
+  "clockEpochMs": 1767323045000,
+  "steps": [
+    {
+      "model": {
+        "id": "glm-5.3",
+        "provider": "zai",
+        "route": {
+          "id": "zai-chat",
+          "protocol": "zai-chat",
+          "providerMetadataKey": "zai"
+        },
+        "endpoint": {
+          "baseURL": "https://api.z.ai/api/paas/v4",
+          "path": "/chat/completions"
+        },
+        "options": {
+          "providerOptions": {
+            "thinking": {
+              "type": "disabled"
+            }
+          }
+        },
+        "modelOptions": {
+          "providerOptions": {
+            "thinking": {
+              "type": "disabled"
+            }
+          }
+        },
+        "compatibility": {
+          "reasoningField": "reasoning_content",
+          "maxTokensField": "max_tokens",
+          "zaiToolStream": false
+        },
+        "capabilities": {
+          "tools": {
+            "strict": false
+          }
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_zai_glm_5_3_rejects_disabled_thinking",
+        "maxTokens": 4096,
+        "system": [],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "What is 173 multiplied by 219? Reply with only the final integer."
+              }
+            ]
+          }
+        ],
+        "tools": []
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/zai",
+        "modelID": "glm-5.3",
+        "settings": {
+          "apiKey": "fixture",
+          "thinking": {
+            "type": "disabled"
+          }
+        }
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://api.z.ai/api/paas/v4/chat/completions",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "229",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"glm-5.3\",\"messages\":[{\"role\":\"user\",\"content\":\"What is 173 multiplied by 219? Reply with only the final integer.\"}],\"stream\":true,\"stream_options\":{\"include_usage\":true},\"max_tokens\":4096,\"thinking\":{\"type\":\"disabled\"}}"
+          },
+          "response": {
+            "status": 400,
+            "headers": {},
+            "body": "eyJlcnJvciI6eyJjb2RlIjoiMTIxMCIsIm1lc3NhZ2UiOiJUaGlzIG1vZGVsIGFsd2F5cyBlbmdhZ2VzIGluIHRoaW5raW5nIGFuZCBjYW5ub3QgYmUgZGlzYWJsZWQ7IHBsZWFzZSB1c2UgbG93LCBoaWdoLCBvciBtYXgifX0=",
+            "bodyEncoding": "base64"
+          }
+        }
+      ],
+      "error": {
+        "reason": {
+          "_tag": "InvalidRequest",
+          "message": "This model always engages in thinking and cannot be disabled; please use low, high, or max",
+          "body": "{\"error\":{\"code\":\"1210\",\"message\":\"This model always engages in thinking and cannot be disabled; please use low, high, or max\"}}",
+          "http": {
+            "url": "https://api.z.ai/api/paas/v4/chat/completions",
+            "status": 400,
+            "headers": {}
+          }
+        },
+        "retryable": false
+      }
+    }
+  ]
+}

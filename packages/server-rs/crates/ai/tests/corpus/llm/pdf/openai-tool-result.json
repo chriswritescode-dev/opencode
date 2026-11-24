@@ -110,6 +110,13 @@
           }
         ]
       },
+      "provider": {
+        "package": "@opencode/ai/providers/openai/responses",
+        "modelID": "gpt-4o-mini",
+        "settings": {
+          "apiKey": "fixture"
+        }
+      },
       "transport": "http",
       "exchanges": [
         {

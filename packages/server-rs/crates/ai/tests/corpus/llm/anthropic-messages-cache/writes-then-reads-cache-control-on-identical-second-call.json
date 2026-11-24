@@ -51,6 +51,13 @@
         ],
         "tools": []
       },
+      "provider": {
+        "package": "@opencode/ai/providers/anthropic",
+        "modelID": "claude-haiku-4-5-20251001",
+        "settings": {
+          "apiKey": "fixture"
+        }
+      },
       "transport": "http",
       "exchanges": [
         {
@@ -200,6 +207,13 @@
           }
         ],
         "tools": []
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/anthropic",
+        "modelID": "claude-haiku-4-5-20251001",
+        "settings": {
+          "apiKey": "fixture"
+        }
       },
       "transport": "http",
       "exchanges": [

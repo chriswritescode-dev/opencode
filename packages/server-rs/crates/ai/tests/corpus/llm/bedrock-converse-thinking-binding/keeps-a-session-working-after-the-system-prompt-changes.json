@@ -30,8 +30,7 @@
                 }
               }
             }
-          },
-          "providerOptions": {}
+          }
         },
         "modelOptions": {
           "http": {
@@ -46,8 +45,7 @@
                 }
               }
             }
-          },
-          "providerOptions": {}
+          }
         },
         "transport": "http",
         "auth": {
@@ -1191,8 +1189,7 @@
                 }
               }
             }
-          },
-          "providerOptions": {}
+          }
         },
         "modelOptions": {
           "http": {
@@ -1207,8 +1204,7 @@
                 }
               }
             }
-          },
-          "providerOptions": {}
+          }
         },
         "transport": "http",
         "auth": {
@@ -2442,8 +2438,7 @@
                 }
               }
             }
-          },
-          "providerOptions": {}
+          }
         },
         "modelOptions": {
           "http": {
@@ -2461,8 +2456,7 @@
                 }
               }
             }
-          },
-          "providerOptions": {}
+          }
         },
         "transport": "http",
         "auth": {

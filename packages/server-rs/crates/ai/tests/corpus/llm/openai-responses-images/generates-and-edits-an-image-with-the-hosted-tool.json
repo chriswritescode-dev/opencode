@@ -84,6 +84,13 @@
           "name": "image_generation"
         }
       },
+      "provider": {
+        "package": "@opencode/ai/providers/openai/responses",
+        "modelID": "gpt-5-mini",
+        "settings": {
+          "apiKey": "fixture"
+        }
+      },
       "transport": "http",
       "exchanges": [
         {
@@ -1361,6 +1368,13 @@
         "toolChoice": {
           "type": "tool",
           "name": "image_generation"
+        }
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/openai/responses",
+        "modelID": "gpt-5-mini",
+        "settings": {
+          "apiKey": "fixture"
         }
       },
       "transport": "http",

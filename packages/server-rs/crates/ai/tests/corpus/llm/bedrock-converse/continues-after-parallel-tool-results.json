@@ -122,6 +122,17 @@
           }
         ]
       },
+      "provider": {
+        "package": "@opencode/ai/providers/amazon-bedrock",
+        "modelID": "us.amazon.nova-micro-v1:0",
+        "settings": {
+          "credentials": {
+            "region": "us-east-1",
+            "accessKeyId": "fixture",
+            "secretAccessKey": "fixture"
+          }
+        }
+      },
       "transport": "http",
       "exchanges": [
         {

@@ -111,6 +111,8 @@ fn model_with_protocol(route_id: &str, id: &str, protocol: Arc<dyn Protocol>) ->
             endpoint: Endpoint::new("https://api.test/v1", "/messages"),
             auth: Auth::None,
             headers: None,
+            body: None,
+            channel: None,
             transport: RouteTransport::Http,
             options: None,
         },
@@ -1534,11 +1536,15 @@ fn compile_rejects_a_later_local_file_reference() {
 #[test]
 fn every_corpus_descriptor_requires_protocol() {
     let corpus = crate::corpus::Corpus::load();
-    assert_eq!(corpus.cassettes.len(), 51);
+    assert_eq!(corpus.cassettes.len(), 313);
     let registry = ProtocolRegistry::new();
     let mut steps = 0usize;
     for cassette in &corpus.cassettes {
         for (index, step) in cassette.steps.iter().enumerate() {
+            steps += 1;
+            if step.operation.is_some() {
+                continue;
+            }
             let descriptor: ModelDescriptor = serde_json::from_value(step.model.clone())
                 .unwrap_or_else(|error| panic!("{} step {index}: {error}", cassette.name));
             match Model::from_descriptor(descriptor, &registry) {
@@ -1550,7 +1556,6 @@ fn every_corpus_descriptor_requires_protocol() {
                 ),
                 Ok(_) => panic!("{} step {index}: descriptor resolved without a protocol", cassette.name),
             }
-            steps += 1;
         }
     }
     assert!(steps > 0, "corpus has no steps");

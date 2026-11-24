@@ -70,6 +70,13 @@
         ],
         "tools": []
       },
+      "provider": {
+        "package": "@opencode/ai/providers/openai/responses",
+        "modelID": "gpt-5.5",
+        "settings": {
+          "apiKey": "fixture"
+        }
+      },
       "transport": "http",
       "exchanges": [
         {

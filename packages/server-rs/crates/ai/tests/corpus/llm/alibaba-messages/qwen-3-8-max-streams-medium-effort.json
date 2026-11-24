@@ -1,0 +1,348 @@
+{
+  "cassette": "alibaba-messages/qwen-3-8-max-streams-medium-effort",
+  "protocol": "alibaba-messages",
+  "routeId": "alibaba-messages",
+  "clockEpochMs": 1767323045000,
+  "steps": [
+    {
+      "model": {
+        "id": "qwen3.8-max",
+        "provider": "alibaba",
+        "route": {
+          "id": "alibaba-messages",
+          "protocol": "alibaba-messages",
+          "providerMetadataKey": "alibaba"
+        },
+        "endpoint": {
+          "baseURL": "https://dashscope-intl.aliyuncs.com/apps/anthropic/v1",
+          "path": "/messages"
+        },
+        "compatibility": {
+          "requireSignature": false
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_alibaba_messages_qwen_3_8_max_streams_medium_effort",
+        "maxTokens": 4096,
+        "providerOptions": {
+          "effort": "medium"
+        },
+        "system": [],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "What is 173 multiplied by 219? Reply with only the final integer."
+              }
+            ]
+          }
+        ],
+        "tools": []
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/alibaba/messages",
+        "modelID": "qwen3.8-max",
+        "settings": {
+          "region": "ap-southeast-1",
+          "apiKey": "fixture"
+        }
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://dashscope-intl.aliyuncs.com/apps/anthropic/v1/messages",
+            "headers": {
+              "anthropic-version": "2023-06-01",
+              "authorization": "Bearer fixture",
+              "content-length": "260",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"qwen3.8-max\",\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"What is 173 multiplied by 219? Reply with only the final integer.\",\"cache_control\":{\"type\":\"ephemeral\"}}]}],\"stream\":true,\"max_tokens\":4096,\"output_config\":{\"effort\":\"medium\"}}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream"
+            },
+            "body": "event:ping\ndata:{\"type\":\"ping\"}\n\nevent:message_start\ndata:{\"message\":{\"model\":\"qwen3.8-max\",\"id\":\"msg_b64044fb-ade1-9788-a3b8-3535093bc1f3\",\"role\":\"assistant\",\"type\":\"message\",\"content\":[],\"usage\":{\"input_tokens\":20,\"output_tokens\":0}},\"type\":\"message_start\"}\n\nevent:content_block_start\ndata:{\"type\":\"content_block_start\",\"content_block\":{\"type\":\"thinking\",\"signature\":\"\",\"thinking\":\"\"},\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\"The\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\" user wants me to\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\" calculate 17\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\"3 × 2\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\"19 and reply\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\" with only the final\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\" integer.\\n\\n1\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\"73 × \"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\"219:\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\"\\n173\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\" × 20\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\"0 = 3\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\"4,60\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\"0\\n17\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\"3 × 1\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\"9 = 1\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\"73 × \"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\"20 - \"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\"173 =\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\" 3,4\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\"60 - \"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\"173 =\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\" 3,2\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\"87\\n3\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\"4,60\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\"0 + 3\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\",287\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\" = 37\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\",887\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\"\\n\\nSo the answer\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\" is 3\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\"7887\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\".\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"signature_delta\",\"signature\":\"\"},\"type\":\"content_block_delta\",\"index\":0}\n\nevent:content_block_stop\ndata:{\"type\":\"content_block_stop\",\"index\":0}\n\nevent:content_block_start\ndata:{\"type\":\"content_block_start\",\"content_block\":{\"type\":\"text\",\"text\":\"\"},\"index\":1}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"text_delta\",\"text\":\"3788\"},\"type\":\"content_block_delta\",\"index\":1}\n\nevent:content_block_delta\ndata:{\"delta\":{\"type\":\"text_delta\",\"text\":\"7\"},\"type\":\"content_block_delta\",\"index\":1}\n\nevent:content_block_stop\ndata:{\"type\":\"content_block_stop\",\"index\":1}\n\nevent:message_delta\ndata:{\"delta\":{\"stop_reason\":\"end_turn\"},\"type\":\"message_delta\",\"usage\":{\"cache_creation\":{\"ephemeral_5m_input_tokens\":0},\"output_tokens\":133,\"cache_creation_input_tokens\":0,\"input_tokens\":43,\"cache_read_input_tokens\":0,\"prompt_tokens_details\":{\"cached_tokens\":0}}}\n\nevent:message_stop\ndata:{\"type\":\"message_stop\"}\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "reasoning-start",
+          "id": "reasoning-0",
+          "providerMetadata": {
+            "alibaba": {
+              "signature": ""
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "The"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " user wants me to"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " calculate 17"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "3 × 2"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "19 and reply"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " with only the final"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " integer.\n\n1"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "73 × "
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "219:"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "\n173"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " × 20"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "0 = 3"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "4,60"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "0\n17"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "3 × 1"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "9 = 1"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "73 × "
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "20 - "
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "173 ="
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " 3,4"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "60 - "
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "173 ="
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " 3,2"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "87\n3"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "4,60"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "0 + 3"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ",287"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " = 37"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ",887"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "\n\nSo the answer"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " is 3"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "7887"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "."
+        },
+        {
+          "type": "reasoning-end",
+          "id": "reasoning-0",
+          "providerMetadata": {
+            "alibaba": {
+              "signature": ""
+            }
+          }
+        },
+        {
+          "type": "text-start",
+          "id": "text-1"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-1",
+          "text": "3788"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-1",
+          "text": "7"
+        },
+        {
+          "type": "text-end",
+          "id": "text-1"
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "stop",
+            "raw": "end_turn"
+          },
+          "usage": {
+            "inputTokens": 43,
+            "outputTokens": 133,
+            "nonCachedInputTokens": 43,
+            "cacheReadInputTokens": 0,
+            "cacheWriteInputTokens": 0,
+            "totalTokens": 176,
+            "providerMetadata": {
+              "alibaba": {
+                "input_tokens": 43,
+                "output_tokens": 133,
+                "cache_creation_input_tokens": 0,
+                "cache_read_input_tokens": 0,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0
+                },
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "stop",
+            "raw": "end_turn"
+          },
+          "usage": {
+            "inputTokens": 43,
+            "outputTokens": 133,
+            "nonCachedInputTokens": 43,
+            "cacheReadInputTokens": 0,
+            "cacheWriteInputTokens": 0,
+            "totalTokens": 176,
+            "providerMetadata": {
+              "alibaba": {
+                "input_tokens": 43,
+                "output_tokens": 133,
+                "cache_creation_input_tokens": 0,
+                "cache_read_input_tokens": 0,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0
+                },
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

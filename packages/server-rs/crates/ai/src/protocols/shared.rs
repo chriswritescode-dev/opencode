@@ -274,7 +274,7 @@ pub fn tool_file_media(item: &ToolContent) -> Option<MediaPart> {
         None => MediaSource::Base64 { data: uri.clone(), media_type: mime.clone() },
     };
     Some(MediaPart {
-        media: MediaAsset { source, info: None, provider_metadata: None },
+        media: MediaAsset { source, info: None, provider_metadata: None, headers: None },
         filename: name.clone(),
         cache: None,
         provider_metadata: None,

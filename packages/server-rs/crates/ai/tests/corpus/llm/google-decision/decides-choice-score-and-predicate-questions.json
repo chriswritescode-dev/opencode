@@ -1,0 +1,170 @@
+{
+  "cassette": "google-decision/decides-choice-score-and-predicate-questions",
+  "protocol": "google-decisions",
+  "routeId": "google-decisions",
+  "clockEpochMs": 1767323045000,
+  "steps": [
+    {
+      "model": {
+        "id": "gemini-decision-1",
+        "provider": "google",
+        "route": {
+          "id": "google-decisions"
+        }
+      },
+      "request": {
+        "input": [
+          {
+            "type": "text",
+            "text": "I was charged twice for the same invoice. Please refund the duplicate payment today."
+          }
+        ],
+        "questions": [
+          {
+            "name": "department",
+            "type": "choice",
+            "instructions": "Which team should handle this support request?",
+            "choices": [
+              {
+                "value": "billing",
+                "description": "Payments, invoices, refunds, or failed charges"
+              },
+              {
+                "value": "technical",
+                "description": "Bugs, outages, or integrations"
+              },
+              {
+                "value": "sales",
+                "description": "Pricing, upgrades, or new accounts"
+              }
+            ]
+          },
+          {
+            "name": "urgency",
+            "type": "score",
+            "instructions": "How urgent is this support request?",
+            "levels": [
+              {
+                "label": "Can wait for normal support"
+              },
+              {
+                "label": "Needs prompt attention"
+              },
+              {
+                "label": "Actively blocking revenue"
+              }
+            ]
+          },
+          {
+            "name": "refund",
+            "type": "predicate",
+            "instructions": "Is the customer asking for a refund?"
+          }
+        ]
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/google/decisions",
+        "modelID": "gemini-decision-1",
+        "settings": {
+          "apiKey": "fixture"
+        },
+        "kind": "decision"
+      },
+      "transport": "http",
+      "operation": "decision.generate",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/decisions",
+            "headers": {
+              "content-length": "675",
+              "content-type": "application/json",
+              "x-goog-api-key": "fixture"
+            },
+            "body": "{\"model\":\"gemini-decision-1\",\"input\":[{\"type\":\"text\",\"text\":\"I was charged twice for the same invoice. Please refund the duplicate payment today.\"}],\"questions\":{\"department\":{\"type\":\"choice\",\"instructions\":\"Which team should handle this support request?\",\"criteria\":{\"billing\":\"Payments, invoices, refunds, or failed charges\",\"technical\":\"Bugs, outages, or integrations\",\"sales\":\"Pricing, upgrades, or new accounts\"}},\"urgency\":{\"type\":\"score\",\"instructions\":\"How urgent is this support request?\",\"criteria\":[\"Can wait for normal support\",\"Needs prompt attention\",\"Actively blocking revenue\"]},\"refund\":{\"type\":\"noul\",\"instructions\":\"Is the customer asking for a refund?\"}}}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": "{\"answers\":{\"department\":{\"confidence\":0.9978076976696219,\"choice\":\"billing\",\"probabilities\":{\"billing\":0.9978076976696219,\"sales\":0.000687029007305657,\"technical\":0.001505273323072618},\"type\":\"choice\"},\"refund\":{\"confidence\":0.99,\"noul\":0.99,\"type\":\"noul\"},\"urgency\":{\"confidence\":0.5717345111874732,\"score\":1.1772012843064368,\"probabilities\":{\"1\":0.5717345111874732,\"0\":0.1255321022530451,\"2\":0.3027333865594818},\"legend\":{\"1\":\"Needs prompt attention\",\"2\":\"Actively blocking revenue\",\"0\":\"Can wait for normal support\"},\"type\":\"score\"}},\"usage\":{\"total_tokens\":242,\"total_input_tokens\":242,\"input_tokens_by_modality\":[{\"modality\":\"text\",\"tokens\":242}],\"total_output_tokens\":0}}"
+          }
+        }
+      ],
+      "result": {
+        "answers": [
+          {
+            "name": "department",
+            "type": "choice",
+            "choice": "billing",
+            "probabilities": [
+              {
+                "value": "billing",
+                "probability": 0.9978076976696219
+              },
+              {
+                "value": "technical",
+                "probability": 0.001505273323072618
+              },
+              {
+                "value": "sales",
+                "probability": 0.000687029007305657
+              }
+            ],
+            "confidence": 0.9978076976696219
+          },
+          {
+            "name": "urgency",
+            "type": "score",
+            "score": 1.1772012843064368,
+            "probabilities": [
+              {
+                "value": 0,
+                "label": "Can wait for normal support",
+                "probability": 0.1255321022530451
+              },
+              {
+                "value": 1,
+                "label": "Needs prompt attention",
+                "probability": 0.5717345111874732
+              },
+              {
+                "value": 2,
+                "label": "Actively blocking revenue",
+                "probability": 0.3027333865594818
+              }
+            ],
+            "confidence": 0.5717345111874732
+          },
+          {
+            "name": "refund",
+            "type": "predicate",
+            "probability": 0.99
+          }
+        ],
+        "usage": {
+          "inputTokens": 242,
+          "outputTokens": 0,
+          "totalTokens": 242
+        },
+        "providerMetadata": {
+          "google": {
+            "usage": {
+              "total_input_tokens": 242,
+              "total_output_tokens": 0,
+              "total_tokens": 242,
+              "input_tokens_by_modality": [
+                {
+                  "modality": "text",
+                  "tokens": 242
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  ]
+}

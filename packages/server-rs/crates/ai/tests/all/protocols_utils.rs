@@ -1,6 +1,14 @@
+use std::sync::Arc;
+
+use opencode_ai::protocols::utils::image_sizing::{Limits, Shape, Size, fit, nearest};
 use opencode_ai::protocols::utils::{
     cache, gemini_generate_content, lifecycle, mistral_tool_id, open_responses_options, partial_json, tool_stream,
 };
+use opencode_ai::protocols::xai_responses;
+use opencode_ai::protocols::xai_responses::XaiResponses;
+use opencode_ai::route::auth::Auth;
+use opencode_ai::route::endpoint::Endpoint;
+use opencode_ai::route::model::{Model, Route, RouteTransport};
 use opencode_ai::schema::{
     AiErrorReason, CacheHint, CacheHintType, FinishReason, FinishReasonDetails, LlmEvent, LlmRequest, MediaAsset,
     MediaSource, ToolChoice, ToolChoiceType,
@@ -189,6 +197,38 @@ fn gemini_content_filtered_matches_policy_reasons() {
 }
 
 #[test]
+fn gemini_usage_details_keep_only_the_reported_google_fields() {
+    let mut metadata = gemini_generate_content::Metadata::default();
+    metadata.track(&object(json!({
+        "usageMetadata": { "promptTokenCount": 3, "candidatesTokenCount": 4 }
+    })));
+    assert_eq!(
+        serde_json::to_value(metadata.usage().expect("usage")).expect("encoded usage"),
+        json!({
+            "type": "tokens",
+            "input": 3,
+            "output": 4,
+            "total": 7,
+            "details": { "google": { "promptTokenCount": 3, "candidatesTokenCount": 4 } }
+        })
+    );
+
+    metadata.track(&object(json!({
+        "usageMetadata": { "promptTokenCount": 3, "candidatesTokenCount": 4, "totalTokenCount": 10 }
+    })));
+    assert_eq!(
+        serde_json::to_value(metadata.usage().expect("usage")).expect("encoded usage"),
+        json!({
+            "type": "tokens",
+            "input": 3,
+            "output": 4,
+            "total": 10,
+            "details": { "google": { "promptTokenCount": 3, "candidatesTokenCount": 4, "totalTokenCount": 10 } }
+        })
+    );
+}
+
+#[test]
 fn gemini_media_part_inlines_base64_media() {
     let asset = media_asset(MediaSource::Base64 { data: "aGVsbG8=".to_string(), media_type: "IMAGE/PNG".to_string() });
     assert_eq!(
@@ -235,7 +275,7 @@ fn gemini_media_part_rejects_other_provider_refs() {
 }
 
 fn media_asset(source: MediaSource) -> MediaAsset {
-    MediaAsset { source, info: None, provider_metadata: None }
+    MediaAsset { source, info: None, provider_metadata: None, headers: None }
 }
 
 fn start_tool(tools: &mut tool_stream::State, key: i64, name: &str, text: &str) {
@@ -276,4 +316,156 @@ fn object(value: Value) -> serde_json::Map<String, Value> {
         Value::Object(map) => map,
         value => panic!("expected object, got {value}"),
     }
+}
+
+fn gpt_image_2() -> Limits {
+    Limits {
+        multiple: 16,
+        max_edge: Some(3840),
+        min_pixels: Some(655_360),
+        max_pixels: Some(8_294_400),
+        max_ratio: Some(3.0),
+        ..Limits::default()
+    }
+}
+
+fn standard(edge: i64) -> Size {
+    Size { width: edge, height: edge }
+}
+
+#[test]
+fn image_sizing_fits_an_aspect_ratio_at_a_resolution_tier() {
+    assert_eq!(
+        fit(&Shape::default(), &Limits { multiple: 16, ..Limits::default() }),
+        Size { width: 1024, height: 1024 }
+    );
+    assert_eq!(
+        fit(&Shape { aspect: Some("16:9"), resolution: None }, &gpt_image_2()),
+        Size { width: 1360, height: 768 }
+    );
+    assert_eq!(
+        fit(&Shape { aspect: Some("9:16"), resolution: Some("2K") }, &gpt_image_2()),
+        Size { width: 1536, height: 2736 }
+    );
+    assert_eq!(
+        fit(&Shape { aspect: Some("1:1"), resolution: Some("0.5K") }, &Limits { multiple: 16, ..Limits::default() }),
+        Size { width: 512, height: 512 }
+    );
+}
+
+#[test]
+fn image_sizing_stays_within_the_providers_limits() {
+    assert_eq!(
+        fit(&Shape { aspect: Some("16:9"), resolution: Some("4K") }, &gpt_image_2()),
+        Size { width: 3840, height: 2160 }
+    );
+    assert_eq!(
+        fit(&Shape { aspect: Some("1:1"), resolution: Some("4K") }, &gpt_image_2()),
+        Size { width: 2880, height: 2880 }
+    );
+    assert_eq!(
+        fit(&Shape { aspect: Some("1:1"), resolution: Some("0.5K") }, &gpt_image_2()),
+        Size { width: 816, height: 816 }
+    );
+    assert_eq!(
+        fit(&Shape { aspect: Some("4:1"), resolution: None }, &gpt_image_2()),
+        Size { width: 1776, height: 592 }
+    );
+    assert_eq!(
+        fit(
+            &Shape { aspect: Some("16:9"), resolution: Some("2K") },
+            &Limits { multiple: 16, max_pixels: Some(2048 * 2048), ..Limits::default() }
+        ),
+        Size { width: 2720, height: 1536 }
+    );
+    assert_eq!(
+        fit(
+            &Shape { aspect: Some("16:9"), resolution: None },
+            &Limits { multiple: 32, min_edge: Some(1024), max_edge: Some(2048), ..Limits::default() }
+        ),
+        Size { width: 1824, height: 1024 }
+    );
+}
+
+#[test]
+fn image_sizing_picks_the_nearest_listed_size() {
+    let sizes = vec![
+        Size { width: 1024, height: 1024 },
+        Size { width: 1536, height: 1024 },
+        Size { width: 1024, height: 1536 },
+    ];
+    assert_eq!(nearest(&Shape { aspect: Some("16:9"), resolution: None }, &sizes), Size { width: 1536, height: 1024 });
+    assert_eq!(nearest(&Shape { aspect: Some("3:4"), resolution: None }, &sizes), Size { width: 1024, height: 1536 });
+    assert_eq!(
+        nearest(&Shape { aspect: None, resolution: Some("0.5K") }, &[standard(256), standard(512), standard(1024)]),
+        Size { width: 512, height: 512 }
+    );
+}
+
+#[test]
+fn xai_compact_request_uses_the_xai_adapter() {
+    let model = Model {
+        id: "grok-4".to_string(),
+        provider: "xai".to_string(),
+        options: None,
+        route: Route {
+            id: "xai-responses".to_string(),
+            protocol: Arc::new(XaiResponses),
+            provider_metadata_key: Some("xai".to_string()),
+            endpoint: Endpoint::new("https://api.x.ai/v1".to_string(), "/responses"),
+            auth: Auth::None,
+            headers: None,
+            body: None,
+            channel: None,
+            transport: RouteTransport::Http,
+            options: None,
+        },
+        compatibility: None,
+        capabilities: None,
+    };
+    let request: LlmRequest = serde_json::from_value(json!({
+        "system": [],
+        "messages": [{
+            "role": "user",
+            "content": [
+                { "type": "text", "text": "Summarize this clip" },
+                {
+                    "type": "media",
+                    "media": {
+                        "source": { "type": "url", "url": "https://cdn.test/clip.mp4", "mediaType": "video/mp4" }
+                    },
+                    "filename": "clip.mp4"
+                }
+            ]
+        }],
+        "tools": []
+    }))
+    .expect("request");
+    let compact = xai_responses::compact_request(&request, &model).expect("compact request");
+    assert!(compact.url.ends_with("/responses/compact"), "{}", compact.url);
+    let input = compact.body["input"].as_array().expect("input");
+    assert!(input.iter().all(|item| item.get("type").and_then(Value::as_str) != Some("input_video")));
+    let part = input
+        .iter()
+        .filter_map(|item| item.get("content").and_then(Value::as_array))
+        .flatten()
+        .find(|part| part.get("type").and_then(Value::as_str) == Some("input_file"))
+        .expect("xAI media lowering");
+    assert_eq!(part["file_url"], json!("https://cdn.test/clip.mp4"));
+    assert_eq!(part["filename"], json!("clip.mp4"));
+}
+
+#[test]
+fn media_input_query_formats_numbers_like_javascript() {
+    let values = json!({ "whole": 1.0, "huge": 1e21, "tiny": 1e-7 });
+    let query =
+        opencode_ai::protocols::utils::media_input::query("test", values.as_object().expect("object")).expect("query");
+    assert_eq!(
+        query,
+        vec![
+            ("whole".to_string(), opencode_ai::media::protocol::QueryValue::One("1".to_string())),
+            ("huge".to_string(), opencode_ai::media::protocol::QueryValue::One("1e+21".to_string())),
+            ("tiny".to_string(), opencode_ai::media::protocol::QueryValue::One("1e-7".to_string())),
+        ]
+    );
 }

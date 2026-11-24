@@ -1,0 +1,156 @@
+{
+  "cassette": "meta-chat/streams-text-with-default-reasoning",
+  "protocol": "openai-chat",
+  "routeId": "meta-chat",
+  "clockEpochMs": 1767323045000,
+  "steps": [
+    {
+      "model": {
+        "id": "muse-spark-1.3",
+        "provider": "meta",
+        "route": {
+          "id": "meta-chat",
+          "protocol": "openai-chat",
+          "providerMetadataKey": "meta"
+        },
+        "endpoint": {
+          "baseURL": "https://api.meta.ai/v1",
+          "path": "/chat/completions"
+        },
+        "compatibility": {
+          "maxTokensField": "max_completion_tokens"
+        },
+        "capabilities": {
+          "promptCacheKey": true
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_meta_chat_streams_text_with_default_reasoning",
+        "maxTokens": 1024,
+        "system": [],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "What is 173 multiplied by 219? Reply with only the final integer."
+              }
+            ]
+          }
+        ],
+        "tools": []
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/meta/chat",
+        "modelID": "muse-spark-1.3",
+        "settings": {
+          "apiKey": "fixture"
+        }
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://api.meta.ai/v1/chat/completions",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "216",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"muse-spark-1.3\",\"messages\":[{\"role\":\"user\",\"content\":\"What is 173 multiplied by 219? Reply with only the final integer.\"}],\"stream\":true,\"stream_options\":{\"include_usage\":true},\"max_completion_tokens\":1024}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream"
+            },
+            "body": "data: {\"id\":\"chatcmpl-01a07ccb-8ae3-72b3-b321-b5163dda0714\",\"choices\":[{\"delta\":{\"content\":\"37887\",\"role\":\"assistant\"},\"finish_reason\":null,\"index\":0}],\"created\":1788800109,\"model\":\"muse-spark-1.3\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"id\":\"chatcmpl-01a07ccb-8ae3-72b3-b321-b5163dda0714\",\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1788800109,\"model\":\"muse-spark-1.3\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":363,\"prompt_tokens\":23,\"total_tokens\":386,\"completion_tokens_details\":{\"reasoning_tokens\":351},\"prompt_tokens_details\":{\"cached_tokens\":0}}}\n\ndata: [DONE]\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "text-start",
+          "id": "text-0"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "37887"
+        },
+        {
+          "type": "text-end",
+          "id": "text-0"
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 23,
+            "outputTokens": 363,
+            "nonCachedInputTokens": 23,
+            "cacheReadInputTokens": 0,
+            "reasoningTokens": 351,
+            "totalTokens": 386,
+            "providerMetadata": {
+              "meta": {
+                "prompt_tokens": 23,
+                "completion_tokens": 363,
+                "total_tokens": 386,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                },
+                "completion_tokens_details": {
+                  "reasoning_tokens": 351
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 23,
+            "outputTokens": 363,
+            "nonCachedInputTokens": 23,
+            "cacheReadInputTokens": 0,
+            "reasoningTokens": 351,
+            "totalTokens": 386,
+            "providerMetadata": {
+              "meta": {
+                "prompt_tokens": 23,
+                "completion_tokens": 363,
+                "total_tokens": 386,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                },
+                "completion_tokens_details": {
+                  "reasoning_tokens": 351
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

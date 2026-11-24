@@ -67,6 +67,23 @@
         ],
         "tools": []
       },
+      "provider": {
+        "package": "@opencode/ai/providers/amazon-bedrock",
+        "modelID": "us.anthropic.claude-sonnet-4-6",
+        "settings": {
+          "apiKey": "fixture",
+          "region": "us-east-1",
+          "effort": "high",
+          "thinking": {
+            "type": "adaptive",
+            "display": "summarized"
+          },
+          "serviceTier": "default",
+          "requestMetadata": {
+            "suite": "opencode-ai"
+          }
+        }
+      },
       "transport": "http",
       "exchanges": [
         {

@@ -15,21 +15,19 @@ pub struct CompactRequest {
 }
 
 pub fn compact_request(request: &LlmRequest, model: &Model) -> Result<CompactRequest, AiError> {
+    compact_request_with(&openai_responses::ADAPTER, openai_tools, request, model)
+}
+
+pub fn compact_request_with(
+    adapter: &open_responses::ProviderAdapter,
+    lower_tools: fn(&LlmRequest) -> Result<Vec<Value>, AiError>,
+    request: &LlmRequest,
+    model: &Model,
+) -> Result<CompactRequest, AiError> {
     let folded = fold_tool_updates(model, strip_effort_updates(request.clone()));
-    let native = open_responses::lower_conversation(&folded, model, &openai_responses::ADAPTER, None)?;
+    let native = open_responses::lower_conversation(&folded, model, adapter, None)?;
     let generation = open_responses::lower_generation(request, model, &open_responses_options::resolve(request));
-    let tools = if folded.tools.is_empty() {
-        None
-    } else {
-        let custom = openai_freeform::tools(&folded);
-        Some(
-            folded
-                .tools
-                .iter()
-                .map(|entry| openai_responses::lower_tool_entry(entry, &custom))
-                .collect::<Result<Vec<Value>, AiError>>()?,
-        )
-    };
+    let tools = if folded.tools.is_empty() { None } else { Some(lower_tools(&folded)?) };
     let mut base = Map::new();
     for key in ["model", "input"] {
         if let Some(value) = native.get(key) {
@@ -58,6 +56,11 @@ pub fn compact_request(request: &LlmRequest, model: &Model) -> Result<CompactReq
     let path = format!("{}/compact", url.path().strip_suffix('/').unwrap_or(url.path()));
     url.set_path(&path);
     Ok(CompactRequest { url: url.to_string(), body })
+}
+
+fn openai_tools(request: &LlmRequest) -> Result<Vec<Value>, AiError> {
+    let custom = openai_freeform::tools(request);
+    request.tools.iter().map(|entry| openai_responses::lower_tool_entry(entry, &custom)).collect()
 }
 
 fn project(merged: &Value) -> Result<Value, AiError> {

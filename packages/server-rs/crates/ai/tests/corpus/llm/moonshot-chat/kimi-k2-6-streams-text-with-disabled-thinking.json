@@ -1,0 +1,175 @@
+{
+  "cassette": "moonshot-chat/kimi-k2-6-streams-text-with-disabled-thinking",
+  "protocol": "openai-chat",
+  "routeId": "moonshot-chat",
+  "clockEpochMs": 1767323045000,
+  "steps": [
+    {
+      "model": {
+        "id": "kimi-k2.6",
+        "provider": "moonshotai",
+        "route": {
+          "id": "moonshot-chat",
+          "protocol": "moonshot-chat",
+          "providerMetadataKey": "moonshot"
+        },
+        "endpoint": {
+          "baseURL": "https://api.moonshot.ai/v1",
+          "path": "/chat/completions"
+        },
+        "options": {
+          "providerOptions": {
+            "thinking": {
+              "type": "disabled"
+            }
+          }
+        },
+        "modelOptions": {
+          "providerOptions": {
+            "thinking": {
+              "type": "disabled"
+            }
+          }
+        },
+        "compatibility": {
+          "sanitizer": "moonshot",
+          "reasoningField": "reasoning_content",
+          "maxTokensField": "max_tokens"
+        },
+        "capabilities": {
+          "tools": {
+            "strict": false
+          },
+          "promptCacheKey": true
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_moonshot_chat_kimi-k2-6_streams_text_with_disabled_thinking",
+        "maxTokens": 4096,
+        "system": [],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "What is 173 multiplied by 219? Reply with only the final integer."
+              }
+            ]
+          }
+        ],
+        "tools": []
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/moonshot",
+        "modelID": "kimi-k2.6",
+        "settings": {
+          "apiKey": "fixture",
+          "thinking": {
+            "type": "disabled"
+          }
+        }
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://api.moonshot.ai/v1/chat/completions",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "231",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"kimi-k2.6\",\"messages\":[{\"role\":\"user\",\"content\":\"What is 173 multiplied by 219? Reply with only the final integer.\"}],\"stream\":true,\"stream_options\":{\"include_usage\":true},\"max_tokens\":4096,\"thinking\":{\"type\":\"disabled\"}}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream"
+            },
+            "body": "data: {\"id\":\"chatcmpl-6a9f1ffd7d28eaca53fe9b4c\",\"object\":\"chat.completion.chunk\",\"created\":1788813309,\"model\":\"kimi-k2.6\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"},\"finish_reason\":null}],\"system_fingerprint\":\"fpv0_45f9e909\"}\n\ndata: {\"id\":\"chatcmpl-6a9f1ffd7d28eaca53fe9b4c\",\"object\":\"chat.completion.chunk\",\"created\":1788813309,\"model\":\"kimi-k2.6\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"\"},\"finish_reason\":null}],\"system_fingerprint\":\"fpv0_45f9e909\"}\n\ndata: {\"id\":\"chatcmpl-6a9f1ffd7d28eaca53fe9b4c\",\"object\":\"chat.completion.chunk\",\"created\":1788813309,\"model\":\"kimi-k2.6\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"378\"},\"finish_reason\":null}],\"system_fingerprint\":\"fpv0_45f9e909\"}\n\ndata: {\"id\":\"chatcmpl-6a9f1ffd7d28eaca53fe9b4c\",\"object\":\"chat.completion.chunk\",\"created\":1788813309,\"model\":\"kimi-k2.6\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"87\"},\"finish_reason\":null}],\"system_fingerprint\":\"fpv0_45f9e909\"}\n\ndata: {\"id\":\"chatcmpl-6a9f1ffd7d28eaca53fe9b4c\",\"object\":\"chat.completion.chunk\",\"created\":1788813309,\"model\":\"kimi-k2.6\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\",\"usage\":{\"prompt_tokens\":23,\"completion_tokens\":5,\"total_tokens\":28,\"completion_tokens_details\":{\"reasoning_tokens\":1}}}],\"system_fingerprint\":\"fpv0_45f9e909\"}\n\ndata: {\"id\":\"chatcmpl-6a9f1ffd7d28eaca53fe9b4c\",\"object\":\"chat.completion.chunk\",\"created\":1788813309,\"model\":\"kimi-k2.6\",\"choices\":[],\"usage\":{\"prompt_tokens\":23,\"completion_tokens\":5,\"total_tokens\":28,\"completion_tokens_details\":{\"reasoning_tokens\":1}}}\n\ndata: [DONE]\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "text-start",
+          "id": "text-0"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "378"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "87"
+        },
+        {
+          "type": "text-end",
+          "id": "text-0"
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 23,
+            "outputTokens": 5,
+            "nonCachedInputTokens": 23,
+            "reasoningTokens": 1,
+            "totalTokens": 28,
+            "providerMetadata": {
+              "moonshot": {
+                "prompt_tokens": 23,
+                "completion_tokens": 5,
+                "total_tokens": 28,
+                "completion_tokens_details": {
+                  "reasoning_tokens": 1
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 23,
+            "outputTokens": 5,
+            "nonCachedInputTokens": 23,
+            "reasoningTokens": 1,
+            "totalTokens": 28,
+            "providerMetadata": {
+              "moonshot": {
+                "prompt_tokens": 23,
+                "completion_tokens": 5,
+                "total_tokens": 28,
+                "completion_tokens_details": {
+                  "reasoning_tokens": 1
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

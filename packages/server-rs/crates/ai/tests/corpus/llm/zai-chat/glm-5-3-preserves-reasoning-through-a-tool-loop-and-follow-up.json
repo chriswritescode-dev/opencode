@@ -1,0 +1,1377 @@
+{
+  "cassette": "zai-chat/glm-5-3-preserves-reasoning-through-a-tool-loop-and-follow-up",
+  "protocol": "openai-chat",
+  "routeId": "zai-chat",
+  "clockEpochMs": 1767323045000,
+  "steps": [
+    {
+      "model": {
+        "id": "glm-5.3",
+        "provider": "zai",
+        "route": {
+          "id": "zai-chat",
+          "protocol": "zai-chat",
+          "providerMetadataKey": "zai"
+        },
+        "endpoint": {
+          "baseURL": "https://api.z.ai/api/paas/v4",
+          "path": "/chat/completions"
+        },
+        "options": {
+          "providerOptions": {
+            "reasoningEffort": "high",
+            "thinking": {
+              "type": "enabled",
+              "clear_thinking": false
+            }
+          }
+        },
+        "modelOptions": {
+          "providerOptions": {
+            "reasoningEffort": "high",
+            "thinking": {
+              "type": "enabled",
+              "clear_thinking": false
+            }
+          }
+        },
+        "compatibility": {
+          "reasoningField": "reasoning_content",
+          "maxTokensField": "max_tokens",
+          "zaiToolStream": false
+        },
+        "capabilities": {
+          "tools": {
+            "strict": false
+          }
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_zai_glm_5_3_tool_loop",
+        "maxTokens": 4096,
+        "system": [],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "We have a budget of 38000 dollars for 219 trips costing 173 dollars each. Calculate whether that is affordable. If it is, use get_weather to look up the current weather in Paris. After receiving the result, report the weather in one short sentence."
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "tool",
+            "name": "get_weather",
+            "description": "Get the current weather in a city",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "city": {
+                  "type": "string",
+                  "enum": [
+                    "Paris"
+                  ]
+                }
+              },
+              "required": [
+                "city"
+              ],
+              "additionalProperties": false
+            }
+          }
+        ]
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/zai",
+        "modelID": "glm-5.3",
+        "settings": {
+          "apiKey": "fixture",
+          "reasoningEffort": "high",
+          "thinking": {
+            "type": "enabled",
+            "clear_thinking": false
+          }
+        }
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://api.z.ai/api/paas/v4/chat/completions",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "730",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"glm-5.3\",\"messages\":[{\"role\":\"user\",\"content\":\"We have a budget of 38000 dollars for 219 trips costing 173 dollars each. Calculate whether that is affordable. If it is, use get_weather to look up the current weather in Paris. After receiving the result, report the weather in one short sentence.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"get_weather\",\"description\":\"Get the current weather in a city\",\"parameters\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\",\"enum\":[\"Paris\"]}},\"required\":[\"city\"],\"additionalProperties\":false}}}],\"stream\":true,\"stream_options\":{\"include_usage\":true},\"max_tokens\":4096,\"reasoning_effort\":\"high\",\"thinking\":{\"type\":\"enabled\",\"clear_thinking\":false},\"tool_stream\":true}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream;charset=UTF-8"
+            },
+            "body": "data: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"2\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"19\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" ×\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" \"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"173\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" =\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" \"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"37\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\",\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"88\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"7\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\".\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" That\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"'s\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" ≤\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" \"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"38\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\",\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"000\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\",\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" affordable\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\".\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" Then\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" call\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" weather\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\".\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"The\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\" total\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\" cost\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\" is\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\" \"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"2\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"19\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\" ×\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\" $\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"173\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\" =\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\" $\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"38\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\",\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"78\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"7\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"...\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\" let\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\" me\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\" rec\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"alculate\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\":\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\" \"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"2\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"19\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\" ×\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\" \"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"173\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\" =\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\" $\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"37\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\",\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"88\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"7\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\",\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\" which\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\" is\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\" under\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\" the\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\" $\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"38\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\",\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"000\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\" budget\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\".\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\" It\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"'s\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\" affordable\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\",\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\" so\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\" I\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"'ll\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\" check\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\" the\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\" Paris\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\" weather\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\" now\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\".\"}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"id\":\"call_e98551e6b421426f8cc46bbd\",\"index\":0,\"type\":\"function\",\"function\":{\"name\":\"get_weather\",\"arguments\":\"{\\\"\"}}]}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":0,\"type\":\"function\",\"function\":{\"arguments\":\"city\"}}]}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":0,\"type\":\"function\",\"function\":{\"arguments\":\"\\\":\\\"\"}}]}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":0,\"type\":\"function\",\"function\":{\"arguments\":\"Paris\\\"\"}}]}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":0,\"type\":\"function\",\"function\":{\"arguments\":\"}\"}}]}}]}\n\ndata: {\"id\":\"20260908085924f024aa8e5d50425f\",\"created\":1788829164,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"finish_reason\":\"tool_calls\",\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}],\"usage\":{\"prompt_tokens\":222,\"completion_tokens\":96,\"total_tokens\":318,\"prompt_tokens_details\":{\"cached_tokens\":0},\"completion_tokens_details\":{\"reasoning_tokens\":26}}}\n\ndata: [DONE]\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "reasoning-start",
+          "id": "reasoning-0",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "2",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "19",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " ×",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " ",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "173",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " =",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " ",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "37",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ",",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "88",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "7",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ".",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " That",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "'s",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " ≤",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " ",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "38",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ",",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "000",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ",",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " affordable",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ".",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " Then",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " call",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " weather",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ".",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "text-start",
+          "id": "text-0"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "The"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " total"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " cost"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " is"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " "
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "2"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "19"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " ×"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " $"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "173"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " ="
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " $"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "38"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": ","
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "78"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "7"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "..."
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " let"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " me"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " rec"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "alculate"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": ":"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " "
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "2"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "19"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " ×"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " "
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "173"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " ="
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " $"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "37"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": ","
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "88"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "7"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": ","
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " which"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " is"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " under"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " the"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " $"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "38"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": ","
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "000"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " budget"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "."
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " It"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "'s"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " affordable"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": ","
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " so"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " I"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "'ll"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " check"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " the"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " Paris"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " weather"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " now"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "."
+        },
+        {
+          "type": "tool-input-start",
+          "id": "call_e98551e6b421426f8cc46bbd",
+          "name": "get_weather"
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "call_e98551e6b421426f8cc46bbd",
+          "name": "get_weather",
+          "text": "{\"",
+          "input": {}
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "call_e98551e6b421426f8cc46bbd",
+          "name": "get_weather",
+          "text": "city",
+          "input": {}
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "call_e98551e6b421426f8cc46bbd",
+          "name": "get_weather",
+          "text": "\":\"",
+          "input": {
+            "city": ""
+          }
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "call_e98551e6b421426f8cc46bbd",
+          "name": "get_weather",
+          "text": "Paris\"",
+          "input": {
+            "city": "Paris"
+          }
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "call_e98551e6b421426f8cc46bbd",
+          "name": "get_weather",
+          "text": "}",
+          "input": {
+            "city": "Paris"
+          }
+        },
+        {
+          "type": "reasoning-end",
+          "id": "reasoning-0",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "tool-input-end",
+          "id": "call_e98551e6b421426f8cc46bbd",
+          "name": "get_weather"
+        },
+        {
+          "type": "tool-call",
+          "id": "call_e98551e6b421426f8cc46bbd",
+          "name": "get_weather",
+          "input": {
+            "city": "Paris"
+          }
+        },
+        {
+          "type": "text-end",
+          "id": "text-0"
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "tool-calls",
+            "raw": "tool_calls"
+          },
+          "usage": {
+            "inputTokens": 222,
+            "outputTokens": 96,
+            "nonCachedInputTokens": 222,
+            "cacheReadInputTokens": 0,
+            "reasoningTokens": 26,
+            "totalTokens": 318,
+            "providerMetadata": {
+              "zai": {
+                "prompt_tokens": 222,
+                "completion_tokens": 96,
+                "total_tokens": 318,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                },
+                "completion_tokens_details": {
+                  "reasoning_tokens": 26
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "tool-calls",
+            "raw": "tool_calls"
+          },
+          "usage": {
+            "inputTokens": 222,
+            "outputTokens": 96,
+            "nonCachedInputTokens": 222,
+            "cacheReadInputTokens": 0,
+            "reasoningTokens": 26,
+            "totalTokens": 318,
+            "providerMetadata": {
+              "zai": {
+                "prompt_tokens": 222,
+                "completion_tokens": 96,
+                "total_tokens": 318,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                },
+                "completion_tokens_details": {
+                  "reasoning_tokens": 26
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "model": {
+        "id": "glm-5.3",
+        "provider": "zai",
+        "route": {
+          "id": "zai-chat",
+          "protocol": "zai-chat",
+          "providerMetadataKey": "zai"
+        },
+        "endpoint": {
+          "baseURL": "https://api.z.ai/api/paas/v4",
+          "path": "/chat/completions"
+        },
+        "options": {
+          "providerOptions": {
+            "reasoningEffort": "high",
+            "thinking": {
+              "type": "enabled",
+              "clear_thinking": false
+            }
+          }
+        },
+        "modelOptions": {
+          "providerOptions": {
+            "reasoningEffort": "high",
+            "thinking": {
+              "type": "enabled",
+              "clear_thinking": false
+            }
+          }
+        },
+        "compatibility": {
+          "reasoningField": "reasoning_content",
+          "maxTokensField": "max_tokens",
+          "zaiToolStream": false
+        },
+        "capabilities": {
+          "tools": {
+            "strict": false
+          }
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_zai_glm_5_3_tool_loop",
+        "maxTokens": 4096,
+        "system": [],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "We have a budget of 38000 dollars for 219 trips costing 173 dollars each. Calculate whether that is affordable. If it is, use get_weather to look up the current weather in Paris. After receiving the result, report the weather in one short sentence."
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "reasoning",
+                "text": "219 × 173 = 37,887. That's ≤ 38,000, affordable. Then call weather.",
+                "providerMetadata": {
+                  "zai": {
+                    "reasoningField": "reasoning_content"
+                  }
+                }
+              },
+              {
+                "type": "text",
+                "text": "The total cost is 219 × $173 = $38,787... let me recalculate: 219 × 173 = $37,887, which is under the $38,000 budget. It's affordable, so I'll check the Paris weather now."
+              },
+              {
+                "type": "tool-call",
+                "id": "call_e98551e6b421426f8cc46bbd",
+                "name": "get_weather",
+                "input": {
+                  "city": "Paris"
+                }
+              }
+            ]
+          },
+          {
+            "role": "tool",
+            "content": [
+              {
+                "type": "tool-result",
+                "id": "call_e98551e6b421426f8cc46bbd",
+                "name": "get_weather",
+                "result": {
+                  "type": "json",
+                  "value": {
+                    "condition": "sunny",
+                    "temperature": "18C"
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "tool",
+            "name": "get_weather",
+            "description": "Get the current weather in a city",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "city": {
+                  "type": "string",
+                  "enum": [
+                    "Paris"
+                  ]
+                }
+              },
+              "required": [
+                "city"
+              ],
+              "additionalProperties": false
+            }
+          }
+        ]
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/zai",
+        "modelID": "glm-5.3",
+        "settings": {
+          "apiKey": "fixture",
+          "reasoningEffort": "high",
+          "thinking": {
+            "type": "enabled",
+            "clear_thinking": false
+          }
+        }
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://api.z.ai/api/paas/v4/chat/completions",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "1296",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"glm-5.3\",\"messages\":[{\"role\":\"user\",\"content\":\"We have a budget of 38000 dollars for 219 trips costing 173 dollars each. Calculate whether that is affordable. If it is, use get_weather to look up the current weather in Paris. After receiving the result, report the weather in one short sentence.\"},{\"role\":\"assistant\",\"content\":\"The total cost is 219 × $173 = $38,787... let me recalculate: 219 × 173 = $37,887, which is under the $38,000 budget. It's affordable, so I'll check the Paris weather now.\",\"tool_calls\":[{\"id\":\"call_e98551e6b421426f8cc46bbd\",\"type\":\"function\",\"function\":{\"name\":\"get_weather\",\"arguments\":\"{\\\"city\\\":\\\"Paris\\\"}\"}}],\"reasoning_content\":\"219 × 173 = 37,887. That's ≤ 38,000, affordable. Then call weather.\"},{\"role\":\"tool\",\"tool_call_id\":\"call_e98551e6b421426f8cc46bbd\",\"content\":\"{\\\"condition\\\":\\\"sunny\\\",\\\"temperature\\\":\\\"18C\\\"}\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"get_weather\",\"description\":\"Get the current weather in a city\",\"parameters\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\",\"enum\":[\"Paris\"]}},\"required\":[\"city\"],\"additionalProperties\":false}}}],\"stream\":true,\"stream_options\":{\"include_usage\":true},\"max_tokens\":4096,\"reasoning_effort\":\"high\",\"thinking\":{\"type\":\"enabled\",\"clear_thinking\":false},\"tool_stream\":true}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream;charset=UTF-8"
+            },
+            "body": "data: {\"id\":\"202609080859295412ec6521734c7f\",\"created\":1788829169,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"It\"}}]}\n\ndata: {\"id\":\"202609080859295412ec6521734c7f\",\"created\":1788829169,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"'s\"}}]}\n\ndata: {\"id\":\"202609080859295412ec6521734c7f\",\"created\":1788829169,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\" currently\"}}]}\n\ndata: {\"id\":\"202609080859295412ec6521734c7f\",\"created\":1788829169,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\" sunny\"}}]}\n\ndata: {\"id\":\"202609080859295412ec6521734c7f\",\"created\":1788829169,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\" and\"}}]}\n\ndata: {\"id\":\"202609080859295412ec6521734c7f\",\"created\":1788829169,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\" \"}}]}\n\ndata: {\"id\":\"202609080859295412ec6521734c7f\",\"created\":1788829169,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"18\"}}]}\n\ndata: {\"id\":\"202609080859295412ec6521734c7f\",\"created\":1788829169,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"°C\"}}]}\n\ndata: {\"id\":\"202609080859295412ec6521734c7f\",\"created\":1788829169,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\" in\"}}]}\n\ndata: {\"id\":\"202609080859295412ec6521734c7f\",\"created\":1788829169,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\" Paris\"}}]}\n\ndata: {\"id\":\"202609080859295412ec6521734c7f\",\"created\":1788829169,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\".\"}}]}\n\ndata: {\"id\":\"202609080859295412ec6521734c7f\",\"created\":1788829169,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"finish_reason\":\"stop\",\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}],\"usage\":{\"prompt_tokens\":333,\"completion_tokens\":13,\"total_tokens\":346,\"prompt_tokens_details\":{\"cached_tokens\":0},\"completion_tokens_details\":{\"reasoning_tokens\":0}}}\n\ndata: [DONE]\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "text-start",
+          "id": "text-0"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "It"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "'s"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " currently"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " sunny"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " and"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " "
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "18"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "°C"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " in"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " Paris"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "."
+        },
+        {
+          "type": "text-end",
+          "id": "text-0"
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 333,
+            "outputTokens": 13,
+            "nonCachedInputTokens": 333,
+            "cacheReadInputTokens": 0,
+            "reasoningTokens": 0,
+            "totalTokens": 346,
+            "providerMetadata": {
+              "zai": {
+                "prompt_tokens": 333,
+                "completion_tokens": 13,
+                "total_tokens": 346,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                },
+                "completion_tokens_details": {
+                  "reasoning_tokens": 0
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 333,
+            "outputTokens": 13,
+            "nonCachedInputTokens": 333,
+            "cacheReadInputTokens": 0,
+            "reasoningTokens": 0,
+            "totalTokens": 346,
+            "providerMetadata": {
+              "zai": {
+                "prompt_tokens": 333,
+                "completion_tokens": 13,
+                "total_tokens": 346,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                },
+                "completion_tokens_details": {
+                  "reasoning_tokens": 0
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "model": {
+        "id": "glm-5.3",
+        "provider": "zai",
+        "route": {
+          "id": "zai-chat",
+          "protocol": "zai-chat",
+          "providerMetadataKey": "zai"
+        },
+        "endpoint": {
+          "baseURL": "https://api.z.ai/api/paas/v4",
+          "path": "/chat/completions"
+        },
+        "options": {
+          "providerOptions": {
+            "reasoningEffort": "high",
+            "thinking": {
+              "type": "enabled",
+              "clear_thinking": false
+            }
+          }
+        },
+        "modelOptions": {
+          "providerOptions": {
+            "reasoningEffort": "high",
+            "thinking": {
+              "type": "enabled",
+              "clear_thinking": false
+            }
+          }
+        },
+        "compatibility": {
+          "reasoningField": "reasoning_content",
+          "maxTokensField": "max_tokens",
+          "zaiToolStream": false
+        },
+        "capabilities": {
+          "tools": {
+            "strict": false
+          }
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_zai_glm_5_3_tool_loop",
+        "maxTokens": 4096,
+        "system": [],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "We have a budget of 38000 dollars for 219 trips costing 173 dollars each. Calculate whether that is affordable. If it is, use get_weather to look up the current weather in Paris. After receiving the result, report the weather in one short sentence."
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "reasoning",
+                "text": "219 × 173 = 37,887. That's ≤ 38,000, affordable. Then call weather.",
+                "providerMetadata": {
+                  "zai": {
+                    "reasoningField": "reasoning_content"
+                  }
+                }
+              },
+              {
+                "type": "text",
+                "text": "The total cost is 219 × $173 = $38,787... let me recalculate: 219 × 173 = $37,887, which is under the $38,000 budget. It's affordable, so I'll check the Paris weather now."
+              },
+              {
+                "type": "tool-call",
+                "id": "call_e98551e6b421426f8cc46bbd",
+                "name": "get_weather",
+                "input": {
+                  "city": "Paris"
+                }
+              }
+            ]
+          },
+          {
+            "role": "tool",
+            "content": [
+              {
+                "type": "tool-result",
+                "id": "call_e98551e6b421426f8cc46bbd",
+                "name": "get_weather",
+                "result": {
+                  "type": "json",
+                  "value": {
+                    "condition": "sunny",
+                    "temperature": "18C"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "It's currently sunny and 18°C in Paris."
+              }
+            ]
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "What temperature did the tool report? Reply with only the temperature."
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "tool",
+            "name": "get_weather",
+            "description": "Get the current weather in a city",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "city": {
+                  "type": "string",
+                  "enum": [
+                    "Paris"
+                  ]
+                }
+              },
+              "required": [
+                "city"
+              ],
+              "additionalProperties": false
+            }
+          }
+        ]
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/zai",
+        "modelID": "glm-5.3",
+        "settings": {
+          "apiKey": "fixture",
+          "reasoningEffort": "high",
+          "thinking": {
+            "type": "enabled",
+            "clear_thinking": false
+          }
+        }
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://api.z.ai/api/paas/v4/chat/completions",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "1492",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"glm-5.3\",\"messages\":[{\"role\":\"user\",\"content\":\"We have a budget of 38000 dollars for 219 trips costing 173 dollars each. Calculate whether that is affordable. If it is, use get_weather to look up the current weather in Paris. After receiving the result, report the weather in one short sentence.\"},{\"role\":\"assistant\",\"content\":\"The total cost is 219 × $173 = $38,787... let me recalculate: 219 × 173 = $37,887, which is under the $38,000 budget. It's affordable, so I'll check the Paris weather now.\",\"tool_calls\":[{\"id\":\"call_e98551e6b421426f8cc46bbd\",\"type\":\"function\",\"function\":{\"name\":\"get_weather\",\"arguments\":\"{\\\"city\\\":\\\"Paris\\\"}\"}}],\"reasoning_content\":\"219 × 173 = 37,887. That's ≤ 38,000, affordable. Then call weather.\"},{\"role\":\"tool\",\"tool_call_id\":\"call_e98551e6b421426f8cc46bbd\",\"content\":\"{\\\"condition\\\":\\\"sunny\\\",\\\"temperature\\\":\\\"18C\\\"}\"},{\"role\":\"assistant\",\"content\":\"It's currently sunny and 18°C in Paris.\",\"reasoning_content\":\"\"},{\"role\":\"user\",\"content\":\"What temperature did the tool report? Reply with only the temperature.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"get_weather\",\"description\":\"Get the current weather in a city\",\"parameters\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\",\"enum\":[\"Paris\"]}},\"required\":[\"city\"],\"additionalProperties\":false}}}],\"stream\":true,\"stream_options\":{\"include_usage\":true},\"max_tokens\":4096,\"reasoning_effort\":\"high\",\"thinking\":{\"type\":\"enabled\",\"clear_thinking\":false},\"tool_stream\":true}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream;charset=UTF-8"
+            },
+            "body": "data: {\"id\":\"20260908085933c58c4dfdf5dc4db2\",\"created\":1788829173,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"18\"}}]}\n\ndata: {\"id\":\"20260908085933c58c4dfdf5dc4db2\",\"created\":1788829173,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"°C\"}}]}\n\ndata: {\"id\":\"20260908085933c58c4dfdf5dc4db2\",\"created\":1788829173,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.3\",\"choices\":[{\"index\":0,\"finish_reason\":\"stop\",\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}],\"usage\":{\"prompt_tokens\":361,\"completion_tokens\":4,\"total_tokens\":365,\"prompt_tokens_details\":{\"cached_tokens\":0},\"completion_tokens_details\":{\"reasoning_tokens\":0}}}\n\ndata: [DONE]\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "text-start",
+          "id": "text-0"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "18"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "°C"
+        },
+        {
+          "type": "text-end",
+          "id": "text-0"
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 361,
+            "outputTokens": 4,
+            "nonCachedInputTokens": 361,
+            "cacheReadInputTokens": 0,
+            "reasoningTokens": 0,
+            "totalTokens": 365,
+            "providerMetadata": {
+              "zai": {
+                "prompt_tokens": 361,
+                "completion_tokens": 4,
+                "total_tokens": 365,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                },
+                "completion_tokens_details": {
+                  "reasoning_tokens": 0
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 361,
+            "outputTokens": 4,
+            "nonCachedInputTokens": 361,
+            "cacheReadInputTokens": 0,
+            "reasoningTokens": 0,
+            "totalTokens": 365,
+            "providerMetadata": {
+              "zai": {
+                "prompt_tokens": 361,
+                "completion_tokens": 4,
+                "total_tokens": 365,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                },
+                "completion_tokens_details": {
+                  "reasoning_tokens": 0
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

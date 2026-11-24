@@ -52,12 +52,42 @@ pub struct Cassette {
 #[derive(Debug, Clone, serde::Deserialize)]
 pub struct Step {
     pub model: serde_json::Value,
+    #[serde(default)]
+    pub provider: Option<ProviderStep>,
     pub request: serde_json::Value,
     pub transport: String,
+    #[serde(default)]
+    pub operation: Option<String>,
     pub exchanges: Option<Vec<Exchange>>,
     pub websocket: Option<serde_json::Value>,
     pub events: Option<Vec<serde_json::Value>>,
+    #[serde(default)]
+    pub result: Option<serde_json::Value>,
+    #[serde(default)]
+    pub poll: Option<Poll>,
+    #[serde(default)]
+    pub sleeps: Vec<u64>,
+    #[serde(default)]
+    pub downloads: Vec<String>,
     pub error: Option<StepError>,
+}
+
+#[derive(Debug, Clone, Copy, serde::Deserialize)]
+pub struct Poll {
+    #[serde(default)]
+    pub interval: Option<u64>,
+    #[serde(default)]
+    pub timeout: Option<u64>,
+}
+
+#[derive(Debug, Clone, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProviderStep {
+    pub package: String,
+    #[serde(rename = "modelID")]
+    pub model_id: String,
+    #[serde(default)]
+    pub settings: serde_json::Map<String, serde_json::Value>,
 }
 
 impl Step {
@@ -144,6 +174,8 @@ pub struct Prepared {
     pub headers: BTreeMap<String, String>,
     pub body: String,
     pub body_encoding: Option<String>,
+    #[serde(default)]
+    pub boundary: Option<String>,
 }
 
 #[derive(Debug, Clone, serde::Deserialize)]

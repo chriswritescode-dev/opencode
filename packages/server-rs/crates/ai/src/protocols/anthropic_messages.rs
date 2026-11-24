@@ -52,7 +52,48 @@ const STREAM_BLOCK_TYPES: [&str; 6] =
 const STREAM_DELTA_TYPES: [&str; 5] =
     ["compaction_delta", "text_delta", "thinking_delta", "signature_delta", "input_json_delta"];
 
-pub struct AnthropicMessages;
+#[derive(Default)]
+pub struct AnthropicMessages {
+    pub effort_updates_require_5_1: bool,
+}
+
+#[derive(Default)]
+pub struct AnthropicMessagesPlain(pub AnthropicMessages);
+
+impl Protocol for AnthropicMessagesPlain {
+    fn id(&self) -> &str {
+        ID
+    }
+
+    fn build_body(
+        &self,
+        request: &ResolvedRequest,
+        model: &Model,
+        context: &ExecutionContext,
+    ) -> Result<Value, AiError> {
+        self.0.build_body(request, model, context)
+    }
+
+    fn default_path(&self, model: &Model, body: &Value) -> Option<String> {
+        self.0.default_path(model, body)
+    }
+
+    fn framing(&self) -> Definition {
+        self.0.framing()
+    }
+
+    fn new_state(&self, request: &ResolvedRequest, context: &ExecutionContext) -> Box<dyn ProtocolState> {
+        self.0.new_state(request, context)
+    }
+
+    fn supports_effort_updates(&self, model: &Model, request: &LlmRequest) -> bool {
+        self.0.supports_effort_updates(model, request)
+    }
+
+    fn tool_updates(&self) -> Option<ToolUpdateEncoding> {
+        self.0.tool_updates()
+    }
+}
 
 #[derive(Debug, Clone, PartialEq)]
 struct BlockBinding {
@@ -2177,7 +2218,23 @@ impl Protocol for AnthropicMessages {
             .and_then(|thinking| thinking.get("type"))
             .and_then(Value::as_str)
             .is_some_and(|kind| kind == "disabled" || kind == "between_tools");
-        model_supports_effort_updates(model, thinking_off)
+        if !model_supports_effort_updates(model, thinking_off) {
+            return false;
+        }
+        if !self.effort_updates_require_5_1 {
+            return true;
+        }
+        if model
+            .capabilities
+            .as_ref()
+            .and_then(|capabilities| capabilities.get("reasoning"))
+            .and_then(|reasoning| reasoning.get("updates"))
+            .is_some()
+        {
+            return true;
+        }
+        claude_model::claude_version(&model.id)
+            .is_some_and(|version| version.major > 5 || (version.major == 5 && version.minor >= 1))
     }
 
     fn tool_updates(&self) -> Option<ToolUpdateEncoding> {
