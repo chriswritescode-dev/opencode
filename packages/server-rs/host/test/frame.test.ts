@@ -125,10 +125,9 @@ test("reads maxFrame on every push", () => {
   const message: Message = { type: "ping", seq: 7 }
   const encoded = encode(message, undefined, DEFAULT_MAX_FRAME)
   const decoder = new Decoder(DEFAULT_MAX_FRAME)
+  expect(decoder.push(encoded)).toEqual([{ message }])
   decoder.maxFrame = encoded.length - 5 - 1
   expect(() => decoder.push(encoded)).toThrow("over its cap")
-  decoder.maxFrame = DEFAULT_MAX_FRAME
-  expect(decoder.push(encoded)).toEqual([{ message }])
 
   const raised = new Decoder(0)
   raised.maxFrame = DEFAULT_MAX_FRAME

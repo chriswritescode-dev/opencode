@@ -42,10 +42,9 @@ export class Decoder {
   }
 
   push(chunk: Uint8Array): Frame[] {
-    const chunks = [...this.chunks]
-    if (chunk.length > 0) chunks.push(asBuffer(chunk))
-    const decoded = drain(chunks, this.size + chunk.length, this.maxFrame)
-    this.chunks = decoded.chunks
+    if (chunk.length > 0) this.chunks.push(asBuffer(chunk))
+    this.size += chunk.length
+    const decoded = drain(this.chunks, this.size, this.maxFrame)
     this.size = decoded.size
     return decoded.frames
   }
