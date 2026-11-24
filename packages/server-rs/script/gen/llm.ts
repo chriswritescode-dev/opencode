@@ -79,9 +79,12 @@ export const GROUPS: Record<string, { protocols: string[] }> = {
   video: {
     protocols: ["google-interactions-video", "minimax-video", "openrouter-video", "xai-video", "seedance-video"],
   },
+  speech: {
+    protocols: ["openai-speech", "cartesia-speech", "deepgram-speech", "elevenlabs-speech", "google-speech"],
+  },
 }
 
-export const EXPECTED_CASSETTES = 291
+export const EXPECTED_CASSETTES = 301
 const EXPECTED_ADC_CASES = 11
 
 const exporter = `${tree}/exporter`

@@ -845,6 +845,7 @@ pub struct ResponseContext<Request> {
     pub request: Request,
     pub provider_metadata_key: String,
     pub http: HttpContext,
+    pub mode: Mode,
 }
 
 pub trait StreamedProtocol<Request, Event, Frame, State>: Send + Sync {
@@ -1079,6 +1080,7 @@ where
                         request: active.request,
                         provider_metadata_key: run.provider_metadata_key.clone(),
                         http: active.http.clone(),
+                        mode: run.mode,
                     };
                     match run.protocol.finish(&state, &response_context) {
                         Ok(events) => {

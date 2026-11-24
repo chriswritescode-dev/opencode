@@ -81,7 +81,7 @@ export interface ProviderStep {
   readonly package: string
   readonly modelID: string
   readonly settings: Record<string, unknown>
-  readonly kind?: "decision"
+  readonly kind?: "decision" | "speech"
 }
 
 export interface RedactOptions {
@@ -243,6 +243,11 @@ const PROTOCOLS: Record<string, { readonly path: string; readonly transport: str
   "openrouter-video": { path: "packages/ai/src/protocols/openrouter-video.ts", transport: "http-json" },
   "xai-video": { path: "packages/ai/src/protocols/xai-video.ts", transport: "http-json" },
   "seedance-video": { path: "packages/ai/src/protocols/seedance-video.ts", transport: "http-json" },
+  "openai-speech": { path: "packages/ai/src/protocols/openai-speech.ts", transport: "http-json/sse" },
+  "cartesia-speech": { path: "packages/ai/src/protocols/cartesia-speech.ts", transport: "http-json/sse" },
+  "deepgram-speech": { path: "packages/ai/src/protocols/deepgram-speech.ts", transport: "http-json/binary" },
+  "elevenlabs-speech": { path: "packages/ai/src/protocols/elevenlabs-speech.ts", transport: "http-json/lines" },
+  "google-speech": { path: "packages/ai/src/protocols/google-speech.ts", transport: "http-json/sse" },
 }
 
 const TEXT_CONTENT_TYPES = new Set([
@@ -331,6 +336,7 @@ const providerModel = async (load: Loader, tree: string, provider: ProviderStep)
   if (typeof target !== "string") throw new Error(`capture: ${provider.package} is not exported by the pin`)
   const module = await load(`packages/ai/${target.replace(/^\.\//, "")}`)
   if (provider.kind === "decision") return (module.decisionModel ?? module.model)(provider.modelID, settings)
+  if (provider.kind === "speech") return module.speech(provider.modelID, settings)
   return module.model(provider.modelID, settings)
 }
 
@@ -405,6 +411,8 @@ export async function capture(tree: string, scenario: Scenario): Promise<Capture
     imageClient,
     video,
     videoClient,
+    speech,
+    speechClient,
   ] = await Promise.all([
     load("@opencode/http-recorder"),
     load("@effect/platform-node"),
@@ -419,6 +427,8 @@ export async function capture(tree: string, scenario: Scenario): Promise<Capture
     load("packages/ai/src/image-client.ts"),
     load("packages/ai/src/video.ts"),
     load("packages/ai/src/video-client.ts"),
+    load("packages/ai/src/speech.ts"),
+    load("packages/ai/src/speech-client.ts"),
   ])
   const HttpRecorder = httpRecorder.HttpRecorder
   const { LLMClient, RequestExecutor, WebSocketTransport } = route
@@ -558,6 +568,30 @@ export async function capture(tree: string, scenario: Scenario): Promise<Capture
           })
         },
         result: (value: unknown) => encode(video.VideoResponse, value),
+      }
+    }
+    if (operation === "speech.generate" || operation === "speech.stream") {
+      return {
+        request: (request: any) => {
+          if (request.fetch !== undefined) throw new Error("capture: request.fetch is not captured")
+          return roundTrip({
+            text: request.text,
+            ...(request.voice === undefined ? {} : { voice: request.voice }),
+            ...(request.format === undefined ? {} : { format: request.format }),
+            ...(request.speed === undefined ? {} : { speed: request.speed }),
+            ...(request.language === undefined ? {} : { language: request.language }),
+            ...(request.instructions === undefined ? {} : { instructions: request.instructions }),
+            ...(request.timestamps === undefined ? {} : { timestamps: request.timestamps }),
+            ...(request.providerOptions === undefined ? {} : { providerOptions: request.providerOptions }),
+            ...(request.headers === undefined ? {} : { headers: request.headers }),
+            ...(request.timeout === undefined ? {} : { timeout: request.timeout }),
+            ...(request.http === undefined ? {} : { http: request.http }),
+          })
+        },
+        result: (value: unknown) =>
+          operation === "speech.generate"
+            ? encode(speech.SpeechResponse, value)
+            : Array.from(value as Array<unknown>).map((event) => encode(speech.SpeechEvent, event)),
       }
     }
     if (operation !== "embedding.generate")
@@ -792,12 +826,14 @@ export async function capture(tree: string, scenario: Scenario): Promise<Capture
   const decisionService = decisionClient.DecisionClient.layer.pipe(Layer.provide(capturing))
   const imageService = imageClient.ImageClient.layer.pipe(Layer.provide(capturing))
   const videoService = videoClient.VideoClient.layer.pipe(Layer.provide(capturing))
+  const speechService = speechClient.SpeechClient.layer.pipe(Layer.provide(capturing))
   const layer = Layer.mergeAll(
     wrapped,
     embeddingService,
     decisionService,
     imageService,
     videoService,
+    speechService,
     webSocket,
     capturing,
   )

@@ -376,6 +376,16 @@
       "group": "wrapped-core"
     },
     {
+      "cassette": "cartesia-speech/generates-speech",
+      "protocol": "cartesia-speech",
+      "group": "speech"
+    },
+    {
+      "cassette": "cartesia-speech/streams-speech-with-timestamps",
+      "protocol": "cartesia-speech",
+      "group": "speech"
+    },
+    {
       "cassette": "cerebras-chat/cerebras-gpt-oss-120b-text",
       "protocol": "openai-chat",
       "group": "openai-chat"
@@ -476,6 +486,16 @@
       "group": "native-vendors"
     },
     {
+      "cassette": "deepgram-speech/generates-speech",
+      "protocol": "deepgram-speech",
+      "group": "speech"
+    },
+    {
+      "cassette": "deepgram-speech/streams-speech",
+      "protocol": "deepgram-speech",
+      "group": "speech"
+    },
+    {
       "cassette": "deepinfra-chat/deepinfra-llama-3-3-70b-text",
       "protocol": "openai-chat",
       "group": "openai-chat"
@@ -529,6 +549,16 @@
       "cassette": "digitalocean-responses/streams-text",
       "protocol": "open-responses",
       "group": "chat-variants"
+    },
+    {
+      "cassette": "elevenlabs-speech/generates-speech",
+      "protocol": "elevenlabs-speech",
+      "group": "speech"
+    },
+    {
+      "cassette": "elevenlabs-speech/streams-speech-with-timestamps",
+      "protocol": "elevenlabs-speech",
+      "group": "speech"
     },
     {
       "cassette": "gemini-cache/reports-cachedcontenttokencount-on-identical-second-call",
@@ -594,6 +624,16 @@
       "cassette": "google-interactions/streams-text-and-reports-usage",
       "protocol": "google-interactions",
       "group": "native-vendors"
+    },
+    {
+      "cassette": "google-speech/generates-speech",
+      "protocol": "google-speech",
+      "group": "speech"
+    },
+    {
+      "cassette": "google-speech/streams-speech",
+      "protocol": "google-speech",
+      "group": "speech"
     },
     {
       "cassette": "google-vertex-embedding/embeds-gemini-embedding-001-one-text-per-predict-request",
@@ -1109,6 +1149,16 @@
       "cassette": "openai-responses/openai-responses-gpt-5-5-tool-loop",
       "protocol": "openai-responses",
       "group": "open-responses"
+    },
+    {
+      "cassette": "openai-speech/generates-speech",
+      "protocol": "openai-speech",
+      "group": "speech"
+    },
+    {
+      "cassette": "openai-speech/streams-speech",
+      "protocol": "openai-speech",
+      "group": "speech"
     },
     {
       "cassette": "opencode-decision/decides-choice-score-and-predicate-questions",

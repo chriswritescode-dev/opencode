@@ -19,12 +19,15 @@ const {
   AmazonBedrockMantle,
   Azure,
   Baseten,
+  Cartesia,
   Cerebras,
   CloudflareAIGateway,
   CloudflareWorkersAI,
   Cohere,
+  Deepgram,
   DeepInfra,
   DigitalOcean,
+  ElevenLabs,
   Google,
   GoogleVertex,
   Groq,
@@ -3089,6 +3092,192 @@ const videoScenarios = [
   }),
 ]
 
+const speechVariant = (scenario: Scenario) => ({ group: "speech", scenario })
+const speechText = "Hello from OpenCode."
+const cartesiaSpeechVoice = "f786b574-daa5-4673-aa0c-cbe3e8534c02"
+const elevenLabsSpeechVoice = "JBFqnCBsd6RMkjVDRZzb"
+const speechScenarios = [
+  speechVariant({
+    cassette: "openai-speech/generates-speech",
+    protocol: "openai-speech",
+    operation: "speech.generate",
+    provider: {
+      package: "@opencode/ai/providers/openai",
+      modelID: "gpt-4o-mini-tts",
+      settings: fixtureSettings,
+      kind: "speech",
+    },
+    run: (context) => {
+      const model = OpenAI.configure({ apiKey: "fixture" }).speech("gpt-4o-mini-tts")
+      const request = ai.experimental.speech.request({ model, text: speechText, voice: "coral" })
+      return context.operation("speech.generate", request, ai.experimental.speech.generate(request))
+    },
+  }),
+  speechVariant({
+    cassette: "openai-speech/streams-speech",
+    protocol: "openai-speech",
+    operation: "speech.stream",
+    provider: {
+      package: "@opencode/ai/providers/openai",
+      modelID: "gpt-4o-mini-tts",
+      settings: fixtureSettings,
+      kind: "speech",
+    },
+    run: (context) => {
+      const model = OpenAI.configure({ apiKey: "fixture" }).speech("gpt-4o-mini-tts")
+      const request = ai.experimental.speech.request({ model, text: speechText, voice: "coral", format: "pcm" })
+      return context.operation("speech.stream", request, Stream.runCollect(ai.experimental.speech.stream(request)))
+    },
+  }),
+  speechVariant({
+    cassette: "cartesia-speech/generates-speech",
+    protocol: "cartesia-speech",
+    operation: "speech.generate",
+    provider: {
+      package: "@opencode/ai/providers/cartesia",
+      modelID: "sonic-3",
+      settings: fixtureSettings,
+      kind: "speech",
+    },
+    redact: { allowRequestHeaders: ["cartesia-version"] },
+    run: (context) => {
+      const model = Cartesia.configure({ apiKey: "fixture" }).speech("sonic-3")
+      const request = ai.experimental.speech.request({
+        model,
+        text: speechText,
+        voice: cartesiaSpeechVoice,
+        format: "mp3",
+      })
+      return context.operation("speech.generate", request, ai.experimental.speech.generate(request))
+    },
+  }),
+  speechVariant({
+    cassette: "cartesia-speech/streams-speech-with-timestamps",
+    protocol: "cartesia-speech",
+    operation: "speech.stream",
+    provider: {
+      package: "@opencode/ai/providers/cartesia",
+      modelID: "sonic-3",
+      settings: fixtureSettings,
+      kind: "speech",
+    },
+    redact: { allowRequestHeaders: ["cartesia-version"] },
+    run: (context) => {
+      const model = Cartesia.configure({ apiKey: "fixture" }).speech("sonic-3")
+      const request = ai.experimental.speech.request({
+        model,
+        text: speechText,
+        voice: cartesiaSpeechVoice,
+        timestamps: true,
+        providerOptions: { sampleRate: 24000 },
+      })
+      return context.operation("speech.stream", request, Stream.runCollect(ai.experimental.speech.stream(request)))
+    },
+  }),
+  speechVariant({
+    cassette: "deepgram-speech/generates-speech",
+    protocol: "deepgram-speech",
+    operation: "speech.generate",
+    provider: {
+      package: "@opencode/ai/providers/deepgram",
+      modelID: "aura-2-thalia-en",
+      settings: fixtureSettings,
+      kind: "speech",
+    },
+    run: (context) => {
+      const model = Deepgram.configure({ apiKey: "fixture" }).speech("aura-2-thalia-en")
+      const request = ai.experimental.speech.request({ model, text: speechText })
+      return context.operation("speech.generate", request, ai.experimental.speech.generate(request))
+    },
+  }),
+  speechVariant({
+    cassette: "deepgram-speech/streams-speech",
+    protocol: "deepgram-speech",
+    operation: "speech.stream",
+    provider: {
+      package: "@opencode/ai/providers/deepgram",
+      modelID: "aura-2-thalia-en",
+      settings: fixtureSettings,
+      kind: "speech",
+    },
+    run: (context) => {
+      const model = Deepgram.configure({ apiKey: "fixture" }).speech("aura-2-thalia-en")
+      const request = ai.experimental.speech.request({ model, text: speechText, format: "pcm" })
+      return context.operation("speech.stream", request, Stream.runCollect(ai.experimental.speech.stream(request)))
+    },
+  }),
+  speechVariant({
+    cassette: "elevenlabs-speech/generates-speech",
+    protocol: "elevenlabs-speech",
+    operation: "speech.generate",
+    provider: {
+      package: "@opencode/ai/providers/elevenlabs",
+      modelID: "eleven_flash_v2_5",
+      settings: fixtureSettings,
+      kind: "speech",
+    },
+    run: (context) => {
+      const model = ElevenLabs.configure({ apiKey: "fixture" }).speech("eleven_flash_v2_5")
+      const request = ai.experimental.speech.request({ model, text: speechText, voice: elevenLabsSpeechVoice })
+      return context.operation("speech.generate", request, ai.experimental.speech.generate(request))
+    },
+  }),
+  speechVariant({
+    cassette: "elevenlabs-speech/streams-speech-with-timestamps",
+    protocol: "elevenlabs-speech",
+    operation: "speech.stream",
+    provider: {
+      package: "@opencode/ai/providers/elevenlabs",
+      modelID: "eleven_flash_v2_5",
+      settings: fixtureSettings,
+      kind: "speech",
+    },
+    run: (context) => {
+      const model = ElevenLabs.configure({ apiKey: "fixture" }).speech("eleven_flash_v2_5")
+      const request = ai.experimental.speech.request({
+        model,
+        text: speechText,
+        voice: elevenLabsSpeechVoice,
+        format: "pcm",
+        timestamps: true,
+      })
+      return context.operation("speech.stream", request, Stream.runCollect(ai.experimental.speech.stream(request)))
+    },
+  }),
+  speechVariant({
+    cassette: "google-speech/generates-speech",
+    protocol: "google-speech",
+    operation: "speech.generate",
+    provider: {
+      package: "@opencode/ai/providers/google",
+      modelID: "gemini-2.5-flash-preview-tts",
+      settings: fixtureSettings,
+      kind: "speech",
+    },
+    run: (context) => {
+      const model = Google.configure({ apiKey: "fixture" }).speech("gemini-2.5-flash-preview-tts")
+      const request = ai.experimental.speech.request({ model, text: `Say: ${speechText}`, voice: "Kore" })
+      return context.operation("speech.generate", request, ai.experimental.speech.generate(request))
+    },
+  }),
+  speechVariant({
+    cassette: "google-speech/streams-speech",
+    protocol: "google-speech",
+    operation: "speech.stream",
+    provider: {
+      package: "@opencode/ai/providers/google",
+      modelID: "gemini-3.1-flash-tts-preview",
+      settings: fixtureSettings,
+      kind: "speech",
+    },
+    run: (context) => {
+      const model = Google.configure({ apiKey: "fixture" }).speech("gemini-3.1-flash-tts-preview")
+      const request = ai.experimental.speech.request({ model, text: `Say: ${speechText}`, voice: "Kore" })
+      return context.operation("speech.stream", request, Stream.runCollect(ai.experimental.speech.stream(request)))
+    },
+  }),
+]
+
 const decisionQuestions = [
   {
     name: "department",
@@ -5218,6 +5407,7 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
   ...decisionScenarios,
   ...imageScenarios,
   ...videoScenarios,
+  ...speechScenarios,
 ]
 
 const cassettes = []

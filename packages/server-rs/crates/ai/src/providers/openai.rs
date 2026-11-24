@@ -5,11 +5,13 @@ use serde_json::{Map, Value, json};
 use crate::Env;
 use crate::media::route::MediaEndpoint;
 use crate::modalities::image::ImageModel;
+use crate::modalities::speech::SpeechModel;
 use crate::protocols::openai_chat;
 use crate::protocols::openai_decisions::{self, OpenAiDecisions};
 use crate::protocols::openai_embeddings::{self, OpenAiEmbeddings};
 use crate::protocols::openai_images::{self, ImageInput, OpenAiImages, pixel_size};
 use crate::protocols::openai_responses;
+use crate::protocols::openai_speech;
 use crate::providers::open_responses_options;
 use crate::providers::openai_options;
 use crate::providers::{RuntimeModel, Settings, language_model, modality_options};
@@ -140,6 +142,47 @@ pub fn image_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Resul
         model_id,
         ID.to_string(),
         std::sync::Arc::new(OpenAiImages::new(ID, std::sync::Arc::new(pixel_size), image_input)),
+        endpoint,
+        auth(settings),
+        None,
+        transport,
+        provider_options,
+    )))
+}
+
+pub fn speech_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result<RuntimeModel, AiError> {
+    let declared = ["apiKey", "baseURL", "organization", "project", "queryParams"];
+    let (transport, provider_options) = modality_options(settings, &declared);
+    let mut transport = transport.unwrap_or_default();
+    let mut headers = transport.headers.take().unwrap_or_default();
+    if let Some(organization) = settings.string("organization") {
+        headers.insert("OpenAI-Organization".to_string(), organization.to_string());
+    }
+    if let Some(project) = settings.string("project") {
+        headers.insert("OpenAI-Project".to_string(), project.to_string());
+    }
+    if let Some(existing) = settings.headers() {
+        for (name, value) in existing.iter() {
+            headers.insert(name.to_string(), value.to_string());
+        }
+    }
+    transport.headers = (!headers.is_empty()).then_some(headers);
+    if let Some(query) = settings.query_params() {
+        let mut http = transport.http.clone().unwrap_or_default();
+        let mut merged = http.query.clone().unwrap_or_default();
+        for (key, value) in query.iter() {
+            merged.insert(key.to_string(), value.to_string());
+        }
+        http.query = Some(merged);
+        transport.http = Some(http);
+    }
+    let transport = (transport != RequestOptions::default()).then_some(transport);
+    let endpoint = MediaEndpoint::path(openai_speech::PATH)
+        .with_base_url(settings.string("baseURL").unwrap_or(openai_speech::DEFAULT_BASE_URL));
+    Ok(RuntimeModel::Speech(SpeechModel::streamed(
+        model_id,
+        ID.to_string(),
+        Arc::new(openai_speech::protocol()),
         endpoint,
         auth(settings),
         None,

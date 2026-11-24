@@ -1,6 +1,7 @@
 pub mod decision;
 pub mod embedding;
 pub mod image;
+pub mod speech;
 pub mod video;
 
 pub use decision::{
@@ -15,4 +16,8 @@ pub use embedding::{
 pub use image::{
     ImageClient, ImageEvent, ImageJob, ImageModel, ImageRequest, ImageRequestInput, ImageResponse, ImageStatus,
     MediaUsage, token_usage,
+};
+pub use speech::{
+    SpeechClient, SpeechEvent, SpeechModel, SpeechRequest, SpeechRequestInput, SpeechResponse, SpeechTimestamp,
+    SpeechVoice,
 };

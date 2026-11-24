@@ -17,6 +17,7 @@ use opencode_ai::media::generation::{AwaitOptions, Generation, Poll, Snapshot, S
 use opencode_ai::modalities::decision::{DecisionClient, DecisionRequestInput};
 use opencode_ai::modalities::embedding::{EmbeddingClient, EmbeddingRequestInput};
 use opencode_ai::modalities::image::{ImageClient, ImageEvent, ImageRequestInput};
+use opencode_ai::modalities::speech::{SpeechClient, SpeechEvent, SpeechRequestInput};
 use opencode_ai::modalities::video::{VideoClient, VideoRequestInput, VideoResponse};
 use opencode_ai::providers::{ProviderPackages, RuntimeModel, Settings};
 use opencode_ai::route::client::LlmClient;
@@ -494,6 +495,229 @@ pub async fn replay_video_group(group: &str) -> usize {
         steps += cassette.steps.len();
     }
     steps
+}
+
+pub async fn replay_speech_cassette(cassette: &Cassette) {
+    for (index, step) in cassette.steps.iter().enumerate() {
+        let Some(provider) = step.provider.as_ref() else {
+            panic!("{} step {index} speech: the step recorded no provider", cassette.name);
+        };
+        let operation = step.operation.as_deref().unwrap_or_default();
+        assert!(
+            matches!(operation, "speech.generate" | "speech.stream"),
+            "{} step {index} speech: unexpected operation {operation}",
+            cassette.name
+        );
+        let settings = Settings::new(provider.settings.clone());
+        let runtime = ProviderPackages::builtin()
+            .speech(&provider.package, &provider.model_id, &settings, &MapEnv::default())
+            .unwrap_or_else(|error| {
+                panic!("{} step {index} provider {}: {}", cassette.name, provider.package, error.message())
+            });
+        let RuntimeModel::Speech(model) = runtime else {
+            panic!("{} step {index} speech: expected a speech model", cassette.name);
+        };
+        assert_eq!(model.id, step.model["id"], "{} step {index} speech model.id", cassette.name);
+        assert_eq!(model.provider, step.model["provider"], "{} step {index} speech model.provider", cassette.name);
+        assert_eq!(model.route.id(), step.model["route"]["id"], "{} step {index} speech model.route.id", cassette.name);
+        let input: SpeechRequestInput = serde_json::from_value(step.request.clone())
+            .unwrap_or_else(|error| panic!("{} step {index} speech request: {error}", cassette.name));
+        let exchanges = match step.exchanges.as_ref() {
+            Some(exchanges) if !exchanges.is_empty() => exchanges.clone(),
+            _ => panic!("{} step {index} speech exchanges: the step recorded no HTTP exchange", cassette.name),
+        };
+        for chunk in [None, Some(CHUNKED_BODY_SIZE)] {
+            let label = match chunk {
+                None => "single-chunk".to_string(),
+                Some(size) => format!("{size}-byte-chunk"),
+            };
+            let sender = Arc::new(RecordedSender {
+                cassette: cassette.name.clone(),
+                step: index,
+                label: label.clone(),
+                chunk,
+                exchanges: Mutex::new(VecDeque::from(exchanges.clone())),
+            });
+            let clock = Arc::new(FixedClock::new(cassette.clock_epoch_ms));
+            let context =
+                ExecutionContext::new(clock.clone(), Arc::new(SequenceIds::new()), Arc::new(MapEnv::default()));
+            let executor = RequestExecutor::new(sender.clone(), None, clock);
+            let request = input.clone().with_model(model.clone());
+            if operation == "speech.generate" {
+                let outcome = SpeechClient::generate(request, &executor, &context).await;
+                sender.assert_consumed();
+                assert_speech_generate_outcome(cassette, index, &label, step, outcome);
+            } else {
+                let items = SpeechClient::stream(request, &executor, &context).collect::<Vec<_>>().await;
+                sender.assert_consumed();
+                assert_speech_stream_outcome(cassette, index, &label, step, items);
+            }
+        }
+    }
+}
+
+pub async fn replay_speech_group(group: &str) -> usize {
+    let corpus = crate::corpus::Corpus::load();
+    let mut steps = 0;
+    for cassette in corpus.cassettes.iter().filter(|cassette| cassette.group == group) {
+        replay_speech_cassette(cassette).await;
+        steps += cassette.steps.len();
+    }
+    steps
+}
+
+fn assert_speech_generate_outcome(
+    cassette: &Cassette,
+    index: usize,
+    label: &str,
+    step: &Step,
+    outcome: Result<opencode_ai::modalities::speech::SpeechResponse, AiError>,
+) {
+    match &step.error {
+        Some(recorded) => {
+            let error = match outcome {
+                Err(error) => error,
+                Ok(_) => panic!("{} step {index} {label} speech error: the generate call succeeded", cassette.name),
+            };
+            assert_recorded_error(cassette, index, label, recorded, &error);
+        }
+        None => {
+            let response = match outcome {
+                Ok(response) => response,
+                Err(error) => {
+                    panic!(
+                        "{} step {index} {label} speech result: the generate call failed with {error}",
+                        cassette.name
+                    )
+                }
+            };
+            let actual = serde_json::to_value(&response)
+                .unwrap_or_else(|failure| panic!("{} step {index} {label} speech result: {failure}", cassette.name));
+            let Some(expected) = step.result.as_ref() else {
+                panic!("{} step {index} {label} speech result: the step recorded no result", cassette.name);
+            };
+            assert_eq!(actual, *expected, "{} step {index} {label} speech result", cassette.name);
+        }
+    }
+}
+
+fn assert_speech_stream_outcome(
+    cassette: &Cassette,
+    index: usize,
+    label: &str,
+    step: &Step,
+    items: Vec<Result<SpeechEvent, AiError>>,
+) {
+    match &step.error {
+        Some(recorded) => {
+            let error = match items.as_slice() {
+                [Err(error)] => error,
+                _ => panic!("{} step {index} {label} speech error: expected only the recorded error", cassette.name),
+            };
+            assert_recorded_error(cassette, index, label, recorded, error);
+        }
+        None => {
+            let events = items
+                .into_iter()
+                .map(|item| match item {
+                    Ok(event) => event,
+                    Err(error) => {
+                        panic!("{} step {index} {label} speech events: the stream failed with {error}", cassette.name)
+                    }
+                })
+                .collect::<Vec<SpeechEvent>>();
+            let actual = events
+                .iter()
+                .map(|event| {
+                    serde_json::to_value(event).unwrap_or_else(|failure| {
+                        panic!("{} step {index} {label} speech events: {failure}", cassette.name)
+                    })
+                })
+                .collect::<Vec<Value>>();
+            let Some(expected) = step.result.as_ref().and_then(Value::as_array) else {
+                panic!("{} step {index} {label} speech events: the step recorded no event list", cassette.name);
+            };
+            assert!(
+                actual.iter().any(|event| event.get("type").and_then(Value::as_str) == Some("audio-delta")),
+                "{} step {index} {label} speech events: the stream produced no audio deltas",
+                cassette.name
+            );
+            assert_eq!(
+                normalized_speech_events(cassette, index, label, &actual),
+                normalized_speech_events(cassette, index, label, expected),
+                "{} step {index} {label} speech events",
+                cassette.name
+            );
+            assert_speech_stream_audio(cassette, index, label, &events);
+        }
+    }
+}
+
+fn normalized_speech_events(cassette: &Cassette, index: usize, label: &str, events: &[Value]) -> Vec<Value> {
+    let mut normalized = Vec::new();
+    let mut audio = Vec::new();
+    for event in events {
+        if event.get("type").and_then(Value::as_str) != Some("audio-delta") {
+            flush_speech_audio(&mut normalized, &mut audio);
+            normalized.push(event.clone());
+            continue;
+        }
+        let chunk = event.get("chunk").and_then(Value::as_str).unwrap_or_else(|| {
+            panic!("{} step {index} {label} speech audio-delta: the event recorded no chunk", cassette.name)
+        });
+        audio.extend(
+            BASE64_STANDARD
+                .decode(chunk)
+                .unwrap_or_else(|error| panic!("{} step {index} {label} speech audio-delta: {error}", cassette.name)),
+        );
+    }
+    flush_speech_audio(&mut normalized, &mut audio);
+    normalized
+}
+
+fn flush_speech_audio(normalized: &mut Vec<Value>, audio: &mut Vec<u8>) {
+    if audio.is_empty() {
+        return;
+    }
+    normalized.push(serde_json::json!({ "type": "audio-delta", "chunk": BASE64_STANDARD.encode(&audio) }));
+    audio.clear();
+}
+
+fn assert_speech_stream_audio(cassette: &Cassette, index: usize, label: &str, events: &[SpeechEvent]) {
+    let streamed = events
+        .iter()
+        .filter_map(|event| match event {
+            SpeechEvent::AudioDelta { chunk } => Some(chunk),
+            _ => None,
+        })
+        .map(|chunk| {
+            BASE64_STANDARD
+                .decode(chunk)
+                .unwrap_or_else(|error| panic!("{} step {index} {label} speech audio-delta: {error}", cassette.name))
+        })
+        .collect::<Vec<Vec<u8>>>()
+        .concat();
+    let audio = events
+        .iter()
+        .find_map(|event| match event {
+            SpeechEvent::Finish { audio, .. } => Some(audio),
+            _ => None,
+        })
+        .unwrap_or_else(|| {
+            panic!("{} step {index} {label} speech events: the stream recorded no finish event", cassette.name)
+        });
+    let data = match &audio.source {
+        MediaSource::Bytes { data, .. } | MediaSource::Base64 { data, .. } => data,
+        other => panic!("{} step {index} {label} speech finish audio: unexpected source {other:?}", cassette.name),
+    };
+    let finished = BASE64_STANDARD
+        .decode(data)
+        .unwrap_or_else(|error| panic!("{} step {index} {label} speech finish audio: {error}", cassette.name));
+    assert_eq!(
+        streamed, finished,
+        "{} step {index} {label} speech events: the audio deltas do not match the finish audio",
+        cassette.name
+    );
 }
 
 #[derive(Default)]
@@ -1037,7 +1261,7 @@ async fn replay_websocket_cassette(cassette: &Cassette) {
 #[tokio::test]
 async fn every_in_scope_cassette_replays() {
     let corpus = crate::corpus::Corpus::load();
-    assert_eq!(corpus.cassettes.len(), 291, "in-scope cassette count");
+    assert_eq!(corpus.cassettes.len(), 301, "in-scope cassette count");
     let groups = [
         "anthropic-messages",
         "bedrock-converse",
@@ -1051,6 +1275,7 @@ async fn every_in_scope_cassette_replays() {
         "open-responses",
         "openai-chat",
         "openai-responses-websocket",
+        "speech",
         "vendor-variants",
         "video",
         "wrapped-core",
@@ -1071,6 +1296,8 @@ async fn every_in_scope_cassette_replays() {
             replay_image_cassette(cassette).await;
         } else if cassette.group == "video" {
             replay_video_cassette(cassette).await;
+        } else if cassette.group == "speech" {
+            replay_speech_cassette(cassette).await;
         } else if cassette.group == "openai-responses-websocket" {
             replay_websocket_cassette(cassette).await;
         } else {
@@ -1078,7 +1305,7 @@ async fn every_in_scope_cassette_replays() {
         }
         replayed += 1;
     }
-    assert_eq!(replayed, 291, "replayed cassette count");
+    assert_eq!(replayed, 301, "replayed cassette count");
 }
 
 #[tokio::test]
@@ -1088,6 +1315,15 @@ async fn image_cassettes() {
     assert_eq!(cassettes, 22, "image cassette count");
     let steps = replay_image_group("images").await;
     assert_eq!(steps, 22, "image step count");
+}
+
+#[tokio::test]
+async fn speech_cassettes() {
+    let corpus = crate::corpus::Corpus::load();
+    let cassettes = corpus.cassettes.iter().filter(|cassette| cassette.group == "speech").count();
+    assert_eq!(cassettes, 10, "speech cassette count");
+    let steps = replay_speech_group("speech").await;
+    assert_eq!(steps, 10, "speech step count");
 }
 
 #[tokio::test]

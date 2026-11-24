@@ -12,13 +12,16 @@ pub mod anthropic_compatible;
 pub mod azure;
 pub mod baseten;
 pub mod byteplus;
+pub mod cartesia;
 pub mod cerebras;
 pub mod cloudflare_ai_gateway;
 pub mod cloudflare_shared;
 pub mod cloudflare_workers_ai;
 pub mod cohere;
+pub mod deepgram;
 pub mod deepinfra;
 pub mod digitalocean;
+pub mod elevenlabs;
 pub mod google;
 pub mod google_adc;
 pub mod google_vertex;
@@ -60,6 +63,7 @@ pub enum RuntimeModel {
     Decision(crate::modalities::decision::DecisionModel),
     Image(crate::modalities::image::ImageModel),
     Video(crate::modalities::video::VideoModel),
+    Speech(crate::modalities::speech::SpeechModel),
 }
 
 pub(crate) fn modality_options(
@@ -128,6 +132,7 @@ pub type Entry = fn(&str, &Settings, &dyn Env) -> Result<RuntimeModel, AiError>;
 pub struct ProviderPackages {
     entries: BTreeMap<&'static str, Entry>,
     decisions: BTreeMap<&'static str, Entry>,
+    speech: BTreeMap<&'static str, Entry>,
 }
 
 impl ProviderPackages {
@@ -254,7 +259,14 @@ impl ProviderPackages {
             ("@opencode/ai/providers/typesafe-ai/decisions", typesafe_ai::decision_model as Entry),
             ("@opencode/ai/providers/vercel-ai-gateway/decisions", vercel_ai_gateway::decision_model as Entry),
         ]);
-        Self { entries, decisions }
+        let speech = BTreeMap::from([
+            ("@opencode/ai/providers/cartesia", cartesia::speech_model as Entry),
+            ("@opencode/ai/providers/deepgram", deepgram::speech_model as Entry),
+            ("@opencode/ai/providers/elevenlabs", elevenlabs::speech_model as Entry),
+            ("@opencode/ai/providers/google", google::speech_model as Entry),
+            ("@opencode/ai/providers/openai", openai::speech_model as Entry),
+        ]);
+        Self { entries, decisions, speech }
     }
 
     pub fn model(
@@ -276,6 +288,17 @@ impl ProviderPackages {
         env: &dyn Env,
     ) -> Result<RuntimeModel, AiError> {
         let entry = self.decisions.get(specifier).ok_or_else(|| unknown_package(specifier))?;
+        entry(model_id, settings, env)
+    }
+
+    pub fn speech(
+        &self,
+        specifier: &str,
+        model_id: &str,
+        settings: &Settings,
+        env: &dyn Env,
+    ) -> Result<RuntimeModel, AiError> {
+        let entry = self.speech.get(specifier).ok_or_else(|| unknown_package(specifier))?;
         entry(model_id, settings, env)
     }
 }

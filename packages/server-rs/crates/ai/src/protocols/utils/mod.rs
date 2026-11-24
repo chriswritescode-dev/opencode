@@ -17,4 +17,5 @@ pub mod partial_json_options;
 pub mod responses_checkpoint;
 pub mod responses_compaction;
 pub mod responses_hosted_tools;
+pub mod speech_stream;
 pub mod tool_stream;
