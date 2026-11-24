@@ -43,6 +43,16 @@ pub fn versioned_type(r#type: &str, version: u32) -> String {
     format!("{type}.{version}")
 }
 
+pub(crate) fn parse_location(value: &Value) -> Option<LocationRef> {
+    let object = value.as_object()?;
+    let directory = object.get("directory")?.as_str()?;
+    let workspace_id = match object.get("workspaceID") {
+        None | Some(Value::Null) => None,
+        Some(value) => Some(WorkspaceID(value.as_str()?.to_string())),
+    };
+    Some(LocationRef { directory: AbsolutePath(directory.to_string()), workspace_id })
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DurableEnvelope {
     pub aggregate_id: String,
@@ -85,13 +95,7 @@ impl Event {
     }
 
     pub fn location(&self) -> Option<LocationRef> {
-        let object = self.payload.get("location")?.as_object()?;
-        let directory = object.get("directory")?.as_str()?;
-        let workspace_id = match object.get("workspaceID") {
-            None | Some(Value::Null) => None,
-            Some(value) => Some(WorkspaceID(value.as_str()?.to_string())),
-        };
-        Some(LocationRef { directory: AbsolutePath(directory.to_string()), workspace_id })
+        parse_location(self.payload.get("location")?)
     }
 
     pub fn durable(&self) -> Option<DurableEnvelope> {

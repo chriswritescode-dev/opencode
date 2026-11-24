@@ -310,9 +310,9 @@ fn publish_delivers_to_typed_and_all_subscribers() {
             PublishOptions::default(),
         )
         .expect("publish the message");
-    assert_eq!(typed.try_recv(), Some(counted.clone()), "the typed subscriber receives the counted event");
+    assert_eq!(typed.try_recv().as_deref(), Some(&counted), "the typed subscriber receives the counted event");
     assert_eq!(typed.try_recv(), None, "the typed subscriber receives nothing else");
-    assert_eq!(all.try_recv(), Some(counted), "the all subscriber receives the counted event");
-    assert_eq!(all.try_recv(), Some(message), "the all subscriber receives the message");
+    assert_eq!(all.try_recv().as_deref(), Some(&counted), "the all subscriber receives the counted event");
+    assert_eq!(all.try_recv().as_deref(), Some(&message), "the all subscriber receives the message");
     assert_eq!(all.try_recv(), None, "the all subscriber has nothing left");
 }

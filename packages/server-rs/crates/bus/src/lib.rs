@@ -5,6 +5,7 @@ mod event;
 mod legacy;
 mod lock;
 mod log;
+mod route;
 
 pub mod sse;
 

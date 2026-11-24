@@ -15,7 +15,9 @@ use crate::error::BusError;
 use crate::event::{Definition, DurableSpec, Event, EventId, versioned_type};
 use crate::legacy;
 use crate::lock::KeyedMutex;
+use crate::route::Routes;
 
+type Delivery = (Arc<Event>, Option<Arc<[LocationRef]>>);
 type Projector = Arc<dyn Fn(&Connection, &Event) -> Result<(), BusError> + Send + Sync>;
 type ProjectorRegistration = Box<dyn Fn(&Connection, &Event) -> Result<(), BusError> + Send + Sync>;
 type Listener = Arc<dyn Fn(&Event) -> Result<(), BusError> + Send + Sync>;
@@ -75,14 +77,14 @@ pub struct Bus {
     pub(crate) durable: Arc<Mutex<HashMap<String, Vec<Arc<Notify>>>>>,
     subscribers: Arc<Mutex<Vec<Subscriber>>>,
     next_subscriber_id: AtomicU64,
+    routes: Mutex<Routes>,
     locks: KeyedMutex<String>,
 }
 
 struct Subscriber {
     id: u64,
     types: Option<Vec<String>>,
-    location: Option<LocationRef>,
-    sender: UnboundedSender<Event>,
+    sender: UnboundedSender<Delivery>,
 }
 
 struct Prepared {
@@ -102,18 +104,29 @@ struct EventRow {
 }
 
 pub struct Subscription {
-    receiver: UnboundedReceiver<Event>,
+    receiver: UnboundedReceiver<Delivery>,
     subscribers: Arc<Mutex<Vec<Subscriber>>>,
     id: u64,
+    location: Option<LocationRef>,
 }
 
 impl Subscription {
-    pub fn try_recv(&mut self) -> Option<Event> {
-        self.receiver.try_recv().ok()
+    pub fn try_recv(&mut self) -> Option<Arc<Event>> {
+        loop {
+            let (event, routes) = self.receiver.try_recv().ok()?;
+            if accepts(self.location.as_ref(), &event, routes.as_deref()) {
+                return Some(event);
+            }
+        }
     }
 
-    pub async fn recv(&mut self) -> Option<Event> {
-        self.receiver.recv().await
+    pub async fn recv(&mut self) -> Option<Arc<Event>> {
+        loop {
+            let (event, routes) = self.receiver.recv().await?;
+            if accepts(self.location.as_ref(), &event, routes.as_deref()) {
+                return Some(event);
+            }
+        }
     }
 }
 
@@ -145,6 +158,7 @@ impl Bus {
             durable: Arc::new(Mutex::new(HashMap::new())),
             subscribers: Arc::new(Mutex::new(Vec::new())),
             next_subscriber_id: AtomicU64::new(0),
+            routes: Mutex::new(Routes::default()),
             locks: KeyedMutex::default(),
         })
     }
@@ -158,7 +172,12 @@ impl Bus {
                 });
             }
             let event = self.make_payload(definition, data, &options);
-            self.notify(&event, false)?;
+            let mut routes = lock(&self.routes);
+            let pending = self.db.read(|connection| Ok(routes.prepare(connection, &[&event])?))?;
+            pending.apply(&mut routes);
+            let resolved = pending.routes(0);
+            drop(routes);
+            self.notify(&event, resolved, false)?;
             return Ok(event);
         };
         let aggregate_id = aggregate_id(definition.r#type, spec.aggregate, &data)?;
@@ -227,7 +246,9 @@ impl Bus {
             tx.execute("DELETE FROM event_sequence WHERE aggregate_id = ?1", [aggregate_id])?;
             tx.execute("DELETE FROM event WHERE aggregate_id = ?1", [aggregate_id])?;
             Ok::<(), BusError>(())
-        })
+        })?;
+        lock(&self.routes).remove(aggregate_id);
+        Ok(())
     }
 
     pub fn claim(&self, aggregate_id: &str, owner_id: &str) -> Result<(), BusError> {
@@ -251,12 +272,14 @@ impl Bus {
     ) -> Result<Event, BusError> {
         let persist = self.options.persist;
         let versioned = versioned_type(r#type, spec.version);
-        let committed = self.db.transaction(TransactionBehavior::Immediate, |tx| {
+        let mut routes = lock(&self.routes);
+        let (committed, pending) = self.db.transaction(TransactionBehavior::Immediate, |tx| {
             let seq = latest_sequence(tx, aggregate_id)? + 1;
             if persist && let Some((existing_aggregate, existing_seq)) = stored_event(tx, event.id())? {
                 return Err(already_exists(r#type, event.id(), &existing_aggregate, existing_seq));
             }
             let committed = with_durable(&event, aggregate_id, seq, spec.version);
+            let pending = routes.prepare(tx, &[&committed])?;
             self.run_projectors(&versioned, tx, &committed)?;
             if let Some(commit) = commit {
                 commit(tx, seq)?;
@@ -265,20 +288,29 @@ impl Bus {
             if persist {
                 insert_event(tx, &committed, aggregate_id, seq, &versioned)?;
             }
-            Ok(committed)
+            Ok((committed, pending))
         })?;
+        pending.apply(&mut routes);
+        let resolved = pending.routes(0);
+        drop(routes);
         self.wake(aggregate_id);
-        self.notify(&committed, true)?;
+        self.notify(&committed, resolved, true)?;
         Ok(committed)
     }
 
     fn commit_batch(&self, aggregate_id: &str, prepared: Vec<Prepared>) -> Result<Vec<Event>, BusError> {
         let persist = self.options.persist;
-        let committed = self.db.transaction(TransactionBehavior::Immediate, |tx| {
+        let mut routes = lock(&self.routes);
+        let (committed, pending) = self.db.transaction(TransactionBehavior::Immediate, |tx| {
             let first = latest_sequence(tx, aggregate_id)? + 1;
             let final_seq = first + prepared.len() as i64 - 1;
+            let queued = prepared
+                .iter()
+                .enumerate()
+                .map(|(index, item)| with_durable(&item.event, aggregate_id, first + index as i64, item.spec.version))
+                .collect::<Vec<_>>();
+            let pending = routes.prepare(tx, &queued.iter().collect::<Vec<_>>())?;
             let mut ids: Vec<String> = Vec::new();
-            let mut queued = Vec::with_capacity(prepared.len());
             let mut rows = Vec::new();
             for (index, item) in prepared.into_iter().enumerate() {
                 let seq = first + index as i64;
@@ -295,21 +327,19 @@ impl Bus {
                     }
                 }
                 let versioned = versioned_type(item.r#type, item.spec.version);
-                let event = with_durable(&item.event, aggregate_id, seq, item.spec.version);
-                self.run_projectors(&versioned, tx, &event)?;
+                self.run_projectors(&versioned, tx, &queued[index])?;
                 if let Some(commit) = item.commit {
                     commit(tx, seq)?;
                 }
                 if persist {
                     rows.push(EventRow {
-                        id: event.id().to_string(),
+                        id: queued[index].id().to_string(),
                         seq,
-                        created: event.created(),
+                        created: queued[index].created(),
                         r#type: versioned,
-                        data: encode_json(event.data()),
+                        data: encode_json(queued[index].data()),
                     });
                 }
-                queued.push(event);
             }
             tx.execute(
                 "INSERT INTO event_sequence (aggregate_id, seq) VALUES (?1, ?2) \
@@ -322,11 +352,14 @@ impl Bus {
                     params![row.id, aggregate_id, row.seq, row.created, row.r#type, row.data],
                 )?;
             }
-            Ok(queued)
+            Ok((queued, pending))
         })?;
+        pending.apply(&mut routes);
+        let resolutions = (0..committed.len()).map(|index| pending.routes(index)).collect::<Vec<_>>();
+        drop(routes);
         self.wake(aggregate_id);
-        for event in &committed {
-            self.notify(event, true)?;
+        for (event, resolved) in committed.iter().zip(resolutions) {
+            self.notify(event, resolved, true)?;
         }
         Ok(committed)
     }
@@ -355,70 +388,28 @@ impl Bus {
         payload.insert("type".to_string(), Value::String(definition.r#type.to_string()));
         payload.insert("data".to_string(), data.clone());
         let payload = Event::from_payload(payload);
-        let committed =
-            self.db.transaction(TransactionBehavior::Immediate, |tx| -> Result<Option<Event>, BusError> {
-                let row = sequence_row(tx, &aggregate)?;
-                let latest = row.as_ref().map_or(-1, |(seq, _)| *seq);
-                let owner = row.as_ref().and_then(|(_, owner)| owner.clone());
-                if options.strict_owner
-                    && let Some(owner_id) = &owner
-                    && options.owner_id.as_ref() != Some(owner_id)
-                {
-                    return Err(BusError::InvalidDurableEvent {
-                        r#type: definition.r#type.to_string(),
-                        message: format!(
-                            "Replay owner mismatch for aggregate {aggregate}: expected {owner_id}, got {}",
-                            options.owner_id.as_deref().unwrap_or("none")
-                        ),
-                    });
-                }
-                if event.seq <= latest {
-                    if !persist {
-                        return Ok(None);
-                    }
-                    if replay_row_matches(tx, versioned, definition.r#type, &event, &data, created)? {
-                        if let Some(owner_id) = &options.owner_id
-                            && owner.is_none()
-                        {
-                            tx.execute(
-                                "UPDATE event_sequence SET owner_id = ?2 WHERE aggregate_id = ?1",
-                                params![aggregate, owner_id],
-                            )?;
-                        }
-                        return Ok(None);
-                    }
-                    return Err(BusError::InvalidDurableEvent {
-                        r#type: definition.r#type.to_string(),
-                        message: format!("Replay diverged at aggregate {aggregate} sequence {}", event.seq),
-                    });
-                }
-                if let Some(owner_id) = &owner
-                    && options.owner_id.as_ref() != Some(owner_id)
-                {
+        let mut routes = lock(&self.routes);
+        let committed = self.db.transaction(TransactionBehavior::Immediate, |tx| {
+            let row = sequence_row(tx, &aggregate)?;
+            let latest = row.as_ref().map_or(-1, |(seq, _)| *seq);
+            let owner = row.as_ref().and_then(|(_, owner)| owner.clone());
+            if options.strict_owner
+                && let Some(owner_id) = &owner
+                && options.owner_id.as_ref() != Some(owner_id)
+            {
+                return Err(BusError::InvalidDurableEvent {
+                    r#type: definition.r#type.to_string(),
+                    message: format!(
+                        "Replay owner mismatch for aggregate {aggregate}: expected {owner_id}, got {}",
+                        options.owner_id.as_deref().unwrap_or("none")
+                    ),
+                });
+            }
+            if event.seq <= latest {
+                if !persist {
                     return Ok(None);
                 }
-                if event.seq != latest + 1 {
-                    return Err(BusError::InvalidDurableEvent {
-                        r#type: definition.r#type.to_string(),
-                        message: format!(
-                            "Sequence mismatch for aggregate {aggregate}: expected {}, got {}",
-                            latest + 1,
-                            event.seq
-                        ),
-                    });
-                }
-                if persist && let Some((existing_aggregate, existing_seq)) = stored_event(tx, &event.id)? {
-                    return Err(already_exists(definition.r#type, &event.id, &existing_aggregate, existing_seq));
-                }
-                let committed = with_durable(&payload, &aggregate, event.seq, spec.version);
-                self.run_projectors(versioned, tx, &committed)?;
-                if row.is_none() {
-                    tx.execute(
-                        "INSERT INTO event_sequence (aggregate_id, seq, owner_id) VALUES (?1, ?2, ?3)",
-                        params![aggregate, event.seq, options.owner_id.as_deref()],
-                    )?;
-                } else {
-                    reserve_sequence(tx, &aggregate, event.seq)?;
+                if replay_row_matches(tx, versioned, definition.r#type, &event, &data, created)? {
                     if let Some(owner_id) = &options.owner_id
                         && owner.is_none()
                     {
@@ -427,18 +418,64 @@ impl Bus {
                             params![aggregate, owner_id],
                         )?;
                     }
+                    return Ok(None);
                 }
-                if persist {
-                    insert_event(tx, &committed, &aggregate, event.seq, versioned)?;
+                return Err(BusError::InvalidDurableEvent {
+                    r#type: definition.r#type.to_string(),
+                    message: format!("Replay diverged at aggregate {aggregate} sequence {}", event.seq),
+                });
+            }
+            if let Some(owner_id) = &owner
+                && options.owner_id.as_ref() != Some(owner_id)
+            {
+                return Ok(None);
+            }
+            if event.seq != latest + 1 {
+                return Err(BusError::InvalidDurableEvent {
+                    r#type: definition.r#type.to_string(),
+                    message: format!(
+                        "Sequence mismatch for aggregate {aggregate}: expected {}, got {}",
+                        latest + 1,
+                        event.seq
+                    ),
+                });
+            }
+            if persist && let Some((existing_aggregate, existing_seq)) = stored_event(tx, &event.id)? {
+                return Err(already_exists(definition.r#type, &event.id, &existing_aggregate, existing_seq));
+            }
+            let committed = with_durable(&payload, &aggregate, event.seq, spec.version);
+            let pending = routes.prepare(tx, &[&committed])?;
+            self.run_projectors(versioned, tx, &committed)?;
+            if row.is_none() {
+                tx.execute(
+                    "INSERT INTO event_sequence (aggregate_id, seq, owner_id) VALUES (?1, ?2, ?3)",
+                    params![aggregate, event.seq, options.owner_id.as_deref()],
+                )?;
+            } else {
+                reserve_sequence(tx, &aggregate, event.seq)?;
+                if let Some(owner_id) = &options.owner_id
+                    && owner.is_none()
+                {
+                    tx.execute(
+                        "UPDATE event_sequence SET owner_id = ?2 WHERE aggregate_id = ?1",
+                        params![aggregate, owner_id],
+                    )?;
                 }
-                Ok(Some(committed))
-            })?;
-        let Some(committed) = committed else {
+            }
+            if persist {
+                insert_event(tx, &committed, &aggregate, event.seq, versioned)?;
+            }
+            Ok(Some((committed, pending)))
+        })?;
+        let Some((committed, pending)) = committed else {
             return Ok(());
         };
+        pending.apply(&mut routes);
+        let resolved = pending.routes(0);
+        drop(routes);
         self.wake(&aggregate);
         if options.publish {
-            self.notify(&committed, true)?;
+            self.notify(&committed, resolved, true)?;
         }
         Ok(())
     }
@@ -460,7 +497,7 @@ impl Bus {
         Event::from_payload(payload)
     }
 
-    fn notify(&self, event: &Event, isolate: bool) -> Result<(), BusError> {
+    fn notify(&self, event: &Event, routes: Option<Arc<[LocationRef]>>, isolate: bool) -> Result<(), BusError> {
         let listeners = lock(&self.listeners).iter().map(|(_, listener)| listener.clone()).collect::<Vec<_>>();
         for listener in listeners {
             let result = listener(event);
@@ -472,25 +509,25 @@ impl Bus {
                 eprintln!("Event listener failed: eventID={} eventType={} error={error}", event.id(), event.r#type());
             }
         }
+        let event = Arc::new(event.clone());
         let (untyped, typed) = {
             let subscribers = lock(&self.subscribers);
             let untyped = subscribers
                 .iter()
-                .filter(|subscriber| subscriber.types.is_none() && accepts(&subscriber.location, event))
+                .filter(|subscriber| subscriber.types.is_none())
                 .map(|subscriber| subscriber.sender.clone())
                 .collect::<Vec<_>>();
             let typed = subscribers
                 .iter()
                 .filter(|subscriber| {
                     subscriber.types.as_ref().is_some_and(|types| types.iter().any(|r#type| r#type == event.r#type()))
-                        && accepts(&subscriber.location, event)
                 })
                 .map(|subscriber| subscriber.sender.clone())
                 .collect::<Vec<_>>();
             (untyped, typed)
         };
         for sender in untyped.into_iter().chain(typed) {
-            let _ = sender.send(event.clone());
+            let _ = sender.send((event.clone(), routes.clone()));
         }
         Ok(())
     }
@@ -498,8 +535,8 @@ impl Bus {
     fn register(&self, types: Option<Vec<String>>, location: Option<LocationRef>) -> Subscription {
         let (sender, receiver) = unbounded_channel();
         let id = self.next_subscriber_id.fetch_add(1, Ordering::Relaxed);
-        lock(&self.subscribers).push(Subscriber { id, types, location, sender });
-        Subscription { receiver, subscribers: self.subscribers.clone(), id }
+        lock(&self.subscribers).push(Subscriber { id, types, sender });
+        Subscription { receiver, subscribers: self.subscribers.clone(), id, location }
     }
 
     fn run_projectors(&self, key: &str, connection: &Connection, event: &Event) -> Result<(), BusError> {
@@ -638,10 +675,13 @@ fn location_value(location: &LocationRef) -> Value {
     Value::Object(object)
 }
 
-fn accepts(location: &Option<LocationRef>, event: &Event) -> bool {
+fn accepts(location: Option<&LocationRef>, event: &Event, routes: Option<&[LocationRef]>) -> bool {
     let Some(location) = location else {
         return true;
     };
+    if let Some(routes) = routes {
+        return routes.contains(location);
+    }
     let Some(event_location) = event.location() else {
         return true;
     };
