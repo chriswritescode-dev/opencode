@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use crate::Env;
 use crate::route::model::Model;
@@ -21,8 +21,10 @@ pub mod cloudflare_workers_ai;
 pub mod cohere;
 pub mod deepgram;
 pub mod deepinfra;
+pub mod deepseek;
 pub mod digitalocean;
 pub mod elevenlabs;
+pub mod fireworks;
 pub mod google;
 pub mod google_adc;
 pub mod google_vertex;
@@ -164,6 +166,7 @@ impl ProviderPackages {
             ("@opencode/ai/providers/azure/responses", azure::responses_model as Entry),
             ("@opencode/ai/providers/baseten", baseten::model as Entry),
             ("@opencode/ai/providers/baseten/decisions", baseten::decision_model as Entry),
+            ("@opencode/ai/providers/byteplus", byteplus::video_model as Entry),
             ("@opencode/ai/providers/byteplus/videos", byteplus::video_model as Entry),
             ("@opencode/ai/providers/cerebras", cerebras::model as Entry),
             ("@opencode/ai/providers/cloudflare-ai-gateway", cloudflare_ai_gateway::model as Entry),
@@ -175,9 +178,15 @@ impl ProviderPackages {
             ("@opencode/ai/providers/cohere/chat", cohere::chat_model as Entry),
             ("@opencode/ai/providers/cohere/embeddings", cohere::embedding_model as Entry),
             ("@opencode/ai/providers/deepinfra", deepinfra::model as Entry),
+            ("@opencode/ai/providers/deepinfra/embeddings", deepinfra::embedding_model as Entry),
+            ("@opencode/ai/providers/deepseek", deepseek::model as Entry),
             ("@opencode/ai/providers/digitalocean", digitalocean::model as Entry),
             ("@opencode/ai/providers/digitalocean/decisions", digitalocean::decision_model as Entry),
+            ("@opencode/ai/providers/digitalocean/embeddings", digitalocean::embedding_model as Entry),
+            ("@opencode/ai/providers/digitalocean/images", digitalocean::image_model as Entry),
             ("@opencode/ai/providers/digitalocean/responses", digitalocean::responses_model as Entry),
+            ("@opencode/ai/providers/fireworks", fireworks::model as Entry),
+            ("@opencode/ai/providers/fireworks/embeddings", fireworks::embedding_model as Entry),
             ("@opencode/ai/providers/google", google::model as Entry),
             ("@opencode/ai/providers/google/decisions", google::decision_model as Entry),
             ("@opencode/ai/providers/google/embeddings", google::embedding_model as Entry),
@@ -218,10 +227,14 @@ impl ProviderPackages {
             ("@opencode/ai/providers/openai/responses", openai::model as Entry),
             ("@opencode/ai/providers/openai-compatible", openai_compatible::model as Entry),
             ("@opencode/ai/providers/openai-compatible/decisions", openai_compatible::decision_model as Entry),
+            ("@opencode/ai/providers/openai-compatible/embeddings", openai_compatible::embedding_model as Entry),
+            ("@opencode/ai/providers/openai-compatible/images", openai_compatible::image_model as Entry),
+            ("@opencode/ai/providers/openai-compatible/responses", openai_compatible_responses::model as Entry),
             ("@opencode/ai/providers/openai-compatible-responses", openai_compatible_responses::model as Entry),
             ("@opencode/ai/providers/opencode/decisions", opencode::decision_model as Entry),
             ("@opencode/ai/providers/openrouter", openrouter::model as Entry),
             ("@opencode/ai/providers/openrouter/decisions", openrouter::decision_model as Entry),
+            ("@opencode/ai/providers/openrouter/embeddings", openrouter::embedding_model as Entry),
             ("@opencode/ai/providers/openrouter/images", openrouter::image_model as Entry),
             ("@opencode/ai/providers/openrouter/responses", openrouter::responses_model as Entry),
             ("@opencode/ai/providers/openrouter/videos", openrouter::video_model as Entry),
@@ -229,11 +242,13 @@ impl ProviderPackages {
             ("@opencode/ai/providers/typesafe-ai/decisions", typesafe_ai::decision_model as Entry),
             ("@opencode/ai/providers/venice", venice::model as Entry),
             ("@opencode/ai/providers/venice/responses", venice::responses_model as Entry),
+            ("@opencode/ai/providers/volcengine", volcengine::video_model as Entry),
             ("@opencode/ai/providers/volcengine/videos", volcengine::video_model as Entry),
             ("@opencode/ai/providers/vercel-ai-gateway", vercel_ai_gateway::model as Entry),
             ("@opencode/ai/providers/vercel-ai-gateway/chat", vercel_ai_gateway::chat_model as Entry),
             ("@opencode/ai/providers/vercel-ai-gateway/messages", vercel_ai_gateway::messages_model as Entry),
             ("@opencode/ai/providers/vercel-ai-gateway/decisions", vercel_ai_gateway::decision_model as Entry),
+            ("@opencode/ai/providers/vercel-ai-gateway/embeddings", vercel_ai_gateway::embedding_model as Entry),
             ("@opencode/ai/providers/vercel-ai-gateway/images", vercel_ai_gateway::image_model as Entry),
             ("@opencode/ai/providers/vercel-ai-gateway/responses", vercel_ai_gateway::responses_model as Entry),
             ("@opencode/ai/providers/xai", xai::model as Entry),
@@ -283,6 +298,17 @@ impl ProviderPackages {
             ("@opencode/ai/providers/openai", openai::transcription_model as Entry),
         ]);
         Self { entries, decisions, extractions, speech, transcription }
+    }
+
+    pub fn specifiers(&self) -> BTreeSet<&'static str> {
+        self.entries
+            .keys()
+            .chain(self.decisions.keys())
+            .chain(self.extractions.keys())
+            .chain(self.speech.keys())
+            .chain(self.transcription.keys())
+            .copied()
+            .collect()
     }
 
     pub fn model(

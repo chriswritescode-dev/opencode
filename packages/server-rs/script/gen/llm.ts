@@ -47,6 +47,22 @@ type ExportedAdc = {
   }>
 }
 
+type ExportedProviderEntries = {
+  clockEpochMs: number
+  cases: Array<{
+    name: string
+    specifier: string
+    modelID: string
+    settings: Record<string, unknown>
+    env: Record<string, string>
+    kind: string
+    routeId: string
+    descriptor: Record<string, unknown> | null
+    prepared: unknown
+    error: { message: string } | null
+  }>
+}
+
 export const GROUPS: Record<string, { protocols: string[] }> = {
   "anthropic-messages": { protocols: ["anthropic-messages"] },
   "openai-chat": { protocols: ["openai-chat"] },
@@ -111,13 +127,14 @@ const EXPECTED_REALTIME_CASES = 8
 
 const exporter = `${tree}/exporter`
 await mkdir(exporter, { recursive: true })
-for (const name of ["capture", "scenarios", "errors", "adc", "realtime"])
+for (const name of ["capture", "scenarios", "errors", "adc", "realtime", "providers"])
   await Bun.write(`${exporter}/${name}.ts`, Bun.file(`${root}script/llm/${name}.ts`))
 
 const scenarios = await run<ScenarioOutput>("scenarios")
 const errors = await run<Array<ExportedError>>("errors")
 const adc = await run<ExportedAdc>("adc")
 const realtime = await run<ExportedRealtime>("realtime")
+const providerEntries = await run<ExportedProviderEntries>("providers")
 
 if (adc.cases.length !== EXPECTED_ADC_CASES) fail(`expected ${EXPECTED_ADC_CASES} ADC cases, got ${adc.cases.length}`)
 if (realtime.cases.length !== EXPECTED_REALTIME_CASES)
@@ -152,8 +169,9 @@ await Bun.write(`${output}/provider-errors.json`, `${JSON.stringify({ errors }, 
 await Bun.write(`${output}/google-adc.json`, `${JSON.stringify(adc, null, 2)}\n`)
 await Bun.write(`${output}/multipart-fixtures.json`, `${JSON.stringify(scenarios.multipartFixtures, null, 2)}\n`)
 await Bun.write(`${output}/realtime.json`, `${JSON.stringify(realtime, null, 2)}\n`)
+await Bun.write(`${output}/provider-entries.json`, `${JSON.stringify(providerEntries, null, 2)}\n`)
 console.log(
-  `llm: ${scenarios.cassettes.length} cassettes, ${errors.length} provider errors, ${adc.cases.length} ADC cases, ${realtime.cases.length} realtime cases -> ${output}`,
+  `llm: ${scenarios.cassettes.length} cassettes, ${errors.length} provider errors, ${adc.cases.length} ADC cases, ${realtime.cases.length} realtime cases, ${providerEntries.cases.length} provider entry cases -> ${output}`,
 )
 
 async function run<T>(name: string) {

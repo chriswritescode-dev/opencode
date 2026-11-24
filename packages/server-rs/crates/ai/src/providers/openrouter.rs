@@ -9,6 +9,7 @@ use crate::modalities::image::ImageModel;
 use crate::modalities::video::VideoModel;
 use crate::protocols::open_responses::{self, OpenResponses, PATH as RESPONSES_PATH};
 use crate::protocols::openai_chat::{self, AssistantTransform, OpenAiChat, PATH as CHAT_PATH};
+use crate::protocols::openai_embeddings::{self, OpenAiEmbeddings};
 use crate::protocols::openai_images::{ImageInput, OpenAiImages};
 use crate::protocols::openrouter_video;
 use crate::protocols::shared;
@@ -17,6 +18,7 @@ use crate::protocols::utils::cache::CacheControl;
 use crate::providers::{RuntimeModel, Settings, language_model_with_route, modality_options, open_responses_options};
 use crate::route::auth::{Auth, ProviderAuthOptions, api_key};
 use crate::route::decision::{DecisionRoute, DecisionRouteInput};
+use crate::route::embedding::{EmbeddingRoute, EmbeddingRouteInput};
 use crate::route::endpoint::Endpoint;
 use crate::route::framing::Definition;
 use crate::route::model::{Model, ResolvedRequest, Route, RouteTransport};
@@ -144,6 +146,23 @@ pub fn responses_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> R
         options,
     };
     Ok(language_model_with_route(model_id, ID, route, None, None))
+}
+
+pub fn embedding_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result<RuntimeModel, AiError> {
+    let (transport, provider_options) = modality_options(settings, &DECLARED);
+    let route = EmbeddingRoute::make(EmbeddingRouteInput {
+        id: openai_embeddings::ID.to_string(),
+        provider: ID.to_string(),
+        protocol: Arc::new(OpenAiEmbeddings),
+        endpoint: MediaEndpoint::path(openai_embeddings::PATH)
+            .with_base_url(settings.string("baseURL").unwrap_or(BASE_URL)),
+        auth: auth(settings),
+        headers: None,
+        provider_metadata_key: Some(METADATA_KEY.to_string()),
+        options: transport,
+        max_values: None,
+    });
+    Ok(RuntimeModel::Embedding(route.model(model_id, provider_options)))
 }
 
 pub fn image_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result<RuntimeModel, AiError> {

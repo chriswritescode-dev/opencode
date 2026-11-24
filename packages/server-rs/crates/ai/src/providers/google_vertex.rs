@@ -49,7 +49,7 @@ impl Protocol for VertexGemini {
     ) -> Result<Value, AiError> {
         let mut body = gemini::Gemini.build_body(request, model, context)?;
         if let Some(object) = body.as_object_mut() {
-            object.remove("serviceTier");
+            object.shift_remove("serviceTier");
         }
         let labels = labels(request.request.provider_options.as_ref());
         if let Some(labels) = labels
@@ -161,7 +161,7 @@ pub fn image_model(model_id: &str, settings: &Settings, env: &dyn Env) -> Result
     .with_base_url(base_url);
     Ok(RuntimeModel::Image(ImageModel::inline(
         model_id,
-        ID.to_string(),
+        "google".to_string(),
         google_images::protocol(),
         endpoint,
         auth,

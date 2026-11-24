@@ -33,7 +33,7 @@ impl Protocol for VertexMistralChat {
     ) -> Result<Value, AiError> {
         let mut body = mistral_chat::from_request(&request.request, model)?;
         if let Some(object) = body.as_object_mut() {
-            object.remove("prompt_cache_key");
+            object.shift_remove("prompt_cache_key");
         }
         Ok(body)
     }

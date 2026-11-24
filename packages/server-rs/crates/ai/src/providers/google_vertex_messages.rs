@@ -36,7 +36,7 @@ impl Protocol for VertexAnthropicMessages {
     ) -> Result<Value, AiError> {
         let body = anthropic_messages::from_request(&request.request, model)?;
         let mut object = body.as_object().cloned().unwrap_or_default();
-        object.remove("model");
+        object.shift_remove("model");
         object.insert("anthropic_version".to_string(), Value::String(ANTHROPIC_VERSION.to_string()));
         Ok(Value::Object(object))
     }

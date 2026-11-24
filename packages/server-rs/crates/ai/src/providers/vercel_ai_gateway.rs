@@ -6,6 +6,7 @@ use crate::Env;
 use crate::media::route::MediaEndpoint;
 use crate::modalities::image::ImageModel;
 use crate::protocols::openai_decisions::{self, OpenAiDecisions};
+use crate::protocols::openai_embeddings::{self, OpenAiEmbeddings};
 use crate::protocols::openai_images::{ImageInput, OpenAiImages, pixel_size};
 use crate::protocols::shared::invalid_request;
 use crate::protocols::utils::gateway_protocol::{GatewayProtocol, Prepare, PreparedBody};
@@ -14,6 +15,7 @@ use crate::protocols::{anthropic_messages, open_responses, openai_chat};
 use crate::providers::{RuntimeModel, Settings, language_model_with_route, modality_options, open_responses_options};
 use crate::route::auth::{Auth, ProviderAuthOptions, api_key};
 use crate::route::decision::{DecisionRoute, DecisionRouteInput};
+use crate::route::embedding::{EmbeddingRoute, EmbeddingRouteInput};
 use crate::route::endpoint::{Endpoint, PathPart};
 use crate::route::model::{Route, RouteTransport};
 use crate::schema::{AiError, LlmRequest, RequestOptions, StringMap, merge_request_options};
@@ -130,6 +132,23 @@ pub fn image_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Resul
         transport,
         provider_options,
     )))
+}
+
+pub fn embedding_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result<RuntimeModel, AiError> {
+    let (transport, provider_options) = modality_options(settings, &DECLARED);
+    let route = EmbeddingRoute::make(EmbeddingRouteInput {
+        id: openai_embeddings::ID.to_string(),
+        provider: ID.to_string(),
+        protocol: Arc::new(OpenAiEmbeddings),
+        endpoint: MediaEndpoint::path(openai_embeddings::PATH)
+            .with_base_url(settings.string("baseURL").unwrap_or(BASE_URL)),
+        auth: auth(settings),
+        headers: None,
+        provider_metadata_key: Some(ID.to_string()),
+        options: transport,
+        max_values: None,
+    });
+    Ok(RuntimeModel::Embedding(route.model(model_id, provider_options)))
 }
 
 fn image_sizing(request: &crate::modalities::image::ImageRequest) -> Option<Map<String, Value>> {

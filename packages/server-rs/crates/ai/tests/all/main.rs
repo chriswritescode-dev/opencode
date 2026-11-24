@@ -12,6 +12,7 @@ mod media;
 mod prepare;
 mod protocols;
 mod protocols_utils;
+mod provider_entries;
 mod provider_errors;
 mod providers;
 mod realtime;
