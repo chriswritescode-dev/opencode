@@ -4,6 +4,7 @@ import { pascal, snake } from "../../../cli-rs/script/rust/types.ts"
 import {
   contractErrors,
   contractEvents,
+  contractMediaMessages,
   contractRequests,
   contractResponses,
   contractRoutes,
@@ -68,11 +69,15 @@ const errors = await contractErrors()
 const events = await contractEvents()
 const responses = await contractResponses(events)
 const requests = await contractRequests()
+const mediaMessages = await contractMediaMessages()
 
 const publicAsts = events.public.map((event) => Schema.toEncoded(event.schema).ast)
 const durableAsts = events.durable.map((event) => Schema.toEncoded(event.schema).ast)
 const idAsts = events.ids.map((id) => id.wire.ast)
-const responseAsts = responses.map((response) => Schema.toEncoded(response.schema).ast)
+const responseAsts = [
+  ...responses.map((response) => Schema.toEncoded(response.schema).ast),
+  Schema.toEncoded(mediaMessages).ast,
+]
 const stringRequests = requests.filter((request) => request.slot !== "body")
 const bodyRequests = requests.filter((request) => request.slot === "body")
 const stringRequestAsts = stringRequests.map((request) => Schema.toType(request.schema).ast)
@@ -143,6 +148,7 @@ const responseRoots = responses.map((response, index) => ({
   ...response,
   rustName: types.type(responseRepresentations[index]!, `${pascal(response.operationId)}Response`),
 }))
+types.type(responseRepresentations[responses.length]!, "SessionMessageMediaInfo")
 
 const wireRequestAsts = stringRequests.map((request) => Schema.toEncoded(request.schema).ast)
 const wireRequestDocument = SchemaRepresentation.toRepresentations(

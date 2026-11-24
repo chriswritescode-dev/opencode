@@ -22,11 +22,13 @@ undocumented_unsafe_blocks = "deny"
 
 [workspace.dependencies]
 opencode-ai = { path = "crates/ai" }
+opencode-bus = { path = "crates/bus" }
 opencode-config = { path = "crates/config" }
 opencode-contract = { path = "crates/contract" }
 opencode-http = { path = "crates/http" }
 opencode-server = { path = "crates/server" }
 opencode-sidecar = { path = "crates/sidecar" }
+opencode-session = { path = "crates/session" }
 opencode-storage = { path = "crates/storage" }
 opencode-api-types = { path = "../cli-rs/crates/api-types" }
 opencode-api = { path = "../cli-rs/crates/api" }
@@ -39,6 +41,7 @@ bytes = "1"
 flate2 = "1"
 futures-util = { version = "0.3", default-features = false, features = ["std", "sink"] }
 http = "1"
+http-body = "1"
 http-body-util = "0.1"
 hyper = { version = "1", features = ["server", "client", "http1"] }
 hyper-util = { version = "0.1", features = ["tokio"] }

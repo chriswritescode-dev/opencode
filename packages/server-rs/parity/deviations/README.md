@@ -43,7 +43,7 @@ explained nothing print `warning: deviation <id> matched nothing`, and files wit
 - `OR-38-lone-surrogates.md`: the strict round-trip corpus skips samples with unpaired UTF-16 surrogates
 - `OR-38-request-bodies.md`: request bodies decode into the wire representation
 - `OR-38-request-non-finite-numbers.md`: non-finite numbers in string slots are rejected
-- `OR-39-not-implemented-operations.md`: only three operations are implemented and the rest answer 501
+- `OR-39-not-implemented-operations.md`: only five operations are implemented and the rest answer 501
 - `OR-39-persistent-pty-capability.md`: server info always reports the persistent PTY capability as unavailable
 - `OR-39-port-owner.md`: a port-in-use message names no owning process
 - `OR-39-wildcard-urls.md`: a wildcard bind reports only one loopback URL in server info
@@ -53,6 +53,8 @@ explained nothing print `warning: deviation <id> matched nothing`, and files wit
 - `OR-40-legacy-credential-json.md`: a legacy auth.json the TypeScript parser accepts is rejected whole
 - `OR-40-migration-locking.md`: migrations take the write lock up front and import the Drizzle journal atomically
 - `OR-40-migration-logging.md`: migrations log nothing and return a report instead
+- `OR-41-query-decode-messages.md`: query decode failures carry the contract decoder's message text
+- `OR-41-stream-failure-defect.md`: a log-read failure frame always names its defect `Error`
 - `OR-42-canonical-failure.md`: a migrated legacy entry that fails re-decoding is dropped with an invalid diagnostic
 - `OR-42-config-read-errors.md`: an unreadable or unresolvable config file is skipped instead of failing the load
 - `OR-42-duration-precision.md`: durations beyond i128 nanoseconds or with 39 or more fractional digits are rejected

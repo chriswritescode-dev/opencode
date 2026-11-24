@@ -1,7 +1,10 @@
+use std::ffi::OsStr;
 use std::io::Write;
 use std::sync::Arc;
 
 use base64::Engine;
+use opencode_http::state::ServerState;
+use opencode_storage::{MigrationReport, StorageError, database_path};
 use tokio::sync::oneshot;
 
 use crate::cli::Serve;
@@ -39,14 +42,17 @@ async fn serve(args: Serve, mut env: ServerEnv) -> std::io::Result<std::process:
         env.remove("OPENCODE_SERVER_PASSWORD");
     }
     let bind_hostname = args.hostname.unwrap_or_else(|| "127.0.0.1".to_owned());
-    let tmp = opencode_local::paths::Paths::from_vars(|name| env.get(name).map(std::ffi::OsStr::to_os_string))?.tmp;
-    std::fs::create_dir_all(&tmp)?;
-    let tmp = std::fs::canonicalize(&tmp)?;
+    let paths = opencode_local::paths::Paths::from_vars(|name| env.get(name).map(OsStr::to_os_string))?;
+    std::fs::create_dir_all(&paths.data)?;
+    std::fs::create_dir_all(&paths.tmp)?;
+    let tmp = std::fs::canonicalize(&paths.tmp)?;
     let listener = bind(&bind_hostname, args.port).await?;
     let address = listener.local_addr()?;
     let generated = environment_password.is_none();
     let password = environment_password.unwrap_or_else(generate_password);
-    let running = start(listener, tmp, password.clone(), machine_hostname(&env), args.cors, &env).await?;
+    let (state, report) = open_state(&env, &paths.data).map_err(std::io::Error::other)?;
+    report_warnings(&report);
+    let running = start(listener, tmp, password.clone(), machine_hostname(&env), args.cors, Some(state), &env).await?;
     running.ready();
     if args.stdio {
         write_line(&serde_json::json!({ "url": format!("http://{address}") }).to_string())?;
@@ -92,6 +98,10 @@ impl Running {
         &self.sidecar
     }
 
+    pub(crate) fn fail(&self) {
+        self.app.status().fail();
+    }
+
     pub(crate) async fn shutdown(self) {
         self.app.status().begin_stopping();
         let _ = self.shutdown.send(());
@@ -107,6 +117,7 @@ pub(crate) async fn start(
     password: String,
     hostname: String,
     cors: Vec<String>,
+    state: Option<Arc<ServerState>>,
     env: &ServerEnv,
 ) -> std::io::Result<Running> {
     let address = listener.local_addr()?;
@@ -129,6 +140,7 @@ pub(crate) async fn start(
         tmp,
         hostname: Some(hostname),
         urls,
+        state,
     });
     let (shutdown, shutdown_receiver) = oneshot::channel::<()>();
     let server = tokio::spawn(opencode_http::serve::serve(listener, app.clone(), async move {
@@ -141,6 +153,21 @@ pub(crate) async fn start(
         #[cfg(unix)]
         sidecar,
     })
+}
+
+pub(crate) fn open_state(
+    env: &ServerEnv,
+    data: &std::path::Path,
+) -> Result<(Arc<ServerState>, MigrationReport), StorageError> {
+    let location = database_path(data, crate::CHANNEL, |name| env.get(name).map(OsStr::to_os_string));
+    let (state, report) = ServerState::open(location, data)?;
+    Ok((Arc::new(state), report))
+}
+
+pub(crate) fn report_warnings(report: &MigrationReport) {
+    for warning in &report.warnings {
+        let _ = writeln!(std::io::stderr(), "{warning}");
+    }
 }
 
 pub(crate) fn generate_password() -> String {

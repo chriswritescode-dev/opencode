@@ -11,10 +11,18 @@ class LocationMiddleware extends HttpApiMiddleware.Service<LocationMiddleware>()
   error: [protocolErrors.LocationNotFoundError],
 }) {}
 class FormMiddleware extends HttpApiMiddleware.Service<FormMiddleware>()("@opencode/server-rs/Form", {
-  error: [protocolErrors.InvalidRequestError, protocolErrors.SessionNotFoundError, protocolErrors.LocationNotFoundError],
+  error: [
+    protocolErrors.InvalidRequestError,
+    protocolErrors.SessionNotFoundError,
+    protocolErrors.LocationNotFoundError,
+  ],
 }) {}
 class SessionMiddleware extends HttpApiMiddleware.Service<SessionMiddleware>()("@opencode/server-rs/Session", {
-  error: [protocolErrors.InvalidRequestError, protocolErrors.SessionNotFoundError, protocolErrors.LocationNotFoundError],
+  error: [
+    protocolErrors.InvalidRequestError,
+    protocolErrors.SessionNotFoundError,
+    protocolErrors.LocationNotFoundError,
+  ],
 }) {}
 
 export const api = protocol.makeDefaultApi({
@@ -312,6 +320,11 @@ export async function contractResponses(
     const response = responses.get(route.operationId)
     return response === undefined ? [] : [response]
   })
+}
+
+export async function contractMediaMessages(): Promise<Schema.Top> {
+  const message = await import(`${tree}/packages/protocol/src/groups/message.ts`)
+  return message.PublicMediaSessionMessage
 }
 
 export async function contractRequests(): Promise<Array<RequestRoot>> {
