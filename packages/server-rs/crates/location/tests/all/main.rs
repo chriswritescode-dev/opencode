@@ -1,4 +1,6 @@
 mod environment;
+mod lifecycle;
+mod map;
 mod project;
 mod state;
 mod state_group;

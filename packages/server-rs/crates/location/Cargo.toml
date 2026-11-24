@@ -13,6 +13,7 @@ workspace = true
 [dependencies]
 base64.workspace = true
 futures-util.workspace = true
+indexmap.workspace = true
 log.workspace = true
 opencode-storage.workspace = true
 ring.workspace = true
@@ -22,6 +23,9 @@ serde_json.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 url.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }
 
 [[test]]
 name = "all"

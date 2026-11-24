@@ -418,7 +418,7 @@ impl ProjectService {
         Ok(adopted)
     }
 
-    fn publish(&self, event: LocationEvent) {
+    pub fn publish(&self, event: LocationEvent) {
         let _ = self.sender.send(event);
     }
 }
