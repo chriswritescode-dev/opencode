@@ -90,6 +90,15 @@
           }
         ]
       },
+      "provider": {
+        "package": "@opencode/ai/providers/openai-compatible",
+        "modelID": "gemini-3.8-flash",
+        "settings": {
+          "provider": "google",
+          "baseURL": "https://generativelanguage.googleapis.com/v1beta/openai",
+          "apiKey": "fixture"
+        }
+      },
       "transport": "http",
       "exchanges": [
         {
@@ -390,6 +399,15 @@
             }
           }
         ]
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/openai-compatible",
+        "modelID": "gemini-3.8-flash",
+        "settings": {
+          "provider": "google",
+          "baseURL": "https://generativelanguage.googleapis.com/v1beta/openai",
+          "apiKey": "fixture"
+        }
       },
       "transport": "http",
       "exchanges": [

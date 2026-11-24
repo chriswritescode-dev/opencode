@@ -1,0 +1,1156 @@
+{
+  "cassette": "cohere/continues-a-native-tool-call",
+  "protocol": "cohere-chat",
+  "routeId": "cohere-chat",
+  "clockEpochMs": 1767323045000,
+  "steps": [
+    {
+      "model": {
+        "id": "command-a-plus-05-2026",
+        "provider": "cohere",
+        "route": {
+          "id": "cohere-chat",
+          "protocol": "cohere-chat",
+          "providerMetadataKey": "cohere"
+        },
+        "endpoint": {
+          "baseURL": "https://api.cohere.com/v2",
+          "path": "/chat"
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "cohere-tool-loop",
+        "maxTokens": 2048,
+        "cache": "none",
+        "system": [
+          {
+            "type": "text",
+            "text": "Use the get_weather tool exactly once."
+          },
+          {
+            "type": "text",
+            "text": "After the tool result, reply exactly: Paris is sunny."
+          }
+        ],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "What is the weather in Paris?"
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "tool",
+            "name": "get_weather",
+            "description": "Get current weather for a city.",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "city": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "city"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "temperature": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "string",
+                      "enum": [
+                        "Infinity",
+                        "-Infinity",
+                        "NaN"
+                      ]
+                    }
+                  ]
+                },
+                "condition": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "temperature",
+                "condition"
+              ],
+              "additionalProperties": false
+            }
+          }
+        ]
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/cohere",
+        "modelID": "command-a-plus-05-2026",
+        "settings": {
+          "apiKey": "fixture"
+        }
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://api.cohere.com/v2/chat",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "567",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"command-a-plus-05-2026\",\"messages\":[{\"role\":\"system\",\"content\":[{\"type\":\"text\",\"text\":\"Use the get_weather tool exactly once.\"},{\"type\":\"text\",\"text\":\"After the tool result, reply exactly: Paris is sunny.\"}]},{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"What is the weather in Paris?\"}]}],\"stream\":true,\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"get_weather\",\"description\":\"Get current weather for a city.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\"}},\"required\":[\"city\"],\"additionalProperties\":false}}}],\"max_tokens\":2048}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream"
+            },
+            "body": "event: message-start\ndata: {\"id\":\"d6c0d412-926c-42ed-b152-043404f8c33c\",\"type\":\"message-start\",\"delta\":{\"message\":{\"role\":\"assistant\",\"content\":[],\"tool_plan\":\"\",\"tool_calls\":[],\"citations\":[]}}}\n\nevent: content-start\ndata: {\"type\":\"content-start\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"type\":\"thinking\",\"thinking\":\"\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\"The\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" user\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" is\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" asking\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" for\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" the\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" weather\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" in\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" Paris\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\".\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" I\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" have\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" a\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" get\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\"_weather\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" function\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" available\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" that\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" takes\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" a\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" city\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" parameter\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\".\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" The\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" user\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" specifically\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" mentioned\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" \\\"\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\"Paris\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\"\\\"\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" as\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" the\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" city\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\".\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" I\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" need\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" to\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" use\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" the\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" get\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\"_weather\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" tool\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" exactly\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" once\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" as\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" per\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" the\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" policies\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\",\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" and\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" I\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" have\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" all\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" the\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" required\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" parameters\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" (\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\"city\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" =\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" \\\"\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\"Paris\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\"\\\").\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\"\\n\\nLet\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" me\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" call\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" the\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" function\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" with\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" the\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" city\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" parameter\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" set\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" to\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" \\\"\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\"Paris\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\"\\\".\"}}}}\n\nevent: content-end\ndata: {\"type\":\"content-end\",\"index\":0}\n\nevent: tool-call-start\ndata: {\"type\":\"tool-call-start\",\"index\":0,\"delta\":{\"message\":{\"tool_calls\":{\"id\":\"get_weather_vfp5ryredwrg\",\"type\":\"function\",\"function\":{\"name\":\"get_weather\",\"arguments\":\"\"}}}}}\n\nevent: tool-call-delta\ndata: {\"type\":\"tool-call-delta\",\"index\":0,\"delta\":{\"message\":{\"tool_calls\":{\"function\":{\"arguments\":\"{\\\"\"}}}}}\n\nevent: tool-call-delta\ndata: {\"type\":\"tool-call-delta\",\"index\":0,\"delta\":{\"message\":{\"tool_calls\":{\"function\":{\"arguments\":\"city\"}}}}}\n\nevent: tool-call-delta\ndata: {\"type\":\"tool-call-delta\",\"index\":0,\"delta\":{\"message\":{\"tool_calls\":{\"function\":{\"arguments\":\"\\\":\"}}}}}\n\nevent: tool-call-delta\ndata: {\"type\":\"tool-call-delta\",\"index\":0,\"delta\":{\"message\":{\"tool_calls\":{\"function\":{\"arguments\":\" \\\"\"}}}}}\n\nevent: tool-call-delta\ndata: {\"type\":\"tool-call-delta\",\"index\":0,\"delta\":{\"message\":{\"tool_calls\":{\"function\":{\"arguments\":\"Paris\"}}}}}\n\nevent: tool-call-delta\ndata: {\"type\":\"tool-call-delta\",\"index\":0,\"delta\":{\"message\":{\"tool_calls\":{\"function\":{\"arguments\":\"\\\"}\"}}}}}\n\nevent: tool-call-end\ndata: {\"type\":\"tool-call-end\",\"index\":0}\n\nevent: message-end\ndata: {\"type\":\"message-end\",\"delta\":{\"finish_reason\":\"TOOL_CALL\",\"usage\":{\"billed_units\":{\"input_tokens\":47,\"output_tokens\":83},\"tokens\":{\"input_tokens\":265,\"output_tokens\":108,\"reasoning_tokens\":76},\"cached_tokens\":0}}}\n\ndata: [DONE]\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "reasoning-start",
+          "id": "0"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": "The"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " user"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " is"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " asking"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " for"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " the"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " weather"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " in"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " Paris"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": "."
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " I"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " have"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " a"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " get"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": "_weather"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " function"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " available"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " that"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " takes"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " a"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " city"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " parameter"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": "."
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " The"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " user"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " specifically"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " mentioned"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " \""
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": "Paris"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": "\""
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " as"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " the"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " city"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": "."
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " I"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " need"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " to"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " use"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " the"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " get"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": "_weather"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " tool"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " exactly"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " once"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " as"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " per"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " the"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " policies"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": ","
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " and"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " I"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " have"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " all"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " the"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " required"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " parameters"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " ("
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": "city"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " ="
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " \""
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": "Paris"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": "\")."
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": "\n\nLet"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " me"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " call"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " the"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " function"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " with"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " the"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " city"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " parameter"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " set"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " to"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " \""
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": "Paris"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": "\"."
+        },
+        {
+          "type": "reasoning-end",
+          "id": "0"
+        },
+        {
+          "type": "tool-input-start",
+          "id": "get_weather_vfp5ryredwrg",
+          "name": "get_weather"
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "get_weather_vfp5ryredwrg",
+          "name": "get_weather",
+          "text": "{\"",
+          "input": {}
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "get_weather_vfp5ryredwrg",
+          "name": "get_weather",
+          "text": "city",
+          "input": {}
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "get_weather_vfp5ryredwrg",
+          "name": "get_weather",
+          "text": "\":",
+          "input": {}
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "get_weather_vfp5ryredwrg",
+          "name": "get_weather",
+          "text": " \"",
+          "input": {
+            "city": ""
+          }
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "get_weather_vfp5ryredwrg",
+          "name": "get_weather",
+          "text": "Paris",
+          "input": {
+            "city": "Paris"
+          }
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "get_weather_vfp5ryredwrg",
+          "name": "get_weather",
+          "text": "\"}",
+          "input": {
+            "city": "Paris"
+          }
+        },
+        {
+          "type": "tool-input-end",
+          "id": "get_weather_vfp5ryredwrg",
+          "name": "get_weather"
+        },
+        {
+          "type": "tool-call",
+          "id": "get_weather_vfp5ryredwrg",
+          "name": "get_weather",
+          "input": {
+            "city": "Paris"
+          }
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "tool-calls",
+            "raw": "TOOL_CALL"
+          },
+          "usage": {
+            "inputTokens": 265,
+            "outputTokens": 108,
+            "nonCachedInputTokens": 265,
+            "cacheReadInputTokens": 0,
+            "reasoningTokens": 76,
+            "totalTokens": 373,
+            "providerMetadata": {
+              "cohere": {
+                "tokens": {
+                  "input_tokens": 265,
+                  "output_tokens": 108,
+                  "reasoning_tokens": 76
+                },
+                "billed_units": {
+                  "input_tokens": 47,
+                  "output_tokens": 83
+                },
+                "cached_tokens": 0
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "tool-calls",
+            "raw": "TOOL_CALL"
+          },
+          "usage": {
+            "inputTokens": 265,
+            "outputTokens": 108,
+            "nonCachedInputTokens": 265,
+            "cacheReadInputTokens": 0,
+            "reasoningTokens": 76,
+            "totalTokens": 373,
+            "providerMetadata": {
+              "cohere": {
+                "tokens": {
+                  "input_tokens": 265,
+                  "output_tokens": 108,
+                  "reasoning_tokens": 76
+                },
+                "billed_units": {
+                  "input_tokens": 47,
+                  "output_tokens": 83
+                },
+                "cached_tokens": 0
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "model": {
+        "id": "command-a-plus-05-2026",
+        "provider": "cohere",
+        "route": {
+          "id": "cohere-chat",
+          "protocol": "cohere-chat",
+          "providerMetadataKey": "cohere"
+        },
+        "endpoint": {
+          "baseURL": "https://api.cohere.com/v2",
+          "path": "/chat"
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "cohere-tool-loop",
+        "maxTokens": 2048,
+        "cache": "none",
+        "system": [
+          {
+            "type": "text",
+            "text": "Use the get_weather tool exactly once."
+          },
+          {
+            "type": "text",
+            "text": "After the tool result, reply exactly: Paris is sunny."
+          }
+        ],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "What is the weather in Paris?"
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "reasoning",
+                "text": "The user is asking for the weather in Paris. I have a get_weather function available that takes a city parameter. The user specifically mentioned \"Paris\" as the city. I need to use the get_weather tool exactly once as per the policies, and I have all the required parameters (city = \"Paris\").\n\nLet me call the function with the city parameter set to \"Paris\"."
+              },
+              {
+                "type": "tool-call",
+                "id": "get_weather_vfp5ryredwrg",
+                "name": "get_weather",
+                "input": {
+                  "city": "Paris"
+                }
+              }
+            ]
+          },
+          {
+            "role": "tool",
+            "content": [
+              {
+                "type": "tool-result",
+                "id": "get_weather_vfp5ryredwrg",
+                "name": "get_weather",
+                "result": {
+                  "type": "json",
+                  "value": {
+                    "temperature": 22,
+                    "condition": "sunny"
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "tool",
+            "name": "get_weather",
+            "description": "Get current weather for a city.",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "city": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "city"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "temperature": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "string",
+                      "enum": [
+                        "Infinity",
+                        "-Infinity",
+                        "NaN"
+                      ]
+                    }
+                  ]
+                },
+                "condition": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "temperature",
+                "condition"
+              ],
+              "additionalProperties": false
+            }
+          }
+        ]
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/cohere",
+        "modelID": "command-a-plus-05-2026",
+        "settings": {
+          "apiKey": "fixture"
+        }
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://api.cohere.com/v2/chat",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "1251",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"command-a-plus-05-2026\",\"messages\":[{\"role\":\"system\",\"content\":[{\"type\":\"text\",\"text\":\"Use the get_weather tool exactly once.\"},{\"type\":\"text\",\"text\":\"After the tool result, reply exactly: Paris is sunny.\"}]},{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"What is the weather in Paris?\"}]},{\"role\":\"assistant\",\"content\":[{\"type\":\"thinking\",\"thinking\":\"The user is asking for the weather in Paris. I have a get_weather function available that takes a city parameter. The user specifically mentioned \\\"Paris\\\" as the city. I need to use the get_weather tool exactly once as per the policies, and I have all the required parameters (city = \\\"Paris\\\").\\n\\nLet me call the function with the city parameter set to \\\"Paris\\\".\"}],\"tool_calls\":[{\"id\":\"get_weather_vfp5ryredwrg\",\"type\":\"function\",\"function\":{\"name\":\"get_weather\",\"arguments\":\"{\\\"city\\\":\\\"Paris\\\"}\"}}]},{\"role\":\"tool\",\"tool_call_id\":\"get_weather_vfp5ryredwrg\",\"content\":\"{\\\"temperature\\\":22,\\\"condition\\\":\\\"sunny\\\"}\"}],\"stream\":true,\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"get_weather\",\"description\":\"Get current weather for a city.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\"}},\"required\":[\"city\"],\"additionalProperties\":false}}}],\"max_tokens\":2048}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream"
+            },
+            "body": "event: message-start\ndata: {\"id\":\"0c6cba0e-442d-4e28-96b2-c3cd6ff3b22d\",\"type\":\"message-start\",\"delta\":{\"message\":{\"role\":\"assistant\",\"content\":[],\"tool_plan\":\"\",\"tool_calls\":[],\"citations\":[]}}}\n\nevent: content-start\ndata: {\"type\":\"content-start\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"type\":\"thinking\",\"thinking\":\"\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\"The\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" function\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" returned\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" weather\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" data\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" for\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" Paris\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\".\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" The\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" result\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" shows\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\":\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\"\\n-\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" Temperature\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\":\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" 22\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" (\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\"presumably\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" degrees\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" Celsius\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\")\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\"\\n-\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" Condition\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\":\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" sunny\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\"\\n\\nI\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" should\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" present\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" this\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" information\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" to\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" the\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" user\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" in\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" a\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" clear\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" and\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" helpful\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" way\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\".\"}}}}\n\nevent: content-end\ndata: {\"type\":\"content-end\",\"index\":0}\n\nevent: content-start\ndata: {\"type\":\"content-start\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"type\":\"text\",\"text\":\"\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\"The\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\" current\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\" weather\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\" in\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\" Paris\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\" is\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\" \"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\"22\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\"°C\"}}}}\n\nevent: citation-start\ndata: {\"type\":\"citation-start\",\"index\":0,\"delta\":{\"message\":{\"citations\":{\"start\":32,\"end\":36,\"text\":\"22°C\",\"sources\":[{\"type\":\"tool\",\"id\":\"get_weather_vfp5ryredwrg:0\",\"tool_output\":{\"condition\":\"sunny\",\"temperature\":\"22\"}}],\"type\":\"TEXT_CONTENT\",\"content_index\":1}}}}\n\nevent: citation-end\ndata: {\"type\":\"citation-end\",\"index\":0}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\" and\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\" \"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\"sun\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\"ny\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\".\"}}}}\n\nevent: citation-start\ndata: {\"type\":\"citation-start\",\"index\":1,\"delta\":{\"message\":{\"citations\":{\"start\":41,\"end\":47,\"text\":\"sunny.\",\"sources\":[{\"type\":\"tool\",\"id\":\"get_weather_vfp5ryredwrg:0\",\"tool_output\":{\"condition\":\"sunny\",\"temperature\":\"22\"}}],\"type\":\"TEXT_CONTENT\",\"content_index\":1}}}}\n\nevent: citation-end\ndata: {\"type\":\"citation-end\",\"index\":1}\n\nevent: content-end\ndata: {\"type\":\"content-end\",\"index\":1}\n\nevent: message-end\ndata: {\"type\":\"message-end\",\"delta\":{\"finish_reason\":\"COMPLETE\",\"usage\":{\"billed_units\":{\"input_tokens\":55,\"output_tokens\":54},\"tokens\":{\"input_tokens\":427,\"output_tokens\":79,\"reasoning_tokens\":42},\"cached_tokens\":0}}}\n\ndata: [DONE]\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "reasoning-start",
+          "id": "0"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": "The"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " function"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " returned"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " weather"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " data"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " for"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " Paris"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": "."
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " The"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " result"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " shows"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": ":"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": "\n-"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " Temperature"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": ":"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " 22"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " ("
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": "presumably"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " degrees"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " Celsius"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": ")"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": "\n-"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " Condition"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": ":"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " sunny"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": "\n\nI"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " should"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " present"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " this"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " information"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " to"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " the"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " user"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " in"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " a"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " clear"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " and"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " helpful"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " way"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": "."
+        },
+        {
+          "type": "reasoning-end",
+          "id": "0"
+        },
+        {
+          "type": "text-start",
+          "id": "1"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": "The"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": " current"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": " weather"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": " in"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": " Paris"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": " is"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": " "
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": "22"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": "°C"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": " and"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": " "
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": "sun"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": "ny"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": "."
+        },
+        {
+          "type": "text-end",
+          "id": "1"
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "stop",
+            "raw": "COMPLETE"
+          },
+          "usage": {
+            "inputTokens": 427,
+            "outputTokens": 79,
+            "nonCachedInputTokens": 427,
+            "cacheReadInputTokens": 0,
+            "reasoningTokens": 42,
+            "totalTokens": 506,
+            "providerMetadata": {
+              "cohere": {
+                "tokens": {
+                  "input_tokens": 427,
+                  "output_tokens": 79,
+                  "reasoning_tokens": 42
+                },
+                "billed_units": {
+                  "input_tokens": 55,
+                  "output_tokens": 54
+                },
+                "cached_tokens": 0
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "stop",
+            "raw": "COMPLETE"
+          },
+          "usage": {
+            "inputTokens": 427,
+            "outputTokens": 79,
+            "nonCachedInputTokens": 427,
+            "cacheReadInputTokens": 0,
+            "reasoningTokens": 42,
+            "totalTokens": 506,
+            "providerMetadata": {
+              "cohere": {
+                "tokens": {
+                  "input_tokens": 427,
+                  "output_tokens": 79,
+                  "reasoning_tokens": 42
+                },
+                "billed_units": {
+                  "input_tokens": 55,
+                  "output_tokens": 54
+                },
+                "cached_tokens": 0
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

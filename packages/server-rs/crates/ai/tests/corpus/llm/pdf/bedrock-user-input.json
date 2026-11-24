@@ -53,6 +53,14 @@
         ],
         "tools": []
       },
+      "provider": {
+        "package": "@opencode/ai/providers/amazon-bedrock",
+        "modelID": "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+        "settings": {
+          "apiKey": "fixture",
+          "region": "us-east-1"
+        }
+      },
       "transport": "http",
       "exchanges": [
         {

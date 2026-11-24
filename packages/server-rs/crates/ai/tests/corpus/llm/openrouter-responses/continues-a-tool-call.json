@@ -1,0 +1,644 @@
+{
+  "cassette": "openrouter-responses/continues-a-tool-call",
+  "protocol": "open-responses",
+  "routeId": "openrouter-responses",
+  "clockEpochMs": 1767323045000,
+  "steps": [
+    {
+      "model": {
+        "id": "openai/gpt-5.4-mini",
+        "provider": "openrouter",
+        "route": {
+          "id": "openrouter-responses",
+          "protocol": "openrouter-responses",
+          "providerMetadataKey": "openrouter"
+        },
+        "endpoint": {
+          "baseURL": "https://openrouter.ai/api/v1",
+          "path": "/responses"
+        },
+        "options": {
+          "providerOptions": {
+            "store": false,
+            "include": [
+              "reasoning.encrypted_content"
+            ]
+          }
+        },
+        "modelOptions": {
+          "providerOptions": {
+            "store": false,
+            "include": [
+              "reasoning.encrypted_content"
+            ]
+          }
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "openrouter-responses-tool-loop",
+        "maxTokens": 256,
+        "cache": "none",
+        "system": [
+          {
+            "type": "text",
+            "text": "Use the get_weather tool, then answer in one short sentence."
+          }
+        ],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "What is the weather in Paris?"
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "tool",
+            "name": "get_weather",
+            "description": "Get current weather for a city.",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "city": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "city"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "temperature": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "string",
+                      "enum": [
+                        "Infinity",
+                        "-Infinity",
+                        "NaN"
+                      ]
+                    }
+                  ]
+                },
+                "condition": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "temperature",
+                "condition"
+              ],
+              "additionalProperties": false
+            }
+          }
+        ]
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/openrouter/responses",
+        "modelID": "openai/gpt-5.4-mini",
+        "settings": {
+          "apiKey": "fixture"
+        }
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://openrouter.ai/api/v1/responses",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "586",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"openai/gpt-5.4-mini\",\"input\":[{\"type\":\"message\",\"role\":\"developer\",\"content\":\"Use the get_weather tool, then answer in one short sentence.\"},{\"type\":\"message\",\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"What is the weather in Paris?\"}]}],\"stream\":true,\"max_output_tokens\":256,\"store\":false,\"include\":[\"reasoning.encrypted_content\"],\"tools\":[{\"type\":\"function\",\"name\":\"get_weather\",\"description\":\"Get current weather for a city.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\"}},\"required\":[\"city\"],\"additionalProperties\":false},\"strict\":false}]}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream"
+            },
+            "body": ": \n\ndata: {\"type\":\"response.created\",\"response\":{\"id\":\"gen-1794960204-rTFL1Pzt6EQ0jIjZXuQ5\",\"object\":\"response\",\"created_at\":1794960204,\"model\":\"openai/gpt-5.4-mini\",\"status\":\"in_progress\",\"completed_at\":null,\"output\":[],\"error\":null,\"incomplete_details\":null,\"access_programs\":null,\"tools\":[{\"type\":\"function\",\"name\":\"get_weather\",\"description\":\"Get current weather for a city.\",\"strict\":false,\"parameters\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\"}},\"required\":[\"city\"],\"additionalProperties\":false}}],\"tool_choice\":\"auto\",\"parallel_tool_calls\":true,\"max_output_tokens\":256,\"temperature\":1,\"top_p\":1,\"presence_penalty\":0,\"frequency_penalty\":0,\"top_logprobs\":0,\"max_tool_calls\":null,\"metadata\":{},\"background\":false,\"previous_response_id\":null,\"service_tier\":\"auto\",\"truncation\":\"disabled\",\"store\":false,\"instructions\":null,\"text\":{\"format\":{\"type\":\"text\"}},\"reasoning\":null,\"safety_identifier\":null,\"prompt_cache_key\":null,\"prompt_cache_options\":null,\"usage\":null},\"sequence_number\":0}\n\ndata: {\"type\":\"response.in_progress\",\"response\":{\"id\":\"gen-1794960204-rTFL1Pzt6EQ0jIjZXuQ5\",\"object\":\"response\",\"created_at\":1794960204,\"model\":\"openai/gpt-5.4-mini\",\"status\":\"in_progress\",\"completed_at\":null,\"output\":[],\"error\":null,\"incomplete_details\":null,\"access_programs\":null,\"tools\":[{\"type\":\"function\",\"name\":\"get_weather\",\"description\":\"Get current weather for a city.\",\"strict\":false,\"parameters\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\"}},\"required\":[\"city\"],\"additionalProperties\":false}}],\"tool_choice\":\"auto\",\"parallel_tool_calls\":true,\"max_output_tokens\":256,\"temperature\":1,\"top_p\":1,\"presence_penalty\":0,\"frequency_penalty\":0,\"top_logprobs\":0,\"max_tool_calls\":null,\"metadata\":{},\"background\":false,\"previous_response_id\":null,\"service_tier\":\"auto\",\"truncation\":\"disabled\",\"store\":false,\"instructions\":null,\"text\":{\"format\":{\"type\":\"text\"}},\"reasoning\":null,\"safety_identifier\":null,\"prompt_cache_key\":null,\"prompt_cache_options\":null,\"usage\":null},\"sequence_number\":1}\n\ndata: {\"type\":\"response.output_item.added\",\"output_index\":0,\"item\":{\"id\":\"fc_tmp_iflee3r81p\",\"type\":\"function_call\",\"status\":\"in_progress\",\"call_id\":\"call_UUZcKbePXBPpkTSgCgS4cdGA\",\"name\":\"get_weather\",\"arguments\":\"\"},\"sequence_number\":2}\n\ndata: {\"type\":\"response.function_call_arguments.delta\",\"output_index\":0,\"item_id\":\"fc_tmp_iflee3r81p\",\"delta\":\"{\\\"\",\"sequence_number\":3}\n\ndata: {\"type\":\"response.function_call_arguments.delta\",\"output_index\":0,\"item_id\":\"fc_tmp_iflee3r81p\",\"delta\":\"city\",\"sequence_number\":4}\n\ndata: {\"type\":\"response.function_call_arguments.delta\",\"output_index\":0,\"item_id\":\"fc_tmp_iflee3r81p\",\"delta\":\"\\\":\\\"\",\"sequence_number\":5}\n\ndata: {\"type\":\"response.function_call_arguments.delta\",\"output_index\":0,\"item_id\":\"fc_tmp_iflee3r81p\",\"delta\":\"Paris\",\"sequence_number\":6}\n\ndata: {\"type\":\"response.function_call_arguments.delta\",\"output_index\":0,\"item_id\":\"fc_tmp_iflee3r81p\",\"delta\":\"\\\"}\",\"sequence_number\":7}\n\ndata: {\"type\":\"response.function_call_arguments.done\",\"output_index\":0,\"item_id\":\"fc_tmp_iflee3r81p\",\"name\":\"get_weather\",\"arguments\":\"{\\\"city\\\":\\\"Paris\\\"}\",\"sequence_number\":8}\n\ndata: {\"type\":\"response.output_item.done\",\"output_index\":0,\"item\":{\"id\":\"fc_tmp_iflee3r81p\",\"type\":\"function_call\",\"status\":\"completed\",\"call_id\":\"call_UUZcKbePXBPpkTSgCgS4cdGA\",\"name\":\"get_weather\",\"arguments\":\"{\\\"city\\\":\\\"Paris\\\"}\"},\"sequence_number\":9}\n\ndata: {\"type\":\"response.completed\",\"response\":{\"id\":\"gen-1794960204-rTFL1Pzt6EQ0jIjZXuQ5\",\"object\":\"response\",\"created_at\":1794960204,\"model\":\"openai/gpt-5.4-mini\",\"status\":\"completed\",\"completed_at\":1794960205,\"output\":[{\"id\":\"fc_tmp_iflee3r81p\",\"type\":\"function_call\",\"status\":\"completed\",\"call_id\":\"call_UUZcKbePXBPpkTSgCgS4cdGA\",\"name\":\"get_weather\",\"arguments\":\"{\\\"city\\\":\\\"Paris\\\"}\"}],\"error\":null,\"incomplete_details\":null,\"access_programs\":{\"cyber\":\"standard\"},\"input_transformations\":[],\"tools\":[{\"type\":\"function\",\"name\":\"get_weather\",\"description\":\"Get current weather for a city.\",\"strict\":false,\"parameters\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\"}},\"required\":[\"city\"],\"additionalProperties\":false}}],\"tool_choice\":\"auto\",\"parallel_tool_calls\":true,\"max_output_tokens\":256,\"temperature\":1,\"top_p\":1,\"presence_penalty\":0,\"frequency_penalty\":0,\"top_logprobs\":0,\"max_tool_calls\":null,\"metadata\":{},\"background\":false,\"previous_response_id\":null,\"service_tier\":\"default\",\"truncation\":\"disabled\",\"store\":false,\"instructions\":null,\"text\":{\"format\":{\"type\":\"text\"}},\"reasoning\":{\"context\":\"current_turn\",\"effort\":\"none\",\"mode\":\"standard\",\"summary\":\"detailed\"},\"safety_identifier\":null,\"prompt_cache_key\":null,\"prompt_cache_options\":null,\"usage\":{\"input_tokens\":67,\"input_tokens_details\":{\"cached_tokens\":0},\"output_tokens\":18,\"output_tokens_details\":{\"reasoning_tokens\":0},\"total_tokens\":85,\"cost\":0.00013125,\"is_byok\":false,\"cost_details\":{\"upstream_inference_cost\":0.00013125,\"upstream_inference_input_cost\":0.00005025,\"upstream_inference_output_cost\":0.000081}}},\"sequence_number\":10}\n\ndata: [DONE]\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "tool-input-start",
+          "id": "call_UUZcKbePXBPpkTSgCgS4cdGA",
+          "name": "get_weather",
+          "providerMetadata": {
+            "openrouter": {
+              "itemId": "fc_tmp_iflee3r81p"
+            }
+          }
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "call_UUZcKbePXBPpkTSgCgS4cdGA",
+          "name": "get_weather",
+          "text": "{\"",
+          "input": {}
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "call_UUZcKbePXBPpkTSgCgS4cdGA",
+          "name": "get_weather",
+          "text": "city",
+          "input": {}
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "call_UUZcKbePXBPpkTSgCgS4cdGA",
+          "name": "get_weather",
+          "text": "\":\"",
+          "input": {
+            "city": ""
+          }
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "call_UUZcKbePXBPpkTSgCgS4cdGA",
+          "name": "get_weather",
+          "text": "Paris",
+          "input": {
+            "city": "Paris"
+          }
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "call_UUZcKbePXBPpkTSgCgS4cdGA",
+          "name": "get_weather",
+          "text": "\"}",
+          "input": {
+            "city": "Paris"
+          }
+        },
+        {
+          "type": "tool-input-end",
+          "id": "call_UUZcKbePXBPpkTSgCgS4cdGA",
+          "name": "get_weather",
+          "providerMetadata": {
+            "openrouter": {
+              "itemId": "fc_tmp_iflee3r81p"
+            }
+          }
+        },
+        {
+          "type": "tool-call",
+          "id": "call_UUZcKbePXBPpkTSgCgS4cdGA",
+          "name": "get_weather",
+          "input": {
+            "city": "Paris"
+          },
+          "providerMetadata": {
+            "openrouter": {
+              "itemId": "fc_tmp_iflee3r81p"
+            }
+          }
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "tool-calls"
+          },
+          "usage": {
+            "inputTokens": 67,
+            "outputTokens": 18,
+            "nonCachedInputTokens": 67,
+            "cacheReadInputTokens": 0,
+            "reasoningTokens": 0,
+            "totalTokens": 85,
+            "cost": 0.00013125,
+            "providerMetadata": {
+              "openrouter": {
+                "input_tokens": 67,
+                "input_tokens_details": {
+                  "cached_tokens": 0
+                },
+                "output_tokens": 18,
+                "output_tokens_details": {
+                  "reasoning_tokens": 0
+                },
+                "total_tokens": 85,
+                "cost": 0.00013125,
+                "is_byok": false,
+                "cost_details": {
+                  "upstream_inference_cost": 0.00013125,
+                  "upstream_inference_input_cost": 0.00005025,
+                  "upstream_inference_output_cost": 0.000081
+                }
+              }
+            }
+          },
+          "providerMetadata": {
+            "openrouter": {
+              "responseId": "gen-1794960204-rTFL1Pzt6EQ0jIjZXuQ5",
+              "serviceTier": "default"
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "tool-calls"
+          },
+          "usage": {
+            "inputTokens": 67,
+            "outputTokens": 18,
+            "nonCachedInputTokens": 67,
+            "cacheReadInputTokens": 0,
+            "reasoningTokens": 0,
+            "totalTokens": 85,
+            "cost": 0.00013125,
+            "providerMetadata": {
+              "openrouter": {
+                "input_tokens": 67,
+                "input_tokens_details": {
+                  "cached_tokens": 0
+                },
+                "output_tokens": 18,
+                "output_tokens_details": {
+                  "reasoning_tokens": 0
+                },
+                "total_tokens": 85,
+                "cost": 0.00013125,
+                "is_byok": false,
+                "cost_details": {
+                  "upstream_inference_cost": 0.00013125,
+                  "upstream_inference_input_cost": 0.00005025,
+                  "upstream_inference_output_cost": 0.000081
+                }
+              }
+            }
+          },
+          "providerMetadata": {
+            "openrouter": {
+              "responseId": "gen-1794960204-rTFL1Pzt6EQ0jIjZXuQ5",
+              "serviceTier": "default"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "model": {
+        "id": "openai/gpt-5.4-mini",
+        "provider": "openrouter",
+        "route": {
+          "id": "openrouter-responses",
+          "protocol": "openrouter-responses",
+          "providerMetadataKey": "openrouter"
+        },
+        "endpoint": {
+          "baseURL": "https://openrouter.ai/api/v1",
+          "path": "/responses"
+        },
+        "options": {
+          "providerOptions": {
+            "store": false,
+            "include": [
+              "reasoning.encrypted_content"
+            ]
+          }
+        },
+        "modelOptions": {
+          "providerOptions": {
+            "store": false,
+            "include": [
+              "reasoning.encrypted_content"
+            ]
+          }
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "openrouter-responses-tool-loop",
+        "maxTokens": 256,
+        "cache": "none",
+        "system": [
+          {
+            "type": "text",
+            "text": "Use the get_weather tool, then answer in one short sentence."
+          }
+        ],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "What is the weather in Paris?"
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "tool-call",
+                "id": "call_UUZcKbePXBPpkTSgCgS4cdGA",
+                "name": "get_weather",
+                "input": {
+                  "city": "Paris"
+                },
+                "providerMetadata": {
+                  "openrouter": {
+                    "itemId": "fc_tmp_iflee3r81p"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "role": "tool",
+            "content": [
+              {
+                "type": "tool-result",
+                "id": "call_UUZcKbePXBPpkTSgCgS4cdGA",
+                "name": "get_weather",
+                "result": {
+                  "type": "json",
+                  "value": {
+                    "temperature": 22,
+                    "condition": "sunny"
+                  }
+                },
+                "providerMetadata": {
+                  "openrouter": {
+                    "itemId": "fc_tmp_iflee3r81p"
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "tool",
+            "name": "get_weather",
+            "description": "Get current weather for a city.",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "city": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "city"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "temperature": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "string",
+                      "enum": [
+                        "Infinity",
+                        "-Infinity",
+                        "NaN"
+                      ]
+                    }
+                  ]
+                },
+                "condition": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "temperature",
+                "condition"
+              ],
+              "additionalProperties": false
+            }
+          }
+        ]
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/openrouter/responses",
+        "modelID": "openai/gpt-5.4-mini",
+        "settings": {
+          "apiKey": "fixture"
+        }
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://openrouter.ai/api/v1/responses",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "864",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"openai/gpt-5.4-mini\",\"input\":[{\"type\":\"message\",\"role\":\"developer\",\"content\":\"Use the get_weather tool, then answer in one short sentence.\"},{\"type\":\"message\",\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"What is the weather in Paris?\"}]},{\"type\":\"function_call\",\"id\":\"fc_tmp_iflee3r81p\",\"call_id\":\"call_UUZcKbePXBPpkTSgCgS4cdGA\",\"name\":\"get_weather\",\"arguments\":\"{\\\"city\\\":\\\"Paris\\\"}\"},{\"type\":\"function_call_output\",\"call_id\":\"call_UUZcKbePXBPpkTSgCgS4cdGA\",\"output\":\"{\\\"temperature\\\":22,\\\"condition\\\":\\\"sunny\\\"}\"}],\"stream\":true,\"max_output_tokens\":256,\"store\":false,\"include\":[\"reasoning.encrypted_content\"],\"tools\":[{\"type\":\"function\",\"name\":\"get_weather\",\"description\":\"Get current weather for a city.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\"}},\"required\":[\"city\"],\"additionalProperties\":false},\"strict\":false}]}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream"
+            },
+            "body": "data: {\"type\":\"response.created\",\"response\":{\"id\":\"gen-1794960205-l6rmi4D7Oh3X9aYSVnG7\",\"object\":\"response\",\"created_at\":1794960205,\"model\":\"openai/gpt-5.4-mini\",\"status\":\"in_progress\",\"completed_at\":null,\"output\":[],\"error\":null,\"incomplete_details\":null,\"access_programs\":null,\"tools\":[{\"type\":\"function\",\"name\":\"get_weather\",\"description\":\"Get current weather for a city.\",\"strict\":false,\"parameters\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\"}},\"required\":[\"city\"],\"additionalProperties\":false}}],\"tool_choice\":\"auto\",\"parallel_tool_calls\":true,\"max_output_tokens\":256,\"temperature\":1,\"top_p\":1,\"presence_penalty\":0,\"frequency_penalty\":0,\"top_logprobs\":0,\"max_tool_calls\":null,\"metadata\":{},\"background\":false,\"previous_response_id\":null,\"service_tier\":\"auto\",\"truncation\":\"disabled\",\"store\":false,\"instructions\":null,\"text\":{\"format\":{\"type\":\"text\"}},\"reasoning\":null,\"safety_identifier\":null,\"prompt_cache_key\":null,\"prompt_cache_options\":null,\"usage\":null},\"sequence_number\":0}\n\ndata: {\"type\":\"response.in_progress\",\"response\":{\"id\":\"gen-1794960205-l6rmi4D7Oh3X9aYSVnG7\",\"object\":\"response\",\"created_at\":1794960205,\"model\":\"openai/gpt-5.4-mini\",\"status\":\"in_progress\",\"completed_at\":null,\"output\":[],\"error\":null,\"incomplete_details\":null,\"access_programs\":null,\"tools\":[{\"type\":\"function\",\"name\":\"get_weather\",\"description\":\"Get current weather for a city.\",\"strict\":false,\"parameters\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\"}},\"required\":[\"city\"],\"additionalProperties\":false}}],\"tool_choice\":\"auto\",\"parallel_tool_calls\":true,\"max_output_tokens\":256,\"temperature\":1,\"top_p\":1,\"presence_penalty\":0,\"frequency_penalty\":0,\"top_logprobs\":0,\"max_tool_calls\":null,\"metadata\":{},\"background\":false,\"previous_response_id\":null,\"service_tier\":\"auto\",\"truncation\":\"disabled\",\"store\":false,\"instructions\":null,\"text\":{\"format\":{\"type\":\"text\"}},\"reasoning\":null,\"safety_identifier\":null,\"prompt_cache_key\":null,\"prompt_cache_options\":null,\"usage\":null},\"sequence_number\":1}\n\ndata: {\"type\":\"response.output_item.added\",\"output_index\":0,\"item\":{\"id\":\"msg_tmp_4r4hjlndlsr\",\"type\":\"message\",\"status\":\"in_progress\",\"role\":\"assistant\",\"content\":[],\"phase\":\"final_answer\"},\"sequence_number\":2}\n\ndata: {\"type\":\"response.content_part.added\",\"output_index\":0,\"item_id\":\"msg_tmp_4r4hjlndlsr\",\"content_index\":0,\"part\":{\"type\":\"output_text\",\"text\":\"\",\"annotations\":[],\"logprobs\":[]},\"sequence_number\":3}\n\ndata: {\"type\":\"response.output_text.delta\",\"output_index\":0,\"item_id\":\"msg_tmp_4r4hjlndlsr\",\"content_index\":0,\"delta\":\"The\",\"logprobs\":[],\"sequence_number\":4}\n\ndata: {\"type\":\"response.output_text.delta\",\"output_index\":0,\"item_id\":\"msg_tmp_4r4hjlndlsr\",\"content_index\":0,\"delta\":\" weather\",\"logprobs\":[],\"sequence_number\":5}\n\ndata: {\"type\":\"response.output_text.delta\",\"output_index\":0,\"item_id\":\"msg_tmp_4r4hjlndlsr\",\"content_index\":0,\"delta\":\" in\",\"logprobs\":[],\"sequence_number\":6}\n\ndata: {\"type\":\"response.output_text.delta\",\"output_index\":0,\"item_id\":\"msg_tmp_4r4hjlndlsr\",\"content_index\":0,\"delta\":\" Paris\",\"logprobs\":[],\"sequence_number\":7}\n\ndata: {\"type\":\"response.output_text.delta\",\"output_index\":0,\"item_id\":\"msg_tmp_4r4hjlndlsr\",\"content_index\":0,\"delta\":\" is\",\"logprobs\":[],\"sequence_number\":8}\n\ndata: {\"type\":\"response.output_text.delta\",\"output_index\":0,\"item_id\":\"msg_tmp_4r4hjlndlsr\",\"content_index\":0,\"delta\":\" sunny\",\"logprobs\":[],\"sequence_number\":9}\n\ndata: {\"type\":\"response.output_text.delta\",\"output_index\":0,\"item_id\":\"msg_tmp_4r4hjlndlsr\",\"content_index\":0,\"delta\":\" and\",\"logprobs\":[],\"sequence_number\":10}\n\ndata: {\"type\":\"response.output_text.delta\",\"output_index\":0,\"item_id\":\"msg_tmp_4r4hjlndlsr\",\"content_index\":0,\"delta\":\" \",\"logprobs\":[],\"sequence_number\":11}\n\ndata: {\"type\":\"response.output_text.delta\",\"output_index\":0,\"item_id\":\"msg_tmp_4r4hjlndlsr\",\"content_index\":0,\"delta\":\"22\",\"logprobs\":[],\"sequence_number\":12}\n\ndata: {\"type\":\"response.output_text.delta\",\"output_index\":0,\"item_id\":\"msg_tmp_4r4hjlndlsr\",\"content_index\":0,\"delta\":\"°C\",\"logprobs\":[],\"sequence_number\":13}\n\ndata: {\"type\":\"response.output_text.delta\",\"output_index\":0,\"item_id\":\"msg_tmp_4r4hjlndlsr\",\"content_index\":0,\"delta\":\".\",\"logprobs\":[],\"sequence_number\":14}\n\ndata: {\"type\":\"response.output_text.done\",\"output_index\":0,\"item_id\":\"msg_tmp_4r4hjlndlsr\",\"content_index\":0,\"text\":\"The weather in Paris is sunny and 22°C.\",\"logprobs\":[],\"sequence_number\":15}\n\ndata: {\"type\":\"response.content_part.done\",\"output_index\":0,\"item_id\":\"msg_tmp_4r4hjlndlsr\",\"content_index\":0,\"part\":{\"type\":\"output_text\",\"text\":\"The weather in Paris is sunny and 22°C.\",\"annotations\":[],\"logprobs\":[]},\"sequence_number\":16}\n\ndata: {\"type\":\"response.output_item.done\",\"output_index\":0,\"item\":{\"id\":\"msg_tmp_4r4hjlndlsr\",\"type\":\"message\",\"status\":\"completed\",\"role\":\"assistant\",\"content\":[{\"type\":\"output_text\",\"text\":\"The weather in Paris is sunny and 22°C.\",\"annotations\":[],\"logprobs\":[]}],\"phase\":\"final_answer\"},\"sequence_number\":17}\n\ndata: {\"type\":\"response.completed\",\"response\":{\"id\":\"gen-1794960205-l6rmi4D7Oh3X9aYSVnG7\",\"object\":\"response\",\"created_at\":1794960205,\"model\":\"openai/gpt-5.4-mini\",\"status\":\"completed\",\"completed_at\":1794960206,\"output\":[{\"id\":\"msg_tmp_4r4hjlndlsr\",\"type\":\"message\",\"role\":\"assistant\",\"status\":\"completed\",\"content\":[{\"type\":\"output_text\",\"text\":\"The weather in Paris is sunny and 22°C.\",\"annotations\":[],\"logprobs\":[]}],\"phase\":\"final_answer\"}],\"error\":null,\"incomplete_details\":null,\"access_programs\":{\"cyber\":\"standard\"},\"input_transformations\":[],\"tools\":[{\"type\":\"function\",\"name\":\"get_weather\",\"description\":\"Get current weather for a city.\",\"strict\":false,\"parameters\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\"}},\"required\":[\"city\"],\"additionalProperties\":false}}],\"tool_choice\":\"auto\",\"parallel_tool_calls\":true,\"max_output_tokens\":256,\"temperature\":1,\"top_p\":1,\"presence_penalty\":0,\"frequency_penalty\":0,\"top_logprobs\":0,\"max_tool_calls\":null,\"metadata\":{},\"background\":false,\"previous_response_id\":null,\"service_tier\":\"default\",\"truncation\":\"disabled\",\"store\":false,\"instructions\":null,\"text\":{\"format\":{\"type\":\"text\"}},\"reasoning\":{\"context\":\"current_turn\",\"effort\":\"none\",\"mode\":\"standard\",\"summary\":\"detailed\"},\"safety_identifier\":null,\"prompt_cache_key\":null,\"prompt_cache_options\":null,\"usage\":{\"input_tokens\":106,\"input_tokens_details\":{\"cached_tokens\":0},\"output_tokens\":15,\"output_tokens_details\":{\"reasoning_tokens\":0},\"total_tokens\":121,\"cost\":0.000147,\"is_byok\":false,\"cost_details\":{\"upstream_inference_cost\":0.000147,\"upstream_inference_input_cost\":0.0000795,\"upstream_inference_output_cost\":0.0000675}}},\"sequence_number\":18}\n\ndata: [DONE]\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "text-start",
+          "id": "msg_tmp_4r4hjlndlsr",
+          "providerMetadata": {
+            "openrouter": {
+              "itemId": "msg_tmp_4r4hjlndlsr",
+              "phase": "final_answer"
+            }
+          }
+        },
+        {
+          "type": "text-delta",
+          "id": "msg_tmp_4r4hjlndlsr",
+          "text": "The"
+        },
+        {
+          "type": "text-delta",
+          "id": "msg_tmp_4r4hjlndlsr",
+          "text": " weather"
+        },
+        {
+          "type": "text-delta",
+          "id": "msg_tmp_4r4hjlndlsr",
+          "text": " in"
+        },
+        {
+          "type": "text-delta",
+          "id": "msg_tmp_4r4hjlndlsr",
+          "text": " Paris"
+        },
+        {
+          "type": "text-delta",
+          "id": "msg_tmp_4r4hjlndlsr",
+          "text": " is"
+        },
+        {
+          "type": "text-delta",
+          "id": "msg_tmp_4r4hjlndlsr",
+          "text": " sunny"
+        },
+        {
+          "type": "text-delta",
+          "id": "msg_tmp_4r4hjlndlsr",
+          "text": " and"
+        },
+        {
+          "type": "text-delta",
+          "id": "msg_tmp_4r4hjlndlsr",
+          "text": " "
+        },
+        {
+          "type": "text-delta",
+          "id": "msg_tmp_4r4hjlndlsr",
+          "text": "22"
+        },
+        {
+          "type": "text-delta",
+          "id": "msg_tmp_4r4hjlndlsr",
+          "text": "°C"
+        },
+        {
+          "type": "text-delta",
+          "id": "msg_tmp_4r4hjlndlsr",
+          "text": "."
+        },
+        {
+          "type": "text-end",
+          "id": "msg_tmp_4r4hjlndlsr",
+          "text": "The weather in Paris is sunny and 22°C.",
+          "providerMetadata": {
+            "openrouter": {
+              "itemId": "msg_tmp_4r4hjlndlsr",
+              "phase": "final_answer"
+            }
+          }
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "stop"
+          },
+          "usage": {
+            "inputTokens": 106,
+            "outputTokens": 15,
+            "nonCachedInputTokens": 106,
+            "cacheReadInputTokens": 0,
+            "reasoningTokens": 0,
+            "totalTokens": 121,
+            "cost": 0.000147,
+            "providerMetadata": {
+              "openrouter": {
+                "input_tokens": 106,
+                "input_tokens_details": {
+                  "cached_tokens": 0
+                },
+                "output_tokens": 15,
+                "output_tokens_details": {
+                  "reasoning_tokens": 0
+                },
+                "total_tokens": 121,
+                "cost": 0.000147,
+                "is_byok": false,
+                "cost_details": {
+                  "upstream_inference_cost": 0.000147,
+                  "upstream_inference_input_cost": 0.0000795,
+                  "upstream_inference_output_cost": 0.0000675
+                }
+              }
+            }
+          },
+          "providerMetadata": {
+            "openrouter": {
+              "responseId": "gen-1794960205-l6rmi4D7Oh3X9aYSVnG7",
+              "serviceTier": "default"
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "stop"
+          },
+          "usage": {
+            "inputTokens": 106,
+            "outputTokens": 15,
+            "nonCachedInputTokens": 106,
+            "cacheReadInputTokens": 0,
+            "reasoningTokens": 0,
+            "totalTokens": 121,
+            "cost": 0.000147,
+            "providerMetadata": {
+              "openrouter": {
+                "input_tokens": 106,
+                "input_tokens_details": {
+                  "cached_tokens": 0
+                },
+                "output_tokens": 15,
+                "output_tokens_details": {
+                  "reasoning_tokens": 0
+                },
+                "total_tokens": 121,
+                "cost": 0.000147,
+                "is_byok": false,
+                "cost_details": {
+                  "upstream_inference_cost": 0.000147,
+                  "upstream_inference_input_cost": 0.0000795,
+                  "upstream_inference_output_cost": 0.0000675
+                }
+              }
+            }
+          },
+          "providerMetadata": {
+            "openrouter": {
+              "responseId": "gen-1794960205-l6rmi4D7Oh3X9aYSVnG7",
+              "serviceTier": "default"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

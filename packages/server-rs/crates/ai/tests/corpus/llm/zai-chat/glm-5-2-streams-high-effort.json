@@ -1,0 +1,484 @@
+{
+  "cassette": "zai-chat/glm-5-2-streams-high-effort",
+  "protocol": "openai-chat",
+  "routeId": "zai-chat",
+  "clockEpochMs": 1767323045000,
+  "steps": [
+    {
+      "model": {
+        "id": "glm-5.2",
+        "provider": "zai",
+        "route": {
+          "id": "zai-chat",
+          "protocol": "zai-chat",
+          "providerMetadataKey": "zai"
+        },
+        "endpoint": {
+          "baseURL": "https://api.z.ai/api/paas/v4",
+          "path": "/chat/completions"
+        },
+        "options": {
+          "providerOptions": {
+            "reasoningEffort": "high"
+          }
+        },
+        "modelOptions": {
+          "providerOptions": {
+            "reasoningEffort": "high"
+          }
+        },
+        "compatibility": {
+          "reasoningField": "reasoning_content",
+          "maxTokensField": "max_tokens",
+          "zaiToolStream": false
+        },
+        "capabilities": {
+          "tools": {
+            "strict": false
+          }
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_zai_glm_5_2_streams_high_effort",
+        "maxTokens": 4096,
+        "system": [],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "What is 173 multiplied by 219? Reply with only the final integer."
+              }
+            ]
+          }
+        ],
+        "tools": []
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/zai",
+        "modelID": "glm-5.2",
+        "settings": {
+          "apiKey": "fixture",
+          "reasoningEffort": "high"
+        }
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://api.z.ai/api/paas/v4/chat/completions",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "224",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"glm-5.2\",\"messages\":[{\"role\":\"user\",\"content\":\"What is 173 multiplied by 219? Reply with only the final integer.\"}],\"stream\":true,\"stream_options\":{\"include_usage\":true},\"max_tokens\":4096,\"reasoning_effort\":\"high\"}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream;charset=UTF-8"
+            },
+            "body": "data: {\"id\":\"202609080859504e397301e57a4d45\",\"created\":1788829190,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"The\"}}]}\n\ndata: {\"id\":\"202609080859504e397301e57a4d45\",\"created\":1788829190,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" user wants to multiply\"}}]}\n\ndata: {\"id\":\"202609080859504e397301e57a4d45\",\"created\":1788829190,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" 173 by 219.\\n\"}}]}\n\ndata: {\"id\":\"202609080859504e397301e57a4d45\",\"created\":1788829190,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"I will calculate the product mentally\"}}]}\n\ndata: {\"id\":\"202609080859504e397301e57a4d45\",\"created\":1788829190,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" or via scratchpad.\\n173\"}}]}\n\ndata: {\"id\":\"202609080859504e397301e57a4d45\",\"created\":1788829190,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" * 219\\n= 173\"}}]}\n\ndata: {\"id\":\"202609080859504e397301e57a4d45\",\"created\":1788829190,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" * (200 + 19\"}}]}\n\ndata: {\"id\":\"202609080859504e397301e57a4d45\",\"created\":1788829190,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\")\\n= 34600 + \"}}]}\n\ndata: {\"id\":\"202609080859504e397301e57a4d45\",\"created\":1788829190,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"173 * 19\\n173\"}}]}\n\ndata: {\"id\":\"202609080859504e397301e57a4d45\",\"created\":1788829190,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" * 10 = 1730\"}}]}\n\ndata: {\"id\":\"202609080859504e397301e57a4d45\",\"created\":1788829190,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"\\n173 * 9 = 155\"}}]}\n\ndata: {\"id\":\"202609080859504e397301e57a4d45\",\"created\":1788829190,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"7\\n1730 + 155\"}}]}\n\ndata: {\"id\":\"202609080859504e397301e57a4d45\",\"created\":1788829190,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"7 = 3287\\n34\"}}]}\n\ndata: {\"id\":\"202609080859504e397301e57a4d45\",\"created\":1788829190,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"600 + 3287 =\"}}]}\n\ndata: {\"id\":\"202609080859504e397301e57a4d45\",\"created\":1788829190,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" 37887\\n\\nLet me double\"}}]}\n\ndata: {\"id\":\"202609080859504e397301e57a4d45\",\"created\":1788829190,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" check.\\n173 * 2\"}}]}\n\ndata: {\"id\":\"202609080859504e397301e57a4d45\",\"created\":1788829190,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"19\\n= 173 * (\"}}]}\n\ndata: {\"id\":\"202609080859504e397301e57a4d45\",\"created\":1788829190,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"220 - 1)\\n=\"}}]}\n\ndata: {\"id\":\"202609080859504e397301e57a4d45\",\"created\":1788829190,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" 173 * 220 - 173\"}}]}\n\ndata: {\"id\":\"202609080859504e397301e57a4d45\",\"created\":1788829190,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"\\n= 173 * 22\"}}]}\n\ndata: {\"id\":\"202609080859504e397301e57a4d45\",\"created\":1788829190,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" * 10 - 173\\n\"}}]}\n\ndata: {\"id\":\"202609080859504e397301e57a4d45\",\"created\":1788829190,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"= 3806 *\"}}]}\n\ndata: {\"id\":\"202609080859504e397301e57a4d45\",\"created\":1788829190,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" 10 - 173\\n=\"}}]}\n\ndata: {\"id\":\"202609080859504e397301e57a4d45\",\"created\":1788829190,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" 38060 - 173\"}}]}\n\ndata: {\"id\":\"202609080859504e397301e57a4d45\",\"created\":1788829190,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"\\n= 37887\\n\"}}]}\n\ndata: {\"id\":\"202609080859504e397301e57a4d45\",\"created\":1788829190,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"Correct.\\n\\nThe user requested \\\"\"}}]}\n\ndata: {\"id\":\"202609080859504e397301e57a4d45\",\"created\":1788829190,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"only the final integer\\\".\\n\"}}]}\n\ndata: {\"id\":\"202609080859504e397301e57a4d45\",\"created\":1788829190,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"So I will output just\"}}]}\n\ndata: {\"id\":\"202609080859504e397301e57a4d45\",\"created\":1788829190,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" 37887.\"}}]}\n\ndata: {\"id\":\"202609080859504e397301e57a4d45\",\"created\":1788829190,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"378\",\"reasoning_content\":\"\"}}]}\n\ndata: {\"id\":\"202609080859504e397301e57a4d45\",\"created\":1788829190,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"87\",\"reasoning_content\":\"\"}}]}\n\ndata: {\"id\":\"202609080859504e397301e57a4d45\",\"created\":1788829190,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}]}\n\ndata: {\"id\":\"202609080859504e397301e57a4d45\",\"created\":1788829190,\"object\":\"chat.completion.chunk\",\"model\":\"glm-5.2\",\"choices\":[{\"index\":0,\"finish_reason\":\"stop\",\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}],\"usage\":{\"prompt_tokens\":29,\"completion_tokens\":189,\"total_tokens\":218,\"prompt_tokens_details\":{\"cached_tokens\":0},\"completion_tokens_details\":{\"reasoning_tokens\":185}}}\n\ndata: [DONE]\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "reasoning-start",
+          "id": "reasoning-0",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "The",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " user wants to multiply",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " 173 by 219.\n",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "I will calculate the product mentally",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " or via scratchpad.\n173",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " * 219\n= 173",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " * (200 + 19",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ")\n= 34600 + ",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "173 * 19\n173",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " * 10 = 1730",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "\n173 * 9 = 155",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "7\n1730 + 155",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "7 = 3287\n34",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "600 + 3287 =",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " 37887\n\nLet me double",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " check.\n173 * 2",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "19\n= 173 * (",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "220 - 1)\n=",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " 173 * 220 - 173",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "\n= 173 * 22",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " * 10 - 173\n",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "= 3806 *",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " 10 - 173\n=",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " 38060 - 173",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "\n= 37887\n",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "Correct.\n\nThe user requested \"",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "only the final integer\".\n",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "So I will output just",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " 37887.",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "text-start",
+          "id": "text-0"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "378"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "87"
+        },
+        {
+          "type": "reasoning-end",
+          "id": "reasoning-0",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "text-end",
+          "id": "text-0"
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 29,
+            "outputTokens": 189,
+            "nonCachedInputTokens": 29,
+            "cacheReadInputTokens": 0,
+            "reasoningTokens": 185,
+            "totalTokens": 218,
+            "providerMetadata": {
+              "zai": {
+                "prompt_tokens": 29,
+                "completion_tokens": 189,
+                "total_tokens": 218,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                },
+                "completion_tokens_details": {
+                  "reasoning_tokens": 185
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 29,
+            "outputTokens": 189,
+            "nonCachedInputTokens": 29,
+            "cacheReadInputTokens": 0,
+            "reasoningTokens": 185,
+            "totalTokens": 218,
+            "providerMetadata": {
+              "zai": {
+                "prompt_tokens": 29,
+                "completion_tokens": 189,
+                "total_tokens": 218,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                },
+                "completion_tokens_details": {
+                  "reasoning_tokens": 185
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

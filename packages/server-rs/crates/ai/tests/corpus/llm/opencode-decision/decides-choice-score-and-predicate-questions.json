@@ -1,0 +1,165 @@
+{
+  "cassette": "opencode-decision/decides-choice-score-and-predicate-questions",
+  "protocol": "system-one",
+  "routeId": "system-one",
+  "clockEpochMs": 1767323045000,
+  "steps": [
+    {
+      "model": {
+        "id": "jev-1.13-free",
+        "provider": "opencode",
+        "route": {
+          "id": "system-one"
+        }
+      },
+      "request": {
+        "input": [
+          {
+            "type": "text",
+            "text": "I was charged twice for the same invoice. Please refund the duplicate payment today."
+          }
+        ],
+        "questions": [
+          {
+            "name": "department",
+            "type": "choice",
+            "instructions": "Which team should handle this support request?",
+            "choices": [
+              {
+                "value": "billing",
+                "description": "Payments, invoices, refunds, or failed charges"
+              },
+              {
+                "value": "technical",
+                "description": "Bugs, outages, or integrations"
+              },
+              {
+                "value": "sales",
+                "description": "Pricing, upgrades, or new accounts"
+              }
+            ]
+          },
+          {
+            "name": "urgency",
+            "type": "score",
+            "instructions": "How urgent is this support request?",
+            "levels": [
+              {
+                "label": "Can wait for normal support"
+              },
+              {
+                "label": "Needs prompt attention"
+              },
+              {
+                "label": "Actively blocking revenue"
+              }
+            ]
+          },
+          {
+            "name": "refund",
+            "type": "predicate",
+            "instructions": "Is the customer asking for a refund?"
+          }
+        ]
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/opencode/decisions",
+        "modelID": "jev-1.13-free",
+        "settings": {
+          "apiKey": "fixture"
+        },
+        "kind": "decision"
+      },
+      "transport": "http",
+      "operation": "decision.generate",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://opencode.ai/inference/systemone/v1/systemone",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "646",
+              "content-type": "application/json",
+              "typesafe-danger-zone-images": "true"
+            },
+            "body": "{\"state\":\"I was charged twice for the same invoice. Please refund the duplicate payment today.\",\"questions\":{\"department\":{\"type\":\"choice\",\"instructions\":\"Which team should handle this support request?\",\"criteria\":{\"billing\":\"Payments, invoices, refunds, or failed charges\",\"technical\":\"Bugs, outages, or integrations\",\"sales\":\"Pricing, upgrades, or new accounts\"}},\"urgency\":{\"type\":\"score\",\"instructions\":\"How urgent is this support request?\",\"criteria\":[\"Can wait for normal support\",\"Needs prompt attention\",\"Actively blocking revenue\"]},\"refund\":{\"type\":\"noul\",\"instructions\":\"Is the customer asking for a refund?\"}},\"model\":\"jev-1.13-free\"}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"jev-1.13-free\",\"answers\":{\"department\":{\"type\":\"choice\",\"choice\":\"billing\",\"confidence\":1,\"probabilities\":{\"technical\":0,\"sales\":0,\"billing\":1}},\"urgency\":{\"type\":\"score\",\"score\":1.02,\"confidence\":0.95,\"legend\":{\"0\":\"Can wait for normal support\",\"1\":\"Needs prompt attention\",\"2\":\"Actively blocking revenue\"},\"probabilities\":{\"0\":0,\"1\":0.97,\"2\":0.03}},\"refund\":{\"type\":\"noul\",\"noul\":0.99}},\"usage\":{\"input_tokens\":422,\"output_tokens\":69}}"
+          }
+        }
+      ],
+      "result": {
+        "answers": [
+          {
+            "name": "department",
+            "type": "choice",
+            "choice": "billing",
+            "probabilities": [
+              {
+                "value": "billing",
+                "probability": 1
+              },
+              {
+                "value": "technical",
+                "probability": 0
+              },
+              {
+                "value": "sales",
+                "probability": 0
+              }
+            ],
+            "confidence": 1
+          },
+          {
+            "name": "urgency",
+            "type": "score",
+            "score": 1.02,
+            "probabilities": [
+              {
+                "value": 0,
+                "label": "Can wait for normal support",
+                "probability": 0
+              },
+              {
+                "value": 1,
+                "label": "Needs prompt attention",
+                "probability": 0.97
+              },
+              {
+                "value": 2,
+                "label": "Actively blocking revenue",
+                "probability": 0.03
+              }
+            ],
+            "confidence": 0.95
+          },
+          {
+            "name": "refund",
+            "type": "predicate",
+            "probability": 0.99
+          }
+        ],
+        "usage": {
+          "inputTokens": 422,
+          "outputTokens": 69,
+          "totalTokens": 491
+        },
+        "providerMetadata": {
+          "opencode": {
+            "model": "jev-1.13-free",
+            "usage": {
+              "input_tokens": 422,
+              "output_tokens": 69
+            }
+          }
+        }
+      }
+    }
+  ]
+}

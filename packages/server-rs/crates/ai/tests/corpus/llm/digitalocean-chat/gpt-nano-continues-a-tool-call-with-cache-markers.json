@@ -1,0 +1,547 @@
+{
+  "cassette": "digitalocean-chat/gpt-nano-continues-a-tool-call-with-cache-markers",
+  "protocol": "openai-chat",
+  "routeId": "digitalocean",
+  "clockEpochMs": 1767323045000,
+  "steps": [
+    {
+      "model": {
+        "id": "openai-gpt-5-nano",
+        "provider": "digitalocean",
+        "route": {
+          "id": "digitalocean",
+          "protocol": "digitalocean-chat",
+          "providerMetadataKey": "digitalocean"
+        },
+        "endpoint": {
+          "baseURL": "https://inference.do-ai.run/v1",
+          "path": "/chat/completions"
+        },
+        "options": {
+          "providerOptions": {
+            "reasoningEffort": "minimal"
+          }
+        },
+        "modelOptions": {
+          "providerOptions": {
+            "reasoningEffort": "minimal"
+          }
+        },
+        "capabilities": {
+          "promptCacheKey": true
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "digitalocean-openai-gpt-5-nano-tool-loop",
+        "maxTokens": 1024,
+        "cache": "auto",
+        "system": [
+          {
+            "type": "text",
+            "text": "Use the get_weather tool exactly once. After the tool result, reply exactly: Paris is sunny."
+          }
+        ],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "What is the weather in Paris?"
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "tool",
+            "name": "get_weather",
+            "description": "Get current weather for a city.",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "city": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "city"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "temperature": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "string",
+                      "enum": [
+                        "Infinity",
+                        "-Infinity",
+                        "NaN"
+                      ]
+                    }
+                  ]
+                },
+                "condition": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "temperature",
+                "condition"
+              ],
+              "additionalProperties": false
+            }
+          }
+        ]
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/digitalocean",
+        "modelID": "openai-gpt-5-nano",
+        "settings": {
+          "apiKey": "fixture",
+          "reasoningEffort": "minimal"
+        }
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://inference.do-ai.run/v1/chat/completions",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "743",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"openai-gpt-5-nano\",\"messages\":[{\"role\":\"system\",\"content\":[{\"type\":\"text\",\"text\":\"Use the get_weather tool exactly once. After the tool result, reply exactly: Paris is sunny.\",\"cache_control\":{\"type\":\"ephemeral\"}}]},{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"What is the weather in Paris?\",\"cache_control\":{\"type\":\"ephemeral\"}}]}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"get_weather\",\"description\":\"Get current weather for a city.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\"}},\"required\":[\"city\"],\"additionalProperties\":false},\"strict\":false},\"cache_control\":{\"type\":\"ephemeral\"}}],\"stream\":true,\"stream_options\":{\"include_usage\":true},\"max_completion_tokens\":1024,\"reasoning_effort\":\"minimal\"}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream"
+            },
+            "body": "data: {\"choices\":[{\"delta\":{\"content\":\"\",\"role\":\"assistant\"},\"finish_reason\":null,\"index\":0,\"logprobs\":null}],\"created\":1790840200,\"id\":\"chatcmpl-EU5dIREwFebLDdrnmX7ftaDIK4qrZ\",\"model\":\"openai-gpt-5-nano\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"choices\":[{\"delta\":{\"tool_calls\":[{\"function\":{\"arguments\":\"\",\"name\":\"get_weather\"},\"id\":\"call_zPwN7xhG4uXQINkufgtjVJ7L\",\"index\":0,\"type\":\"function\"}]},\"finish_reason\":null,\"index\":0,\"logprobs\":null}],\"created\":1790840200,\"id\":\"chatcmpl-EU5dIREwFebLDdrnmX7ftaDIK4qrZ\",\"model\":\"openai-gpt-5-nano\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"choices\":[{\"delta\":{\"tool_calls\":[{\"function\":{\"arguments\":\"{\\\"\"},\"index\":0,\"type\":\"function\"}]},\"finish_reason\":null,\"index\":0,\"logprobs\":null}],\"created\":1790840200,\"id\":\"chatcmpl-EU5dIREwFebLDdrnmX7ftaDIK4qrZ\",\"model\":\"openai-gpt-5-nano\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"choices\":[{\"delta\":{\"tool_calls\":[{\"function\":{\"arguments\":\"city\"},\"index\":0,\"type\":\"function\"}]},\"finish_reason\":null,\"index\":0,\"logprobs\":null}],\"created\":1790840200,\"id\":\"chatcmpl-EU5dIREwFebLDdrnmX7ftaDIK4qrZ\",\"model\":\"openai-gpt-5-nano\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"choices\":[{\"delta\":{\"tool_calls\":[{\"function\":{\"arguments\":\"\\\":\\\"\"},\"index\":0,\"type\":\"function\"}]},\"finish_reason\":null,\"index\":0,\"logprobs\":null}],\"created\":1790840200,\"id\":\"chatcmpl-EU5dIREwFebLDdrnmX7ftaDIK4qrZ\",\"model\":\"openai-gpt-5-nano\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"choices\":[{\"delta\":{\"tool_calls\":[{\"function\":{\"arguments\":\"Paris\"},\"index\":0,\"type\":\"function\"}]},\"finish_reason\":null,\"index\":0,\"logprobs\":null}],\"created\":1790840200,\"id\":\"chatcmpl-EU5dIREwFebLDdrnmX7ftaDIK4qrZ\",\"model\":\"openai-gpt-5-nano\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"choices\":[{\"delta\":{\"tool_calls\":[{\"function\":{\"arguments\":\"\\\"}\"},\"index\":0,\"type\":\"function\"}]},\"finish_reason\":null,\"index\":0,\"logprobs\":null}],\"created\":1790840200,\"id\":\"chatcmpl-EU5dIREwFebLDdrnmX7ftaDIK4qrZ\",\"model\":\"openai-gpt-5-nano\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"choices\":[{\"delta\":{},\"finish_reason\":\"tool_calls\",\"index\":0,\"logprobs\":null}],\"created\":1790840200,\"id\":\"chatcmpl-EU5dIREwFebLDdrnmX7ftaDIK4qrZ\",\"model\":\"openai-gpt-5-nano\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"choices\":[],\"created\":1790840200,\"id\":\"chatcmpl-EU5dIREwFebLDdrnmX7ftaDIK4qrZ\",\"model\":\"openai-gpt-5-nano\",\"object\":\"chat.completion.chunk\",\"usage\":{\"cache_created_input_tokens\":0,\"cache_creation\":{\"ephemeral_1h_input_tokens\":0,\"ephemeral_5m_input_tokens\":0},\"cache_read_input_tokens\":0,\"completion_tokens\":23,\"completion_tokens_details\":{\"reasoning_tokens\":0},\"prompt_tokens\":155,\"prompt_tokens_details\":{\"cached_tokens\":0},\"speed\":null,\"total_tokens\":178}}\n\ndata: [DONE]\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "tool-input-start",
+          "id": "call_zPwN7xhG4uXQINkufgtjVJ7L",
+          "name": "get_weather"
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "call_zPwN7xhG4uXQINkufgtjVJ7L",
+          "name": "get_weather",
+          "text": "{\"",
+          "input": {}
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "call_zPwN7xhG4uXQINkufgtjVJ7L",
+          "name": "get_weather",
+          "text": "city",
+          "input": {}
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "call_zPwN7xhG4uXQINkufgtjVJ7L",
+          "name": "get_weather",
+          "text": "\":\"",
+          "input": {
+            "city": ""
+          }
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "call_zPwN7xhG4uXQINkufgtjVJ7L",
+          "name": "get_weather",
+          "text": "Paris",
+          "input": {
+            "city": "Paris"
+          }
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "call_zPwN7xhG4uXQINkufgtjVJ7L",
+          "name": "get_weather",
+          "text": "\"}",
+          "input": {
+            "city": "Paris"
+          }
+        },
+        {
+          "type": "tool-input-end",
+          "id": "call_zPwN7xhG4uXQINkufgtjVJ7L",
+          "name": "get_weather"
+        },
+        {
+          "type": "tool-call",
+          "id": "call_zPwN7xhG4uXQINkufgtjVJ7L",
+          "name": "get_weather",
+          "input": {
+            "city": "Paris"
+          }
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "tool-calls",
+            "raw": "tool_calls"
+          },
+          "usage": {
+            "inputTokens": 155,
+            "outputTokens": 23,
+            "nonCachedInputTokens": 155,
+            "cacheReadInputTokens": 0,
+            "cacheWriteInputTokens": 0,
+            "reasoningTokens": 0,
+            "totalTokens": 178,
+            "providerMetadata": {
+              "digitalocean": {
+                "prompt_tokens": 155,
+                "completion_tokens": 23,
+                "total_tokens": 178,
+                "cache_read_input_tokens": 0,
+                "cache_created_input_tokens": 0,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                },
+                "completion_tokens_details": {
+                  "reasoning_tokens": 0
+                },
+                "cache_creation": {
+                  "ephemeral_1h_input_tokens": 0,
+                  "ephemeral_5m_input_tokens": 0
+                },
+                "speed": null
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "tool-calls",
+            "raw": "tool_calls"
+          },
+          "usage": {
+            "inputTokens": 155,
+            "outputTokens": 23,
+            "nonCachedInputTokens": 155,
+            "cacheReadInputTokens": 0,
+            "cacheWriteInputTokens": 0,
+            "reasoningTokens": 0,
+            "totalTokens": 178,
+            "providerMetadata": {
+              "digitalocean": {
+                "prompt_tokens": 155,
+                "completion_tokens": 23,
+                "total_tokens": 178,
+                "cache_read_input_tokens": 0,
+                "cache_created_input_tokens": 0,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                },
+                "completion_tokens_details": {
+                  "reasoning_tokens": 0
+                },
+                "cache_creation": {
+                  "ephemeral_1h_input_tokens": 0,
+                  "ephemeral_5m_input_tokens": 0
+                },
+                "speed": null
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "model": {
+        "id": "openai-gpt-5-nano",
+        "provider": "digitalocean",
+        "route": {
+          "id": "digitalocean",
+          "protocol": "digitalocean-chat",
+          "providerMetadataKey": "digitalocean"
+        },
+        "endpoint": {
+          "baseURL": "https://inference.do-ai.run/v1",
+          "path": "/chat/completions"
+        },
+        "options": {
+          "providerOptions": {
+            "reasoningEffort": "minimal"
+          }
+        },
+        "modelOptions": {
+          "providerOptions": {
+            "reasoningEffort": "minimal"
+          }
+        },
+        "capabilities": {
+          "promptCacheKey": true
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "digitalocean-openai-gpt-5-nano-tool-loop",
+        "maxTokens": 1024,
+        "cache": "auto",
+        "system": [
+          {
+            "type": "text",
+            "text": "Use the get_weather tool exactly once. After the tool result, reply exactly: Paris is sunny."
+          }
+        ],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "What is the weather in Paris?"
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "tool-call",
+                "id": "call_zPwN7xhG4uXQINkufgtjVJ7L",
+                "name": "get_weather",
+                "input": {
+                  "city": "Paris"
+                }
+              }
+            ]
+          },
+          {
+            "role": "tool",
+            "content": [
+              {
+                "type": "tool-result",
+                "id": "call_zPwN7xhG4uXQINkufgtjVJ7L",
+                "name": "get_weather",
+                "result": {
+                  "type": "json",
+                  "value": {
+                    "temperature": 22,
+                    "condition": "sunny"
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "tool",
+            "name": "get_weather",
+            "description": "Get current weather for a city.",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "city": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "city"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "temperature": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "string",
+                      "enum": [
+                        "Infinity",
+                        "-Infinity",
+                        "NaN"
+                      ]
+                    }
+                  ]
+                },
+                "condition": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "temperature",
+                "condition"
+              ],
+              "additionalProperties": false
+            }
+          }
+        ]
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/digitalocean",
+        "modelID": "openai-gpt-5-nano",
+        "settings": {
+          "apiKey": "fixture",
+          "reasoningEffort": "minimal"
+        }
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://inference.do-ai.run/v1/chat/completions",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "1040",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"openai-gpt-5-nano\",\"messages\":[{\"role\":\"system\",\"content\":[{\"type\":\"text\",\"text\":\"Use the get_weather tool exactly once. After the tool result, reply exactly: Paris is sunny.\",\"cache_control\":{\"type\":\"ephemeral\"}}]},{\"role\":\"user\",\"content\":\"What is the weather in Paris?\"},{\"role\":\"assistant\",\"content\":null,\"tool_calls\":[{\"id\":\"call_zPwN7xhG4uXQINkufgtjVJ7L\",\"type\":\"function\",\"function\":{\"name\":\"get_weather\",\"arguments\":\"{\\\"city\\\":\\\"Paris\\\"}\"}}]},{\"role\":\"tool\",\"tool_call_id\":\"call_zPwN7xhG4uXQINkufgtjVJ7L\",\"content\":[{\"type\":\"text\",\"text\":\"{\\\"temperature\\\":22,\\\"condition\\\":\\\"sunny\\\"}\",\"cache_control\":{\"type\":\"ephemeral\"}}]}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"get_weather\",\"description\":\"Get current weather for a city.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\"}},\"required\":[\"city\"],\"additionalProperties\":false},\"strict\":false},\"cache_control\":{\"type\":\"ephemeral\"}}],\"stream\":true,\"stream_options\":{\"include_usage\":true},\"max_completion_tokens\":1024,\"reasoning_effort\":\"minimal\"}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream"
+            },
+            "body": "data: {\"choices\":[{\"delta\":{\"content\":\"\",\"role\":\"assistant\"},\"finish_reason\":null,\"index\":0,\"logprobs\":null}],\"created\":1790840201,\"id\":\"chatcmpl-EU5dJprTkE7OHEKnmvot7rR0LSo5L\",\"model\":\"openai-gpt-5-nano\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"choices\":[{\"delta\":{\"content\":\"Paris\"},\"finish_reason\":null,\"index\":0,\"logprobs\":null}],\"created\":1790840201,\"id\":\"chatcmpl-EU5dJprTkE7OHEKnmvot7rR0LSo5L\",\"model\":\"openai-gpt-5-nano\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"choices\":[{\"delta\":{\"content\":\" is\"},\"finish_reason\":null,\"index\":0,\"logprobs\":null}],\"created\":1790840201,\"id\":\"chatcmpl-EU5dJprTkE7OHEKnmvot7rR0LSo5L\",\"model\":\"openai-gpt-5-nano\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"choices\":[{\"delta\":{\"content\":\" sunny\"},\"finish_reason\":null,\"index\":0,\"logprobs\":null}],\"created\":1790840201,\"id\":\"chatcmpl-EU5dJprTkE7OHEKnmvot7rR0LSo5L\",\"model\":\"openai-gpt-5-nano\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"choices\":[{\"delta\":{\"content\":\".\"},\"finish_reason\":null,\"index\":0,\"logprobs\":null}],\"created\":1790840201,\"id\":\"chatcmpl-EU5dJprTkE7OHEKnmvot7rR0LSo5L\",\"model\":\"openai-gpt-5-nano\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\",\"index\":0,\"logprobs\":null}],\"created\":1790840201,\"id\":\"chatcmpl-EU5dJprTkE7OHEKnmvot7rR0LSo5L\",\"model\":\"openai-gpt-5-nano\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"choices\":[],\"created\":1790840201,\"id\":\"chatcmpl-EU5dJprTkE7OHEKnmvot7rR0LSo5L\",\"model\":\"openai-gpt-5-nano\",\"object\":\"chat.completion.chunk\",\"usage\":{\"cache_created_input_tokens\":0,\"cache_creation\":{\"ephemeral_1h_input_tokens\":0,\"ephemeral_5m_input_tokens\":0},\"cache_read_input_tokens\":0,\"completion_tokens\":13,\"completion_tokens_details\":{\"reasoning_tokens\":0},\"prompt_tokens\":193,\"prompt_tokens_details\":{\"cached_tokens\":0},\"speed\":null,\"total_tokens\":206}}\n\ndata: [DONE]\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "text-start",
+          "id": "text-0"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "Paris"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " is"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": " sunny"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "."
+        },
+        {
+          "type": "text-end",
+          "id": "text-0"
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 193,
+            "outputTokens": 13,
+            "nonCachedInputTokens": 193,
+            "cacheReadInputTokens": 0,
+            "cacheWriteInputTokens": 0,
+            "reasoningTokens": 0,
+            "totalTokens": 206,
+            "providerMetadata": {
+              "digitalocean": {
+                "prompt_tokens": 193,
+                "completion_tokens": 13,
+                "total_tokens": 206,
+                "cache_read_input_tokens": 0,
+                "cache_created_input_tokens": 0,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                },
+                "completion_tokens_details": {
+                  "reasoning_tokens": 0
+                },
+                "cache_creation": {
+                  "ephemeral_1h_input_tokens": 0,
+                  "ephemeral_5m_input_tokens": 0
+                },
+                "speed": null
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 193,
+            "outputTokens": 13,
+            "nonCachedInputTokens": 193,
+            "cacheReadInputTokens": 0,
+            "cacheWriteInputTokens": 0,
+            "reasoningTokens": 0,
+            "totalTokens": 206,
+            "providerMetadata": {
+              "digitalocean": {
+                "prompt_tokens": 193,
+                "completion_tokens": 13,
+                "total_tokens": 206,
+                "cache_read_input_tokens": 0,
+                "cache_created_input_tokens": 0,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                },
+                "completion_tokens_details": {
+                  "reasoning_tokens": 0
+                },
+                "cache_creation": {
+                  "ephemeral_1h_input_tokens": 0,
+                  "ephemeral_5m_input_tokens": 0
+                },
+                "speed": null
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

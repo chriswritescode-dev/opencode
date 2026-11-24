@@ -17,6 +17,7 @@ type CapturedCassette = {
 type ScenarioOutput = {
   cassettes: Array<CapturedCassette>
   groups: Record<string, string>
+  multipartFixtures: { fixtures: Array<unknown> }
 }
 
 type ExportedError = {
@@ -25,24 +26,122 @@ type ExportedError = {
   retryable: boolean
 }
 
-const allowedGroups = new Set([
-  "anthropic-messages",
-  "openai-chat",
-  "open-responses",
-  "openai-responses-websocket",
-  "gemini",
-  "bedrock-converse",
-])
+type ExportedRealtime = {
+  clockEpochMs: number
+  cases: Array<{
+    name: string
+    input: Record<string, unknown>
+    requests: Array<unknown>
+    result?: unknown
+    error?: unknown
+  }>
+}
+
+type ExportedAdc = {
+  clockEpochMs: number
+  cases: Array<{
+    name: string
+    files: Record<string, string>
+    env: Record<string, string>
+    steps: Array<{ requests: Array<unknown>; token?: string; error?: string }>
+  }>
+}
+
+type ExportedProviderEntries = {
+  clockEpochMs: number
+  cases: Array<{
+    name: string
+    specifier: string
+    modelID: string
+    settings: Record<string, unknown>
+    env: Record<string, string>
+    kind: string
+    routeId: string
+    descriptor: Record<string, unknown> | null
+    prepared: unknown
+    error: { message: string } | null
+  }>
+}
+
+export const GROUPS: Record<string, { protocols: string[] }> = {
+  "anthropic-messages": { protocols: ["anthropic-messages"] },
+  "openai-chat": { protocols: ["openai-chat"] },
+  "open-responses": { protocols: ["open-responses", "openai-responses"] },
+  "openai-responses-websocket": { protocols: ["openai-responses"] },
+  gemini: { protocols: ["gemini"] },
+  "bedrock-converse": { protocols: ["bedrock-converse"] },
+  "wrapped-core": { protocols: ["openai-chat", "anthropic-messages", "openai-responses", "open-responses"] },
+  gateways: { protocols: ["openai-chat", "anthropic-messages", "openai-responses", "open-responses"] },
+  "chat-variants": { protocols: ["openai-chat", "anthropic-messages", "open-responses"] },
+  "vendor-variants": {
+    protocols: [
+      "alibaba-chat",
+      "alibaba-messages",
+      "alibaba-responses",
+      "meta-messages",
+      "meta-responses",
+      "openai-chat",
+      "xai-responses",
+    ],
+  },
+  "native-vendors": { protocols: ["cohere-chat", "gemini", "google-interactions", "openai-chat"] },
+  embeddings: {
+    protocols: ["openai-embeddings", "google-embed-content", "google-vertex-predict-embeddings"],
+  },
+  decisions: {
+    protocols: ["system-one", "baseten-system-one", "openai-decisions", "google-decisions", "cloudflare-run-decisions"],
+  },
+  images: {
+    protocols: [
+      "openai-images",
+      "alibaba-images",
+      "cloudflare-workers-ai-images",
+      "google-images",
+      "meta-images",
+      "minimax-images",
+      "xai-images",
+      "zai-images",
+    ],
+  },
+  video: {
+    protocols: ["google-interactions-video", "minimax-video", "openrouter-video", "xai-video", "seedance-video"],
+  },
+  speech: {
+    protocols: ["openai-speech", "cartesia-speech", "deepgram-speech", "elevenlabs-speech", "google-speech"],
+  },
+  transcription: {
+    protocols: [
+      "openai-transcription",
+      "assemblyai-transcription",
+      "deepgram-transcription",
+      "elevenlabs-transcription",
+      "google-transcription",
+    ],
+  },
+  extraction: { protocols: ["cloudflare-run-extraction"] },
+}
+
+const EXPECTED_ADC_CASES = 11
+const EXPECTED_REALTIME_CASES = 8
+const EXPECTED_PROVIDER_ENTRY_CASES = 339
 
 const exporter = `${tree}/exporter`
 await mkdir(exporter, { recursive: true })
-for (const name of ["capture", "scenarios", "errors"])
+for (const name of ["capture", "scenarios", "errors", "adc", "realtime", "providers"])
   await Bun.write(`${exporter}/${name}.ts`, Bun.file(`${root}script/llm/${name}.ts`))
 
 const scenarios = await run<ScenarioOutput>("scenarios")
 const errors = await run<Array<ExportedError>>("errors")
+const adc = await run<ExportedAdc>("adc")
+const realtime = await run<ExportedRealtime>("realtime")
+const providerEntries = await run<ExportedProviderEntries>("providers")
 
-if (scenarios.cassettes.length !== 51) fail(`expected 51 cassettes, got ${scenarios.cassettes.length}`)
+if (adc.cases.length !== EXPECTED_ADC_CASES) fail(`expected ${EXPECTED_ADC_CASES} ADC cases, got ${adc.cases.length}`)
+if (realtime.cases.length !== EXPECTED_REALTIME_CASES)
+  fail(`expected ${EXPECTED_REALTIME_CASES} realtime cases, got ${realtime.cases.length}`)
+if (providerEntries.cases.length !== EXPECTED_PROVIDER_ENTRY_CASES)
+  fail(`expected ${EXPECTED_PROVIDER_ENTRY_CASES} provider entry cases, got ${providerEntries.cases.length}`)
+
 const names = new Set<string>()
 const index: Array<{ cassette: string; protocol: string; group: string }> = []
 for (const cassette of scenarios.cassettes) {
@@ -50,9 +149,26 @@ for (const cassette of scenarios.cassettes) {
   names.add(cassette.cassette)
   const group = scenarios.groups[cassette.cassette]
   if (group === undefined) fail(`cassette ${cassette.cassette} has no group`)
-  if (!allowedGroups.has(group)) fail(`cassette ${cassette.cassette} has unknown group ${group}`)
+  const definition = GROUPS[group]
+  if (definition === undefined) fail(`cassette ${cassette.cassette} has unknown group ${group}`)
+  if (!definition.protocols.includes(cassette.protocol))
+    fail(`cassette ${cassette.cassette} has protocol ${cassette.protocol} outside group ${group}`)
   index.push({ cassette: cassette.cassette, protocol: cassette.protocol, group })
 }
+const recordings = `${tree}/packages/ai/test/fixtures/recordings`
+const recorded = new Set(
+  Array.from(new Bun.Glob("**/*.json").scanSync({ cwd: recordings })).map((file) => file.slice(0, -".json".length)),
+)
+const missingRecordings = Array.from(names)
+  .filter((name) => !recorded.has(name))
+  .sort()
+const missingScenarios = Array.from(recorded)
+  .filter((name) => !names.has(name))
+  .sort()
+if (missingRecordings.length > 0 || missingScenarios.length > 0)
+  fail(
+    `recordings without a scenario: [${missingScenarios.join(", ")}]; scenarios without a recording: [${missingRecordings.join(", ")}]`,
+  )
 index.sort((a, b) => (a.cassette < b.cassette ? -1 : 1))
 
 await rm(`${output}/llm`, { recursive: true, force: true })
@@ -64,7 +180,13 @@ for (const cassette of scenarios.cassettes) {
 await mkdir(`${output}/llm`, { recursive: true })
 await Bun.write(`${output}/llm/index.json`, `${JSON.stringify({ cassettes: index }, null, 2)}\n`)
 await Bun.write(`${output}/provider-errors.json`, `${JSON.stringify({ errors }, null, 2)}\n`)
-console.log(`llm: ${scenarios.cassettes.length} cassettes, ${errors.length} provider errors -> ${output}`)
+await Bun.write(`${output}/google-adc.json`, `${JSON.stringify(adc, null, 2)}\n`)
+await Bun.write(`${output}/multipart-fixtures.json`, `${JSON.stringify(scenarios.multipartFixtures, null, 2)}\n`)
+await Bun.write(`${output}/realtime.json`, `${JSON.stringify(realtime, null, 2)}\n`)
+await Bun.write(`${output}/provider-entries.json`, `${JSON.stringify(providerEntries, null, 2)}\n`)
+console.log(
+  `llm: ${scenarios.cassettes.length} cassettes, ${errors.length} provider errors, ${adc.cases.length} ADC cases, ${realtime.cases.length} realtime cases, ${providerEntries.cases.length} provider entry cases -> ${output}`,
+)
 
 async function run<T>(name: string) {
   const proc = Bun.spawn(["bun", "run", `${exporter}/${name}.ts`], {

@@ -77,6 +77,13 @@
           "name": "get_weather"
         }
       },
+      "provider": {
+        "package": "@opencode/ai/providers/togetherai",
+        "modelID": "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+        "settings": {
+          "apiKey": "fixture"
+        }
+      },
       "transport": "http",
       "exchanges": [
         {

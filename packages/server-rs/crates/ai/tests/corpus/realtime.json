@@ -1,0 +1,296 @@
+{
+  "clockEpochMs": 1760000000000,
+  "cases": [
+    {
+      "name": "openai-live/webrtc",
+      "input": {
+        "engine": {
+          "id": "openai-live",
+          "provider": "openai",
+          "api": "live",
+          "transports": [
+            "webrtc"
+          ]
+        },
+        "model": "gpt-live-1",
+        "apiKey": "sk-openai",
+        "session": {
+          "instructions": "Be concise.",
+          "voice": "marin"
+        },
+        "transport": {
+          "type": "webrtc",
+          "sdp": "v=0\r\no=offer\r\n",
+          "dcid": 4
+        }
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "url": "https://api.openai.com/v1/live/sessions",
+          "headers": {
+            "authorization": "Bearer sk-openai",
+            "content-length": "145",
+            "content-type": "application/json"
+          },
+          "body": "{\"session\":{\"instructions\":\"Be concise.\",\"voice\":\"marin\",\"model\":\"gpt-live-1\"},\"transport\":{\"type\":\"webrtc\",\"sdp\":\"v=0\\r\\no=offer\\r\\n\",\"dcid\":4}}"
+        }
+      ],
+      "result": {
+        "type": "webrtc",
+        "sdp": "v=0\r\no=live-answer\r\n"
+      }
+    },
+    {
+      "name": "openai-realtime/webrtc",
+      "input": {
+        "engine": {
+          "id": "openai-realtime",
+          "provider": "openai",
+          "api": "realtime",
+          "transports": [
+            "webrtc",
+            "websocket"
+          ]
+        },
+        "model": "gpt-realtime-2.1",
+        "apiKey": "sk-openai",
+        "session": {
+          "type": "realtime",
+          "instructions": "Brief."
+        },
+        "transport": {
+          "type": "webrtc",
+          "sdp": "v=0\r\no=offer\r\n",
+          "dcid": 4
+        }
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "url": "https://api.openai.com/v1/realtime/calls?dcid=4",
+          "headers": {
+            "authorization": "Bearer sk-openai",
+            "content-type": "multipart/form-data; boundary=----OpenCodeFixtureBoundary"
+          },
+          "body": "------OpenCodeFixtureBoundary\r\nContent-Disposition: form-data; name=\"sdp\"\r\n\r\nv=0\r\no=offer\r\n\r\n------OpenCodeFixtureBoundary\r\nContent-Disposition: form-data; name=\"session\"\r\n\r\n{\"type\":\"realtime\",\"instructions\":\"Brief.\",\"model\":\"gpt-realtime-2.1\"}\r\n------OpenCodeFixtureBoundary--\r\n",
+          "boundary": "----OpenCodeFixtureBoundary"
+        }
+      ],
+      "result": {
+        "type": "webrtc",
+        "sdp": "v=0\r\no=rtc-answer\r\n"
+      }
+    },
+    {
+      "name": "openai-realtime/websocket",
+      "input": {
+        "engine": {
+          "id": "openai-realtime",
+          "provider": "openai",
+          "api": "realtime",
+          "transports": [
+            "webrtc",
+            "websocket"
+          ]
+        },
+        "model": "gpt-realtime-2.1",
+        "apiKey": "sk-openai",
+        "session": {
+          "type": "realtime",
+          "instructions": "Brief."
+        },
+        "transport": {
+          "type": "websocket"
+        }
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "url": "https://api.openai.com/v1/realtime/client_secrets",
+          "headers": {
+            "authorization": "Bearer sk-openai",
+            "content-length": "135",
+            "content-type": "application/json"
+          },
+          "body": "{\"expires_after\":{\"anchor\":\"created_at\",\"seconds\":60},\"session\":{\"type\":\"realtime\",\"instructions\":\"Brief.\",\"model\":\"gpt-realtime-2.1\"}}"
+        }
+      ],
+      "result": {
+        "type": "websocket",
+        "url": "wss://api.openai.com/v1/realtime?model=gpt-realtime-2.1",
+        "token": "ek_1",
+        "expiresAt": 1760000060
+      }
+    },
+    {
+      "name": "xai-realtime/websocket",
+      "input": {
+        "engine": {
+          "id": "xai-realtime",
+          "provider": "xai",
+          "api": "realtime",
+          "transports": [
+            "websocket"
+          ]
+        },
+        "model": "grok-voice-3.0",
+        "apiKey": "xai-key",
+        "session": {
+          "voice": "ara"
+        },
+        "transport": {
+          "type": "websocket"
+        }
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "url": "https://api.x.ai/v1/realtime/client_secrets",
+          "headers": {
+            "authorization": "Bearer xai-key",
+            "content-length": "32",
+            "content-type": "application/json"
+          },
+          "body": "{\"expires_after\":{\"seconds\":60}}"
+        }
+      ],
+      "result": {
+        "type": "websocket",
+        "url": "wss://api.x.ai/v1/realtime?model=grok-voice-3.0",
+        "token": "ek_2",
+        "expiresAt": 1760000120
+      }
+    },
+    {
+      "name": "gemini-live/websocket",
+      "input": {
+        "engine": {
+          "id": "gemini-live",
+          "provider": "google",
+          "api": "bidi-generate-content",
+          "transports": [
+            "websocket"
+          ]
+        },
+        "model": "gemini-3.8-live",
+        "apiKey": "gemini-key",
+        "session": {
+          "generationConfig": {
+            "responseModalities": [
+              "AUDIO"
+            ]
+          },
+          "systemInstruction": {
+            "parts": [
+              {
+                "text": "Brief."
+              }
+            ]
+          }
+        },
+        "transport": {
+          "type": "websocket"
+        }
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "url": "https://generativelanguage.googleapis.com/v1beta/auth_tokens",
+          "headers": {
+            "content-length": "264",
+            "content-type": "application/json",
+            "x-goog-api-key": "gemini-key"
+          },
+          "body": "{\"uses\":1,\"expireTime\":\"2025-10-09T09:23:20.000Z\",\"newSessionExpireTime\":\"2025-10-09T08:54:20.000Z\",\"bidiGenerateContentSetup\":{\"generationConfig\":{\"responseModalities\":[\"AUDIO\"]},\"systemInstruction\":{\"parts\":[{\"text\":\"Brief.\"}]},\"model\":\"models/gemini-3.8-live\"}}"
+        }
+      ],
+      "result": {
+        "type": "websocket",
+        "url": "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContentConstrained",
+        "token": "auth_tokens/ek_3",
+        "expiresAt": 1760000060
+      }
+    },
+    {
+      "name": "openai-live/rejects-websocket",
+      "input": {
+        "engine": {
+          "id": "openai-live",
+          "provider": "openai",
+          "api": "live",
+          "transports": [
+            "webrtc"
+          ]
+        },
+        "model": "gpt-live-1",
+        "apiKey": "k",
+        "transport": {
+          "type": "websocket"
+        }
+      },
+      "requests": [],
+      "error": {
+        "reason": {
+          "_tag": "InvalidRequest",
+          "message": "gpt-live-1 only supports webrtc transport"
+        },
+        "retryable": false
+      }
+    },
+    {
+      "name": "xai-realtime/rejects-webrtc",
+      "input": {
+        "engine": {
+          "id": "xai-realtime",
+          "provider": "xai",
+          "api": "realtime",
+          "transports": [
+            "websocket"
+          ]
+        },
+        "model": "grok-voice-3.0",
+        "apiKey": "k",
+        "transport": {
+          "type": "webrtc",
+          "sdp": "v=0"
+        }
+      },
+      "requests": [],
+      "error": {
+        "reason": {
+          "_tag": "InvalidRequest",
+          "message": "grok-voice-3.0 only supports websocket transport"
+        },
+        "retryable": false
+      }
+    },
+    {
+      "name": "gemini-live/rejects-webrtc",
+      "input": {
+        "engine": {
+          "id": "gemini-live",
+          "provider": "google",
+          "api": "bidi-generate-content",
+          "transports": [
+            "websocket"
+          ]
+        },
+        "model": "gemini-3.8-live",
+        "apiKey": "k",
+        "transport": {
+          "type": "webrtc",
+          "sdp": "v=0"
+        }
+      },
+      "requests": [],
+      "error": {
+        "reason": {
+          "_tag": "InvalidRequest",
+          "message": "gemini-3.8-live only supports websocket transport"
+        },
+        "retryable": false
+      }
+    }
+  ]
+}

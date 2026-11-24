@@ -22,6 +22,8 @@ pub fn route() -> Route {
         endpoint: Endpoint::path(open_responses::PATH),
         auth: Auth::None,
         headers: None,
+        body: None,
+        channel: None,
         transport: RouteTransport::Http,
         options: Some(RequestOptions { provider_options: Some(provider_options), ..Default::default() }),
     }

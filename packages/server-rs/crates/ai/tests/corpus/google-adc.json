@@ -1,0 +1,350 @@
+{
+  "clockEpochMs": 1767323045000,
+  "cases": [
+    {
+      "name": "authorized-user-cloudsdk-config",
+      "files": {
+        "/adc/sdk/application_default_credentials.json": "{\"type\":\"authorized_user\",\"client_id\":\"adc-client.apps.googleusercontent.com\",\"client_secret\":\"adc-client-secret\",\"refresh_token\":\"adc-refresh-token\",\"quota_project_id\":\"adc-quota-project\"}"
+      },
+      "env": {
+        "HOME": "/adc/home",
+        "CLOUDSDK_CONFIG": "/adc/sdk"
+      },
+      "steps": [
+        {
+          "requests": [
+            {
+              "method": "POST",
+              "url": "https://oauth2.googleapis.com/token",
+              "headers": {
+                "content-type": "application/x-www-form-urlencoded;charset=UTF-8"
+              },
+              "body": "refresh_token=adc-refresh-token&client_id=adc-client.apps.googleusercontent.com&client_secret=adc-client-secret&grant_type=refresh_token",
+              "response": {
+                "status": 200,
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "body": "{\"access_token\":\"access-token-1\",\"expires_in\":3600,\"token_type\":\"Bearer\"}"
+              }
+            }
+          ],
+          "token": "access-token-1"
+        }
+      ]
+    },
+    {
+      "name": "authorized-user-home",
+      "files": {
+        "/adc/home/.config/gcloud/application_default_credentials.json": "{\"type\":\"authorized_user\",\"client_id\":\"adc-client.apps.googleusercontent.com\",\"client_secret\":\"adc-client-secret\",\"refresh_token\":\"adc-refresh-token\",\"quota_project_id\":\"adc-quota-project\"}"
+      },
+      "env": {
+        "HOME": "/adc/home"
+      },
+      "steps": [
+        {
+          "requests": [
+            {
+              "method": "POST",
+              "url": "https://oauth2.googleapis.com/token",
+              "headers": {
+                "content-type": "application/x-www-form-urlencoded;charset=UTF-8"
+              },
+              "body": "refresh_token=adc-refresh-token&client_id=adc-client.apps.googleusercontent.com&client_secret=adc-client-secret&grant_type=refresh_token",
+              "response": {
+                "status": 200,
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "body": "{\"access_token\":\"access-token-1\",\"expires_in\":3600,\"token_type\":\"Bearer\"}"
+              }
+            }
+          ],
+          "token": "access-token-1"
+        }
+      ]
+    },
+    {
+      "name": "authorized-user-environment",
+      "files": {
+        "/adc/creds/user.json": "{\"type\":\"authorized_user\",\"client_id\":\"adc-client.apps.googleusercontent.com\",\"client_secret\":\"adc-client-secret\",\"refresh_token\":\"adc-refresh-token\",\"quota_project_id\":\"adc-quota-project\"}"
+      },
+      "env": {
+        "HOME": "/adc/home",
+        "GOOGLE_APPLICATION_CREDENTIALS": "/adc/creds/user.json"
+      },
+      "steps": [
+        {
+          "requests": [
+            {
+              "method": "POST",
+              "url": "https://oauth2.googleapis.com/token",
+              "headers": {
+                "content-type": "application/x-www-form-urlencoded;charset=UTF-8"
+              },
+              "body": "refresh_token=adc-refresh-token&client_id=adc-client.apps.googleusercontent.com&client_secret=adc-client-secret&grant_type=refresh_token",
+              "response": {
+                "status": 200,
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "body": "{\"access_token\":\"access-token-1\",\"expires_in\":3600,\"token_type\":\"Bearer\"}"
+              }
+            }
+          ],
+          "token": "access-token-1"
+        }
+      ]
+    },
+    {
+      "name": "service-account-environment",
+      "files": {
+        "/adc/creds/service.json": "{\"type\":\"service_account\",\"client_email\":\"adc-service@adc-project.iam.gserviceaccount.com\",\"private_key_id\":\"adc-key-id\",\"private_key\":\"-----BEGIN PRIVATE KEY-----\\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDboNZroYuLXww6\\nmg1nJvCpk3tVSkdoNP3yyaaY8a0qj+urtEsKscbequDzZZNb0Yt4376do6yFGOsd\\naC9NT7TQnpkTl3R9eFhUoc8Patjqin2VPKw38rcr3Zsh4efYlPLRLr25OKjyvWV8\\nNSD3X0xyltQTOb+LvkLwH7juJ8/IZVbok6WoN6WF0Tmam9NHt/Bj17HUeINfwsEZ\\nG1jIkQu+CsCeSulgAijrXeHryBFQ9dbQtsGGxt9+VAwQhmPD6EDJRb2ZKB6doaSc\\nT6FaiK6QGBaRtJyuEqY7PZQ+RBQOlkkTGGJJpGbycGgS82Mbb1/3iQdxROeG2arT\\nBVjUo6fTAgMBAAECggEACQQ02U1T/8BCrcM2SqZQGf4agZlfjhki1c1OgBfn3ofz\\nCmUH8aPzwJ9uRb/FSW80VR2GY01dX0dzG41z564eg7QHH8VHfIEsyyirafwedJ6D\\n4lUP0uotd+kMndr63CrdPxY2prx7Px/kYzGBLXalmkyz3ygvQ2rnr5j1zB0pTBY9\\ndxCtoDqvv1UTeKKrnRFKVtidpRZMopCVCeCfLqCVOH9wwg1sKCWy2vYgVGauuaPy\\nJJNLKjbH6NeaHZuMaf+YM9UVVOM7F59mzFKHOI51huRCNH3RhIUyW+S15grnpSCc\\n3XNC8Z4g/jbldcI56vsPWz/HNTTTAj46EqQ3AD3/QQKBgQD7W4wGtd54Jk/7+RFh\\ncu1slQVkTX9ICJuxEdY6iugz7eTbXCymw5BkDnYGv2+aC+JuYRXtaTtsek3jCPww\\nwk0f6A0e4SxmKXWSkzPcP1zSH+qVUynKI3lvEDkDSqh0Hkm2ZAeb9rmu3UFYJJWd\\nx1Iy6UvxrZ3hzazSOZg+2HQ3EwKBgQDfr0Ud7sAhnsvPJGfVhn350/a++U0VxO8/\\nXoHFNGeh5zTbdWL8YlJej9YVQmtLIyOCRGOHhO4PYeNW60/3M0XzT2CRNdAMfB4j\\neWbKkbXqS/I3q3yAZSMA7JfUe9VQrQ0oEA76GMYHQxqi081E87rCXQ6n9o3uEn+M\\ncdEK6HEkQQKBgH/spaU8pk6r4QUyS6A255LdfPMBZgf5KZPCqi79RxQ2vMTPcoIl\\nAbWKjpL8lwXlioX2rzw21GFvFXi4t/Dw0mOsrBDNNNWBwC6q8Dfln43pZHA+9QPF\\nbiYSMZH1Sypdx9IlsqGzvei6/minpeW47aKvjVEgtTuYe546ZbuGWg81AoGBAL+T\\n27yROVkSKjiVU6EbeVW5ZwGVf6H/c3FwvfBqu798yFaVqVvD0gxPYOoAYuiNheIS\\nNLRi84mVKyLMk0aDUYvcFjcIQdIPk7iKR7GDLq0msqNfaliFRn+KI1fHX6GjNTt0\\n1X76LNEXdf6zLIG7xd6l2OGeV1zp1vgwmvuerRiBAoGAUudFwVk1YJEbDU2BikgM\\nHGr/ARpWrMYpb8J6OQBQSvu3YAliWuU8xzJqjMCD8BUHUGNsO7bFXBJzUYnon+c9\\n7FqvDSrW+G2+Mwv1R6F0ca4t4BzBQ6V1pDev5vMEUllwnyydvyBHMHFmJ2GUdQs2\\njnvIwL5JEwNa32TT8tC3+SM=\\n-----END PRIVATE KEY-----\",\"project_id\":\"adc-project\",\"token_uri\":\"https://oauth2.googleapis.com/token\"}"
+      },
+      "env": {
+        "HOME": "/adc/home",
+        "GOOGLE_APPLICATION_CREDENTIALS": "/adc/creds/service.json"
+      },
+      "steps": [
+        {
+          "requests": [
+            {
+              "method": "POST",
+              "url": "https://oauth2.googleapis.com/token",
+              "headers": {
+                "content-type": "application/x-www-form-urlencoded;charset=UTF-8"
+              },
+              "body": "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=eyJhbGciOiJSUzI1NiJ9.eyJpc3MiOiJhZGMtc2VydmljZUBhZGMtcHJvamVjdC5pYW0uZ3NlcnZpY2VhY2NvdW50LmNvbSIsInNjb3BlIjoiaHR0cHM6Ly93d3cuZ29vZ2xlYXBpcy5jb20vYXV0aC9jbG91ZC1wbGF0Zm9ybSIsImF1ZCI6Imh0dHBzOi8vb2F1dGgyLmdvb2dsZWFwaXMuY29tL3Rva2VuIiwiZXhwIjoxNzY3MzI2NjQ1LCJpYXQiOjE3NjczMjMwNDV9.rwF0McAQ-09Y1sKP4IRbIUTKkpMlEfeRi0kkhDOndUYYoite1_dSE_HHWGjynGvccUh-DMJnbMbbo2CYU49zgWoIgVg3bvNS4_kAZYkp2Qf9FLBwisEkc3hU7WTaVRodyA3WNr2PhcztoA5JHroZWP3q3NFtKvsFXGQzgyuCSC-yUxBpHToQWkzVdvpqWkFqnI5l6GmbK9_J_r_viWw-RxBiVlhe8ouLu9zKKOLLAcqYP55l2oxMJ3nccns1_LxQPTcASLW5l2AnGHG30ZR_D_iR8KCSVNi7TInOSJoa4oR0y87JOudKahd2GOGzYFpLOQIfDCYRpppUtqI2QZaBKQ",
+              "response": {
+                "status": 200,
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "body": "{\"access_token\":\"access-token-1\",\"expires_in\":3600,\"token_type\":\"Bearer\"}"
+              }
+            }
+          ],
+          "token": "access-token-1"
+        }
+      ]
+    },
+    {
+      "name": "authorized-user-cached",
+      "files": {
+        "/adc/sdk/application_default_credentials.json": "{\"type\":\"authorized_user\",\"client_id\":\"adc-client.apps.googleusercontent.com\",\"client_secret\":\"adc-client-secret\",\"refresh_token\":\"adc-refresh-token\",\"quota_project_id\":\"adc-quota-project\"}"
+      },
+      "env": {
+        "HOME": "/adc/home",
+        "CLOUDSDK_CONFIG": "/adc/sdk"
+      },
+      "steps": [
+        {
+          "requests": [
+            {
+              "method": "POST",
+              "url": "https://oauth2.googleapis.com/token",
+              "headers": {
+                "content-type": "application/x-www-form-urlencoded;charset=UTF-8"
+              },
+              "body": "refresh_token=adc-refresh-token&client_id=adc-client.apps.googleusercontent.com&client_secret=adc-client-secret&grant_type=refresh_token",
+              "response": {
+                "status": 200,
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "body": "{\"access_token\":\"access-token-1\",\"expires_in\":3600,\"token_type\":\"Bearer\"}"
+              }
+            }
+          ],
+          "token": "access-token-1"
+        },
+        {
+          "requests": [],
+          "token": "access-token-1"
+        }
+      ]
+    },
+    {
+      "name": "authorized-user-refresh",
+      "files": {
+        "/adc/sdk/application_default_credentials.json": "{\"type\":\"authorized_user\",\"client_id\":\"adc-client.apps.googleusercontent.com\",\"client_secret\":\"adc-client-secret\",\"refresh_token\":\"adc-refresh-token\",\"quota_project_id\":\"adc-quota-project\"}"
+      },
+      "env": {
+        "HOME": "/adc/home",
+        "CLOUDSDK_CONFIG": "/adc/sdk"
+      },
+      "steps": [
+        {
+          "requests": [
+            {
+              "method": "POST",
+              "url": "https://oauth2.googleapis.com/token",
+              "headers": {
+                "content-type": "application/x-www-form-urlencoded;charset=UTF-8"
+              },
+              "body": "refresh_token=adc-refresh-token&client_id=adc-client.apps.googleusercontent.com&client_secret=adc-client-secret&grant_type=refresh_token",
+              "response": {
+                "status": 200,
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "body": "{\"access_token\":\"access-token-1\",\"expires_in\":300,\"token_type\":\"Bearer\"}"
+              }
+            }
+          ],
+          "token": "access-token-1"
+        },
+        {
+          "requests": [
+            {
+              "method": "POST",
+              "url": "https://oauth2.googleapis.com/token",
+              "headers": {
+                "content-type": "application/x-www-form-urlencoded;charset=UTF-8"
+              },
+              "body": "refresh_token=adc-refresh-token&client_id=adc-client.apps.googleusercontent.com&client_secret=adc-client-secret&grant_type=refresh_token",
+              "response": {
+                "status": 200,
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "body": "{\"access_token\":\"access-token-2\",\"expires_in\":300,\"token_type\":\"Bearer\"}"
+              }
+            }
+          ],
+          "token": "access-token-2"
+        }
+      ]
+    },
+    {
+      "name": "service-account-cached",
+      "files": {
+        "/adc/creds/service.json": "{\"type\":\"service_account\",\"client_email\":\"adc-service@adc-project.iam.gserviceaccount.com\",\"private_key_id\":\"adc-key-id\",\"private_key\":\"-----BEGIN PRIVATE KEY-----\\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDboNZroYuLXww6\\nmg1nJvCpk3tVSkdoNP3yyaaY8a0qj+urtEsKscbequDzZZNb0Yt4376do6yFGOsd\\naC9NT7TQnpkTl3R9eFhUoc8Patjqin2VPKw38rcr3Zsh4efYlPLRLr25OKjyvWV8\\nNSD3X0xyltQTOb+LvkLwH7juJ8/IZVbok6WoN6WF0Tmam9NHt/Bj17HUeINfwsEZ\\nG1jIkQu+CsCeSulgAijrXeHryBFQ9dbQtsGGxt9+VAwQhmPD6EDJRb2ZKB6doaSc\\nT6FaiK6QGBaRtJyuEqY7PZQ+RBQOlkkTGGJJpGbycGgS82Mbb1/3iQdxROeG2arT\\nBVjUo6fTAgMBAAECggEACQQ02U1T/8BCrcM2SqZQGf4agZlfjhki1c1OgBfn3ofz\\nCmUH8aPzwJ9uRb/FSW80VR2GY01dX0dzG41z564eg7QHH8VHfIEsyyirafwedJ6D\\n4lUP0uotd+kMndr63CrdPxY2prx7Px/kYzGBLXalmkyz3ygvQ2rnr5j1zB0pTBY9\\ndxCtoDqvv1UTeKKrnRFKVtidpRZMopCVCeCfLqCVOH9wwg1sKCWy2vYgVGauuaPy\\nJJNLKjbH6NeaHZuMaf+YM9UVVOM7F59mzFKHOI51huRCNH3RhIUyW+S15grnpSCc\\n3XNC8Z4g/jbldcI56vsPWz/HNTTTAj46EqQ3AD3/QQKBgQD7W4wGtd54Jk/7+RFh\\ncu1slQVkTX9ICJuxEdY6iugz7eTbXCymw5BkDnYGv2+aC+JuYRXtaTtsek3jCPww\\nwk0f6A0e4SxmKXWSkzPcP1zSH+qVUynKI3lvEDkDSqh0Hkm2ZAeb9rmu3UFYJJWd\\nx1Iy6UvxrZ3hzazSOZg+2HQ3EwKBgQDfr0Ud7sAhnsvPJGfVhn350/a++U0VxO8/\\nXoHFNGeh5zTbdWL8YlJej9YVQmtLIyOCRGOHhO4PYeNW60/3M0XzT2CRNdAMfB4j\\neWbKkbXqS/I3q3yAZSMA7JfUe9VQrQ0oEA76GMYHQxqi081E87rCXQ6n9o3uEn+M\\ncdEK6HEkQQKBgH/spaU8pk6r4QUyS6A255LdfPMBZgf5KZPCqi79RxQ2vMTPcoIl\\nAbWKjpL8lwXlioX2rzw21GFvFXi4t/Dw0mOsrBDNNNWBwC6q8Dfln43pZHA+9QPF\\nbiYSMZH1Sypdx9IlsqGzvei6/minpeW47aKvjVEgtTuYe546ZbuGWg81AoGBAL+T\\n27yROVkSKjiVU6EbeVW5ZwGVf6H/c3FwvfBqu798yFaVqVvD0gxPYOoAYuiNheIS\\nNLRi84mVKyLMk0aDUYvcFjcIQdIPk7iKR7GDLq0msqNfaliFRn+KI1fHX6GjNTt0\\n1X76LNEXdf6zLIG7xd6l2OGeV1zp1vgwmvuerRiBAoGAUudFwVk1YJEbDU2BikgM\\nHGr/ARpWrMYpb8J6OQBQSvu3YAliWuU8xzJqjMCD8BUHUGNsO7bFXBJzUYnon+c9\\n7FqvDSrW+G2+Mwv1R6F0ca4t4BzBQ6V1pDev5vMEUllwnyydvyBHMHFmJ2GUdQs2\\njnvIwL5JEwNa32TT8tC3+SM=\\n-----END PRIVATE KEY-----\",\"project_id\":\"adc-project\",\"token_uri\":\"https://oauth2.googleapis.com/token\"}"
+      },
+      "env": {
+        "HOME": "/adc/home",
+        "GOOGLE_APPLICATION_CREDENTIALS": "/adc/creds/service.json"
+      },
+      "steps": [
+        {
+          "requests": [
+            {
+              "method": "POST",
+              "url": "https://oauth2.googleapis.com/token",
+              "headers": {
+                "content-type": "application/x-www-form-urlencoded;charset=UTF-8"
+              },
+              "body": "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=eyJhbGciOiJSUzI1NiJ9.eyJpc3MiOiJhZGMtc2VydmljZUBhZGMtcHJvamVjdC5pYW0uZ3NlcnZpY2VhY2NvdW50LmNvbSIsInNjb3BlIjoiaHR0cHM6Ly93d3cuZ29vZ2xlYXBpcy5jb20vYXV0aC9jbG91ZC1wbGF0Zm9ybSIsImF1ZCI6Imh0dHBzOi8vb2F1dGgyLmdvb2dsZWFwaXMuY29tL3Rva2VuIiwiZXhwIjoxNzY3MzI2NjQ1LCJpYXQiOjE3NjczMjMwNDV9.rwF0McAQ-09Y1sKP4IRbIUTKkpMlEfeRi0kkhDOndUYYoite1_dSE_HHWGjynGvccUh-DMJnbMbbo2CYU49zgWoIgVg3bvNS4_kAZYkp2Qf9FLBwisEkc3hU7WTaVRodyA3WNr2PhcztoA5JHroZWP3q3NFtKvsFXGQzgyuCSC-yUxBpHToQWkzVdvpqWkFqnI5l6GmbK9_J_r_viWw-RxBiVlhe8ouLu9zKKOLLAcqYP55l2oxMJ3nccns1_LxQPTcASLW5l2AnGHG30ZR_D_iR8KCSVNi7TInOSJoa4oR0y87JOudKahd2GOGzYFpLOQIfDCYRpppUtqI2QZaBKQ",
+              "response": {
+                "status": 200,
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "body": "{\"access_token\":\"access-token-1\",\"expires_in\":3600,\"token_type\":\"Bearer\"}"
+              }
+            }
+          ],
+          "token": "access-token-1"
+        },
+        {
+          "requests": [],
+          "token": "access-token-1"
+        }
+      ]
+    },
+    {
+      "name": "missing-credentials",
+      "files": {},
+      "env": {
+        "HOME": "/adc/home",
+        "METADATA_SERVER_DETECTION": "none"
+      },
+      "steps": [
+        {
+          "requests": [],
+          "error": "Missing auth credential: Google Application Default Credentials"
+        }
+      ]
+    },
+    {
+      "name": "missing-cloudsdk-config",
+      "files": {},
+      "env": {
+        "HOME": "/adc/home",
+        "CLOUDSDK_CONFIG": "/adc/sdk",
+        "METADATA_SERVER_DETECTION": "none"
+      },
+      "steps": [
+        {
+          "requests": [],
+          "error": "Missing auth credential: Google Application Default Credentials"
+        }
+      ]
+    },
+    {
+      "name": "missing-credentials-file",
+      "files": {},
+      "env": {
+        "HOME": "/adc/home",
+        "GOOGLE_APPLICATION_CREDENTIALS": "/adc/creds/missing.json"
+      },
+      "steps": [
+        {
+          "requests": [],
+          "error": "Missing auth credential: Google Application Default Credentials"
+        }
+      ]
+    },
+    {
+      "name": "metadata-server",
+      "files": {},
+      "env": {
+        "HOME": "/adc/home",
+        "GCE_METADATA_HOST": "metadata.google.internal"
+      },
+      "steps": [
+        {
+          "requests": [
+            {
+              "method": "GET",
+              "url": "http://metadata.google.internal/computeMetadata/v1/instance",
+              "headers": {
+                "metadata-flavor": "Google"
+              },
+              "body": "",
+              "response": {
+                "status": 200,
+                "headers": {
+                  "metadata-flavor": "Google",
+                  "content-type": "application/json"
+                },
+                "body": "{}"
+              }
+            },
+            {
+              "method": "GET",
+              "url": "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token?scopes=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcloud-platform",
+              "headers": {
+                "metadata-flavor": "Google"
+              },
+              "body": "",
+              "response": {
+                "status": 200,
+                "headers": {
+                  "metadata-flavor": "Google",
+                  "content-type": "application/json"
+                },
+                "body": "{\"access_token\":\"metadata-token-1\",\"expires_in\":3600,\"token_type\":\"Bearer\"}"
+              }
+            }
+          ],
+          "token": "metadata-token-1"
+        },
+        {
+          "requests": [],
+          "token": "metadata-token-1"
+        }
+      ]
+    }
+  ]
+}

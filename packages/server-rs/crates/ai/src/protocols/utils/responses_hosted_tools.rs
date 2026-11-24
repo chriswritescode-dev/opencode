@@ -131,7 +131,7 @@ fn mcp_input(item: &Value) -> Value {
     fields_input(item, &["server_label", "name", "arguments"])
 }
 
-fn fields_input(item: &Value, keys: &[&str]) -> Value {
+pub(crate) fn fields_input(item: &Value, keys: &[&str]) -> Value {
     let mut object = Map::new();
     for key in keys {
         if let Some(value) = item.get(*key) {

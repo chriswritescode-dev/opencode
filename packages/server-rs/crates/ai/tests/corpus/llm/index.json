@@ -1,6 +1,231 @@
 {
   "cassettes": [
     {
+      "cassette": "alibaba-chat/qwen-3-7-plus-streams-thinking-disabled",
+      "protocol": "alibaba-chat",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-chat/qwen-3-7-plus-streams-thinking-enabled",
+      "protocol": "alibaba-chat",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-chat/qwen-3-8-flash-reads-image-bytes",
+      "protocol": "alibaba-chat",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-chat/qwen-3-8-max-obeys-named-tool-choice",
+      "protocol": "alibaba-chat",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-chat/qwen-3-8-max-replays-reasoning-through-a-tool-loop-and-follow-up",
+      "protocol": "alibaba-chat",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-chat/qwen-3-8-max-returns-a-json-object",
+      "protocol": "alibaba-chat",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-chat/qwen-3-8-max-streams-default-effort",
+      "protocol": "alibaba-chat",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-chat/qwen-3-8-max-streams-high-effort",
+      "protocol": "alibaba-chat",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-chat/qwen-3-8-max-streams-low-effort",
+      "protocol": "alibaba-chat",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-chat/qwen-3-8-max-streams-max-effort",
+      "protocol": "alibaba-chat",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-chat/qwen-3-8-max-streams-medium-effort",
+      "protocol": "alibaba-chat",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-chat/qwen-3-8-max-streams-minimal-effort",
+      "protocol": "alibaba-chat",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-chat/qwen-3-8-max-streams-none-effort",
+      "protocol": "alibaba-chat",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-chat/qwen-3-8-max-streams-xhigh-effort",
+      "protocol": "alibaba-chat",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-images/edits-an-image",
+      "protocol": "alibaba-images",
+      "group": "images"
+    },
+    {
+      "cassette": "alibaba-images/generates-qwen-image-images",
+      "protocol": "alibaba-images",
+      "group": "images"
+    },
+    {
+      "cassette": "alibaba-images/generates-wan-images",
+      "protocol": "alibaba-images",
+      "group": "images"
+    },
+    {
+      "cassette": "alibaba-messages/qwen-3-7-plus-streams-thinking-disabled",
+      "protocol": "alibaba-messages",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-messages/qwen-3-7-plus-streams-thinking-enabled",
+      "protocol": "alibaba-messages",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-messages/qwen-3-8-flash-reads-image-bytes",
+      "protocol": "alibaba-messages",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-messages/qwen-3-8-max-follows-a-json-schema",
+      "protocol": "alibaba-messages",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-messages/qwen-3-8-max-obeys-named-tool-choice",
+      "protocol": "alibaba-messages",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-messages/qwen-3-8-max-replays-reasoning-through-a-tool-loop-and-follow-up",
+      "protocol": "alibaba-messages",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-messages/qwen-3-8-max-streams-default-effort",
+      "protocol": "alibaba-messages",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-messages/qwen-3-8-max-streams-high-effort",
+      "protocol": "alibaba-messages",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-messages/qwen-3-8-max-streams-low-effort",
+      "protocol": "alibaba-messages",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-messages/qwen-3-8-max-streams-max-effort",
+      "protocol": "alibaba-messages",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-messages/qwen-3-8-max-streams-medium-effort",
+      "protocol": "alibaba-messages",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-messages/qwen-3-8-max-streams-xhigh-effort",
+      "protocol": "alibaba-messages",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-responses/qwen-3-7-plus-streams-thinking-disabled",
+      "protocol": "alibaba-responses",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-responses/qwen-3-7-plus-streams-thinking-enabled",
+      "protocol": "alibaba-responses",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-responses/qwen-3-8-flash-reads-image-bytes",
+      "protocol": "alibaba-responses",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-responses/qwen-3-8-max-continues-a-stored-response",
+      "protocol": "alibaba-responses",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-responses/qwen-3-8-max-obeys-named-tool-choice",
+      "protocol": "alibaba-responses",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-responses/qwen-3-8-max-replays-reasoning-through-a-tool-loop-and-follow-up",
+      "protocol": "alibaba-responses",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-responses/qwen-3-8-max-streams-default-effort",
+      "protocol": "alibaba-responses",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-responses/qwen-3-8-max-streams-high-effort",
+      "protocol": "alibaba-responses",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-responses/qwen-3-8-max-streams-low-effort",
+      "protocol": "alibaba-responses",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-responses/qwen-3-8-max-streams-max-effort",
+      "protocol": "alibaba-responses",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-responses/qwen-3-8-max-streams-medium-effort",
+      "protocol": "alibaba-responses",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-responses/qwen-3-8-max-streams-minimal-effort",
+      "protocol": "alibaba-responses",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-responses/qwen-3-8-max-streams-none-effort",
+      "protocol": "alibaba-responses",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-responses/qwen-3-8-max-streams-xhigh-effort",
+      "protocol": "alibaba-responses",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-responses/qwen-3-8-max-uses-hosted-code-interpreter",
+      "protocol": "alibaba-responses",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "alibaba-responses/qwen-3-8-max-uses-hosted-web-search-and-extraction",
+      "protocol": "alibaba-responses",
+      "group": "vendor-variants"
+    },
+    {
       "cassette": "anthropic-compatible-messages/minimax-m3-anthropic-compatible-text",
       "protocol": "anthropic-messages",
       "group": "anthropic-messages"
@@ -29,6 +254,51 @@
       "cassette": "anthropic-messages/anthropic-opus-4-7-image-tool-result",
       "protocol": "anthropic-messages",
       "group": "anthropic-messages"
+    },
+    {
+      "cassette": "assemblyai-transcription/uploads-submits-and-polls-a-transcript",
+      "protocol": "assemblyai-transcription",
+      "group": "transcription"
+    },
+    {
+      "cassette": "azure/chat-streams-text",
+      "protocol": "openai-chat",
+      "group": "wrapped-core"
+    },
+    {
+      "cassette": "azure/chat-streams-text-from-a-foundry-models-url",
+      "protocol": "openai-chat",
+      "group": "wrapped-core"
+    },
+    {
+      "cassette": "azure/messages-calls-a-tool",
+      "protocol": "anthropic-messages",
+      "group": "wrapped-core"
+    },
+    {
+      "cassette": "azure/messages-streams-text",
+      "protocol": "anthropic-messages",
+      "group": "wrapped-core"
+    },
+    {
+      "cassette": "azure/responses-calls-a-tool",
+      "protocol": "openai-responses",
+      "group": "wrapped-core"
+    },
+    {
+      "cassette": "azure/responses-continues-after-a-tool-result",
+      "protocol": "openai-responses",
+      "group": "wrapped-core"
+    },
+    {
+      "cassette": "azure/responses-streams-text",
+      "protocol": "openai-responses",
+      "group": "wrapped-core"
+    },
+    {
+      "cassette": "baseten-decision/decides-choice-score-and-predicate-questions",
+      "protocol": "baseten-system-one",
+      "group": "decisions"
     },
     {
       "cassette": "bedrock-converse-cache/writes-then-reads-cachepoint-on-identical-second-call",
@@ -86,6 +356,41 @@
       "group": "bedrock-converse"
     },
     {
+      "cassette": "bedrock-mantle-messages/applies-mid-conversation-effort-updates-and-thinking-block-binding-on-opus-5-5",
+      "protocol": "anthropic-messages",
+      "group": "wrapped-core"
+    },
+    {
+      "cassette": "bedrock-mantle-messages/lowers-system-updates-to-wrapped-user-text-on-haiku-4-5-with-budget-thinking",
+      "protocol": "anthropic-messages",
+      "group": "wrapped-core"
+    },
+    {
+      "cassette": "bedrock-mantle-messages/replays-signed-thinking-through-a-tool-loop-and-native-system-update",
+      "protocol": "anthropic-messages",
+      "group": "wrapped-core"
+    },
+    {
+      "cassette": "bedrock-mantle-messages/strips-unsupported-mid-conversation-effort-updates-on-opus-5-0",
+      "protocol": "anthropic-messages",
+      "group": "wrapped-core"
+    },
+    {
+      "cassette": "bedrock-mantle/streams-text",
+      "protocol": "open-responses",
+      "group": "wrapped-core"
+    },
+    {
+      "cassette": "cartesia-speech/generates-speech",
+      "protocol": "cartesia-speech",
+      "group": "speech"
+    },
+    {
+      "cassette": "cartesia-speech/streams-speech-with-timestamps",
+      "protocol": "cartesia-speech",
+      "group": "speech"
+    },
+    {
       "cassette": "cerebras-chat/cerebras-gpt-oss-120b-text",
       "protocol": "openai-chat",
       "group": "openai-chat"
@@ -99,6 +404,116 @@
       "cassette": "cerebras-chat/cerebras-gpt-oss-120b-tool-loop",
       "protocol": "openai-chat",
       "group": "openai-chat"
+    },
+    {
+      "cassette": "cloudflare-ai-gateway-decision/decides-choice-score-and-predicate-questions",
+      "protocol": "cloudflare-run-decisions",
+      "group": "decisions"
+    },
+    {
+      "cassette": "cloudflare-ai-gateway/cloudflare-ai-gateway-claude-haiku-4-5-text",
+      "protocol": "anthropic-messages",
+      "group": "gateways"
+    },
+    {
+      "cassette": "cloudflare-ai-gateway/cloudflare-ai-gateway-claude-haiku-4-5-tool-loop",
+      "protocol": "anthropic-messages",
+      "group": "gateways"
+    },
+    {
+      "cassette": "cloudflare-ai-gateway/cloudflare-ai-gateway-openai-gpt-5-nano-text",
+      "protocol": "openai-responses",
+      "group": "gateways"
+    },
+    {
+      "cassette": "cloudflare-ai-gateway/cloudflare-ai-gateway-openai-gpt-5-nano-tool-loop",
+      "protocol": "openai-responses",
+      "group": "gateways"
+    },
+    {
+      "cassette": "cloudflare-ai-gateway/cloudflare-ai-gateway-workers-ai-gpt-oss-20b-tools-tool-call",
+      "protocol": "openai-chat",
+      "group": "gateways"
+    },
+    {
+      "cassette": "cloudflare-ai-gateway/cloudflare-ai-gateway-workers-ai-llama-3-1-8b-text",
+      "protocol": "openai-chat",
+      "group": "gateways"
+    },
+    {
+      "cassette": "cloudflare-workers-ai-decision/decides-choice-score-and-predicate-questions",
+      "protocol": "cloudflare-run-decisions",
+      "group": "decisions"
+    },
+    {
+      "cassette": "cloudflare-workers-ai-extraction/extracts-invoice-fields",
+      "protocol": "cloudflare-run-extraction",
+      "group": "extraction"
+    },
+    {
+      "cassette": "cloudflare-workers-ai-images/generates-a-flux-2-image-from-multipart-fields",
+      "protocol": "cloudflare-workers-ai-images",
+      "group": "images"
+    },
+    {
+      "cassette": "cloudflare-workers-ai-images/generates-a-raw-binary-image",
+      "protocol": "cloudflare-workers-ai-images",
+      "group": "images"
+    },
+    {
+      "cassette": "cloudflare-workers-ai/cloudflare-workers-ai-gpt-oss-20b-tools-tool-call",
+      "protocol": "openai-chat",
+      "group": "gateways"
+    },
+    {
+      "cassette": "cloudflare-workers-ai/cloudflare-workers-ai-llama-3-1-8b-text",
+      "protocol": "openai-chat",
+      "group": "gateways"
+    },
+    {
+      "cassette": "cohere-embedding/embeds-text-through-the-compatibility-api",
+      "protocol": "openai-embeddings",
+      "group": "embeddings"
+    },
+    {
+      "cassette": "cohere/continues-a-native-tool-call",
+      "protocol": "cohere-chat",
+      "group": "native-vendors"
+    },
+    {
+      "cassette": "cohere/streams-compatible-chat-reasoning",
+      "protocol": "openai-chat",
+      "group": "native-vendors"
+    },
+    {
+      "cassette": "cohere/streams-native-text-and-usage",
+      "protocol": "cohere-chat",
+      "group": "native-vendors"
+    },
+    {
+      "cassette": "cohere/streams-native-thinking-with-a-budget",
+      "protocol": "cohere-chat",
+      "group": "native-vendors"
+    },
+    {
+      "cassette": "deepgram-speech/generates-speech",
+      "protocol": "deepgram-speech",
+      "group": "speech"
+    },
+    {
+      "cassette": "deepgram-speech/streams-speech",
+      "protocol": "deepgram-speech",
+      "group": "speech"
+    },
+    {
+      "cassette": "deepgram-transcription/splits-utterances-at-speaker-changes",
+      "protocol": "deepgram-transcription",
+      "group": "transcription"
+    },
+    {
+      "cassette": "deepgram-transcription/transcribes-raw-audio-with-speakers-and-word-timestamps",
+      "protocol": "deepgram-transcription",
+      "group": "transcription"
     },
     {
       "cassette": "deepinfra-chat/deepinfra-llama-3-3-70b-text",
@@ -116,6 +531,66 @@
       "group": "openai-chat"
     },
     {
+      "cassette": "digitalocean-chat/gpt-nano-continues-a-tool-call-with-cache-markers",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "digitalocean-chat/gpt-nano-reuses-a-cached-prompt",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "digitalocean-chat/haiku-continues-a-tool-call-with-cache-markers",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "digitalocean-chat/haiku-reuses-a-cached-prompt",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "digitalocean-decision/decides-choice-score-and-predicate-questions",
+      "protocol": "system-one",
+      "group": "decisions"
+    },
+    {
+      "cassette": "digitalocean-responses/calls-a-freeform-text-tool",
+      "protocol": "open-responses",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "digitalocean-responses/continues-a-tool-call",
+      "protocol": "open-responses",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "digitalocean-responses/streams-text",
+      "protocol": "open-responses",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "elevenlabs-speech/generates-speech",
+      "protocol": "elevenlabs-speech",
+      "group": "speech"
+    },
+    {
+      "cassette": "elevenlabs-speech/streams-speech-with-timestamps",
+      "protocol": "elevenlabs-speech",
+      "group": "speech"
+    },
+    {
+      "cassette": "elevenlabs-transcription/groups-diarized-words-into-speaker-turns",
+      "protocol": "elevenlabs-transcription",
+      "group": "transcription"
+    },
+    {
+      "cassette": "elevenlabs-transcription/transcribes-audio-with-word-timestamps",
+      "protocol": "elevenlabs-transcription",
+      "group": "transcription"
+    },
+    {
       "cassette": "gemini-cache/reports-cachedcontenttokencount-on-identical-second-call",
       "protocol": "gemini",
       "group": "gemini"
@@ -124,6 +599,506 @@
       "cassette": "gemini/gemini-2-5-flash-image",
       "protocol": "gemini",
       "group": "gemini"
+    },
+    {
+      "cassette": "google-decision/decides-choice-score-and-predicate-questions",
+      "protocol": "google-decisions",
+      "group": "decisions"
+    },
+    {
+      "cassette": "google-embedding/embeds-an-image-and-text-into-one-vector-each",
+      "protocol": "google-embed-content",
+      "group": "embeddings"
+    },
+    {
+      "cassette": "google-embedding/embeds-text-through-batchembedcontents",
+      "protocol": "google-embed-content",
+      "group": "embeddings"
+    },
+    {
+      "cassette": "google-embedding/maps-inputtype-to-a-task-type-for-gemini-embedding-001",
+      "protocol": "google-embed-content",
+      "group": "embeddings"
+    },
+    {
+      "cassette": "google-images/edits-an-image",
+      "protocol": "google-images",
+      "group": "images"
+    },
+    {
+      "cassette": "google-images/generates-an-image",
+      "protocol": "google-images",
+      "group": "images"
+    },
+    {
+      "cassette": "google-interactions-video/generates-a-video",
+      "protocol": "google-interactions-video",
+      "group": "video"
+    },
+    {
+      "cassette": "google-interactions/continues-tool-results-with-previous-interaction-id",
+      "protocol": "google-interactions",
+      "group": "native-vendors"
+    },
+    {
+      "cassette": "google-interactions/replays-native-tool-results-and-signatures-statelessly",
+      "protocol": "google-interactions",
+      "group": "native-vendors"
+    },
+    {
+      "cassette": "google-interactions/streams-reasoning-and-retains-thought-signatures",
+      "protocol": "google-interactions",
+      "group": "native-vendors"
+    },
+    {
+      "cassette": "google-interactions/streams-text-and-reports-usage",
+      "protocol": "google-interactions",
+      "group": "native-vendors"
+    },
+    {
+      "cassette": "google-speech/generates-speech",
+      "protocol": "google-speech",
+      "group": "speech"
+    },
+    {
+      "cassette": "google-speech/streams-speech",
+      "protocol": "google-speech",
+      "group": "speech"
+    },
+    {
+      "cassette": "google-transcription/streams-speaker-turns",
+      "protocol": "google-transcription",
+      "group": "transcription"
+    },
+    {
+      "cassette": "google-transcription/transcribes-with-speakers-and-word-timestamps",
+      "protocol": "google-transcription",
+      "group": "transcription"
+    },
+    {
+      "cassette": "google-vertex-embedding/embeds-gemini-embedding-001-one-text-per-predict-request",
+      "protocol": "google-vertex-predict-embeddings",
+      "group": "embeddings"
+    },
+    {
+      "cassette": "google-vertex-embedding/embeds-text-through-predict",
+      "protocol": "google-vertex-predict-embeddings",
+      "group": "embeddings"
+    },
+    {
+      "cassette": "google-vertex/calls-a-tool",
+      "protocol": "gemini",
+      "group": "native-vendors"
+    },
+    {
+      "cassette": "google-vertex/continues-after-a-tool-result",
+      "protocol": "gemini",
+      "group": "native-vendors"
+    },
+    {
+      "cassette": "google-vertex/streams-text",
+      "protocol": "gemini",
+      "group": "native-vendors"
+    },
+    {
+      "cassette": "groq-chat/continues-qwen-parallel-tool-calls",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "groq-chat/replays-gpt-oss-reasoning-through-a-tool-loop",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "groq-chat/streams-qwen-parsed-reasoning",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "groq-chat/streams-text-with-usage",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "meta-chat/continues-a-generated-tool-call",
+      "protocol": "openai-chat",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "meta-chat/streams-text-with-default-reasoning",
+      "protocol": "openai-chat",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "meta-chat/streams-text-with-high-reasoning",
+      "protocol": "openai-chat",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "meta-chat/streams-text-with-low-reasoning",
+      "protocol": "openai-chat",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "meta-chat/streams-text-with-max-reasoning",
+      "protocol": "openai-chat",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "meta-chat/streams-text-with-medium-reasoning",
+      "protocol": "openai-chat",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "meta-chat/streams-text-with-minimal-reasoning",
+      "protocol": "openai-chat",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "meta-chat/streams-text-with-xhigh-reasoning",
+      "protocol": "openai-chat",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "meta-images/edits-image-bytes-and-returns-png",
+      "protocol": "meta-images",
+      "group": "images"
+    },
+    {
+      "cassette": "meta-images/generates-default-webp-bytes",
+      "protocol": "meta-images",
+      "group": "images"
+    },
+    {
+      "cassette": "meta-images/replays-a-signed-image-handle-for-a-responses-edit",
+      "protocol": "meta-responses",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "meta-messages/replays-encrypted-thinking-through-a-tool-loop",
+      "protocol": "meta-messages",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "meta-messages/streams-text-with-adaptive-thinking",
+      "protocol": "meta-messages",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "meta-messages/streams-text-with-enabled-thinking",
+      "protocol": "meta-messages",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "meta-responses/replays-encrypted-reasoning-through-a-tool-loop",
+      "protocol": "meta-responses",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "meta-responses/streams-text-with-default-reasoning",
+      "protocol": "meta-responses",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "meta-responses/streams-text-with-high-reasoning",
+      "protocol": "meta-responses",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "meta-responses/streams-text-with-low-reasoning",
+      "protocol": "meta-responses",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "meta-responses/streams-text-with-max-reasoning",
+      "protocol": "meta-responses",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "meta-responses/streams-text-with-medium-reasoning",
+      "protocol": "meta-responses",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "meta-responses/streams-text-with-minimal-reasoning",
+      "protocol": "meta-responses",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "meta-responses/streams-text-with-xhigh-reasoning",
+      "protocol": "meta-responses",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "meta-search/searches-and-replays-grounded-messages",
+      "protocol": "meta-messages",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "meta-search/searches-and-replays-grounded-responses",
+      "protocol": "meta-responses",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "minimax-chat/m3-continues-a-tool-loop-with-default-thinking",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "minimax-chat/m3-streams-text-with-thinking-disabled",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "minimax-images/generates-an-image",
+      "protocol": "minimax-images",
+      "group": "images"
+    },
+    {
+      "cassette": "minimax-images/generates-from-a-subject-reference",
+      "protocol": "minimax-images",
+      "group": "images"
+    },
+    {
+      "cassette": "minimax-messages/m2-7-streams-default-thinking",
+      "protocol": "anthropic-messages",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "minimax-messages/m3-continues-a-tool-loop-with-adaptive-thinking",
+      "protocol": "anthropic-messages",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "minimax-messages/m3-generates-a-named-tool-call-with-default-thinking-off",
+      "protocol": "anthropic-messages",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "minimax-messages/m3-streams-adaptive-thinking",
+      "protocol": "anthropic-messages",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "minimax-messages/m3-streams-text-with-thinking-disabled",
+      "protocol": "anthropic-messages",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "minimax-responses/m3-continues-a-tool-loop-with-effort-minimal",
+      "protocol": "open-responses",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "minimax-responses/m3-streams-text-with-effort-none",
+      "protocol": "open-responses",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "minimax-video/generates-a-hailuo-video-from-a-first-frame",
+      "protocol": "minimax-video",
+      "group": "video"
+    },
+    {
+      "cassette": "minimax-video/generates-an-h3-video",
+      "protocol": "minimax-video",
+      "group": "video"
+    },
+    {
+      "cassette": "mistral-chat-glm/streams-an-indexed-tool-call",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "mistral-chat/drives-a-tool-loop",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "mistral-chat/replays-native-reasoning",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "mistral-chat/streams-text-with-usage",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-chat/k3-reads-image-bytes",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-chat/k3-respects-tool-choice-none",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-chat/k3-respects-tool-choice-required",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-chat/k3-returns-native-structured-output",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-chat/k3-streams-text-with-default-effort",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-chat/k3-streams-text-with-high-effort",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-chat/k3-streams-text-with-low-effort",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-chat/k3-streams-text-with-max-effort",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-chat/kimi-k2-6-preserves-reasoning-through-a-tool-loop-and-follow-up",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-chat/kimi-k2-6-streams-text-with-default-thinking",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-chat/kimi-k2-6-streams-text-with-disabled-thinking",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-chat/kimi-k2-6-streams-text-with-enabled-thinking",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-chat/kimi-k2-7-code-highspeed-preserves-reasoning-through-a-tool-loop-and-follow-up",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-chat/kimi-k2-7-code-highspeed-streams-text-with-default-thinking",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-chat/kimi-k2-7-code-preserves-reasoning-through-a-tool-loop-and-follow-up",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-chat/kimi-k2-7-code-streams-text-with-default-thinking",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-chat/kimi-k3-preserves-reasoning-through-a-tool-loop-and-follow-up",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-messages/k3-reads-image-bytes",
+      "protocol": "anthropic-messages",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-messages/k3-respects-tool-choice-none",
+      "protocol": "anthropic-messages",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-messages/k3-respects-tool-choice-required",
+      "protocol": "anthropic-messages",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-messages/k3-returns-native-structured-output",
+      "protocol": "anthropic-messages",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-messages/k3-streams-text-with-default-effort",
+      "protocol": "anthropic-messages",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-messages/k3-streams-text-with-high-effort",
+      "protocol": "anthropic-messages",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-messages/k3-streams-text-with-low-effort",
+      "protocol": "anthropic-messages",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-messages/k3-streams-text-with-max-effort",
+      "protocol": "anthropic-messages",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-messages/kimi-k3-preserves-reasoning-through-a-tool-loop-and-follow-up",
+      "protocol": "anthropic-messages",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-responses/k3-reads-image-bytes",
+      "protocol": "open-responses",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-responses/k3-rejects-unsupported-tool-choice-none",
+      "protocol": "open-responses",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-responses/k3-rejects-unsupported-tool-choice-required",
+      "protocol": "open-responses",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-responses/k3-returns-native-structured-output",
+      "protocol": "open-responses",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-responses/k3-streams-text-with-default-effort",
+      "protocol": "open-responses",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-responses/k3-streams-text-with-high-effort",
+      "protocol": "open-responses",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-responses/k3-streams-text-with-low-effort",
+      "protocol": "open-responses",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-responses/k3-streams-text-with-max-effort",
+      "protocol": "open-responses",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "moonshot-responses/kimi-k3-preserves-reasoning-through-a-tool-loop-and-follow-up",
+      "protocol": "open-responses",
+      "group": "chat-variants"
     },
     {
       "cassette": "openai-compatible-chat/gemini-parallel-tool-signatures",
@@ -139,6 +1114,31 @@
       "cassette": "openai-compatible-chat/togetherai-streams-tool-call",
       "protocol": "openai-chat",
       "group": "openai-chat"
+    },
+    {
+      "cassette": "openai-decision/decides-choice-score-and-predicate-questions-about-json-state",
+      "protocol": "openai-decisions",
+      "group": "decisions"
+    },
+    {
+      "cassette": "openai-embedding/embeds-text-with-requested-dimensions",
+      "protocol": "openai-embeddings",
+      "group": "embeddings"
+    },
+    {
+      "cassette": "openai-images/edits-an-image",
+      "protocol": "openai-images",
+      "group": "images"
+    },
+    {
+      "cassette": "openai-images/generates-an-image",
+      "protocol": "openai-images",
+      "group": "images"
+    },
+    {
+      "cassette": "openai-images/streams-a-partial-image-before-the-final-image",
+      "protocol": "openai-images",
+      "group": "images"
     },
     {
       "cassette": "openai-responses-cache/caches-the-system-prompt-on-gpt-6-2-sol",
@@ -191,6 +1191,91 @@
       "group": "open-responses"
     },
     {
+      "cassette": "openai-speech/generates-speech",
+      "protocol": "openai-speech",
+      "group": "speech"
+    },
+    {
+      "cassette": "openai-speech/streams-speech",
+      "protocol": "openai-speech",
+      "group": "speech"
+    },
+    {
+      "cassette": "openai-transcription/diarizes-speakers-into-segments",
+      "protocol": "openai-transcription",
+      "group": "transcription"
+    },
+    {
+      "cassette": "openai-transcription/returns-whisper-word-timestamps",
+      "protocol": "openai-transcription",
+      "group": "transcription"
+    },
+    {
+      "cassette": "openai-transcription/streams-text-deltas",
+      "protocol": "openai-transcription",
+      "group": "transcription"
+    },
+    {
+      "cassette": "openai-transcription/transcribes-with-a-language-hint",
+      "protocol": "openai-transcription",
+      "group": "transcription"
+    },
+    {
+      "cassette": "opencode-decision/decides-choice-score-and-predicate-questions",
+      "protocol": "system-one",
+      "group": "decisions"
+    },
+    {
+      "cassette": "openrouter-decision/decides-choice-score-and-predicate-questions",
+      "protocol": "system-one",
+      "group": "decisions"
+    },
+    {
+      "cassette": "openrouter-images/edits-an-image-through-input-references",
+      "protocol": "openai-images",
+      "group": "images"
+    },
+    {
+      "cassette": "openrouter-images/renders-flux-3-from-an-aspect-ratio-and-tier",
+      "protocol": "openai-images",
+      "group": "images"
+    },
+    {
+      "cassette": "openrouter-images/renders-gemini-at-the-requested-2k-tier",
+      "protocol": "openai-images",
+      "group": "images"
+    },
+    {
+      "cassette": "openrouter-reasoning",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "openrouter-reasoning-tool-loop",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "openrouter-responses/calls-a-freeform-text-tool",
+      "protocol": "open-responses",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "openrouter-responses/continues-a-tool-call",
+      "protocol": "open-responses",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "openrouter-responses/streams-text",
+      "protocol": "open-responses",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "openrouter-video/generates-a-video",
+      "protocol": "openrouter-video",
+      "group": "video"
+    },
+    {
       "cassette": "pdf/anthropic-tool-result",
       "protocol": "anthropic-messages",
       "group": "anthropic-messages"
@@ -231,6 +1316,56 @@
       "group": "open-responses"
     },
     {
+      "cassette": "pdf/xai-tool-result",
+      "protocol": "xai-responses",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "pdf/xai-user-input",
+      "protocol": "xai-responses",
+      "group": "vendor-variants"
+    },
+    {
+      "cassette": "typesafe-decision/decides-choice-score-and-predicate-questions",
+      "protocol": "system-one",
+      "group": "decisions"
+    },
+    {
+      "cassette": "venice-chat/claude-opus-4-8-preserves-reasoning-through-a-tool-loop-and-follow-up",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "venice-chat/deepseek-v4-flash-preserves-reasoning-through-a-tool-loop-and-follow-up",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "venice-chat/gemini-3-1-pro-preview-preserves-reasoning-through-a-tool-loop-and-follow-up",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "venice-chat/gemini-preserves-per-call-signatures-through-parallel-tools",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "venice-chat/openai-gpt-54-mini-preserves-reasoning-through-a-tool-loop-and-follow-up",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "venice-chat/qwen-disables-reasoning",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "venice-chat/surfaces-venice-model-errors",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
       "cassette": "venice-responses/calls-a-freeform-text-tool",
       "protocol": "open-responses",
       "group": "open-responses"
@@ -246,6 +1381,16 @@
       "group": "open-responses"
     },
     {
+      "cassette": "vercel-ai-gateway-images/generates-an-image",
+      "protocol": "openai-images",
+      "group": "images"
+    },
+    {
+      "cassette": "vercel-ai-gateway-images/sizes-grok-through-xai-provider-options",
+      "protocol": "openai-images",
+      "group": "images"
+    },
+    {
       "cassette": "vercel-ai-gateway-reasoning",
       "protocol": "openai-chat",
       "group": "openai-chat"
@@ -254,6 +1399,171 @@
       "cassette": "vercel-ai-gateway-reasoning-tool-loop",
       "protocol": "openai-chat",
       "group": "openai-chat"
+    },
+    {
+      "cassette": "vercel-native/automatically-caches-distinct-claude-system-blocks",
+      "protocol": "anthropic-messages",
+      "group": "gateways"
+    },
+    {
+      "cassette": "vercel-native/continues-chat-claude-reasoning-and-tools",
+      "protocol": "openai-chat",
+      "group": "gateways"
+    },
+    {
+      "cassette": "vercel-native/continues-chat-muse-reasoning-and-tools",
+      "protocol": "openai-chat",
+      "group": "gateways"
+    },
+    {
+      "cassette": "vercel-native/continues-messages-claude-reasoning-and-tools",
+      "protocol": "anthropic-messages",
+      "group": "gateways"
+    },
+    {
+      "cassette": "vercel-native/continues-messages-deepseek-reasoning-and-tools",
+      "protocol": "anthropic-messages",
+      "group": "gateways"
+    },
+    {
+      "cassette": "vercel-native/continues-messages-gemini-reasoning-and-tools",
+      "protocol": "anthropic-messages",
+      "group": "gateways"
+    },
+    {
+      "cassette": "vercel-native/continues-responses-gpt-reasoning-and-tools",
+      "protocol": "open-responses",
+      "group": "gateways"
+    },
+    {
+      "cassette": "vercel-native/continues-responses-grok-reasoning-and-tools",
+      "protocol": "open-responses",
+      "group": "gateways"
+    },
+    {
+      "cassette": "vercel-native/rejects-invalid-credentials-without-retryable-classification",
+      "protocol": "anthropic-messages",
+      "group": "gateways"
+    },
+    {
+      "cassette": "xai-images/edits-an-image",
+      "protocol": "xai-images",
+      "group": "images"
+    },
+    {
+      "cassette": "xai-images/generates-an-image",
+      "protocol": "xai-images",
+      "group": "images"
+    },
+    {
+      "cassette": "xai-video/generates-a-video",
+      "protocol": "xai-video",
+      "group": "video"
+    },
+    {
+      "cassette": "zai-chat/glm-4-5-calls-a-tool-without-streaming-arguments",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "zai-chat/glm-4-7-streams-thinking-disabled",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "zai-chat/glm-4-7-streams-thinking-enabled",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "zai-chat/glm-5-2-streams-high-effort",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "zai-chat/glm-5-2-streams-low-effort",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "zai-chat/glm-5-2-streams-max-effort",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "zai-chat/glm-5-2-streams-medium-effort",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "zai-chat/glm-5-2-streams-minimal-effort",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "zai-chat/glm-5-2-streams-none-effort",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "zai-chat/glm-5-2-streams-thinking-disabled",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "zai-chat/glm-5-2-streams-thinking-enabled",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "zai-chat/glm-5-2-streams-xhigh-effort",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "zai-chat/glm-5-3-flash-reads-image-bytes",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "zai-chat/glm-5-3-preserves-reasoning-through-a-tool-loop-and-follow-up",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "zai-chat/glm-5-3-rejects-disabled-thinking",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "zai-chat/glm-5-3-returns-a-json-object",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "zai-chat/glm-5-3-streams-default-effort",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "zai-chat/glm-5-3-streams-high-effort",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "zai-chat/glm-5-3-streams-low-effort",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "zai-chat/glm-5-3-streams-max-effort",
+      "protocol": "openai-chat",
+      "group": "chat-variants"
+    },
+    {
+      "cassette": "zai-images/generates-an-image",
+      "protocol": "zai-images",
+      "group": "images"
     }
   ]
 }

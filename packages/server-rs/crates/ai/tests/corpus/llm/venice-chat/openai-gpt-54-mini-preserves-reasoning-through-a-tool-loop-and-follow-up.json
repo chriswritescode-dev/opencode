@@ -1,0 +1,2879 @@
+{
+  "cassette": "venice-chat/openai-gpt-54-mini-preserves-reasoning-through-a-tool-loop-and-follow-up",
+  "protocol": "openai-chat",
+  "routeId": "venice-chat",
+  "clockEpochMs": 1767323045000,
+  "steps": [
+    {
+      "model": {
+        "id": "openai-gpt-54-mini",
+        "provider": "venice",
+        "route": {
+          "id": "venice-chat",
+          "protocol": "venice-chat",
+          "providerMetadataKey": "venice"
+        },
+        "endpoint": {
+          "baseURL": "https://api.venice.ai/api/v1",
+          "path": "/chat/completions"
+        },
+        "compatibility": {
+          "maxTokensField": "max_completion_tokens"
+        },
+        "capabilities": {
+          "promptCacheKey": true
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_venice_chat_openai_gpt_54_mini_tool_loop",
+        "maxTokens": 4096,
+        "system": [
+          {
+            "type": "text",
+            "text": "Use the provided tool for private data. After receiving the result, give only the requested number; do not call the tool again."
+          }
+        ],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Look up conversion rate for code ZEBRA. Then multiply that rate by 17 and add 9. You must use lookup_rate before answering."
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "tool",
+            "name": "lookup_rate",
+            "description": "Retrieve the private conversion rate for a code. Only this tool knows the rate.",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "enum": [
+                    "ZEBRA",
+                    "MOOSE"
+                  ]
+                }
+              },
+              "required": [
+                "code"
+              ],
+              "additionalProperties": false
+            }
+          }
+        ]
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/venice",
+        "modelID": "openai-gpt-54-mini",
+        "settings": {
+          "apiKey": "fixture"
+        }
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://api.venice.ai/api/v1/chat/completions",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "815",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"openai-gpt-54-mini\",\"messages\":[{\"role\":\"system\",\"content\":\"Use the provided tool for private data. After receiving the result, give only the requested number; do not call the tool again.\"},{\"role\":\"user\",\"content\":\"Look up conversion rate for code ZEBRA. Then multiply that rate by 17 and add 9. You must use lookup_rate before answering.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"lookup_rate\",\"description\":\"Retrieve the private conversion rate for a code. Only this tool knows the rate.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"code\":{\"type\":\"string\",\"enum\":[\"ZEBRA\",\"MOOSE\"]}},\"required\":[\"code\"],\"additionalProperties\":false},\"strict\":false}}],\"stream\":true,\"stream_options\":{\"include_usage\":true},\"max_completion_tokens\":4096,\"venice_parameters\":{\"include_venice_system_prompt\":false}}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream; charset=utf-8"
+            },
+            "body": "data: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169264,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"**Calculating private data**\\n\\nI\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169264,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" need\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169264,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" to\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169264,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" follow\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169264,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" the\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169264,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" developer\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169264,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"'s\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169264,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" instructions\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169264,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" and\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169264,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" use\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169264,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" the\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169264,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" provided\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169264,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" tool\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169264,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" to\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169264,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" handle\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169264,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" private\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169264,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" data\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169264,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\".\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169264,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" First\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169264,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\",\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169264,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" I\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169264,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" should\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169264,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" look\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169264,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" up\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169264,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" the\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169264,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" rate\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169264,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" for\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169264,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" \\\"\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169264,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"Z\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169264,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"EB\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169264,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"RA\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169264,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"\\\"\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169264,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" before\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" I\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" answer\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\".\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" After\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" that\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\",\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" I\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"’ll\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" multiply\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" the\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" rate\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" by\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" 17\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" and\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" then\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" add\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" 9\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" to\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" get\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" the\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" required\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" number\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\".\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" It\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"’s\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" important\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" to\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" give\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" only\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" the\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" requested\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" number\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" and\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" avoid\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" making\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" another\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" tool\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" call\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\".\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" I\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"’ll\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" likely\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" use\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" the\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" commentary\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" channel\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" for\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" this\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" tool\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" call\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\".\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":0,\"id\":\"call_onp7EArhOgXu0hGRF6Y5WHLu\",\"function\":{\"name\":\"lookup_rate\",\"arguments\":\"\"},\"type\":\"function\"}]},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"{\\\"\"},\"type\":\"function\"}]},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"code\"},\"type\":\"function\"}]},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\":\\\"\"},\"type\":\"function\"}]},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"Z\"},\"type\":\"function\"}]},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"EB\"},\"type\":\"function\"}]},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"RA\"},\"type\":\"function\"}]},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\"}\"},\"type\":\"function\"}]},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"\\n\\n__ENCRYPTED_REASONING__id=rs_014406f0f45e19c6016ac312f01d2487d2a5f2bdb7fbc42f76\\ngAAAAABqwxLxEN4vtmI2WcZ_aDDttdmPwAHgnV2gLZBo_f_mmTdGm4oZzE2JVzcj72AeXHyABmmo2VQN4nXaZK9GSSUZRlYL8mECMxKTj9AMgL8zlnuN5WDexxU-e9SduGP36RN9nH56-go4dz8eu5DEMvMf_TMoTnxz5AnC_UWbty63Vp8jEgkD-DoRjd0cg9LjthP_FLyMvP2Wj9qMJxEuO7Mw2_Pu4I3YeChnygLvmRfRR2QkamL5vjb9yHkl0Lb502vEGB2DW_czNEpHxisifvwRBjA7vk0mbn2dlhiR80aNHO71hC-QqrtUfPXx2HIbVLfbPdJf0saI0wD7ZuCJSQCBfB7fMCnj2ZLQeXa67lgXwsZDLBg4HmSJFvsMinx1IHIjUk7iebsKvmYx40cjqpXL3wj7htZWk2hO9OyGGUwlRsn5THdhTsgwg2SPbuHxb-sLPQnEFZ7bRp5lsVm31X2dlHDa1uZ7KLJZyy9g2CLIKsBwFFoCK7jY3HBXfL21ac5TAkOzVmz-XKl6OMPSl-PSdByOO15uHHpyOcJvJvuaea5Tj1nihtuDlhUP5EQPi7MiWpJMFo9AhDCafAbaQOEF5W8AQPeb_GXvPTzhySRAC8PxrhraEcZ4fjpjLqkv6mi_A1YHwbHEHHWjcK5VEKc3dadlIM_s6djclFBocVXrvnQQElVhWBDM-RtK9sgR07BFj5LVk6fYvg0b6gQnbDuQH18jhtPoj0SX0lN921XEQ1ebMCWGLANND2ew_wyNShYouJohefLULicWG57xh_yV1KEG1ufBedq2CPvCHA9Hm5UssbeJx5yBriyUA2Yh4D7j2UBT_KDWEHydDLQ4mWEyLTfQn0ZB3ZOqkU79z3HpK2w_VHUnkl5nEYEU2bmF5lsG33B4gtbQIBtZT76-fizXsvVZx__taOWXg96VMi3CD3DY0TS76B4U92KFmAFJ4aeiM8bkPuzf1Qd202EWE39CotUDoxAM6mzQu0NObTDnGQE776P6kzUoIKUmP8sDwYG5xot8ZTuXcBYysvj4-pFC_fvqMhsdfgonbke78SIjHtmePsOkfHBnCjSSUFKEbaM0nm8jJ6nYVwiYFuXBKD31QD462TAC7ORVIn32sWSgV2t3Sd7vq4ws2Yy7nUoILRAt_NYQUEXt7_R8J5YWj1L6Ruagk7Vtt-CAWxT6FhVyU4JhMb6-tJrYHgdmtunYrjpHBiOVdQR25aOmLbc_WlDvpO4azcRazpgkASAjPaaDycYceKcheiyUDBgFrvcSYrS1fJb6YZrTzOKw1Ztd0YsklS4nc3jffLNLrBQVvnkajj0OHjGcW8wkP93TCMJyt8tfIH0Rd5hIZLY5EqUWj9yZgXO7CuDKQZIEI0oZXef3mjfQqH8Q9rZsSgS3DI3mCF3CN003R_ZKKLGWkG8VzwlvdocNxaV_Z-ujp_O0YMyOcmEoTJI-j3JP3nefNboyP7EWND6VWDjJbqg64dvu0PK0EW5L0lnAu0l-WVb2qmXLYao_7bOlD8JLFZOyUgHAWmetmnm0NuxzevJEVBkNUu1jQatPzf2Jzf9SGKM_3bM_z0TM5McCZ2Pikzwp96QlaiEEWV_j2g02PT5Y3td-lfpoKxoFD5tltGNY9TlPzK-4a9Iz0hloiCprxWMLGKw2JzctrPF1xr42PKGNgPE84xAQ3sQ4mQ==\",\"reasoning_encrypted\":true,\"reasoning_details\":[{\"type\":\"reasoning.encrypted\",\"format\":\"openai-responses-v1\",\"index\":0,\"id\":\"rs_014406f0f45e19c6016ac312f01d2487d2a5f2bdb7fbc42f76\",\"data\":\"gAAAAABqwxLxEN4vtmI2WcZ_aDDttdmPwAHgnV2gLZBo_f_mmTdGm4oZzE2JVzcj72AeXHyABmmo2VQN4nXaZK9GSSUZRlYL8mECMxKTj9AMgL8zlnuN5WDexxU-e9SduGP36RN9nH56-go4dz8eu5DEMvMf_TMoTnxz5AnC_UWbty63Vp8jEgkD-DoRjd0cg9LjthP_FLyMvP2Wj9qMJxEuO7Mw2_Pu4I3YeChnygLvmRfRR2QkamL5vjb9yHkl0Lb502vEGB2DW_czNEpHxisifvwRBjA7vk0mbn2dlhiR80aNHO71hC-QqrtUfPXx2HIbVLfbPdJf0saI0wD7ZuCJSQCBfB7fMCnj2ZLQeXa67lgXwsZDLBg4HmSJFvsMinx1IHIjUk7iebsKvmYx40cjqpXL3wj7htZWk2hO9OyGGUwlRsn5THdhTsgwg2SPbuHxb-sLPQnEFZ7bRp5lsVm31X2dlHDa1uZ7KLJZyy9g2CLIKsBwFFoCK7jY3HBXfL21ac5TAkOzVmz-XKl6OMPSl-PSdByOO15uHHpyOcJvJvuaea5Tj1nihtuDlhUP5EQPi7MiWpJMFo9AhDCafAbaQOEF5W8AQPeb_GXvPTzhySRAC8PxrhraEcZ4fjpjLqkv6mi_A1YHwbHEHHWjcK5VEKc3dadlIM_s6djclFBocVXrvnQQElVhWBDM-RtK9sgR07BFj5LVk6fYvg0b6gQnbDuQH18jhtPoj0SX0lN921XEQ1ebMCWGLANND2ew_wyNShYouJohefLULicWG57xh_yV1KEG1ufBedq2CPvCHA9Hm5UssbeJx5yBriyUA2Yh4D7j2UBT_KDWEHydDLQ4mWEyLTfQn0ZB3ZOqkU79z3HpK2w_VHUnkl5nEYEU2bmF5lsG33B4gtbQIBtZT76-fizXsvVZx__taOWXg96VMi3CD3DY0TS76B4U92KFmAFJ4aeiM8bkPuzf1Qd202EWE39CotUDoxAM6mzQu0NObTDnGQE776P6kzUoIKUmP8sDwYG5xot8ZTuXcBYysvj4-pFC_fvqMhsdfgonbke78SIjHtmePsOkfHBnCjSSUFKEbaM0nm8jJ6nYVwiYFuXBKD31QD462TAC7ORVIn32sWSgV2t3Sd7vq4ws2Yy7nUoILRAt_NYQUEXt7_R8J5YWj1L6Ruagk7Vtt-CAWxT6FhVyU4JhMb6-tJrYHgdmtunYrjpHBiOVdQR25aOmLbc_WlDvpO4azcRazpgkASAjPaaDycYceKcheiyUDBgFrvcSYrS1fJb6YZrTzOKw1Ztd0YsklS4nc3jffLNLrBQVvnkajj0OHjGcW8wkP93TCMJyt8tfIH0Rd5hIZLY5EqUWj9yZgXO7CuDKQZIEI0oZXef3mjfQqH8Q9rZsSgS3DI3mCF3CN003R_ZKKLGWkG8VzwlvdocNxaV_Z-ujp_O0YMyOcmEoTJI-j3JP3nefNboyP7EWND6VWDjJbqg64dvu0PK0EW5L0lnAu0l-WVb2qmXLYao_7bOlD8JLFZOyUgHAWmetmnm0NuxzevJEVBkNUu1jQatPzf2Jzf9SGKM_3bM_z0TM5McCZ2Pikzwp96QlaiEEWV_j2g02PT5Y3td-lfpoKxoFD5tltGNY9TlPzK-4a9Iz0hloiCprxWMLGKw2JzctrPF1xr42PKGNgPE84xAQ3sQ4mQ==\"}]},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"tool_calls\"}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312efd07487d28fc51d6572174c85\",\"object\":\"chat.completion.chunk\",\"created\":1791169265,\"model\":\"openai-gpt-54-mini\",\"choices\":[],\"usage\":{\"prompt_tokens\":121,\"completion_tokens\":85,\"total_tokens\":206,\"completion_tokens_details\":{\"reasoning_tokens\":63}},\"cost\":{\"usd\":0.0005915625,\"diem\":0}}\n\ndata: [DONE]\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "reasoning-start",
+          "id": "reasoning-0",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "**Calculating private data**\n\nI",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " need",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " to",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " follow",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " the",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " developer",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "'s",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " instructions",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " and",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " use",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " the",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " provided",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " tool",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " to",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " handle",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " private",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " data",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ".",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " First",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ",",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " I",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " should",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " look",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " up",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " the",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " rate",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " for",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " \"",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "Z",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "EB",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "RA",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "\"",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " before",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " I",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " answer",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ".",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " After",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " that",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ",",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " I",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "’ll",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " multiply",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " the",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " rate",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " by",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " 17",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " and",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " then",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " add",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " 9",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " to",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " get",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " the",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " required",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " number",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ".",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " It",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "’s",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " important",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " to",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " give",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " only",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " the",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " requested",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " number",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " and",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " avoid",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " making",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " another",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " tool",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " call",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ".",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " I",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "’ll",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " likely",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " use",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " the",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " commentary",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " channel",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " for",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " this",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " tool",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " call",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ".",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "tool-input-start",
+          "id": "call_onp7EArhOgXu0hGRF6Y5WHLu",
+          "name": "lookup_rate"
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "call_onp7EArhOgXu0hGRF6Y5WHLu",
+          "name": "lookup_rate",
+          "text": "{\"",
+          "input": {}
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "call_onp7EArhOgXu0hGRF6Y5WHLu",
+          "name": "lookup_rate",
+          "text": "code",
+          "input": {}
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "call_onp7EArhOgXu0hGRF6Y5WHLu",
+          "name": "lookup_rate",
+          "text": "\":\"",
+          "input": {
+            "code": ""
+          }
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "call_onp7EArhOgXu0hGRF6Y5WHLu",
+          "name": "lookup_rate",
+          "text": "Z",
+          "input": {
+            "code": "Z"
+          }
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "call_onp7EArhOgXu0hGRF6Y5WHLu",
+          "name": "lookup_rate",
+          "text": "EB",
+          "input": {
+            "code": "ZEB"
+          }
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "call_onp7EArhOgXu0hGRF6Y5WHLu",
+          "name": "lookup_rate",
+          "text": "RA",
+          "input": {
+            "code": "ZEBRA"
+          }
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "call_onp7EArhOgXu0hGRF6Y5WHLu",
+          "name": "lookup_rate",
+          "text": "\"}",
+          "input": {
+            "code": "ZEBRA"
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "\n\n",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-end",
+          "id": "reasoning-0",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content",
+              "reasoningDetails": [
+                {
+                  "type": "reasoning.encrypted",
+                  "data": "gAAAAABqwxLxEN4vtmI2WcZ_aDDttdmPwAHgnV2gLZBo_f_mmTdGm4oZzE2JVzcj72AeXHyABmmo2VQN4nXaZK9GSSUZRlYL8mECMxKTj9AMgL8zlnuN5WDexxU-e9SduGP36RN9nH56-go4dz8eu5DEMvMf_TMoTnxz5AnC_UWbty63Vp8jEgkD-DoRjd0cg9LjthP_FLyMvP2Wj9qMJxEuO7Mw2_Pu4I3YeChnygLvmRfRR2QkamL5vjb9yHkl0Lb502vEGB2DW_czNEpHxisifvwRBjA7vk0mbn2dlhiR80aNHO71hC-QqrtUfPXx2HIbVLfbPdJf0saI0wD7ZuCJSQCBfB7fMCnj2ZLQeXa67lgXwsZDLBg4HmSJFvsMinx1IHIjUk7iebsKvmYx40cjqpXL3wj7htZWk2hO9OyGGUwlRsn5THdhTsgwg2SPbuHxb-sLPQnEFZ7bRp5lsVm31X2dlHDa1uZ7KLJZyy9g2CLIKsBwFFoCK7jY3HBXfL21ac5TAkOzVmz-XKl6OMPSl-PSdByOO15uHHpyOcJvJvuaea5Tj1nihtuDlhUP5EQPi7MiWpJMFo9AhDCafAbaQOEF5W8AQPeb_GXvPTzhySRAC8PxrhraEcZ4fjpjLqkv6mi_A1YHwbHEHHWjcK5VEKc3dadlIM_s6djclFBocVXrvnQQElVhWBDM-RtK9sgR07BFj5LVk6fYvg0b6gQnbDuQH18jhtPoj0SX0lN921XEQ1ebMCWGLANND2ew_wyNShYouJohefLULicWG57xh_yV1KEG1ufBedq2CPvCHA9Hm5UssbeJx5yBriyUA2Yh4D7j2UBT_KDWEHydDLQ4mWEyLTfQn0ZB3ZOqkU79z3HpK2w_VHUnkl5nEYEU2bmF5lsG33B4gtbQIBtZT76-fizXsvVZx__taOWXg96VMi3CD3DY0TS76B4U92KFmAFJ4aeiM8bkPuzf1Qd202EWE39CotUDoxAM6mzQu0NObTDnGQE776P6kzUoIKUmP8sDwYG5xot8ZTuXcBYysvj4-pFC_fvqMhsdfgonbke78SIjHtmePsOkfHBnCjSSUFKEbaM0nm8jJ6nYVwiYFuXBKD31QD462TAC7ORVIn32sWSgV2t3Sd7vq4ws2Yy7nUoILRAt_NYQUEXt7_R8J5YWj1L6Ruagk7Vtt-CAWxT6FhVyU4JhMb6-tJrYHgdmtunYrjpHBiOVdQR25aOmLbc_WlDvpO4azcRazpgkASAjPaaDycYceKcheiyUDBgFrvcSYrS1fJb6YZrTzOKw1Ztd0YsklS4nc3jffLNLrBQVvnkajj0OHjGcW8wkP93TCMJyt8tfIH0Rd5hIZLY5EqUWj9yZgXO7CuDKQZIEI0oZXef3mjfQqH8Q9rZsSgS3DI3mCF3CN003R_ZKKLGWkG8VzwlvdocNxaV_Z-ujp_O0YMyOcmEoTJI-j3JP3nefNboyP7EWND6VWDjJbqg64dvu0PK0EW5L0lnAu0l-WVb2qmXLYao_7bOlD8JLFZOyUgHAWmetmnm0NuxzevJEVBkNUu1jQatPzf2Jzf9SGKM_3bM_z0TM5McCZ2Pikzwp96QlaiEEWV_j2g02PT5Y3td-lfpoKxoFD5tltGNY9TlPzK-4a9Iz0hloiCprxWMLGKw2JzctrPF1xr42PKGNgPE84xAQ3sQ4mQ==",
+                  "id": "rs_014406f0f45e19c6016ac312f01d2487d2a5f2bdb7fbc42f76",
+                  "format": "openai-responses-v1",
+                  "index": 0
+                }
+              ],
+              "encryptedReasoningContent": "**Calculating private data**\n\nI need to follow the developer's instructions and use the provided tool to handle private data. First, I should look up the rate for \"ZEBRA\" before I answer. After that, I’ll multiply the rate by 17 and then add 9 to get the required number. It’s important to give only the requested number and avoid making another tool call. I’ll likely use the commentary channel for this tool call.\n\n__ENCRYPTED_REASONING__id=rs_014406f0f45e19c6016ac312f01d2487d2a5f2bdb7fbc42f76\ngAAAAABqwxLxEN4vtmI2WcZ_aDDttdmPwAHgnV2gLZBo_f_mmTdGm4oZzE2JVzcj72AeXHyABmmo2VQN4nXaZK9GSSUZRlYL8mECMxKTj9AMgL8zlnuN5WDexxU-e9SduGP36RN9nH56-go4dz8eu5DEMvMf_TMoTnxz5AnC_UWbty63Vp8jEgkD-DoRjd0cg9LjthP_FLyMvP2Wj9qMJxEuO7Mw2_Pu4I3YeChnygLvmRfRR2QkamL5vjb9yHkl0Lb502vEGB2DW_czNEpHxisifvwRBjA7vk0mbn2dlhiR80aNHO71hC-QqrtUfPXx2HIbVLfbPdJf0saI0wD7ZuCJSQCBfB7fMCnj2ZLQeXa67lgXwsZDLBg4HmSJFvsMinx1IHIjUk7iebsKvmYx40cjqpXL3wj7htZWk2hO9OyGGUwlRsn5THdhTsgwg2SPbuHxb-sLPQnEFZ7bRp5lsVm31X2dlHDa1uZ7KLJZyy9g2CLIKsBwFFoCK7jY3HBXfL21ac5TAkOzVmz-XKl6OMPSl-PSdByOO15uHHpyOcJvJvuaea5Tj1nihtuDlhUP5EQPi7MiWpJMFo9AhDCafAbaQOEF5W8AQPeb_GXvPTzhySRAC8PxrhraEcZ4fjpjLqkv6mi_A1YHwbHEHHWjcK5VEKc3dadlIM_s6djclFBocVXrvnQQElVhWBDM-RtK9sgR07BFj5LVk6fYvg0b6gQnbDuQH18jhtPoj0SX0lN921XEQ1ebMCWGLANND2ew_wyNShYouJohefLULicWG57xh_yV1KEG1ufBedq2CPvCHA9Hm5UssbeJx5yBriyUA2Yh4D7j2UBT_KDWEHydDLQ4mWEyLTfQn0ZB3ZOqkU79z3HpK2w_VHUnkl5nEYEU2bmF5lsG33B4gtbQIBtZT76-fizXsvVZx__taOWXg96VMi3CD3DY0TS76B4U92KFmAFJ4aeiM8bkPuzf1Qd202EWE39CotUDoxAM6mzQu0NObTDnGQE776P6kzUoIKUmP8sDwYG5xot8ZTuXcBYysvj4-pFC_fvqMhsdfgonbke78SIjHtmePsOkfHBnCjSSUFKEbaM0nm8jJ6nYVwiYFuXBKD31QD462TAC7ORVIn32sWSgV2t3Sd7vq4ws2Yy7nUoILRAt_NYQUEXt7_R8J5YWj1L6Ruagk7Vtt-CAWxT6FhVyU4JhMb6-tJrYHgdmtunYrjpHBiOVdQR25aOmLbc_WlDvpO4azcRazpgkASAjPaaDycYceKcheiyUDBgFrvcSYrS1fJb6YZrTzOKw1Ztd0YsklS4nc3jffLNLrBQVvnkajj0OHjGcW8wkP93TCMJyt8tfIH0Rd5hIZLY5EqUWj9yZgXO7CuDKQZIEI0oZXef3mjfQqH8Q9rZsSgS3DI3mCF3CN003R_ZKKLGWkG8VzwlvdocNxaV_Z-ujp_O0YMyOcmEoTJI-j3JP3nefNboyP7EWND6VWDjJbqg64dvu0PK0EW5L0lnAu0l-WVb2qmXLYao_7bOlD8JLFZOyUgHAWmetmnm0NuxzevJEVBkNUu1jQatPzf2Jzf9SGKM_3bM_z0TM5McCZ2Pikzwp96QlaiEEWV_j2g02PT5Y3td-lfpoKxoFD5tltGNY9TlPzK-4a9Iz0hloiCprxWMLGKw2JzctrPF1xr42PKGNgPE84xAQ3sQ4mQ=="
+            }
+          }
+        },
+        {
+          "type": "tool-input-end",
+          "id": "call_onp7EArhOgXu0hGRF6Y5WHLu",
+          "name": "lookup_rate",
+          "providerMetadata": {
+            "venice": {}
+          }
+        },
+        {
+          "type": "tool-call",
+          "id": "call_onp7EArhOgXu0hGRF6Y5WHLu",
+          "name": "lookup_rate",
+          "input": {
+            "code": "ZEBRA"
+          },
+          "providerMetadata": {
+            "venice": {}
+          }
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "tool-calls",
+            "raw": "tool_calls"
+          },
+          "usage": {
+            "inputTokens": 121,
+            "outputTokens": 85,
+            "nonCachedInputTokens": 121,
+            "reasoningTokens": 63,
+            "totalTokens": 206,
+            "providerMetadata": {
+              "venice": {
+                "prompt_tokens": 121,
+                "completion_tokens": 85,
+                "total_tokens": 206,
+                "completion_tokens_details": {
+                  "reasoning_tokens": 63
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "tool-calls",
+            "raw": "tool_calls"
+          },
+          "usage": {
+            "inputTokens": 121,
+            "outputTokens": 85,
+            "nonCachedInputTokens": 121,
+            "reasoningTokens": 63,
+            "totalTokens": 206,
+            "providerMetadata": {
+              "venice": {
+                "prompt_tokens": 121,
+                "completion_tokens": 85,
+                "total_tokens": 206,
+                "completion_tokens_details": {
+                  "reasoning_tokens": 63
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "model": {
+        "id": "openai-gpt-54-mini",
+        "provider": "venice",
+        "route": {
+          "id": "venice-chat",
+          "protocol": "venice-chat",
+          "providerMetadataKey": "venice"
+        },
+        "endpoint": {
+          "baseURL": "https://api.venice.ai/api/v1",
+          "path": "/chat/completions"
+        },
+        "compatibility": {
+          "maxTokensField": "max_completion_tokens"
+        },
+        "capabilities": {
+          "promptCacheKey": true
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_venice_chat_openai_gpt_54_mini_tool_loop",
+        "maxTokens": 4096,
+        "system": [
+          {
+            "type": "text",
+            "text": "Use the provided tool for private data. After receiving the result, give only the requested number; do not call the tool again."
+          }
+        ],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Look up conversion rate for code ZEBRA. Then multiply that rate by 17 and add 9. You must use lookup_rate before answering."
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "reasoning",
+                "text": "**Calculating private data**\n\nI need to follow the developer's instructions and use the provided tool to handle private data. First, I should look up the rate for \"ZEBRA\" before I answer. After that, I’ll multiply the rate by 17 and then add 9 to get the required number. It’s important to give only the requested number and avoid making another tool call. I’ll likely use the commentary channel for this tool call.\n\n",
+                "providerMetadata": {
+                  "venice": {
+                    "reasoningField": "reasoning_content",
+                    "reasoningDetails": [
+                      {
+                        "type": "reasoning.encrypted",
+                        "data": "gAAAAABqwxLxEN4vtmI2WcZ_aDDttdmPwAHgnV2gLZBo_f_mmTdGm4oZzE2JVzcj72AeXHyABmmo2VQN4nXaZK9GSSUZRlYL8mECMxKTj9AMgL8zlnuN5WDexxU-e9SduGP36RN9nH56-go4dz8eu5DEMvMf_TMoTnxz5AnC_UWbty63Vp8jEgkD-DoRjd0cg9LjthP_FLyMvP2Wj9qMJxEuO7Mw2_Pu4I3YeChnygLvmRfRR2QkamL5vjb9yHkl0Lb502vEGB2DW_czNEpHxisifvwRBjA7vk0mbn2dlhiR80aNHO71hC-QqrtUfPXx2HIbVLfbPdJf0saI0wD7ZuCJSQCBfB7fMCnj2ZLQeXa67lgXwsZDLBg4HmSJFvsMinx1IHIjUk7iebsKvmYx40cjqpXL3wj7htZWk2hO9OyGGUwlRsn5THdhTsgwg2SPbuHxb-sLPQnEFZ7bRp5lsVm31X2dlHDa1uZ7KLJZyy9g2CLIKsBwFFoCK7jY3HBXfL21ac5TAkOzVmz-XKl6OMPSl-PSdByOO15uHHpyOcJvJvuaea5Tj1nihtuDlhUP5EQPi7MiWpJMFo9AhDCafAbaQOEF5W8AQPeb_GXvPTzhySRAC8PxrhraEcZ4fjpjLqkv6mi_A1YHwbHEHHWjcK5VEKc3dadlIM_s6djclFBocVXrvnQQElVhWBDM-RtK9sgR07BFj5LVk6fYvg0b6gQnbDuQH18jhtPoj0SX0lN921XEQ1ebMCWGLANND2ew_wyNShYouJohefLULicWG57xh_yV1KEG1ufBedq2CPvCHA9Hm5UssbeJx5yBriyUA2Yh4D7j2UBT_KDWEHydDLQ4mWEyLTfQn0ZB3ZOqkU79z3HpK2w_VHUnkl5nEYEU2bmF5lsG33B4gtbQIBtZT76-fizXsvVZx__taOWXg96VMi3CD3DY0TS76B4U92KFmAFJ4aeiM8bkPuzf1Qd202EWE39CotUDoxAM6mzQu0NObTDnGQE776P6kzUoIKUmP8sDwYG5xot8ZTuXcBYysvj4-pFC_fvqMhsdfgonbke78SIjHtmePsOkfHBnCjSSUFKEbaM0nm8jJ6nYVwiYFuXBKD31QD462TAC7ORVIn32sWSgV2t3Sd7vq4ws2Yy7nUoILRAt_NYQUEXt7_R8J5YWj1L6Ruagk7Vtt-CAWxT6FhVyU4JhMb6-tJrYHgdmtunYrjpHBiOVdQR25aOmLbc_WlDvpO4azcRazpgkASAjPaaDycYceKcheiyUDBgFrvcSYrS1fJb6YZrTzOKw1Ztd0YsklS4nc3jffLNLrBQVvnkajj0OHjGcW8wkP93TCMJyt8tfIH0Rd5hIZLY5EqUWj9yZgXO7CuDKQZIEI0oZXef3mjfQqH8Q9rZsSgS3DI3mCF3CN003R_ZKKLGWkG8VzwlvdocNxaV_Z-ujp_O0YMyOcmEoTJI-j3JP3nefNboyP7EWND6VWDjJbqg64dvu0PK0EW5L0lnAu0l-WVb2qmXLYao_7bOlD8JLFZOyUgHAWmetmnm0NuxzevJEVBkNUu1jQatPzf2Jzf9SGKM_3bM_z0TM5McCZ2Pikzwp96QlaiEEWV_j2g02PT5Y3td-lfpoKxoFD5tltGNY9TlPzK-4a9Iz0hloiCprxWMLGKw2JzctrPF1xr42PKGNgPE84xAQ3sQ4mQ==",
+                        "id": "rs_014406f0f45e19c6016ac312f01d2487d2a5f2bdb7fbc42f76",
+                        "format": "openai-responses-v1",
+                        "index": 0
+                      }
+                    ],
+                    "encryptedReasoningContent": "**Calculating private data**\n\nI need to follow the developer's instructions and use the provided tool to handle private data. First, I should look up the rate for \"ZEBRA\" before I answer. After that, I’ll multiply the rate by 17 and then add 9 to get the required number. It’s important to give only the requested number and avoid making another tool call. I’ll likely use the commentary channel for this tool call.\n\n__ENCRYPTED_REASONING__id=rs_014406f0f45e19c6016ac312f01d2487d2a5f2bdb7fbc42f76\ngAAAAABqwxLxEN4vtmI2WcZ_aDDttdmPwAHgnV2gLZBo_f_mmTdGm4oZzE2JVzcj72AeXHyABmmo2VQN4nXaZK9GSSUZRlYL8mECMxKTj9AMgL8zlnuN5WDexxU-e9SduGP36RN9nH56-go4dz8eu5DEMvMf_TMoTnxz5AnC_UWbty63Vp8jEgkD-DoRjd0cg9LjthP_FLyMvP2Wj9qMJxEuO7Mw2_Pu4I3YeChnygLvmRfRR2QkamL5vjb9yHkl0Lb502vEGB2DW_czNEpHxisifvwRBjA7vk0mbn2dlhiR80aNHO71hC-QqrtUfPXx2HIbVLfbPdJf0saI0wD7ZuCJSQCBfB7fMCnj2ZLQeXa67lgXwsZDLBg4HmSJFvsMinx1IHIjUk7iebsKvmYx40cjqpXL3wj7htZWk2hO9OyGGUwlRsn5THdhTsgwg2SPbuHxb-sLPQnEFZ7bRp5lsVm31X2dlHDa1uZ7KLJZyy9g2CLIKsBwFFoCK7jY3HBXfL21ac5TAkOzVmz-XKl6OMPSl-PSdByOO15uHHpyOcJvJvuaea5Tj1nihtuDlhUP5EQPi7MiWpJMFo9AhDCafAbaQOEF5W8AQPeb_GXvPTzhySRAC8PxrhraEcZ4fjpjLqkv6mi_A1YHwbHEHHWjcK5VEKc3dadlIM_s6djclFBocVXrvnQQElVhWBDM-RtK9sgR07BFj5LVk6fYvg0b6gQnbDuQH18jhtPoj0SX0lN921XEQ1ebMCWGLANND2ew_wyNShYouJohefLULicWG57xh_yV1KEG1ufBedq2CPvCHA9Hm5UssbeJx5yBriyUA2Yh4D7j2UBT_KDWEHydDLQ4mWEyLTfQn0ZB3ZOqkU79z3HpK2w_VHUnkl5nEYEU2bmF5lsG33B4gtbQIBtZT76-fizXsvVZx__taOWXg96VMi3CD3DY0TS76B4U92KFmAFJ4aeiM8bkPuzf1Qd202EWE39CotUDoxAM6mzQu0NObTDnGQE776P6kzUoIKUmP8sDwYG5xot8ZTuXcBYysvj4-pFC_fvqMhsdfgonbke78SIjHtmePsOkfHBnCjSSUFKEbaM0nm8jJ6nYVwiYFuXBKD31QD462TAC7ORVIn32sWSgV2t3Sd7vq4ws2Yy7nUoILRAt_NYQUEXt7_R8J5YWj1L6Ruagk7Vtt-CAWxT6FhVyU4JhMb6-tJrYHgdmtunYrjpHBiOVdQR25aOmLbc_WlDvpO4azcRazpgkASAjPaaDycYceKcheiyUDBgFrvcSYrS1fJb6YZrTzOKw1Ztd0YsklS4nc3jffLNLrBQVvnkajj0OHjGcW8wkP93TCMJyt8tfIH0Rd5hIZLY5EqUWj9yZgXO7CuDKQZIEI0oZXef3mjfQqH8Q9rZsSgS3DI3mCF3CN003R_ZKKLGWkG8VzwlvdocNxaV_Z-ujp_O0YMyOcmEoTJI-j3JP3nefNboyP7EWND6VWDjJbqg64dvu0PK0EW5L0lnAu0l-WVb2qmXLYao_7bOlD8JLFZOyUgHAWmetmnm0NuxzevJEVBkNUu1jQatPzf2Jzf9SGKM_3bM_z0TM5McCZ2Pikzwp96QlaiEEWV_j2g02PT5Y3td-lfpoKxoFD5tltGNY9TlPzK-4a9Iz0hloiCprxWMLGKw2JzctrPF1xr42PKGNgPE84xAQ3sQ4mQ=="
+                  }
+                }
+              },
+              {
+                "type": "tool-call",
+                "id": "call_onp7EArhOgXu0hGRF6Y5WHLu",
+                "name": "lookup_rate",
+                "input": {
+                  "code": "ZEBRA"
+                },
+                "providerMetadata": {
+                  "venice": {}
+                }
+              }
+            ]
+          },
+          {
+            "role": "tool",
+            "content": [
+              {
+                "type": "tool-result",
+                "id": "call_onp7EArhOgXu0hGRF6Y5WHLu",
+                "name": "lookup_rate",
+                "result": {
+                  "type": "json",
+                  "value": {
+                    "code": "ZEBRA",
+                    "rate": 23
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "tool",
+            "name": "lookup_rate",
+            "description": "Retrieve the private conversion rate for a code. Only this tool knows the rate.",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "enum": [
+                    "ZEBRA",
+                    "MOOSE"
+                  ]
+                }
+              },
+              "required": [
+                "code"
+              ],
+              "additionalProperties": false
+            }
+          }
+        ],
+        "toolChoice": {
+          "type": "none"
+        }
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/venice",
+        "modelID": "openai-gpt-54-mini",
+        "settings": {
+          "apiKey": "fixture"
+        }
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://api.venice.ai/api/v1/chat/completions",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "5219",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"openai-gpt-54-mini\",\"messages\":[{\"role\":\"system\",\"content\":\"Use the provided tool for private data. After receiving the result, give only the requested number; do not call the tool again.\"},{\"role\":\"user\",\"content\":\"Look up conversion rate for code ZEBRA. Then multiply that rate by 17 and add 9. You must use lookup_rate before answering.\"},{\"role\":\"assistant\",\"content\":null,\"tool_calls\":[{\"id\":\"call_onp7EArhOgXu0hGRF6Y5WHLu\",\"type\":\"function\",\"function\":{\"name\":\"lookup_rate\",\"arguments\":\"{\\\"code\\\":\\\"ZEBRA\\\"}\"}}],\"reasoning_details\":[{\"type\":\"reasoning.encrypted\",\"data\":\"gAAAAABqwxLxEN4vtmI2WcZ_aDDttdmPwAHgnV2gLZBo_f_mmTdGm4oZzE2JVzcj72AeXHyABmmo2VQN4nXaZK9GSSUZRlYL8mECMxKTj9AMgL8zlnuN5WDexxU-e9SduGP36RN9nH56-go4dz8eu5DEMvMf_TMoTnxz5AnC_UWbty63Vp8jEgkD-DoRjd0cg9LjthP_FLyMvP2Wj9qMJxEuO7Mw2_Pu4I3YeChnygLvmRfRR2QkamL5vjb9yHkl0Lb502vEGB2DW_czNEpHxisifvwRBjA7vk0mbn2dlhiR80aNHO71hC-QqrtUfPXx2HIbVLfbPdJf0saI0wD7ZuCJSQCBfB7fMCnj2ZLQeXa67lgXwsZDLBg4HmSJFvsMinx1IHIjUk7iebsKvmYx40cjqpXL3wj7htZWk2hO9OyGGUwlRsn5THdhTsgwg2SPbuHxb-sLPQnEFZ7bRp5lsVm31X2dlHDa1uZ7KLJZyy9g2CLIKsBwFFoCK7jY3HBXfL21ac5TAkOzVmz-XKl6OMPSl-PSdByOO15uHHpyOcJvJvuaea5Tj1nihtuDlhUP5EQPi7MiWpJMFo9AhDCafAbaQOEF5W8AQPeb_GXvPTzhySRAC8PxrhraEcZ4fjpjLqkv6mi_A1YHwbHEHHWjcK5VEKc3dadlIM_s6djclFBocVXrvnQQElVhWBDM-RtK9sgR07BFj5LVk6fYvg0b6gQnbDuQH18jhtPoj0SX0lN921XEQ1ebMCWGLANND2ew_wyNShYouJohefLULicWG57xh_yV1KEG1ufBedq2CPvCHA9Hm5UssbeJx5yBriyUA2Yh4D7j2UBT_KDWEHydDLQ4mWEyLTfQn0ZB3ZOqkU79z3HpK2w_VHUnkl5nEYEU2bmF5lsG33B4gtbQIBtZT76-fizXsvVZx__taOWXg96VMi3CD3DY0TS76B4U92KFmAFJ4aeiM8bkPuzf1Qd202EWE39CotUDoxAM6mzQu0NObTDnGQE776P6kzUoIKUmP8sDwYG5xot8ZTuXcBYysvj4-pFC_fvqMhsdfgonbke78SIjHtmePsOkfHBnCjSSUFKEbaM0nm8jJ6nYVwiYFuXBKD31QD462TAC7ORVIn32sWSgV2t3Sd7vq4ws2Yy7nUoILRAt_NYQUEXt7_R8J5YWj1L6Ruagk7Vtt-CAWxT6FhVyU4JhMb6-tJrYHgdmtunYrjpHBiOVdQR25aOmLbc_WlDvpO4azcRazpgkASAjPaaDycYceKcheiyUDBgFrvcSYrS1fJb6YZrTzOKw1Ztd0YsklS4nc3jffLNLrBQVvnkajj0OHjGcW8wkP93TCMJyt8tfIH0Rd5hIZLY5EqUWj9yZgXO7CuDKQZIEI0oZXef3mjfQqH8Q9rZsSgS3DI3mCF3CN003R_ZKKLGWkG8VzwlvdocNxaV_Z-ujp_O0YMyOcmEoTJI-j3JP3nefNboyP7EWND6VWDjJbqg64dvu0PK0EW5L0lnAu0l-WVb2qmXLYao_7bOlD8JLFZOyUgHAWmetmnm0NuxzevJEVBkNUu1jQatPzf2Jzf9SGKM_3bM_z0TM5McCZ2Pikzwp96QlaiEEWV_j2g02PT5Y3td-lfpoKxoFD5tltGNY9TlPzK-4a9Iz0hloiCprxWMLGKw2JzctrPF1xr42PKGNgPE84xAQ3sQ4mQ==\",\"id\":\"rs_014406f0f45e19c6016ac312f01d2487d2a5f2bdb7fbc42f76\",\"format\":\"openai-responses-v1\",\"index\":0}],\"reasoning_content\":\"**Calculating private data**\\n\\nI need to follow the developer's instructions and use the provided tool to handle private data. First, I should look up the rate for \\\"ZEBRA\\\" before I answer. After that, I’ll multiply the rate by 17 and then add 9 to get the required number. It’s important to give only the requested number and avoid making another tool call. I’ll likely use the commentary channel for this tool call.\\n\\n__ENCRYPTED_REASONING__id=rs_014406f0f45e19c6016ac312f01d2487d2a5f2bdb7fbc42f76\\ngAAAAABqwxLxEN4vtmI2WcZ_aDDttdmPwAHgnV2gLZBo_f_mmTdGm4oZzE2JVzcj72AeXHyABmmo2VQN4nXaZK9GSSUZRlYL8mECMxKTj9AMgL8zlnuN5WDexxU-e9SduGP36RN9nH56-go4dz8eu5DEMvMf_TMoTnxz5AnC_UWbty63Vp8jEgkD-DoRjd0cg9LjthP_FLyMvP2Wj9qMJxEuO7Mw2_Pu4I3YeChnygLvmRfRR2QkamL5vjb9yHkl0Lb502vEGB2DW_czNEpHxisifvwRBjA7vk0mbn2dlhiR80aNHO71hC-QqrtUfPXx2HIbVLfbPdJf0saI0wD7ZuCJSQCBfB7fMCnj2ZLQeXa67lgXwsZDLBg4HmSJFvsMinx1IHIjUk7iebsKvmYx40cjqpXL3wj7htZWk2hO9OyGGUwlRsn5THdhTsgwg2SPbuHxb-sLPQnEFZ7bRp5lsVm31X2dlHDa1uZ7KLJZyy9g2CLIKsBwFFoCK7jY3HBXfL21ac5TAkOzVmz-XKl6OMPSl-PSdByOO15uHHpyOcJvJvuaea5Tj1nihtuDlhUP5EQPi7MiWpJMFo9AhDCafAbaQOEF5W8AQPeb_GXvPTzhySRAC8PxrhraEcZ4fjpjLqkv6mi_A1YHwbHEHHWjcK5VEKc3dadlIM_s6djclFBocVXrvnQQElVhWBDM-RtK9sgR07BFj5LVk6fYvg0b6gQnbDuQH18jhtPoj0SX0lN921XEQ1ebMCWGLANND2ew_wyNShYouJohefLULicWG57xh_yV1KEG1ufBedq2CPvCHA9Hm5UssbeJx5yBriyUA2Yh4D7j2UBT_KDWEHydDLQ4mWEyLTfQn0ZB3ZOqkU79z3HpK2w_VHUnkl5nEYEU2bmF5lsG33B4gtbQIBtZT76-fizXsvVZx__taOWXg96VMi3CD3DY0TS76B4U92KFmAFJ4aeiM8bkPuzf1Qd202EWE39CotUDoxAM6mzQu0NObTDnGQE776P6kzUoIKUmP8sDwYG5xot8ZTuXcBYysvj4-pFC_fvqMhsdfgonbke78SIjHtmePsOkfHBnCjSSUFKEbaM0nm8jJ6nYVwiYFuXBKD31QD462TAC7ORVIn32sWSgV2t3Sd7vq4ws2Yy7nUoILRAt_NYQUEXt7_R8J5YWj1L6Ruagk7Vtt-CAWxT6FhVyU4JhMb6-tJrYHgdmtunYrjpHBiOVdQR25aOmLbc_WlDvpO4azcRazpgkASAjPaaDycYceKcheiyUDBgFrvcSYrS1fJb6YZrTzOKw1Ztd0YsklS4nc3jffLNLrBQVvnkajj0OHjGcW8wkP93TCMJyt8tfIH0Rd5hIZLY5EqUWj9yZgXO7CuDKQZIEI0oZXef3mjfQqH8Q9rZsSgS3DI3mCF3CN003R_ZKKLGWkG8VzwlvdocNxaV_Z-ujp_O0YMyOcmEoTJI-j3JP3nefNboyP7EWND6VWDjJbqg64dvu0PK0EW5L0lnAu0l-WVb2qmXLYao_7bOlD8JLFZOyUgHAWmetmnm0NuxzevJEVBkNUu1jQatPzf2Jzf9SGKM_3bM_z0TM5McCZ2Pikzwp96QlaiEEWV_j2g02PT5Y3td-lfpoKxoFD5tltGNY9TlPzK-4a9Iz0hloiCprxWMLGKw2JzctrPF1xr42PKGNgPE84xAQ3sQ4mQ==\"},{\"role\":\"tool\",\"tool_call_id\":\"call_onp7EArhOgXu0hGRF6Y5WHLu\",\"content\":\"{\\\"code\\\":\\\"ZEBRA\\\",\\\"rate\\\":23}\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"lookup_rate\",\"description\":\"Retrieve the private conversion rate for a code. Only this tool knows the rate.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"code\":{\"type\":\"string\",\"enum\":[\"ZEBRA\",\"MOOSE\"]}},\"required\":[\"code\"],\"additionalProperties\":false},\"strict\":false}}],\"tool_choice\":\"none\",\"stream\":true,\"stream_options\":{\"include_usage\":true},\"max_completion_tokens\":4096,\"venice_parameters\":{\"include_venice_system_prompt\":false}}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream; charset=utf-8"
+            },
+            "body": "data: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169266,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"**Calculating a simple math problem**\\n\\nI'm\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169266,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" working\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169266,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" through\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169266,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" the\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169266,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" math\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169266,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\":\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169266,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" first\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169266,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\",\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169266,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" I\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169266,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" multiply\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169267,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" 23\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169267,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" by\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169267,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" 17\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169267,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\",\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169267,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" and\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169267,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" that\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169267,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" gives\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169267,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" me\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169267,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" 391\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169267,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\".\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169267,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" Then\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169267,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\",\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169267,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" I\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169267,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" add\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169267,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" 9\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169267,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\",\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169267,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" resulting\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169267,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" in\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169267,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" 400\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169267,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\".\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169267,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" It\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169267,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" seems\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169267,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" like\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169267,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" the\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169267,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" user\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169267,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" only\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169267,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" wanted\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169267,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" the\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169267,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" final\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169267,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" number\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169267,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\",\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169267,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" which\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169267,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" is\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169267,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" just\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169267,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" 400\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169267,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\".\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169267,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" Keeping\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169267,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" it\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169267,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" straightforward\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169267,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" is\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169267,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" important\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169267,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\",\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169267,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" so\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169267,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" I\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169267,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"’ll\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169268,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" make\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169268,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" sure\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169268,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" to\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169268,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" present\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169268,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" that\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169268,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" number\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169268,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" clearly\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169268,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\".\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169268,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169268,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"400\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169268,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"\\n\\n__ENCRYPTED_REASONING__id=rs_014406f0f45e19c6016ac312f26e4887d2af2f777fa50f9801\\ngAAAAABqwxL0Nl6Jl5EZuOS3A9KuObO5gPHpF1y4xbTEmtnZFQ3yz-u6TiK9EQuW1YliegqQQP8kUdRi0d3cYSCpD_LhB0e21fnC7ThMJanFTO3QNA28EHfzp3AO4rNujfMpvdYBhvjnxFIaLUYXGKv6XNEJG6sm7FO11jDzuTlHrNGLYBgQU40tTATGgpckEZ6Wr5VK9w45M8V5HcBUWLPQE0eCYjRfibNopDeNlfy6eVhslTGCAtEzBrDVFNVqO3DJPUwDCVq0sQRoLlJ6dg0JKA1OpV2BQDlA0Ke_55Cm8o-ja6bqxinxezc-vgMtGF9ovlEcJaaHUabtiBiTFKbHD5K_5mkLY1gz3GJ_JPXEJpawFz9euCkB7mkITf9LhoFZWnbLvT7HLL5CTni0CreebWo5eokZlnrUv1lPd5rKELwW044PNc8fyFye5huCCmaxQyiLzfkSXWEl_d4hDCs9U3-q_wp620lrgWicyNP4Pv2P2hLN-1ZVY7BOhhPZ2Jrvuheab-PaWAtQeueN18QrbB2BcJkqlH1x9Hy2xCzawFwdr63OYnx8SdQ43ixKGtXWvgfCi8PQo_5JQAxCdgXnNCGK3ffXXulnxJzX8U219NN8atcxTEpGXwcwFzcvZ-Qfjm_VODaihpubSWc4Lk3QBiWH6WtC_VukI7J9uOc0kPjIdlaOrdeePpzdYpPxlZR8HhMDNisSizTI3ueJyeVF43yVlCZiUR4k-EzJbh4QH_Jwr7lnqtmdXjEY_kqzs5hTbsPy2-YmTZRWa4mV-G8jcjt5MoNv9X6D8wozlJJ0eJdFbvsv-oWcKRpnUXM8InQTCrWe_GUb0QtFRpFKvDEWPbOEc0bPOrTTwZ89p59kWmRidlESfHCNpwxh72Fj1VzIS5CEewb_gBV0ZdN9P60nEpcFyFaQWjo71vWVjgmv_a1G9ZXJSfTIRzrTMQQH3D8vwmmTTfSsPgdfd6WnN823_Id2akZ9zu9sxD8drVe30cCVNXtdF2--B_73UQ6dHi-PrYf58HzbMlqQFSs-P3CsQfhcrby9Uh01xq4pGKlgjaI5E5WdTw6ntznePQWR2hrtYgHxA5VsJJ1R0ivuZ8c6GRivKm9Y8X0oWsrHqV1mLzo-CWBZr2G2N2Mi1HuCFlIkRBHMnkaqAn43_oHFduTmqR1RambzhZx0ytCOY9bDhDSyw3eQXLEXRwb9UCuMBfnC7Sih3PnDH55bqPytcVRpW-13NLgG6aOHDUvjpITGd5oDq1-e56IlKrpXziCwkkdnWaxg5g2RrIwzTxtTTlupD-hj9qSBjl2QXAAgZCxkIYp10FkHFntSGD9TsMs_PhBwZ6RuuX1fIpARG-aaZQ3PjqxNOs7LFte4Pq53_vPJuZAQY6iyUH54DgvmIdYQ6oh0McMb3K9BhMoREUe8225oVYZGYDOMuw==\",\"reasoning_encrypted\":true,\"reasoning_details\":[{\"type\":\"reasoning.encrypted\",\"format\":\"openai-responses-v1\",\"index\":0,\"id\":\"rs_014406f0f45e19c6016ac312f26e4887d2af2f777fa50f9801\",\"data\":\"gAAAAABqwxL0Nl6Jl5EZuOS3A9KuObO5gPHpF1y4xbTEmtnZFQ3yz-u6TiK9EQuW1YliegqQQP8kUdRi0d3cYSCpD_LhB0e21fnC7ThMJanFTO3QNA28EHfzp3AO4rNujfMpvdYBhvjnxFIaLUYXGKv6XNEJG6sm7FO11jDzuTlHrNGLYBgQU40tTATGgpckEZ6Wr5VK9w45M8V5HcBUWLPQE0eCYjRfibNopDeNlfy6eVhslTGCAtEzBrDVFNVqO3DJPUwDCVq0sQRoLlJ6dg0JKA1OpV2BQDlA0Ke_55Cm8o-ja6bqxinxezc-vgMtGF9ovlEcJaaHUabtiBiTFKbHD5K_5mkLY1gz3GJ_JPXEJpawFz9euCkB7mkITf9LhoFZWnbLvT7HLL5CTni0CreebWo5eokZlnrUv1lPd5rKELwW044PNc8fyFye5huCCmaxQyiLzfkSXWEl_d4hDCs9U3-q_wp620lrgWicyNP4Pv2P2hLN-1ZVY7BOhhPZ2Jrvuheab-PaWAtQeueN18QrbB2BcJkqlH1x9Hy2xCzawFwdr63OYnx8SdQ43ixKGtXWvgfCi8PQo_5JQAxCdgXnNCGK3ffXXulnxJzX8U219NN8atcxTEpGXwcwFzcvZ-Qfjm_VODaihpubSWc4Lk3QBiWH6WtC_VukI7J9uOc0kPjIdlaOrdeePpzdYpPxlZR8HhMDNisSizTI3ueJyeVF43yVlCZiUR4k-EzJbh4QH_Jwr7lnqtmdXjEY_kqzs5hTbsPy2-YmTZRWa4mV-G8jcjt5MoNv9X6D8wozlJJ0eJdFbvsv-oWcKRpnUXM8InQTCrWe_GUb0QtFRpFKvDEWPbOEc0bPOrTTwZ89p59kWmRidlESfHCNpwxh72Fj1VzIS5CEewb_gBV0ZdN9P60nEpcFyFaQWjo71vWVjgmv_a1G9ZXJSfTIRzrTMQQH3D8vwmmTTfSsPgdfd6WnN823_Id2akZ9zu9sxD8drVe30cCVNXtdF2--B_73UQ6dHi-PrYf58HzbMlqQFSs-P3CsQfhcrby9Uh01xq4pGKlgjaI5E5WdTw6ntznePQWR2hrtYgHxA5VsJJ1R0ivuZ8c6GRivKm9Y8X0oWsrHqV1mLzo-CWBZr2G2N2Mi1HuCFlIkRBHMnkaqAn43_oHFduTmqR1RambzhZx0ytCOY9bDhDSyw3eQXLEXRwb9UCuMBfnC7Sih3PnDH55bqPytcVRpW-13NLgG6aOHDUvjpITGd5oDq1-e56IlKrpXziCwkkdnWaxg5g2RrIwzTxtTTlupD-hj9qSBjl2QXAAgZCxkIYp10FkHFntSGD9TsMs_PhBwZ6RuuX1fIpARG-aaZQ3PjqxNOs7LFte4Pq53_vPJuZAQY6iyUH54DgvmIdYQ6oh0McMb3K9BhMoREUe8225oVYZGYDOMuw==\"}]},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169268,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f2137487d2aa3a1f180cbf07eb\",\"object\":\"chat.completion.chunk\",\"created\":1791169268,\"model\":\"openai-gpt-54-mini\",\"choices\":[],\"usage\":{\"prompt_tokens\":173,\"completion_tokens\":37,\"total_tokens\":210,\"completion_tokens_details\":{\"reasoning_tokens\":30}},\"cost\":{\"usd\":0.0003703125,\"diem\":0}}\n\ndata: [DONE]\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "reasoning-start",
+          "id": "reasoning-0",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "**Calculating a simple math problem**\n\nI'm",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " working",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " through",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " the",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " math",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ":",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " first",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ",",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " I",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " multiply",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " 23",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " by",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " 17",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ",",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " and",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " that",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " gives",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " me",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " 391",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ".",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " Then",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ",",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " I",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " add",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " 9",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ",",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " resulting",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " in",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " 400",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ".",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " It",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " seems",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " like",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " the",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " user",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " only",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " wanted",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " the",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " final",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " number",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ",",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " which",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " is",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " just",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " 400",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ".",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " Keeping",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " it",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " straightforward",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " is",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " important",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ",",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " so",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " I",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "’ll",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " make",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " sure",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " to",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " present",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " that",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " number",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " clearly",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ".",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "text-start",
+          "id": "text-0"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "400"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "\n\n",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-end",
+          "id": "reasoning-0",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content",
+              "reasoningDetails": [
+                {
+                  "type": "reasoning.encrypted",
+                  "data": "gAAAAABqwxL0Nl6Jl5EZuOS3A9KuObO5gPHpF1y4xbTEmtnZFQ3yz-u6TiK9EQuW1YliegqQQP8kUdRi0d3cYSCpD_LhB0e21fnC7ThMJanFTO3QNA28EHfzp3AO4rNujfMpvdYBhvjnxFIaLUYXGKv6XNEJG6sm7FO11jDzuTlHrNGLYBgQU40tTATGgpckEZ6Wr5VK9w45M8V5HcBUWLPQE0eCYjRfibNopDeNlfy6eVhslTGCAtEzBrDVFNVqO3DJPUwDCVq0sQRoLlJ6dg0JKA1OpV2BQDlA0Ke_55Cm8o-ja6bqxinxezc-vgMtGF9ovlEcJaaHUabtiBiTFKbHD5K_5mkLY1gz3GJ_JPXEJpawFz9euCkB7mkITf9LhoFZWnbLvT7HLL5CTni0CreebWo5eokZlnrUv1lPd5rKELwW044PNc8fyFye5huCCmaxQyiLzfkSXWEl_d4hDCs9U3-q_wp620lrgWicyNP4Pv2P2hLN-1ZVY7BOhhPZ2Jrvuheab-PaWAtQeueN18QrbB2BcJkqlH1x9Hy2xCzawFwdr63OYnx8SdQ43ixKGtXWvgfCi8PQo_5JQAxCdgXnNCGK3ffXXulnxJzX8U219NN8atcxTEpGXwcwFzcvZ-Qfjm_VODaihpubSWc4Lk3QBiWH6WtC_VukI7J9uOc0kPjIdlaOrdeePpzdYpPxlZR8HhMDNisSizTI3ueJyeVF43yVlCZiUR4k-EzJbh4QH_Jwr7lnqtmdXjEY_kqzs5hTbsPy2-YmTZRWa4mV-G8jcjt5MoNv9X6D8wozlJJ0eJdFbvsv-oWcKRpnUXM8InQTCrWe_GUb0QtFRpFKvDEWPbOEc0bPOrTTwZ89p59kWmRidlESfHCNpwxh72Fj1VzIS5CEewb_gBV0ZdN9P60nEpcFyFaQWjo71vWVjgmv_a1G9ZXJSfTIRzrTMQQH3D8vwmmTTfSsPgdfd6WnN823_Id2akZ9zu9sxD8drVe30cCVNXtdF2--B_73UQ6dHi-PrYf58HzbMlqQFSs-P3CsQfhcrby9Uh01xq4pGKlgjaI5E5WdTw6ntznePQWR2hrtYgHxA5VsJJ1R0ivuZ8c6GRivKm9Y8X0oWsrHqV1mLzo-CWBZr2G2N2Mi1HuCFlIkRBHMnkaqAn43_oHFduTmqR1RambzhZx0ytCOY9bDhDSyw3eQXLEXRwb9UCuMBfnC7Sih3PnDH55bqPytcVRpW-13NLgG6aOHDUvjpITGd5oDq1-e56IlKrpXziCwkkdnWaxg5g2RrIwzTxtTTlupD-hj9qSBjl2QXAAgZCxkIYp10FkHFntSGD9TsMs_PhBwZ6RuuX1fIpARG-aaZQ3PjqxNOs7LFte4Pq53_vPJuZAQY6iyUH54DgvmIdYQ6oh0McMb3K9BhMoREUe8225oVYZGYDOMuw==",
+                  "id": "rs_014406f0f45e19c6016ac312f26e4887d2af2f777fa50f9801",
+                  "format": "openai-responses-v1",
+                  "index": 0
+                }
+              ],
+              "encryptedReasoningContent": "**Calculating a simple math problem**\n\nI'm working through the math: first, I multiply 23 by 17, and that gives me 391. Then, I add 9, resulting in 400. It seems like the user only wanted the final number, which is just 400. Keeping it straightforward is important, so I’ll make sure to present that number clearly.\n\n__ENCRYPTED_REASONING__id=rs_014406f0f45e19c6016ac312f26e4887d2af2f777fa50f9801\ngAAAAABqwxL0Nl6Jl5EZuOS3A9KuObO5gPHpF1y4xbTEmtnZFQ3yz-u6TiK9EQuW1YliegqQQP8kUdRi0d3cYSCpD_LhB0e21fnC7ThMJanFTO3QNA28EHfzp3AO4rNujfMpvdYBhvjnxFIaLUYXGKv6XNEJG6sm7FO11jDzuTlHrNGLYBgQU40tTATGgpckEZ6Wr5VK9w45M8V5HcBUWLPQE0eCYjRfibNopDeNlfy6eVhslTGCAtEzBrDVFNVqO3DJPUwDCVq0sQRoLlJ6dg0JKA1OpV2BQDlA0Ke_55Cm8o-ja6bqxinxezc-vgMtGF9ovlEcJaaHUabtiBiTFKbHD5K_5mkLY1gz3GJ_JPXEJpawFz9euCkB7mkITf9LhoFZWnbLvT7HLL5CTni0CreebWo5eokZlnrUv1lPd5rKELwW044PNc8fyFye5huCCmaxQyiLzfkSXWEl_d4hDCs9U3-q_wp620lrgWicyNP4Pv2P2hLN-1ZVY7BOhhPZ2Jrvuheab-PaWAtQeueN18QrbB2BcJkqlH1x9Hy2xCzawFwdr63OYnx8SdQ43ixKGtXWvgfCi8PQo_5JQAxCdgXnNCGK3ffXXulnxJzX8U219NN8atcxTEpGXwcwFzcvZ-Qfjm_VODaihpubSWc4Lk3QBiWH6WtC_VukI7J9uOc0kPjIdlaOrdeePpzdYpPxlZR8HhMDNisSizTI3ueJyeVF43yVlCZiUR4k-EzJbh4QH_Jwr7lnqtmdXjEY_kqzs5hTbsPy2-YmTZRWa4mV-G8jcjt5MoNv9X6D8wozlJJ0eJdFbvsv-oWcKRpnUXM8InQTCrWe_GUb0QtFRpFKvDEWPbOEc0bPOrTTwZ89p59kWmRidlESfHCNpwxh72Fj1VzIS5CEewb_gBV0ZdN9P60nEpcFyFaQWjo71vWVjgmv_a1G9ZXJSfTIRzrTMQQH3D8vwmmTTfSsPgdfd6WnN823_Id2akZ9zu9sxD8drVe30cCVNXtdF2--B_73UQ6dHi-PrYf58HzbMlqQFSs-P3CsQfhcrby9Uh01xq4pGKlgjaI5E5WdTw6ntznePQWR2hrtYgHxA5VsJJ1R0ivuZ8c6GRivKm9Y8X0oWsrHqV1mLzo-CWBZr2G2N2Mi1HuCFlIkRBHMnkaqAn43_oHFduTmqR1RambzhZx0ytCOY9bDhDSyw3eQXLEXRwb9UCuMBfnC7Sih3PnDH55bqPytcVRpW-13NLgG6aOHDUvjpITGd5oDq1-e56IlKrpXziCwkkdnWaxg5g2RrIwzTxtTTlupD-hj9qSBjl2QXAAgZCxkIYp10FkHFntSGD9TsMs_PhBwZ6RuuX1fIpARG-aaZQ3PjqxNOs7LFte4Pq53_vPJuZAQY6iyUH54DgvmIdYQ6oh0McMb3K9BhMoREUe8225oVYZGYDOMuw=="
+            }
+          }
+        },
+        {
+          "type": "text-end",
+          "id": "text-0",
+          "providerMetadata": {
+            "venice": {}
+          }
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 173,
+            "outputTokens": 37,
+            "nonCachedInputTokens": 173,
+            "reasoningTokens": 30,
+            "totalTokens": 210,
+            "providerMetadata": {
+              "venice": {
+                "prompt_tokens": 173,
+                "completion_tokens": 37,
+                "total_tokens": 210,
+                "completion_tokens_details": {
+                  "reasoning_tokens": 30
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 173,
+            "outputTokens": 37,
+            "nonCachedInputTokens": 173,
+            "reasoningTokens": 30,
+            "totalTokens": 210,
+            "providerMetadata": {
+              "venice": {
+                "prompt_tokens": 173,
+                "completion_tokens": 37,
+                "total_tokens": 210,
+                "completion_tokens_details": {
+                  "reasoning_tokens": 30
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "model": {
+        "id": "openai-gpt-54-mini",
+        "provider": "venice",
+        "route": {
+          "id": "venice-chat",
+          "protocol": "venice-chat",
+          "providerMetadataKey": "venice"
+        },
+        "endpoint": {
+          "baseURL": "https://api.venice.ai/api/v1",
+          "path": "/chat/completions"
+        },
+        "compatibility": {
+          "maxTokensField": "max_completion_tokens"
+        },
+        "capabilities": {
+          "promptCacheKey": true
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_venice_chat_openai_gpt_54_mini_tool_loop",
+        "maxTokens": 4096,
+        "system": [
+          {
+            "type": "text",
+            "text": "Use the provided tool for private data. After receiving the result, give only the requested number; do not call the tool again."
+          }
+        ],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Look up conversion rate for code ZEBRA. Then multiply that rate by 17 and add 9. You must use lookup_rate before answering."
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "reasoning",
+                "text": "**Calculating private data**\n\nI need to follow the developer's instructions and use the provided tool to handle private data. First, I should look up the rate for \"ZEBRA\" before I answer. After that, I’ll multiply the rate by 17 and then add 9 to get the required number. It’s important to give only the requested number and avoid making another tool call. I’ll likely use the commentary channel for this tool call.\n\n",
+                "providerMetadata": {
+                  "venice": {
+                    "reasoningField": "reasoning_content",
+                    "reasoningDetails": [
+                      {
+                        "type": "reasoning.encrypted",
+                        "data": "gAAAAABqwxLxEN4vtmI2WcZ_aDDttdmPwAHgnV2gLZBo_f_mmTdGm4oZzE2JVzcj72AeXHyABmmo2VQN4nXaZK9GSSUZRlYL8mECMxKTj9AMgL8zlnuN5WDexxU-e9SduGP36RN9nH56-go4dz8eu5DEMvMf_TMoTnxz5AnC_UWbty63Vp8jEgkD-DoRjd0cg9LjthP_FLyMvP2Wj9qMJxEuO7Mw2_Pu4I3YeChnygLvmRfRR2QkamL5vjb9yHkl0Lb502vEGB2DW_czNEpHxisifvwRBjA7vk0mbn2dlhiR80aNHO71hC-QqrtUfPXx2HIbVLfbPdJf0saI0wD7ZuCJSQCBfB7fMCnj2ZLQeXa67lgXwsZDLBg4HmSJFvsMinx1IHIjUk7iebsKvmYx40cjqpXL3wj7htZWk2hO9OyGGUwlRsn5THdhTsgwg2SPbuHxb-sLPQnEFZ7bRp5lsVm31X2dlHDa1uZ7KLJZyy9g2CLIKsBwFFoCK7jY3HBXfL21ac5TAkOzVmz-XKl6OMPSl-PSdByOO15uHHpyOcJvJvuaea5Tj1nihtuDlhUP5EQPi7MiWpJMFo9AhDCafAbaQOEF5W8AQPeb_GXvPTzhySRAC8PxrhraEcZ4fjpjLqkv6mi_A1YHwbHEHHWjcK5VEKc3dadlIM_s6djclFBocVXrvnQQElVhWBDM-RtK9sgR07BFj5LVk6fYvg0b6gQnbDuQH18jhtPoj0SX0lN921XEQ1ebMCWGLANND2ew_wyNShYouJohefLULicWG57xh_yV1KEG1ufBedq2CPvCHA9Hm5UssbeJx5yBriyUA2Yh4D7j2UBT_KDWEHydDLQ4mWEyLTfQn0ZB3ZOqkU79z3HpK2w_VHUnkl5nEYEU2bmF5lsG33B4gtbQIBtZT76-fizXsvVZx__taOWXg96VMi3CD3DY0TS76B4U92KFmAFJ4aeiM8bkPuzf1Qd202EWE39CotUDoxAM6mzQu0NObTDnGQE776P6kzUoIKUmP8sDwYG5xot8ZTuXcBYysvj4-pFC_fvqMhsdfgonbke78SIjHtmePsOkfHBnCjSSUFKEbaM0nm8jJ6nYVwiYFuXBKD31QD462TAC7ORVIn32sWSgV2t3Sd7vq4ws2Yy7nUoILRAt_NYQUEXt7_R8J5YWj1L6Ruagk7Vtt-CAWxT6FhVyU4JhMb6-tJrYHgdmtunYrjpHBiOVdQR25aOmLbc_WlDvpO4azcRazpgkASAjPaaDycYceKcheiyUDBgFrvcSYrS1fJb6YZrTzOKw1Ztd0YsklS4nc3jffLNLrBQVvnkajj0OHjGcW8wkP93TCMJyt8tfIH0Rd5hIZLY5EqUWj9yZgXO7CuDKQZIEI0oZXef3mjfQqH8Q9rZsSgS3DI3mCF3CN003R_ZKKLGWkG8VzwlvdocNxaV_Z-ujp_O0YMyOcmEoTJI-j3JP3nefNboyP7EWND6VWDjJbqg64dvu0PK0EW5L0lnAu0l-WVb2qmXLYao_7bOlD8JLFZOyUgHAWmetmnm0NuxzevJEVBkNUu1jQatPzf2Jzf9SGKM_3bM_z0TM5McCZ2Pikzwp96QlaiEEWV_j2g02PT5Y3td-lfpoKxoFD5tltGNY9TlPzK-4a9Iz0hloiCprxWMLGKw2JzctrPF1xr42PKGNgPE84xAQ3sQ4mQ==",
+                        "id": "rs_014406f0f45e19c6016ac312f01d2487d2a5f2bdb7fbc42f76",
+                        "format": "openai-responses-v1",
+                        "index": 0
+                      }
+                    ],
+                    "encryptedReasoningContent": "**Calculating private data**\n\nI need to follow the developer's instructions and use the provided tool to handle private data. First, I should look up the rate for \"ZEBRA\" before I answer. After that, I’ll multiply the rate by 17 and then add 9 to get the required number. It’s important to give only the requested number and avoid making another tool call. I’ll likely use the commentary channel for this tool call.\n\n__ENCRYPTED_REASONING__id=rs_014406f0f45e19c6016ac312f01d2487d2a5f2bdb7fbc42f76\ngAAAAABqwxLxEN4vtmI2WcZ_aDDttdmPwAHgnV2gLZBo_f_mmTdGm4oZzE2JVzcj72AeXHyABmmo2VQN4nXaZK9GSSUZRlYL8mECMxKTj9AMgL8zlnuN5WDexxU-e9SduGP36RN9nH56-go4dz8eu5DEMvMf_TMoTnxz5AnC_UWbty63Vp8jEgkD-DoRjd0cg9LjthP_FLyMvP2Wj9qMJxEuO7Mw2_Pu4I3YeChnygLvmRfRR2QkamL5vjb9yHkl0Lb502vEGB2DW_czNEpHxisifvwRBjA7vk0mbn2dlhiR80aNHO71hC-QqrtUfPXx2HIbVLfbPdJf0saI0wD7ZuCJSQCBfB7fMCnj2ZLQeXa67lgXwsZDLBg4HmSJFvsMinx1IHIjUk7iebsKvmYx40cjqpXL3wj7htZWk2hO9OyGGUwlRsn5THdhTsgwg2SPbuHxb-sLPQnEFZ7bRp5lsVm31X2dlHDa1uZ7KLJZyy9g2CLIKsBwFFoCK7jY3HBXfL21ac5TAkOzVmz-XKl6OMPSl-PSdByOO15uHHpyOcJvJvuaea5Tj1nihtuDlhUP5EQPi7MiWpJMFo9AhDCafAbaQOEF5W8AQPeb_GXvPTzhySRAC8PxrhraEcZ4fjpjLqkv6mi_A1YHwbHEHHWjcK5VEKc3dadlIM_s6djclFBocVXrvnQQElVhWBDM-RtK9sgR07BFj5LVk6fYvg0b6gQnbDuQH18jhtPoj0SX0lN921XEQ1ebMCWGLANND2ew_wyNShYouJohefLULicWG57xh_yV1KEG1ufBedq2CPvCHA9Hm5UssbeJx5yBriyUA2Yh4D7j2UBT_KDWEHydDLQ4mWEyLTfQn0ZB3ZOqkU79z3HpK2w_VHUnkl5nEYEU2bmF5lsG33B4gtbQIBtZT76-fizXsvVZx__taOWXg96VMi3CD3DY0TS76B4U92KFmAFJ4aeiM8bkPuzf1Qd202EWE39CotUDoxAM6mzQu0NObTDnGQE776P6kzUoIKUmP8sDwYG5xot8ZTuXcBYysvj4-pFC_fvqMhsdfgonbke78SIjHtmePsOkfHBnCjSSUFKEbaM0nm8jJ6nYVwiYFuXBKD31QD462TAC7ORVIn32sWSgV2t3Sd7vq4ws2Yy7nUoILRAt_NYQUEXt7_R8J5YWj1L6Ruagk7Vtt-CAWxT6FhVyU4JhMb6-tJrYHgdmtunYrjpHBiOVdQR25aOmLbc_WlDvpO4azcRazpgkASAjPaaDycYceKcheiyUDBgFrvcSYrS1fJb6YZrTzOKw1Ztd0YsklS4nc3jffLNLrBQVvnkajj0OHjGcW8wkP93TCMJyt8tfIH0Rd5hIZLY5EqUWj9yZgXO7CuDKQZIEI0oZXef3mjfQqH8Q9rZsSgS3DI3mCF3CN003R_ZKKLGWkG8VzwlvdocNxaV_Z-ujp_O0YMyOcmEoTJI-j3JP3nefNboyP7EWND6VWDjJbqg64dvu0PK0EW5L0lnAu0l-WVb2qmXLYao_7bOlD8JLFZOyUgHAWmetmnm0NuxzevJEVBkNUu1jQatPzf2Jzf9SGKM_3bM_z0TM5McCZ2Pikzwp96QlaiEEWV_j2g02PT5Y3td-lfpoKxoFD5tltGNY9TlPzK-4a9Iz0hloiCprxWMLGKw2JzctrPF1xr42PKGNgPE84xAQ3sQ4mQ=="
+                  }
+                }
+              },
+              {
+                "type": "tool-call",
+                "id": "call_onp7EArhOgXu0hGRF6Y5WHLu",
+                "name": "lookup_rate",
+                "input": {
+                  "code": "ZEBRA"
+                },
+                "providerMetadata": {
+                  "venice": {}
+                }
+              }
+            ]
+          },
+          {
+            "role": "tool",
+            "content": [
+              {
+                "type": "tool-result",
+                "id": "call_onp7EArhOgXu0hGRF6Y5WHLu",
+                "name": "lookup_rate",
+                "result": {
+                  "type": "json",
+                  "value": {
+                    "code": "ZEBRA",
+                    "rate": 23
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "reasoning",
+                "text": "**Calculating a simple math problem**\n\nI'm working through the math: first, I multiply 23 by 17, and that gives me 391. Then, I add 9, resulting in 400. It seems like the user only wanted the final number, which is just 400. Keeping it straightforward is important, so I’ll make sure to present that number clearly.\n\n",
+                "providerMetadata": {
+                  "venice": {
+                    "reasoningField": "reasoning_content",
+                    "reasoningDetails": [
+                      {
+                        "type": "reasoning.encrypted",
+                        "data": "gAAAAABqwxL0Nl6Jl5EZuOS3A9KuObO5gPHpF1y4xbTEmtnZFQ3yz-u6TiK9EQuW1YliegqQQP8kUdRi0d3cYSCpD_LhB0e21fnC7ThMJanFTO3QNA28EHfzp3AO4rNujfMpvdYBhvjnxFIaLUYXGKv6XNEJG6sm7FO11jDzuTlHrNGLYBgQU40tTATGgpckEZ6Wr5VK9w45M8V5HcBUWLPQE0eCYjRfibNopDeNlfy6eVhslTGCAtEzBrDVFNVqO3DJPUwDCVq0sQRoLlJ6dg0JKA1OpV2BQDlA0Ke_55Cm8o-ja6bqxinxezc-vgMtGF9ovlEcJaaHUabtiBiTFKbHD5K_5mkLY1gz3GJ_JPXEJpawFz9euCkB7mkITf9LhoFZWnbLvT7HLL5CTni0CreebWo5eokZlnrUv1lPd5rKELwW044PNc8fyFye5huCCmaxQyiLzfkSXWEl_d4hDCs9U3-q_wp620lrgWicyNP4Pv2P2hLN-1ZVY7BOhhPZ2Jrvuheab-PaWAtQeueN18QrbB2BcJkqlH1x9Hy2xCzawFwdr63OYnx8SdQ43ixKGtXWvgfCi8PQo_5JQAxCdgXnNCGK3ffXXulnxJzX8U219NN8atcxTEpGXwcwFzcvZ-Qfjm_VODaihpubSWc4Lk3QBiWH6WtC_VukI7J9uOc0kPjIdlaOrdeePpzdYpPxlZR8HhMDNisSizTI3ueJyeVF43yVlCZiUR4k-EzJbh4QH_Jwr7lnqtmdXjEY_kqzs5hTbsPy2-YmTZRWa4mV-G8jcjt5MoNv9X6D8wozlJJ0eJdFbvsv-oWcKRpnUXM8InQTCrWe_GUb0QtFRpFKvDEWPbOEc0bPOrTTwZ89p59kWmRidlESfHCNpwxh72Fj1VzIS5CEewb_gBV0ZdN9P60nEpcFyFaQWjo71vWVjgmv_a1G9ZXJSfTIRzrTMQQH3D8vwmmTTfSsPgdfd6WnN823_Id2akZ9zu9sxD8drVe30cCVNXtdF2--B_73UQ6dHi-PrYf58HzbMlqQFSs-P3CsQfhcrby9Uh01xq4pGKlgjaI5E5WdTw6ntznePQWR2hrtYgHxA5VsJJ1R0ivuZ8c6GRivKm9Y8X0oWsrHqV1mLzo-CWBZr2G2N2Mi1HuCFlIkRBHMnkaqAn43_oHFduTmqR1RambzhZx0ytCOY9bDhDSyw3eQXLEXRwb9UCuMBfnC7Sih3PnDH55bqPytcVRpW-13NLgG6aOHDUvjpITGd5oDq1-e56IlKrpXziCwkkdnWaxg5g2RrIwzTxtTTlupD-hj9qSBjl2QXAAgZCxkIYp10FkHFntSGD9TsMs_PhBwZ6RuuX1fIpARG-aaZQ3PjqxNOs7LFte4Pq53_vPJuZAQY6iyUH54DgvmIdYQ6oh0McMb3K9BhMoREUe8225oVYZGYDOMuw==",
+                        "id": "rs_014406f0f45e19c6016ac312f26e4887d2af2f777fa50f9801",
+                        "format": "openai-responses-v1",
+                        "index": 0
+                      }
+                    ],
+                    "encryptedReasoningContent": "**Calculating a simple math problem**\n\nI'm working through the math: first, I multiply 23 by 17, and that gives me 391. Then, I add 9, resulting in 400. It seems like the user only wanted the final number, which is just 400. Keeping it straightforward is important, so I’ll make sure to present that number clearly.\n\n__ENCRYPTED_REASONING__id=rs_014406f0f45e19c6016ac312f26e4887d2af2f777fa50f9801\ngAAAAABqwxL0Nl6Jl5EZuOS3A9KuObO5gPHpF1y4xbTEmtnZFQ3yz-u6TiK9EQuW1YliegqQQP8kUdRi0d3cYSCpD_LhB0e21fnC7ThMJanFTO3QNA28EHfzp3AO4rNujfMpvdYBhvjnxFIaLUYXGKv6XNEJG6sm7FO11jDzuTlHrNGLYBgQU40tTATGgpckEZ6Wr5VK9w45M8V5HcBUWLPQE0eCYjRfibNopDeNlfy6eVhslTGCAtEzBrDVFNVqO3DJPUwDCVq0sQRoLlJ6dg0JKA1OpV2BQDlA0Ke_55Cm8o-ja6bqxinxezc-vgMtGF9ovlEcJaaHUabtiBiTFKbHD5K_5mkLY1gz3GJ_JPXEJpawFz9euCkB7mkITf9LhoFZWnbLvT7HLL5CTni0CreebWo5eokZlnrUv1lPd5rKELwW044PNc8fyFye5huCCmaxQyiLzfkSXWEl_d4hDCs9U3-q_wp620lrgWicyNP4Pv2P2hLN-1ZVY7BOhhPZ2Jrvuheab-PaWAtQeueN18QrbB2BcJkqlH1x9Hy2xCzawFwdr63OYnx8SdQ43ixKGtXWvgfCi8PQo_5JQAxCdgXnNCGK3ffXXulnxJzX8U219NN8atcxTEpGXwcwFzcvZ-Qfjm_VODaihpubSWc4Lk3QBiWH6WtC_VukI7J9uOc0kPjIdlaOrdeePpzdYpPxlZR8HhMDNisSizTI3ueJyeVF43yVlCZiUR4k-EzJbh4QH_Jwr7lnqtmdXjEY_kqzs5hTbsPy2-YmTZRWa4mV-G8jcjt5MoNv9X6D8wozlJJ0eJdFbvsv-oWcKRpnUXM8InQTCrWe_GUb0QtFRpFKvDEWPbOEc0bPOrTTwZ89p59kWmRidlESfHCNpwxh72Fj1VzIS5CEewb_gBV0ZdN9P60nEpcFyFaQWjo71vWVjgmv_a1G9ZXJSfTIRzrTMQQH3D8vwmmTTfSsPgdfd6WnN823_Id2akZ9zu9sxD8drVe30cCVNXtdF2--B_73UQ6dHi-PrYf58HzbMlqQFSs-P3CsQfhcrby9Uh01xq4pGKlgjaI5E5WdTw6ntznePQWR2hrtYgHxA5VsJJ1R0ivuZ8c6GRivKm9Y8X0oWsrHqV1mLzo-CWBZr2G2N2Mi1HuCFlIkRBHMnkaqAn43_oHFduTmqR1RambzhZx0ytCOY9bDhDSyw3eQXLEXRwb9UCuMBfnC7Sih3PnDH55bqPytcVRpW-13NLgG6aOHDUvjpITGd5oDq1-e56IlKrpXziCwkkdnWaxg5g2RrIwzTxtTTlupD-hj9qSBjl2QXAAgZCxkIYp10FkHFntSGD9TsMs_PhBwZ6RuuX1fIpARG-aaZQ3PjqxNOs7LFte4Pq53_vPJuZAQY6iyUH54DgvmIdYQ6oh0McMb3K9BhMoREUe8225oVYZGYDOMuw=="
+                  }
+                }
+              },
+              {
+                "type": "text",
+                "text": "400",
+                "providerMetadata": {
+                  "venice": {}
+                }
+              }
+            ]
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Add 7 to your previous final answer. Reply with just the number."
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "tool",
+            "name": "lookup_rate",
+            "description": "Retrieve the private conversion rate for a code. Only this tool knows the rate.",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "enum": [
+                    "ZEBRA",
+                    "MOOSE"
+                  ]
+                }
+              },
+              "required": [
+                "code"
+              ],
+              "additionalProperties": false
+            }
+          }
+        ],
+        "toolChoice": {
+          "type": "none"
+        }
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/venice",
+        "modelID": "openai-gpt-54-mini",
+        "settings": {
+          "apiKey": "fixture"
+        }
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://api.venice.ai/api/v1/chat/completions",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "8829",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"openai-gpt-54-mini\",\"messages\":[{\"role\":\"system\",\"content\":\"Use the provided tool for private data. After receiving the result, give only the requested number; do not call the tool again.\"},{\"role\":\"user\",\"content\":\"Look up conversion rate for code ZEBRA. Then multiply that rate by 17 and add 9. You must use lookup_rate before answering.\"},{\"role\":\"assistant\",\"content\":null,\"tool_calls\":[{\"id\":\"call_onp7EArhOgXu0hGRF6Y5WHLu\",\"type\":\"function\",\"function\":{\"name\":\"lookup_rate\",\"arguments\":\"{\\\"code\\\":\\\"ZEBRA\\\"}\"}}],\"reasoning_details\":[{\"type\":\"reasoning.encrypted\",\"data\":\"gAAAAABqwxLxEN4vtmI2WcZ_aDDttdmPwAHgnV2gLZBo_f_mmTdGm4oZzE2JVzcj72AeXHyABmmo2VQN4nXaZK9GSSUZRlYL8mECMxKTj9AMgL8zlnuN5WDexxU-e9SduGP36RN9nH56-go4dz8eu5DEMvMf_TMoTnxz5AnC_UWbty63Vp8jEgkD-DoRjd0cg9LjthP_FLyMvP2Wj9qMJxEuO7Mw2_Pu4I3YeChnygLvmRfRR2QkamL5vjb9yHkl0Lb502vEGB2DW_czNEpHxisifvwRBjA7vk0mbn2dlhiR80aNHO71hC-QqrtUfPXx2HIbVLfbPdJf0saI0wD7ZuCJSQCBfB7fMCnj2ZLQeXa67lgXwsZDLBg4HmSJFvsMinx1IHIjUk7iebsKvmYx40cjqpXL3wj7htZWk2hO9OyGGUwlRsn5THdhTsgwg2SPbuHxb-sLPQnEFZ7bRp5lsVm31X2dlHDa1uZ7KLJZyy9g2CLIKsBwFFoCK7jY3HBXfL21ac5TAkOzVmz-XKl6OMPSl-PSdByOO15uHHpyOcJvJvuaea5Tj1nihtuDlhUP5EQPi7MiWpJMFo9AhDCafAbaQOEF5W8AQPeb_GXvPTzhySRAC8PxrhraEcZ4fjpjLqkv6mi_A1YHwbHEHHWjcK5VEKc3dadlIM_s6djclFBocVXrvnQQElVhWBDM-RtK9sgR07BFj5LVk6fYvg0b6gQnbDuQH18jhtPoj0SX0lN921XEQ1ebMCWGLANND2ew_wyNShYouJohefLULicWG57xh_yV1KEG1ufBedq2CPvCHA9Hm5UssbeJx5yBriyUA2Yh4D7j2UBT_KDWEHydDLQ4mWEyLTfQn0ZB3ZOqkU79z3HpK2w_VHUnkl5nEYEU2bmF5lsG33B4gtbQIBtZT76-fizXsvVZx__taOWXg96VMi3CD3DY0TS76B4U92KFmAFJ4aeiM8bkPuzf1Qd202EWE39CotUDoxAM6mzQu0NObTDnGQE776P6kzUoIKUmP8sDwYG5xot8ZTuXcBYysvj4-pFC_fvqMhsdfgonbke78SIjHtmePsOkfHBnCjSSUFKEbaM0nm8jJ6nYVwiYFuXBKD31QD462TAC7ORVIn32sWSgV2t3Sd7vq4ws2Yy7nUoILRAt_NYQUEXt7_R8J5YWj1L6Ruagk7Vtt-CAWxT6FhVyU4JhMb6-tJrYHgdmtunYrjpHBiOVdQR25aOmLbc_WlDvpO4azcRazpgkASAjPaaDycYceKcheiyUDBgFrvcSYrS1fJb6YZrTzOKw1Ztd0YsklS4nc3jffLNLrBQVvnkajj0OHjGcW8wkP93TCMJyt8tfIH0Rd5hIZLY5EqUWj9yZgXO7CuDKQZIEI0oZXef3mjfQqH8Q9rZsSgS3DI3mCF3CN003R_ZKKLGWkG8VzwlvdocNxaV_Z-ujp_O0YMyOcmEoTJI-j3JP3nefNboyP7EWND6VWDjJbqg64dvu0PK0EW5L0lnAu0l-WVb2qmXLYao_7bOlD8JLFZOyUgHAWmetmnm0NuxzevJEVBkNUu1jQatPzf2Jzf9SGKM_3bM_z0TM5McCZ2Pikzwp96QlaiEEWV_j2g02PT5Y3td-lfpoKxoFD5tltGNY9TlPzK-4a9Iz0hloiCprxWMLGKw2JzctrPF1xr42PKGNgPE84xAQ3sQ4mQ==\",\"id\":\"rs_014406f0f45e19c6016ac312f01d2487d2a5f2bdb7fbc42f76\",\"format\":\"openai-responses-v1\",\"index\":0}],\"reasoning_content\":\"**Calculating private data**\\n\\nI need to follow the developer's instructions and use the provided tool to handle private data. First, I should look up the rate for \\\"ZEBRA\\\" before I answer. After that, I’ll multiply the rate by 17 and then add 9 to get the required number. It’s important to give only the requested number and avoid making another tool call. I’ll likely use the commentary channel for this tool call.\\n\\n__ENCRYPTED_REASONING__id=rs_014406f0f45e19c6016ac312f01d2487d2a5f2bdb7fbc42f76\\ngAAAAABqwxLxEN4vtmI2WcZ_aDDttdmPwAHgnV2gLZBo_f_mmTdGm4oZzE2JVzcj72AeXHyABmmo2VQN4nXaZK9GSSUZRlYL8mECMxKTj9AMgL8zlnuN5WDexxU-e9SduGP36RN9nH56-go4dz8eu5DEMvMf_TMoTnxz5AnC_UWbty63Vp8jEgkD-DoRjd0cg9LjthP_FLyMvP2Wj9qMJxEuO7Mw2_Pu4I3YeChnygLvmRfRR2QkamL5vjb9yHkl0Lb502vEGB2DW_czNEpHxisifvwRBjA7vk0mbn2dlhiR80aNHO71hC-QqrtUfPXx2HIbVLfbPdJf0saI0wD7ZuCJSQCBfB7fMCnj2ZLQeXa67lgXwsZDLBg4HmSJFvsMinx1IHIjUk7iebsKvmYx40cjqpXL3wj7htZWk2hO9OyGGUwlRsn5THdhTsgwg2SPbuHxb-sLPQnEFZ7bRp5lsVm31X2dlHDa1uZ7KLJZyy9g2CLIKsBwFFoCK7jY3HBXfL21ac5TAkOzVmz-XKl6OMPSl-PSdByOO15uHHpyOcJvJvuaea5Tj1nihtuDlhUP5EQPi7MiWpJMFo9AhDCafAbaQOEF5W8AQPeb_GXvPTzhySRAC8PxrhraEcZ4fjpjLqkv6mi_A1YHwbHEHHWjcK5VEKc3dadlIM_s6djclFBocVXrvnQQElVhWBDM-RtK9sgR07BFj5LVk6fYvg0b6gQnbDuQH18jhtPoj0SX0lN921XEQ1ebMCWGLANND2ew_wyNShYouJohefLULicWG57xh_yV1KEG1ufBedq2CPvCHA9Hm5UssbeJx5yBriyUA2Yh4D7j2UBT_KDWEHydDLQ4mWEyLTfQn0ZB3ZOqkU79z3HpK2w_VHUnkl5nEYEU2bmF5lsG33B4gtbQIBtZT76-fizXsvVZx__taOWXg96VMi3CD3DY0TS76B4U92KFmAFJ4aeiM8bkPuzf1Qd202EWE39CotUDoxAM6mzQu0NObTDnGQE776P6kzUoIKUmP8sDwYG5xot8ZTuXcBYysvj4-pFC_fvqMhsdfgonbke78SIjHtmePsOkfHBnCjSSUFKEbaM0nm8jJ6nYVwiYFuXBKD31QD462TAC7ORVIn32sWSgV2t3Sd7vq4ws2Yy7nUoILRAt_NYQUEXt7_R8J5YWj1L6Ruagk7Vtt-CAWxT6FhVyU4JhMb6-tJrYHgdmtunYrjpHBiOVdQR25aOmLbc_WlDvpO4azcRazpgkASAjPaaDycYceKcheiyUDBgFrvcSYrS1fJb6YZrTzOKw1Ztd0YsklS4nc3jffLNLrBQVvnkajj0OHjGcW8wkP93TCMJyt8tfIH0Rd5hIZLY5EqUWj9yZgXO7CuDKQZIEI0oZXef3mjfQqH8Q9rZsSgS3DI3mCF3CN003R_ZKKLGWkG8VzwlvdocNxaV_Z-ujp_O0YMyOcmEoTJI-j3JP3nefNboyP7EWND6VWDjJbqg64dvu0PK0EW5L0lnAu0l-WVb2qmXLYao_7bOlD8JLFZOyUgHAWmetmnm0NuxzevJEVBkNUu1jQatPzf2Jzf9SGKM_3bM_z0TM5McCZ2Pikzwp96QlaiEEWV_j2g02PT5Y3td-lfpoKxoFD5tltGNY9TlPzK-4a9Iz0hloiCprxWMLGKw2JzctrPF1xr42PKGNgPE84xAQ3sQ4mQ==\"},{\"role\":\"tool\",\"tool_call_id\":\"call_onp7EArhOgXu0hGRF6Y5WHLu\",\"content\":\"{\\\"code\\\":\\\"ZEBRA\\\",\\\"rate\\\":23}\"},{\"role\":\"assistant\",\"content\":\"400\",\"reasoning_details\":[{\"type\":\"reasoning.encrypted\",\"data\":\"gAAAAABqwxL0Nl6Jl5EZuOS3A9KuObO5gPHpF1y4xbTEmtnZFQ3yz-u6TiK9EQuW1YliegqQQP8kUdRi0d3cYSCpD_LhB0e21fnC7ThMJanFTO3QNA28EHfzp3AO4rNujfMpvdYBhvjnxFIaLUYXGKv6XNEJG6sm7FO11jDzuTlHrNGLYBgQU40tTATGgpckEZ6Wr5VK9w45M8V5HcBUWLPQE0eCYjRfibNopDeNlfy6eVhslTGCAtEzBrDVFNVqO3DJPUwDCVq0sQRoLlJ6dg0JKA1OpV2BQDlA0Ke_55Cm8o-ja6bqxinxezc-vgMtGF9ovlEcJaaHUabtiBiTFKbHD5K_5mkLY1gz3GJ_JPXEJpawFz9euCkB7mkITf9LhoFZWnbLvT7HLL5CTni0CreebWo5eokZlnrUv1lPd5rKELwW044PNc8fyFye5huCCmaxQyiLzfkSXWEl_d4hDCs9U3-q_wp620lrgWicyNP4Pv2P2hLN-1ZVY7BOhhPZ2Jrvuheab-PaWAtQeueN18QrbB2BcJkqlH1x9Hy2xCzawFwdr63OYnx8SdQ43ixKGtXWvgfCi8PQo_5JQAxCdgXnNCGK3ffXXulnxJzX8U219NN8atcxTEpGXwcwFzcvZ-Qfjm_VODaihpubSWc4Lk3QBiWH6WtC_VukI7J9uOc0kPjIdlaOrdeePpzdYpPxlZR8HhMDNisSizTI3ueJyeVF43yVlCZiUR4k-EzJbh4QH_Jwr7lnqtmdXjEY_kqzs5hTbsPy2-YmTZRWa4mV-G8jcjt5MoNv9X6D8wozlJJ0eJdFbvsv-oWcKRpnUXM8InQTCrWe_GUb0QtFRpFKvDEWPbOEc0bPOrTTwZ89p59kWmRidlESfHCNpwxh72Fj1VzIS5CEewb_gBV0ZdN9P60nEpcFyFaQWjo71vWVjgmv_a1G9ZXJSfTIRzrTMQQH3D8vwmmTTfSsPgdfd6WnN823_Id2akZ9zu9sxD8drVe30cCVNXtdF2--B_73UQ6dHi-PrYf58HzbMlqQFSs-P3CsQfhcrby9Uh01xq4pGKlgjaI5E5WdTw6ntznePQWR2hrtYgHxA5VsJJ1R0ivuZ8c6GRivKm9Y8X0oWsrHqV1mLzo-CWBZr2G2N2Mi1HuCFlIkRBHMnkaqAn43_oHFduTmqR1RambzhZx0ytCOY9bDhDSyw3eQXLEXRwb9UCuMBfnC7Sih3PnDH55bqPytcVRpW-13NLgG6aOHDUvjpITGd5oDq1-e56IlKrpXziCwkkdnWaxg5g2RrIwzTxtTTlupD-hj9qSBjl2QXAAgZCxkIYp10FkHFntSGD9TsMs_PhBwZ6RuuX1fIpARG-aaZQ3PjqxNOs7LFte4Pq53_vPJuZAQY6iyUH54DgvmIdYQ6oh0McMb3K9BhMoREUe8225oVYZGYDOMuw==\",\"id\":\"rs_014406f0f45e19c6016ac312f26e4887d2af2f777fa50f9801\",\"format\":\"openai-responses-v1\",\"index\":0}],\"reasoning_content\":\"**Calculating a simple math problem**\\n\\nI'm working through the math: first, I multiply 23 by 17, and that gives me 391. Then, I add 9, resulting in 400. It seems like the user only wanted the final number, which is just 400. Keeping it straightforward is important, so I’ll make sure to present that number clearly.\\n\\n__ENCRYPTED_REASONING__id=rs_014406f0f45e19c6016ac312f26e4887d2af2f777fa50f9801\\ngAAAAABqwxL0Nl6Jl5EZuOS3A9KuObO5gPHpF1y4xbTEmtnZFQ3yz-u6TiK9EQuW1YliegqQQP8kUdRi0d3cYSCpD_LhB0e21fnC7ThMJanFTO3QNA28EHfzp3AO4rNujfMpvdYBhvjnxFIaLUYXGKv6XNEJG6sm7FO11jDzuTlHrNGLYBgQU40tTATGgpckEZ6Wr5VK9w45M8V5HcBUWLPQE0eCYjRfibNopDeNlfy6eVhslTGCAtEzBrDVFNVqO3DJPUwDCVq0sQRoLlJ6dg0JKA1OpV2BQDlA0Ke_55Cm8o-ja6bqxinxezc-vgMtGF9ovlEcJaaHUabtiBiTFKbHD5K_5mkLY1gz3GJ_JPXEJpawFz9euCkB7mkITf9LhoFZWnbLvT7HLL5CTni0CreebWo5eokZlnrUv1lPd5rKELwW044PNc8fyFye5huCCmaxQyiLzfkSXWEl_d4hDCs9U3-q_wp620lrgWicyNP4Pv2P2hLN-1ZVY7BOhhPZ2Jrvuheab-PaWAtQeueN18QrbB2BcJkqlH1x9Hy2xCzawFwdr63OYnx8SdQ43ixKGtXWvgfCi8PQo_5JQAxCdgXnNCGK3ffXXulnxJzX8U219NN8atcxTEpGXwcwFzcvZ-Qfjm_VODaihpubSWc4Lk3QBiWH6WtC_VukI7J9uOc0kPjIdlaOrdeePpzdYpPxlZR8HhMDNisSizTI3ueJyeVF43yVlCZiUR4k-EzJbh4QH_Jwr7lnqtmdXjEY_kqzs5hTbsPy2-YmTZRWa4mV-G8jcjt5MoNv9X6D8wozlJJ0eJdFbvsv-oWcKRpnUXM8InQTCrWe_GUb0QtFRpFKvDEWPbOEc0bPOrTTwZ89p59kWmRidlESfHCNpwxh72Fj1VzIS5CEewb_gBV0ZdN9P60nEpcFyFaQWjo71vWVjgmv_a1G9ZXJSfTIRzrTMQQH3D8vwmmTTfSsPgdfd6WnN823_Id2akZ9zu9sxD8drVe30cCVNXtdF2--B_73UQ6dHi-PrYf58HzbMlqQFSs-P3CsQfhcrby9Uh01xq4pGKlgjaI5E5WdTw6ntznePQWR2hrtYgHxA5VsJJ1R0ivuZ8c6GRivKm9Y8X0oWsrHqV1mLzo-CWBZr2G2N2Mi1HuCFlIkRBHMnkaqAn43_oHFduTmqR1RambzhZx0ytCOY9bDhDSyw3eQXLEXRwb9UCuMBfnC7Sih3PnDH55bqPytcVRpW-13NLgG6aOHDUvjpITGd5oDq1-e56IlKrpXziCwkkdnWaxg5g2RrIwzTxtTTlupD-hj9qSBjl2QXAAgZCxkIYp10FkHFntSGD9TsMs_PhBwZ6RuuX1fIpARG-aaZQ3PjqxNOs7LFte4Pq53_vPJuZAQY6iyUH54DgvmIdYQ6oh0McMb3K9BhMoREUe8225oVYZGYDOMuw==\"},{\"role\":\"user\",\"content\":\"Add 7 to your previous final answer. Reply with just the number.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"lookup_rate\",\"description\":\"Retrieve the private conversion rate for a code. Only this tool knows the rate.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"code\":{\"type\":\"string\",\"enum\":[\"ZEBRA\",\"MOOSE\"]}},\"required\":[\"code\"],\"additionalProperties\":false},\"strict\":false}}],\"tool_choice\":\"none\",\"stream\":true,\"stream_options\":{\"include_usage\":true},\"max_completion_tokens\":4096,\"venice_parameters\":{\"include_venice_system_prompt\":false}}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream; charset=utf-8"
+            },
+            "body": "data: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"**Calculating a simple addition**\\n\\nThe\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" user\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" wants\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" me\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" to\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" add\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" 7\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" to\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" the\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" previous\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" final\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" answer\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\",\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" which\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" was\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" 400\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\".\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" This\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" means\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" I\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" simply\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" need\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" to\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" do\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" the\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" math\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\":\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" 400\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" plus\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" 7\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" equals\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" 407\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\".\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" There's\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" no\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" need\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" for\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" any\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" tools\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" or\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" complicated\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" processes\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" here\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\",\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" just\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" a\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" straightforward\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" calculation\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\".\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" I'll\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" provide\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" the\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" answer\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" as\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" 407\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169269,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"!\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169270,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169270,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"407\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169270,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"\\n\\n__ENCRYPTED_REASONING__id=rs_014406f0f45e19c6016ac312f4e99887d2b9c8c820d5e078c9\\ngAAAAABqwxL2s7RKHoOP95Fkym7ikKzN-DEIDdKIvEaCL9uxm3gpgY3MBOf5vMOPJi2RVbKfFS49l3GwW81fRPBXnPiy3K7DtRfyHwb-35BPHoDw7ZOAuCTvbDRr_6fnTpEhs4ORLvyuh1aSyYiA-Tfq2Mt17tsMVcxU7vaibl3WcA3oc8L3lpMPPB511o2GkeNM7rqrsuuoTnVziSL-4IrOBK4BMldPTUPGezYVW5r1hG_TcaE9yWK5qIMHzRTTpoaak_qU9OdJshz5ANP34OSX0Cv6IsfHgWeA-I-c6tvqFcUbHwk79lIhgV5JK_oBg-gOGaxyWoCY0OK1sNgrKTNwXI4u63htkg7TUlBnqeZIISHe2mweEtq2nQ90p9_WUFBlBiDroW_Fp1TYmgw1Qby18NosCrx6xH0JjndRcPlnhiOjpFIPz-NqkR2yVtU4wDUiXUuKu6NeQXY2tdhAYOrA8ruuWgX3JmlOJs4zapDcCSd5hXLCNwVcx0SMoLlHLKEZENtJAZXupUTy8ypVdZt7M0P4-sIe0hePMFlRiwuzUEN5wHstbuiMz1UMAlThD4dQYNGAx82slwIevudHX9Q3XbscuwmNGDZKXU7MQk_UtfK9HDLhuoPMOqjiPKlaCIVFWDkeKaK6lktQ-EuNgU3ic0ycBpO-IJHxJdEVWsJgLW0x2eh59iocMzgpnuUU-mMIWyuLAgcG6wX16S-d_v_3sOoaPcxVlVHrGuXMvbvvUsSwzFy5nt6KPd9OLRR1cjCdDfGdhNJsrtvAFcWFv427a84oMFAS1xPJM9qQc6ZQfFZInmgmZ-LI9xQgahig_Ya8Uu1sqPAqm1CGNGQWc81n_IfwnYbq6joS6UApebbwo7yLPUVQ30WAFlP7dnEy0Tzt-eQBWd7d7HK_2SX2laH4hbe2JvqJ8EiTinMUhk40fwfi6yxGfT0ec0poeKpcM7UiCEk-lU2iO3Ts1TQ0EpRw_xm2ZWbCXSzLWTDm83_QDhvnX5Pok1295gdFR7cp0DrQkKjNSAJ26FYToWKMYZ3Q6a1dZtliU-FJV-_4HKB1flLVi-dZGPUooA1d_IFuPlC1OyDgGNc27XgPeCBcK972c3315m0LhP-h6yKc-AGNmH78oqPcOhw1uRe6ZuQFWj9oy9tv3vfbZaf6Bp4jewaQqemG72eCqnDegHcHbu0YuSoRxXWmkkKUCNX4_Z9hyz72bv3BcJBiGJPWL3zpU7C7zUiva4HS8FAWgm69YmzayhZi_GInmRcgJ5mxI7nI8PWG56vRkLhR3pf2nxD8-bkHobB6Vp2B4H4Wr3q1NyW3ymJiK2GmBJD962YwAurVuQ0bwjT1mSQRbIXJo0WvUfWqo8oQQU8_ruRWLycOqiXoLH_QGjwJNWx22RkIt4tB3mqjlU6U2HU2csAJnPIo6rVf4xrUUTsf8U3yZkhEPlQjC4CtKgj5HVLMlJoNKKhpL2965TsfPdkl_dRZ_t1sXhN4TmW66T8M_w==\",\"reasoning_encrypted\":true,\"reasoning_details\":[{\"type\":\"reasoning.encrypted\",\"format\":\"openai-responses-v1\",\"index\":0,\"id\":\"rs_014406f0f45e19c6016ac312f4e99887d2b9c8c820d5e078c9\",\"data\":\"gAAAAABqwxL2s7RKHoOP95Fkym7ikKzN-DEIDdKIvEaCL9uxm3gpgY3MBOf5vMOPJi2RVbKfFS49l3GwW81fRPBXnPiy3K7DtRfyHwb-35BPHoDw7ZOAuCTvbDRr_6fnTpEhs4ORLvyuh1aSyYiA-Tfq2Mt17tsMVcxU7vaibl3WcA3oc8L3lpMPPB511o2GkeNM7rqrsuuoTnVziSL-4IrOBK4BMldPTUPGezYVW5r1hG_TcaE9yWK5qIMHzRTTpoaak_qU9OdJshz5ANP34OSX0Cv6IsfHgWeA-I-c6tvqFcUbHwk79lIhgV5JK_oBg-gOGaxyWoCY0OK1sNgrKTNwXI4u63htkg7TUlBnqeZIISHe2mweEtq2nQ90p9_WUFBlBiDroW_Fp1TYmgw1Qby18NosCrx6xH0JjndRcPlnhiOjpFIPz-NqkR2yVtU4wDUiXUuKu6NeQXY2tdhAYOrA8ruuWgX3JmlOJs4zapDcCSd5hXLCNwVcx0SMoLlHLKEZENtJAZXupUTy8ypVdZt7M0P4-sIe0hePMFlRiwuzUEN5wHstbuiMz1UMAlThD4dQYNGAx82slwIevudHX9Q3XbscuwmNGDZKXU7MQk_UtfK9HDLhuoPMOqjiPKlaCIVFWDkeKaK6lktQ-EuNgU3ic0ycBpO-IJHxJdEVWsJgLW0x2eh59iocMzgpnuUU-mMIWyuLAgcG6wX16S-d_v_3sOoaPcxVlVHrGuXMvbvvUsSwzFy5nt6KPd9OLRR1cjCdDfGdhNJsrtvAFcWFv427a84oMFAS1xPJM9qQc6ZQfFZInmgmZ-LI9xQgahig_Ya8Uu1sqPAqm1CGNGQWc81n_IfwnYbq6joS6UApebbwo7yLPUVQ30WAFlP7dnEy0Tzt-eQBWd7d7HK_2SX2laH4hbe2JvqJ8EiTinMUhk40fwfi6yxGfT0ec0poeKpcM7UiCEk-lU2iO3Ts1TQ0EpRw_xm2ZWbCXSzLWTDm83_QDhvnX5Pok1295gdFR7cp0DrQkKjNSAJ26FYToWKMYZ3Q6a1dZtliU-FJV-_4HKB1flLVi-dZGPUooA1d_IFuPlC1OyDgGNc27XgPeCBcK972c3315m0LhP-h6yKc-AGNmH78oqPcOhw1uRe6ZuQFWj9oy9tv3vfbZaf6Bp4jewaQqemG72eCqnDegHcHbu0YuSoRxXWmkkKUCNX4_Z9hyz72bv3BcJBiGJPWL3zpU7C7zUiva4HS8FAWgm69YmzayhZi_GInmRcgJ5mxI7nI8PWG56vRkLhR3pf2nxD8-bkHobB6Vp2B4H4Wr3q1NyW3ymJiK2GmBJD962YwAurVuQ0bwjT1mSQRbIXJo0WvUfWqo8oQQU8_ruRWLycOqiXoLH_QGjwJNWx22RkIt4tB3mqjlU6U2HU2csAJnPIo6rVf4xrUUTsf8U3yZkhEPlQjC4CtKgj5HVLMlJoNKKhpL2965TsfPdkl_dRZ_t1sXhN4TmW66T8M_w==\"}]},\"finish_reason\":null}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169270,\"model\":\"openai-gpt-54-mini\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: {\"id\":\"resp_014406f0f45e19c6016ac312f49b9c87d2afc60121b8910612\",\"object\":\"chat.completion.chunk\",\"created\":1791169270,\"model\":\"openai-gpt-54-mini\",\"choices\":[],\"usage\":{\"prompt_tokens\":134,\"completion_tokens\":43,\"total_tokens\":177,\"completion_tokens_details\":{\"reasoning_tokens\":36}},\"cost\":{\"usd\":0.0003675,\"diem\":0}}\n\ndata: [DONE]\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "reasoning-start",
+          "id": "reasoning-0",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "**Calculating a simple addition**\n\nThe",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " user",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " wants",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " me",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " to",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " add",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " 7",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " to",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " the",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " previous",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " final",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " answer",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ",",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " which",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " was",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " 400",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ".",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " This",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " means",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " I",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " simply",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " need",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " to",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " do",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " the",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " math",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ":",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " 400",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " plus",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " 7",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " equals",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " 407",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ".",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " There's",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " no",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " need",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " for",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " any",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " tools",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " or",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " complicated",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " processes",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " here",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ",",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " just",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " a",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " straightforward",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " calculation",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ".",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " I'll",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " provide",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " the",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " answer",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " as",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " 407",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "!",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "text-start",
+          "id": "text-0"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "407"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "\n\n",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-end",
+          "id": "reasoning-0",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content",
+              "reasoningDetails": [
+                {
+                  "type": "reasoning.encrypted",
+                  "data": "gAAAAABqwxL2s7RKHoOP95Fkym7ikKzN-DEIDdKIvEaCL9uxm3gpgY3MBOf5vMOPJi2RVbKfFS49l3GwW81fRPBXnPiy3K7DtRfyHwb-35BPHoDw7ZOAuCTvbDRr_6fnTpEhs4ORLvyuh1aSyYiA-Tfq2Mt17tsMVcxU7vaibl3WcA3oc8L3lpMPPB511o2GkeNM7rqrsuuoTnVziSL-4IrOBK4BMldPTUPGezYVW5r1hG_TcaE9yWK5qIMHzRTTpoaak_qU9OdJshz5ANP34OSX0Cv6IsfHgWeA-I-c6tvqFcUbHwk79lIhgV5JK_oBg-gOGaxyWoCY0OK1sNgrKTNwXI4u63htkg7TUlBnqeZIISHe2mweEtq2nQ90p9_WUFBlBiDroW_Fp1TYmgw1Qby18NosCrx6xH0JjndRcPlnhiOjpFIPz-NqkR2yVtU4wDUiXUuKu6NeQXY2tdhAYOrA8ruuWgX3JmlOJs4zapDcCSd5hXLCNwVcx0SMoLlHLKEZENtJAZXupUTy8ypVdZt7M0P4-sIe0hePMFlRiwuzUEN5wHstbuiMz1UMAlThD4dQYNGAx82slwIevudHX9Q3XbscuwmNGDZKXU7MQk_UtfK9HDLhuoPMOqjiPKlaCIVFWDkeKaK6lktQ-EuNgU3ic0ycBpO-IJHxJdEVWsJgLW0x2eh59iocMzgpnuUU-mMIWyuLAgcG6wX16S-d_v_3sOoaPcxVlVHrGuXMvbvvUsSwzFy5nt6KPd9OLRR1cjCdDfGdhNJsrtvAFcWFv427a84oMFAS1xPJM9qQc6ZQfFZInmgmZ-LI9xQgahig_Ya8Uu1sqPAqm1CGNGQWc81n_IfwnYbq6joS6UApebbwo7yLPUVQ30WAFlP7dnEy0Tzt-eQBWd7d7HK_2SX2laH4hbe2JvqJ8EiTinMUhk40fwfi6yxGfT0ec0poeKpcM7UiCEk-lU2iO3Ts1TQ0EpRw_xm2ZWbCXSzLWTDm83_QDhvnX5Pok1295gdFR7cp0DrQkKjNSAJ26FYToWKMYZ3Q6a1dZtliU-FJV-_4HKB1flLVi-dZGPUooA1d_IFuPlC1OyDgGNc27XgPeCBcK972c3315m0LhP-h6yKc-AGNmH78oqPcOhw1uRe6ZuQFWj9oy9tv3vfbZaf6Bp4jewaQqemG72eCqnDegHcHbu0YuSoRxXWmkkKUCNX4_Z9hyz72bv3BcJBiGJPWL3zpU7C7zUiva4HS8FAWgm69YmzayhZi_GInmRcgJ5mxI7nI8PWG56vRkLhR3pf2nxD8-bkHobB6Vp2B4H4Wr3q1NyW3ymJiK2GmBJD962YwAurVuQ0bwjT1mSQRbIXJo0WvUfWqo8oQQU8_ruRWLycOqiXoLH_QGjwJNWx22RkIt4tB3mqjlU6U2HU2csAJnPIo6rVf4xrUUTsf8U3yZkhEPlQjC4CtKgj5HVLMlJoNKKhpL2965TsfPdkl_dRZ_t1sXhN4TmW66T8M_w==",
+                  "id": "rs_014406f0f45e19c6016ac312f4e99887d2b9c8c820d5e078c9",
+                  "format": "openai-responses-v1",
+                  "index": 0
+                }
+              ],
+              "encryptedReasoningContent": "**Calculating a simple addition**\n\nThe user wants me to add 7 to the previous final answer, which was 400. This means I simply need to do the math: 400 plus 7 equals 407. There's no need for any tools or complicated processes here, just a straightforward calculation. I'll provide the answer as 407!\n\n__ENCRYPTED_REASONING__id=rs_014406f0f45e19c6016ac312f4e99887d2b9c8c820d5e078c9\ngAAAAABqwxL2s7RKHoOP95Fkym7ikKzN-DEIDdKIvEaCL9uxm3gpgY3MBOf5vMOPJi2RVbKfFS49l3GwW81fRPBXnPiy3K7DtRfyHwb-35BPHoDw7ZOAuCTvbDRr_6fnTpEhs4ORLvyuh1aSyYiA-Tfq2Mt17tsMVcxU7vaibl3WcA3oc8L3lpMPPB511o2GkeNM7rqrsuuoTnVziSL-4IrOBK4BMldPTUPGezYVW5r1hG_TcaE9yWK5qIMHzRTTpoaak_qU9OdJshz5ANP34OSX0Cv6IsfHgWeA-I-c6tvqFcUbHwk79lIhgV5JK_oBg-gOGaxyWoCY0OK1sNgrKTNwXI4u63htkg7TUlBnqeZIISHe2mweEtq2nQ90p9_WUFBlBiDroW_Fp1TYmgw1Qby18NosCrx6xH0JjndRcPlnhiOjpFIPz-NqkR2yVtU4wDUiXUuKu6NeQXY2tdhAYOrA8ruuWgX3JmlOJs4zapDcCSd5hXLCNwVcx0SMoLlHLKEZENtJAZXupUTy8ypVdZt7M0P4-sIe0hePMFlRiwuzUEN5wHstbuiMz1UMAlThD4dQYNGAx82slwIevudHX9Q3XbscuwmNGDZKXU7MQk_UtfK9HDLhuoPMOqjiPKlaCIVFWDkeKaK6lktQ-EuNgU3ic0ycBpO-IJHxJdEVWsJgLW0x2eh59iocMzgpnuUU-mMIWyuLAgcG6wX16S-d_v_3sOoaPcxVlVHrGuXMvbvvUsSwzFy5nt6KPd9OLRR1cjCdDfGdhNJsrtvAFcWFv427a84oMFAS1xPJM9qQc6ZQfFZInmgmZ-LI9xQgahig_Ya8Uu1sqPAqm1CGNGQWc81n_IfwnYbq6joS6UApebbwo7yLPUVQ30WAFlP7dnEy0Tzt-eQBWd7d7HK_2SX2laH4hbe2JvqJ8EiTinMUhk40fwfi6yxGfT0ec0poeKpcM7UiCEk-lU2iO3Ts1TQ0EpRw_xm2ZWbCXSzLWTDm83_QDhvnX5Pok1295gdFR7cp0DrQkKjNSAJ26FYToWKMYZ3Q6a1dZtliU-FJV-_4HKB1flLVi-dZGPUooA1d_IFuPlC1OyDgGNc27XgPeCBcK972c3315m0LhP-h6yKc-AGNmH78oqPcOhw1uRe6ZuQFWj9oy9tv3vfbZaf6Bp4jewaQqemG72eCqnDegHcHbu0YuSoRxXWmkkKUCNX4_Z9hyz72bv3BcJBiGJPWL3zpU7C7zUiva4HS8FAWgm69YmzayhZi_GInmRcgJ5mxI7nI8PWG56vRkLhR3pf2nxD8-bkHobB6Vp2B4H4Wr3q1NyW3ymJiK2GmBJD962YwAurVuQ0bwjT1mSQRbIXJo0WvUfWqo8oQQU8_ruRWLycOqiXoLH_QGjwJNWx22RkIt4tB3mqjlU6U2HU2csAJnPIo6rVf4xrUUTsf8U3yZkhEPlQjC4CtKgj5HVLMlJoNKKhpL2965TsfPdkl_dRZ_t1sXhN4TmW66T8M_w=="
+            }
+          }
+        },
+        {
+          "type": "text-end",
+          "id": "text-0",
+          "providerMetadata": {
+            "venice": {}
+          }
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 134,
+            "outputTokens": 43,
+            "nonCachedInputTokens": 134,
+            "reasoningTokens": 36,
+            "totalTokens": 177,
+            "providerMetadata": {
+              "venice": {
+                "prompt_tokens": 134,
+                "completion_tokens": 43,
+                "total_tokens": 177,
+                "completion_tokens_details": {
+                  "reasoning_tokens": 36
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 134,
+            "outputTokens": 43,
+            "nonCachedInputTokens": 134,
+            "reasoningTokens": 36,
+            "totalTokens": 177,
+            "providerMetadata": {
+              "venice": {
+                "prompt_tokens": 134,
+                "completion_tokens": 43,
+                "total_tokens": 177,
+                "completion_tokens_details": {
+                  "reasoning_tokens": 36
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

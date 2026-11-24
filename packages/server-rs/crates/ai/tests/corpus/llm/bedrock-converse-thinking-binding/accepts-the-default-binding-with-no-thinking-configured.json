@@ -17,12 +17,6 @@
           "baseURL": "https://bedrock-runtime.us-east-1.amazonaws.com",
           "path": null
         },
-        "options": {
-          "providerOptions": {}
-        },
-        "modelOptions": {
-          "providerOptions": {}
-        },
         "transport": "http",
         "auth": {
           "type": "bearer",
@@ -51,6 +45,14 @@
           }
         ],
         "tools": []
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/amazon-bedrock",
+        "modelID": "global.anthropic.claude-opus-5-5",
+        "settings": {
+          "apiKey": "fixture",
+          "region": "us-east-1"
+        }
       },
       "transport": "http",
       "exchanges": [

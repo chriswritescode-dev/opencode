@@ -34,7 +34,10 @@ pub fn compile(
     reject_local_files(&request)?;
     let request = crate::prepare::prepare(model, request);
     let mut resolved = ResolvedRequest { request, model: model.clone() };
-    let body = resolved.model.route.protocol.build_body(&resolved, &resolved.model, context)?;
+    let mut body = resolved.model.route.protocol.build_body(&resolved, &resolved.model, context)?;
+    if let Some(transform) = resolved.model.route.body.clone() {
+        body = transform(body, &resolved, &resolved.model)?;
+    }
     let prepared_headers = resolved.model.route.protocol.body_headers(&resolved.model, &resolved.request, &body);
     if !prepared_headers.is_empty() {
         let mut headers = resolved.request.headers.clone().unwrap_or_default();
@@ -60,10 +63,14 @@ pub fn compile(
         context,
     )?;
     let channel = match options.web_socket {
-        Some(_) if resolved.model.route.transport == RouteTransport::OpenAiResponsesChannel => {
-            resolved.model.route.protocol.prepare_channel(&resolved.model, &parts).transpose()?
-        }
-        _ => None,
+        Some(_) => match &resolved.model.route.channel {
+            Some(channel) => crate::protocols::open_responses_channel::prepare(channel.as_ref(), &parts)?,
+            None if resolved.model.route.transport == RouteTransport::OpenAiResponsesChannel => {
+                resolved.model.route.protocol.prepare_channel(&resolved.model, &parts).transpose()?
+            }
+            None => None,
+        },
+        None => None,
     };
     let encoding = resolved.request.http.as_ref().and_then(|http| http.encoding.clone());
     let body = parts.json_body.clone();

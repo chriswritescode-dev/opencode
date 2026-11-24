@@ -1,0 +1,682 @@
+{
+  "cassette": "zai-chat/glm-4-5-calls-a-tool-without-streaming-arguments",
+  "protocol": "openai-chat",
+  "routeId": "zai-chat",
+  "clockEpochMs": 1767323045000,
+  "steps": [
+    {
+      "model": {
+        "id": "glm-4.5",
+        "provider": "zai",
+        "route": {
+          "id": "zai-chat",
+          "protocol": "zai-chat",
+          "providerMetadataKey": "zai"
+        },
+        "endpoint": {
+          "baseURL": "https://api.z.ai/api/paas/v4",
+          "path": "/chat/completions"
+        },
+        "compatibility": {
+          "reasoningField": "reasoning_content",
+          "maxTokensField": "max_tokens",
+          "zaiToolStream": false
+        },
+        "capabilities": {
+          "tools": {
+            "strict": false
+          }
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_zai_glm_4_5_calls_a_tool_without_streaming_arguments",
+        "maxTokens": 4096,
+        "system": [],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Use get_weather to look up the current weather in Paris."
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "tool",
+            "name": "get_weather",
+            "description": "Get weather in a city",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "city": {
+                  "type": "string",
+                  "enum": [
+                    "Paris"
+                  ]
+                }
+              },
+              "required": [
+                "city"
+              ]
+            }
+          }
+        ]
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/zai",
+        "modelID": "glm-4.5",
+        "settings": {
+          "apiKey": "fixture"
+        }
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://api.z.ai/api/paas/v4/chat/completions",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "399",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"glm-4.5\",\"messages\":[{\"role\":\"user\",\"content\":\"Use get_weather to look up the current weather in Paris.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"get_weather\",\"description\":\"Get weather in a city\",\"parameters\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\",\"enum\":[\"Paris\"]}},\"required\":[\"city\"]}}}],\"stream\":true,\"stream_options\":{\"include_usage\":true},\"max_tokens\":4096}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream;charset=UTF-8"
+            },
+            "body": "data: {\"id\":\"2026090809000486533b4eb7114fb0\",\"created\":1788829204,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.5\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"\\n\"}}]}\n\ndata: {\"id\":\"2026090809000486533b4eb7114fb0\",\"created\":1788829204,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.5\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"The\"}}]}\n\ndata: {\"id\":\"2026090809000486533b4eb7114fb0\",\"created\":1788829204,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.5\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" user wants\"}}]}\n\ndata: {\"id\":\"2026090809000486533b4eb7114fb0\",\"created\":1788829204,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.5\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" me to\"}}]}\n\ndata: {\"id\":\"2026090809000486533b4eb7114fb0\",\"created\":1788829204,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.5\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" use the\"}}]}\n\ndata: {\"id\":\"2026090809000486533b4eb7114fb0\",\"created\":1788829204,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.5\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" get_weather\"}}]}\n\ndata: {\"id\":\"2026090809000486533b4eb7114fb0\",\"created\":1788829204,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.5\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" function\"}}]}\n\ndata: {\"id\":\"2026090809000486533b4eb7114fb0\",\"created\":1788829204,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.5\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" to look\"}}]}\n\ndata: {\"id\":\"2026090809000486533b4eb7114fb0\",\"created\":1788829204,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.5\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" up the\"}}]}\n\ndata: {\"id\":\"2026090809000486533b4eb7114fb0\",\"created\":1788829204,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.5\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" current weather\"}}]}\n\ndata: {\"id\":\"2026090809000486533b4eb7114fb0\",\"created\":1788829204,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.5\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" in\"}}]}\n\ndata: {\"id\":\"2026090809000486533b4eb7114fb0\",\"created\":1788829204,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.5\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" Paris.\"}}]}\n\ndata: {\"id\":\"2026090809000486533b4eb7114fb0\",\"created\":1788829204,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.5\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" Looking at\"}}]}\n\ndata: {\"id\":\"2026090809000486533b4eb7114fb0\",\"created\":1788829204,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.5\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" the function\"}}]}\n\ndata: {\"id\":\"2026090809000486533b4eb7114fb0\",\"created\":1788829204,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.5\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" definition:\\n\\n\"}}]}\n\ndata: {\"id\":\"2026090809000486533b4eb7114fb0\",\"created\":1788829204,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.5\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"- Function\"}}]}\n\ndata: {\"id\":\"2026090809000486533b4eb7114fb0\",\"created\":1788829204,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.5\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" name:\"}}]}\n\ndata: {\"id\":\"2026090809000486533b4eb7114fb0\",\"created\":1788829204,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.5\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" get\"}}]}\n\ndata: {\"id\":\"2026090809000486533b4eb7114fb0\",\"created\":1788829204,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.5\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"_weather\\n\"}}]}\n\ndata: {\"id\":\"2026090809000486533b4eb7114fb0\",\"created\":1788829204,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.5\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"- Parameters\"}}]}\n\ndata: {\"id\":\"2026090809000486533b4eb7114fb0\",\"created\":1788829204,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.5\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\": city\"}}]}\n\ndata: {\"id\":\"2026090809000486533b4eb7114fb0\",\"created\":1788829204,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.5\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" (\"}}]}\n\ndata: {\"id\":\"2026090809000486533b4eb7114fb0\",\"created\":1788829204,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.5\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"required),\"}}]}\n\ndata: {\"id\":\"2026090809000486533b4eb7114fb0\",\"created\":1788829204,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.5\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" enum with\"}}]}\n\ndata: {\"id\":\"2026090809000486533b4eb7114fb0\",\"created\":1788829204,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.5\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" only \\\"\"}}]}\n\ndata: {\"id\":\"2026090809000486533b4eb7114fb0\",\"created\":1788829204,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.5\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"Paris\"}}]}\n\ndata: {\"id\":\"2026090809000486533b4eb7114fb0\",\"created\":1788829204,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.5\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"\\\" as\"}}]}\n\ndata: {\"id\":\"2026090809000486533b4eb7114fb0\",\"created\":1788829204,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.5\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" the allowed\"}}]}\n\ndata: {\"id\":\"2026090809000486533b4eb7114fb0\",\"created\":1788829204,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.5\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" value\\n\"}}]}\n\ndata: {\"id\":\"2026090809000486533b4eb7114fb0\",\"created\":1788829204,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.5\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"-\"}}]}\n\ndata: {\"id\":\"2026090809000486533b4eb7114fb0\",\"created\":1788829204,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.5\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" The user\"}}]}\n\ndata: {\"id\":\"2026090809000486533b4eb7114fb0\",\"created\":1788829204,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.5\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" specifically mentioned\"}}]}\n\ndata: {\"id\":\"2026090809000486533b4eb7114fb0\",\"created\":1788829204,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.5\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" \\\"Paris\"}}]}\n\ndata: {\"id\":\"2026090809000486533b4eb7114fb0\",\"created\":1788829204,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.5\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"\\\" which\"}}]}\n\ndata: {\"id\":\"2026090809000486533b4eb7114fb0\",\"created\":1788829204,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.5\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" matches the\"}}]}\n\ndata: {\"id\":\"2026090809000486533b4eb7114fb0\",\"created\":1788829204,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.5\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" only available\"}}]}\n\ndata: {\"id\":\"2026090809000486533b4eb7114fb0\",\"created\":1788829204,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.5\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" city\"}}]}\n\ndata: {\"id\":\"2026090809000486533b4eb7114fb0\",\"created\":1788829204,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.5\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" option\\n\\n\"}}]}\n\ndata: {\"id\":\"2026090809000486533b4eb7114fb0\",\"created\":1788829204,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.5\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\"I have\"}}]}\n\ndata: {\"id\":\"2026090809000486533b4eb7114fb0\",\"created\":1788829204,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.5\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" all the\"}}]}\n\ndata: {\"id\":\"2026090809000486533b4eb7114fb0\",\"created\":1788829204,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.5\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" required\"}}]}\n\ndata: {\"id\":\"2026090809000486533b4eb7114fb0\",\"created\":1788829204,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.5\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" parameters,\"}}]}\n\ndata: {\"id\":\"2026090809000486533b4eb7114fb0\",\"created\":1788829204,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.5\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" so I\"}}]}\n\ndata: {\"id\":\"2026090809000486533b4eb7114fb0\",\"created\":1788829204,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.5\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" can proceed\"}}]}\n\ndata: {\"id\":\"2026090809000486533b4eb7114fb0\",\"created\":1788829204,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.5\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" with the\"}}]}\n\ndata: {\"id\":\"2026090809000486533b4eb7114fb0\",\"created\":1788829204,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.5\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\" function call\"}}]}\n\ndata: {\"id\":\"2026090809000486533b4eb7114fb0\",\"created\":1788829204,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.5\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"reasoning_content\":\".\"}}]}\n\ndata: {\"id\":\"2026090809000486533b4eb7114fb0\",\"created\":1788829204,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.5\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"id\":\"tool-064305c5b5554370a8a47f0d7f4ae007\",\"index\":0,\"type\":\"function\",\"function\":{\"name\":\"get_weather\",\"arguments\":\"{\\\"city\\\": \\\"Paris\\\"}\"}}]}}]}\n\ndata: {\"id\":\"2026090809000486533b4eb7114fb0\",\"created\":1788829204,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.5\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}]}\n\ndata: {\"id\":\"2026090809000486533b4eb7114fb0\",\"created\":1788829204,\"object\":\"chat.completion.chunk\",\"model\":\"glm-4.5\",\"choices\":[{\"index\":0,\"finish_reason\":\"tool_calls\",\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}],\"usage\":{\"prompt_tokens\":174,\"completion_tokens\":95,\"total_tokens\":269,\"prompt_tokens_details\":{\"cached_tokens\":0},\"completion_tokens_details\":{\"reasoning_tokens\":83}}}\n\ndata: [DONE]\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "reasoning-start",
+          "id": "reasoning-0",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "\n",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "The",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " user wants",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " me to",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " use the",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " get_weather",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " function",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " to look",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " up the",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " current weather",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " in",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " Paris.",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " Looking at",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " the function",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " definition:\n\n",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "- Function",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " name:",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " get",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "_weather\n",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "- Parameters",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ": city",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " (",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "required),",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " enum with",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " only \"",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "Paris",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "\" as",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " the allowed",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " value\n",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "-",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " The user",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " specifically mentioned",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " \"Paris",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "\" which",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " matches the",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " only available",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " city",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " option\n\n",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "I have",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " all the",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " required",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " parameters,",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " so I",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " can proceed",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " with the",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " function call",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ".",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "tool-input-start",
+          "id": "tool-064305c5b5554370a8a47f0d7f4ae007",
+          "name": "get_weather"
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "tool-064305c5b5554370a8a47f0d7f4ae007",
+          "name": "get_weather",
+          "text": "{\"city\": \"Paris\"}",
+          "input": {
+            "city": "Paris"
+          }
+        },
+        {
+          "type": "reasoning-end",
+          "id": "reasoning-0",
+          "providerMetadata": {
+            "zai": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "tool-input-end",
+          "id": "tool-064305c5b5554370a8a47f0d7f4ae007",
+          "name": "get_weather"
+        },
+        {
+          "type": "tool-call",
+          "id": "tool-064305c5b5554370a8a47f0d7f4ae007",
+          "name": "get_weather",
+          "input": {
+            "city": "Paris"
+          }
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "tool-calls",
+            "raw": "tool_calls"
+          },
+          "usage": {
+            "inputTokens": 174,
+            "outputTokens": 95,
+            "nonCachedInputTokens": 174,
+            "cacheReadInputTokens": 0,
+            "reasoningTokens": 83,
+            "totalTokens": 269,
+            "providerMetadata": {
+              "zai": {
+                "prompt_tokens": 174,
+                "completion_tokens": 95,
+                "total_tokens": 269,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                },
+                "completion_tokens_details": {
+                  "reasoning_tokens": 83
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "tool-calls",
+            "raw": "tool_calls"
+          },
+          "usage": {
+            "inputTokens": 174,
+            "outputTokens": 95,
+            "nonCachedInputTokens": 174,
+            "cacheReadInputTokens": 0,
+            "reasoningTokens": 83,
+            "totalTokens": 269,
+            "providerMetadata": {
+              "zai": {
+                "prompt_tokens": 174,
+                "completion_tokens": 95,
+                "total_tokens": 269,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                },
+                "completion_tokens_details": {
+                  "reasoning_tokens": 83
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

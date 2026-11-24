@@ -1,0 +1,1011 @@
+{
+  "cassette": "venice-chat/deepseek-v4-flash-preserves-reasoning-through-a-tool-loop-and-follow-up",
+  "protocol": "openai-chat",
+  "routeId": "venice-chat",
+  "clockEpochMs": 1767323045000,
+  "steps": [
+    {
+      "model": {
+        "id": "deepseek-v4-flash",
+        "provider": "venice",
+        "route": {
+          "id": "venice-chat",
+          "protocol": "venice-chat",
+          "providerMetadataKey": "venice"
+        },
+        "endpoint": {
+          "baseURL": "https://api.venice.ai/api/v1",
+          "path": "/chat/completions"
+        },
+        "compatibility": {
+          "maxTokensField": "max_completion_tokens"
+        },
+        "capabilities": {
+          "promptCacheKey": true
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_venice_chat_deepseek_v4_flash_tool_loop",
+        "maxTokens": 4096,
+        "system": [
+          {
+            "type": "text",
+            "text": "Use the provided tool for private data. After receiving the result, give only the requested number; do not call the tool again."
+          }
+        ],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Look up conversion rate for code ZEBRA. Then multiply that rate by 17 and add 9. You must use lookup_rate before answering."
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "tool",
+            "name": "lookup_rate",
+            "description": "Retrieve the private conversion rate for a code. Only this tool knows the rate.",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "enum": [
+                    "ZEBRA",
+                    "MOOSE"
+                  ]
+                }
+              },
+              "required": [
+                "code"
+              ],
+              "additionalProperties": false
+            }
+          }
+        ]
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/venice",
+        "modelID": "deepseek-v4-flash",
+        "settings": {
+          "apiKey": "fixture"
+        }
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://api.venice.ai/api/v1/chat/completions",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "814",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"deepseek-v4-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"Use the provided tool for private data. After receiving the result, give only the requested number; do not call the tool again.\"},{\"role\":\"user\",\"content\":\"Look up conversion rate for code ZEBRA. Then multiply that rate by 17 and add 9. You must use lookup_rate before answering.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"lookup_rate\",\"description\":\"Retrieve the private conversion rate for a code. Only this tool knows the rate.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"code\":{\"type\":\"string\",\"enum\":[\"ZEBRA\",\"MOOSE\"]}},\"required\":[\"code\"],\"additionalProperties\":false},\"strict\":false}}],\"stream\":true,\"stream_options\":{\"include_usage\":true},\"max_completion_tokens\":4096,\"venice_parameters\":{\"include_venice_system_prompt\":false}}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream; charset=utf-8"
+            },
+            "body": "data: {\"service_tier\":null,\"id\":\"chatcmpl-Rhr7pZI7Hv6zIafL3B1KoyzY\",\"object\":\"chat.completion.chunk\",\"created\":1791169188,\"model\":\"deepseek-v4-flash\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\",\"reasoning_content\":null,\"tool_calls\":null},\"logprobs\":null,\"finish_reason\":null}],\"usage\":null}\n\ndata: {\"service_tier\":\"default\",\"id\":\"chatcmpl-Rhr7pZI7Hv6zIafL3B1KoyzY\",\"object\":\"chat.completion.chunk\",\"created\":1791169188,\"model\":\"deepseek-v4-flash\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\",\"reasoning_content\":null,\"tool_calls\":null},\"logprobs\":null,\"finish_reason\":null}],\"usage\":null}\n\ndata: {\"service_tier\":\"default\",\"id\":\"chatcmpl-Rhr7pZI7Hv6zIafL3B1KoyzY\",\"object\":\"chat.completion.chunk\",\"created\":1791169188,\"model\":\"deepseek-v4-flash\",\"choices\":[{\"index\":0,\"delta\":{\"role\":null,\"content\":\"\",\"reasoning_content\":\"Th\",\"tool_calls\":null},\"logprobs\":null,\"finish_reason\":null}],\"usage\":null}\n\ndata: {\"service_tier\":\"default\",\"id\":\"chatcmpl-Rhr7pZI7Hv6zIafL3B1KoyzY\",\"object\":\"chat.completion.chunk\",\"created\":1791169188,\"model\":\"deepseek-v4-flash\",\"choices\":[{\"index\":0,\"delta\":{\"role\":null,\"content\":\"\",\"reasoning_content\":\"e user wants me to look\",\"tool_calls\":null},\"logprobs\":null,\"finish_reason\":null}],\"usage\":null}\n\ndata: {\"service_tier\":\"default\",\"id\":\"chatcmpl-Rhr7pZI7Hv6zIafL3B1KoyzY\",\"object\":\"chat.completion.chunk\",\"created\":1791169188,\"model\":\"deepseek-v4-flash\",\"choices\":[{\"index\":0,\"delta\":{\"role\":null,\"content\":\"\",\"reasoning_content\":\" up the conversi\",\"tool_calls\":null},\"logprobs\":null,\"finish_reason\":null}],\"usage\":null}\n\ndata: {\"service_tier\":\"default\",\"id\":\"chatcmpl-Rhr7pZI7Hv6zIafL3B1KoyzY\",\"object\":\"chat.completion.chunk\",\"created\":1791169188,\"model\":\"deepseek-v4-flash\",\"choices\":[{\"index\":0,\"delta\":{\"role\":null,\"content\":\"\",\"reasoning_content\":\"on rate fo\",\"tool_calls\":null},\"logprobs\":null,\"finish_reason\":null}],\"usage\":null}\n\ndata: {\"service_tier\":\"default\",\"id\":\"chatcmpl-Rhr7pZI7Hv6zIafL3B1KoyzY\",\"object\":\"chat.completion.chunk\",\"created\":1791169188,\"model\":\"deepseek-v4-flash\",\"choices\":[{\"index\":0,\"delta\":{\"role\":null,\"content\":\"\",\"reasoning_content\":\"r code ZEBRA\",\"tool_calls\":null},\"logprobs\":null,\"finish_reason\":null}],\"usage\":null}\n\ndata: {\"service_tier\":\"default\",\"id\":\"chatcmpl-Rhr7pZI7Hv6zIafL3B1KoyzY\",\"object\":\"chat.completion.chunk\",\"created\":1791169188,\"model\":\"deepseek-v4-flash\",\"choices\":[{\"index\":0,\"delta\":{\"role\":null,\"content\":\"\",\"reasoning_content\":\", then mult\",\"tool_calls\":null},\"logprobs\":null,\"finish_reason\":null}],\"usage\":null}\n\ndata: {\"service_tier\":\"default\",\"id\":\"chatcmpl-Rhr7pZI7Hv6zIafL3B1KoyzY\",\"object\":\"chat.completion.chunk\",\"created\":1791169188,\"model\":\"deepseek-v4-flash\",\"choices\":[{\"index\":0,\"delta\":{\"role\":null,\"content\":\"\",\"reasoning_content\":\"iply by\",\"tool_calls\":null},\"logprobs\":null,\"finish_reason\":null}],\"usage\":null}\n\ndata: {\"service_tier\":\"default\",\"id\":\"chatcmpl-Rhr7pZI7Hv6zIafL3B1KoyzY\",\"object\":\"chat.completion.chunk\",\"created\":1791169188,\"model\":\"deepseek-v4-flash\",\"choices\":[{\"index\":0,\"delta\":{\"role\":null,\"content\":\"\",\"reasoning_content\":\" 17 and add 9. Let m\",\"tool_calls\":null},\"logprobs\":null,\"finish_reason\":null}],\"usage\":null}\n\ndata: {\"service_tier\":\"default\",\"id\":\"chatcmpl-Rhr7pZI7Hv6zIafL3B1KoyzY\",\"object\":\"chat.completion.chunk\",\"created\":1791169188,\"model\":\"deepseek-v4-flash\",\"choices\":[{\"index\":0,\"delta\":{\"role\":null,\"content\":\"\",\"reasoning_content\":\"e start by lo\",\"tool_calls\":null},\"logprobs\":null,\"finish_reason\":null}],\"usage\":null}\n\ndata: {\"service_tier\":\"default\",\"id\":\"chatcmpl-Rhr7pZI7Hv6zIafL3B1KoyzY\",\"object\":\"chat.completion.chunk\",\"created\":1791169188,\"model\":\"deepseek-v4-flash\",\"choices\":[{\"index\":0,\"delta\":{\"role\":null,\"content\":\"\",\"reasoning_content\":\"oking up the rate.\",\"tool_calls\":null},\"logprobs\":null,\"finish_reason\":null}],\"usage\":null}\n\ndata: {\"service_tier\":\"default\",\"id\":\"chatcmpl-Rhr7pZI7Hv6zIafL3B1KoyzY\",\"object\":\"chat.completion.chunk\",\"created\":1791169188,\"model\":\"deepseek-v4-flash\",\"choices\":[{\"index\":0,\"delta\":{\"role\":null,\"content\":\"\",\"reasoning_content\":null,\"tool_calls\":[{\"index\":0,\"id\":\"chatcmpl-tool-ab656a8b683341f2\",\"function\":{\"arguments\":\"\",\"name\":\"lookup_rate\"},\"type\":\"function\"}]},\"logprobs\":null,\"finish_reason\":null}],\"usage\":null}\n\ndata: {\"service_tier\":\"default\",\"id\":\"chatcmpl-Rhr7pZI7Hv6zIafL3B1KoyzY\",\"object\":\"chat.completion.chunk\",\"created\":1791169188,\"model\":\"deepseek-v4-flash\",\"choices\":[{\"index\":0,\"delta\":{\"role\":null,\"content\":\"\",\"reasoning_content\":null,\"tool_calls\":[{\"index\":0,\"id\":null,\"function\":{\"arguments\":\"\",\"name\":null},\"type\":null}]},\"logprobs\":null,\"finish_reason\":null}],\"usage\":null}\n\ndata: {\"service_tier\":\"default\",\"id\":\"chatcmpl-Rhr7pZI7Hv6zIafL3B1KoyzY\",\"object\":\"chat.completion.chunk\",\"created\":1791169188,\"model\":\"deepseek-v4-flash\",\"choices\":[{\"index\":0,\"delta\":{\"role\":null,\"content\":\"\",\"reasoning_content\":null,\"tool_calls\":[{\"index\":0,\"id\":null,\"function\":{\"arguments\":\"\",\"name\":null},\"type\":null}]},\"logprobs\":null,\"finish_reason\":null}],\"usage\":null}\n\ndata: {\"service_tier\":\"default\",\"id\":\"chatcmpl-Rhr7pZI7Hv6zIafL3B1KoyzY\",\"object\":\"chat.completion.chunk\",\"created\":1791169188,\"model\":\"deepseek-v4-flash\",\"choices\":[{\"index\":0,\"delta\":{\"role\":null,\"content\":\"\",\"reasoning_content\":null,\"tool_calls\":[{\"index\":0,\"id\":null,\"function\":{\"arguments\":\"{\\\"code\\\": \\\"ZEBRA\\\"}\",\"name\":null},\"type\":null}]},\"logprobs\":null,\"finish_reason\":\"tool_calls\"}]}\n\ndata: {\"service_tier\":\"default\",\"id\":\"chatcmpl-Rhr7pZI7Hv6zIafL3B1KoyzY\",\"object\":\"chat.completion.chunk\",\"created\":1791169188,\"model\":\"deepseek-v4-flash\",\"choices\":[],\"usage\":{\"prompt_tokens\":357,\"completion_tokens\":83,\"total_tokens\":440,\"prompt_tokens_details\":{\"cached_tokens\":256},\"cache_read_input_tokens\":256},\"cost\":{\"usd\":0.000043931,\"diem\":0}}\n\ndata: [DONE]\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "reasoning-start",
+          "id": "reasoning-0",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "Th",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "e user wants me to look",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " up the conversi",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "on rate fo",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "r code ZEBRA",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": ", then mult",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "iply by",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " 17 and add 9. Let m",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "e start by lo",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "oking up the rate.",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "tool-input-start",
+          "id": "chatcmpl-tool-ab656a8b683341f2",
+          "name": "lookup_rate"
+        },
+        {
+          "type": "tool-input-delta",
+          "id": "chatcmpl-tool-ab656a8b683341f2",
+          "name": "lookup_rate",
+          "text": "{\"code\": \"ZEBRA\"}",
+          "input": {
+            "code": "ZEBRA"
+          }
+        },
+        {
+          "type": "reasoning-end",
+          "id": "reasoning-0",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "tool-input-end",
+          "id": "chatcmpl-tool-ab656a8b683341f2",
+          "name": "lookup_rate",
+          "providerMetadata": {
+            "venice": {}
+          }
+        },
+        {
+          "type": "tool-call",
+          "id": "chatcmpl-tool-ab656a8b683341f2",
+          "name": "lookup_rate",
+          "input": {
+            "code": "ZEBRA"
+          },
+          "providerMetadata": {
+            "venice": {}
+          }
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "tool-calls",
+            "raw": "tool_calls"
+          },
+          "usage": {
+            "inputTokens": 357,
+            "outputTokens": 83,
+            "nonCachedInputTokens": 101,
+            "cacheReadInputTokens": 256,
+            "totalTokens": 440,
+            "providerMetadata": {
+              "venice": {
+                "prompt_tokens": 357,
+                "completion_tokens": 83,
+                "total_tokens": 440,
+                "cache_read_input_tokens": 256,
+                "prompt_tokens_details": {
+                  "cached_tokens": 256
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "tool-calls",
+            "raw": "tool_calls"
+          },
+          "usage": {
+            "inputTokens": 357,
+            "outputTokens": 83,
+            "nonCachedInputTokens": 101,
+            "cacheReadInputTokens": 256,
+            "totalTokens": 440,
+            "providerMetadata": {
+              "venice": {
+                "prompt_tokens": 357,
+                "completion_tokens": 83,
+                "total_tokens": 440,
+                "cache_read_input_tokens": 256,
+                "prompt_tokens_details": {
+                  "cached_tokens": 256
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "model": {
+        "id": "deepseek-v4-flash",
+        "provider": "venice",
+        "route": {
+          "id": "venice-chat",
+          "protocol": "venice-chat",
+          "providerMetadataKey": "venice"
+        },
+        "endpoint": {
+          "baseURL": "https://api.venice.ai/api/v1",
+          "path": "/chat/completions"
+        },
+        "compatibility": {
+          "maxTokensField": "max_completion_tokens"
+        },
+        "capabilities": {
+          "promptCacheKey": true
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_venice_chat_deepseek_v4_flash_tool_loop",
+        "maxTokens": 4096,
+        "system": [
+          {
+            "type": "text",
+            "text": "Use the provided tool for private data. After receiving the result, give only the requested number; do not call the tool again."
+          }
+        ],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Look up conversion rate for code ZEBRA. Then multiply that rate by 17 and add 9. You must use lookup_rate before answering."
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "reasoning",
+                "text": "The user wants me to look up the conversion rate for code ZEBRA, then multiply by 17 and add 9. Let me start by looking up the rate.",
+                "providerMetadata": {
+                  "venice": {
+                    "reasoningField": "reasoning_content"
+                  }
+                }
+              },
+              {
+                "type": "tool-call",
+                "id": "chatcmpl-tool-ab656a8b683341f2",
+                "name": "lookup_rate",
+                "input": {
+                  "code": "ZEBRA"
+                },
+                "providerMetadata": {
+                  "venice": {}
+                }
+              }
+            ]
+          },
+          {
+            "role": "tool",
+            "content": [
+              {
+                "type": "tool-result",
+                "id": "chatcmpl-tool-ab656a8b683341f2",
+                "name": "lookup_rate",
+                "result": {
+                  "type": "json",
+                  "value": {
+                    "code": "ZEBRA",
+                    "rate": 23
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "tool",
+            "name": "lookup_rate",
+            "description": "Retrieve the private conversion rate for a code. Only this tool knows the rate.",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "enum": [
+                    "ZEBRA",
+                    "MOOSE"
+                  ]
+                }
+              },
+              "required": [
+                "code"
+              ],
+              "additionalProperties": false
+            }
+          }
+        ],
+        "toolChoice": {
+          "type": "none"
+        }
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/venice",
+        "modelID": "deepseek-v4-flash",
+        "settings": {
+          "apiKey": "fixture"
+        }
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://api.venice.ai/api/v1/chat/completions",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "1277",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"deepseek-v4-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"Use the provided tool for private data. After receiving the result, give only the requested number; do not call the tool again.\"},{\"role\":\"user\",\"content\":\"Look up conversion rate for code ZEBRA. Then multiply that rate by 17 and add 9. You must use lookup_rate before answering.\"},{\"role\":\"assistant\",\"content\":null,\"tool_calls\":[{\"id\":\"chatcmpl-tool-ab656a8b683341f2\",\"type\":\"function\",\"function\":{\"name\":\"lookup_rate\",\"arguments\":\"{\\\"code\\\":\\\"ZEBRA\\\"}\"}}],\"reasoning_content\":\"The user wants me to look up the conversion rate for code ZEBRA, then multiply by 17 and add 9. Let me start by looking up the rate.\"},{\"role\":\"tool\",\"tool_call_id\":\"chatcmpl-tool-ab656a8b683341f2\",\"content\":\"{\\\"code\\\":\\\"ZEBRA\\\",\\\"rate\\\":23}\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"lookup_rate\",\"description\":\"Retrieve the private conversion rate for a code. Only this tool knows the rate.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"code\":{\"type\":\"string\",\"enum\":[\"ZEBRA\",\"MOOSE\"]}},\"required\":[\"code\"],\"additionalProperties\":false},\"strict\":false}}],\"tool_choice\":\"none\",\"stream\":true,\"stream_options\":{\"include_usage\":true},\"max_completion_tokens\":4096,\"venice_parameters\":{\"include_venice_system_prompt\":false}}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream; charset=utf-8"
+            },
+            "body": "data: {\"service_tier\":null,\"id\":\"chatcmpl-RtwpMZBraGwqJiKRKQFrmmIq\",\"object\":\"chat.completion.chunk\",\"created\":1791169191,\"model\":\"deepseek-v4-flash\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\",\"reasoning_content\":null,\"tool_calls\":null},\"logprobs\":null,\"finish_reason\":null}],\"usage\":null}\n\ndata: {\"service_tier\":\"default\",\"id\":\"chatcmpl-RtwpMZBraGwqJiKRKQFrmmIq\",\"object\":\"chat.completion.chunk\",\"created\":1791169191,\"model\":\"deepseek-v4-flash\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\",\"reasoning_content\":null,\"tool_calls\":null},\"logprobs\":null,\"finish_reason\":null}],\"usage\":null}\n\ndata: {\"service_tier\":\"default\",\"id\":\"chatcmpl-RtwpMZBraGwqJiKRKQFrmmIq\",\"object\":\"chat.completion.chunk\",\"created\":1791169191,\"model\":\"deepseek-v4-flash\",\"choices\":[{\"index\":0,\"delta\":{\"role\":null,\"content\":\"\",\"reasoning_content\":\"We have the\",\"tool_calls\":null},\"logprobs\":null,\"finish_reason\":null}],\"usage\":null}\n\ndata: {\"service_tier\":\"default\",\"id\":\"chatcmpl-RtwpMZBraGwqJiKRKQFrmmIq\",\"object\":\"chat.completion.chunk\",\"created\":1791169191,\"model\":\"deepseek-v4-flash\",\"choices\":[{\"index\":0,\"delta\":{\"role\":null,\"content\":\"\",\"reasoning_content\":\" rate: 2\",\"tool_calls\":null},\"logprobs\":null,\"finish_reason\":null}],\"usage\":null}\n\ndata: {\"service_tier\":\"default\",\"id\":\"chatcmpl-RtwpMZBraGwqJiKRKQFrmmIq\",\"object\":\"chat.completion.chunk\",\"created\":1791169191,\"model\":\"deepseek-v4-flash\",\"choices\":[{\"index\":0,\"delta\":{\"role\":null,\"content\":\"\",\"reasoning_content\":\"3. Mul\",\"tool_calls\":null},\"logprobs\":null,\"finish_reason\":null}],\"usage\":null}\n\ndata: {\"service_tier\":\"default\",\"id\":\"chatcmpl-RtwpMZBraGwqJiKRKQFrmmIq\",\"object\":\"chat.completion.chunk\",\"created\":1791169191,\"model\":\"deepseek-v4-flash\",\"choices\":[{\"index\":0,\"delta\":{\"role\":null,\"content\":\"\",\"reasoning_content\":\"tiply by\",\"tool_calls\":null},\"logprobs\":null,\"finish_reason\":null}],\"usage\":null}\n\ndata: {\"service_tier\":\"default\",\"id\":\"chatcmpl-RtwpMZBraGwqJiKRKQFrmmIq\",\"object\":\"chat.completion.chunk\",\"created\":1791169191,\"model\":\"deepseek-v4-flash\",\"choices\":[{\"index\":0,\"delta\":{\"role\":null,\"content\":\"\",\"reasoning_content\":\" 17: 2\",\"tool_calls\":null},\"logprobs\":null,\"finish_reason\":null}],\"usage\":null}\n\ndata: {\"service_tier\":\"default\",\"id\":\"chatcmpl-RtwpMZBraGwqJiKRKQFrmmIq\",\"object\":\"chat.completion.chunk\",\"created\":1791169191,\"model\":\"deepseek-v4-flash\",\"choices\":[{\"index\":0,\"delta\":{\"role\":null,\"content\":\"\",\"reasoning_content\":\"3 * 17\",\"tool_calls\":null},\"logprobs\":null,\"finish_reason\":null}],\"usage\":null}\n\ndata: {\"service_tier\":\"default\",\"id\":\"chatcmpl-RtwpMZBraGwqJiKRKQFrmmIq\",\"object\":\"chat.completion.chunk\",\"created\":1791169191,\"model\":\"deepseek-v4-flash\",\"choices\":[{\"index\":0,\"delta\":{\"role\":null,\"content\":\"\",\"reasoning_content\":\" = 391.\",\"tool_calls\":null},\"logprobs\":null,\"finish_reason\":null}],\"usage\":null}\n\ndata: {\"service_tier\":\"default\",\"id\":\"chatcmpl-RtwpMZBraGwqJiKRKQFrmmIq\",\"object\":\"chat.completion.chunk\",\"created\":1791169191,\"model\":\"deepseek-v4-flash\",\"choices\":[{\"index\":0,\"delta\":{\"role\":null,\"content\":\"\",\"reasoning_content\":\" Then ad\",\"tool_calls\":null},\"logprobs\":null,\"finish_reason\":null}],\"usage\":null}\n\ndata: {\"service_tier\":\"default\",\"id\":\"chatcmpl-RtwpMZBraGwqJiKRKQFrmmIq\",\"object\":\"chat.completion.chunk\",\"created\":1791169191,\"model\":\"deepseek-v4-flash\",\"choices\":[{\"index\":0,\"delta\":{\"role\":null,\"content\":\"\",\"reasoning_content\":\"d 9:\",\"tool_calls\":null},\"logprobs\":null,\"finish_reason\":null}],\"usage\":null}\n\ndata: {\"service_tier\":\"default\",\"id\":\"chatcmpl-RtwpMZBraGwqJiKRKQFrmmIq\",\"object\":\"chat.completion.chunk\",\"created\":1791169191,\"model\":\"deepseek-v4-flash\",\"choices\":[{\"index\":0,\"delta\":{\"role\":null,\"content\":\"\",\"reasoning_content\":\" 391 + 9 = 400.\",\"tool_calls\":null},\"logprobs\":null,\"finish_reason\":null}],\"usage\":null}\n\ndata: {\"service_tier\":\"default\",\"id\":\"chatcmpl-RtwpMZBraGwqJiKRKQFrmmIq\",\"object\":\"chat.completion.chunk\",\"created\":1791169191,\"model\":\"deepseek-v4-flash\",\"choices\":[{\"index\":0,\"delta\":{\"role\":null,\"content\":\"400\",\"reasoning_content\":\" So the answer is 400.\",\"tool_calls\":null},\"logprobs\":null,\"finish_reason\":\"stop\"}]}\n\ndata: {\"service_tier\":\"default\",\"id\":\"chatcmpl-RtwpMZBraGwqJiKRKQFrmmIq\",\"object\":\"chat.completion.chunk\",\"created\":1791169191,\"model\":\"deepseek-v4-flash\",\"choices\":[],\"usage\":{\"prompt_tokens\":128,\"completion_tokens\":46,\"total_tokens\":174,\"prompt_tokens_details\":{\"cached_tokens\":0}},\"cost\":{\"usd\":0.000030313999999999998,\"diem\":0}}\n\ndata: [DONE]\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "reasoning-start",
+          "id": "reasoning-0",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "We have the",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " rate: 2",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "3. Mul",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "tiply by",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " 17: 2",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "3 * 17",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " = 391.",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " Then ad",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "d 9:",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " 391 + 9 = 400.",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " So the answer is 400.",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "text-start",
+          "id": "text-0"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "400"
+        },
+        {
+          "type": "reasoning-end",
+          "id": "reasoning-0",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "text-end",
+          "id": "text-0",
+          "providerMetadata": {
+            "venice": {}
+          }
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 128,
+            "outputTokens": 46,
+            "nonCachedInputTokens": 128,
+            "cacheReadInputTokens": 0,
+            "totalTokens": 174,
+            "providerMetadata": {
+              "venice": {
+                "prompt_tokens": 128,
+                "completion_tokens": 46,
+                "total_tokens": 174,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 128,
+            "outputTokens": 46,
+            "nonCachedInputTokens": 128,
+            "cacheReadInputTokens": 0,
+            "totalTokens": 174,
+            "providerMetadata": {
+              "venice": {
+                "prompt_tokens": 128,
+                "completion_tokens": 46,
+                "total_tokens": 174,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "model": {
+        "id": "deepseek-v4-flash",
+        "provider": "venice",
+        "route": {
+          "id": "venice-chat",
+          "protocol": "venice-chat",
+          "providerMetadataKey": "venice"
+        },
+        "endpoint": {
+          "baseURL": "https://api.venice.ai/api/v1",
+          "path": "/chat/completions"
+        },
+        "compatibility": {
+          "maxTokensField": "max_completion_tokens"
+        },
+        "capabilities": {
+          "promptCacheKey": true
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_venice_chat_deepseek_v4_flash_tool_loop",
+        "maxTokens": 4096,
+        "system": [
+          {
+            "type": "text",
+            "text": "Use the provided tool for private data. After receiving the result, give only the requested number; do not call the tool again."
+          }
+        ],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Look up conversion rate for code ZEBRA. Then multiply that rate by 17 and add 9. You must use lookup_rate before answering."
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "reasoning",
+                "text": "The user wants me to look up the conversion rate for code ZEBRA, then multiply by 17 and add 9. Let me start by looking up the rate.",
+                "providerMetadata": {
+                  "venice": {
+                    "reasoningField": "reasoning_content"
+                  }
+                }
+              },
+              {
+                "type": "tool-call",
+                "id": "chatcmpl-tool-ab656a8b683341f2",
+                "name": "lookup_rate",
+                "input": {
+                  "code": "ZEBRA"
+                },
+                "providerMetadata": {
+                  "venice": {}
+                }
+              }
+            ]
+          },
+          {
+            "role": "tool",
+            "content": [
+              {
+                "type": "tool-result",
+                "id": "chatcmpl-tool-ab656a8b683341f2",
+                "name": "lookup_rate",
+                "result": {
+                  "type": "json",
+                  "value": {
+                    "code": "ZEBRA",
+                    "rate": 23
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "reasoning",
+                "text": "We have the rate: 23. Multiply by 17: 23 * 17 = 391. Then add 9: 391 + 9 = 400. So the answer is 400.",
+                "providerMetadata": {
+                  "venice": {
+                    "reasoningField": "reasoning_content"
+                  }
+                }
+              },
+              {
+                "type": "text",
+                "text": "400",
+                "providerMetadata": {
+                  "venice": {}
+                }
+              }
+            ]
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Add 7 to your previous final answer. Reply with just the number."
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "tool",
+            "name": "lookup_rate",
+            "description": "Retrieve the private conversion rate for a code. Only this tool knows the rate.",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "enum": [
+                    "ZEBRA",
+                    "MOOSE"
+                  ]
+                }
+              },
+              "required": [
+                "code"
+              ],
+              "additionalProperties": false
+            }
+          }
+        ],
+        "toolChoice": {
+          "type": "none"
+        }
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/venice",
+        "modelID": "deepseek-v4-flash",
+        "settings": {
+          "apiKey": "fixture"
+        }
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://api.venice.ai/api/v1/chat/completions",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "1531",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"deepseek-v4-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"Use the provided tool for private data. After receiving the result, give only the requested number; do not call the tool again.\"},{\"role\":\"user\",\"content\":\"Look up conversion rate for code ZEBRA. Then multiply that rate by 17 and add 9. You must use lookup_rate before answering.\"},{\"role\":\"assistant\",\"content\":null,\"tool_calls\":[{\"id\":\"chatcmpl-tool-ab656a8b683341f2\",\"type\":\"function\",\"function\":{\"name\":\"lookup_rate\",\"arguments\":\"{\\\"code\\\":\\\"ZEBRA\\\"}\"}}],\"reasoning_content\":\"The user wants me to look up the conversion rate for code ZEBRA, then multiply by 17 and add 9. Let me start by looking up the rate.\"},{\"role\":\"tool\",\"tool_call_id\":\"chatcmpl-tool-ab656a8b683341f2\",\"content\":\"{\\\"code\\\":\\\"ZEBRA\\\",\\\"rate\\\":23}\"},{\"role\":\"assistant\",\"content\":\"400\",\"reasoning_content\":\"We have the rate: 23. Multiply by 17: 23 * 17 = 391. Then add 9: 391 + 9 = 400. So the answer is 400.\"},{\"role\":\"user\",\"content\":\"Add 7 to your previous final answer. Reply with just the number.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"lookup_rate\",\"description\":\"Retrieve the private conversion rate for a code. Only this tool knows the rate.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"code\":{\"type\":\"string\",\"enum\":[\"ZEBRA\",\"MOOSE\"]}},\"required\":[\"code\"],\"additionalProperties\":false},\"strict\":false}}],\"tool_choice\":\"none\",\"stream\":true,\"stream_options\":{\"include_usage\":true},\"max_completion_tokens\":4096,\"venice_parameters\":{\"include_venice_system_prompt\":false}}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream; charset=utf-8"
+            },
+            "body": "data: {\"service_tier\":null,\"id\":\"chatcmpl-R0MMWxoRA5NidBHTttxrMoVe\",\"object\":\"chat.completion.chunk\",\"created\":1791169192,\"model\":\"deepseek-v4-flash\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\",\"reasoning_content\":null,\"tool_calls\":null},\"logprobs\":null,\"finish_reason\":null}],\"usage\":null}\n\ndata: {\"service_tier\":\"default\",\"id\":\"chatcmpl-R0MMWxoRA5NidBHTttxrMoVe\",\"object\":\"chat.completion.chunk\",\"created\":1791169192,\"model\":\"deepseek-v4-flash\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\",\"reasoning_content\":null,\"tool_calls\":null},\"logprobs\":null,\"finish_reason\":null}],\"usage\":null}\n\ndata: {\"service_tier\":\"default\",\"id\":\"chatcmpl-R0MMWxoRA5NidBHTttxrMoVe\",\"object\":\"chat.completion.chunk\",\"created\":1791169192,\"model\":\"deepseek-v4-flash\",\"choices\":[{\"index\":0,\"delta\":{\"role\":null,\"content\":\"\",\"reasoning_content\":\"We need to add\",\"tool_calls\":null},\"logprobs\":null,\"finish_reason\":null}],\"usage\":null}\n\ndata: {\"service_tier\":\"default\",\"id\":\"chatcmpl-R0MMWxoRA5NidBHTttxrMoVe\",\"object\":\"chat.completion.chunk\",\"created\":1791169192,\"model\":\"deepseek-v4-flash\",\"choices\":[{\"index\":0,\"delta\":{\"role\":null,\"content\":\"\",\"reasoning_content\":\" 7 to t\",\"tool_calls\":null},\"logprobs\":null,\"finish_reason\":null}],\"usage\":null}\n\ndata: {\"service_tier\":\"default\",\"id\":\"chatcmpl-R0MMWxoRA5NidBHTttxrMoVe\",\"object\":\"chat.completion.chunk\",\"created\":1791169192,\"model\":\"deepseek-v4-flash\",\"choices\":[{\"index\":0,\"delta\":{\"role\":null,\"content\":\"\",\"reasoning_content\":\"h\",\"tool_calls\":null},\"logprobs\":null,\"finish_reason\":null}],\"usage\":null}\n\ndata: {\"service_tier\":\"default\",\"id\":\"chatcmpl-R0MMWxoRA5NidBHTttxrMoVe\",\"object\":\"chat.completion.chunk\",\"created\":1791169192,\"model\":\"deepseek-v4-flash\",\"choices\":[{\"index\":0,\"delta\":{\"role\":null,\"content\":\"\",\"reasoning_content\":\"e previous ans\",\"tool_calls\":null},\"logprobs\":null,\"finish_reason\":null}],\"usage\":null}\n\ndata: {\"service_tier\":\"default\",\"id\":\"chatcmpl-R0MMWxoRA5NidBHTttxrMoVe\",\"object\":\"chat.completion.chunk\",\"created\":1791169192,\"model\":\"deepseek-v4-flash\",\"choices\":[{\"index\":0,\"delta\":{\"role\":null,\"content\":\"\",\"reasoning_content\":\"wer,\",\"tool_calls\":null},\"logprobs\":null,\"finish_reason\":null}],\"usage\":null}\n\ndata: {\"service_tier\":\"default\",\"id\":\"chatcmpl-R0MMWxoRA5NidBHTttxrMoVe\",\"object\":\"chat.completion.chunk\",\"created\":1791169192,\"model\":\"deepseek-v4-flash\",\"choices\":[{\"index\":0,\"delta\":{\"role\":null,\"content\":\"\",\"reasoning_content\":\" which\",\"tool_calls\":null},\"logprobs\":null,\"finish_reason\":null}],\"usage\":null}\n\ndata: {\"service_tier\":\"default\",\"id\":\"chatcmpl-R0MMWxoRA5NidBHTttxrMoVe\",\"object\":\"chat.completion.chunk\",\"created\":1791169192,\"model\":\"deepseek-v4-flash\",\"choices\":[{\"index\":0,\"delta\":{\"role\":null,\"content\":\"\",\"reasoning_content\":\" was 400. S\",\"tool_calls\":null},\"logprobs\":null,\"finish_reason\":null}],\"usage\":null}\n\ndata: {\"service_tier\":\"default\",\"id\":\"chatcmpl-R0MMWxoRA5NidBHTttxrMoVe\",\"object\":\"chat.completion.chunk\",\"created\":1791169192,\"model\":\"deepseek-v4-flash\",\"choices\":[{\"index\":0,\"delta\":{\"role\":null,\"content\":\"\",\"reasoning_content\":\"o 400+7=407. Reply wi\",\"tool_calls\":null},\"logprobs\":null,\"finish_reason\":null}],\"usage\":null}\n\ndata: {\"service_tier\":\"default\",\"id\":\"chatcmpl-R0MMWxoRA5NidBHTttxrMoVe\",\"object\":\"chat.completion.chunk\",\"created\":1791169192,\"model\":\"deepseek-v4-flash\",\"choices\":[{\"index\":0,\"delta\":{\"role\":null,\"content\":\"407\",\"reasoning_content\":\"th just the number.\",\"tool_calls\":null},\"logprobs\":null,\"finish_reason\":\"stop\"}]}\n\ndata: {\"service_tier\":\"default\",\"id\":\"chatcmpl-R0MMWxoRA5NidBHTttxrMoVe\",\"object\":\"chat.completion.chunk\",\"created\":1791169192,\"model\":\"deepseek-v4-flash\",\"choices\":[],\"usage\":{\"prompt_tokens\":148,\"completion_tokens\":33,\"total_tokens\":181,\"prompt_tokens_details\":{\"cached_tokens\":0}},\"cost\":{\"usd\":0.000029499,\"diem\":0}}\n\ndata: [DONE]\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "reasoning-start",
+          "id": "reasoning-0",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "We need to add",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " 7 to t",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "h",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "e previous ans",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "wer,",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " which",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": " was 400. S",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "o 400+7=407. Reply wi",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "reasoning-0",
+          "text": "th just the number.",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "text-start",
+          "id": "text-0"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "407"
+        },
+        {
+          "type": "reasoning-end",
+          "id": "reasoning-0",
+          "providerMetadata": {
+            "venice": {
+              "reasoningField": "reasoning_content"
+            }
+          }
+        },
+        {
+          "type": "text-end",
+          "id": "text-0",
+          "providerMetadata": {
+            "venice": {}
+          }
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 148,
+            "outputTokens": 33,
+            "nonCachedInputTokens": 148,
+            "cacheReadInputTokens": 0,
+            "totalTokens": 181,
+            "providerMetadata": {
+              "venice": {
+                "prompt_tokens": 148,
+                "completion_tokens": 33,
+                "total_tokens": 181,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 148,
+            "outputTokens": 33,
+            "nonCachedInputTokens": 148,
+            "cacheReadInputTokens": 0,
+            "totalTokens": 181,
+            "providerMetadata": {
+              "venice": {
+                "prompt_tokens": 148,
+                "completion_tokens": 33,
+                "total_tokens": 181,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

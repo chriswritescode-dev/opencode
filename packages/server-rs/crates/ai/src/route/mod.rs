@@ -1,6 +1,8 @@
 pub mod auth;
 pub mod client;
 pub mod compile;
+pub mod decision;
+pub mod embedding;
 pub mod endpoint;
 pub mod executor;
 pub mod framing;

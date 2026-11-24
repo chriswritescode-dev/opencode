@@ -275,6 +275,8 @@ pub struct MediaAsset {
     pub info: Option<MediaInfo>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub provider_metadata: Option<ProviderMetadata>,
+    #[serde(skip)]
+    pub headers: Option<StringMap>,
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]

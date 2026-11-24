@@ -1,0 +1,155 @@
+{
+  "cassette": "cloudflare-workers-ai/cloudflare-workers-ai-llama-3-1-8b-text",
+  "protocol": "openai-chat",
+  "routeId": "cloudflare-workers-ai",
+  "clockEpochMs": 1767323045000,
+  "steps": [
+    {
+      "model": {
+        "id": "@cf/meta/llama-3.1-8b-instruct",
+        "provider": "cloudflare-workers-ai",
+        "route": {
+          "id": "cloudflare-workers-ai",
+          "protocol": "openai-chat",
+          "providerMetadataKey": "cloudflare-workers-ai"
+        },
+        "endpoint": {
+          "baseURL": "https://api.cloudflare.com/client/v4/accounts/fixture-account/ai/v1",
+          "path": "/chat/completions"
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "id": "recorded_cloudflare_workers_ai_llama_3_1_8b_text_1",
+        "maxTokens": 40,
+        "temperature": 0,
+        "cache": "none",
+        "system": [
+          {
+            "type": "text",
+            "text": "You are concise."
+          }
+        ],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Reply exactly with: Hello!"
+              }
+            ]
+          }
+        ],
+        "tools": []
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/cloudflare-workers-ai",
+        "modelID": "@cf/meta/llama-3.1-8b-instruct",
+        "settings": {
+          "accountId": "fixture-account",
+          "apiKey": "fixture"
+        }
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://api.cloudflare.com/client/v4/accounts/fixture-account/ai/v1/chat/completions",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "243",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"@cf/meta/llama-3.1-8b-instruct\",\"messages\":[{\"role\":\"system\",\"content\":\"You are concise.\"},{\"role\":\"user\",\"content\":\"Reply exactly with: Hello!\"}],\"stream\":true,\"stream_options\":{\"include_usage\":true},\"max_tokens\":40,\"temperature\":0}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream"
+            },
+            "body": "data: {\"id\":\"id-1778255778230\",\"created\":1778255778,\"model\":\"@cf/meta/llama-3.1-8b-instruct\",\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"Hello\"}}]}\n\ndata: {\"id\":\"id-1778255778230\",\"created\":1778255778,\"model\":\"@cf/meta/llama-3.1-8b-instruct\",\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"!\"}}]}\n\ndata: {\"id\":\"id-1778255778230\",\"object\":\"chat.completion.chunk\",\"created\":1778255778,\"model\":\"@cf/meta/llama-3.1-8b-instruct\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":45,\"completion_tokens\":2,\"total_tokens\":47}}\n\ndata: {\"id\":\"id-1778255778230\",\"object\":\"chat.completion.chunk\",\"created\":1778255778,\"model\":\"@cf/meta/llama-3.1-8b-instruct\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":0,\"completion_tokens\":0,\"total_tokens\":0,\"prompt_tokens_details\":{\"cached_tokens\":0}}}\n\ndata: [DONE]\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "text-start",
+          "id": "text-0"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "Hello"
+        },
+        {
+          "type": "text-delta",
+          "id": "text-0",
+          "text": "!"
+        },
+        {
+          "type": "text-end",
+          "id": "text-0"
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 0,
+            "outputTokens": 0,
+            "nonCachedInputTokens": 0,
+            "cacheReadInputTokens": 0,
+            "totalTokens": 0,
+            "providerMetadata": {
+              "cloudflare-workers-ai": {
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "stop",
+            "raw": "stop"
+          },
+          "usage": {
+            "inputTokens": 0,
+            "outputTokens": 0,
+            "nonCachedInputTokens": 0,
+            "cacheReadInputTokens": 0,
+            "totalTokens": 0,
+            "providerMetadata": {
+              "cloudflare-workers-ai": {
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

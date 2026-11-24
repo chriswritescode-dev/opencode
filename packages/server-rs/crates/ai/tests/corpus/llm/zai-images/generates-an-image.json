@@ -1,0 +1,73 @@
+{
+  "cassette": "zai-images/generates-an-image",
+  "protocol": "zai-images",
+  "routeId": "zai-images",
+  "clockEpochMs": 1767323045000,
+  "steps": [
+    {
+      "model": {
+        "id": "cogview-4-250304",
+        "provider": "zai",
+        "route": {
+          "id": "zai-images"
+        }
+      },
+      "request": {
+        "prompt": "A simple flat red circle centered on a plain white background.",
+        "aspect": "1:1",
+        "providerOptions": {
+          "quality": "standard",
+          "userID": "opencode-image-test"
+        }
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/zai/images",
+        "modelID": "cogview-4-250304",
+        "settings": {
+          "apiKey": "fixture"
+        }
+      },
+      "transport": "http",
+      "operation": "image.generate",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://api.z.ai/api/paas/v4/images/generations",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "174",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"cogview-4-250304\",\"prompt\":\"A simple flat red circle centered on a plain white background.\",\"size\":\"1024x1024\",\"user_id\":\"opencode-image-test\",\"quality\":\"standard\"}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "application/json; charset=UTF-8"
+            },
+            "body": "{\"created\":1784477028,\"data\":[{\"url\":\"https://mfile.z.ai/1784477035500-43574eab2b6e402da9063d6ac22dfefb.png?ufileattname=202607200003482062c3bba9b04f7d_watermark.png\"}],\"id\":\"202607200003482062c3bba9b04f7d\",\"request_id\":\"202607200003482062c3bba9b04f7d\"}"
+          }
+        }
+      ],
+      "result": {
+        "images": [
+          {
+            "source": {
+              "type": "url",
+              "url": "https://mfile.z.ai/1784477035500-43574eab2b6e402da9063d6ac22dfefb.png?ufileattname=202607200003482062c3bba9b04f7d_watermark.png",
+              "expiresAt": 1769915045000
+            }
+          }
+        ],
+        "providerMetadata": {
+          "zai": {
+            "created": 1784477028,
+            "id": "202607200003482062c3bba9b04f7d",
+            "requestID": "202607200003482062c3bba9b04f7d"
+          }
+        }
+      }
+    }
+  ]
+}

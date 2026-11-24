@@ -1,0 +1,1060 @@
+{
+  "cassette": "cohere/streams-native-thinking-with-a-budget",
+  "protocol": "cohere-chat",
+  "routeId": "cohere-chat",
+  "clockEpochMs": 1767323045000,
+  "steps": [
+    {
+      "model": {
+        "id": "command-a-reasoning-08-2025",
+        "provider": "cohere",
+        "route": {
+          "id": "cohere-chat",
+          "protocol": "cohere-chat",
+          "providerMetadataKey": "cohere"
+        },
+        "endpoint": {
+          "baseURL": "https://api.cohere.com/v2",
+          "path": "/chat"
+        },
+        "transport": "http",
+        "auth": {
+          "type": "bearer",
+          "value": "fixture"
+        }
+      },
+      "request": {
+        "maxTokens": 2048,
+        "providerOptions": {
+          "thinking": {
+            "type": "enabled",
+            "tokenBudget": 128
+          }
+        },
+        "system": [],
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "What is 17 times 23? Answer briefly."
+              }
+            ]
+          }
+        ],
+        "tools": []
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/cohere",
+        "modelID": "command-a-reasoning-08-2025",
+        "settings": {
+          "apiKey": "fixture"
+        }
+      },
+      "transport": "http",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://api.cohere.com/v2/chat",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "223",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"command-a-reasoning-08-2025\",\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"What is 17 times 23? Answer briefly.\"}]}],\"stream\":true,\"thinking\":{\"type\":\"enabled\",\"token_budget\":128},\"max_tokens\":2048}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "text/event-stream"
+            },
+            "body": "event: message-start\ndata: {\"id\":\"305edbbe-9f86-4bc0-9490-7766b168a453\",\"type\":\"message-start\",\"delta\":{\"message\":{\"role\":\"assistant\",\"content\":[],\"tool_plan\":\"\",\"tool_calls\":[],\"citations\":[]}}}\n\nevent: content-start\ndata: {\"type\":\"content-start\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"type\":\"thinking\",\"thinking\":\"\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\"Okay\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\",\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" let\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\"'s\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" see\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\".\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" I\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" need\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" to\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" figure\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" out\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" what\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" 1\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\"7\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" multiplied\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" by\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" 2\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\"3\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" is\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\".\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" H\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\"mm\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\",\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" how\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" do\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" I\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" do\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" this\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\"?\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" I\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" remember\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" some\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" multiplication\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" methods\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" from\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" school\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\".\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" Maybe\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" I\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" can\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" use\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" the\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" standard\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" algorithm\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" or\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" break\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" it\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" down\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" into\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" smaller\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" parts\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\".\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" Let\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" me\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" try\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" both\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" ways\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" to\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" make\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" sure\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" I\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" get\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" the\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" right\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" answer\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\".\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\"\\n\\nFirst\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\",\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" the\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" standard\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" way\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\".\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" So\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\",\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" multiplying\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" 1\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\"7\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" by\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" 2\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\"3\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\".\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" I\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" guess\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" I\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" should\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" write\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" it\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" down\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" like\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\":\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\"\\n\\n   1\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\"7\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\"\\nx\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" 2\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\"3\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\"\\n------\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\"\\n\\nStarting\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" with\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" the\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" ones\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" place\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\".\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" Multiply\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" 1\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\"7\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" by\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" 3\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\".\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" 7\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" times\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" 3\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":0,\"delta\":{\"message\":{\"content\":{\"thinking\":\" is\"}}}}\n\nevent: content-end\ndata: {\"type\":\"content-end\",\"index\":0}\n\nevent: content-start\ndata: {\"type\":\"content-start\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"type\":\"text\",\"text\":\"\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\"To\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\" calculate\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\" \\\\(\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\"1\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\"7\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\" \\\\\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\"times\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\" 2\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\"3\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\"\\\\\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\"):\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\"\\n\\n1\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\".\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\" Break\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\" down\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\" the\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\" multiplication\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\":\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\"\\n   -\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\" \\\\(\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\"1\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\"7\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\" \\\\\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\"times\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\" 2\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\"0\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\" =\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\" 3\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\"4\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\"0\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\"\\\\)\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\"\\n   -\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\" \\\\(\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\"1\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\"7\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\" \\\\\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\"times\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\" 3\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\" =\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\" 5\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\"1\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\"\\\\)\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\"\\n2\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\".\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\" Add\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\" the\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\" results\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\":\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\" \\\\(\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\"3\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\"4\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\"0\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\" +\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\" 5\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\"1\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\" =\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\" 3\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\"9\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\"1\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\"\\\\\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\").\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\"\\n\\n**\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\"Answer\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\":**\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\" 3\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\"9\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\"1\"}}}}\n\nevent: content-delta\ndata: {\"type\":\"content-delta\",\"index\":1,\"delta\":{\"message\":{\"content\":{\"text\":\".\"}}}}\n\nevent: content-end\ndata: {\"type\":\"content-end\",\"index\":1}\n\nevent: message-end\ndata: {\"type\":\"message-end\",\"delta\":{\"finish_reason\":\"COMPLETE\",\"usage\":{\"billed_units\":{\"input_tokens\":13,\"output_tokens\":210},\"tokens\":{\"input_tokens\":1399,\"output_tokens\":215,\"reasoning_tokens\":128},\"cached_tokens\":1360}}}\n\ndata: [DONE]\n\n"
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "step-start",
+          "index": 0
+        },
+        {
+          "type": "reasoning-start",
+          "id": "0"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": "Okay"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": ","
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " let"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": "'s"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " see"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": "."
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " I"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " need"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " to"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " figure"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " out"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " what"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " 1"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": "7"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " multiplied"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " by"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " 2"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": "3"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " is"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": "."
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " H"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": "mm"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": ","
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " how"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " do"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " I"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " do"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " this"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": "?"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " I"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " remember"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " some"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " multiplication"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " methods"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " from"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " school"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": "."
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " Maybe"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " I"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " can"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " use"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " the"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " standard"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " algorithm"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " or"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " break"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " it"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " down"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " into"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " smaller"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " parts"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": "."
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " Let"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " me"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " try"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " both"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " ways"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " to"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " make"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " sure"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " I"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " get"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " the"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " right"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " answer"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": "."
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": "\n\nFirst"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": ","
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " the"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " standard"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " way"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": "."
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " So"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": ","
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " multiplying"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " 1"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": "7"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " by"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " 2"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": "3"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": "."
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " I"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " guess"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " I"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " should"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " write"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " it"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " down"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " like"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": ":"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": "\n\n   1"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": "7"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": "\nx"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " 2"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": "3"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": "\n------"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": "\n\nStarting"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " with"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " the"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " ones"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " place"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": "."
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " Multiply"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " 1"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": "7"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " by"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " 3"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": "."
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " 7"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " times"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " 3"
+        },
+        {
+          "type": "reasoning-delta",
+          "id": "0",
+          "text": " is"
+        },
+        {
+          "type": "reasoning-end",
+          "id": "0"
+        },
+        {
+          "type": "text-start",
+          "id": "1"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": "To"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": " calculate"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": " \\("
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": "1"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": "7"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": " \\"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": "times"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": " 2"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": "3"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": "\\"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": "):"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": "\n\n1"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": "."
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": " Break"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": " down"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": " the"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": " multiplication"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": ":"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": "\n   -"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": " \\("
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": "1"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": "7"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": " \\"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": "times"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": " 2"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": "0"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": " ="
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": " 3"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": "4"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": "0"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": "\\)"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": "\n   -"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": " \\("
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": "1"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": "7"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": " \\"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": "times"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": " 3"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": " ="
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": " 5"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": "1"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": "\\)"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": "\n2"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": "."
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": " Add"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": " the"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": " results"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": ":"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": " \\("
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": "3"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": "4"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": "0"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": " +"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": " 5"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": "1"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": " ="
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": " 3"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": "9"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": "1"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": "\\"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": ")."
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": "\n\n**"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": "Answer"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": ":**"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": " 3"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": "9"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": "1"
+        },
+        {
+          "type": "text-delta",
+          "id": "1",
+          "text": "."
+        },
+        {
+          "type": "text-end",
+          "id": "1"
+        },
+        {
+          "type": "step-finish",
+          "index": 0,
+          "reason": {
+            "normalized": "stop",
+            "raw": "COMPLETE"
+          },
+          "usage": {
+            "inputTokens": 1399,
+            "outputTokens": 215,
+            "nonCachedInputTokens": 39,
+            "cacheReadInputTokens": 1360,
+            "reasoningTokens": 128,
+            "totalTokens": 1614,
+            "providerMetadata": {
+              "cohere": {
+                "tokens": {
+                  "input_tokens": 1399,
+                  "output_tokens": 215,
+                  "reasoning_tokens": 128
+                },
+                "billed_units": {
+                  "input_tokens": 13,
+                  "output_tokens": 210
+                },
+                "cached_tokens": 1360
+              }
+            }
+          }
+        },
+        {
+          "type": "finish",
+          "reason": {
+            "normalized": "stop",
+            "raw": "COMPLETE"
+          },
+          "usage": {
+            "inputTokens": 1399,
+            "outputTokens": 215,
+            "nonCachedInputTokens": 39,
+            "cacheReadInputTokens": 1360,
+            "reasoningTokens": 128,
+            "totalTokens": 1614,
+            "providerMetadata": {
+              "cohere": {
+                "tokens": {
+                  "input_tokens": 1399,
+                  "output_tokens": 215,
+                  "reasoning_tokens": 128
+                },
+                "billed_units": {
+                  "input_tokens": 13,
+                  "output_tokens": 210
+                },
+                "cached_tokens": 1360
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
