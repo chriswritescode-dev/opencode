@@ -26,6 +26,7 @@ opencode-contract = { path = "crates/contract" }
 opencode-http = { path = "crates/http" }
 opencode-server = { path = "crates/server" }
 opencode-sidecar = { path = "crates/sidecar" }
+opencode-storage = { path = "crates/storage" }
 opencode-api-types = { path = "../cli-rs/crates/api-types" }
 opencode-api = { path = "../cli-rs/crates/api" }
 opencode-local = { path = "../cli-rs/crates/local" }
@@ -46,6 +47,7 @@ rand = "0.10"
 regex-lite = "0.1"
 reqwest = { version = "0.13", default-features = false, features = ["rustls-no-provider", "stream"] }
 ring = "0.17"
+rusqlite = { version = "0.43", default-features = false, features = ["bundled", "cache"] }
 rustix = { version = "1", features = ["system", "process", "fs"] }
 rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
 rustls-platform-verifier = "0.7"

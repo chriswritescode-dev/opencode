@@ -17,6 +17,11 @@ on:
       - packages/cli-rs/crates/api/**
       - packages/cli-rs/crates/service/**
       - packages/cli-rs/script/rust/types.ts
+      - packages/core/src/database/**
+      - packages/core/src/kv*
+      - packages/core/src/project/sql.ts
+      - packages/cli/src/database-path.ts
+      - packages/schema/src/identifier.ts
       - .github/workflows/check-server-rs.yml
   push:
     branches: [dev]
@@ -35,6 +40,11 @@ on:
       - packages/cli-rs/crates/api/**
       - packages/cli-rs/crates/service/**
       - packages/cli-rs/script/rust/types.ts
+      - packages/core/src/database/**
+      - packages/core/src/kv*
+      - packages/core/src/project/sql.ts
+      - packages/cli/src/database-path.ts
+      - packages/schema/src/identifier.ts
       - .github/workflows/check-server-rs.yml
   workflow_dispatch:
 
@@ -95,3 +105,4 @@ jobs:
       - name: Install Rust
         run: rustup toolchain install 1.99.1 --profile minimal --component rustfmt --component clippy
       - run: bun run check:drift
+      - run: bun run check:interop
