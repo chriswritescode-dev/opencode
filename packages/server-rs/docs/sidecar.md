@@ -120,7 +120,8 @@ as they change.
 - `Ready` holds one generation. The monitor task pings it every `heartbeat` and records each `pong`.
 - A `pong.rss` above `memory` ends the generation with `MemoryExceeded`. No `pong` within `liveness` of the last one,
   or no answer to a `ping` within `liveness`, ends it with `Unresponsive`. A connection broken by the host, such as a
-  `chunk` beyond its credit, ends it at the next `ping` with that `ProtocolBroken` reason. Each way the process group
+  `chunk` beyond its credit, ends it at the next `ping` with that `ProtocolBroken` reason. A connection that ended
+  while the process has not exited `grace` after that `ping` ends it with `Unresponsive`. Each way the process group
   is killed.
 - A crash after `crash_window` of uptime counts as the first; otherwise the count grows. The delay is
   `backoff_initial * 2^(crashes - 1)`, capped at `backoff_max`, and `crash_limit` crashes in a row leave the sidecar
