@@ -104,6 +104,21 @@ test("a result over the frame cap rejects the caller with TooLarge", async () =>
   b.close()
 })
 
+test("a result or chunk without a value is sent as null", async () => {
+  const { a, b } = pair()
+  b.register("empty", async () => ({}) as Outcome)
+  b.registerStream("empties", async function* () {
+    yield {} as Outcome
+  })
+  const outcome = await a.call("empty", null)
+  expect(outcome.value).toBeNull()
+  const chunks: Outcome[] = []
+  for await (const chunk of a.stream("empties", null)) chunks.push(chunk)
+  expect(chunks.map((chunk) => chunk.value)).toEqual([null])
+  a.close()
+  b.close()
+})
+
 test("a nested call keeps its parent's location", async () => {
   const { a, b } = pair()
   const location: LocationRef = { directory: "/tmp/outer", workspaceID: "workspace-1" }

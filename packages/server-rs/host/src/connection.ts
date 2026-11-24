@@ -328,7 +328,7 @@ export class Connection {
     try {
       const outcome = await handler(this.context(message, incoming.controller.signal), message.params, bytes)
       if (incoming.controller.signal.aborted) return
-      this.write({ type: "result", id: message.id, value: outcome.value }, outcome.bytes)
+      this.write({ type: "result", id: message.id, value: outcome.value ?? null }, outcome.bytes)
     } catch (thrown) {
       this.fail(
         message.id,
@@ -367,7 +367,7 @@ export class Connection {
         incoming.credit -= 1
         incoming.sent += 1
         this.stats.maxInflight = Math.max(this.stats.maxInflight, incoming.sent - incoming.credited)
-        this.write({ type: "chunk", id: message.id, value: next.value.value }, next.value.bytes)
+        this.write({ type: "chunk", id: message.id, value: next.value.value ?? null }, next.value.bytes)
       }
       if (!incoming.controller.signal.aborted) this.quiet({ type: "end", id: message.id })
     } catch (thrown) {
