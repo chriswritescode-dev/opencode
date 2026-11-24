@@ -183,6 +183,7 @@ async function settleEvents(events: unknown[]) {
     }
     if (Date.now() - quietSince >= 1_000) return
   }
+  throw new Error("scenario: event stream did not go quiet within 5 s")
 }
 
 async function waitForFirstEvent(events: unknown[], state: StreamState, side: string) {

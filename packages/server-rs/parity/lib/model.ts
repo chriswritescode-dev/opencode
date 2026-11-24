@@ -46,12 +46,13 @@ export async function startModelEndpoint(): Promise<ModelEndpoint> {
 
 async function respond(request: Request, state: State): Promise<Response> {
   const pathname = new URL(request.url).pathname
+  const accepted = request.method === "POST" && routes.has(pathname)
+  const reply = accepted ? state.replies[state.consumed] : undefined
+  if (reply !== undefined) state.consumed += 1
   const body = await readBody(request)
   state.log.push({ method: request.method, path: pathname, body })
-  if (request.method !== "POST" || !routes.has(pathname)) return error(404, "not found")
-  if (state.consumed >= state.replies.length) return failure(state, "unscripted model request")
-  const reply = state.replies[state.consumed]
-  state.consumed += 1
+  if (!accepted) return error(404, "not found")
+  if (reply === undefined) return failure(state, "unscripted model request")
   return encode(reply, pathname, body, state)
 }
 
