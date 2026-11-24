@@ -11,7 +11,6 @@ pub(crate) trait Adapter {
     fn get_current_assistant(&self) -> Result<Option<Value>, BusError>;
     fn get_assistant(&self, message_id: &str) -> Result<Option<Value>, BusError>;
     fn get_shell(&self, shell_id: &str) -> Result<Option<Value>, BusError>;
-    #[allow(dead_code)]
     fn get_compaction(&self) -> Result<Option<Value>, BusError>;
     fn update_assistant(&self, assistant: Value) -> Result<(), BusError>;
     fn append_assistant_part(&self, message_id: &str, part: Value) -> Result<(), BusError>;
@@ -23,6 +22,7 @@ pub(crate) trait Adapter {
     ) -> Result<(), BusError>;
     fn replace_assistant_parts(&self, message_id: &str, parts: Vec<Value>) -> Result<(), BusError>;
     fn update_shell(&self, shell: Value) -> Result<(), BusError>;
+    fn update_compaction(&self, compaction: Value) -> Result<(), BusError>;
     fn append_message(&self, message: Value) -> Result<(), BusError>;
 }
 
@@ -111,6 +111,116 @@ pub(crate) fn update(adapter: &dyn Adapter, event: &Event) -> Result<(), BusErro
                 return clear_current_retry(adapter);
             }
             idle(adapter, event, "interrupted", None)
+        }
+        "session.instructions.updated" => {
+            let Some(text) = data.get("text").filter(|value| !value.is_null()).and_then(Value::as_str) else {
+                return Ok(());
+            };
+            let delta = data
+                .get("delta")
+                .and_then(Value::as_object)
+                .map(|delta| delta.keys().cloned().collect::<Vec<String>>())
+                .unwrap_or_default();
+            let mut metadata =
+                envelope_metadata(event).and_then(|value| value.as_object().cloned()).unwrap_or_default();
+            metadata.insert("notice".to_string(), Value::String("instructions".to_string()));
+            metadata.insert(
+                "instructionSources".to_string(),
+                Value::Array(delta.iter().cloned().map(Value::String).collect()),
+            );
+            adapter.append_message(message(
+                event,
+                "system",
+                Some(Value::Object(metadata)),
+                vec![
+                    ("text", Value::String(text.to_string())),
+                    ("description", Value::String(format!("Instructions updated: {}", delta.join(", ")))),
+                ],
+            ))
+        }
+        "session.compaction.started" => adapter.append_message(message_at(
+            data.get("inputID")
+                .and_then(Value::as_str)
+                .map(str::to_string)
+                .unwrap_or_else(|| history::message_id_from_event(event.id())),
+            "compaction",
+            envelope_metadata(event),
+            Value::from(event.created()),
+            vec![
+                ("status", Value::String("running".to_string())),
+                ("reason", required_value(event, data, "reason")?),
+                ("summary", Value::String(String::new())),
+            ],
+        )),
+        "session.compaction.ended" => {
+            let text = text_value(event, data, "text")?;
+            let reason = required_value(event, data, "reason")?;
+            let model = present(data, "model").cloned();
+            let native = present(data, "native").cloned();
+            let cost = present(data, "cost").cloned();
+            let tokens = present(data, "tokens").cloned();
+            if let Some(current) = adapter.get_compaction()? {
+                let object = current.as_object().ok_or_else(|| invalid(event, "expected a stored compaction"))?;
+                let id = text_field(event, object, "id")?;
+                let created = object
+                    .get("time")
+                    .and_then(|time| time.get("created"))
+                    .cloned()
+                    .unwrap_or_else(|| Value::from(event.created()));
+                let metadata = match envelope_metadata(event) {
+                    Some(event_metadata) => merge_metadata(object.get("metadata"), &event_metadata),
+                    None => object.get("metadata").filter(|value| !value.is_null()).cloned(),
+                };
+                let mut fields = vec![("status", Value::String("completed".to_string())), ("reason", reason)];
+                push(&mut fields, "model", model);
+                push(&mut fields, "native", native);
+                fields.push(("summary", Value::String(text)));
+                push(&mut fields, "cost", cost);
+                push(&mut fields, "tokens", tokens);
+                return adapter.update_compaction(message_at(id, "compaction", metadata, created, fields));
+            }
+            let mut fields = vec![("status", Value::String("completed".to_string())), ("reason", reason)];
+            push(&mut fields, "model", model);
+            push(&mut fields, "native", native);
+            fields.push(("summary", Value::String(text)));
+            push(&mut fields, "cost", cost);
+            push(&mut fields, "tokens", tokens);
+            adapter.append_message(message(event, "compaction", envelope_metadata(event), fields))
+        }
+        "session.compaction.failed" => {
+            let reason = required_value(event, data, "reason")?;
+            let error = required_value(event, data, "error")?;
+            let cost = present(data, "cost").cloned();
+            let tokens = present(data, "tokens").cloned();
+            let current = adapter.get_compaction()?.and_then(|current| current.as_object().cloned());
+            let id = current
+                .as_ref()
+                .and_then(|object| object.get("id"))
+                .and_then(Value::as_str)
+                .map(str::to_string)
+                .or_else(|| data.get("inputID").and_then(Value::as_str).map(str::to_string))
+                .unwrap_or_else(|| history::message_id_from_event(event.id()));
+            let metadata = current
+                .as_ref()
+                .and_then(|object| object.get("metadata"))
+                .filter(|value| !value.is_null())
+                .cloned()
+                .or_else(|| envelope_metadata(event));
+            let created = current
+                .as_ref()
+                .and_then(|object| object.get("time"))
+                .and_then(|time| time.get("created"))
+                .cloned()
+                .unwrap_or_else(|| Value::from(event.created()));
+            let mut fields =
+                vec![("status", Value::String("failed".to_string())), ("reason", reason), ("error", error)];
+            push(&mut fields, "cost", cost);
+            push(&mut fields, "tokens", tokens);
+            let failed = message_at(id, "compaction", metadata, created, fields);
+            match current {
+                Some(_) => adapter.update_compaction(failed),
+                None => adapter.append_message(failed),
+            }
         }
         "session.step.started" => step_started(adapter, event),
         "session.step.first-token" => {
@@ -631,6 +741,16 @@ fn push(fields: &mut Vec<(&'static str, Value)>, key: &'static str, value: Optio
 
 fn envelope_metadata(event: &Event) -> Option<Value> {
     event.payload().get("metadata").filter(|value| !value.is_null()).cloned()
+}
+
+fn merge_metadata(current: Option<&Value>, event: &Value) -> Option<Value> {
+    let mut merged = current.and_then(Value::as_object).cloned().unwrap_or_default();
+    if let Some(event) = event.as_object() {
+        for (key, value) in event {
+            merged.insert(key.clone(), value.clone());
+        }
+    }
+    Some(Value::Object(merged))
 }
 
 fn shell_metadata(event: &Event) -> Option<Value> {

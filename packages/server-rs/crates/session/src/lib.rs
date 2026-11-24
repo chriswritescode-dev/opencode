@@ -1,6 +1,7 @@
 mod blob;
 mod history;
 mod inbox;
+mod instruction;
 mod message_updater;
 mod parts;
 mod projector;

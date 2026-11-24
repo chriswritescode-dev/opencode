@@ -3,11 +3,13 @@ use std::sync::Arc;
 use opencode_bus::{Bus, BusError, Definition, Event, ListenerHandle, PublishOptions, versioned_type};
 use opencode_contract::codec::{Decode, Encode, Path, encode_json};
 use opencode_contract::generated::{
-    DURABLE_EVENTS, SessionAgentSelectedData, SessionArchivedData, SessionCreatedData, SessionDeletedData,
-    SessionExecutionFailedData, SessionExecutionInterruptedData, SessionExecutionInterruptedDataReason,
-    SessionExecutionStartedData, SessionExecutionSucceededData, SessionMetadataUpdatedData, SessionModelSelectedData,
-    SessionMovedData, SessionPermissionsData, SessionRenamedData, SessionRevertClearedData, SessionRevertStagedData,
-    SessionStepEndedData, SessionStepFailedData, SessionUnarchivedData, SessionUsageRecordedData, SessionViewedData,
+    DURABLE_EVENTS, SessionAgentSelectedData, SessionArchivedData, SessionCompactionEndedData, SessionCreatedData,
+    SessionDeletedData, SessionExecutionFailedData, SessionExecutionInterruptedData,
+    SessionExecutionInterruptedDataReason, SessionExecutionStartedData, SessionExecutionSucceededData,
+    SessionInstructionsUpdatedData, SessionInstructionsUpdatedDataDeltaValue, SessionMetadataUpdatedData,
+    SessionModelSelectedData, SessionMovedData, SessionPermissionsData, SessionRenamedData, SessionRevertClearedData,
+    SessionRevertStagedData, SessionStepEndedData, SessionStepFailedData, SessionUnarchivedData,
+    SessionUsageRecordedData, SessionViewedData,
 };
 use opencode_storage::Database;
 use rusqlite::types::Value;
@@ -16,6 +18,7 @@ use rusqlite::{Connection, OptionalExtension};
 use crate::blob;
 use crate::history;
 use crate::inbox::{self, Delivered};
+use crate::instruction;
 use crate::message_updater::{self, Adapter};
 use crate::parts;
 use crate::settings::ProjectionSettings;
@@ -188,6 +191,32 @@ fn project(settings: &dyn Fn() -> ProjectionSettings, connection: &Connection, e
                 return Ok(());
             }
             project_idle(connection, &data.session_id.0, event.created(), "interrupted")
+        }
+        "session.instructions.updated" => {
+            run(connection, event, settings)?;
+            let data: SessionInstructionsUpdatedData = decode(event)?;
+            let delta = data
+                .delta
+                .0
+                .iter()
+                .map(|(key, value)| match value {
+                    SessionInstructionsUpdatedDataDeltaValue::String(hash) => (key.clone(), Some(hash.0.clone())),
+                    SessionInstructionsUpdatedDataDeltaValue::String2(_) => (key.clone(), None),
+                })
+                .collect::<Vec<_>>();
+            let seq = event
+                .durable()
+                .map_or_else(|| Err(invalid(event, "missing durable envelope")), |durable| Ok(durable.seq))?;
+            instruction::apply(connection, &data.session_id.0, seq, &delta)
+        }
+        "session.compaction.started" | "session.compaction.failed" => run(connection, event, settings),
+        "session.compaction.ended" => {
+            run(connection, event, settings)?;
+            let data: SessionCompactionEndedData = decode(event)?;
+            let seq = event
+                .durable()
+                .map_or_else(|| Err(invalid(event, "missing durable envelope")), |durable| Ok(durable.seq))?;
+            instruction::advance_epoch(connection, &data.session_id.0, seq)
         }
         "session.renamed" => project_renamed(connection, event),
         "session.metadata.updated" => project_metadata_updated(connection, event),
@@ -565,6 +594,10 @@ impl message_updater::Adapter for ProjectorAdapter<'_> {
 
     fn update_shell(&self, shell: serde_json::Value) -> Result<(), BusError> {
         self.update_message(&shell)
+    }
+
+    fn update_compaction(&self, compaction: serde_json::Value) -> Result<(), BusError> {
+        self.update_message(&compaction)
     }
 
     fn append_message(&self, message: serde_json::Value) -> Result<(), BusError> {
