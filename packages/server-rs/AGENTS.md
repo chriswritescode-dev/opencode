@@ -55,6 +55,8 @@ Before merging, the whole package must pass:
 - `bun run cargo test --locked --workspace --no-fail-fast`
 - `bun run check:deny`
 - `bun run check:drift`
+- `bun run parity:test`
+- `bun run parity --candidate ts`
 - `bun run test:shell`, which needs `bun install` and a debug build of `opencode-server`
 - `bun run test:host`
 
@@ -69,6 +71,9 @@ there, not as a new `tests/*.rs`.
   `bun run check:drift` fails when one is stale.
 - Every difference from the TypeScript server needs a file in `parity/deviations/` that the owner has accepted. A
   difference without one is a failure.
+- Parity is defined by `parity/` (ADR-007): a task is done when its named parity checks pass, not when its code
+  is written. Each later task names the scenarios it adds.
+- A new scenario passes `bun run parity --candidate ts --repeat 20` before it is committed.
 - All work targets the upstream commit in `upstream-pin`. Read the TypeScript sources at that commit, for example
   `git show $(cat upstream-pin):packages/protocol/openapi.json`, whenever the checkout is newer. Only re-sync
   tasks change the pin.
