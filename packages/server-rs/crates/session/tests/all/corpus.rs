@@ -1,3 +1,4 @@
+use std::collections::BTreeSet;
 use std::sync::atomic::{AtomicI64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -221,6 +222,51 @@ fn projector_registers_every_durable_type() {
         .collect::<Vec<_>>();
     expected.sort();
     assert_eq!(registered, expected, "each durable event type is registered exactly once");
+}
+
+#[test]
+fn corpus_covers_every_durable_type() {
+    let corpus: Value = serde_json::from_str(CORPUS).expect("parse the events corpus");
+    let mut covered = BTreeSet::new();
+    for fixture in corpus["fixtures"].as_array().expect("the corpus carries fixtures") {
+        let name = fixture["name"].as_str().expect("a fixture carries a name");
+        for step in fixture["steps"].as_array().unwrap_or_else(|| panic!("fixture {name} carries no steps")) {
+            let r#type = step["type"].as_str().unwrap_or_else(|| panic!("fixture {name}: a step carries no type"));
+            match step["kind"].as_str().unwrap_or_else(|| panic!("fixture {name}: a step carries no kind")) {
+                "publish" => {
+                    let version = DURABLE_EVENTS
+                        .iter()
+                        .find(|(candidate, ..)| *candidate == r#type)
+                        .map(|(_, version, _)| *version)
+                        .unwrap_or_else(|| panic!("fixture {name}: unknown publish type {type}"));
+                    covered.insert(versioned_type(r#type, version));
+                }
+                "replay" => {
+                    covered.insert(r#type.to_string());
+                }
+                kind => panic!("fixture {name}: unknown step kind {kind}"),
+            }
+        }
+    }
+    for (r#type, version, _) in DURABLE_EVENTS {
+        let expected = versioned_type(r#type, version);
+        assert!(covered.contains(&expected), "the corpus does not cover {expected}");
+    }
+}
+
+#[test]
+fn corpus_has_no_unexpected_errors() {
+    let corpus: Value = serde_json::from_str(CORPUS).expect("parse the events corpus");
+    for fixture in corpus["fixtures"].as_array().expect("the corpus carries fixtures") {
+        let name = fixture["name"].as_str().expect("a fixture carries a name");
+        let expect_error =
+            fixture["expectError"].as_bool().unwrap_or_else(|| panic!("fixture {name} carries no expectError"));
+        assert_eq!(
+            fixture["error"].is_null(),
+            !expect_error,
+            "fixture {name}: the recorded error must be present if and only if expectError is true"
+        );
+    }
 }
 
 async fn run_fixture(fixture: &Value, masks: &Masks) {

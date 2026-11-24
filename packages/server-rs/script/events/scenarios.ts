@@ -1952,6 +1952,7 @@ export const fixtures: Fixture[] = [
   {
     name: "inbox-conflict-message",
     group: "inbox",
+    expectError: true,
     start: project,
     logAfter: [0],
     steps: [
@@ -1990,6 +1991,7 @@ export const fixtures: Fixture[] = [
   {
     name: "inbox-conflict-delivery",
     group: "inbox",
+    expectError: true,
     start: project,
     logAfter: [0],
     steps: [
@@ -2017,6 +2019,7 @@ export const fixtures: Fixture[] = [
   {
     name: "inbox-conflict-cancel",
     group: "inbox",
+    expectError: true,
     start: project,
     logAfter: [0],
     steps: [
@@ -2785,6 +2788,7 @@ export const fixtures: Fixture[] = [
   {
     name: "fork-missing-parent",
     group: "fork-revert",
+    expectError: true,
     start: forkProjects,
     logAfter: [],
     steps: [

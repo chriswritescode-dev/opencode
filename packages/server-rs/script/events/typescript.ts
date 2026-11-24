@@ -46,6 +46,7 @@ export type Fixture = {
   steps: Step[]
   logAfter?: number[]
   filters?: string[][]
+  expectError?: true
 }
 
 export type FixtureRecord = {
@@ -60,6 +61,7 @@ export type FixtureRecord = {
   frames: Record<string, string[]> | null
   usage: string[] | null
   log: Record<string, Record<string, string>> | null
+  expectError: boolean
   error: string | null
 }
 
@@ -165,6 +167,7 @@ async function runFixture(fixture: Fixture, masks: Record<string, string[]>): Pr
     start: fixture.start ?? [],
     steps,
     logAfter: fixture.logAfter ?? [],
+    expectError: fixture.expectError ?? false,
     ...fields,
   })
   try {
