@@ -1,6 +1,7 @@
 use opencode_storage::column;
-use opencode_storage::project::{self, ProjectDirectoryRow};
+use opencode_storage::project::{self, ProjectDirectoryRow, ProjectMetadataUpdate};
 use opencode_storage::{Database, DatabaseLocation, StorageError};
+use serde_json::json;
 
 use crate::TempDir;
 
@@ -101,6 +102,196 @@ fn get_rejects_a_stored_relative_worktree() {
 
     let error = database.read(|connection| project::get(connection, "p1")).expect_err("the row cannot be decoded");
     assert_eq!(error.to_string(), "Path is not absolute: relative/path");
+}
+
+#[test]
+fn update_metadata_sets_every_provided_field_and_bumps_time_updated() {
+    let (_dir, database) = database();
+    read(&database, |connection| project::upsert(connection, "p1", "/work/project", Some("git")));
+    read(&database, |connection| {
+        connection.execute("UPDATE project SET time_updated = 1 WHERE id = 'p1'", [])?;
+        Ok(())
+    });
+
+    let commands = json!({ "setup": "echo hi" });
+    let row = read(&database, |connection| {
+        project::update_metadata(
+            connection,
+            "p1",
+            &ProjectMetadataUpdate {
+                canonical: Some("/work/moved"),
+                name: Some(Some("Project")),
+                icon_url_override: Some(Some("https://icon/override")),
+                icon_color: Some(Some("#ff0000")),
+                commands: Some(Some(&commands)),
+            },
+        )
+    })
+    .expect("the project is present");
+
+    assert_eq!(row.worktree, "/work/moved", "the canonical moves the stored worktree");
+    assert_eq!(row.name.as_deref(), Some("Project"));
+    assert_eq!(row.icon_url_override.as_deref(), Some("https://icon/override"));
+    assert_eq!(row.icon_color.as_deref(), Some("#ff0000"));
+    assert_eq!(row.commands, Some(commands), "the commands are stored as JSON");
+    assert!(row.time_updated > 1, "the update bumps time_updated");
+}
+
+#[test]
+fn update_metadata_clears_nullable_fields_and_leaves_omitted_ones_unchanged() {
+    let (_dir, database) = database();
+    read(&database, |connection| project::upsert(connection, "p1", "/work/project", Some("git")));
+    let commands = json!({ "setup": "echo hi" });
+    read(&database, |connection| {
+        project::update_metadata(
+            connection,
+            "p1",
+            &ProjectMetadataUpdate {
+                canonical: Some("/work/moved"),
+                name: Some(Some("Project")),
+                icon_url_override: Some(Some("https://icon/override")),
+                icon_color: Some(Some("#ff0000")),
+                commands: Some(Some(&commands)),
+            },
+        )
+    })
+    .expect("the project is present");
+
+    let row = read(&database, |connection| {
+        project::update_metadata(
+            connection,
+            "p1",
+            &ProjectMetadataUpdate {
+                name: Some(None),
+                icon_url_override: Some(None),
+                icon_color: Some(None),
+                commands: Some(None),
+                ..Default::default()
+            },
+        )
+    })
+    .expect("the project is present");
+
+    assert_eq!(row.name, None, "the inner None clears name");
+    assert_eq!(row.icon_url_override, None, "the inner None clears the icon override");
+    assert_eq!(row.icon_color, None, "the inner None clears the icon color");
+    assert_eq!(row.commands, None, "the inner None clears the commands");
+    assert_eq!(row.worktree, "/work/moved", "an omitted canonical leaves the worktree unchanged");
+}
+
+#[test]
+fn update_metadata_returns_none_for_an_unknown_project() {
+    let (_dir, database) = database();
+
+    let updated = read(&database, |connection| {
+        project::update_metadata(
+            connection,
+            "missing",
+            &ProjectMetadataUpdate { name: Some(Some("Project")), ..Default::default() },
+        )
+    });
+
+    assert_eq!(updated, None);
+    assert_eq!(count(&database, "SELECT COUNT(*) FROM project"), 0, "nothing is inserted");
+}
+
+#[test]
+fn update_metadata_rejects_a_relative_canonical() {
+    let (_dir, database) = database();
+    read(&database, |connection| project::upsert(connection, "p1", "/work/project", Some("git")));
+
+    let error = database
+        .read(|connection| {
+            project::update_metadata(
+                connection,
+                "p1",
+                &ProjectMetadataUpdate {
+                    canonical: Some("relative/path"),
+                    name: Some(Some("Project")),
+                    ..Default::default()
+                },
+            )
+        })
+        .expect_err("a relative canonical is not stored");
+    assert_eq!(error.to_string(), "Path is not absolute: relative/path");
+
+    let row = read(&database, |connection| project::get(connection, "p1")).expect("the project is present");
+    assert_eq!(row.worktree, "/work/project", "the rejected update writes nothing");
+    assert_eq!(row.name, None, "the rejected update writes nothing");
+}
+
+#[test]
+fn set_archived_writes_and_clears_time_archived_without_touching_time_updated() {
+    let (_dir, database) = database();
+    read(&database, |connection| project::upsert(connection, "p1", "/work/project", Some("git")));
+    read(&database, |connection| {
+        connection.execute("UPDATE project SET time_updated = 1 WHERE id = 'p1'", [])?;
+        Ok(())
+    });
+
+    let archived = read(&database, |connection| project::set_archived(connection, "p1", Some(7))).expect("present");
+    assert_eq!(archived.time_archived, Some(7), "the archive time is stored");
+    assert_eq!(archived.time_updated, 1, "archiving leaves time_updated untouched");
+
+    let restored = read(&database, |connection| project::set_archived(connection, "p1", None)).expect("present");
+    assert_eq!(restored.time_archived, None, "a missing archive time clears time_archived");
+    assert_eq!(restored.time_updated, 1, "unarchiving leaves time_updated untouched");
+
+    assert_eq!(read(&database, |connection| project::set_archived(connection, "missing", Some(1))), None);
+}
+
+#[test]
+fn set_canonical_moves_the_worktree_and_rejects_a_relative_path() {
+    let (_dir, database) = database();
+    read(&database, |connection| project::upsert(connection, "p1", "/work/project", Some("git")));
+
+    let row = read(&database, |connection| project::set_canonical(connection, "p1", "/work/moved")).expect("present");
+    assert_eq!(row.worktree, "/work/moved", "the worktree moves to the new canonical");
+
+    let error = database
+        .read(|connection| project::set_canonical(connection, "p1", "relative/path"))
+        .expect_err("a relative canonical is not stored");
+    assert_eq!(error.to_string(), "Path is not absolute: relative/path");
+
+    let row = read(&database, |connection| project::get(connection, "p1")).expect("the project is present");
+    assert_eq!(row.worktree, "/work/moved", "the rejected move writes nothing");
+}
+
+#[test]
+fn touch_active_writes_time_active_without_touching_time_updated() {
+    let (_dir, database) = database();
+    read(&database, |connection| project::upsert(connection, "p1", "/work/project", Some("git")));
+    read(&database, |connection| {
+        connection.execute("UPDATE project SET time_updated = 1 WHERE id = 'p1'", [])?;
+        Ok(())
+    });
+
+    let row = read(&database, |connection| project::touch_active(connection, "p1", 42)).expect("present");
+    assert_eq!(row.time_active, 42, "the given activity time is stored");
+    assert_eq!(row.time_updated, 1, "touching leaves time_updated untouched");
+}
+
+#[test]
+fn set_icon_url_writes_icon_url_without_touching_the_override_or_color() {
+    let (_dir, database) = database();
+    read(&database, |connection| project::upsert(connection, "p1", "/work/project", Some("git")));
+    read(&database, |connection| {
+        project::update_metadata(
+            connection,
+            "p1",
+            &ProjectMetadataUpdate {
+                icon_url_override: Some(Some("https://icon/override")),
+                icon_color: Some(Some("#ff0000")),
+                ..Default::default()
+            },
+        )
+    })
+    .expect("the project is present");
+
+    let row = read(&database, |connection| project::set_icon_url(connection, "p1", "https://icon")).expect("present");
+    assert_eq!(row.icon_url.as_deref(), Some("https://icon"));
+    assert_eq!(row.icon_url_override.as_deref(), Some("https://icon/override"), "the override is untouched");
+    assert_eq!(row.icon_color.as_deref(), Some("#ff0000"), "the color is untouched");
 }
 
 #[test]

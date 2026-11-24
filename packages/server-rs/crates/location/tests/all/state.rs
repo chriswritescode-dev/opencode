@@ -2,7 +2,8 @@ use std::sync::atomic::{AtomicBool, AtomicI64, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
 use opencode_location::state::{
-    BoxFuture, ExternalBlock, NotifyFn, Options, Registration, State, TransformError, batch, changes, inherit, shutdown,
+    BatchScope, BoxFuture, ExternalBlock, NotifyFn, Options, Registration, State, TransformError, batch, changes,
+    inherit, shutdown,
 };
 
 #[derive(Clone, Debug, PartialEq)]
@@ -973,6 +974,45 @@ async fn shares_nested_live_batches_and_does_not_retain_an_escaped_batch() {
     );
     assert_eq!(state.get().await.expect("reads the state").value, 3);
     assert_eq!(notifications.load(Ordering::Relaxed), 2);
+}
+
+#[tokio::test]
+async fn notifies_through_an_escaped_scope_after_its_batch_is_dropped() {
+    let notifications = Arc::new(AtomicUsize::new(0));
+    let registrations: Arc<Mutex<Vec<Registration>>> = Arc::new(Mutex::new(Vec::new()));
+    let state =
+        State::new(Options { notify: Some(counting(notifications.clone())), ..Options::new(|| Counter { value: 0 }) });
+    let escaped: Arc<Mutex<Option<BatchScope>>> = Arc::new(Mutex::new(None));
+    let (started, ready) = tokio::sync::oneshot::channel();
+
+    let task = tokio::spawn({
+        let escaped = escaped.clone();
+        async move {
+            batch(async {
+                *escaped.lock().expect("the escaped lock is not poisoned") = Some(inherit().await);
+                let _ = started.send(());
+                std::future::pending::<()>().await;
+            })
+            .await
+        }
+    });
+    ready.await.expect("the batch body starts");
+    task.abort();
+    let _ = task.await;
+
+    let scope = escaped.lock().expect("the escaped lock is not poisoned").take().expect("the scope escaped");
+    keep(
+        &registrations,
+        scope
+            .scope(state.transform(|data| {
+                data.value += 1;
+                Ok(())
+            }))
+            .await,
+    );
+
+    assert_eq!(state.get().await.expect("reads the state").value, 1);
+    assert_eq!(notifications.load(Ordering::Relaxed), 1, "a dropped batch no longer defers notifications");
 }
 
 #[tokio::test]

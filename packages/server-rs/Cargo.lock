@@ -872,12 +872,17 @@ dependencies = [
 name = "opencode-location"
 version = "0.1.0"
 dependencies = [
+ "base64",
  "futures-util",
  "log",
  "opencode-storage",
+ "ring",
+ "rusqlite",
+ "serde",
  "serde_json",
  "thiserror",
  "tokio",
+ "url",
 ]
 
 [[package]]

@@ -1,9 +1,9 @@
 use opencode_contract::codec::encode_json;
-use rusqlite::{params, Connection, Row};
+use rusqlite::{Connection, Row, params};
 use serde_json::Value;
 
-use crate::id::now_ms;
 use crate::StorageError;
+use crate::id::now_ms;
 
 const SELECT: &str = "SELECT id, provider, binding, created_at, last_used_at FROM workspace";
 

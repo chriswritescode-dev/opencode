@@ -394,10 +394,19 @@ pub async fn shutdown<F: Future>(fut: F) -> F::Output {
     run_batch(fut, true).await
 }
 
+struct Deactivate(Arc<Batch>);
+
+impl Drop for Deactivate {
+    fn drop(&mut self) {
+        self.0.active.store(false, Ordering::Release);
+    }
+}
+
 async fn run_batch<F: Future>(fut: F, shutdown: bool) -> F::Output {
     let batch = Arc::new(Batch { active: AtomicBool::new(true), shutdown, notifications: Mutex::new(Vec::new()) });
+    let deactivate = Deactivate(batch.clone());
     let output = CURRENT_BATCH.scope(batch.clone(), fut).await;
-    batch.active.store(false, Ordering::Release);
+    drop(deactivate);
     if batch.shutdown {
         return output;
     }
