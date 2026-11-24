@@ -70,6 +70,22 @@ async fn nested_calls_run_while_the_outer_call_waits() {
 }
 
 #[tokio::test]
+async fn a_reply_over_the_frame_cap_reaches_the_caller_as_an_error() {
+    let mut handlers = Handlers::new();
+    handlers.register("test.huge", |_context, _request| {
+        Box::pin(async move { Ok(Reply { value: Value::Null, bytes: Some(Bytes::from(vec![0u8; 2 << 20])) }) })
+    });
+    let config = support::config();
+    let Some((_host, connection)) = connect(&config, handlers).await else { return };
+
+    let request = Request::new("host.nested", json!({ "method": "test.huge" }));
+    match within(connection.call(request)).await {
+        Err(SidecarError::Remote(error)) => assert_eq!(error.tag, "TooLarge", "{error:?}"),
+        other => panic!("expected a TooLarge error, got {other:?}"),
+    }
+}
+
+#[tokio::test]
 async fn location_and_parent_travel_with_the_call() {
     let mut handlers = Handlers::new();
     handlers.register("test.location", |context, _request| {

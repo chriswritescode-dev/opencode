@@ -566,7 +566,11 @@ async fn serve_call(inner: Arc<Inner>, request: Request, context: CallContext, c
         () = cancel.cancelled() => {}
         outcome = handler(context, request) => match outcome {
             Ok(reply) => {
-                let _ = inner.send(Message::Result { id, value: reply.value }, reply.bytes.as_deref()).await;
+                let sent = inner.send(Message::Result { id, value: reply.value }, reply.bytes.as_deref()).await;
+                if let Err(error @ SidecarError::TooLarge { .. }) = sent {
+                    let error = RemoteError { tag: "TooLarge".to_owned(), message: error.to_string(), data: None };
+                    let _ = inner.send(Message::Error { id, error }, None).await;
+                }
             }
             Err(error) => {
                 let _ = inner.send(Message::Error { id, error }, None).await;
