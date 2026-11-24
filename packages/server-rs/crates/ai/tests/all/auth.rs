@@ -159,6 +159,9 @@ fn corpus_auth_descriptors_resolve() {
     let mut seen = 0usize;
     for cassette in &corpus.cassettes {
         for (index, step) in cassette.steps.iter().enumerate() {
+            if step.operation.is_some() {
+                continue;
+            }
             let value =
                 step.model.get("auth").unwrap_or_else(|| panic!("{} step {index}: missing auth", cassette.name));
             let descriptor: AuthDescriptor = serde_json::from_value(value.clone())

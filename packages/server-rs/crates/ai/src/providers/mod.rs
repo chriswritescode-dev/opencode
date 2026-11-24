@@ -48,8 +48,20 @@ pub mod zai_coding_plan;
 pub use settings::Settings;
 
 #[derive(Clone)]
+#[allow(clippy::large_enum_variant)]
 pub enum RuntimeModel {
     Language(Model),
+    Embedding(crate::modalities::embedding::EmbeddingModel),
+}
+
+pub(crate) fn embedding_options(
+    settings: &Settings,
+    declared: &[&str],
+) -> (Option<crate::schema::RequestOptions>, Option<crate::schema::ProviderOptions>) {
+    let options = settings.request_options(declared);
+    let provider_options = options.as_ref().and_then(|options| options.provider_options.clone());
+    let transport = options.map(|options| crate::schema::RequestOptions { provider_options: None, ..options });
+    (transport, provider_options)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -114,6 +126,7 @@ impl ProviderPackages {
         let entries = BTreeMap::from([
             ("@opencode/ai/providers/alibaba", alibaba::model as Entry),
             ("@opencode/ai/providers/alibaba/chat", alibaba::model as Entry),
+            ("@opencode/ai/providers/alibaba/embeddings", alibaba::embedding_model as Entry),
             ("@opencode/ai/providers/alibaba/messages", alibaba::messages_model as Entry),
             ("@opencode/ai/providers/alibaba/responses", alibaba::responses_model as Entry),
             ("@opencode/ai/providers/amazon-bedrock", amazon_bedrock::model as Entry),
@@ -125,6 +138,7 @@ impl ProviderPackages {
             ("@opencode/ai/providers/anthropic-compatible", anthropic_compatible::model as Entry),
             ("@opencode/ai/providers/azure", azure::model as Entry),
             ("@opencode/ai/providers/azure/chat", azure::chat_model as Entry),
+            ("@opencode/ai/providers/azure/embeddings", azure::embedding_model as Entry),
             ("@opencode/ai/providers/azure/messages", azure::messages_model as Entry),
             ("@opencode/ai/providers/azure/responses", azure::responses_model as Entry),
             ("@opencode/ai/providers/cerebras", cerebras::model as Entry),
@@ -132,14 +146,17 @@ impl ProviderPackages {
             ("@opencode/ai/providers/cloudflare-workers-ai", cloudflare_workers_ai::model as Entry),
             ("@opencode/ai/providers/cohere", cohere::model as Entry),
             ("@opencode/ai/providers/cohere/chat", cohere::chat_model as Entry),
+            ("@opencode/ai/providers/cohere/embeddings", cohere::embedding_model as Entry),
             ("@opencode/ai/providers/deepinfra", deepinfra::model as Entry),
             ("@opencode/ai/providers/digitalocean", digitalocean::model as Entry),
             ("@opencode/ai/providers/digitalocean/responses", digitalocean::responses_model as Entry),
             ("@opencode/ai/providers/google", google::model as Entry),
+            ("@opencode/ai/providers/google/embeddings", google::embedding_model as Entry),
             ("@opencode/ai/providers/google/interactions", google::interactions_model as Entry),
             ("@opencode/ai/providers/google-vertex", google_vertex::model as Entry),
             ("@opencode/ai/providers/google-vertex-messages", google_vertex_messages::model as Entry),
             ("@opencode/ai/providers/google-vertex/chat", google_vertex_chat::model as Entry),
+            ("@opencode/ai/providers/google-vertex/embeddings", google_vertex::embedding_model as Entry),
             ("@opencode/ai/providers/google-vertex/gemini", google_vertex::model as Entry),
             ("@opencode/ai/providers/google-vertex/interactions", google_vertex_interactions::model as Entry),
             ("@opencode/ai/providers/google-vertex/messages", google_vertex_messages::model as Entry),
@@ -161,6 +178,7 @@ impl ProviderPackages {
             ("@opencode/ai/providers/moonshot/responses", moonshot::responses_model as Entry),
             ("@opencode/ai/providers/openai", openai::model as Entry),
             ("@opencode/ai/providers/openai/chat", openai::chat_model as Entry),
+            ("@opencode/ai/providers/openai/embeddings", openai::embedding_model as Entry),
             ("@opencode/ai/providers/openai/responses", openai::model as Entry),
             ("@opencode/ai/providers/openai-compatible", openai_compatible::model as Entry),
             ("@opencode/ai/providers/openai-compatible-responses", openai_compatible_responses::model as Entry),

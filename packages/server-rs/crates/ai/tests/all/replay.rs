@@ -11,6 +11,7 @@ use opencode_ai::ExecutionContext;
 use opencode_ai::MapEnv;
 use opencode_ai::clock::FixedClock;
 use opencode_ai::id::SequenceIds;
+use opencode_ai::modalities::embedding::{EmbeddingClient, EmbeddingRequestInput};
 use opencode_ai::providers::{ProviderPackages, RuntimeModel, Settings};
 use opencode_ai::route::client::LlmClient;
 use opencode_ai::route::compile::StreamOptions;
@@ -77,7 +78,9 @@ fn model_for_step(cassette: &Cassette, index: usize, step: &Step, registry: &Pro
         .unwrap_or_else(|error| {
             panic!("{} step {index} provider {}: {}", cassette.name, provider.package, error.message())
         });
-    let RuntimeModel::Language(model) = runtime;
+    let RuntimeModel::Language(model) = runtime else {
+        panic!("{} step {index} provider {}: expected a language model", cassette.name, provider.package);
+    };
     let actual = without_auth(
         serde_json::to_value(model.descriptor())
             .unwrap_or_else(|error| panic!("{} step {index} provider descriptor: {error}", cassette.name)),
@@ -102,6 +105,99 @@ pub async fn replay_group(group: &str) -> usize {
         steps += cassette.steps.len();
     }
     steps
+}
+
+pub async fn replay_embedding_cassette(cassette: &Cassette) {
+    for (index, step) in cassette.steps.iter().enumerate() {
+        let Some(provider) = step.provider.as_ref() else {
+            panic!("{} step {index} embedding: the step recorded no provider", cassette.name);
+        };
+        let settings = Settings::new(provider.settings.clone());
+        let runtime = ProviderPackages::builtin()
+            .model(&provider.package, &provider.model_id, &settings, &MapEnv::default())
+            .unwrap_or_else(|error| {
+                panic!("{} step {index} provider {}: {}", cassette.name, provider.package, error.message())
+            });
+        let RuntimeModel::Embedding(model) = runtime else {
+            panic!("{} step {index} embedding: expected an embedding model", cassette.name);
+        };
+        assert_eq!(model.id, step.model["id"], "{} step {index} embedding model.id", cassette.name);
+        assert_eq!(model.provider, step.model["provider"], "{} step {index} embedding model.provider", cassette.name);
+        assert_eq!(
+            model.route.id, step.model["route"]["id"],
+            "{} step {index} embedding model.route.id",
+            cassette.name
+        );
+        let input: EmbeddingRequestInput = serde_json::from_value(step.request.clone())
+            .unwrap_or_else(|error| panic!("{} step {index} embedding request: {error}", cassette.name));
+        let request = input.with_model(model);
+        let exchanges = match step.exchanges.as_ref() {
+            Some(exchanges) if !exchanges.is_empty() => exchanges.clone(),
+            _ => panic!("{} step {index} embedding exchanges: the step recorded no HTTP exchange", cassette.name),
+        };
+        let sender = Arc::new(RecordedSender {
+            cassette: cassette.name.clone(),
+            step: index,
+            label: "embedding".to_string(),
+            chunk: None,
+            exchanges: Mutex::new(VecDeque::from(exchanges)),
+        });
+        let clock = Arc::new(FixedClock::new(cassette.clock_epoch_ms));
+        let context = ExecutionContext::new(clock.clone(), Arc::new(SequenceIds::new()), Arc::new(MapEnv::default()));
+        let executor = RequestExecutor::new(sender.clone(), None, clock);
+        let outcome = EmbeddingClient::generate(request, &executor, &context).await;
+        sender.assert_consumed();
+        assert_embedding_outcome(cassette, index, step.error.as_ref(), outcome);
+    }
+}
+
+pub async fn replay_embedding_group(group: &str) -> usize {
+    let corpus = crate::corpus::Corpus::load();
+    let mut steps = 0;
+    for cassette in corpus.cassettes.iter().filter(|cassette| cassette.group == group) {
+        replay_embedding_cassette(cassette).await;
+        steps += cassette.steps.len();
+    }
+    steps
+}
+
+fn assert_embedding_outcome(
+    cassette: &Cassette,
+    index: usize,
+    recorded_error: Option<&crate::corpus::StepError>,
+    outcome: Result<opencode_ai::modalities::embedding::EmbeddingResponse, AiError>,
+) {
+    match recorded_error {
+        Some(recorded) => {
+            let error = match outcome {
+                Err(error) => error,
+                Ok(_) => panic!("{} step {index} embedding error: the generate call succeeded", cassette.name),
+            };
+            let reason = serde_json::to_value(&error.reason)
+                .unwrap_or_else(|failure| panic!("{} step {index} embedding error.reason: {failure}", cassette.name));
+            assert_eq!(reason, recorded.reason, "{} step {index} embedding error.reason", cassette.name);
+            assert_eq!(
+                error.is_retryable(),
+                recorded.retryable,
+                "{} step {index} embedding error.retryable",
+                cassette.name
+            );
+        }
+        None => {
+            let response = match outcome {
+                Ok(response) => response,
+                Err(error) => {
+                    panic!("{} step {index} embedding result: the generate call failed with {error}", cassette.name)
+                }
+            };
+            let actual = serde_json::to_value(&response)
+                .unwrap_or_else(|failure| panic!("{} step {index} embedding result: {failure}", cassette.name));
+            let Some(expected) = cassette.steps[index].result.as_ref() else {
+                panic!("{} step {index} embedding result: the step recorded no result", cassette.name);
+            };
+            assert_eq!(actual, *expected, "{} step {index} embedding result", cassette.name);
+        }
+    }
 }
 
 fn assert_outcome(
@@ -201,6 +297,39 @@ impl HttpSender for RecordedSender {
 }
 
 fn assert_prepared(cassette: &str, step: usize, label: &str, prepared: &Prepared, request: &PreparedHttp) {
+    if let Some(boundary) = prepared.boundary.as_deref() {
+        assert_eq!(request.method, prepared.method, "{cassette} step {step} {label} prepared.method");
+        assert_eq!(request.url, prepared.url, "{cassette} step {step} {label} prepared.url");
+        let sent_boundary = request
+            .headers
+            .iter()
+            .find(|(name, _)| name.eq_ignore_ascii_case("content-type"))
+            .and_then(|(_, value)| boundary_token(value))
+            .unwrap_or_else(|| boundary.to_string());
+        let recorded_boundary = prepared
+            .headers
+            .get("content-type")
+            .and_then(|value| boundary_token(value))
+            .unwrap_or_else(|| boundary.to_string());
+        let sent = request
+            .headers
+            .iter()
+            .map(|(name, value)| (name.to_lowercase(), normalize_boundary_header(name, value)))
+            .collect::<BTreeMap<String, String>>();
+        let recorded = prepared
+            .headers
+            .iter()
+            .map(|(name, value)| (name.to_lowercase(), normalize_boundary_header(name, value)))
+            .collect::<BTreeMap<String, String>>();
+        assert_eq!(sent, recorded, "{cassette} step {step} {label} prepared.headers");
+        let sent_body = replace_boundary(&request.body, &sent_boundary);
+        let recorded_body = replace_boundary(
+            &body_bytes(&prepared.body, prepared.body_encoding.as_deref(), cassette, step, label, "prepared.body"),
+            &recorded_boundary,
+        );
+        assert_eq!(sent_body, recorded_body, "{cassette} step {step} {label} prepared.body bytes");
+        return;
+    }
     assert_eq!(request.method, prepared.method, "{cassette} step {step} {label} prepared.method");
     assert_eq!(request.url, prepared.url, "{cassette} step {step} {label} prepared.url");
     let headers = request
@@ -235,6 +364,40 @@ fn chunk_bytes(body: Vec<u8>, chunk: Option<usize>) -> Vec<Bytes> {
         None => vec![Bytes::from(body)],
         Some(size) => body.chunks(size).map(Bytes::copy_from_slice).collect(),
     }
+}
+
+fn normalize_boundary_header(name: &str, value: &str) -> String {
+    if !name.eq_ignore_ascii_case("content-type") {
+        return value.to_string();
+    }
+    let Some((prefix, rest)) = value.split_once("boundary=") else {
+        return value.to_string();
+    };
+    let token = rest.split(';').next().unwrap_or_default();
+    let suffix = &rest[token.len()..];
+    format!("{prefix}boundary=BOUNDARY{suffix}")
+}
+
+fn boundary_token(value: &str) -> Option<String> {
+    let (_, rest) = value.split_once("boundary=")?;
+    let token = rest.split(';').next().unwrap_or_default().trim().trim_matches('"');
+    Some(token.to_string())
+}
+
+fn replace_boundary(body: &[u8], token: &str) -> Vec<u8> {
+    let needle = token.as_bytes();
+    if needle.is_empty() {
+        return body.to_vec();
+    }
+    let mut replaced = Vec::with_capacity(body.len());
+    let mut rest = body;
+    while let Some(position) = rest.windows(needle.len()).position(|window| window == needle) {
+        replaced.extend_from_slice(&rest[..position]);
+        replaced.extend_from_slice(b"BOUNDARY");
+        rest = &rest[position + needle.len()..];
+    }
+    replaced.extend_from_slice(rest);
+    replaced
 }
 
 struct ReplayChannelExecutor {
@@ -474,11 +637,12 @@ async fn replay_websocket_cassette(cassette: &Cassette) {
 #[tokio::test]
 async fn every_in_scope_cassette_replays() {
     let corpus = crate::corpus::Corpus::load();
-    assert_eq!(corpus.cassettes.len(), 248, "in-scope cassette count");
+    assert_eq!(corpus.cassettes.len(), 255, "in-scope cassette count");
     let groups = [
         "anthropic-messages",
         "bedrock-converse",
         "chat-variants",
+        "embeddings",
         "gateways",
         "gemini",
         "native-vendors",
@@ -496,14 +660,25 @@ async fn every_in_scope_cassette_replays() {
     }
     let mut replayed = 0;
     for cassette in &corpus.cassettes {
-        if cassette.group == "openai-responses-websocket" {
+        if cassette.group == "embeddings" {
+            replay_embedding_cassette(cassette).await;
+        } else if cassette.group == "openai-responses-websocket" {
             replay_websocket_cassette(cassette).await;
         } else {
             replay_cassette(cassette).await;
         }
         replayed += 1;
     }
-    assert_eq!(replayed, 248, "replayed cassette count");
+    assert_eq!(replayed, 255, "replayed cassette count");
+}
+
+#[tokio::test]
+async fn embedding_cassettes() {
+    let corpus = crate::corpus::Corpus::load();
+    let cassettes = corpus.cassettes.iter().filter(|cassette| cassette.group == "embeddings").count();
+    assert_eq!(cassettes, 7, "embedding cassette count");
+    let steps = replay_embedding_group("embeddings").await;
+    assert_eq!(steps, 8, "embedding step count");
 }
 
 #[tokio::test]

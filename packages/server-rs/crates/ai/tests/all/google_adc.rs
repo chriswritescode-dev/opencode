@@ -266,7 +266,9 @@ async fn google_adc_authorizes_the_vertex_chat_route() {
     let runtime = ProviderPackages::builtin()
         .model("@opencode/ai/providers/google-vertex/chat", "gemini-chat", &settings, &env)
         .expect("vertex chat model");
-    let RuntimeModel::Language(model) = runtime;
+    let RuntimeModel::Language(model) = runtime else {
+        panic!("google-vertex/chat: expected a language model");
+    };
     let sender = Arc::new(ScriptedSender::new(vec![
         scripted(
             200,

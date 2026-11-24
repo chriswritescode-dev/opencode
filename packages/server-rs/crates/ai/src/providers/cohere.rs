@@ -3,10 +3,13 @@ use std::sync::Arc;
 use serde_json::json;
 
 use crate::Env;
+use crate::media::route::MediaEndpoint;
 use crate::protocols::cohere_chat::{self, CohereChat};
 use crate::protocols::openai_chat::{self, OpenAiChat};
-use crate::providers::{RuntimeModel, Settings, language_model, language_model_with_route};
+use crate::protocols::openai_embeddings::{self, OpenAiEmbeddings};
+use crate::providers::{RuntimeModel, Settings, embedding_options, language_model, language_model_with_route};
 use crate::route::auth::{Auth, ProviderAuthOptions, api_key};
+use crate::route::embedding::{EmbeddingRoute, EmbeddingRouteInput};
 use crate::route::endpoint::Endpoint;
 use crate::route::model::{Route, RouteTransport};
 use crate::schema::AiError;
@@ -54,6 +57,23 @@ pub fn chat_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result
         Some(json!({ "maxTokensField": "max_tokens", "reasoningField": "reasoning_content" })),
         Some(json!({ "tools": { "strict": false } })),
     ))
+}
+
+pub fn embedding_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result<RuntimeModel, AiError> {
+    let (transport, provider_options) = embedding_options(settings, &DECLARED);
+    let route = EmbeddingRoute::make(EmbeddingRouteInput {
+        id: openai_embeddings::ID.to_string(),
+        provider: ID.to_string(),
+        protocol: Arc::new(OpenAiEmbeddings),
+        endpoint: MediaEndpoint::path(openai_embeddings::PATH)
+            .with_base_url(settings.string("baseURL").unwrap_or(COMPATIBILITY_BASE_URL)),
+        auth: auth(settings),
+        headers: None,
+        provider_metadata_key: Some(METADATA_KEY.to_string()),
+        options: transport,
+        max_values: None,
+    });
+    Ok(RuntimeModel::Embedding(route.model(model_id, provider_options)))
 }
 
 fn auth(settings: &Settings) -> Auth {

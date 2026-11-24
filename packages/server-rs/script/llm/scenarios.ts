@@ -1,7 +1,7 @@
 import "./capture.js"
 import { Effect, Schema, Stream } from "effect"
 import { HttpClientRequest } from "effect/http"
-import { capture, createLoader, type Scenario } from "./capture.js"
+import { capture, createLoader, multipartFixtures, type Scenario } from "./capture.js"
 
 const tree = process.env.OPENCODE_UPSTREAM_TREE
 if (!tree) throw new Error("scenarios: OPENCODE_UPSTREAM_TREE is not set")
@@ -2355,6 +2355,139 @@ const nativeVendorScenarios = [
   }),
 ]
 
+const embeddingValues = ["The invoice was charged twice.", "Refund the duplicate payment."]
+const embeddingVariant = (scenario: Scenario) => ({ group: "embeddings", scenario })
+
+const embeddingScenarios = [
+  embeddingVariant({
+    cassette: "openai-embedding/embeds-text-with-requested-dimensions",
+    protocol: "openai-embeddings",
+    operation: "embedding.generate",
+    provider: {
+      package: "@opencode/ai/providers/openai/embeddings",
+      modelID: "text-embedding-3-small",
+      settings: { apiKey: "fixture" },
+    },
+    run: (context) => {
+      const model = OpenAI.configure({ apiKey: "fixture" }).embedding("text-embedding-3-small")
+      const request = ai.embedding.request({ model, values: embeddingValues, dimensions: 256, inputType: "document" })
+      return context.operation("embedding.generate", request, ai.embedding.generate(request))
+    },
+  }),
+  embeddingVariant({
+    cassette: "cohere-embedding/embeds-text-through-the-compatibility-api",
+    protocol: "openai-embeddings",
+    operation: "embedding.generate",
+    provider: {
+      package: "@opencode/ai/providers/cohere/embeddings",
+      modelID: "embed-v4.0",
+      settings: { apiKey: "fixture" },
+    },
+    run: (context) => {
+      const model = Cohere.configure({ apiKey: "fixture" }).embedding("embed-v4.0")
+      const request = ai.embedding.request({ model, values: embeddingValues, dimensions: 256, inputType: "document" })
+      return context.operation("embedding.generate", request, ai.embedding.generate(request))
+    },
+  }),
+  embeddingVariant({
+    cassette: "google-embedding/embeds-text-through-batchembedcontents",
+    protocol: "google-embed-content",
+    operation: "embedding.generate",
+    provider: {
+      package: "@opencode/ai/providers/google/embeddings",
+      modelID: "gemini-embedding-2",
+      settings: { apiKey: "fixture" },
+    },
+    run: (context) => {
+      const model = Google.configure({ apiKey: "fixture" }).embedding("gemini-embedding-2")
+      const request = ai.embedding.request({ model, values: embeddingValues, dimensions: 256, inputType: "document" })
+      return context.operation("embedding.generate", request, ai.embedding.generate(request))
+    },
+  }),
+  embeddingVariant({
+    cassette: "google-embedding/embeds-an-image-and-text-into-one-vector-each",
+    protocol: "google-embed-content",
+    operation: "embedding.generate",
+    provider: {
+      package: "@opencode/ai/providers/google/embeddings",
+      modelID: "gemini-embedding-2",
+      settings: { apiKey: "fixture" },
+    },
+    run: (context) =>
+      Effect.gen(function* () {
+        const image = Media.bytes(
+          yield* Effect.promise(() => Bun.file(`${tree}/packages/ai/test/fixtures/images/edit-source.jpg`).bytes()),
+          "image/jpeg",
+        )
+        const model = Google.configure({ apiKey: "fixture" }).embedding("gemini-embedding-2")
+        const request = ai.embedding.request({
+          model,
+          values: [image, "A small square image."],
+          dimensions: 128,
+        })
+        return yield* context.operation("embedding.generate", request, ai.embedding.generate(request))
+      }),
+  }),
+  embeddingVariant({
+    cassette: "google-embedding/maps-inputtype-to-a-task-type-for-gemini-embedding-001",
+    protocol: "google-embed-content",
+    operation: "embedding.generate",
+    provider: {
+      package: "@opencode/ai/providers/google/embeddings",
+      modelID: "gemini-embedding-001",
+      settings: { apiKey: "fixture" },
+    },
+    run: (context) =>
+      Effect.gen(function* () {
+        const model = Google.configure({ apiKey: "fixture" }).embedding("gemini-embedding-001")
+        const query = ai.embedding.request({
+          model,
+          values: [embeddingValues[0]],
+          dimensions: 64,
+          inputType: "query",
+        })
+        yield* context.operation("embedding.generate", query, ai.embedding.generate(query))
+        const document = ai.embedding.request({
+          model,
+          values: [embeddingValues[0]],
+          dimensions: 64,
+          inputType: "document",
+        })
+        yield* context.operation("embedding.generate", document, ai.embedding.generate(document))
+      }),
+  }),
+  embeddingVariant({
+    cassette: "google-vertex-embedding/embeds-text-through-predict",
+    protocol: "google-vertex-predict-embeddings",
+    operation: "embedding.generate",
+    provider: {
+      package: "@opencode/ai/providers/google-vertex/embeddings",
+      modelID: "text-embedding-005",
+      settings: { apiKey: "fixture" },
+    },
+    run: (context) => {
+      const model = GoogleVertex.configure({ apiKey: "fixture" }).embedding("text-embedding-005")
+      const request = ai.embedding.request({ model, values: embeddingValues, dimensions: 256, inputType: "document" })
+      return context.operation("embedding.generate", request, ai.embedding.generate(request))
+    },
+  }),
+  embeddingVariant({
+    cassette: "google-vertex-embedding/embeds-gemini-embedding-001-one-text-per-predict-request",
+    protocol: "google-vertex-predict-embeddings",
+    operation: "embedding.generate",
+    provider: {
+      package: "@opencode/ai/providers/google-vertex/embeddings",
+      modelID: "gemini-embedding-001",
+      settings: { apiKey: "fixture" },
+    },
+    run: (context) => {
+      const model = GoogleVertex.configure({ apiKey: "fixture" }).embedding("gemini-embedding-001")
+      const request = ai.embedding.request({ model, values: embeddingValues, dimensions: 256, inputType: "document" })
+      return context.operation("embedding.generate", request, ai.embedding.generate(request))
+    },
+  }),
+]
+
 const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scenario }> = [
   {
     group: "anthropic-messages",
@@ -4259,6 +4392,7 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
   ...chatVariantScenarios,
   ...vendorVariantScenarios,
   ...nativeVendorScenarios,
+  ...embeddingScenarios,
 ]
 
 const cassettes = []
@@ -4269,4 +4403,5 @@ for (const item of scenarios) {
   cassettes.push(cassette)
   groups[cassette.cassette] = item.group
 }
-process.stdout.write(JSON.stringify({ cassettes, groups }))
+const fixtures = await multipartFixtures(load)
+process.stdout.write(JSON.stringify({ cassettes, groups, multipartFixtures: fixtures }))

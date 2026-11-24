@@ -4,12 +4,14 @@ use serde_json::{Map, Value, json};
 use url::Url;
 
 use crate::Env;
+use crate::media::route::MediaEndpoint;
 use crate::protocols::shared::invalid_request;
-use crate::protocols::{anthropic_messages, open_responses_channel, openai_chat, openai_responses};
+use crate::protocols::{anthropic_messages, open_responses_channel, openai_chat, openai_embeddings, openai_responses};
 use crate::providers::open_responses_options;
 use crate::providers::openai_options;
-use crate::providers::{RuntimeModel, Settings, language_model_with_route};
+use crate::providers::{RuntimeModel, Settings, embedding_options, language_model_with_route};
 use crate::route::auth::{Auth, ProviderAuthOptions, api_key};
+use crate::route::embedding::{EmbeddingRoute, EmbeddingRouteInput};
 use crate::route::endpoint::{Endpoint, PathPart, trim_base_url};
 use crate::route::model::{Route, RouteTransport};
 use crate::schema::{AiError, RequestOptions, StringMap, merge_request_options};
@@ -96,6 +98,28 @@ pub fn messages_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Re
         None,
         None,
     ))
+}
+
+pub fn embedding_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result<RuntimeModel, AiError> {
+    let (transport, provider_options) = embedding_options(settings, &DECLARED);
+    let endpoint = openai_endpoint(settings, model_id, openai_embeddings::PATH)?;
+    let endpoint = MediaEndpoint {
+        base_url: endpoint.base_url,
+        path: Arc::new(|_| openai_embeddings::PATH.to_string()),
+        query: endpoint.query,
+    };
+    let route = EmbeddingRoute::make(EmbeddingRouteInput {
+        id: openai_embeddings::ID.to_string(),
+        provider: ID.to_string(),
+        protocol: Arc::new(openai_embeddings::OpenAiEmbeddings),
+        endpoint,
+        auth: auth(settings, "api-key"),
+        headers: None,
+        provider_metadata_key: None,
+        options: transport,
+        max_values: None,
+    });
+    Ok(RuntimeModel::Embedding(route.model(model_id, provider_options)))
 }
 
 fn auth(settings: &Settings, header: &str) -> Auth {

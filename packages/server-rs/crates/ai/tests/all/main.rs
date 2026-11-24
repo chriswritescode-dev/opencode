@@ -7,6 +7,7 @@ mod event_stream;
 mod executor;
 mod framing;
 mod google_adc;
+mod media;
 mod prepare;
 mod protocols;
 mod protocols_utils;

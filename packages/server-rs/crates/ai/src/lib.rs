@@ -3,6 +3,8 @@
 pub mod clock;
 pub mod id;
 pub mod json;
+pub mod media;
+pub mod modalities;
 pub mod prepare;
 pub mod protocols;
 pub mod provider_error;
@@ -62,16 +64,39 @@ impl Env for MapEnv {
     }
 }
 
+pub trait Sleeper: Send + Sync {
+    fn sleep(&self, duration: std::time::Duration) -> futures_util::future::BoxFuture<'static, ()>;
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+pub struct TokioSleeper;
+
+impl Sleeper for TokioSleeper {
+    fn sleep(&self, duration: std::time::Duration) -> futures_util::future::BoxFuture<'static, ()> {
+        Box::pin(tokio::time::sleep(duration))
+    }
+}
+
 #[derive(Clone)]
 pub struct ExecutionContext {
     pub clock: Arc<dyn Clock>,
     pub ids: Arc<dyn IdSource>,
     pub env: Arc<dyn Env>,
+    pub sleeper: Arc<dyn Sleeper>,
 }
 
 impl ExecutionContext {
     pub fn new(clock: Arc<dyn Clock>, ids: Arc<dyn IdSource>, env: Arc<dyn Env>) -> Self {
-        Self { clock, ids, env }
+        Self::with_sleeper(clock, ids, env, Arc::new(TokioSleeper))
+    }
+
+    pub fn with_sleeper(
+        clock: Arc<dyn Clock>,
+        ids: Arc<dyn IdSource>,
+        env: Arc<dyn Env>,
+        sleeper: Arc<dyn Sleeper>,
+    ) -> Self {
+        Self { clock, ids, env, sleeper }
     }
 
     pub fn system() -> Self {

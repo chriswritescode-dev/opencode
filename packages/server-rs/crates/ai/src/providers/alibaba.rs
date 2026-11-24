@@ -3,13 +3,16 @@ use std::sync::Arc;
 use serde_json::json;
 
 use crate::Env;
+use crate::media::route::MediaEndpoint;
 use crate::protocols::alibaba_chat::{self, AlibabaChat};
 use crate::protocols::alibaba_messages::AlibabaMessages;
 use crate::protocols::alibaba_responses::AlibabaResponses;
 use crate::protocols::open_responses::PATH as RESPONSES_PATH;
+use crate::protocols::openai_embeddings::{self, OpenAiEmbeddings};
 use crate::protocols::shared::invalid_request;
-use crate::providers::{RuntimeModel, Settings, language_model_with_route};
+use crate::providers::{RuntimeModel, Settings, embedding_options, language_model_with_route};
 use crate::route::auth::{Auth, ProviderAuthOptions, api_key};
+use crate::route::embedding::{EmbeddingRoute, EmbeddingRouteInput};
 use crate::route::endpoint::Endpoint;
 use crate::route::model::{Route, RouteTransport};
 use crate::schema::{AiError, LlmRequest};
@@ -74,6 +77,23 @@ pub fn responses_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> R
         options: settings.request_options(&DECLARED),
     };
     Ok(language_model_with_route(model_id, ID, route, None, None))
+}
+
+pub fn embedding_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result<RuntimeModel, AiError> {
+    let (transport, provider_options) = embedding_options(settings, &DECLARED);
+    let route = EmbeddingRoute::make(EmbeddingRouteInput {
+        id: openai_embeddings::ID.to_string(),
+        provider: ID.to_string(),
+        protocol: Arc::new(OpenAiEmbeddings),
+        endpoint: MediaEndpoint::path(openai_embeddings::PATH)
+            .with_base_url(base_url(settings, "/compatible-mode/v1")?),
+        auth: auth(settings),
+        headers: None,
+        provider_metadata_key: Some(METADATA_KEY.to_string()),
+        options: transport,
+        max_values: None,
+    });
+    Ok(RuntimeModel::Embedding(route.model(model_id, provider_options)))
 }
 
 fn base_url(settings: &Settings, suffix: &str) -> Result<String, AiError> {

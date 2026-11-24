@@ -8,7 +8,7 @@ use crate::corpus::Corpus;
 #[test]
 fn corpus_schema_round_trips() {
     let corpus = Corpus::load();
-    assert_eq!(corpus.cassettes.len(), 248, "unexpected cassette count");
+    assert_eq!(corpus.cassettes.len(), 255, "unexpected cassette count");
     let mut steps = 0usize;
     for cassette in &corpus.cassettes {
         assert!(!cassette.protocol.is_empty(), "{}: empty protocol", cassette.name);
@@ -17,8 +17,10 @@ fn corpus_schema_round_trips() {
         assert!(cassette.clock_epoch_ms > 0, "{}: zero clockEpochMs", cassette.name);
         for (index, step) in cassette.steps.iter().enumerate() {
             steps += 1;
-            let label = format!("{} step {index} request", cassette.name);
-            round_trip::<LlmRequest>(&step.request, &label);
+            if step.operation.is_none() {
+                let label = format!("{} step {index} request", cassette.name);
+                round_trip::<LlmRequest>(&step.request, &label);
+            }
             if let Some(events) = &step.events {
                 for (event_index, event) in events.iter().enumerate() {
                     let label = format!("{} step {index} event {event_index}", cassette.name);

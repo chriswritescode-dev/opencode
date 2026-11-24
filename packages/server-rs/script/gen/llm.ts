@@ -17,6 +17,7 @@ type CapturedCassette = {
 type ScenarioOutput = {
   cassettes: Array<CapturedCassette>
   groups: Record<string, string>
+  multipartFixtures: { fixtures: Array<unknown> }
 }
 
 type ExportedError = {
@@ -57,9 +58,12 @@ export const GROUPS: Record<string, { protocols: string[] }> = {
     ],
   },
   "native-vendors": { protocols: ["cohere-chat", "gemini", "google-interactions", "openai-chat"] },
+  embeddings: {
+    protocols: ["openai-embeddings", "google-embed-content", "google-vertex-predict-embeddings"],
+  },
 }
 
-export const EXPECTED_CASSETTES = 248
+export const EXPECTED_CASSETTES = 255
 const EXPECTED_ADC_CASES = 11
 
 const exporter = `${tree}/exporter`
@@ -100,6 +104,7 @@ await mkdir(`${output}/llm`, { recursive: true })
 await Bun.write(`${output}/llm/index.json`, `${JSON.stringify({ cassettes: index }, null, 2)}\n`)
 await Bun.write(`${output}/provider-errors.json`, `${JSON.stringify({ errors }, null, 2)}\n`)
 await Bun.write(`${output}/google-adc.json`, `${JSON.stringify(adc, null, 2)}\n`)
+await Bun.write(`${output}/multipart-fixtures.json`, `${JSON.stringify(scenarios.multipartFixtures, null, 2)}\n`)
 console.log(
   `llm: ${scenarios.cassettes.length} cassettes, ${errors.length} provider errors, ${adc.cases.length} ADC cases -> ${output}`,
 )

@@ -56,9 +56,13 @@ pub struct Step {
     pub provider: Option<ProviderStep>,
     pub request: serde_json::Value,
     pub transport: String,
+    #[serde(default)]
+    pub operation: Option<String>,
     pub exchanges: Option<Vec<Exchange>>,
     pub websocket: Option<serde_json::Value>,
     pub events: Option<Vec<serde_json::Value>>,
+    #[serde(default)]
+    pub result: Option<serde_json::Value>,
     pub error: Option<StepError>,
 }
 
@@ -156,6 +160,8 @@ pub struct Prepared {
     pub headers: BTreeMap<String, String>,
     pub body: String,
     pub body_encoding: Option<String>,
+    #[serde(default)]
+    pub boundary: Option<String>,
 }
 
 #[derive(Debug, Clone, serde::Deserialize)]

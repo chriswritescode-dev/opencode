@@ -411,6 +411,11 @@
       "group": "gateways"
     },
     {
+      "cassette": "cohere-embedding/embeds-text-through-the-compatibility-api",
+      "protocol": "openai-embeddings",
+      "group": "embeddings"
+    },
+    {
       "cassette": "cohere/continues-a-native-tool-call",
       "protocol": "cohere-chat",
       "group": "native-vendors"
@@ -491,6 +496,21 @@
       "group": "gemini"
     },
     {
+      "cassette": "google-embedding/embeds-an-image-and-text-into-one-vector-each",
+      "protocol": "google-embed-content",
+      "group": "embeddings"
+    },
+    {
+      "cassette": "google-embedding/embeds-text-through-batchembedcontents",
+      "protocol": "google-embed-content",
+      "group": "embeddings"
+    },
+    {
+      "cassette": "google-embedding/maps-inputtype-to-a-task-type-for-gemini-embedding-001",
+      "protocol": "google-embed-content",
+      "group": "embeddings"
+    },
+    {
       "cassette": "google-interactions/continues-tool-results-with-previous-interaction-id",
       "protocol": "google-interactions",
       "group": "native-vendors"
@@ -509,6 +529,16 @@
       "cassette": "google-interactions/streams-text-and-reports-usage",
       "protocol": "google-interactions",
       "group": "native-vendors"
+    },
+    {
+      "cassette": "google-vertex-embedding/embeds-gemini-embedding-001-one-text-per-predict-request",
+      "protocol": "google-vertex-predict-embeddings",
+      "group": "embeddings"
+    },
+    {
+      "cassette": "google-vertex-embedding/embeds-text-through-predict",
+      "protocol": "google-vertex-predict-embeddings",
+      "group": "embeddings"
     },
     {
       "cassette": "google-vertex/calls-a-tool",
@@ -909,6 +939,11 @@
       "cassette": "openai-compatible-chat/togetherai-streams-tool-call",
       "protocol": "openai-chat",
       "group": "openai-chat"
+    },
+    {
+      "cassette": "openai-embedding/embeds-text-with-requested-dimensions",
+      "protocol": "openai-embeddings",
+      "group": "embeddings"
     },
     {
       "cassette": "openai-responses-cache/caches-the-system-prompt-on-gpt-6-2-sol",

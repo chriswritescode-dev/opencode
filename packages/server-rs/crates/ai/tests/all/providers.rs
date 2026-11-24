@@ -91,7 +91,9 @@ fn model(specifier: &str, model_id: &str, settings: serde_json::Value) -> Model 
     let runtime = ProviderPackages::builtin()
         .model(specifier, model_id, &settings, &MapEnv::default())
         .unwrap_or_else(|error| panic!("{specifier}: {}", error.message()));
-    let RuntimeModel::Language(model) = runtime;
+    let RuntimeModel::Language(model) = runtime else {
+        panic!("{specifier}: expected a language model");
+    };
     model
 }
 
@@ -402,7 +404,9 @@ fn moonshot_reads_api_key_environment_fallbacks_in_order() {
             ]),
         )
         .expect("moonshot model");
-    let RuntimeModel::Language(model) = runtime;
+    let RuntimeModel::Language(model) = runtime else {
+        panic!("moonshot: expected a language model");
+    };
     let request = serde_json::from_value(zai_request(Some(64), false)).expect("request");
     let context = opencode_ai::ExecutionContext::new(
         std::sync::Arc::new(opencode_ai::clock::FixedClock::new(1_767_323_045_000)),
@@ -620,10 +624,16 @@ fn google_vertex_gemini_entry_matches_the_root_provider() {
     let packages = ProviderPackages::builtin();
     let RuntimeModel::Language(root) = packages
         .model("@opencode/ai/providers/google-vertex", "gemini-2.5-flash", &settings, &env)
-        .expect("root model");
+        .expect("root model")
+    else {
+        panic!("google-vertex: expected a language model");
+    };
     let RuntimeModel::Language(gemini) = packages
         .model("@opencode/ai/providers/google-vertex/gemini", "gemini-2.5-flash", &settings, &env)
-        .expect("gemini model");
+        .expect("gemini model")
+    else {
+        panic!("google-vertex/gemini: expected a language model");
+    };
     assert_eq!(gemini.route.id, "google-vertex-gemini");
     assert_eq!(
         serde_json::to_value(gemini.descriptor()).expect("gemini descriptor"),
