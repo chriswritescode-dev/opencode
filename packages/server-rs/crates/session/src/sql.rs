@@ -47,6 +47,10 @@ pub(crate) fn number(value: f64) -> Value {
     Value::Real(value)
 }
 
+pub(crate) fn now_millis() -> i64 {
+    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |duration| duration.as_millis() as i64)
+}
+
 pub(crate) fn apply_usage(
     connection: &Connection,
     session_id: &str,
