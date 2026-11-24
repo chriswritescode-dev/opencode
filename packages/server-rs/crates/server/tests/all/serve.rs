@@ -1,5 +1,6 @@
 #![cfg(unix)]
 
+use std::io::{Read, Write};
 use std::time::Duration;
 
 use rustix::process::Signal;
@@ -17,6 +18,37 @@ fn stdio_serves_one_json_line_and_exits_when_stdin_closes() {
     let response = get(port_from_url(&url), "/api/info", &[("Authorization", &basic_header("pw"))]);
     assert_eq!(status_code(&response), "200", "response:\n{response}");
     assert_eq!(json_body(&response)["pid"], serde_json::json!(process.pid()), "response:\n{response}");
+
+    process.close_stdin();
+    let status = process.wait(Duration::from_secs(5));
+    assert_eq!(status.code(), Some(0), "exit status {status:?}");
+}
+
+#[test]
+fn stdio_creates_the_database_and_serves_the_event_stream() {
+    let sandbox = Sandbox::new();
+    let mut process = Process::spawn(
+        &sandbox,
+        &["serve", "--stdio", "--port", "0"],
+        &[("OPENCODE_PASSWORD", "pw"), ("OPENCODE_DISABLE_CHANNEL_DB", "1")],
+    );
+    let handshake = process.line();
+    let port = port_from_url(&handshake_url(&handshake));
+
+    let database = sandbox.dir().join("data").join("opencode").join("opencode.db");
+    assert!(database.exists(), "database {} was not created", database.display());
+
+    let head = event_head(port, "pw");
+    assert_eq!(status_code(&head), "200", "head:\n{head}");
+    let lowered = head.to_ascii_lowercase();
+    for header in [
+        "content-type: text/event-stream",
+        "cache-control: no-cache, no-transform",
+        "x-accel-buffering: no",
+        "x-content-type-options: nosniff",
+    ] {
+        assert!(lowered.contains(header), "head has no `{header}`:\n{head}");
+    }
 
     process.close_stdin();
     let status = process.wait(Duration::from_secs(5));
@@ -187,4 +219,27 @@ fn printed_password(process: &Process) -> String {
 
 fn status_code(response: &str) -> &str {
     response.lines().next().unwrap_or_default().split_whitespace().nth(1).unwrap_or_default()
+}
+
+fn event_head(port: u16, password: &str) -> String {
+    let mut stream = std::net::TcpStream::connect(("127.0.0.1", port))
+        .unwrap_or_else(|error| panic!("connect to 127.0.0.1:{port}: {error}"));
+    stream.set_read_timeout(Some(Duration::from_secs(5))).unwrap();
+    let request = format!(
+        "GET /api/event HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nAuthorization: {}\r\nConnection: close\r\n\r\n",
+        basic_header(password)
+    );
+    stream.write_all(request.as_bytes()).unwrap();
+    let mut head = Vec::new();
+    let mut chunk = [0; 1024];
+    while !head.windows(4).any(|window| window == b"\r\n\r\n") {
+        let read = stream
+            .read(&mut chunk)
+            .unwrap_or_else(|error| panic!("read GET /api/event from 127.0.0.1:{port}: {error}"));
+        if read == 0 {
+            break;
+        }
+        head.extend_from_slice(&chunk[..read]);
+    }
+    String::from_utf8_lossy(&head).into_owned()
 }

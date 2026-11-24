@@ -6,5 +6,6 @@
     "noUnusedLocals": true,
     "noUncheckedIndexedAccess": false
   },
-  "include": ["script", "test"]
+  "include": ["script", "test", "parity"],
+  "exclude": ["script/config-corpus"]
 }

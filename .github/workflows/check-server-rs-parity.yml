@@ -1,0 +1,71 @@
+name: Server (Rust) parity
+
+on:
+  pull_request:
+    paths:
+      - packages/server-rs/parity/**
+      - packages/server-rs/package.json
+      - packages/server-rs/upstream-pin
+      - packages/cli/src/**
+      - packages/core/src/**
+      - packages/server/src/**
+      - packages/protocol/**
+      - packages/schema/src/**
+      - packages/ai/src/**
+      - packages/ai/test/fixtures/recordings/**
+      - packages/plugin/src/**
+      - packages/codemode/src/**
+      - packages/util/src/**
+      - package.json
+      - bun.lock
+      - .github/workflows/check-server-rs-parity.yml
+  push:
+    branches: [dev]
+    paths:
+      - packages/server-rs/parity/**
+      - packages/server-rs/package.json
+      - packages/server-rs/upstream-pin
+      - packages/cli/src/**
+      - packages/core/src/**
+      - packages/server/src/**
+      - packages/protocol/**
+      - packages/schema/src/**
+      - packages/ai/src/**
+      - packages/ai/test/fixtures/recordings/**
+      - packages/plugin/src/**
+      - packages/codemode/src/**
+      - packages/util/src/**
+      - package.json
+      - bun.lock
+      - .github/workflows/check-server-rs-parity.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    working-directory: packages/server-rs
+
+jobs:
+  parity:
+    name: Parity
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-bun
+      - run: bun run parity:test
+      - run: bun run parity --candidate ts
+      - name: Upload parity output
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: parity-output
+          path: packages/server-rs/parity/out

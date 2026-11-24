@@ -1,11 +1,32 @@
-use std::io::Read;
+use std::io::{self, Read};
 
 use bytes::Bytes;
 use flate2::read::{GzDecoder, ZlibDecoder};
 use http::{HeaderValue, Request, StatusCode, header};
+use http_body_util::BodyExt;
 use opencode_http::{compression, response};
 
 use crate::{UNAUTHORIZED_BODY, authorized, body, ready_app, request, text};
+
+async fn next_chunk(body: &mut response::Body) -> Option<Bytes> {
+    loop {
+        let frame = body.frame().await?.expect("a body frame");
+        let Ok(data) = frame.into_data() else {
+            continue;
+        };
+        return Some(data);
+    }
+}
+
+fn inflate_gzip_prefix(compressed: &[u8], expected: usize) -> Vec<u8> {
+    let mut output = vec![0u8; expected];
+    GzDecoder::new(compressed).read_exact(&mut output).expect("the first gzip frame");
+    output
+}
+
+fn chunks(frames: Vec<Bytes>) -> impl Iterator<Item = Result<Bytes, io::Error>> {
+    frames.into_iter().map(Ok)
+}
 
 fn decompress(encoding: &str, bytes: &[u8]) -> Vec<u8> {
     let mut output = Vec::new();
@@ -152,4 +173,44 @@ async fn empty_and_204_bodies_are_not_compressed() {
     response.headers_mut().insert(header::CONTENT_TYPE, HeaderValue::from_static("application/json"));
     let applied = compression::apply(Some("gzip"), response);
     assert!(applied.headers().get(header::CONTENT_ENCODING).is_none());
+    assert!(applied.headers().get(header::VARY).is_none());
+}
+
+#[tokio::test]
+async fn streaming_bodies_are_compressed_incrementally() {
+    let frames: Vec<Bytes> = [b"data: one\n\n".as_slice(), b"data: two\n\n", b"data: three\n\n"]
+        .into_iter()
+        .map(Bytes::copy_from_slice)
+        .collect();
+    let response =
+        response::stream(StatusCode::OK, "text/event-stream", &[], futures_util::stream::iter(chunks(frames.clone())));
+    let mut applied = compression::apply(Some("gzip"), response);
+    assert_eq!(header_value(&applied, header::CONTENT_ENCODING), Some("gzip"));
+    assert!(applied.headers().get(header::CONTENT_LENGTH).is_none());
+    assert_eq!(header_value(&applied, header::VARY), Some("Accept-Encoding"));
+
+    let body = applied.body_mut();
+    let first = next_chunk(body).await.expect("a first compressed chunk");
+    assert_eq!(inflate_gzip_prefix(&first, frames[0].len()), frames[0].to_vec());
+    let mut compressed = first.to_vec();
+    while let Some(chunk) = next_chunk(body).await {
+        compressed.extend_from_slice(&chunk);
+    }
+    let expected: Vec<u8> = frames.iter().flat_map(|frame| frame.to_vec()).collect();
+    assert_eq!(decompress("gzip", &compressed), expected);
+}
+
+#[tokio::test]
+async fn no_transform_streaming_bodies_are_not_compressed() {
+    let frames = vec![Bytes::from_static(b"data: one\n\n"), Bytes::from_static(b"data: two\n\n")];
+    let response = response::stream(
+        StatusCode::OK,
+        "text/event-stream",
+        &[("cache-control", "no-transform")],
+        futures_util::stream::iter(chunks(frames.clone())),
+    );
+    let applied = compression::apply(Some("gzip"), response);
+    assert!(applied.headers().get(header::CONTENT_ENCODING).is_none());
+    let expected: Vec<u8> = frames.iter().flat_map(|frame| frame.to_vec()).collect();
+    assert_eq!(body(applied).await, Bytes::from(expected));
 }
