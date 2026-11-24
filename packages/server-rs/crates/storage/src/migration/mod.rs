@@ -93,11 +93,11 @@ pub fn apply_only(
                 Ok(())
             })?;
             let result = run(db, migration, legacy_credentials, &mut report);
-            db.read(|connection| {
+            let restored = db.read(|connection| {
                 connection.execute_batch("PRAGMA foreign_keys = ON")?;
                 Ok(())
-            })?;
-            result
+            });
+            result.and_then(|applied| restored.map(|()| applied))
         };
         if result? {
             report.applied.push(migration.id);
