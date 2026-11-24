@@ -317,7 +317,11 @@ impl ChunkSink {
     pub async fn send(&self, reply: Reply) -> Result<(), SidecarError> {
         self.gate.take().await?;
         let message = Message::Chunk { id: self.id, value: reply.value };
-        self.connection.inner.send(message, reply.bytes.as_deref()).await
+        let sent = self.connection.inner.send(message, reply.bytes.as_deref()).await;
+        if matches!(sent, Err(SidecarError::TooLarge { .. })) {
+            self.gate.grant(1);
+        }
+        sent
     }
 }
 

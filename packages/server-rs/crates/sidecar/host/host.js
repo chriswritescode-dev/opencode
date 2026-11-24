@@ -10,8 +10,11 @@ function encode(message, bytes, maxFrame) {
   const json = Buffer.from(globalThis.JSON.stringify(message));
   const len = bytes === undefined ? json.length : json.length + 4 + bytes.length;
   const max = Math.min(maxFrame, 4294967295);
-  if (len > max)
-    throw new Error(`a frame of ${len} bytes, over its cap of ${max}`);
+  if (len > max) {
+    const error = new Error(`a frame of ${len} bytes, over its cap of ${max}`);
+    error.name = "TooLarge";
+    throw error;
+  }
   const frame = Buffer.allocUnsafe(len + HEADER);
   frame.writeUInt32LE(len, 0);
   frame[4] = bytes === undefined ? JSON : BINARY;

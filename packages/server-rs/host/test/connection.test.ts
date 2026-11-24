@@ -94,6 +94,16 @@ test("a call returns a JSON value with its bytes", async () => {
   b.close()
 })
 
+test("a result over the frame cap rejects the caller with TooLarge", async () => {
+  const { a, b } = pair()
+  b.register("huge", async () => ({ value: null, bytes: new Uint8Array(MAX_FRAME + 1) }))
+  const error = await rejection(a.call("huge", null))
+  expect(error.name).toBe("TooLarge")
+  expect(error.message).toContain("over its cap")
+  a.close()
+  b.close()
+})
+
 test("a nested call keeps its parent's location", async () => {
   const { a, b } = pair()
   const location: LocationRef = { directory: "/tmp/outer", workspaceID: "workspace-1" }

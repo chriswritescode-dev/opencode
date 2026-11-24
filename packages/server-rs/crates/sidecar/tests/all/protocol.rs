@@ -188,6 +188,30 @@ async fn a_slow_consumer_keeps_a_javascript_stream_within_its_credit() {
 }
 
 #[tokio::test]
+async fn a_chunk_over_the_frame_cap_keeps_its_credit() {
+    let config = support::config();
+    let window = config.limits.window;
+    let mut handlers = Handlers::new();
+    handlers.register_stream("test.oversized", move |_context, _request, sink| {
+        Box::pin(async move {
+            for _ in 0..=window {
+                let huge = Reply { value: Value::Null, bytes: Some(Bytes::from(vec![0u8; 2 << 20])) };
+                match sink.send(huge).await {
+                    Err(SidecarError::TooLarge { .. }) => {}
+                    other => panic!("expected TooLarge, got {other:?}"),
+                }
+            }
+            sink.send(Reply::new(json!({ "index": 0 }))).await.map_err(remote)
+        })
+    });
+    let Some((_host, connection)) = connect(&config, handlers).await else { return };
+
+    let request = Request::new("host.consume", json!({ "method": "test.oversized" }));
+    let reply = within(connection.call(request)).await.expect("a reply");
+    assert_eq!(reply.value["count"], json!(1));
+}
+
+#[tokio::test]
 async fn a_javascript_consumer_drains_a_rust_stream() {
     let mut handlers = Handlers::new();
     handlers.register_stream("test.many", |_context, request, sink| {
