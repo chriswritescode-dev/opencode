@@ -1,0 +1,14 @@
+{
+"env-empty":{"source":{"type":"path","path":"config/opencode.jsonc"},"text":"{\"shell\":\"{env:EMPTY_SHELL}\"}","env":{"EMPTY_SHELL":""},"files":{},"output":"{\"shell\":\"\"}","references":[]},
+"env-set":{"source":{"type":"path","path":"config/opencode.jsonc"},"text":"{\"shell\":\"{env:SHELL}\"}","env":{"SHELL":"/bin/zsh"},"files":{},"output":"{\"shell\":\"/bin/zsh\"}","references":[]},
+"env-unset":{"source":{"type":"path","path":"config/opencode.jsonc"},"text":"{\"shell\":\"{env:OPENCODE_RS_SUBSTITUTE_UNSET}\"}","env":{},"files":{},"output":"{\"shell\":\"\"}","references":[]},
+"env-windows-path":{"source":{"type":"path","path":"config/opencode.jsonc"},"text":"{\"shell\":\"{env:WIN_PATH}\"}","env":{"WIN_PATH":"C:\\Users\\me\\config"},"files":{},"output":"{\"shell\":\"C:\\\\Users\\\\me\\\\config\"}","references":[]},
+"file-absolute":{"source":{"type":"path","path":"config/opencode.jsonc"},"text":"{\"token\":\"{file:{{root}}/shared/absolute.txt}\"}","env":{},"files":{"shared/absolute.txt":"absolute\n"},"output":"{\"token\":\"absolute\"}","references":["shared/absolute.txt"]},
+"file-comment":{"source":{"type":"path","path":"config/opencode.jsonc"},"text":"   // {file:secrets/token.txt}\n{\"token\":\"ok\"}","env":{},"files":{"config/secrets/token.txt":"commented\n"},"output":"   // {file:secrets/token.txt}\n{\"token\":\"ok\"}","references":[]},
+"file-escape":{"source":{"type":"path","path":"config/opencode.jsonc"},"text":"{\"token\":\"{file:escape.txt}\"}","env":{},"files":{"config/escape.txt":"  quoted \"value\" and C:\\path\nsecond line\n"},"output":"{\"token\":\"quoted \\\"value\\\" and C:\\\\path\\nsecond line\"}","references":["config/escape.txt"]},
+"file-home":{"source":{"type":"path","path":"config/opencode.jsonc"},"text":"{\"token\":\"{file:~/home-secret.txt}\"}","env":{},"files":{"home/home-secret.txt":"home-secret\n"},"output":"{\"token\":\"home-secret\"}","references":["home/home-secret.txt"]},
+"file-missing":{"source":{"type":"path","path":"config/opencode.jsonc"},"text":"{\"token\":\"{file:missing.txt}\"}","env":{},"files":{},"output":"{\"token\":\"\"}","references":["config/missing.txt"]},
+"file-relative":{"source":{"type":"path","path":"config/opencode.jsonc"},"text":"{\"token\":\"{file:secrets/token.txt}\"}","env":{},"files":{"config/secrets/token.txt":"  secret-value\n"},"output":"{\"token\":\"secret-value\"}","references":["config/secrets/token.txt"]},
+"file-trim":{"source":{"type":"path","path":"config/opencode.jsonc"},"text":"{\"token\":\"{file:trim.txt}\"}","env":{},"files":{"config/trim.txt":"\n\n  trimmed value  \n"},"output":"{\"token\":\"trimmed value\"}","references":["config/trim.txt"]},
+"virtual-dir":{"source":{"type":"virtual","source":"virtual.jsonc","dir":"config"},"text":"{\"token\":\"{file:virtual.txt}\"}","env":{},"files":{"config/virtual.txt":"virtual\n"},"output":"{\"token\":\"virtual\"}","references":["config/virtual.txt"]}
+}

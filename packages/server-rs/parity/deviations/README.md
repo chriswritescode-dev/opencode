@@ -53,6 +53,13 @@ explained nothing print `warning: deviation <id> matched nothing`, and files wit
 - `OR-40-legacy-credential-json.md`: a legacy auth.json the TypeScript parser accepts is rejected whole
 - `OR-40-migration-locking.md`: migrations take the write lock up front and import the Drizzle journal atomically
 - `OR-40-migration-logging.md`: migrations log nothing and return a report instead
+- `OR-42-canonical-failure.md`: a migrated legacy entry that fails re-decoding is dropped with an invalid diagnostic
+- `OR-42-config-read-errors.md`: an unreadable or unresolvable config file is skipped instead of failing the load
+- `OR-42-duration-precision.md`: durations beyond i128 nanoseconds or with 39 or more fractional digits are rejected
+- `OR-42-file-home.md`: `{file:~/...}` expands from the configured home instead of `os.homedir()`
+- `OR-42-macos-preferences-user.md`: managed preferences take the user name from `$USER` instead of the passwd entry
+- `OR-42-observer-initial-apply.md`: the sources observer applies its initial load instead of returning it
+- `OR-42-watcher-ignore.md`: config watching ignores directories per event and uses one native watcher per target
 - `OR-44-aws-credentials.md`: Bedrock credentials come only from route configuration, not the AWS default chain
 - `OR-44-bedrock-output.md`: Bedrock frames, cache warnings and SigV4 output carry different wire details
 - `OR-44-client-tls.md`: per-request client certificates are not presented

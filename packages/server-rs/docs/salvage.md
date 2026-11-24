@@ -20,14 +20,14 @@ named in the row needs it.
 | AWS event-stream framing | `oc-llm` | Binary event-stream encoding and decoding | `ai` | OR-44 | `packages/ai/src/protocols/bedrock-event-stream.ts`; OR-44 ported from the TypeScript at the pin and imported no first-attempt code |
 | SSE framing | `oc-llm` | Server-sent event encoding and decoding | `ai` | OR-44 | `packages/ai/src/route/framing.ts`; OR-44 ported from the TypeScript at the pin and imported no first-attempt code |
 | transports | `oc-llm` | HTTP and WebSocket transports | `ai` | OR-44 | `packages/ai/src/route/transport/*`; OR-44 ported from the TypeScript at the pin and imported no first-attempt code |
-| file lock | `oc-core` | Cross-process lock directories | `config` | OR-42 | compare with `opencode_local::lock` first and prefer it when it already matches; `packages/util/src/flock.ts` |
+| file lock | `oc-core` | Cross-process lock directories | `config` | OR-42 | OR-42 reused `opencode_local::lock` and imported no first-attempt code, because the config system takes no lock of its own and `GlobalPaths::locks()` exposes the lock directory; `packages/util/src/flock.ts` |
 | OAuth callback page | `oc-core` | The local page shown after an OAuth redirect | `catalog` | OR-46 | `packages/core/src/oauth/page.ts` |
 | migration runner | `oc-storage` | Applies ordered migrations to SQLite | `storage` | OR-40 | `packages/core/src/database/migration.ts`; OR-40 ported the TypeScript at the pin and imported no first-attempt code, because that branch is not visible in this checkout |
 | dump tooling | `oc-storage` | Database dump and restore helpers | `storage` | OR-40 | the debug entry points for storage at the pin; OR-40 ported the dump format from the TypeScript at the pin and imported no first-attempt code, because that branch is not visible in this checkout |
 | ID helpers | `oc-schema` | Prefixed, sortable identifiers | `storage` | OR-40 | `packages/schema/src/identifier.ts`; OR-40 ported the TypeScript at the pin and imported no first-attempt code, because that branch is not visible in this checkout |
 | JavaScript-string helpers | `oc-schema` | String conversions that match JavaScript semantics | `contract` | OR-38 | OR-38 used `opencode_api_types::js` (`encode_component`, `decode_component`) and imported no first-attempt code: the helpers already match the TypeScript behaviour, and the first-attempt branches are not visible in this checkout. |
 | number helpers | `oc-schema` | Number parsing and formatting that match JavaScript | `contract` | OR-38 | OR-38 used `opencode_api_types::js` (`number_to_string`) and imported no first-attempt code: the helpers already match the TypeScript behaviour, and the first-attempt branches are not visible in this checkout. |
-| wildcard helpers | `oc-schema` | Glob-style pattern matching for permission rules | `session` permissions | OR-50 | `packages/core/src/util/wildcard.ts` |
+| wildcard helpers | `oc-schema` | Glob-style pattern matching for permission rules | `config` | OR-50 | `packages/core/src/util/wildcard.ts`; OR-42 ported it from the pinned TypeScript in `opencode_config::wildcard`, the first-attempt code was not visible in this checkout, and OR-50 reuses `opencode_config::wildcard` |
 | response validator | `oc-contract` | Validates responses against the committed schema | `parity/` | not imported (OR-37) | `packages/protocol/src/client.ts` and `packages/protocol/openapi.json` at the pin |
 | git fixtures | `oc-testkit` | Temporary git repositories for tests | `vcs` tests | OR-53 | `packages/core/test/fixture/git.ts` |
 | server scaffold | `oc-server` | Authentication, CORS, event stream and error scaffolding | `http` | OR-39 | no first-attempt code was imported because the first-attempt branches are not visible in this checkout, and OR-39 ported the modules from the pinned TypeScript instead |
@@ -36,6 +36,9 @@ named in the row needs it.
 
 ADR-004 excludes the first attempt's hand-written wire types, its table modules, its session crate, and its SDK, TUI
 and CLI.
+
+OR-42 ported config discovery and normalisation from the pinned TypeScript instead of importing the first attempt's
+`oc-config`, because that crate is not visible in this checkout.
 
 The first-attempt branches are not reachable from this checkout, and the harness compares responses with the TypeScript server rather than with the schema, so OR-37 did not import the response validator.
 
