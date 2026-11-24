@@ -869,6 +869,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "opencode-location"
+version = "0.1.0"
+dependencies = [
+ "futures-util",
+ "log",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
 name = "opencode-server"
 version = "0.1.0"
 dependencies = [
