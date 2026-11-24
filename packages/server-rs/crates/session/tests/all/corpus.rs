@@ -51,6 +51,22 @@ async fn messages() {
 }
 
 #[tokio::test]
+async fn assistant() {
+    let corpus: Value = serde_json::from_str(CORPUS).expect("parse the events corpus");
+    let masks: Masks = serde_json::from_value(corpus["masks"].clone()).expect("read the corpus masks");
+    let mut count = 0;
+    for fixture in corpus["fixtures"].as_array().expect("the corpus carries fixtures") {
+        let name = fixture["name"].as_str().expect("a fixture carries a name");
+        if fixture["group"].as_str().unwrap_or_else(|| panic!("fixture {name} carries no group")) != "assistant" {
+            continue;
+        }
+        run_fixture(fixture, &masks).await;
+        count += 1;
+    }
+    assert_eq!(count, 6, "the assistant group carries every ported fixture");
+}
+
+#[tokio::test]
 async fn unported_durable_type_fails() {
     let dir = TempDir::new();
     let (database, _) = Database::open(DatabaseLocation::Memory, dir.path()).expect("open the database");
@@ -60,7 +76,7 @@ async fn unported_durable_type_fails() {
     let _projector = SessionProjector::register(&bus, &database, Arc::new(ProjectionSettings::default));
 
     let definition =
-        Definition::latest_durable("session.step.started").expect("the manifest carries session.step.started");
+        Definition::latest_durable("session.inbox.enqueued").expect("the manifest carries session.inbox.enqueued");
     let error = bus
         .publish(&definition, json!({ "sessionID": "ses_1" }), PublishOptions::default())
         .expect_err("an unported durable type is rejected");

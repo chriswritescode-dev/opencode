@@ -74,6 +74,7 @@ fn rows(conn: &Connection, table: &str, columns: &[String], masked: &[String]) -
         }
         rows.push(Value::Array(cells));
     }
+    rows.sort_by_cached_key(|row| serde_json::to_string(row).unwrap_or_default());
     Ok(Value::Array(rows))
 }
 

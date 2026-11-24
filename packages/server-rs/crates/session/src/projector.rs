@@ -7,7 +7,7 @@ use opencode_contract::generated::{
     SessionExecutionFailedData, SessionExecutionInterruptedData, SessionExecutionInterruptedDataReason,
     SessionExecutionStartedData, SessionExecutionSucceededData, SessionMetadataUpdatedData, SessionModelSelectedData,
     SessionMovedData, SessionPermissionsData, SessionRenamedData, SessionRevertClearedData, SessionRevertStagedData,
-    SessionUnarchivedData, SessionUsageRecordedData, SessionViewedData,
+    SessionStepEndedData, SessionStepFailedData, SessionUnarchivedData, SessionUsageRecordedData, SessionViewedData,
 };
 use opencode_storage::Database;
 use rusqlite::types::Value;
@@ -16,6 +16,7 @@ use rusqlite::{Connection, OptionalExtension};
 use crate::blob;
 use crate::history;
 use crate::message_updater;
+use crate::parts;
 use crate::settings::ProjectionSettings;
 use crate::sql::{Assignment, TokenTotals, apply_usage, now_millis, number, set_session};
 
@@ -39,16 +40,30 @@ impl SessionProjector {
         let published = bus.clone();
         let database = database.clone();
         bus.listen(Box::new(move |event: &Event| {
-            if event.r#type() != "session.usage.recorded" {
+            let data = event.data();
+            let session_id = match event.r#type() {
+                "session.usage.recorded" | "session.step.ended" => {
+                    data.get("sessionID").and_then(serde_json::Value::as_str)
+                }
+                "session.step.failed" => {
+                    if data.get("cost").is_none_or(serde_json::Value::is_null)
+                        || data.get("tokens").is_none_or(serde_json::Value::is_null)
+                    {
+                        return Ok(());
+                    }
+                    data.get("sessionID").and_then(serde_json::Value::as_str)
+                }
+                _ => return Ok(()),
+            };
+            let Some(session_id) = session_id else {
                 return Ok(());
-            }
-            let data: SessionUsageRecordedData = decode(event)?;
+            };
             let row = database.read(|connection| {
                 Ok(connection
                     .query_row(
                         "SELECT cost, tokens_input, tokens_output, tokens_reasoning, tokens_cache_read, \
                          tokens_cache_write FROM session_v2 WHERE id = ?1",
-                        [data.session_id.0.as_str()],
+                        [session_id],
                         |row| {
                             Ok((
                                 row.get::<_, f64>(0)?,
@@ -68,7 +83,7 @@ impl SessionProjector {
             published.publish(
                 &Definition::ephemeral("session.usage.updated"),
                 serde_json::json!({
-                    "sessionID": data.session_id.0,
+                    "sessionID": session_id,
                     "cost": cost,
                     "tokens": {
                         "input": input,
@@ -102,6 +117,52 @@ fn project(settings: &dyn Fn() -> ProjectionSettings, connection: &Connection, e
         }
         "session.synthetic" | "session.skill.activated" | "session.shell.started" | "session.shell.ended" => {
             run(connection, event, settings)
+        }
+        "session.step.started" => {
+            run(connection, event, settings)?;
+            touch(connection, event)
+        }
+        "session.step.first-token"
+        | "session.step.streamed"
+        | "session.text.started"
+        | "session.text.ended"
+        | "session.reasoning.started"
+        | "session.reasoning.ended"
+        | "session.tool.input.started"
+        | "session.tool.input.ended"
+        | "session.tool.called"
+        | "session.tool.success"
+        | "session.tool.failed"
+        | "session.retry.scheduled"
+        | "session.message.content.updated" => run(connection, event, settings),
+        "session.step.ended" => {
+            run(connection, event, settings)?;
+            let data: SessionStepEndedData = decode(event)?;
+            let tokens = TokenTotals {
+                input: data.tokens.input,
+                output: data.tokens.output,
+                reasoning: data.tokens.reasoning,
+                cache_read: data.tokens.cache.read,
+                cache_write: data.tokens.cache.write,
+            };
+            apply_usage(connection, &data.session_id.0, data.cost.0, &tokens, Some(event.created()))
+        }
+        "session.step.failed" => {
+            run(connection, event, settings)?;
+            let data: SessionStepFailedData = decode(event)?;
+            match (data.cost, data.tokens) {
+                (Some(cost), Some(tokens)) => {
+                    let tokens = TokenTotals {
+                        input: tokens.input,
+                        output: tokens.output,
+                        reasoning: tokens.reasoning,
+                        cache_read: tokens.cache.read,
+                        cache_write: tokens.cache.write,
+                    };
+                    apply_usage(connection, &data.session_id.0, cost.0, &tokens, Some(event.created()))
+                }
+                _ => touch(connection, event),
+            }
         }
         "session.execution.succeeded" => {
             run(connection, event, settings)?;
@@ -157,14 +218,41 @@ impl ProjectorAdapter<'_> {
     }
 
     fn update_message(&self, message: &serde_json::Value) -> Result<(), BusError> {
+        let id = history::message_id(message)?;
+        let session_id = self.session_id()?;
+        if history::message_type(message)? != "assistant" {
+            self.connection.execute(
+                "UPDATE session_message SET data = ?1, time_updated = ?2 WHERE id = ?3 AND session_id = ?4",
+                rusqlite::params![encode_json(&history::stored_data(message)?), now_millis(), id, session_id],
+            )?;
+            return Ok(());
+        }
+        let content = self
+            .connection
+            .query_row(
+                "SELECT json_extract(data, '$.content') FROM session_message WHERE id = ?1 AND session_id = ?2",
+                rusqlite::params![id, session_id],
+                |row| row.get::<_, Option<String>>(0),
+            )
+            .optional()?
+            .flatten();
+        let content = match content {
+            Some(content) => serde_json::from_str(&content).map_err(|error| invalid(self.event, error.to_string()))?,
+            None => serde_json::Value::Array(Vec::new()),
+        };
+        let data = encode_json(&history::assistant_data(message, Some(content))?);
+        if self.event.r#type() == "session.step.started" {
+            let created = number(history::message_created(message)?);
+            self.connection.execute(
+                "UPDATE session_message SET data = ?1, time_created = ?2, time_updated = ?3 \
+                 WHERE id = ?4 AND session_id = ?5",
+                rusqlite::params![data, created, now_millis(), id, session_id],
+            )?;
+            return Ok(());
+        }
         self.connection.execute(
             "UPDATE session_message SET data = ?1, time_updated = ?2 WHERE id = ?3 AND session_id = ?4",
-            rusqlite::params![
-                encode_json(&history::stored_data(message)?),
-                now_millis(),
-                history::message_id(message)?,
-                self.session_id()?,
-            ],
+            rusqlite::params![data, now_millis(), id, session_id],
         )?;
         Ok(())
     }
@@ -249,6 +337,18 @@ impl message_updater::Adapter for ProjectorAdapter<'_> {
         Ok(Some(message))
     }
 
+    fn get_assistant(&self, message_id: &str) -> Result<Option<serde_json::Value>, BusError> {
+        let row = self
+            .connection
+            .query_row(
+                "SELECT id, data FROM session_message WHERE id = ?1 AND session_id = ?2 AND type = 'assistant'",
+                rusqlite::params![message_id, self.session_id()?],
+                |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)),
+            )
+            .optional()?;
+        row.map(|(id, data)| history::decode_message_row(&id, "assistant", &data)).transpose()
+    }
+
     fn get_shell(&self, shell_id: &str) -> Result<Option<serde_json::Value>, BusError> {
         let row = self
             .connection
@@ -279,6 +379,23 @@ impl message_updater::Adapter for ProjectorAdapter<'_> {
         self.update_message(&assistant)
     }
 
+    fn append_assistant_part(&self, message_id: &str, part: serde_json::Value) -> Result<(), BusError> {
+        parts::append(self.connection, self.session_id()?, self.event.created(), message_id, &part)
+    }
+
+    fn update_assistant_part(
+        &self,
+        message_id: &str,
+        part_match: parts::PartMatch,
+        recipe: &mut dyn FnMut(&mut serde_json::Value),
+    ) -> Result<(), BusError> {
+        parts::update(self.connection, self.session_id()?, self.event.created(), message_id, &part_match, recipe)
+    }
+
+    fn replace_assistant_parts(&self, message_id: &str, parts: Vec<serde_json::Value>) -> Result<(), BusError> {
+        parts::replace(self.connection, self.session_id()?, self.event.created(), message_id, &parts)
+    }
+
     fn update_shell(&self, shell: serde_json::Value) -> Result<(), BusError> {
         self.update_message(&shell)
     }
@@ -288,17 +405,23 @@ impl message_updater::Adapter for ProjectorAdapter<'_> {
             .event
             .durable()
             .map_or_else(|| Err(invalid(self.event, "missing durable envelope")), |durable| Ok(durable.seq))?;
+        let r#type = history::message_type(&message)?;
+        let data = if r#type == "assistant" {
+            history::assistant_data(&message, None)?
+        } else {
+            history::stored_data(&message)?
+        };
         self.connection.execute(
             "INSERT INTO session_message (id, session_id, type, seq, time_created, time_updated, data) \
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             rusqlite::params![
                 history::message_id(&message)?,
                 self.session_id()?,
-                history::message_type(&message)?,
+                r#type,
                 seq,
                 number(history::message_created(&message)?),
                 now_millis(),
-                encode_json(&history::stored_data(&message)?),
+                encode_json(&data),
             ],
         )?;
         Ok(())
@@ -468,7 +591,16 @@ fn project_usage_recorded(connection: &Connection, event: &Event) -> Result<(), 
         cache_read: data.tokens.cache.read,
         cache_write: data.tokens.cache.write,
     };
-    apply_usage(connection, &data.session_id.0, data.cost.0, &tokens)
+    apply_usage(connection, &data.session_id.0, data.cost.0, &tokens, None)
+}
+
+fn touch(connection: &Connection, event: &Event) -> Result<(), BusError> {
+    let session_id = event
+        .data()
+        .get("sessionID")
+        .and_then(serde_json::Value::as_str)
+        .ok_or_else(|| invalid(event, "missing sessionID"))?;
+    set_session(connection, session_id, &[Assignment::Value("time_updated", Value::Integer(event.created()))])
 }
 
 fn project_deleted(connection: &Connection, event: &Event) -> Result<(), BusError> {

@@ -56,21 +56,32 @@ pub(crate) fn apply_usage(
     session_id: &str,
     cost: f64,
     tokens: &TokenTotals,
+    time_updated: Option<i64>,
 ) -> Result<(), BusError> {
+    let mut values = vec![
+        number(cost),
+        number(tokens.input),
+        number(tokens.output),
+        number(tokens.reasoning),
+        number(tokens.cache_read),
+        number(tokens.cache_write),
+        Value::Text(session_id.to_string()),
+    ];
+    let updated = match time_updated {
+        Some(time) => {
+            values.push(Value::Integer(time));
+            "time_updated = ?8".to_string()
+        }
+        None => "time_updated = time_updated".to_string(),
+    };
     connection.execute(
-        "UPDATE session_v2 SET cost = cost + ?1, tokens_input = tokens_input + ?2, \
-         tokens_output = tokens_output + ?3, tokens_reasoning = tokens_reasoning + ?4, \
-         tokens_cache_read = tokens_cache_read + ?5, tokens_cache_write = tokens_cache_write + ?6, \
-         time_updated = time_updated WHERE id = ?7",
-        rusqlite::params_from_iter([
-            number(cost),
-            number(tokens.input),
-            number(tokens.output),
-            number(tokens.reasoning),
-            number(tokens.cache_read),
-            number(tokens.cache_write),
-            Value::Text(session_id.to_string()),
-        ]),
+        &format!(
+            "UPDATE session_v2 SET cost = cost + ?1, tokens_input = tokens_input + ?2, \
+             tokens_output = tokens_output + ?3, tokens_reasoning = tokens_reasoning + ?4, \
+             tokens_cache_read = tokens_cache_read + ?5, tokens_cache_write = tokens_cache_write + ?6, \
+             {updated} WHERE id = ?7"
+        ),
+        rusqlite::params_from_iter(values),
     )?;
     Ok(())
 }
