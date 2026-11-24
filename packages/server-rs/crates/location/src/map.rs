@@ -36,7 +36,7 @@ impl<T: LocationServices> LocationMap<T> {
         let (shutdown, _) = watch::channel(false);
         LocationMap {
             inner: Arc::new(Inner {
-                boot: Box::new(boot),
+                boot: Arc::new(Box::new(boot)),
                 state: Mutex::new(MapState { slots: IndexMap::new(), closed: false }),
                 shutdown,
             }),
@@ -63,6 +63,7 @@ impl<T: LocationServices> LocationMap<T> {
                 }
             };
             match slot.wait().await {
+                BootOutcome::Failed(BootError::Invalidated) => continue,
                 BootOutcome::Failed(error) => return Err(error),
                 BootOutcome::Ready(entry) => {
                     let state = self.inner.state.lock().await;
@@ -80,7 +81,7 @@ impl<T: LocationServices> LocationMap<T> {
         let key = reference.canonical();
         let entry = match self.inner.state.lock().await.slots.shift_remove(&key) {
             Some(Slot::Ready(entry)) => entry,
-            _ => return,
+            Some(Slot::Booting(_)) | None => return,
         };
         entry.invalidated.store(true, Ordering::SeqCst);
         let _ = tokio::spawn(release_entry(entry, key)).await;
@@ -169,7 +170,7 @@ impl<T: LocationServices> Drop for Lease<T> {
         if self.entry.leases.fetch_sub(1, Ordering::SeqCst) > 1 {
             return;
         }
-        self.entry.released.notify_one();
+        self.entry.released.notify_waiters();
         if !self.entry.invalidated.load(Ordering::SeqCst) {
             return;
         }
@@ -178,7 +179,7 @@ impl<T: LocationServices> Drop for Lease<T> {
 }
 
 struct Inner<T: LocationServices> {
-    boot: BootFn<T>,
+    boot: Arc<BootFn<T>>,
     state: Mutex<MapState<T>>,
     shutdown: watch::Sender<bool>,
 }
@@ -273,8 +274,14 @@ impl<T: LocationServices> Clone for BootOutcome<T> {
 }
 
 fn spawn_boot<T: LocationServices>(inner: Arc<Inner<T>>, key: LocationRef, slot: Arc<BootSlot<T>>) {
+    let boot = inner.boot.clone();
+    let boot_key = key.clone();
     tokio::spawn(async move {
-        let result = (inner.boot)(key.clone()).await;
+        let result = match tokio::spawn(async move { boot(boot_key).await }).await {
+            Ok(result) => result,
+            Err(error) if error.is_panic() => Err(BootError::Panicked),
+            Err(_) => Err(BootError::Invalidated),
+        };
         finish_boot(inner, key, slot, result).await;
     });
 }

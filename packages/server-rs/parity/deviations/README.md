@@ -65,6 +65,7 @@ A deviation that excepts a recorded cassette from the replay gate also has a `Ca
 - `OR-42-observer-initial-apply.md`: the sources observer applies its initial load instead of returning it
 - `OR-42-watcher-ignore.md`: config watching ignores directories per event and uses one native watcher per target
 - `OR-43-heap-dump.md`: a heap dump writes a JSON memory report instead of a V8 heap snapshot
+- `OR-43-location-events.md`: project, worktree and location events are not published on the event feed
 - `OR-43-project-query-decode-messages.md`: a project.list query decode failure carries the contract decoder's message text
 - `OR-44-aws-credentials.md`: Bedrock credentials come only from route configuration, not the AWS default chain
 - `OR-44-bedrock-output.md`: Bedrock frames, cache warnings and SigV4 output carry different wire details

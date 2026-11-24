@@ -3,7 +3,7 @@ use std::future::Future;
 use std::sync::Arc;
 use std::time::Duration;
 
-use http_body_util::BodyExt;
+use http_body_util::{BodyExt, LengthLimitError, Limited};
 use hyper::body::Incoming;
 use hyper::server::conn::http1;
 use hyper::service::service_fn;
@@ -13,6 +13,8 @@ use tokio::net::TcpListener;
 use tokio::task::JoinSet;
 
 use crate::app::App;
+
+const MAX_REQUEST_BODY: usize = 128 * 1024 * 1024;
 
 pub async fn serve(listener: TcpListener, app: Arc<App>, shutdown: impl Future<Output = ()>) {
     let mut connections = JoinSet::new();
@@ -48,8 +50,19 @@ pub async fn serve(listener: TcpListener, app: Arc<App>, shutdown: impl Future<O
 
 async fn dispatch(app: &App, request: http::Request<Incoming>) -> crate::response::Response {
     let (parts, body) = request.into_parts();
-    let bytes = match BodyExt::collect(body).await {
+    let declared = parts
+        .headers
+        .get(http::header::CONTENT_LENGTH)
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.parse::<u64>().ok());
+    if declared.is_some_and(|length| length > MAX_REQUEST_BODY as u64) {
+        return crate::response::empty(http::StatusCode::PAYLOAD_TOO_LARGE);
+    }
+    let bytes = match BodyExt::collect(Limited::new(body, MAX_REQUEST_BODY)).await {
         Ok(collected) => collected.to_bytes(),
+        Err(error) if error.downcast_ref::<LengthLimitError>().is_some() => {
+            return crate::response::empty(http::StatusCode::PAYLOAD_TOO_LARGE);
+        }
         Err(_) => return crate::response::empty(http::StatusCode::BAD_REQUEST),
     };
     app.handle(http::Request::from_parts(parts, bytes)).await

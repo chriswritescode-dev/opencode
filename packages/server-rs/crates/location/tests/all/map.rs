@@ -319,8 +319,8 @@ async fn invalidated_boot_failure_does_not_evict_its_replacement() {
     map.invalidate(&reference).await;
     let replacement = map.get(&reference).await.expect("boots the replacement");
     gate.notify_one();
-    let failed = first.await.expect("the first acquisition joins").err().expect("the first boot is invalidated");
-    assert!(matches!(failed, BootError::Invalidated));
+    let retried = first.await.expect("the first acquisition joins").expect("retries after the invalidated boot");
+    assert!(Arc::ptr_eq(retried.services(), replacement.services()));
     assert_eq!(attempts.load(Ordering::SeqCst), 2);
     assert!(map.has(&reference).await);
     let again = map.get(&reference).await.expect("reuses the replacement");
@@ -363,8 +363,8 @@ async fn an_invalidated_boot_that_succeeds_shuts_down_without_installing() {
     map.invalidate(&reference).await;
     let replacement = map.get(&reference).await.expect("boots the replacement");
     gate.notify_one();
-    let failed = first.await.expect("the first acquisition joins").err().expect("the detached boot is invalidated");
-    assert!(matches!(failed, BootError::Invalidated));
+    let retried = first.await.expect("the first acquisition joins").expect("retries after the invalidated boot");
+    assert!(Arc::ptr_eq(retried.services(), replacement.services()));
 
     wait_for_closes(&closes, 1).await;
     assert_eq!(closes.load(Ordering::SeqCst), 1);
@@ -382,6 +382,90 @@ async fn an_invalidated_boot_that_succeeds_shuts_down_without_installing() {
         .collect();
     assert_eq!(shutdowns, vec![(reference.directory.clone(), reference.workspace_id.clone())]);
     assert!(!replacement.lifecycle().is_closed());
+}
+
+#[tokio::test]
+async fn invalidating_an_in_flight_boot_shuts_it_down_and_boots_fresh_services() {
+    let projects = Arc::new(ProjectService::new(database()));
+    let closes = Arc::new(AtomicUsize::new(0));
+    let attempts = Arc::new(AtomicUsize::new(0));
+    let gate = Arc::new(Notify::new());
+    let map = Arc::new(LocationMap::new({
+        let projects = projects.clone();
+        let closes = closes.clone();
+        let attempts = attempts.clone();
+        let gate = gate.clone();
+        move |reference: LocationRef| -> BoxFuture<'static, Result<Arc<TestServices>, BootError>> {
+            let attempt = attempts.fetch_add(1, Ordering::SeqCst);
+            let projects = projects.clone();
+            let closes = closes.clone();
+            let gate = gate.clone();
+            Box::pin(async move {
+                if attempt == 0 {
+                    gate.notified().await;
+                }
+                services(projects, reference, closes, None).await
+            })
+        }
+    }));
+    let reference = LocationRef::new("/fake/in-flight-boot", None);
+
+    let first = tokio::spawn({
+        let map = map.clone();
+        let reference = reference.clone();
+        async move { map.get(&reference).await }
+    });
+    wait_for_boot(&attempts).await;
+    map.invalidate(&reference).await;
+    assert!(!map.has(&reference).await);
+    gate.notify_one();
+    wait_for_closes(&closes, 1).await;
+    assert_eq!(closes.load(Ordering::SeqCst), 1);
+
+    let replacement = map.get(&reference).await.expect("boots fresh services");
+    assert_eq!(attempts.load(Ordering::SeqCst), 2);
+    assert!(!replacement.lifecycle().is_closed());
+    let retried = first.await.expect("the first acquisition joins").expect("retries after the invalidated boot");
+    assert!(Arc::ptr_eq(retried.services(), replacement.services()));
+}
+
+#[tokio::test]
+async fn recovers_from_a_panicking_boot() {
+    let projects = Arc::new(ProjectService::new(database()));
+    let closes = Arc::new(AtomicUsize::new(0));
+    let attempts = Arc::new(AtomicUsize::new(0));
+    let map = Arc::new(LocationMap::new({
+        let projects = projects.clone();
+        let closes = closes.clone();
+        let attempts = attempts.clone();
+        move |reference: LocationRef| -> BoxFuture<'static, Result<Arc<TestServices>, BootError>> {
+            let attempt = attempts.fetch_add(1, Ordering::SeqCst);
+            let projects = projects.clone();
+            let closes = closes.clone();
+            Box::pin(async move {
+                if attempt == 0 {
+                    panic!("the boot panics");
+                }
+                services(projects, reference, closes, None).await
+            })
+        }
+    }));
+    let reference = LocationRef::new("/fake/panicking", None);
+
+    let error = tokio::time::timeout(Duration::from_secs(1), map.get(&reference))
+        .await
+        .expect("the panicking boot finishes")
+        .err()
+        .expect("the panicking boot fails");
+    assert!(matches!(error, BootError::Panicked));
+    assert!(!map.has(&reference).await);
+
+    let lease = tokio::time::timeout(Duration::from_secs(1), map.get(&reference))
+        .await
+        .expect("the retried boot finishes")
+        .expect("boots after the panic");
+    assert!(!lease.lifecycle().is_closed());
+    assert_eq!(attempts.load(Ordering::SeqCst), 2);
 }
 
 #[tokio::test]
@@ -602,6 +686,31 @@ async fn does_not_warn_when_the_borrower_releases_on_shutdown() {
     tokio::task::yield_now().await;
 
     assert!(warnings_for(&directory).is_empty());
+}
+
+#[tokio::test(start_paused = true)]
+async fn warns_when_a_held_location_was_released_before() {
+    install_logger();
+    let temp = crate::TempDir::new();
+    let directory = temp.path();
+    let projects = Arc::new(ProjectService::new(database()));
+    let closes = Arc::new(AtomicUsize::new(0));
+    let map = LocationMap::new(simple_boot(projects, closes, None));
+    let reference = LocationRef::new(directory.clone(), None);
+
+    let released = map.get(&reference).await.expect("boots the location");
+    drop(released);
+    let lease = map.get(&reference).await.expect("reuses the released location");
+    map.invalidate(&reference).await;
+    tokio::task::yield_now().await;
+    tokio::time::advance(Duration::from_secs(30)).await;
+    tokio::task::yield_now().await;
+
+    let warnings = warnings_for(&directory);
+    assert_eq!(warnings.len(), 1, "warns once: {warnings:?}");
+    assert!(warnings[0].contains("location still held after shutdown"));
+    assert!(warnings[0].contains(&directory));
+    drop(lease);
 }
 
 #[tokio::test]

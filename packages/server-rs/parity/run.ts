@@ -109,7 +109,7 @@ async function main() {
     const coverage = coverageReport(surface, coverageRuns, {
       operations: options.parts.has("steps"),
       events: options.parts.has("events"),
-      websockets: options.parts.has("steps") && comparedWebsockets,
+      websockets: options.parts.size === PARTS.length || (options.parts.has("steps") && comparedWebsockets),
     })
     await writeCoverage(outputRoot, coverage)
     console.log(coverageSummary(coverage))

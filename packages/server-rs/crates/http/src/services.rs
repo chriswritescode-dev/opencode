@@ -24,9 +24,10 @@ use opencode_location::events::LocationEvent;
 use opencode_location::lifecycle::Lifecycle;
 use opencode_location::location::{BootError, LocationInfo, boot_location};
 use opencode_location::map::LocationMap;
-use opencode_location::project::ProjectService;
+use opencode_location::project::{ProjectService, SWEEP_INTERVAL_MS};
 use opencode_storage::Database;
 use serde_json::Value;
+use tokio::task::JoinHandle;
 
 use crate::response;
 
@@ -42,6 +43,7 @@ pub struct GlobalServices {
     pub start_directory: String,
     pub events: tokio::sync::broadcast::Receiver<LocationEvent>,
     pub environment: ConfigEnv,
+    sweep: JoinHandle<()>,
 }
 
 pub struct LocationServices {
@@ -92,6 +94,23 @@ impl GlobalServices {
                 ..Default::default()
             },
         );
+        let sweep_projects = projects.clone();
+        let sweep_environment = environment.clone();
+        let mut sweep_shutdown = locations.shutdown_signal();
+        let sweep = tokio::spawn(async move {
+            if *sweep_shutdown.borrow() {
+                return;
+            }
+            loop {
+                if let Err(error) = sweep_projects.sweep(sweep_environment.as_ref()).await {
+                    log::error!("Project archive sweep failed: {error}");
+                }
+                tokio::select! {
+                    _ = tokio::time::sleep(Duration::from_millis(SWEEP_INTERVAL_MS as u64)) => {}
+                    _ = sweep_shutdown.changed() => return,
+                }
+            }
+        });
         GlobalServices {
             database,
             paths,
@@ -102,6 +121,7 @@ impl GlobalServices {
             start_directory,
             events,
             environment: config_env,
+            sweep,
         }
     }
 
@@ -111,6 +131,12 @@ impl GlobalServices {
 
     pub fn var(&self, name: &str) -> Option<OsString> {
         (self.environment)(name)
+    }
+}
+
+impl Drop for GlobalServices {
+    fn drop(&mut self) {
+        self.sweep.abort();
     }
 }
 
@@ -208,9 +234,9 @@ pub fn location_error(error: BootError) -> response::Response {
                 service: Some(Some("location".to_owned())),
             }),
         ),
-        BootError::Project(cause) => response::json(
+        error @ (BootError::Project(_) | BootError::Panicked) => response::json(
             StatusCode::INTERNAL_SERVER_ERROR,
-            &serde_json::json!({ "_tag": "UnknownError", "message": cause.to_string() }),
+            &serde_json::json!({ "_tag": "UnknownError", "message": error.to_string() }),
         ),
     }
 }

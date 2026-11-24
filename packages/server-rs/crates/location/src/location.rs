@@ -52,6 +52,8 @@ pub enum BootError {
     Closed,
     #[error("Location boot was invalidated")]
     Invalidated,
+    #[error("location boot failed")]
+    Panicked,
     #[error(transparent)]
     Project(Arc<ProjectError>),
 }

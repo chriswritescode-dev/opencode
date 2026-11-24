@@ -54,7 +54,8 @@ The Rust replacement for the TypeScript OpenCode server process, the `opencode-s
   blocks), project identity with its git calls (until OR-53), environments, the workspace connect seam, the Location
   map, lifecycle and the idle sweep. `crates/http/src/services.rs` is the only composer of per-Location services
   (`LocationServices`), and `opencode-storage` owns the `workspace` and `project` queries the crate calls. Boots and
-  project changes publish `LocationEvent` on a broadcast channel, which OR-41's bus bridges; session-row resolution
+  project changes publish `LocationEvent` on a broadcast channel that is not yet bridged to `opencode-bus` (pending
+  deviation `OR-43-location-events`); session-row resolution
   waits for a `SessionLookup` from OR-49. `State` notifications are infallible (`BoxFuture<()>`), so the port omits
   three upstream cases: a failed reload notification, the observer-failure half of the batch-failure case, and the
   notification-failure premise of the group case. Calling `get()` on a `State` inside its own transform deadlocks on
