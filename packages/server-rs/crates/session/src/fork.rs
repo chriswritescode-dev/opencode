@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::sync::LazyLock;
 
 use opencode_bus::{BusError, Event, reserve_sequence};
-use opencode_contract::codec::encode_json;
+use opencode_contract::codec::{Encode, encode_json};
 use opencode_contract::generated::{SessionForkBoundary, SessionForkedData};
 use rusqlite::types::Value as SqlValue;
 use rusqlite::{Connection, OptionalExtension, params, params_from_iter};
@@ -12,6 +12,8 @@ use crate::projector::decode;
 use crate::{blob, history, instruction, parts, slug};
 
 const FORK_BATCH_SIZE: i64 = 500;
+
+const MESSAGE_COLUMNS: &[&str] = &["id", "session_id", "type", "seq", "time_created", "time_updated", "data"];
 
 struct MessageRow {
     id: String,
@@ -32,8 +34,9 @@ struct PartSource {
     data: String,
 }
 
-static FORK_TITLE: LazyLock<regex_lite::Regex> =
-    LazyLock::new(|| regex_lite::Regex::new(r"^(.+) \(fork #([0-9]+)\)$").expect("the fork title pattern compiles"));
+static FORK_TITLE: LazyLock<regex_lite::Regex> = LazyLock::new(|| {
+    regex_lite::Regex::new(r"^([^\n\r\u{2028}\u{2029}]+) \(fork #([0-9]+)\)$").expect("the fork title pattern compiles")
+});
 
 pub(crate) fn project(connection: &Connection, event: &Event, fork_media: bool) -> Result<(), BusError> {
     let data: SessionForkedData = decode(event)?;
@@ -173,21 +176,24 @@ pub(crate) fn project(connection: &Connection, event: &Event, fork_media: bool) 
                 if row.r#type == "compaction" {
                     value = remap_keep_id(connection, &data.parent_id.0, value, &base_id)?;
                 }
-                connection.execute(
-                    "INSERT INTO session_message (id, session_id, type, seq, time_created, time_updated, data) \
-                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
-                    params![
-                        forked_id,
-                        data.session_id.0,
-                        row.r#type,
-                        row.seq,
-                        row.time_created,
-                        row.time_updated,
-                        encode_json(&value)
-                    ],
-                )?;
                 copied.push((row, forked_id, value));
             }
+
+            let message_rows = copied
+                .iter()
+                .map(|(row, forked_id, value)| {
+                    vec![
+                        SqlValue::Text(forked_id.clone()),
+                        SqlValue::Text(data.session_id.0.clone()),
+                        SqlValue::Text(row.r#type.clone()),
+                        SqlValue::Integer(row.seq),
+                        SqlValue::Integer(row.time_created),
+                        SqlValue::Integer(row.time_updated),
+                        SqlValue::Text(encode_json(value)),
+                    ]
+                })
+                .collect::<Vec<_>>();
+            parts::insert_batches(connection, "session_message", MESSAGE_COLUMNS, &message_rows)?;
 
             for (row, forked_id, value) in &copied {
                 let owner =
@@ -316,8 +322,14 @@ fn fork_title(value: Option<&str>) -> Option<String> {
         return Some(format!("{value} (fork #1)"));
     };
     let group = captures.get(1).map_or("", |group| group.as_str());
-    let fork = captures.get(2).and_then(|group| group.as_str().parse::<i64>().ok()).unwrap_or(0) + 1;
-    Some(format!("{group} (fork #{fork})"))
+    let fork = captures.get(2).and_then(|group| group.as_str().parse::<f64>().ok()).unwrap_or(0.0) + 1.0;
+    let mut number = String::new();
+    if fork.is_infinite() {
+        number.push_str("Infinity");
+    } else {
+        fork.encode(&mut number);
+    }
+    Some(format!("{group} (fork #{number})"))
 }
 
 fn invalid(event: &Event, message: impl Into<String>) -> BusError {
@@ -333,5 +345,24 @@ mod tests {
         assert_eq!(fork_title(None), None);
         assert_eq!(fork_title(Some("Parent")), Some("Parent (fork #1)".to_string()));
         assert_eq!(fork_title(Some("Parent (fork #2)")), Some("Parent (fork #3)".to_string()));
+        assert_eq!(fork_title(Some("Parent (fork #0002)")), Some("Parent (fork #3)".to_string()));
+        assert_eq!(
+            fork_title(Some("Parent (fork #9223372036854775807)")),
+            Some("Parent (fork #9223372036854776000)".to_string())
+        );
+        assert_eq!(
+            fork_title(Some("Parent (fork #99999999999999999999)")),
+            Some("Parent (fork #100000000000000000000)".to_string())
+        );
+        let overflow = format!("Parent (fork #{})", "9".repeat(400));
+        assert_eq!(fork_title(Some(&overflow)), Some("Parent (fork #Infinity)".to_string()));
+    }
+
+    #[test]
+    fn fork_title_ignores_javascript_line_terminators() {
+        for terminator in ["\r", "\u{2028}", "\u{2029}"] {
+            let title = format!("Parent{terminator}(fork #2)");
+            assert_eq!(fork_title(Some(&title)), Some(format!("{title} (fork #1)")));
+        }
     }
 }

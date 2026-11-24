@@ -10,7 +10,6 @@
       "time_created"
     ],
     "session_v2": [
-      "slug",
       "time_suspended"
     ]
   },
@@ -23,6 +22,7 @@
         "mediaBlob": false,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)"
@@ -1360,7 +1360,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "slug"
+                ],
                 [
                   "text",
                   "/repo"
@@ -1480,6 +1483,7 @@
         "mediaBlob": false,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)"
@@ -2806,7 +2810,10 @@
                 ],
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "full-slug"
+                ],
                 [
                   "text",
                   "/repo"
@@ -2939,6 +2946,7 @@
         "mediaBlob": false,
         "forkMedia": false
       },
+      "masks": {},
       "persist": false,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)"
@@ -4222,7 +4230,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "slug"
+                ],
                 [
                   "text",
                   "/repo"
@@ -4341,6 +4352,7 @@
         "mediaBlob": false,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)"
@@ -5829,7 +5841,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "slug"
+                ],
                 [
                   "text",
                   "/repo"
@@ -5959,6 +5974,7 @@
         "mediaBlob": false,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)"
@@ -7367,7 +7383,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "slug"
+                ],
                 [
                   "text",
                   "/repo"
@@ -7488,6 +7507,7 @@
         "mediaBlob": false,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)"
@@ -8823,7 +8843,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "slug"
+                ],
                 [
                   "text",
                   "/repo"
@@ -8942,6 +8965,7 @@
         "mediaBlob": false,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)"
@@ -10324,7 +10348,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "slug"
+                ],
                 [
                   "text",
                   "/repo"
@@ -10441,6 +10468,7 @@
         "mediaBlob": false,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)"
@@ -11833,7 +11861,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "slug"
+                ],
                 [
                   "text",
                   "/repo"
@@ -11951,6 +11982,7 @@
         "mediaBlob": false,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)",
@@ -13293,7 +13325,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "slug-2"
+                ],
                 [
                   "text",
                   "/repo"
@@ -13406,6 +13441,7 @@
         "mediaBlob": false,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)"
@@ -14749,7 +14785,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "slug"
+                ],
                 [
                   "text",
                   "/repo"
@@ -14868,6 +14907,7 @@
         "mediaBlob": false,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)"
@@ -16208,7 +16248,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "slug"
+                ],
                 [
                   "text",
                   "/repo"
@@ -16328,6 +16371,7 @@
         "mediaBlob": false,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)"
@@ -17823,7 +17867,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "slug"
+                ],
                 [
                   "text",
                   "/repo"
@@ -17945,6 +17992,7 @@
         "mediaBlob": false,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)"
@@ -19453,7 +19501,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "slug"
+                ],
                 [
                   "text",
                   "/repo"
@@ -19575,6 +19626,7 @@
         "mediaBlob": false,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)"
@@ -21010,7 +21062,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "slug"
+                ],
                 [
                   "text",
                   "/third"
@@ -21130,6 +21185,7 @@
         "mediaBlob": false,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)"
@@ -22564,7 +22620,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "slug"
+                ],
                 [
                   "text",
                   "/repo"
@@ -22681,6 +22740,7 @@
         "mediaBlob": false,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)"
@@ -24050,7 +24110,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "slug"
+                ],
                 [
                   "text",
                   "/repo"
@@ -24166,6 +24229,7 @@
         "mediaBlob": false,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)"
@@ -25736,7 +25800,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "slug"
+                ],
                 [
                   "text",
                   "/repo"
@@ -25855,6 +25922,7 @@
         "mediaBlob": false,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)"
@@ -27421,7 +27489,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "slug"
+                ],
                 [
                   "text",
                   "/repo"
@@ -27546,6 +27617,7 @@
         "mediaBlob": false,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)"
@@ -29637,7 +29709,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "slug"
+                ],
                 [
                   "text",
                   "/repo"
@@ -29769,6 +29844,7 @@
         "mediaBlob": false,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)"
@@ -31312,7 +31388,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "slug"
+                ],
                 [
                   "text",
                   "/repo"
@@ -31433,6 +31512,7 @@
         "mediaBlob": false,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)"
@@ -33059,7 +33139,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "slug"
+                ],
                 [
                   "text",
                   "/repo"
@@ -33181,6 +33264,7 @@
         "mediaBlob": false,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)"
@@ -34878,7 +34962,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "slug"
+                ],
                 [
                   "text",
                   "/repo"
@@ -35006,6 +35093,7 @@
         "mediaBlob": false,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)"
@@ -36627,7 +36715,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "slug"
+                ],
                 [
                   "text",
                   "/repo"
@@ -36745,6 +36836,7 @@
         "mediaBlob": false,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)",
@@ -38273,7 +38365,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "slug-1"
+                ],
                 [
                   "text",
                   "/repo"
@@ -38387,6 +38482,7 @@
         "mediaBlob": false,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)"
@@ -40347,7 +40443,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "slug"
+                ],
                 [
                   "text",
                   "/repo"
@@ -40479,6 +40578,7 @@
         "mediaBlob": false,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)"
@@ -42022,7 +42122,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "slug"
+                ],
                 [
                   "text",
                   "/repo"
@@ -42143,6 +42246,7 @@
         "mediaBlob": false,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)"
@@ -43706,7 +43810,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "slug"
+                ],
                 [
                   "text",
                   "/repo"
@@ -43828,6 +43935,7 @@
         "mediaBlob": false,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)"
@@ -45525,7 +45633,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "slug"
+                ],
                 [
                   "text",
                   "/repo"
@@ -45653,6 +45764,7 @@
         "mediaBlob": false,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)"
@@ -47177,7 +47289,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "slug"
+                ],
                 [
                   "text",
                   "/repo"
@@ -47295,6 +47410,7 @@
         "mediaBlob": false,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)",
@@ -48729,7 +48845,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "slug-1"
+                ],
                 [
                   "text",
                   "/repo"
@@ -48843,6 +48962,7 @@
         "mediaBlob": false,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)",
@@ -50367,7 +50487,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "slug-1"
+                ],
                 [
                   "text",
                   "/repo"
@@ -50482,6 +50605,7 @@
         "mediaBlob": false,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)"
@@ -52104,7 +52228,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "slug"
+                ],
                 [
                   "text",
                   "/repo"
@@ -52223,6 +52350,7 @@
         "mediaBlob": false,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)"
@@ -53977,7 +54105,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "slug"
+                ],
                 [
                   "text",
                   "/repo"
@@ -54100,6 +54231,7 @@
         "mediaBlob": false,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)"
@@ -55627,7 +55759,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "slug"
+                ],
                 [
                   "text",
                   "/repo"
@@ -55747,6 +55882,7 @@
         "mediaBlob": false,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)"
@@ -55832,6 +55968,7 @@
         "mediaBlob": false,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)"
@@ -55901,6 +56038,7 @@
         "mediaBlob": false,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)"
@@ -55979,6 +56117,7 @@
         "mediaBlob": false,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)"
@@ -57545,7 +57684,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "slug"
+                ],
                 [
                   "text",
                   "/repo"
@@ -57665,6 +57807,7 @@
         "mediaBlob": false,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)"
@@ -59346,7 +59489,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "slug"
+                ],
                 [
                   "text",
                   "/repo"
@@ -59468,6 +59614,7 @@
         "mediaBlob": false,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)"
@@ -61024,7 +61171,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "slug"
+                ],
                 [
                   "text",
                   "/repo"
@@ -61143,6 +61293,7 @@
         "mediaBlob": false,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)"
@@ -62524,7 +62675,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "slug"
+                ],
                 [
                   "text",
                   "/repo"
@@ -62641,6 +62795,7 @@
         "mediaBlob": false,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)",
@@ -63966,7 +64121,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "slug-1"
+                ],
                 [
                   "text",
                   "/repo"
@@ -64079,6 +64237,7 @@
         "mediaBlob": true,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)"
@@ -65537,7 +65696,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "slug"
+                ],
                 [
                   "text",
                   "/repo"
@@ -65654,6 +65816,7 @@
         "mediaBlob": true,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)"
@@ -67228,7 +67391,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "slug"
+                ],
                 [
                   "text",
                   "/repo"
@@ -67347,6 +67513,7 @@
         "mediaBlob": true,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)"
@@ -68919,7 +69086,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "slug"
+                ],
                 [
                   "text",
                   "/repo"
@@ -69038,6 +69208,7 @@
         "mediaBlob": true,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)"
@@ -70427,7 +70598,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "slug"
+                ],
                 [
                   "text",
                   "/repo"
@@ -70544,6 +70718,7 @@
         "mediaBlob": true,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)"
@@ -72007,6 +72182,7 @@
         "mediaBlob": true,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)"
@@ -73599,7 +73775,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "slug"
+                ],
                 [
                   "text",
                   "/repo"
@@ -73718,6 +73897,7 @@
         "mediaBlob": true,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)"
@@ -75333,7 +75513,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "slug"
+                ],
                 [
                   "text",
                   "/repo"
@@ -75452,6 +75635,7 @@
         "mediaBlob": true,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)"
@@ -76991,7 +77175,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "slug"
+                ],
                 [
                   "text",
                   "/repo"
@@ -77110,6 +77297,7 @@
         "mediaBlob": true,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)"
@@ -78650,7 +78838,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "slug"
+                ],
                 [
                   "text",
                   "/repo"
@@ -78768,6 +78959,11 @@
         "partRows": true,
         "mediaBlob": false,
         "forkMedia": false
+      },
+      "masks": {
+        "session_v2": [
+          "slug"
+        ]
       },
       "persist": true,
       "start": [
@@ -109306,6 +109502,11 @@
         "partRows": true,
         "mediaBlob": false,
         "forkMedia": false
+      },
+      "masks": {
+        "session_v2": [
+          "slug"
+        ]
       },
       "persist": true,
       "start": [
@@ -139872,6 +140073,11 @@
         "mediaBlob": false,
         "forkMedia": true
       },
+      "masks": {
+        "session_v2": [
+          "slug"
+        ]
+      },
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)",
@@ -141615,6 +141821,11 @@
         "mediaBlob": false,
         "forkMedia": false
       },
+      "masks": {
+        "session_v2": [
+          "slug"
+        ]
+      },
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)"
@@ -141653,6 +141864,7 @@
         "mediaBlob": false,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)",
@@ -143029,7 +143241,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "slug-1"
+                ],
                 [
                   "text",
                   "/repo"
@@ -143142,6 +143357,7 @@
         "mediaBlob": false,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)",
@@ -144589,7 +144805,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "adopted"
+                ],
                 [
                   "text",
                   "/ignored/path"
@@ -144670,7 +144889,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "far"
+                ],
                 [
                   "text",
                   "/repo/far"
@@ -144748,7 +144970,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "global"
+                ],
                 [
                   "text",
                   "/repo/other"
@@ -144829,7 +145054,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "new"
+                ],
                 [
                   "text",
                   "/repo/new"
@@ -144907,7 +145135,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "outside"
+                ],
                 [
                   "text",
                   "/other/place"
@@ -144985,7 +145216,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "prefix"
+                ],
                 [
                   "text",
                   "/repo2/pkg"
@@ -145063,7 +145297,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "previous"
+                ],
                 [
                   "text",
                   "/repo/pkg"
@@ -145144,7 +145381,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "root"
+                ],
                 [
                   "text",
                   "/repo"
@@ -145228,7 +145468,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "workspace"
+                ],
                 [
                   "text",
                   "/repo/ws"
@@ -145336,6 +145579,7 @@
         "mediaBlob": false,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)",
@@ -146722,7 +146966,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "alpha"
+                ],
                 [
                   "text",
                   "/repo"
@@ -146824,7 +147071,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "beta"
+                ],
                 [
                   "text",
                   "/repo/pkg"
@@ -146920,7 +147170,10 @@
                   "text",
                   "{\"type\":\"through\",\"messageID\":\"msg_1\"}"
                 ],
-                "<masked>",
+                [
+                  "text",
+                  "gamma"
+                ],
                 [
                   "text",
                   "/other"
@@ -147001,7 +147254,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "delta"
+                ],
                 [
                   "text",
                   "/other"
@@ -147082,7 +147338,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "echec"
+                ],
                 [
                   "text",
                   "/repo/pkg"
@@ -147211,6 +147470,7 @@
         "mediaBlob": false,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)",
@@ -148798,7 +149058,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "slug-1"
+                ],
                 [
                   "text",
                   "/repo"
@@ -148916,6 +149179,7 @@
         "mediaBlob": false,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)",
@@ -150428,7 +150692,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "slug-1"
+                ],
                 [
                   "text",
                   "/repo"
@@ -150506,7 +150773,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "slug-2"
+                ],
                 [
                   "text",
                   "/repo"
@@ -150623,6 +150893,7 @@
         "mediaBlob": true,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)",
@@ -152164,7 +152435,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "slug-1"
+                ],
                 [
                   "text",
                   "/repo"
@@ -152275,6 +152549,7 @@
         "mediaBlob": false,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)",
@@ -153562,7 +153837,10 @@
                 ],
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "child"
+                ],
                 [
                   "text",
                   "/repo"
@@ -153643,7 +153921,10 @@
                 ],
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "orphan"
+                ],
                 [
                   "text",
                   "/repo"
@@ -153721,7 +154002,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "parent"
+                ],
                 [
                   "text",
                   "/repo"
@@ -153799,7 +154083,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "root"
+                ],
                 [
                   "text",
                   "/repo"
@@ -153916,6 +154203,7 @@
         "mediaBlob": false,
         "forkMedia": false
       },
+      "masks": {},
       "persist": true,
       "start": [
         "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) VALUES ('prj_1', '/repo', '[]', 1, 2)",
@@ -155200,7 +155488,10 @@
                 null,
                 null,
                 null,
-                "<masked>",
+                [
+                  "text",
+                  "slug-1"
+                ],
                 [
                   "text",
                   "/repo"

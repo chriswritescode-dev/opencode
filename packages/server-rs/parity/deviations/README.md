@@ -21,14 +21,15 @@ Each file has these paragraphs, in order:
 - `OR-38-lone-surrogates.md`: the strict round-trip corpus skips samples with unpaired UTF-16 surrogates
 - `OR-38-request-bodies.md`: request bodies decode into the wire representation
 - `OR-38-request-non-finite-numbers.md`: non-finite numbers in string slots are rejected
-- `OR-39-not-implemented-operations.md`: only three operations are implemented and the rest answer 501
+- `OR-39-not-implemented-operations.md`: only five operations are implemented and the rest answer 501
 - `OR-39-persistent-pty-capability.md`: server info always reports the persistent PTY capability as unavailable
 - `OR-39-port-owner.md`: a port-in-use message names no owning process
 - `OR-39-wildcard-urls.md`: a wildcard bind reports only one loopback URL in server info
 - `OR-39-remote-tunnel.md`: a `remote` service route prints a warning instead of starting a tunnel
 - `OR-39-logging.md`: diagnostic lines go to stderr and no log file is written
 - `OR-39-usage-errors.md`: malformed arguments print one fixed usage line and exit with code 1
-- `OR-41-streaming-compression.md`: compressed stream bodies flush after every frame
+- `OR-41-query-decode-messages.md`: query decode failures carry the contract decoder's message text
+- `OR-41-stream-failure-defect.md`: a log-read failure frame always names its defect `Error`
 - `OR-44-aws-credentials.md`: Bedrock credentials come only from route configuration, not the AWS default chain
 - `OR-44-bedrock-output.md`: Bedrock frames, cache warnings and SigV4 output carry different wire details
 - `OR-44-client-tls.md`: per-request client certificates are not presented

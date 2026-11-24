@@ -19,10 +19,10 @@ rand.workspace = true
 regex-lite.workspace = true
 rusqlite.workspace = true
 serde_json.workspace = true
+tokio.workspace = true
 
 [dev-dependencies]
 futures-util = { workspace = true, features = ["async-await"] }
-tokio.workspace = true
 
 [[test]]
 name = "all"

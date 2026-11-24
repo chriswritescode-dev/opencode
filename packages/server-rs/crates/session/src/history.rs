@@ -4,8 +4,10 @@ use opencode_bus::BusError;
 use opencode_contract::codec::{Decode, Path};
 use opencode_contract::generated::{SessionMessageInfo, SessionMessageMediaInfo};
 use rusqlite::Connection;
+use rusqlite::params_from_iter;
 use serde_json::{Map, Value};
 
+use crate::parts::MAX_BOUND_PARAMETERS;
 use crate::{blob, legacy};
 
 #[derive(Clone)]
@@ -176,20 +178,21 @@ fn with_parts(connection: &Connection, rows: &[MessageRow]) -> Result<Vec<Messag
     if ids.is_empty() {
         return Ok(rows.to_vec());
     }
-    let mut statement =
-        connection.prepare("SELECT data FROM session_part WHERE message_id = ?1 ORDER BY ordinal ASC")?;
     let mut parts = BTreeMap::<String, Vec<Value>>::new();
-    for id in ids {
-        let stored = statement.query_map([id], |row| row.get::<_, String>(0))?.collect::<Result<Vec<_>, _>>()?;
-        if stored.is_empty() {
-            continue;
+    for batch in ids.chunks(MAX_BOUND_PARAMETERS) {
+        let placeholders = (1..=batch.len()).map(|index| format!("?{index}")).collect::<Vec<_>>().join(", ");
+        let mut statement = connection.prepare(&format!(
+            "SELECT message_id, data FROM session_part WHERE message_id IN ({placeholders}) \
+             ORDER BY message_id ASC, ordinal ASC"
+        ))?;
+        let stored = statement
+            .query_map(params_from_iter(batch.iter()), |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)))?
+            .collect::<Result<Vec<_>, _>>()?;
+        for (message_id, data) in stored {
+            let value = serde_json::from_str::<Value>(&data)
+                .map_err(|error| HistoryError::Database(invalid("session_part", error.to_string())))?;
+            parts.entry(message_id).or_default().push(value);
         }
-        let values = stored
-            .iter()
-            .map(|data| serde_json::from_str::<Value>(data))
-            .collect::<Result<Vec<_>, _>>()
-            .map_err(|error| HistoryError::Database(invalid("session_part", error.to_string())))?;
-        parts.insert(id.to_string(), values);
     }
     if parts.is_empty() {
         return Ok(rows.to_vec());
@@ -336,7 +339,6 @@ fn required(object: &Map<String, Value>, r#type: &str, key: &str) -> Result<Valu
     present(object, key).cloned().ok_or_else(|| invalid(r#type, format!("expected {key}")))
 }
 
-#[allow(dead_code)]
 pub(crate) fn decode_part_row(r#type: &str, data: &str) -> Result<Value, BusError> {
     let mut object = stored_object(r#type, data)?;
     object.insert("type".to_string(), Value::String(r#type.to_string()));

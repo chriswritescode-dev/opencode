@@ -13,6 +13,7 @@ mod slug;
 mod sql;
 mod store;
 mod stored;
+mod usage;
 
 pub use projector::SessionProjector;
 pub use settings::ProjectionSettings;

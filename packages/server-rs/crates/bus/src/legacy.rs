@@ -33,7 +33,7 @@ fn renames(r#type: &str) -> Option<(&'static str, &'static str)> {
     }
 }
 
-fn content(mut data: Map<String, Value>) -> Map<String, Value> {
+pub fn content(mut data: Map<String, Value>) -> Map<String, Value> {
     let parts =
         data.get("content").and_then(Value::as_array).map(|parts| parts.iter().cloned().map(part).collect::<Vec<_>>());
     let Some(parts) = parts else {
@@ -43,7 +43,7 @@ fn content(mut data: Map<String, Value>) -> Map<String, Value> {
     data
 }
 
-fn part(value: Value) -> Value {
+pub fn part(value: Value) -> Value {
     let Value::Object(object) = value else {
         return value;
     };
@@ -57,21 +57,22 @@ fn part(value: Value) -> Value {
     Value::Object(object)
 }
 
-fn tool_result(mut value: Map<String, Value>) -> Map<String, Value> {
-    let Some(Value::Object(result)) = value.remove("providerResultState") else {
+pub fn tool_result(mut value: Map<String, Value>) -> Map<String, Value> {
+    let Some(Value::Object(result)) = value.shift_remove("providerResultState") else {
         return value;
     };
-    let mut native = match value.remove("native") {
-        Some(Value::Object(native)) => native,
-        _ => Map::new(),
-    };
-    native.extend(result);
-    value.insert("native".to_string(), Value::Object(native));
+    match value.get_mut("native") {
+        Some(Value::Object(native)) => native.extend(result),
+        Some(other) => *other = Value::Object(result),
+        None => {
+            value.insert("native".to_string(), Value::Object(result));
+        }
+    }
     value
 }
 
-fn provider_context(mut data: Map<String, Value>) -> Map<String, Value> {
-    let Some(Value::Object(context)) = data.remove("providerContext") else {
+pub fn provider_context(mut data: Map<String, Value>) -> Map<String, Value> {
+    let Some(Value::Object(context)) = data.shift_remove("providerContext") else {
         return data;
     };
     let mut native = Map::new();
@@ -88,7 +89,7 @@ fn provider_context(mut data: Map<String, Value>) -> Map<String, Value> {
     data
 }
 
-fn media(value: Value) -> Value {
+pub fn media(value: Value) -> Value {
     let Value::Object(mut message) = value else {
         return value;
     };
@@ -103,7 +104,7 @@ fn media(value: Value) -> Value {
     Value::Object(message)
 }
 
-fn media_part(value: Value) -> Value {
+pub fn media_part(value: Value) -> Value {
     let Value::Object(mut part) = value else {
         return value;
     };
@@ -113,8 +114,8 @@ fn media_part(value: Value) -> Value {
     if !replace {
         return Value::Object(part);
     }
-    let media_type = part.remove("mediaType");
-    let data = part.remove("data").unwrap_or(Value::Null);
+    let media_type = part.shift_remove("mediaType");
+    let data = part.shift_remove("data").unwrap_or(Value::Null);
     let mut source = Map::new();
     source.insert("type".to_string(), Value::String("base64".to_string()));
     source.insert("data".to_string(), data);
@@ -127,13 +128,13 @@ fn media_part(value: Value) -> Value {
     Value::Object(part)
 }
 
-fn omit(mut value: Map<String, Value>, key: &str) -> Map<String, Value> {
-    value.remove(key);
+pub fn omit(mut value: Map<String, Value>, key: &str) -> Map<String, Value> {
+    value.shift_remove(key);
     value
 }
 
-fn rename(mut value: Map<String, Value>, from: &str, to: &str) -> Map<String, Value> {
-    let Some(moved) = value.remove(from) else {
+pub fn rename(mut value: Map<String, Value>, from: &str, to: &str) -> Map<String, Value> {
+    let Some(moved) = value.shift_remove(from) else {
         return value;
     };
     if value.contains_key(to) {

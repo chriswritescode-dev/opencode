@@ -89,6 +89,7 @@ export type FixtureRecord = {
   name: string
   group: string
   settings: Settings
+  masks: Record<string, string[]>
   persist: boolean
   start: string[]
   steps: Step[]
@@ -132,6 +133,7 @@ const { SessionProjector } = await load("core/src/session/projector.ts")
 const { SessionEvent } = await load("core/src/session/event.ts")
 const { SessionStore } = await load("core/src/session/store.ts")
 const { SessionSchema } = await load("core/src/session/schema.ts")
+const { SessionTable } = await load("core/src/session/sql.ts")
 const { SessionMessage } = await load("core/src/session/message.ts")
 const { Global } = await load("util/src/global.ts")
 const { Worktree } = await load("core/src/worktree.ts")
@@ -189,16 +191,21 @@ const failureEndpoint = makeLogEndpoint((handlers) =>
   ),
 )
 
-const baseMasks: Record<string, string[]> = {
+export const masks: Record<string, string[]> = {
   migration: ["time_completed"],
   session_message: ["time_updated"],
   blob: ["time_created"],
   session_v2: ["time_suspended"],
 }
 
-export function masksFor(fixtures: Fixture[]): Record<string, string[]> {
-  const forked = fixtures.some((fixture) => fixture.steps.some((step) => step.type === "session.forked"))
-  return forked ? { ...baseMasks, session_v2: ["slug", "time_suspended"] } : baseMasks
+function fixtureMasks(fixture: Fixture): Record<string, string[]> {
+  return fixture.steps.some((step) => step.type === "session.forked") ? { session_v2: ["slug"] } : {}
+}
+
+function mergeMasks(global: Record<string, string[]>, local: Record<string, string[]>): Record<string, string[]> {
+  const merged = { ...global }
+  for (const [table, columns] of Object.entries(local)) merged[table] = [...(merged[table] ?? []), ...columns]
+  return merged
 }
 
 const encode = (schema: unknown, value: unknown) => JSON.stringify(Schema.encodeSync(schema)(value))
@@ -277,9 +284,8 @@ function fixtureClock(time: () => number) {
 }
 
 export async function runFixtures(fixtures: Fixture[]): Promise<FixtureRecord[]> {
-  const masks = masksFor(fixtures)
   const records: FixtureRecord[] = []
-  for (const fixture of fixtures) records.push(await runFixture(fixture, masks))
+  for (const fixture of fixtures) records.push(await runFixture(fixture))
   return records
 }
 
@@ -379,7 +385,7 @@ function feedSource() {
   }
 }
 
-async function runFixture(fixture: Fixture, masks: Record<string, string[]>): Promise<FixtureRecord> {
+async function runFixture(fixture: Fixture): Promise<FixtureRecord> {
   const directory = await mkdtemp(join(tmpdir(), "opencode-events-corpus-"))
   const settings: Settings = {
     partRows: fixture.partRows ?? true,
@@ -395,6 +401,7 @@ async function runFixture(fixture: Fixture, masks: Record<string, string[]>): Pr
     name: fixture.name,
     group: fixture.group,
     settings,
+    masks: fixtureMasks(fixture),
     persist: fixture.persist ?? true,
     start: fixture.start ?? [],
     steps,
@@ -419,10 +426,28 @@ async function runFixture(fixture: Fixture, masks: Record<string, string[]>): Pr
       const db = (yield* Database.Service).db
       for (const statement of fixture.start ?? []) yield* db.run(drizzle.sql.raw(statement))
       yield* bus.listen((event: BusEvent) =>
-        Effect.sync(() => {
-          if (event.type !== "session.usage.updated") return
-          usage.push(event.data)
-          expectedUsage += 1
+        Effect.gen(function* () {
+          if (event.type === "session.usage.updated") {
+            usage.push(event.data)
+            return
+          }
+          if (
+            event.type !== "session.step.ended" &&
+            event.type !== "session.usage.recorded" &&
+            event.type !== "session.step.failed"
+          )
+            return
+          const data = event.data as { sessionID?: unknown; cost?: unknown; tokens?: unknown }
+          if (event.type === "session.step.failed" && (data.cost === undefined || data.tokens === undefined)) return
+          const sessionID = data.sessionID
+          if (typeof sessionID !== "string") return
+          const row = yield* db
+            .select({ id: SessionTable.id })
+            .from(SessionTable)
+            .where(drizzle.eq(SessionTable.id, sessionID))
+            .get()
+            .pipe(Effect.orDie)
+          if (row) expectedUsage += 1
         }),
       )
       for (const [index, filter] of subscribers.entries()) {
@@ -538,7 +563,7 @@ async function runFixture(fixture: Fixture, masks: Record<string, string[]>): Pr
     )
 
     const opened = new BunDatabase(path)
-    const expected = dump(opened, masks)
+    const expected = dump(opened, mergeMasks(masks, fixtureMasks(fixture)))
     opened.close()
 
     return record({

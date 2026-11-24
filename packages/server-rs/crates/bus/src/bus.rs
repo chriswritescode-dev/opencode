@@ -352,11 +352,11 @@ impl Bus {
                  ON CONFLICT(aggregate_id) DO UPDATE SET seq = excluded.seq",
                 params![aggregate_id, final_seq],
             )?;
+            let mut insert_statement = tx.prepare_cached(
+                "INSERT INTO event (id, aggregate_id, seq, created, type, data) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            )?;
             for row in rows {
-                tx.execute(
-                    "INSERT INTO event (id, aggregate_id, seq, created, type, data) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-                    params![row.id, aggregate_id, row.seq, row.created, row.r#type, row.data],
-                )?;
+                insert_statement.execute(params![row.id, aggregate_id, row.seq, row.created, row.r#type, row.data])?;
             }
             Ok((queued, pending))
         })?;
@@ -567,17 +567,19 @@ impl Bus {
 
 pub fn latest_sequence(connection: &Connection, aggregate_id: &str) -> rusqlite::Result<i64> {
     let seq = connection
-        .query_row("SELECT seq FROM event_sequence WHERE aggregate_id = ?1", [aggregate_id], |row| row.get(0))
+        .prepare_cached("SELECT seq FROM event_sequence WHERE aggregate_id = ?1")?
+        .query_row([aggregate_id], |row| row.get(0))
         .optional()?;
     Ok(seq.unwrap_or(-1))
 }
 
 pub fn reserve_sequence(connection: &Connection, aggregate_id: &str, seq: i64) -> rusqlite::Result<()> {
-    connection.execute(
-        "INSERT INTO event_sequence (aggregate_id, seq) VALUES (?1, ?2) \
-         ON CONFLICT(aggregate_id) DO UPDATE SET seq = max(seq, excluded.seq)",
-        params![aggregate_id, seq],
-    )?;
+    connection
+        .prepare_cached(
+            "INSERT INTO event_sequence (aggregate_id, seq) VALUES (?1, ?2) \
+             ON CONFLICT(aggregate_id) DO UPDATE SET seq = max(seq, excluded.seq)",
+        )?
+        .execute(params![aggregate_id, seq])?;
     Ok(())
 }
 
@@ -601,7 +603,8 @@ fn already_exists(r#type: &str, id: &str, aggregate_id: &str, seq: i64) -> BusEr
 
 fn stored_event(connection: &Connection, id: &str) -> rusqlite::Result<Option<(String, i64)>> {
     connection
-        .query_row("SELECT aggregate_id, seq FROM event WHERE id = ?1", [id], |row| Ok((row.get(0)?, row.get(1)?)))
+        .prepare_cached("SELECT aggregate_id, seq FROM event WHERE id = ?1")?
+        .query_row([id], |row| Ok((row.get(0)?, row.get(1)?)))
         .optional()
 }
 
@@ -656,10 +659,11 @@ fn insert_event(
     seq: i64,
     versioned: &str,
 ) -> rusqlite::Result<()> {
-    connection.execute(
-        "INSERT INTO event (id, aggregate_id, seq, created, type, data) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-        params![event.id(), aggregate_id, seq, event.created(), versioned, encode_json(event.data())],
-    )?;
+    connection
+        .prepare_cached(
+            "INSERT INTO event (id, aggregate_id, seq, created, type, data) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+        )?
+        .execute(params![event.id(), aggregate_id, seq, event.created(), versioned, encode_json(event.data())])?;
     Ok(())
 }
 

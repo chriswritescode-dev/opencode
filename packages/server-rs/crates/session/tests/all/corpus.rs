@@ -1,5 +1,5 @@
 use std::collections::BTreeSet;
-use std::sync::atomic::{AtomicI64, Ordering};
+use std::sync::atomic::{AtomicI64, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -17,6 +17,7 @@ use opencode_session::{
 };
 use opencode_storage::dump::{Masks, dump};
 use opencode_storage::{Database, DatabaseLocation};
+use rusqlite::OptionalExtension;
 use serde_json::{Map, Value, json};
 
 use crate::TempDir;
@@ -175,7 +176,7 @@ async fn inline_update_sets_time_updated() {
     let bus =
         Bus::new(database.clone(), BusOptions { persist: true, now: Some(Arc::new(|| 0i64)), ..Default::default() });
     let settings = ProjectionSettings { part_rows: false, ..Default::default() };
-    let _projector = SessionProjector::register(&bus, &database, Arc::new(move || settings));
+    SessionProjector::register(&bus, Arc::new(move || settings));
     database
         .read(|connection| {
             connection.execute(
@@ -232,7 +233,7 @@ fn projector_registers_every_durable_type() {
     let (database, _) = Database::open(DatabaseLocation::Memory, dir.path()).expect("open the database");
     let database = Arc::new(database);
     let bus = Bus::new(database.clone(), BusOptions::default());
-    let _projector = SessionProjector::register(&bus, &database, Arc::new(ProjectionSettings::default));
+    SessionProjector::register(&bus, Arc::new(ProjectionSettings::default));
     let mut registered = bus.projector_registrations();
     registered.sort();
     let mut expected = DURABLE_EVENTS
@@ -367,8 +368,21 @@ fn frame_types(key: &str) -> Vec<String> {
         .collect()
 }
 
-async fn run_fixture(fixture: &Value, masks: &Masks) {
+fn merged_masks(global: &Masks, fixture: &Value) -> Masks {
+    let mut masks = global.clone();
+    let Some(local) = fixture.get("masks") else {
+        return masks;
+    };
+    let local: Masks = serde_json::from_value(local.clone()).expect("read the fixture masks");
+    for (table, columns) in local {
+        masks.entry(table).or_default().extend(columns);
+    }
+    masks
+}
+
+async fn run_fixture(fixture: &Value, global_masks: &Masks) {
     let name = fixture["name"].as_str().expect("a fixture carries a name");
+    let masks = merged_masks(global_masks, fixture);
     let expected = match &fixture["error"] {
         Value::Null => None,
         Value::String(error) => Some(error.as_str()),
@@ -400,7 +414,7 @@ async fn run_fixture(fixture: &Value, masks: &Masks) {
             ..Default::default()
         },
     );
-    let _projector = SessionProjector::register(&bus, &database, Arc::new(move || settings));
+    let _usage = SessionProjector::start(&bus, &database, Arc::new(move || settings));
 
     for statement in fixture["start"].as_array().unwrap_or_else(|| panic!("fixture {name} carries no start statements"))
     {
@@ -424,9 +438,15 @@ async fn run_fixture(fixture: &Value, masks: &Masks) {
 
     let usage = Arc::new(Mutex::new(Vec::new()));
     let usage_sink = usage.clone();
+    let expected_usage = Arc::new(AtomicUsize::new(0));
+    let expected_sink = expected_usage.clone();
+    let usage_database = database.clone();
     let _usage_listener = bus.listen(Box::new(move |event: &Event| {
         if event.r#type() == "session.usage.updated" {
             usage_sink.lock().expect("lock the usage sink").push(encode_json(event.data()));
+        }
+        if produces_usage(&usage_database, event) {
+            expected_sink.fetch_add(1, Ordering::SeqCst);
         }
         Ok(())
     }));
@@ -483,6 +503,12 @@ async fn run_fixture(fixture: &Value, masks: &Masks) {
             );
             failed = true;
             break;
+        }
+        let mut waits = 0;
+        while usage.lock().expect("lock the usage sink").len() < expected_usage.load(Ordering::SeqCst) {
+            waits += 1;
+            assert!(waits <= 1000, "fixture {name} step {index}: the usage publisher did not catch up");
+            tokio::task::yield_now().await;
         }
     }
 
@@ -555,7 +581,7 @@ async fn run_fixture(fixture: &Value, masks: &Masks) {
         log.insert(session.clone(), Value::Object(bodies));
     }
 
-    let snapshot = database.read(|connection| dump(connection, masks)).expect("dump the projected database");
+    let snapshot = database.read(|connection| dump(connection, &masks)).expect("dump the projected database");
 
     let frames = Value::Object(
         subscriptions
@@ -581,6 +607,30 @@ async fn run_fixture(fixture: &Value, masks: &Masks) {
     assert_field(name, "usage", &usage, &fixture["usage"]);
     assert_field(name, "log", &Value::Object(log), &fixture["log"]);
     assert_field(name, "dump", &snapshot, &fixture["dump"]);
+}
+
+fn produces_usage(database: &Arc<Database>, event: &Event) -> bool {
+    let r#type = event.r#type();
+    if !matches!(r#type, "session.step.ended" | "session.step.failed" | "session.usage.recorded") {
+        return false;
+    }
+    let data = event.data();
+    if r#type == "session.step.failed"
+        && (data.get("cost").is_none_or(Value::is_null) || data.get("tokens").is_none_or(Value::is_null))
+    {
+        return false;
+    }
+    let Some(session_id) = data.get("sessionID").and_then(Value::as_str) else {
+        return false;
+    };
+    database
+        .read(|connection| {
+            Ok(connection
+                .query_row("SELECT 1 FROM session_v2 WHERE id = ?1", [session_id], |_| Ok(()))
+                .optional()?
+                .is_some())
+        })
+        .expect("read the session row for the usage count")
 }
 
 fn run_store_query(store: &SessionStore, fixture: &str, query: &Value) -> String {

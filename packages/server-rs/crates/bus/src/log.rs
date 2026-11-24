@@ -187,7 +187,7 @@ impl Bus {
         }
         let limit = i64::try_from(self.options.log_read_page_size).unwrap_or(i64::MAX);
         let rows = self.db.read(|connection| {
-            let mut statement = connection.prepare(
+            let mut statement = connection.prepare_cached(
                 "SELECT id, seq, created, type, data FROM event \
                  WHERE aggregate_id = ?1 AND seq > ?2 AND seq <= ?3 ORDER BY seq LIMIT ?4",
             )?;

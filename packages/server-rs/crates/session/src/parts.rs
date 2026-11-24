@@ -6,6 +6,7 @@ use serde_json::Value;
 
 use crate::blob::{self, Owner};
 use crate::history;
+use crate::sql::now_millis;
 
 pub(crate) struct PartMatch {
     pub r#type: String,
@@ -19,7 +20,10 @@ pub(crate) struct StoredPart {
     pub data: String,
 }
 
-const ROWS_PER_INSERT: usize = 12;
+pub(crate) const MAX_BOUND_PARAMETERS: usize = 100;
+
+const PART_COLUMNS: &[&str] =
+    &["message_id", "session_id", "ordinal", "type", "call_id", "time_created", "time_updated", "data"];
 
 pub(crate) struct PartRow {
     pub message_id: String,
@@ -86,9 +90,10 @@ pub(crate) fn prepare_assistant_parts(
             insert_rows(connection, &rows)?;
         }
         connection.execute(
-            "UPDATE session_message SET data = ?1 WHERE id = ?2 AND session_id = ?3",
+            "UPDATE session_message SET data = ?1, time_updated = ?2 WHERE id = ?3 AND session_id = ?4",
             rusqlite::params![
                 encode_json(&history::assistant_data(&message, Some(Value::Array(Vec::new())))?),
+                now_millis(),
                 message_id,
                 session_id
             ],
@@ -292,38 +297,44 @@ fn call_id(part: &Value) -> Option<String> {
 }
 
 pub(crate) fn insert_rows(connection: &Connection, rows: &[PartRow]) -> Result<(), BusError> {
-    for batch in rows.chunks(ROWS_PER_INSERT) {
-        let mut values = Vec::with_capacity(batch.len() * 8);
+    let rows = rows
+        .iter()
+        .map(|row| {
+            vec![
+                SqlValue::Text(row.message_id.clone()),
+                SqlValue::Text(row.session_id.clone()),
+                SqlValue::Integer(row.ordinal),
+                SqlValue::Text(row.r#type.clone()),
+                row.call_id.clone().map_or(SqlValue::Null, SqlValue::Text),
+                SqlValue::Integer(row.time_created),
+                SqlValue::Integer(row.time_updated),
+                SqlValue::Text(encode_json(&row.data)),
+            ]
+        })
+        .collect::<Vec<_>>();
+    insert_batches(connection, "session_part", PART_COLUMNS, &rows)
+}
+
+pub(crate) fn insert_batches(
+    connection: &Connection,
+    table: &str,
+    columns: &[&str],
+    rows: &[Vec<SqlValue>],
+) -> Result<(), BusError> {
+    let per_batch = (MAX_BOUND_PARAMETERS / columns.len()).max(1);
+    for batch in rows.chunks(per_batch) {
+        let mut values = Vec::with_capacity(batch.len() * columns.len());
         let placeholders = batch
             .iter()
             .map(|row| {
                 let first = values.len() + 1;
-                values.push(SqlValue::Text(row.message_id.clone()));
-                values.push(SqlValue::Text(row.session_id.clone()));
-                values.push(SqlValue::Integer(row.ordinal));
-                values.push(SqlValue::Text(row.r#type.clone()));
-                values.push(row.call_id.clone().map_or(SqlValue::Null, SqlValue::Text));
-                values.push(SqlValue::Integer(row.time_created));
-                values.push(SqlValue::Integer(row.time_updated));
-                values.push(SqlValue::Text(encode_json(&row.data)));
-                format!(
-                    "(?{first}, ?{}, ?{}, ?{}, ?{}, ?{}, ?{}, ?{})",
-                    first + 1,
-                    first + 2,
-                    first + 3,
-                    first + 4,
-                    first + 5,
-                    first + 6,
-                    first + 7
-                )
+                values.extend(row.iter().cloned());
+                let bound = (first..first + columns.len()).map(|index| format!("?{index}")).collect::<Vec<_>>();
+                format!("({})", bound.join(", "))
             })
             .collect::<Vec<_>>();
         connection.execute(
-            &format!(
-                "INSERT INTO session_part (message_id, session_id, ordinal, type, call_id, time_created, \
-                 time_updated, data) VALUES {}",
-                placeholders.join(", ")
-            ),
+            &format!("INSERT INTO {table} ({}) VALUES {}", columns.join(", "), placeholders.join(", ")),
             rusqlite::params_from_iter(values),
         )?;
     }

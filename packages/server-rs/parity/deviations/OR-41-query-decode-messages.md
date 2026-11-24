@@ -11,9 +11,10 @@ union it prints the list of accepted literals. The layer answers `400` with an `
 (`packages/protocol/src/errors.ts`).
 
 Rust: `crates/http/src/handlers/event.rs` calls `event_subscribe::decode_query` from the generated contract and, on
-`Err`, returns `crates/http/src/handlers/invalid.rs::query`. That handler answers `400` with the same `_tag` and
-`kind: "Query"` fields, but `message` is `DecodeError`'s display text from `crates/contract/src/codec.rs:15-19`,
-which is a single `<path>: <reason>` line such as `$.types[0]: no member matched` and is never truncated.
+`Err`, returns `crates/http/src/handlers/invalid.rs::request` with `Kind::Query`. That handler answers `400` with
+the same `_tag` and `kind: "Query"` fields, but `message` is `DecodeError`'s display text from
+`crates/contract/src/codec.rs:15-19`, which is a single `<path>: <reason>` line such as `$.types[0]: no member
+matched` and is never truncated.
 
 Reason: the Rust server decodes requests with the generated contract decoder rather than Effect's `Schema`, so it has
 no Effect formatter output to reuse. Status, `_tag` and `kind` stay identical and only the human-readable `message`

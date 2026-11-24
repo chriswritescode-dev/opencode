@@ -25,10 +25,10 @@ fn state(now: i64, heartbeat: Duration) -> Arc<ServerState> {
     let (db, _) = Database::open(DatabaseLocation::Memory, Path::new("/tmp")).expect("open the database");
     let db = Arc::new(db);
     let bus = Bus::new(db.clone(), BusOptions { now: Some(Arc::new(move || now)), ..Default::default() });
-    let projector = SessionProjector::register(&bus, &db, Arc::new(ProjectionSettings::default));
+    let usage = SessionProjector::start(&bus, &db, Arc::new(ProjectionSettings::default));
     let feed = EventFeed::new(&bus, SUBSCRIBER_CAPACITY);
     let store = SessionStore::new(db.clone());
-    Arc::new(ServerState { db, bus, feed, store, projector, heartbeat })
+    Arc::new(ServerState { db, bus, feed, store, usage, heartbeat })
 }
 
 struct Live {

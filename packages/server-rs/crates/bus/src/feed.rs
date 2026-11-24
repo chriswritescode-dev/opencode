@@ -125,11 +125,10 @@ impl EventFeed {
         let encoded = match (self.encode)(event) {
             Ok(encoded) => encoded,
             Err(cause) => {
-                self.fail(FeedError::EncodingError {
-                    event_id: event.id().to_string(),
-                    event_type: event.r#type().to_string(),
-                    cause,
-                });
+                let event_id = event.id().to_string();
+                let event_type = event.r#type().to_string();
+                eprintln!("Failed to encode public event: eventID={event_id} eventType={event_type} cause={cause}");
+                self.fail(FeedError::EncodingError { event_id, event_type, cause });
                 return;
             }
         };

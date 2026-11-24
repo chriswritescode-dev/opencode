@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use opencode_bus::{Bus, BusError, Definition, Event, ListenerHandle, PublishOptions, versioned_type};
+use opencode_bus::{Bus, BusError, Definition, Event, versioned_type};
 use opencode_contract::codec::{Decode, Encode, Path, encode_json};
 use opencode_contract::generated::{
     DURABLE_EVENTS, SessionAgentSelectedData, SessionArchivedData, SessionCompactionEndedData, SessionCreatedData,
@@ -15,6 +15,7 @@ use opencode_storage::Database;
 use opencode_util::path::Flavor;
 use rusqlite::types::Value;
 use rusqlite::{Connection, OptionalExtension, params, params_from_iter};
+use tokio::task::JoinHandle;
 
 use crate::blob;
 use crate::fork;
@@ -25,15 +26,12 @@ use crate::message_updater::{self, Adapter};
 use crate::parts;
 use crate::settings::ProjectionSettings;
 use crate::sql::{Assignment, TokenTotals, apply_usage, now_millis, number, set_session};
+use crate::usage;
 
 pub struct SessionProjector;
 
 impl SessionProjector {
-    pub fn register(
-        bus: &Arc<Bus>,
-        database: &Arc<Database>,
-        settings: Arc<dyn Fn() -> ProjectionSettings + Send + Sync>,
-    ) -> ListenerHandle {
+    pub fn register(bus: &Arc<Bus>, settings: Arc<dyn Fn() -> ProjectionSettings + Send + Sync>) {
         for (r#type, _, _) in DURABLE_EVENTS {
             let definition = Definition::latest_durable(r#type).expect("a durable event type resolves");
             let version = definition.durable.expect("a durable definition carries its spec").version;
@@ -43,65 +41,15 @@ impl SessionProjector {
                 Box::new(move |connection, event| project(settings.as_ref(), connection, event)),
             );
         }
-        let published = bus.clone();
-        let database = database.clone();
-        bus.listen(Box::new(move |event: &Event| {
-            let data = event.data();
-            let session_id = match event.r#type() {
-                "session.usage.recorded" | "session.step.ended" => {
-                    data.get("sessionID").and_then(serde_json::Value::as_str)
-                }
-                "session.step.failed" => {
-                    if data.get("cost").is_none_or(serde_json::Value::is_null)
-                        || data.get("tokens").is_none_or(serde_json::Value::is_null)
-                    {
-                        return Ok(());
-                    }
-                    data.get("sessionID").and_then(serde_json::Value::as_str)
-                }
-                _ => return Ok(()),
-            };
-            let Some(session_id) = session_id else {
-                return Ok(());
-            };
-            let row = database.read(|connection| {
-                Ok(connection
-                    .query_row(
-                        "SELECT cost, tokens_input, tokens_output, tokens_reasoning, tokens_cache_read, \
-                         tokens_cache_write FROM session_v2 WHERE id = ?1",
-                        [session_id],
-                        |row| {
-                            Ok((
-                                row.get::<_, f64>(0)?,
-                                row.get::<_, f64>(1)?,
-                                row.get::<_, f64>(2)?,
-                                row.get::<_, f64>(3)?,
-                                row.get::<_, f64>(4)?,
-                                row.get::<_, f64>(5)?,
-                            ))
-                        },
-                    )
-                    .optional()?)
-            })?;
-            let Some((cost, input, output, reasoning, cache_read, cache_write)) = row else {
-                return Ok(());
-            };
-            published.publish(
-                &Definition::ephemeral("session.usage.updated"),
-                serde_json::json!({
-                    "sessionID": session_id,
-                    "cost": cost,
-                    "tokens": {
-                        "input": input,
-                        "output": output,
-                        "reasoning": reasoning,
-                        "cache": { "read": cache_read, "write": cache_write },
-                    },
-                }),
-                PublishOptions::default(),
-            )?;
-            Ok(())
-        }))
+    }
+
+    pub fn start(
+        bus: &Arc<Bus>,
+        database: &Arc<Database>,
+        settings: Arc<dyn Fn() -> ProjectionSettings + Send + Sync>,
+    ) -> JoinHandle<()> {
+        SessionProjector::register(bus, settings);
+        usage::spawn_usage_publisher(bus.clone(), database.clone())
     }
 }
 

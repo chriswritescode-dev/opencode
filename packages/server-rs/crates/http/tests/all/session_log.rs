@@ -29,10 +29,10 @@ fn state(persist: bool) -> (Arc<ServerState>, Arc<AtomicI64>) {
         db.clone(),
         BusOptions { persist, now: Some(Arc::new(move || clock.load(Ordering::Relaxed))), ..Default::default() },
     );
-    let projector = SessionProjector::register(&bus, &db, Arc::new(ProjectionSettings::default));
+    let usage = SessionProjector::start(&bus, &db, Arc::new(ProjectionSettings::default));
     let feed = EventFeed::new(&bus, SUBSCRIBER_CAPACITY);
     let store = SessionStore::new(db.clone());
-    let state = ServerState { db, bus, feed, store, projector, heartbeat: Duration::from_secs(60) };
+    let state = ServerState { db, bus, feed, store, usage, heartbeat: Duration::from_secs(60) };
     (Arc::new(state), now)
 }
 
@@ -127,6 +127,20 @@ async fn invalid_after_and_follow_are_query_errors() {
         assert!(value["message"].as_str().is_some_and(|message| !message.is_empty()), "{body}");
         assert!(body.ends_with(r#"","kind":"Query"}"#), "{body}");
     }
+}
+
+#[tokio::test]
+async fn an_invalid_session_id_is_a_params_error() {
+    let (state, _) = state(false);
+    let app = app(state);
+    let response = app.handle(crate::authorized("GET", "/api/experimental/session/foo/log")).await;
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    let body = crate::text(response).await;
+    let value: Value = serde_json::from_str(&body).expect("a JSON body");
+    assert_eq!(value["_tag"], "InvalidRequestError", "{body}");
+    assert_eq!(value["kind"], "Params", "{body}");
+    assert!(value["message"].as_str().is_some_and(|message| !message.is_empty()), "{body}");
+    assert!(body.ends_with(r#"","kind":"Params"}"#), "{body}");
 }
 
 #[tokio::test]

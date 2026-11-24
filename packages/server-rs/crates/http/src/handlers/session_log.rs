@@ -12,11 +12,15 @@ use crate::response;
 use crate::state::ServerState;
 
 pub fn log(state: &ServerState, raw: &RawRequest) -> response::Response {
-    let request = match experimental_session_log::decode(raw) {
-        Ok(request) => request,
-        Err(error) => return invalid::query(error),
+    let params = match experimental_session_log::decode_params(raw) {
+        Ok(params) => params,
+        Err(error) => return invalid::request(invalid::Kind::Params, error),
     };
-    let session_id = request.params.session_id.0;
+    let query = match experimental_session_log::decode_query(raw) {
+        Ok(query) => query,
+        Err(error) => return invalid::request(invalid::Kind::Query, error),
+    };
+    let session_id = params.session_id.0;
     match state.store.get(&session_id) {
         Ok(Some(_)) => {}
         Ok(None) => {
@@ -39,8 +43,8 @@ pub fn log(state: &ServerState, raw: &RawRequest) -> response::Response {
             return response::json(StatusCode::INTERNAL_SERVER_ERROR, &body);
         }
     }
-    let after = request.query.after.flatten().map(|seq| seq.0 as i64);
-    let follow = request.query.follow.flatten().unwrap_or(false);
+    let after = query.after.flatten().map(|seq| seq.0 as i64);
+    let follow = query.follow.flatten().unwrap_or(false);
     let stream = state.bus.log(LogInput { aggregate_id: session_id, after, follow }).filter_map(|item| async move {
         match item {
             Ok(item) => keep(&item).then(|| Ok(Bytes::from(sse::data_frame(&item.json())))),

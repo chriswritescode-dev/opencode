@@ -17,7 +17,7 @@ use crate::state::ServerState;
 pub fn subscribe(state: &ServerState, raw: &RawRequest) -> response::Response {
     let query = match event_subscribe::decode_query(raw) {
         Ok(query) => query,
-        Err(error) => return invalid::query(error),
+        Err(error) => return invalid::request(invalid::Kind::Query, error),
     };
     let types = query.types.flatten().map(|items| {
         items

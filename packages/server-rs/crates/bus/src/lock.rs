@@ -22,12 +22,11 @@ impl<K: Clone + Eq + Hash> KeyedMutex<K> {
             let _guard = entry.lock().unwrap_or_else(|error| error.into_inner());
             f()
         };
+        let mut entries = self.entries.lock().unwrap_or_else(|error| error.into_inner());
         if Arc::strong_count(&entry) == 2 {
-            let mut entries = self.entries.lock().unwrap_or_else(|error| error.into_inner());
-            if Arc::strong_count(&entry) == 2 {
-                entries.remove(&key);
-            }
+            entries.remove(&key);
         }
+        drop(entry);
         value
     }
 }

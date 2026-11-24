@@ -2,7 +2,7 @@ mod bus;
 mod decode;
 mod error;
 mod event;
-mod legacy;
+pub mod legacy;
 mod lock;
 mod log;
 mod route;

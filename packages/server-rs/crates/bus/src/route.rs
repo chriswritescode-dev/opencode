@@ -136,9 +136,8 @@ fn delivered_routes(event: &Event, reference: Option<LocationRef>) -> Vec<Locati
 
 fn session_location(connection: &Connection, session_id: &str) -> rusqlite::Result<Option<LocationRef>> {
     let row = connection
-        .query_row("SELECT directory, workspace_id FROM session_v2 WHERE id = ?1", [session_id], |row| {
-            Ok((row.get::<_, String>(0)?, row.get::<_, Option<String>>(1)?))
-        })
+        .prepare_cached("SELECT directory, workspace_id FROM session_v2 WHERE id = ?1")?
+        .query_row([session_id], |row| Ok((row.get::<_, String>(0)?, row.get::<_, Option<String>>(1)?)))
         .optional()?;
     Ok(row.map(|(directory, workspace_id)| LocationRef {
         directory: AbsolutePath(directory),

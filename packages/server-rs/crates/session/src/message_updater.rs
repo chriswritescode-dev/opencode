@@ -280,7 +280,7 @@ pub(crate) fn update(adapter: &dyn Adapter, event: &Event) -> Result<(), BusErro
                 set_optional(object, "rawFinish", raw_finish);
                 set_optional(object, "native", native);
                 object.insert("error".to_string(), error);
-                object.remove("retry");
+                object.shift_remove("retry");
                 if let Some((cost, tokens)) = usage {
                     object.insert("cost".to_string(), cost);
                     object.insert("tokens".to_string(), tokens);
@@ -533,13 +533,13 @@ fn step_started(adapter: &dyn Adapter, event: &Event) -> Result<(), BusError> {
             object.insert("agent".to_string(), Value::String(agent));
             object.insert("model".to_string(), model);
             for key in ["retry", "error", "finish", "rawFinish", "native"] {
-                object.remove(key);
+                object.shift_remove(key);
             }
             with_time(object, |time| {
                 time.insert("created".to_string(), started);
-                time.remove("firstToken");
-                time.remove("streamed");
-                time.remove("completed");
+                time.shift_remove("firstToken");
+                time.shift_remove("streamed");
+                time.shift_remove("completed");
             });
             if let Some(snapshot) = present(data, "snapshot") {
                 set_snapshot_key(object, "start", snapshot.clone());
@@ -550,7 +550,7 @@ fn step_started(adapter: &dyn Adapter, event: &Event) -> Result<(), BusError> {
     if let Some(mut current) = adapter.get_current_assistant()? {
         {
             let object = current.as_object_mut().ok_or_else(|| invalid(event, "expected a stored assistant"))?;
-            object.remove("retry");
+            object.shift_remove("retry");
             with_time(object, |time| {
                 time.insert("completed".to_string(), Value::from(event.created()));
             });
@@ -631,7 +631,7 @@ fn set_optional(object: &mut Map<String, Value>, key: &str, value: Option<Value>
             object.insert(key.to_string(), value);
         }
         None => {
-            object.remove(key);
+            object.shift_remove(key);
         }
     }
 }
@@ -672,7 +672,7 @@ fn ended(adapter: &dyn Adapter, event: &Event) -> Result<(), BusError> {
             object.insert("exit".to_string(), exit.clone());
         }
         None => {
-            object.remove("exit");
+            object.shift_remove("exit");
         }
     }
     match data.get("output").filter(|value| !value.is_null()) {
@@ -680,7 +680,7 @@ fn ended(adapter: &dyn Adapter, event: &Event) -> Result<(), BusError> {
             object.insert("output".to_string(), output.clone());
         }
         None => {
-            object.remove("output");
+            object.shift_remove("output");
         }
     }
     let completed = Value::from(event.created());
@@ -712,7 +712,7 @@ fn clear_current_retry(adapter: &dyn Adapter) -> Result<(), BusError> {
     if object.get("retry").is_none_or(Value::is_null) {
         return Ok(());
     }
-    object.remove("retry");
+    object.shift_remove("retry");
     adapter.update_assistant(assistant)
 }
 
