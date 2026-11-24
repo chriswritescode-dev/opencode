@@ -7,6 +7,7 @@ use opencode_contract::generated::LocationRef;
 use opencode_storage::Database;
 use rusqlite::{Connection, OptionalExtension, TransactionBehavior, params};
 use serde_json::{Map, Value};
+use tokio::sync::Notify;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel};
 
 use crate::decode;
@@ -20,16 +21,17 @@ type ProjectorRegistration = Box<dyn Fn(&Connection, &Event) -> Result<(), BusEr
 type Listener = Arc<dyn Fn(&Event) -> Result<(), BusError> + Send + Sync>;
 type ListenerRegistration = Box<dyn Fn(&Event) -> Result<(), BusError> + Send + Sync>;
 type CommitHook = Box<dyn FnOnce(&Connection, i64) -> Result<(), BusError>>;
+type BeforeAggregateRead = Arc<dyn Fn(&str) + Send + Sync>;
 
 pub struct BusOptions {
     pub persist: bool,
-    #[allow(dead_code)]
     pub log_read_page_size: usize,
+    pub before_aggregate_read: Option<BeforeAggregateRead>,
 }
 
 impl Default for BusOptions {
     fn default() -> Self {
-        BusOptions { persist: false, log_read_page_size: 512 }
+        BusOptions { persist: false, log_read_page_size: 512, before_aggregate_read: None }
     }
 }
 
@@ -65,12 +67,12 @@ pub struct ReplayOptions {
 }
 
 pub struct Bus {
-    db: Arc<Database>,
-    options: BusOptions,
+    pub(crate) db: Arc<Database>,
+    pub(crate) options: BusOptions,
     projectors: Mutex<HashMap<String, Vec<Projector>>>,
     listeners: Arc<Mutex<Vec<(u64, Listener)>>>,
     next_listener_id: AtomicU64,
-    durable: Mutex<HashMap<String, Vec<UnboundedSender<()>>>>,
+    pub(crate) durable: Arc<Mutex<HashMap<String, Vec<Arc<Notify>>>>>,
     subscribers: Arc<Mutex<Vec<Subscriber>>>,
     next_subscriber_id: AtomicU64,
     locks: KeyedMutex<String>,
@@ -140,7 +142,7 @@ impl Bus {
             projectors: Mutex::new(HashMap::new()),
             listeners: Arc::new(Mutex::new(Vec::new())),
             next_listener_id: AtomicU64::new(0),
-            durable: Mutex::new(HashMap::new()),
+            durable: Arc::new(Mutex::new(HashMap::new())),
             subscribers: Arc::new(Mutex::new(Vec::new())),
             next_subscriber_id: AtomicU64::new(0),
             locks: KeyedMutex::default(),
@@ -512,9 +514,9 @@ impl Bus {
     }
 
     fn wake(&self, aggregate_id: &str) {
-        let senders = lock(&self.durable).get(aggregate_id).cloned().unwrap_or_default();
-        for sender in senders {
-            let _ = sender.send(());
+        let notifies = lock(&self.durable).get(aggregate_id).cloned().unwrap_or_default();
+        for notify in notifies {
+            notify.notify_one();
         }
     }
 }
@@ -535,7 +537,7 @@ pub fn reserve_sequence(connection: &Connection, aggregate_id: &str, seq: i64) -
     Ok(())
 }
 
-fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
+pub(crate) fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
     mutex.lock().unwrap_or_else(|error| error.into_inner())
 }
 

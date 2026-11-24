@@ -781,6 +781,7 @@ dependencies = [
 name = "opencode-bus"
 version = "0.1.0"
 dependencies = [
+ "futures-util",
  "opencode-contract",
  "opencode-storage",
  "rusqlite",

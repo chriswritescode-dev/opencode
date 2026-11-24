@@ -1,3 +1,4 @@
+mod log;
 mod publish;
 mod replay;
 
