@@ -135,13 +135,31 @@ function parse(payload: Uint8Array): Message {
   }
 }
 
-export function write(bytes: Uint8Array, fd = 0): void {
-  let at = 0
-  while (at < bytes.length) {
-    try {
-      at += fs.writeSync(fd, bytes, at)
-    } catch (error) {
-      if (!(error instanceof Error && "code" in error && error.code === "EAGAIN")) throw error
+export function writer(fd: number): (bytes: Uint8Array) => void {
+  const queue: Uint8Array[] = []
+  let failure: unknown
+  const flush = () => {
+    while (queue.length > 0) {
+      const head = queue[0]
+      try {
+        const written = fs.writeSync(fd, head)
+        if (written < head.length) queue[0] = head.subarray(written)
+        else queue.shift()
+      } catch (error) {
+        if (error instanceof Error && "code" in error && error.code === "EAGAIN") {
+          setTimeout(flush, 1)
+          return
+        }
+        failure = error
+        queue.length = 0
+        return
+      }
     }
+  }
+  return (bytes) => {
+    if (failure !== undefined) throw failure
+    queue.push(bytes)
+    if (queue.length === 1) flush()
+    if (failure !== undefined) throw failure
   }
 }

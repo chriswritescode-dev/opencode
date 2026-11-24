@@ -1,5 +1,5 @@
 import { Connection } from "./connection"
-import { Decoder, DEFAULT_MAX_FRAME, write, type Frame } from "./frame"
+import { Decoder, DEFAULT_MAX_FRAME, writer, type Frame } from "./frame"
 import { register } from "./methods"
 import { MAGIC, VERSION } from "./protocol.gen"
 import { killAll, supervise } from "./supervise"
@@ -15,12 +15,10 @@ if (hello.version !== VERSION) {
 }
 decoder.maxFrame = hello.maxFrame
 
-const connection = new Connection(
-  { write: (bytes) => write(bytes, 0), frames },
-  { window: hello.window, maxFrame: hello.maxFrame },
-)
+const write = writer(0)
+const connection = new Connection({ write, frames }, { window: hello.window, maxFrame: hello.maxFrame })
 
-register(connection, { test: hello.test, maxFrame: hello.maxFrame, write: (bytes) => write(bytes, 0) })
+register(connection, { test: hello.test, maxFrame: hello.maxFrame, write })
 
 connection.onControl = (message) => {
   if (message.type !== "ping") return

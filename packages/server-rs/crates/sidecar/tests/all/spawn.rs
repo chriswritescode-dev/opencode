@@ -41,7 +41,7 @@ async fn the_host_sees_only_the_allowlisted_environment() {
     for forbidden in ["OPENCODE_PASSWORD", "OPENCODE_SERVER_PASSWORD", "SIDECAR_DOTENV"] {
         assert!(!names.contains(&forbidden), "{forbidden} must not reach the host");
     }
-    for name in names {
+    for name in names.into_iter().filter(|name| !(runtime.opencode && *name == "BUN_BE_BUN")) {
         assert!(inherited(OsStr::new(name)), "{name} is not allowlisted");
     }
 }

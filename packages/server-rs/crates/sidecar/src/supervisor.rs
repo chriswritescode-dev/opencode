@@ -389,7 +389,12 @@ async fn monitor(
                         ended = Some(error);
                         kill_group(pid);
                     }
-                    Ok(Err(_)) => {}
+                    Ok(Err(_)) => {
+                        if tokio::time::timeout(limits.grace, spawned.child.wait()).await.is_err() {
+                            ended = Some(SidecarError::Unresponsive);
+                            kill_group(pid);
+                        }
+                    }
                     Err(_) => {
                         ended = Some(SidecarError::Unresponsive);
                         kill_group(pid);

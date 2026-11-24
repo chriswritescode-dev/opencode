@@ -134,16 +134,38 @@ function parse(payload) {
     throw new Error(`a frame whose JSON did not parse: ${reason}`);
   }
 }
-function write(bytes, fd = 0) {
-  let at = 0;
-  while (at < bytes.length) {
-    try {
-      at += fs.writeSync(fd, bytes, at);
-    } catch (error) {
-      if (!(error instanceof Error && ("code" in error) && error.code === "EAGAIN"))
-        throw error;
+function writer(fd) {
+  const queue = [];
+  let failure;
+  const flush = () => {
+    while (queue.length > 0) {
+      const head = queue[0];
+      try {
+        const written = fs.writeSync(fd, head);
+        if (written < head.length)
+          queue[0] = head.subarray(written);
+        else
+          queue.shift();
+      } catch (error) {
+        if (error instanceof Error && "code" in error && error.code === "EAGAIN") {
+          setTimeout(flush, 1);
+          return;
+        }
+        failure = error;
+        queue.length = 0;
+        return;
+      }
     }
-  }
+  };
+  return (bytes) => {
+    if (failure !== undefined)
+      throw failure;
+    queue.push(bytes);
+    if (queue.length === 1)
+      flush();
+    if (failure !== undefined)
+      throw failure;
+  };
 }
 
 // host/src/connection.ts
@@ -787,8 +809,9 @@ if (hello.version !== VERSION) {
   process.exit(3);
 }
 decoder.maxFrame = hello.maxFrame;
-var connection = new Connection({ write: (bytes) => write(bytes, 0), frames }, { window: hello.window, maxFrame: hello.maxFrame });
-register(connection, { test: hello.test, maxFrame: hello.maxFrame, write: (bytes) => write(bytes, 0) });
+var write = writer(0);
+var connection = new Connection({ write, frames }, { window: hello.window, maxFrame: hello.maxFrame });
+register(connection, { test: hello.test, maxFrame: hello.maxFrame, write });
 connection.onControl = (message) => {
   if (message.type !== "ping")
     return;

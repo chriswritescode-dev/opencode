@@ -1,6 +1,9 @@
 import { expect, test } from "bun:test"
+import fs from "node:fs"
+import os from "node:os"
+import path from "node:path"
 
-import { Decoder, DEFAULT_MAX_FRAME, encode, JSON } from "../src/frame"
+import { Decoder, DEFAULT_MAX_FRAME, encode, JSON, writer } from "../src/frame"
 import type { Frame } from "../src/frame"
 import type { Message } from "../src/protocol.gen"
 
@@ -134,3 +137,42 @@ test("reads maxFrame on every push", () => {
   raised.maxFrame = DEFAULT_MAX_FRAME
   expect(raised.push(encoded)).toEqual([{ message }])
 })
+
+test("queues bytes a full descriptor cannot take and flushes them in order without blocking", async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "sidecar-frame-"))
+  const fifo = path.join(dir, "fifo")
+  expect(Bun.spawnSync(["mkfifo", fifo]).exitCode).toBe(0)
+  const fd = fs.openSync(fifo, fs.constants.O_RDWR | fs.constants.O_NONBLOCK)
+  try {
+    const payload = Buffer.alloc(1 << 20)
+    for (let index = 0; index < payload.length; index++) payload[index] = index % 251
+    const write = writer(fd)
+    write(payload.subarray(0, 1 << 19))
+    write(payload.subarray(1 << 19))
+    const received: Buffer[] = []
+    const chunk = Buffer.alloc(1 << 16)
+    let size = 0
+    while (size < payload.length) {
+      const read = readAvailable(fd, chunk)
+      if (read === 0) {
+        await Bun.sleep(1)
+        continue
+      }
+      received.push(Buffer.from(chunk.subarray(0, read)))
+      size += read
+    }
+    expect(Buffer.concat(received).equals(payload)).toBe(true)
+  } finally {
+    fs.closeSync(fd)
+    fs.rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+function readAvailable(fd: number, chunk: Buffer) {
+  try {
+    return fs.readSync(fd, chunk)
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "EAGAIN") return 0
+    throw error
+  }
+}
