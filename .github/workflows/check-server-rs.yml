@@ -20,6 +20,24 @@ on:
       - packages/core/src/database/**
       - packages/core/src/kv*
       - packages/core/src/project/sql.ts
+      - packages/core/src/bus.ts
+      - packages/core/src/event/**
+      - packages/core/src/session/projector.ts
+      - packages/core/src/session/message-updater.ts
+      - packages/core/src/session/sql.ts
+      - packages/core/src/session/store.ts
+      - packages/core/src/session/inbox.ts
+      - packages/core/src/session/instruction-state.ts
+      - packages/core/src/session/instruction-entry.ts
+      - packages/core/src/session/blob.ts
+      - packages/core/src/session/history.ts
+      - packages/core/src/session/stored.ts
+      - packages/core/src/session/info.ts
+      - packages/core/src/instructions/index.ts
+      - packages/core/src/util/slug.ts
+      - packages/schema/src/session-legacy.ts
+      - packages/schema/src/session-event.ts
+      - packages/server/src/event-feed.ts
       - packages/cli/src/database-path.ts
       - packages/schema/src/identifier.ts
       - .github/workflows/check-server-rs.yml
@@ -43,6 +61,24 @@ on:
       - packages/core/src/database/**
       - packages/core/src/kv*
       - packages/core/src/project/sql.ts
+      - packages/core/src/bus.ts
+      - packages/core/src/event/**
+      - packages/core/src/session/projector.ts
+      - packages/core/src/session/message-updater.ts
+      - packages/core/src/session/sql.ts
+      - packages/core/src/session/store.ts
+      - packages/core/src/session/inbox.ts
+      - packages/core/src/session/instruction-state.ts
+      - packages/core/src/session/instruction-entry.ts
+      - packages/core/src/session/blob.ts
+      - packages/core/src/session/history.ts
+      - packages/core/src/session/stored.ts
+      - packages/core/src/session/info.ts
+      - packages/core/src/instructions/index.ts
+      - packages/core/src/util/slug.ts
+      - packages/schema/src/session-legacy.ts
+      - packages/schema/src/session-event.ts
+      - packages/server/src/event-feed.ts
       - packages/cli/src/database-path.ts
       - packages/schema/src/identifier.ts
       - .github/workflows/check-server-rs.yml
