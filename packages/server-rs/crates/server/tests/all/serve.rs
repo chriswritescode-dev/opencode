@@ -188,6 +188,48 @@ fn the_cors_flag_allows_its_origin() {
     assert_eq!(status.code(), Some(143), "exit status {status:?}");
 }
 
+#[test]
+fn a_served_process_starts_no_sidecar_until_a_call() {
+    use std::os::unix::fs::PermissionsExt;
+
+    if !cfg!(target_os = "linux") {
+        println!("skipped: only Linux exposes /proc/<pid>/task/*/children");
+        return;
+    }
+    let sandbox = Sandbox::new();
+    let marker = sandbox.dir().join("sidecar-started");
+    let stub = sandbox.dir().join("bun");
+    std::fs::write(&stub, format!("#!/bin/sh\ntouch '{}'\nsleep 30\n", marker.display())).expect("a stub runtime");
+    std::fs::set_permissions(&stub, std::fs::Permissions::from_mode(0o755)).expect("an executable");
+    let stub = stub.to_str().expect("a UTF-8 stub path");
+
+    let mut process = Process::spawn(&sandbox, &["serve", "--port", "0"], &[("OPENCODE_BUN", stub)]);
+    let port = listening_port(&process);
+    let password = printed_password(&process);
+
+    let response = get(port, "/api/info", &[("Authorization", &basic_header(&password))]);
+    assert_eq!(status_code(&response), "200", "response:\n{response}");
+
+    std::thread::sleep(Duration::from_millis(300));
+    assert!(!marker.exists(), "the server ran the sidecar runtime before a sidecar call: {}", marker.display());
+
+    let task_dir = format!("/proc/{pid}/task", pid = process.pid());
+    for task in std::fs::read_dir(&task_dir).unwrap_or_else(|error| panic!("read {task_dir}: {error}")) {
+        let task = task.unwrap_or_else(|error| panic!("read {task_dir}: {error}"));
+        let path = task.path().join("children");
+        let children = match std::fs::read_to_string(&path) {
+            Ok(children) => children,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => continue,
+            Err(error) => panic!("read {}: {error}", path.display()),
+        };
+        assert!(children.trim().is_empty(), "the server started a child process: {children:?}");
+    }
+
+    process.signal(Signal::TERM);
+    let status = process.wait(Duration::from_secs(5));
+    assert_eq!(status.code(), Some(143), "exit status {status:?}");
+}
+
 fn handshake_url(handshake: &str) -> String {
     let value: serde_json::Value = serde_json::from_str(handshake)
         .unwrap_or_else(|error| panic!("first stdout line is not JSON ({error}): {handshake:?}"));

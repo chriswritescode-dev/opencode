@@ -3,3 +3,5 @@ packages/desktop/src/bindings.ts
 packages/client/src/generated/
 packages/client/src/generated-effect/
 packages/plugins/figma/skills/
+packages/server-rs/host/src/protocol.gen.ts
+packages/server-rs/crates/sidecar/host/host.js

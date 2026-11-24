@@ -81,7 +81,8 @@ pub(crate) async fn run(args: Serve, mut env: ServerEnv, mut watch: Watch) -> st
             None
         }
     };
-    let running = serve::start(listener, tmp, password.clone(), serve::machine_hostname(&env), cors, state).await?;
+    let running =
+        serve::start(listener, tmp, password.clone(), serve::machine_hostname(&env), cors, state, &env).await?;
     if generated {
         service_config.password(Some(&password))?;
     }

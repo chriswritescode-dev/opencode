@@ -52,7 +52,7 @@ async fn serve(args: Serve, mut env: ServerEnv) -> std::io::Result<std::process:
     let password = environment_password.unwrap_or_else(generate_password);
     let (state, report) = open_state(&env, &paths.data).map_err(std::io::Error::other)?;
     report_warnings(&report);
-    let running = start(listener, tmp, password.clone(), machine_hostname(&env), args.cors, Some(state)).await?;
+    let running = start(listener, tmp, password.clone(), machine_hostname(&env), args.cors, Some(state), &env).await?;
     running.ready();
     if args.stdio {
         write_line(&serde_json::json!({ "url": format!("http://{address}") }).to_string())?;
@@ -83,11 +83,19 @@ pub(crate) struct Running {
     app: Arc<opencode_http::app::App>,
     shutdown: oneshot::Sender<()>,
     server: tokio::task::JoinHandle<()>,
+    #[cfg(unix)]
+    sidecar: opencode_sidecar::supervisor::Sidecar,
 }
 
 impl Running {
     pub(crate) fn ready(&self) {
         self.app.status().ready();
+    }
+
+    #[cfg(unix)]
+    #[allow(dead_code)]
+    pub(crate) fn sidecar(&self) -> &opencode_sidecar::supervisor::Sidecar {
+        &self.sidecar
     }
 
     pub(crate) fn fail(&self) {
@@ -98,6 +106,8 @@ impl Running {
         self.app.status().begin_stopping();
         let _ = self.shutdown.send(());
         let _ = self.server.await;
+        #[cfg(unix)]
+        self.sidecar.shutdown().await;
     }
 }
 
@@ -108,9 +118,21 @@ pub(crate) async fn start(
     hostname: String,
     cors: Vec<String>,
     state: Option<Arc<ServerState>>,
+    env: &ServerEnv,
 ) -> std::io::Result<Running> {
     let address = listener.local_addr()?;
     let urls = Arc::new(move || connection_urls(address));
+    #[cfg(unix)]
+    let sidecar = opencode_sidecar::supervisor::Sidecar::new(
+        opencode_sidecar::config::Config::new(
+            env.vars(),
+            std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/")),
+            tmp.clone(),
+        ),
+        opencode_sidecar::connection::Handlers::default(),
+    );
+    #[cfg(not(unix))]
+    let _ = env;
     let app = opencode_http::app::App::new(opencode_http::app::Options {
         password,
         version: crate::VERSION.to_owned(),
@@ -124,7 +146,13 @@ pub(crate) async fn start(
     let server = tokio::spawn(opencode_http::serve::serve(listener, app.clone(), async move {
         let _ = shutdown_receiver.await;
     }));
-    Ok(Running { app, shutdown, server })
+    Ok(Running {
+        app,
+        shutdown,
+        server,
+        #[cfg(unix)]
+        sidecar,
+    })
 }
 
 pub(crate) fn open_state(

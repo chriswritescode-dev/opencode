@@ -92,3 +92,4 @@ A deviation that excepts a recorded cassette from the replay gate also has a `Ca
 - `OR-45-xai-responses-websocket.md`: xAI streams over HTTP only and has no chat route
 - `OR-45-extraction.md`: extraction validates requests less strictly and forwards provider options
 - `OR-45-corpus-normalisation.md`: the corpus normalises transport noise and replay skips some byte comparisons
+- `OR-61-sidecar-environment.md`: plugins run in a sidecar with an allowlisted environment instead of inside the server
