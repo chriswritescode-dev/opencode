@@ -15,6 +15,28 @@ Each file has these paragraphs, in order:
 - `Rust:` what this package does instead, with the crate and function or file.
 - `Reason:` why the difference exists, and which parity scenario or check covers it.
 - `Accepted:` the owner's name and the date the deviation was accepted.
+- `parity` block: a fenced code block with one rule per line, required once the file is accepted (see [Matches](#matches)).
+
+## Matches
+
+The file stem is the deviation id that task text calls `<id>`. A non-empty `Accepted:` value is required: a value
+starting with `pending` (any case) is not accepted, and the file then explains nothing. An accepted file must carry a
+fenced `parity` block with one rule per line, or the run exits 2.
+
+Each rule is `<scenario glob> <difference-path glob>`, matched with `Bun.Glob` semantics. The scenario name is its
+path under `parity/scenarios` without `.scenario.ts`. The difference path uses the capture paths
+(`steps/<i>/body/...`, `events/<i>/...`, `logs/<name>/...`, `model/<i>/...`,
+`database/<file>/tables/<table>/...`, `files/<path>`), and a `ws` step's paths start with `steps/<i>/opened`,
+`steps/<i>/frames` or `steps/<i>/close`.
+
+```parity
+info-auth steps/*/body/version
+```
+
+A scenario passes when every difference matches an accepted deviation; the harness prints the matched count and ids
+on `PASS <scenario> (<n> explained by <ids>)`. After a full run with no scenario arguments, accepted deviations that
+explained nothing print `warning: deviation <id> matched nothing`, and files without an accepted line print
+`warning: deviation <id> is not accepted`.
 
 ## Current deviations
 
@@ -28,8 +50,18 @@ Each file has these paragraphs, in order:
 - `OR-39-remote-tunnel.md`: a `remote` service route prints a warning instead of starting a tunnel
 - `OR-39-logging.md`: diagnostic lines go to stderr and no log file is written
 - `OR-39-usage-errors.md`: malformed arguments print one fixed usage line and exit with code 1
+- `OR-40-legacy-credential-json.md`: a legacy auth.json the TypeScript parser accepts is rejected whole
+- `OR-40-migration-locking.md`: migrations take the write lock up front and import the Drizzle journal atomically
+- `OR-40-migration-logging.md`: migrations log nothing and return a report instead
 - `OR-41-query-decode-messages.md`: query decode failures carry the contract decoder's message text
 - `OR-41-stream-failure-defect.md`: a log-read failure frame always names its defect `Error`
+- `OR-42-canonical-failure.md`: a migrated legacy entry that fails re-decoding is dropped with an invalid diagnostic
+- `OR-42-config-read-errors.md`: an unreadable or unresolvable config file is skipped instead of failing the load
+- `OR-42-duration-precision.md`: durations beyond i128 nanoseconds or with 39 or more fractional digits are rejected
+- `OR-42-file-home.md`: `{file:~/...}` expands from the configured home instead of `os.homedir()`
+- `OR-42-macos-preferences-user.md`: managed preferences take the user name from `$USER` instead of the passwd entry
+- `OR-42-observer-initial-apply.md`: the sources observer applies its initial load instead of returning it
+- `OR-42-watcher-ignore.md`: config watching ignores directories per event and uses one native watcher per target
 - `OR-44-aws-credentials.md`: Bedrock credentials come only from route configuration, not the AWS default chain
 - `OR-44-bedrock-output.md`: Bedrock frames, cache warnings and SigV4 output carry different wire details
 - `OR-44-client-tls.md`: per-request client certificates are not presented

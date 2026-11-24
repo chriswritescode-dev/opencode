@@ -18,8 +18,8 @@ TypeScript logs described: whether the schema was bootstrapped, the ids of the m
 the skipped-file warning as one message with the path appended (`crates/storage/src/migration/hand.rs:105`), since
 a Rust string has no structured fields for the TypeScript `{ path }` yet. No durations are reported. A failure
 returns `Err(StorageError)`: `StorageError::Migration("Database is not empty and has no session table")`
-(`crates/storage/src/migration/mod.rs:35`) and the unmatched legacy timestamp
-(`crates/storage/src/migration/mod.rs:106-109`), which `Database::open` propagates.
+(`crates/storage/src/migration/mod.rs:34`) and the unmatched legacy timestamp
+(`crates/storage/src/migration/mod.rs:129-132`), which `Database::open` propagates.
 
 Reason: server-rs has no structured logger yet, which OR-39-logging records; the task that wires `Database::open`
 into the server owns turning the report into those log lines and the error into the startup failure, so storage does

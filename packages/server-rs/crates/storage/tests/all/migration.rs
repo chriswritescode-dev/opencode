@@ -278,6 +278,26 @@ fn an_unknown_drizzle_timestamp_is_rejected() {
 }
 
 #[test]
+fn a_rejected_drizzle_journal_imports_nothing() {
+    let dir = TempDir::new();
+    let (database, _) = Database::open(file(&dir), dir.path()).expect("open the database");
+    database
+        .read(|connection| {
+            connection.execute_batch(
+                "DELETE FROM migration;
+                 CREATE TABLE __drizzle_migrations (id integer PRIMARY KEY, hash text, created_at integer);
+                 INSERT INTO __drizzle_migrations (created_at) VALUES (1775843113000), (1234567890000);",
+            )?;
+            Ok(())
+        })
+        .expect("seed the unnamed journal");
+
+    let input = [Migration { id: "20260410174513_workspace-name", foreign_keys: true, body: Body::Sql(&[]) }];
+    assert!(apply_only(&database, &input, None).is_err(), "the unknown timestamp is rejected");
+    assert!(completed_ids(&database).is_empty(), "the matched entry is rolled back with the rejected one");
+}
+
+#[test]
 fn unknown_migration_ids_are_tolerated() {
     let dir = TempDir::new();
     let (database, _) = Database::open(file(&dir), dir.path()).expect("open the database");

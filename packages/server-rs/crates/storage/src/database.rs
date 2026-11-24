@@ -30,9 +30,9 @@ impl Database {
             DatabaseLocation::File(path) => Connection::open(path)?,
             DatabaseLocation::Memory => Connection::open_in_memory()?,
         };
+        connection.pragma_update(None, "busy_timeout", 5000)?;
         let _journal_mode: String = connection.query_row("PRAGMA journal_mode = WAL", [], |row| row.get(0))?;
         connection.pragma_update(None, "synchronous", "NORMAL")?;
-        connection.pragma_update(None, "busy_timeout", 5000)?;
         connection.pragma_update(None, "cache_size", -64000)?;
         connection.pragma_update(None, "foreign_keys", "ON")?;
         let database = Database { connection: Mutex::new(connection), location };

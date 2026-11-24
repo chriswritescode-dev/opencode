@@ -21,20 +21,18 @@ pub struct MigrationReport {
 }
 
 pub(crate) fn apply(db: &Database, legacy_credentials: Option<&Path>) -> Result<MigrationReport, StorageError> {
-    let tables = db.read(|connection| {
-        let mut statement = connection.prepare(
+    let report = db.transaction(TransactionBehavior::Immediate, |tx| {
+        let mut statement = tx.prepare(
             "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND substr(name, 1, 1) <> '_'",
         )?;
-        let names = statement.query_map([], |row| row.get::<_, String>(0))?.collect::<Result<Vec<_>, _>>()?;
-        Ok(names)
-    })?;
-    if tables.iter().any(|name| name == "session" || name == "session_v2") {
-        return apply_only(db, MIGRATIONS, legacy_credentials);
-    }
-    if !tables.is_empty() {
-        return Err(StorageError::Migration("Database is not empty and has no session table".into()));
-    }
-    let report = db.transaction(TransactionBehavior::Deferred, |tx| {
+        let tables = statement.query_map([], |row| row.get::<_, String>(0))?.collect::<Result<Vec<_>, _>>()?;
+        drop(statement);
+        if tables.iter().any(|name| name == "session" || name == "session_v2") {
+            return Ok(None);
+        }
+        if !tables.is_empty() {
+            return Err(StorageError::Migration("Database is not empty and has no session table".into()));
+        }
         let mut report = MigrationReport::default();
         for statement in SCHEMA {
             tx.execute(statement, [])?;
@@ -46,9 +44,12 @@ pub(crate) fn apply(db: &Database, legacy_credentials: Option<&Path>) -> Result<
         for migration in MIGRATIONS {
             record(tx, migration.id, id::now_ms())?;
         }
-        Ok::<_, StorageError>(report)
+        Ok(Some(report))
     })?;
-    Ok(MigrationReport { bootstrapped: true, ..report })
+    match report {
+        Some(report) => Ok(MigrationReport { bootstrapped: true, ..report }),
+        None => apply_only(db, MIGRATIONS, legacy_credentials),
+    }
 }
 
 pub fn apply_only(
@@ -56,70 +57,28 @@ pub fn apply_only(
     migrations: &[Migration],
     legacy_credentials: Option<&Path>,
 ) -> Result<MigrationReport, StorageError> {
-    let mut known = db.read(|connection| {
-        connection.execute(
+    let known: HashSet<String> = db.transaction(TransactionBehavior::Immediate, |tx| {
+        tx.execute(
             r#"CREATE TABLE IF NOT EXISTS "migration" (id TEXT PRIMARY KEY, time_completed INTEGER NOT NULL)"#,
             [],
         )?;
-        completed(connection).map(|ids| ids.into_iter().collect::<HashSet<String>>())
-    })?;
-    if known.is_empty() {
-        let drizzle = db.read(|connection| {
-            connection
-                .query_row(
-                    "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?",
-                    ["__drizzle_migrations"],
-                    |row| row.get::<_, String>(0),
-                )
-                .optional()
-                .map_err(StorageError::from)
-        })?;
-        if drizzle.is_some() {
-            let named = db.read(|connection| {
-                let mut statement = connection.prepare("SELECT name FROM pragma_table_info('__drizzle_migrations')")?;
-                let names = statement.query_map([], |row| row.get::<_, String>(0))?.collect::<Result<Vec<_>, _>>()?;
-                Ok(names.iter().any(|name| name == "name"))
-            })?;
-            if named {
-                db.read(|connection| {
-                    connection.execute(
-                        r#"INSERT OR IGNORE INTO "migration" (id, time_completed) SELECT name, ? FROM "__drizzle_migrations" WHERE name IS NOT NULL"#,
-                        [id::now_ms()],
-                    )?;
-                    Ok(())
-                })?;
-            } else {
-                let entries = db.read(|connection| {
-                    let mut statement = connection.prepare(
-                        r#"SELECT created_at, strftime('%Y%m%d%H%M%S', created_at / 1000, 'unixepoch') AS prefix FROM "__drizzle_migrations" WHERE created_at IS NOT NULL"#,
-                    )?;
-                    let entries = statement
-                        .query_map([], |row| Ok((row.get::<_, f64>(0)?, row.get::<_, Option<String>>(1)?)))?
-                        .collect::<Result<Vec<_>, _>>()?;
-                    Ok(entries)
-                })?;
-                for (created_at, prefix) in entries {
-                    let prefix = prefix.unwrap_or_else(|| "null".to_owned());
-                    let Some(migration) =
-                        migrations.iter().find(|migration| migration.id.starts_with(&format!("{prefix}_")))
-                    else {
-                        return Err(StorageError::Migration(format!(
-                            "Legacy migration timestamp {} does not match any known migration",
-                            opencode_api_types::js::number_to_string(created_at)
-                        )));
-                    };
-                    db.read(|connection| {
-                        connection.execute(
-                            r#"INSERT OR IGNORE INTO "migration" (id, time_completed) VALUES (?, ?)"#,
-                            rusqlite::params![migration.id, id::now_ms()],
-                        )?;
-                        Ok(())
-                    })?;
-                }
-            }
-            known = db.read(completed)?.into_iter().collect();
+        let known = completed(tx)?;
+        if !known.is_empty() {
+            return Ok::<_, StorageError>(known.into_iter().collect());
         }
-    }
+        let drizzle = tx
+            .query_row(
+                "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?",
+                ["__drizzle_migrations"],
+                |row| row.get::<_, String>(0),
+            )
+            .optional()?;
+        if drizzle.is_none() {
+            return Ok(HashSet::new());
+        }
+        import_drizzle_journal(tx, migrations)?;
+        Ok(completed(tx)?.into_iter().collect())
+    })?;
 
     let mut report = MigrationReport::default();
     for migration in migrations {
@@ -134,16 +93,50 @@ pub fn apply_only(
                 Ok(())
             })?;
             let result = run(db, migration, legacy_credentials, &mut report);
-            db.read(|connection| {
+            let restored = db.read(|connection| {
                 connection.execute_batch("PRAGMA foreign_keys = ON")?;
                 Ok(())
-            })?;
-            result
+            });
+            result.and_then(|applied| restored.map(|()| applied))
         };
-        result?;
-        report.applied.push(migration.id);
+        if result? {
+            report.applied.push(migration.id);
+        }
     }
     Ok(report)
+}
+
+fn import_drizzle_journal(tx: &Transaction<'_>, migrations: &[Migration]) -> Result<(), StorageError> {
+    let mut statement = tx.prepare("SELECT name FROM pragma_table_info('__drizzle_migrations')")?;
+    let columns = statement.query_map([], |row| row.get::<_, String>(0))?.collect::<Result<Vec<_>, _>>()?;
+    if columns.iter().any(|name| name == "name") {
+        tx.execute(
+            r#"INSERT OR IGNORE INTO "migration" (id, time_completed) SELECT name, ? FROM "__drizzle_migrations" WHERE name IS NOT NULL"#,
+            [id::now_ms()],
+        )?;
+        return Ok(());
+    }
+    let mut statement = tx.prepare(
+        r#"SELECT created_at, strftime('%Y%m%d%H%M%S', created_at / 1000, 'unixepoch') AS prefix FROM "__drizzle_migrations" WHERE created_at IS NOT NULL"#,
+    )?;
+    let entries = statement
+        .query_map([], |row| Ok((row.get::<_, f64>(0)?, row.get::<_, Option<String>>(1)?)))?
+        .collect::<Result<Vec<_>, _>>()?;
+    for (created_at, prefix) in entries {
+        let prefix = prefix.unwrap_or_else(|| "null".to_owned());
+        let Some(migration) = migrations.iter().find(|migration| migration.id.starts_with(&format!("{prefix}_")))
+        else {
+            return Err(StorageError::Migration(format!(
+                "Legacy migration timestamp {} does not match any known migration",
+                opencode_api_types::js::number_to_string(created_at)
+            )));
+        };
+        tx.execute(
+            r#"INSERT OR IGNORE INTO "migration" (id, time_completed) VALUES (?, ?)"#,
+            rusqlite::params![migration.id, id::now_ms()],
+        )?;
+    }
+    Ok(())
 }
 
 fn run(
@@ -151,8 +144,14 @@ fn run(
     migration: &Migration,
     legacy_credentials: Option<&Path>,
     report: &mut MigrationReport,
-) -> Result<(), StorageError> {
-    db.transaction(TransactionBehavior::Deferred, |tx| {
+) -> Result<bool, StorageError> {
+    db.transaction(TransactionBehavior::Immediate, |tx| {
+        let recorded = tx
+            .query_row(r#"SELECT 1 FROM "migration" WHERE id = ?"#, [migration.id], |row| row.get::<_, i64>(0))
+            .optional()?;
+        if recorded.is_some() {
+            return Ok(false);
+        }
         match &migration.body {
             Body::Sql(statements) => {
                 for statement in *statements {
@@ -161,7 +160,8 @@ fn run(
             }
             Body::HandPorted => hand::apply(migration.id, tx, legacy_credentials, report)?,
         }
-        record(tx, migration.id, id::now_ms())
+        record(tx, migration.id, id::now_ms())?;
+        Ok(true)
     })
 }
 

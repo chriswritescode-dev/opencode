@@ -791,6 +791,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "opencode-config"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "notify",
+ "opencode-api-types",
+ "opencode-contract",
+ "opencode-local",
+ "opencode-util",
+ "regex-lite",
+ "reqwest",
+ "rustix",
+ "rustls",
+ "rustls-platform-verifier",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
 name = "opencode-contract"
 version = "0.1.0"
 dependencies = [
