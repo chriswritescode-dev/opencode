@@ -13,6 +13,8 @@ workspace = true
 [dependencies]
 futures-util.workspace = true
 log.workspace = true
+opencode-storage.workspace = true
+serde_json.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 
