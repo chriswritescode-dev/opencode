@@ -890,6 +890,7 @@ dependencies = [
  "opencode-bus",
  "opencode-contract",
  "opencode-storage",
+ "opencode-util",
  "rusqlite",
  "serde_json",
  "tokio",

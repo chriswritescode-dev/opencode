@@ -7,6 +7,7 @@ mod parts;
 mod projector;
 mod settings;
 mod sql;
+mod stored;
 
 pub use projector::SessionProjector;
 pub use settings::ProjectionSettings;

@@ -16,7 +16,7 @@ pub(crate) enum Delivered {
     Removed,
 }
 
-pub(crate) fn admitted(connection: &Connection, event: &Event) -> Result<(), BusError> {
+pub(crate) fn admitted(connection: &Connection, media_blob: bool, event: &Event) -> Result<(), BusError> {
     let data: SessionInboxEnqueuedData = decode(event)?;
     let seq =
         event.durable().map_or_else(|| Err(invalid(event, "missing durable envelope")), |durable| Ok(durable.seq))?;
@@ -27,9 +27,11 @@ pub(crate) fn admitted(connection: &Connection, event: &Event) -> Result<(), Bus
         return Err(conflict(event));
     }
     let (kind, delivery, payload) = match &data.item {
-        SessionInboxItem::User(item) => {
-            ("user", item.delivery, blob::externalize_payload(connection, &as_value(event, &item.payload)?)?)
-        }
+        SessionInboxItem::User(item) => (
+            "user",
+            item.delivery,
+            blob::externalize_payload(connection, media_blob, &as_value(event, &item.payload)?)?,
+        ),
         SessionInboxItem::Synthetic(item) => ("synthetic", item.delivery, as_value(event, &item.payload)?),
         SessionInboxItem::Compaction(item) => ("compaction", item.delivery, as_value(event, &item.payload)?),
         SessionInboxItem::Move(item) => ("move", item.delivery, as_value(event, &item.payload)?),

@@ -99,6 +99,7 @@ pub(crate) fn prepare_assistant_parts(
 
 pub(crate) fn append(
     connection: &Connection,
+    media_blob: bool,
     session_id: &str,
     created: i64,
     message_id: &str,
@@ -107,7 +108,7 @@ pub(crate) fn append(
     let Some(owner) = prepare_assistant_parts(connection, session_id, created, message_id, true)? else {
         return Ok(());
     };
-    let part = blob::externalize_part(connection, part)?;
+    let part = blob::externalize_part(connection, media_blob, part)?;
     let data = history::encode_part(&part);
     let ordinal = connection.query_row(
         "SELECT coalesce(max(ordinal) + 1, 0) FROM session_part WHERE message_id = ?1",
@@ -132,6 +133,7 @@ pub(crate) fn append(
 
 pub(crate) fn update(
     connection: &Connection,
+    media_blob: bool,
     session_id: &str,
     created: i64,
     message_id: &str,
@@ -171,7 +173,7 @@ pub(crate) fn update(
     if history::encode_part(&current) == before {
         return Ok(());
     }
-    let stored = blob::externalize_part(connection, &current)?;
+    let stored = blob::externalize_part(connection, media_blob, &current)?;
     let data = history::encode_part(&stored);
     connection.execute(
         "UPDATE session_part SET data = ?1, time_updated = ?2 WHERE message_id = ?3 AND ordinal = ?4",
@@ -185,6 +187,7 @@ pub(crate) fn update(
 
 pub(crate) fn replace(
     connection: &Connection,
+    media_blob: bool,
     session_id: &str,
     created: i64,
     message_id: &str,
@@ -198,7 +201,7 @@ pub(crate) fn replace(
         .iter()
         .enumerate()
         .map(|(ordinal, part)| {
-            let stored = blob::externalize_part(connection, part)?;
+            let stored = blob::externalize_part(connection, media_blob, part)?;
             Ok(PartRow {
                 message_id: message_id.to_string(),
                 session_id: session_id.to_string(),

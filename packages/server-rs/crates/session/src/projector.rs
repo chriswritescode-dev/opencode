@@ -173,7 +173,7 @@ fn project(settings: &dyn Fn() -> ProjectionSettings, connection: &Connection, e
             project_idle(connection, &data.session_id.0, event.created(), "succeeded")
         }
         "session.inbox.enqueued" => {
-            inbox::admitted(connection, event)?;
+            inbox::admitted(connection, settings().media_blob, event)?;
             touch(connection, event)
         }
         "session.inbox.delivered" => project_inbox_delivered(connection, event, settings),
@@ -236,13 +236,17 @@ fn project(settings: &dyn Fn() -> ProjectionSettings, connection: &Connection, e
 }
 
 fn run(connection: &Connection, event: &Event, settings: &dyn Fn() -> ProjectionSettings) -> Result<(), BusError> {
-    message_updater::update(&ProjectorAdapter { connection, event, part_rows: settings().part_rows }, event)
+    let settings = settings();
+    let adapter =
+        ProjectorAdapter { connection, event, part_rows: settings.part_rows, media_blob: settings.media_blob };
+    message_updater::update(&adapter, event)
 }
 
 struct ProjectorAdapter<'a> {
     connection: &'a Connection,
     event: &'a Event,
     part_rows: bool,
+    media_blob: bool,
 }
 
 impl ProjectorAdapter<'_> {
@@ -297,14 +301,28 @@ impl ProjectorAdapter<'_> {
         Ok(())
     }
 
+    fn stored_seq(&self, message_id: &str) -> Result<Option<i64>, BusError> {
+        let seq = self
+            .connection
+            .query_row(
+                "SELECT seq FROM session_message WHERE id = ?1 AND session_id = ?2",
+                rusqlite::params![message_id, self.session_id()?],
+                |row| row.get::<_, i64>(0),
+            )
+            .optional()?;
+        Ok(seq)
+    }
+
     fn update_message_inline(&self, message: &serde_json::Value) -> Result<(), BusError> {
         let id = history::message_id(message)?;
         let session_id = self.session_id()?;
         let r#type = history::message_type(message)?;
+        let stored = blob::externalize(self.connection, self.media_blob, message)?;
+        let changed = stored != *message;
         let mut data = if r#type == "assistant" {
-            history::assistant_data(message, None)?
+            history::assistant_data(&stored, None)?
         } else {
-            history::stored_data(message)?
+            history::stored_data(&stored)?
         };
         let content = if r#type == "assistant" {
             let content = data
@@ -319,6 +337,7 @@ impl ProjectorAdapter<'_> {
         } else {
             Vec::new()
         };
+        let full = data.clone();
         let parts = if r#type == "assistant" { parts::content_rows(self.connection, &id)? } else { Vec::new() };
         if !parts.is_empty() {
             data.as_object_mut()
@@ -343,25 +362,17 @@ impl ProjectorAdapter<'_> {
         if !parts.is_empty() {
             parts::write_content(self.connection, session_id, self.event.created(), &id, &parts, &content)?;
         }
-        if self.event.r#type() != "session.message.content.updated" {
-            return Ok(());
-        }
-        let seq = self
-            .connection
-            .query_row(
-                "SELECT seq FROM session_message WHERE id = ?1 AND session_id = ?2",
-                rusqlite::params![id, session_id],
-                |row| row.get::<_, i64>(0),
-            )
-            .optional()?;
-        let Some(seq) = seq else {
+        let Some(seq) = self.stored_seq(&id)? else {
             return Ok(());
         };
-        blob::sync_refs(
-            self.connection,
-            &blob::Owner { session_id: session_id.to_string(), message_id: id, seq },
-            &content,
-        )
+        let owner = blob::Owner { session_id: session_id.to_string(), message_id: id, seq };
+        if self.event.r#type() == "session.message.content.updated" {
+            blob::sync_refs(self.connection, &owner, &[full])
+        } else if changed {
+            blob::record_refs(self.connection, &owner, &[full])
+        } else {
+            Ok(())
+        }
     }
 
     fn with_parts(&self, mut message: serde_json::Value) -> Result<serde_json::Value, BusError> {
@@ -526,7 +537,14 @@ impl message_updater::Adapter for ProjectorAdapter<'_> {
 
     fn append_assistant_part(&self, message_id: &str, part: serde_json::Value) -> Result<(), BusError> {
         if self.part_rows {
-            return parts::append(self.connection, self.session_id()?, self.event.created(), message_id, &part);
+            return parts::append(
+                self.connection,
+                self.media_blob,
+                self.session_id()?,
+                self.event.created(),
+                message_id,
+                &part,
+            );
         }
         self.edit_assistant(message_id, &mut |assistant| {
             let Some(object) = assistant.as_object_mut() else {
@@ -550,6 +568,7 @@ impl message_updater::Adapter for ProjectorAdapter<'_> {
         if self.part_rows {
             return parts::update(
                 self.connection,
+                self.media_blob,
                 self.session_id()?,
                 self.event.created(),
                 message_id,
@@ -583,7 +602,14 @@ impl message_updater::Adapter for ProjectorAdapter<'_> {
 
     fn replace_assistant_parts(&self, message_id: &str, parts: Vec<serde_json::Value>) -> Result<(), BusError> {
         if self.part_rows {
-            return parts::replace(self.connection, self.session_id()?, self.event.created(), message_id, &parts);
+            return parts::replace(
+                self.connection,
+                self.media_blob,
+                self.session_id()?,
+                self.event.created(),
+                message_id,
+                &parts,
+            );
         }
         self.edit_assistant(message_id, &mut |assistant| {
             if let Some(object) = assistant.as_object_mut() {
@@ -605,17 +631,19 @@ impl message_updater::Adapter for ProjectorAdapter<'_> {
             .event
             .durable()
             .map_or_else(|| Err(invalid(self.event, "missing durable envelope")), |durable| Ok(durable.seq))?;
-        let r#type = history::message_type(&message)?;
+        let stored = blob::externalize(self.connection, self.media_blob, &message)?;
+        let r#type = history::message_type(&stored)?;
         let data = if r#type == "assistant" {
-            history::assistant_data(&message, None)?
+            history::assistant_data(&stored, None)?
         } else {
-            history::stored_data(&message)?
+            history::stored_data(&stored)?
         };
+        let id = history::message_id(&stored)?;
         self.connection.execute(
             "INSERT INTO session_message (id, session_id, type, seq, time_created, time_updated, data) \
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             rusqlite::params![
-                history::message_id(&message)?,
+                id,
                 self.session_id()?,
                 r#type,
                 seq,
@@ -624,7 +652,8 @@ impl message_updater::Adapter for ProjectorAdapter<'_> {
                 encode_json(&data),
             ],
         )?;
-        Ok(())
+        let owner = blob::Owner { session_id: self.session_id()?.to_string(), message_id: id, seq };
+        blob::record_refs(self.connection, &owner, &[data])
     }
 }
 
@@ -799,7 +828,9 @@ fn project_inbox_delivered(
     event: &Event,
     settings: &dyn Fn() -> ProjectionSettings,
 ) -> Result<(), BusError> {
-    let adapter = ProjectorAdapter { connection, event, part_rows: settings().part_rows };
+    let settings = settings();
+    let adapter =
+        ProjectorAdapter { connection, event, part_rows: settings.part_rows, media_blob: settings.media_blob };
     match inbox::delivered(connection, event)? {
         Delivered::User { id, payload } => {
             adapter.append_message(stored_message(event, &id, "user", &payload, &["files", "agents", "skills"])?)

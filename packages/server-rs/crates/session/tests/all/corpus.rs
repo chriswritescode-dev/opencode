@@ -116,6 +116,22 @@ async fn instructions() {
 }
 
 #[tokio::test]
+async fn media() {
+    let corpus: Value = serde_json::from_str(CORPUS).expect("parse the events corpus");
+    let masks: Masks = serde_json::from_value(corpus["masks"].clone()).expect("read the corpus masks");
+    let mut count = 0;
+    for fixture in corpus["fixtures"].as_array().expect("the corpus carries fixtures") {
+        let name = fixture["name"].as_str().expect("a fixture carries a name");
+        if fixture["group"].as_str().unwrap_or_else(|| panic!("fixture {name} carries no group")) != "media" {
+            continue;
+        }
+        run_fixture(fixture, &masks).await;
+        count += 1;
+    }
+    assert_eq!(count, 9, "the media group carries every ported fixture");
+}
+
+#[tokio::test]
 async fn inline_update_sets_time_updated() {
     let dir = TempDir::new();
     let (database, _) = Database::open(DatabaseLocation::Memory, dir.path()).expect("open the database");
