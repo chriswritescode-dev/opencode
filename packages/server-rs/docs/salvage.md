@@ -28,7 +28,7 @@ named in the row needs it.
 | JavaScript-string helpers | `oc-schema` | String conversions that match JavaScript semantics | `contract` | OR-38 | OR-38 used `opencode_api_types::js` (`encode_component`, `decode_component`) and imported no first-attempt code: the helpers already match the TypeScript behaviour, and the first-attempt branches are not visible in this checkout. |
 | number helpers | `oc-schema` | Number parsing and formatting that match JavaScript | `contract` | OR-38 | OR-38 used `opencode_api_types::js` (`number_to_string`) and imported no first-attempt code: the helpers already match the TypeScript behaviour, and the first-attempt branches are not visible in this checkout. |
 | wildcard helpers | `oc-schema` | Glob-style pattern matching for permission rules | `session` permissions | OR-50 | `packages/core/src/util/wildcard.ts` |
-| response validator | `oc-contract` | Validates responses against the committed schema | `parity/` | OR-37 | `packages/protocol/src/client.ts` and `packages/protocol/openapi.json` at the pin |
+| response validator | `oc-contract` | Validates responses against the committed schema | `parity/` | not imported (OR-37) | `packages/protocol/src/client.ts` and `packages/protocol/openapi.json` at the pin |
 | git fixtures | `oc-testkit` | Temporary git repositories for tests | `vcs` tests | OR-53 | `packages/core/test/fixture/git.ts` |
 | server scaffold | `oc-server` | Authentication, CORS, event stream and error scaffolding | `http` | OR-39 | no first-attempt code was imported because the first-attempt branches are not visible in this checkout, and OR-39 ported the modules from the pinned TypeScript instead |
 
@@ -36,6 +36,8 @@ named in the row needs it.
 
 ADR-004 excludes the first attempt's hand-written wire types, its table modules, its session crate, and its SDK, TUI
 and CLI.
+
+The first-attempt branches are not reachable from this checkout, and the harness compares responses with the TypeScript server rather than with the schema, so OR-37 did not import the response validator.
 
 Each import re-checks the module against the TypeScript behaviour at the pinned commit, and records any difference as
 a deviation in `../parity/deviations/`.
