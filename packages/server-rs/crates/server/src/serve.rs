@@ -1,4 +1,5 @@
-use std::ffi::OsStr;
+use std::collections::HashMap;
+use std::ffi::{OsStr, OsString};
 use std::io::Write;
 use std::sync::Arc;
 
@@ -106,6 +107,7 @@ impl Running {
         self.app.status().begin_stopping();
         let _ = self.shutdown.send(());
         let _ = self.server.await;
+        self.app.shutdown().await;
         #[cfg(unix)]
         self.sidecar.shutdown().await;
     }
@@ -131,8 +133,17 @@ pub(crate) async fn start(
         ),
         opencode_sidecar::connection::Handlers::default(),
     );
-    #[cfg(not(unix))]
-    let _ = env;
+    let paths =
+        opencode_config::paths::GlobalPaths::from_vars(|name| env.get(name).map(OsStr::to_os_string))?.acquire()?;
+    let start_directory = opencode_local::paths::current_dir()?.to_string_lossy().into_owned();
+    let config_env: opencode_http::services::ConfigEnv = {
+        let vars: HashMap<OsString, OsString> =
+            env.vars().map(|(name, value)| (name.to_os_string(), value.to_os_string())).collect();
+        Arc::new(move |name: &str| vars.get(OsStr::new(name)).cloned())
+    };
+    let services = state.as_ref().map(|state| {
+        Arc::new(opencode_http::services::GlobalServices::new(state.db.clone(), paths, start_directory, config_env))
+    });
     let app = opencode_http::app::App::new(opencode_http::app::Options {
         password,
         version: crate::VERSION.to_owned(),
@@ -141,6 +152,7 @@ pub(crate) async fn start(
         hostname: Some(hostname),
         urls,
         state,
+        services,
     });
     let (shutdown, shutdown_receiver) = oneshot::channel::<()>();
     let server = tokio::spawn(opencode_http::serve::serve(listener, app.clone(), async move {

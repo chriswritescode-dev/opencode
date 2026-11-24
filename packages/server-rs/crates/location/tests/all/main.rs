@@ -3,6 +3,7 @@ mod environment;
 mod lifecycle;
 mod map;
 mod project;
+mod resolve;
 mod state;
 mod state_group;
 mod state_replay;

@@ -53,6 +53,7 @@ async fn live(now: i64, heartbeat: Duration) -> Live {
         hostname: None,
         urls: Arc::new(Vec::new),
         state: Some(state.clone()),
+        services: Some(crate::services()),
     });
     app.status().ready();
     let listener = TcpListener::bind(("127.0.0.1", 0)).await.expect("a listener");

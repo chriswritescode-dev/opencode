@@ -19,6 +19,7 @@ fn ready_app_with_state() -> Arc<App> {
         hostname: None,
         urls: Arc::new(|| vec!["http://127.0.0.1:4096".to_owned()]),
         state: Some(Arc::new(state)),
+        services: Some(crate::services()),
     });
     app.status().ready();
     app

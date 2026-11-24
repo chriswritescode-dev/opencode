@@ -45,6 +45,7 @@ fn app(state: Arc<ServerState>) -> Arc<App> {
         hostname: None,
         urls: Arc::new(Vec::new),
         state: Some(state),
+        services: Some(crate::services()),
     });
     app.status().ready();
     app

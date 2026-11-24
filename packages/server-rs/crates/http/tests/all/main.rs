@@ -17,9 +17,26 @@ use std::sync::Arc;
 
 use bytes::Bytes;
 use http::Request;
+use opencode_config::paths::GlobalPaths;
 use opencode_http::app::{App, Options};
+use opencode_http::services::GlobalServices;
+use opencode_storage::{Database, DatabaseLocation};
 
 const UNAUTHORIZED_BODY: &str = r#"{"_tag":"UnauthorizedError","message":"Authentication required"}"#;
+
+fn services() -> Arc<GlobalServices> {
+    let (database, _) = Database::open(DatabaseLocation::Memory, &std::env::temp_dir()).expect("open the database");
+    let paths = GlobalPaths::from_vars(|name| {
+        (name == "HOME").then(|| std::env::temp_dir().join("opencode-http-test-home").into_os_string())
+    })
+    .expect("global paths");
+    Arc::new(GlobalServices::new(
+        Arc::new(database),
+        paths,
+        "/tmp/opencode-http-test".to_owned(),
+        Arc::new(|_: &str| None),
+    ))
+}
 
 fn app() -> Arc<App> {
     make_app(Vec::new(), None)
@@ -42,6 +59,7 @@ fn make_app(cors: Vec<String>, hostname: Option<&str>) -> Arc<App> {
         hostname: hostname.map(str::to_owned),
         urls: Arc::new(|| vec!["http://127.0.0.1:4096".to_owned()]),
         state: None,
+        services: Some(services()),
     })
 }
 

@@ -47,9 +47,12 @@ pub async fn serve(listener: TcpListener, app: Arc<App>, shutdown: impl Future<O
 }
 
 async fn dispatch(app: &App, request: http::Request<Incoming>) -> crate::response::Response {
-    let (parts, mut body) = request.into_parts();
-    tokio::spawn(async move { while body.frame().await.is_some_and(|frame| frame.is_ok()) {} });
-    app.handle(http::Request::from_parts(parts, ())).await
+    let (parts, body) = request.into_parts();
+    let bytes = match BodyExt::collect(body).await {
+        Ok(collected) => collected.to_bytes(),
+        Err(_) => return crate::response::empty(http::StatusCode::BAD_REQUEST),
+    };
+    app.handle(http::Request::from_parts(parts, bytes)).await
 }
 
 fn exhausted(error: &std::io::Error) -> bool {
