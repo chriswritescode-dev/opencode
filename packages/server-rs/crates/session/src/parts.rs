@@ -13,6 +13,12 @@ pub(crate) struct PartMatch {
     pub incomplete_reasoning: bool,
 }
 
+pub(crate) struct StoredPart {
+    pub ordinal: i64,
+    pub r#type: String,
+    pub data: String,
+}
+
 const ROWS_PER_INSERT: usize = 12;
 
 struct PartRow {
@@ -208,6 +214,67 @@ pub(crate) fn replace(
     let content = rows.iter().map(|row| row.data.clone()).collect::<Vec<_>>();
     insert_rows(connection, &rows)?;
     blob::sync_refs(connection, &owner, &content)
+}
+
+pub(crate) fn content_rows(connection: &Connection, message_id: &str) -> Result<Vec<StoredPart>, BusError> {
+    let mut statement = connection
+        .prepare("SELECT ordinal, type, data FROM session_part WHERE message_id = ?1 ORDER BY ordinal ASC")?;
+    let rows = statement.query_map([message_id], |row| {
+        Ok(StoredPart { ordinal: row.get(0)?, r#type: row.get(1)?, data: row.get(2)? })
+    })?;
+    Ok(rows.collect::<Result<Vec<_>, _>>()?)
+}
+
+pub(crate) fn write_content(
+    connection: &Connection,
+    session_id: &str,
+    created: i64,
+    message_id: &str,
+    existing: &[StoredPart],
+    content: &[Value],
+) -> Result<(), BusError> {
+    let content = content.iter().map(history::encode_part).collect::<Vec<_>>();
+    let mut next = existing.last().map_or(0, |part| part.ordinal + 1);
+    let mut appended = Vec::new();
+    for (index, part) in content.iter().enumerate() {
+        let Some(current) = existing.get(index) else {
+            appended.push(PartRow {
+                message_id: message_id.to_string(),
+                session_id: session_id.to_string(),
+                ordinal: next,
+                r#type: part_type(part)?.to_string(),
+                call_id: call_id(part),
+                time_created: created,
+                time_updated: created,
+                data: part.clone(),
+            });
+            next += 1;
+            continue;
+        };
+        let stored =
+            serde_json::from_str::<Value>(&current.data).map_err(|error| invalid("part", error.to_string()))?;
+        if encode_json(&stored) == encode_json(part) {
+            continue;
+        }
+        connection.execute(
+            "UPDATE session_part SET type = ?1, call_id = ?2, data = ?3, time_updated = ?4 \
+             WHERE message_id = ?5 AND ordinal = ?6",
+            rusqlite::params![part_type(part)?, call_id(part), encode_json(part), created, message_id, current.ordinal],
+        )?;
+    }
+    insert_rows(connection, &appended)?;
+    let stale = existing.iter().skip(content.len()).map(|part| SqlValue::Integer(part.ordinal)).collect::<Vec<_>>();
+    if stale.is_empty() {
+        return Ok(());
+    }
+    let placeholders = (2..stale.len() + 2).map(|index| format!("?{index}")).collect::<Vec<_>>().join(", ");
+    let mut values = vec![SqlValue::Text(message_id.to_string())];
+    values.extend(stale);
+    connection.execute(
+        &format!("DELETE FROM session_part WHERE message_id = ?1 AND ordinal IN ({placeholders})"),
+        rusqlite::params_from_iter(values),
+    )?;
+    Ok(())
 }
 
 fn part_type(part: &Value) -> Result<&str, BusError> {

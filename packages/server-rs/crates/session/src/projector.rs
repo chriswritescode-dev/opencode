@@ -15,7 +15,7 @@ use rusqlite::{Connection, OptionalExtension};
 
 use crate::blob;
 use crate::history;
-use crate::message_updater;
+use crate::message_updater::{self, Adapter};
 use crate::parts;
 use crate::settings::ProjectionSettings;
 use crate::sql::{Assignment, TokenTotals, apply_usage, now_millis, number, set_session};
@@ -100,7 +100,6 @@ impl SessionProjector {
 }
 
 fn project(settings: &dyn Fn() -> ProjectionSettings, connection: &Connection, event: &Event) -> Result<(), BusError> {
-    settings();
     match event.r#type() {
         "session.created" => project_created(connection, event),
         "session.agent.selected" => {
@@ -199,13 +198,14 @@ fn project(settings: &dyn Fn() -> ProjectionSettings, connection: &Connection, e
     }
 }
 
-fn run(connection: &Connection, event: &Event, _settings: &dyn Fn() -> ProjectionSettings) -> Result<(), BusError> {
-    message_updater::update(&ProjectorAdapter { connection, event }, event)
+fn run(connection: &Connection, event: &Event, settings: &dyn Fn() -> ProjectionSettings) -> Result<(), BusError> {
+    message_updater::update(&ProjectorAdapter { connection, event, part_rows: settings().part_rows }, event)
 }
 
 struct ProjectorAdapter<'a> {
     connection: &'a Connection,
     event: &'a Event,
+    part_rows: bool,
 }
 
 impl ProjectorAdapter<'_> {
@@ -218,6 +218,9 @@ impl ProjectorAdapter<'_> {
     }
 
     fn update_message(&self, message: &serde_json::Value) -> Result<(), BusError> {
+        if !self.part_rows {
+            return self.update_message_inline(message);
+        }
         let id = history::message_id(message)?;
         let session_id = self.session_id()?;
         if history::message_type(message)? != "assistant" {
@@ -255,6 +258,103 @@ impl ProjectorAdapter<'_> {
             rusqlite::params![data, now_millis(), id, session_id],
         )?;
         Ok(())
+    }
+
+    fn update_message_inline(&self, message: &serde_json::Value) -> Result<(), BusError> {
+        let id = history::message_id(message)?;
+        let session_id = self.session_id()?;
+        let r#type = history::message_type(message)?;
+        let mut data = if r#type == "assistant" {
+            history::assistant_data(message, None)?
+        } else {
+            history::stored_data(message)?
+        };
+        let content = if r#type == "assistant" {
+            let content = data
+                .get("content")
+                .and_then(serde_json::Value::as_array)
+                .map(|parts| parts.iter().map(history::encode_part).collect::<Vec<_>>())
+                .unwrap_or_default();
+            data.as_object_mut()
+                .ok_or_else(|| invalid(self.event, "expected a message object"))?
+                .insert("content".to_string(), serde_json::Value::Array(content.clone()));
+            content
+        } else {
+            Vec::new()
+        };
+        let parts = if r#type == "assistant" { parts::content_rows(self.connection, &id)? } else { Vec::new() };
+        if !parts.is_empty() {
+            data.as_object_mut()
+                .ok_or_else(|| invalid(self.event, "expected a message object"))?
+                .insert("content".to_string(), serde_json::Value::Array(Vec::new()));
+        }
+        let updated = self.connection.execute(
+            "UPDATE session_message SET type = ?1, time_created = ?2, data = ?3, time_updated = ?4 \
+             WHERE id = ?5 AND session_id = ?6",
+            rusqlite::params![
+                r#type,
+                number(history::message_created(message)?),
+                encode_json(&data),
+                now_millis(),
+                id,
+                session_id
+            ],
+        )?;
+        if updated == 0 {
+            return Ok(());
+        }
+        if !parts.is_empty() {
+            parts::write_content(self.connection, session_id, self.event.created(), &id, &parts, &content)?;
+        }
+        if self.event.r#type() != "session.message.content.updated" {
+            return Ok(());
+        }
+        let seq = self
+            .connection
+            .query_row(
+                "SELECT seq FROM session_message WHERE id = ?1 AND session_id = ?2",
+                rusqlite::params![id, session_id],
+                |row| row.get::<_, i64>(0),
+            )
+            .optional()?;
+        let Some(seq) = seq else {
+            return Ok(());
+        };
+        blob::sync_refs(
+            self.connection,
+            &blob::Owner { session_id: session_id.to_string(), message_id: id, seq },
+            &content,
+        )
+    }
+
+    fn with_parts(&self, mut message: serde_json::Value) -> Result<serde_json::Value, BusError> {
+        let Some(id) = message.get("id").and_then(serde_json::Value::as_str).map(str::to_string) else {
+            return Ok(message);
+        };
+        let rows = parts::content_rows(self.connection, &id)?;
+        if rows.is_empty() {
+            return Ok(message);
+        }
+        let mut content = rows
+            .iter()
+            .map(|row| history::decode_part_row(&row.r#type, &row.data))
+            .collect::<Result<Vec<_>, BusError>>()?;
+        let Some(object) = message.as_object_mut() else {
+            return Ok(message);
+        };
+        if let Some(serde_json::Value::Array(inline)) = object.get("content") {
+            content.extend(inline.iter().cloned());
+        }
+        object.insert("content".to_string(), serde_json::Value::Array(content));
+        Ok(message)
+    }
+
+    fn edit_assistant(&self, message_id: &str, recipe: &mut dyn FnMut(&mut serde_json::Value)) -> Result<(), BusError> {
+        let Some(mut assistant) = self.get_assistant(message_id)? else {
+            return Ok(());
+        };
+        recipe(&mut assistant);
+        self.update_message(&assistant)
     }
 }
 
@@ -331,6 +431,7 @@ impl message_updater::Adapter for ProjectorAdapter<'_> {
             return Ok(None);
         };
         let message = history::decode_message_row(&id, "assistant", &data)?;
+        let message = if self.part_rows { message } else { self.with_parts(message)? };
         if message.get("time").and_then(|time| time.get("completed")).is_some_and(|value| !value.is_null()) {
             return Ok(None);
         }
@@ -346,7 +447,14 @@ impl message_updater::Adapter for ProjectorAdapter<'_> {
                 |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)),
             )
             .optional()?;
-        row.map(|(id, data)| history::decode_message_row(&id, "assistant", &data)).transpose()
+        let Some((id, data)) = row else {
+            return Ok(None);
+        };
+        let message = history::decode_message_row(&id, "assistant", &data)?;
+        if self.part_rows {
+            return Ok(Some(message));
+        }
+        Ok(Some(self.with_parts(message)?))
     }
 
     fn get_shell(&self, shell_id: &str) -> Result<Option<serde_json::Value>, BusError> {
@@ -380,7 +488,20 @@ impl message_updater::Adapter for ProjectorAdapter<'_> {
     }
 
     fn append_assistant_part(&self, message_id: &str, part: serde_json::Value) -> Result<(), BusError> {
-        parts::append(self.connection, self.session_id()?, self.event.created(), message_id, &part)
+        if self.part_rows {
+            return parts::append(self.connection, self.session_id()?, self.event.created(), message_id, &part);
+        }
+        self.edit_assistant(message_id, &mut |assistant| {
+            let Some(object) = assistant.as_object_mut() else {
+                return;
+            };
+            match object.get_mut("content") {
+                Some(serde_json::Value::Array(content)) => content.push(part.clone()),
+                _ => {
+                    object.insert("content".to_string(), serde_json::Value::Array(vec![part.clone()]));
+                }
+            }
+        })
     }
 
     fn update_assistant_part(
@@ -389,11 +510,49 @@ impl message_updater::Adapter for ProjectorAdapter<'_> {
         part_match: parts::PartMatch,
         recipe: &mut dyn FnMut(&mut serde_json::Value),
     ) -> Result<(), BusError> {
-        parts::update(self.connection, self.session_id()?, self.event.created(), message_id, &part_match, recipe)
+        if self.part_rows {
+            return parts::update(
+                self.connection,
+                self.session_id()?,
+                self.event.created(),
+                message_id,
+                &part_match,
+                recipe,
+            );
+        }
+        self.edit_assistant(message_id, &mut |assistant| {
+            let Some(object) = assistant.as_object_mut() else {
+                return;
+            };
+            let Some(serde_json::Value::Array(content)) = object.get_mut("content") else {
+                return;
+            };
+            let found = content.iter_mut().rev().find(|item| {
+                item.get("type").and_then(serde_json::Value::as_str) == Some(part_match.r#type.as_str())
+                    && part_match.call_id.as_ref().is_none_or(|call_id| {
+                        item.get("id").and_then(serde_json::Value::as_str) == Some(call_id.as_str())
+                    })
+                    && (!part_match.incomplete_reasoning
+                        || item
+                            .get("time")
+                            .and_then(|time| time.get("completed"))
+                            .is_none_or(serde_json::Value::is_null))
+            });
+            if let Some(found) = found {
+                recipe(found);
+            }
+        })
     }
 
     fn replace_assistant_parts(&self, message_id: &str, parts: Vec<serde_json::Value>) -> Result<(), BusError> {
-        parts::replace(self.connection, self.session_id()?, self.event.created(), message_id, &parts)
+        if self.part_rows {
+            return parts::replace(self.connection, self.session_id()?, self.event.created(), message_id, &parts);
+        }
+        self.edit_assistant(message_id, &mut |assistant| {
+            if let Some(object) = assistant.as_object_mut() {
+                object.insert("content".to_string(), serde_json::Value::Array(parts.clone()));
+            }
+        })
     }
 
     fn update_shell(&self, shell: serde_json::Value) -> Result<(), BusError> {

@@ -1,5 +1,6 @@
 use std::sync::atomic::{AtomicI64, Ordering};
 use std::sync::{Arc, Mutex};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use futures_util::StreamExt;
 use opencode_bus::sse::data_frame;
@@ -64,6 +65,81 @@ async fn assistant() {
         count += 1;
     }
     assert_eq!(count, 6, "the assistant group carries every ported fixture");
+}
+
+#[tokio::test]
+async fn inline() {
+    let corpus: Value = serde_json::from_str(CORPUS).expect("parse the events corpus");
+    let masks: Masks = serde_json::from_value(corpus["masks"].clone()).expect("read the corpus masks");
+    let mut count = 0;
+    for fixture in corpus["fixtures"].as_array().expect("the corpus carries fixtures") {
+        let name = fixture["name"].as_str().expect("a fixture carries a name");
+        if fixture["group"].as_str().unwrap_or_else(|| panic!("fixture {name} carries no group")) != "inline" {
+            continue;
+        }
+        run_fixture(fixture, &masks).await;
+        count += 1;
+    }
+    assert_eq!(count, 7, "the inline group carries every ported fixture");
+}
+
+#[tokio::test]
+async fn inline_update_sets_time_updated() {
+    let dir = TempDir::new();
+    let (database, _) = Database::open(DatabaseLocation::Memory, dir.path()).expect("open the database");
+    let database = Arc::new(database);
+    let bus =
+        Bus::new(database.clone(), BusOptions { persist: true, now: Some(Arc::new(|| 0i64)), ..Default::default() });
+    let settings = ProjectionSettings { part_rows: false, ..Default::default() };
+    let _projector = SessionProjector::register(&bus, &database, Arc::new(move || settings));
+    database
+        .read(|connection| {
+            connection.execute(
+                "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) \
+                 VALUES ('prj_1', '/repo', '[]', 1, 2)",
+                [],
+            )?;
+            connection.execute(
+                "INSERT INTO session_v2 (id, project_id, slug, directory, version, time_created, time_updated) \
+                 VALUES ('ses_1', 'prj_1', 'slug-1', '/repo', '1', 1000, 1000)",
+                [],
+            )?;
+            connection.execute(
+                "INSERT INTO session_message (id, session_id, type, seq, time_created, time_updated, data) \
+                 VALUES ('msg_1', 'ses_1', 'assistant', 0, 1000, 1000, \
+                 '{\"time\":{\"created\":1000},\"agent\":\"build\",\"model\":{\"id\":\"gpt-5\",\"providerID\":\"openai\"},\"content\":[],\"type\":\"assistant\"}')",
+                [],
+            )?;
+            connection.execute(
+                "INSERT INTO session_part (message_id, session_id, ordinal, type, call_id, time_created, time_updated, data) \
+                 VALUES ('msg_1', 'ses_1', 0, 'text', NULL, 1000, 1000, '{\"type\":\"text\",\"text\":\"first\"}')",
+                [],
+            )?;
+            Ok(())
+        })
+        .expect("seed the session");
+
+    let before = SystemTime::now().duration_since(UNIX_EPOCH).expect("system time").as_millis() as i64;
+    let definition = Definition::latest_durable("session.text.ended").expect("session.text.ended is durable");
+    bus.publish(
+        &definition,
+        json!({ "sessionID": "ses_1", "assistantMessageID": "msg_1", "ordinal": 0, "text": "done" }),
+        PublishOptions::default(),
+    )
+    .expect("publish the text end");
+
+    let (time_updated, data) = database
+        .read(|connection| {
+            Ok(connection.query_row(
+                "SELECT time_updated, data FROM session_message WHERE id = 'msg_1'",
+                [],
+                |row| Ok((row.get::<_, i64>(0)?, row.get::<_, String>(1)?)),
+            )?)
+        })
+        .expect("read the updated message");
+    assert_ne!(time_updated, 1000, "the inline update bumps time_updated off the seeded value");
+    assert!(time_updated >= before, "the inline update uses the wall clock at projection time");
+    assert!(data.contains("\"content\":[]"), "the envelope stays empty while part rows hold the content");
 }
 
 #[tokio::test]
