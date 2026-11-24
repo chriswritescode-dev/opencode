@@ -41,7 +41,6 @@ pub struct GlobalServices {
     pub activity: Activity<LocationServices>,
     pub wellknown: Arc<WellKnown>,
     pub start_directory: String,
-    pub events: tokio::sync::broadcast::Receiver<LocationEvent>,
     pub environment: ConfigEnv,
     sweep: JoinHandle<()>,
 }
@@ -60,7 +59,6 @@ impl GlobalServices {
         let environment: Arc<dyn Environment> = Arc::new(LocalEnvironment::new());
         let channel = flag::build_channel().to_owned();
         let flag_overrides = config_env("OPENCODE_FLAGS").map(|value| value.to_string_lossy().into_owned());
-        let events = projects.subscribe();
         let boot_projects = projects.clone();
         let boot_environment = environment.clone();
         let boot_config_env = config_env.clone();
@@ -119,14 +117,13 @@ impl GlobalServices {
             activity,
             wellknown,
             start_directory,
-            events,
             environment: config_env,
             sweep,
         }
     }
 
     pub fn subscribe_events(&self) -> tokio::sync::broadcast::Receiver<LocationEvent> {
-        self.events.resubscribe()
+        self.projects.subscribe()
     }
 
     pub fn var(&self, name: &str) -> Option<OsString> {
