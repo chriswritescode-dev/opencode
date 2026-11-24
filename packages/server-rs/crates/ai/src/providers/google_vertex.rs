@@ -6,8 +6,10 @@ use crate::Env;
 use crate::ExecutionContext;
 use crate::media::route::MediaEndpoint;
 use crate::modalities::embedding::EmbeddingRequest;
+use crate::modalities::image::ImageModel;
 use crate::protocols::gemini;
 use crate::protocols::google_embed_content::GoogleVertexEmbedContent;
+use crate::protocols::google_images;
 use crate::protocols::google_vertex_predict_embeddings::{self, GoogleVertexPredictEmbeddings};
 use crate::protocols::shared::invalid_request;
 use crate::providers::google_vertex_shared::{self, OAuthInput};
@@ -124,6 +126,49 @@ pub fn model(model_id: &str, settings: &Settings, env: &dyn Env) -> Result<Runti
         options: settings.request_options(&google_vertex_shared::CONNECTION_KEYS),
     };
     Ok(language_model_with_route(model_id, ID, route, None, None))
+}
+
+pub fn image_model(model_id: &str, settings: &Settings, env: &dyn Env) -> Result<RuntimeModel, AiError> {
+    let api_key = google_vertex_shared::api_key(&google_vertex_shared::settings_api_key_input(settings), env)?;
+    let endpoint_model = model_id.starts_with("endpoints/");
+    if api_key.is_some() && endpoint_model {
+        return Err(invalid_request("Google Vertex tuned models do not support Express Mode API keys"));
+    }
+    let location = google_vertex_shared::location(settings.string("location"), env);
+    let project = google_vertex_shared::project(settings.string("project"), env);
+    let base_url = match settings.string("baseURL") {
+        Some(base_url) => base_url.to_string(),
+        None if api_key.is_some() => EXPRESS_BASE_URL.to_string(),
+        None => format!(
+            "https://{}/v1beta1/projects/{}/locations/{}{}",
+            google_vertex_shared::host(&location),
+            google_vertex_shared::require_project(project.as_deref())?,
+            location,
+            if endpoint_model { "" } else { "/publishers/google" }
+        ),
+    };
+    let auth = match &api_key {
+        Some(api_key) => Auth::headers([("x-goog-api-key".to_string(), api_key.clone())]),
+        None => google_vertex_shared::oauth(
+            &OAuthInput { access_token: settings.string("accessToken").map(str::to_string), auth: None },
+            project.as_deref(),
+        )?,
+    };
+    let (transport, provider_options) = modality_options(settings, &google_vertex_shared::CONNECTION_KEYS);
+    let endpoint = MediaEndpoint::function(Arc::new(|request: &crate::modalities::image::ImageRequest| {
+        google_images::path(&request.model.id)
+    }))
+    .with_base_url(base_url);
+    Ok(RuntimeModel::Image(ImageModel::inline(
+        model_id,
+        ID.to_string(),
+        google_images::protocol(),
+        endpoint,
+        auth,
+        None,
+        transport,
+        provider_options,
+    )))
 }
 
 pub fn embedding_model(model_id: &str, settings: &Settings, env: &dyn Env) -> Result<RuntimeModel, AiError> {

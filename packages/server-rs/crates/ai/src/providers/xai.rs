@@ -1,7 +1,10 @@
 use std::sync::Arc;
 
 use crate::Env;
+use crate::media::route::MediaEndpoint;
+use crate::modalities::image::ImageModel;
 use crate::protocols::open_responses::PATH as RESPONSES_PATH;
+use crate::protocols::xai_images;
 use crate::protocols::xai_responses::XaiResponses;
 use crate::providers::{RuntimeModel, Settings, language_model_with_route, open_responses_options};
 use crate::route::auth::{Auth, ProviderAuthOptions, api_key};
@@ -29,6 +32,25 @@ pub fn model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result<Runt
         options: responses_options(settings),
     };
     Ok(language_model_with_route(model_id, ID, route, None, None))
+}
+
+pub fn image_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result<RuntimeModel, AiError> {
+    let (transport, provider_options) = crate::providers::modality_options(settings, &DECLARED);
+    let endpoint = MediaEndpoint::function(std::sync::Arc::new(|request: &crate::modalities::image::ImageRequest| {
+        xai_images::path(!request.images.is_empty())
+    }))
+    .with_base_url(base_url(settings));
+    let route = ImageModel::inline(
+        model_id,
+        ID.to_string(),
+        xai_images::protocol(),
+        endpoint,
+        auth(settings),
+        None,
+        transport,
+        provider_options,
+    );
+    Ok(RuntimeModel::Image(route))
 }
 
 fn base_url(settings: &Settings) -> &str {

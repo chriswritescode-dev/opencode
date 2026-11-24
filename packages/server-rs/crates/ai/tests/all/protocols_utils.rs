@@ -1,3 +1,4 @@
+use opencode_ai::protocols::utils::image_sizing::{Limits, Shape, Size, fit, nearest};
 use opencode_ai::protocols::utils::{
     cache, gemini_generate_content, lifecycle, mistral_tool_id, open_responses_options, partial_json, tool_stream,
 };
@@ -276,4 +277,88 @@ fn object(value: Value) -> serde_json::Map<String, Value> {
         Value::Object(map) => map,
         value => panic!("expected object, got {value}"),
     }
+}
+
+fn gpt_image_2() -> Limits {
+    Limits {
+        multiple: 16,
+        max_edge: Some(3840),
+        min_pixels: Some(655_360),
+        max_pixels: Some(8_294_400),
+        max_ratio: Some(3.0),
+        ..Limits::default()
+    }
+}
+
+fn standard(edge: i64) -> Size {
+    Size { width: edge, height: edge }
+}
+
+#[test]
+fn image_sizing_fits_an_aspect_ratio_at_a_resolution_tier() {
+    assert_eq!(
+        fit(&Shape::default(), &Limits { multiple: 16, ..Limits::default() }),
+        Size { width: 1024, height: 1024 }
+    );
+    assert_eq!(
+        fit(&Shape { aspect: Some("16:9"), resolution: None }, &gpt_image_2()),
+        Size { width: 1360, height: 768 }
+    );
+    assert_eq!(
+        fit(&Shape { aspect: Some("9:16"), resolution: Some("2K") }, &gpt_image_2()),
+        Size { width: 1536, height: 2736 }
+    );
+    assert_eq!(
+        fit(&Shape { aspect: Some("1:1"), resolution: Some("0.5K") }, &Limits { multiple: 16, ..Limits::default() }),
+        Size { width: 512, height: 512 }
+    );
+}
+
+#[test]
+fn image_sizing_stays_within_the_providers_limits() {
+    assert_eq!(
+        fit(&Shape { aspect: Some("16:9"), resolution: Some("4K") }, &gpt_image_2()),
+        Size { width: 3840, height: 2160 }
+    );
+    assert_eq!(
+        fit(&Shape { aspect: Some("1:1"), resolution: Some("4K") }, &gpt_image_2()),
+        Size { width: 2880, height: 2880 }
+    );
+    assert_eq!(
+        fit(&Shape { aspect: Some("1:1"), resolution: Some("0.5K") }, &gpt_image_2()),
+        Size { width: 816, height: 816 }
+    );
+    assert_eq!(
+        fit(&Shape { aspect: Some("4:1"), resolution: None }, &gpt_image_2()),
+        Size { width: 1776, height: 592 }
+    );
+    assert_eq!(
+        fit(
+            &Shape { aspect: Some("16:9"), resolution: Some("2K") },
+            &Limits { multiple: 16, max_pixels: Some(2048 * 2048), ..Limits::default() }
+        ),
+        Size { width: 2720, height: 1536 }
+    );
+    assert_eq!(
+        fit(
+            &Shape { aspect: Some("16:9"), resolution: None },
+            &Limits { multiple: 32, min_edge: Some(1024), max_edge: Some(2048), ..Limits::default() }
+        ),
+        Size { width: 1824, height: 1024 }
+    );
+}
+
+#[test]
+fn image_sizing_picks_the_nearest_listed_size() {
+    let sizes = vec![
+        Size { width: 1024, height: 1024 },
+        Size { width: 1536, height: 1024 },
+        Size { width: 1024, height: 1536 },
+    ];
+    assert_eq!(nearest(&Shape { aspect: Some("16:9"), resolution: None }, &sizes), Size { width: 1536, height: 1024 });
+    assert_eq!(nearest(&Shape { aspect: Some("3:4"), resolution: None }, &sizes), Size { width: 1024, height: 1536 });
+    assert_eq!(
+        nearest(&Shape { aspect: None, resolution: Some("0.5K") }, &[standard(256), standard(512), standard(1024)]),
+        Size { width: 512, height: 512 }
+    );
 }

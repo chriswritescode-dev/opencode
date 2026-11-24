@@ -169,6 +169,7 @@ export interface Scenario {
   readonly operation?: string
   readonly directory?: string
   readonly redact?: RedactOptions
+  readonly match?: (incoming: CapturedRequest, recorded: CapturedRequest) => boolean
   readonly run: (context: ScenarioContext) => any
 }
 
@@ -217,6 +218,17 @@ const PROTOCOLS: Record<string, { readonly path: string; readonly transport: str
   "google-decisions": { path: "packages/ai/src/protocols/google-decisions.ts", transport: "http-json" },
   "cloudflare-run-decisions": { path: "packages/ai/src/protocols/cloudflare-run-decisions.ts", transport: "http-json" },
   "baseten-system-one": { path: "packages/ai/src/providers/baseten.ts", transport: "http-json" },
+  "openai-images": { path: "packages/ai/src/protocols/openai-images.ts", transport: "http-json/sse" },
+  "alibaba-images": { path: "packages/ai/src/protocols/alibaba-images.ts", transport: "http-json" },
+  "cloudflare-workers-ai-images": {
+    path: "packages/ai/src/protocols/cloudflare-workers-ai-images.ts",
+    transport: "http-json/base64",
+  },
+  "google-images": { path: "packages/ai/src/protocols/google-images.ts", transport: "http-json" },
+  "meta-images": { path: "packages/ai/src/protocols/meta-images.ts", transport: "http-json" },
+  "minimax-images": { path: "packages/ai/src/protocols/minimax-images.ts", transport: "http-json" },
+  "xai-images": { path: "packages/ai/src/protocols/xai-images.ts", transport: "http-json" },
+  "zai-images": { path: "packages/ai/src/protocols/zai-images.ts", transport: "http-json" },
 }
 
 const TEXT_CONTENT_TYPES = new Set([
@@ -325,13 +337,18 @@ const captureHttp = (request: any, next: any) =>
     const requestType = web.headers.get("content-type") ?? undefined
     const bodyText = isTextContentType(requestType)
     const boundary = multipartBoundary(requestType)
+    const headers = Object.fromEntries(web.headers.entries())
+    // Multipart boundaries are random per request, so recordings replace them with a fixed token.
+    const normalized = boundary === undefined ? undefined : normalizeMultipart(boundary, headers, bodyBytes)
     const prepared: CapturedRequest = {
       method: web.method,
       url: web.url,
-      headers: Object.fromEntries(web.headers.entries()),
-      body: bodyText ? new TextDecoder().decode(bodyBytes) : Buffer.from(bodyBytes).toString("base64"),
+      headers: normalized?.headers ?? headers,
+      body:
+        normalized?.body ??
+        (bodyText ? new TextDecoder().decode(bodyBytes) : Buffer.from(bodyBytes).toString("base64")),
       ...(bodyText ? {} : { bodyEncoding: "base64" as const }),
-      ...(boundary === undefined ? {} : { boundary }),
+      ...(normalized === undefined ? {} : { boundary: FIXTURE_BOUNDARY }),
     }
     const response = yield* next(request)
     const bytes = yield* response.arrayBuffer
@@ -360,18 +377,31 @@ export async function capture(tree: string, scenario: Scenario): Promise<Capture
     scenario.auth ?? (scenario.provider === undefined ? { type: "none" } : describeAuth(scenario.provider))
   process.env.CI = "true"
 
-  const [httpRecorder, platformNode, route, schema, media, embedding, embeddingClient, decision, decisionClient] =
-    await Promise.all([
-      load("@opencode/http-recorder"),
-      load("@effect/platform-node"),
-      load("packages/ai/src/route.ts"),
-      load("packages/ai/src/schema/index.ts"),
-      load("packages/ai/src/media.ts"),
-      load("packages/ai/src/embedding.ts"),
-      load("packages/ai/src/embedding-client.ts"),
-      load("packages/ai/src/decision.ts"),
-      load("packages/ai/src/decision-client.ts"),
-    ])
+  const [
+    httpRecorder,
+    platformNode,
+    route,
+    schema,
+    media,
+    embedding,
+    embeddingClient,
+    decision,
+    decisionClient,
+    image,
+    imageClient,
+  ] = await Promise.all([
+    load("@opencode/http-recorder"),
+    load("@effect/platform-node"),
+    load("packages/ai/src/route.ts"),
+    load("packages/ai/src/schema/index.ts"),
+    load("packages/ai/src/media.ts"),
+    load("packages/ai/src/embedding.ts"),
+    load("packages/ai/src/embedding-client.ts"),
+    load("packages/ai/src/decision.ts"),
+    load("packages/ai/src/decision-client.ts"),
+    load("packages/ai/src/image.ts"),
+    load("packages/ai/src/image-client.ts"),
+  ])
   const HttpRecorder = httpRecorder.HttpRecorder
   const { LLMClient, RequestExecutor, WebSocketTransport } = route
   const directory = scenario.directory ?? `${tree}/packages/ai/test/fixtures/recordings`
@@ -464,6 +494,30 @@ export async function capture(tree: string, scenario: Scenario): Promise<Capture
         },
         result: (value: unknown) => encode(decision.DecisionResponse, value),
       }
+    if (operation === "image.generate" || operation === "image.stream") {
+      return {
+        request: (request: any) => {
+          if (request.fetch !== undefined) throw new Error("capture: request.fetch is not captured")
+          return roundTrip({
+            prompt: request.prompt,
+            ...(request.images === undefined
+              ? {}
+              : { images: request.images.map((value: unknown) => encode(media.AssetSchema, value)) }),
+            ...(request.n === undefined ? {} : { n: request.n }),
+            ...(request.aspect === undefined ? {} : { aspect: request.aspect }),
+            ...(request.resolution === undefined ? {} : { resolution: request.resolution }),
+            ...(request.providerOptions === undefined ? {} : { providerOptions: request.providerOptions }),
+            ...(request.headers === undefined ? {} : { headers: request.headers }),
+            ...(request.timeout === undefined ? {} : { timeout: request.timeout }),
+            ...(request.http === undefined ? {} : { http: request.http }),
+          })
+        },
+        result: (value: unknown) =>
+          operation === "image.generate"
+            ? encode(image.ImageResponse, value)
+            : Array.from(value as Array<unknown>).map((event) => encode(image.ImageEvent, event)),
+      }
+    }
     if (operation !== "embedding.generate")
       throw new Error(`capture: operation "${operation}" has no encoder in this phase`)
     return {
@@ -655,7 +709,13 @@ export async function capture(tree: string, scenario: Scenario): Promise<Capture
   })
 
   const executor = RequestExecutor.layer.pipe(
-    Layer.provide(HttpRecorder.layerFetch(scenario.cassette, { directory, redact: scenario.redact })),
+    Layer.provide(
+      HttpRecorder.layerFetch(scenario.cassette, {
+        directory,
+        redact: scenario.redact,
+        match: scenario.match,
+      }),
+    ),
   )
   const capturing = RequestExecutor.middleware(captureHttp, executor)
   const base = LLMClient.layer.pipe(Layer.provide(capturing))
@@ -671,7 +731,8 @@ export async function capture(tree: string, scenario: Scenario): Promise<Capture
   )
   const embeddingService = embeddingClient.EmbeddingClient.layer.pipe(Layer.provide(capturing))
   const decisionService = decisionClient.DecisionClient.layer.pipe(Layer.provide(capturing))
-  const layer = Layer.mergeAll(wrapped, embeddingService, decisionService, webSocket, capturing)
+  const imageService = imageClient.ImageClient.layer.pipe(Layer.provide(capturing))
+  const layer = Layer.mergeAll(wrapped, embeddingService, decisionService, imageService, webSocket, capturing)
 
   const program = Effect.gen(function* () {
     const channel = yield* makeChannel
@@ -714,6 +775,16 @@ export async function capture(tree: string, scenario: Scenario): Promise<Capture
     clockEpochMs: FIXED_EPOCH_MS,
     steps: steps.map(({ raw: _raw, ...step }) => step),
   }
+}
+
+function normalizeMultipart(boundary: string, headers: Record<string, string>, body: Uint8Array) {
+  const text = Buffer.from(body).toString("latin1").replaceAll(boundary, FIXTURE_BOUNDARY)
+  const normalized = Object.fromEntries(
+    Object.entries(headers).map(([name, value]) =>
+      name.toLowerCase() === "content-type" ? [name, value.replaceAll(boundary, FIXTURE_BOUNDARY)] : [name, value],
+    ),
+  )
+  return { headers: normalized, body: Buffer.from(text, "latin1").toString("base64") }
 }
 
 const FIXTURE_BOUNDARY = "----OpenCodeFixtureBoundary"

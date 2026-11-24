@@ -3,9 +3,11 @@ use std::sync::Arc;
 use crate::Env;
 use crate::media::route::MediaEndpoint;
 use crate::modalities::embedding::EmbeddingRequest;
+use crate::modalities::image::ImageModel;
 use crate::protocols::gemini::{DEFAULT_BASE_URL, Gemini};
 use crate::protocols::google_decisions::{self, GoogleDecisions};
 use crate::protocols::google_embed_content::{self, GoogleEmbedContent};
+use crate::protocols::google_images;
 use crate::protocols::google_interactions::{self, GoogleInteractions};
 use crate::providers::{RuntimeModel, Settings, language_model, modality_options};
 use crate::route::auth::{Auth, ProviderAuthOptions, api_key};
@@ -72,6 +74,25 @@ pub fn interactions_model(model_id: &str, settings: &Settings, _env: &dyn Env) -
         None,
         None,
     ))
+}
+
+pub fn image_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result<RuntimeModel, AiError> {
+    let (transport, provider_options) = modality_options(settings, &["apiKey", "baseURL"]);
+    let endpoint = MediaEndpoint::function(std::sync::Arc::new(|request: &crate::modalities::image::ImageRequest| {
+        google_images::path(&request.model.id)
+    }))
+    .with_base_url(settings.string("baseURL").unwrap_or(google_images::DEFAULT_BASE_URL));
+    let route = ImageModel::inline(
+        model_id,
+        ID.to_string(),
+        google_images::protocol(),
+        endpoint,
+        auth(settings),
+        None,
+        transport,
+        provider_options,
+    );
+    Ok(RuntimeModel::Image(route))
 }
 
 pub fn decision_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result<RuntimeModel, AiError> {

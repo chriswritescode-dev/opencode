@@ -5,8 +5,10 @@ use serde_json::{Map, Number, Value, json};
 use crate::Env;
 use crate::ExecutionContext;
 use crate::media::route::MediaEndpoint;
+use crate::modalities::image::ImageModel;
 use crate::protocols::open_responses::{self, OpenResponses, PATH as RESPONSES_PATH};
 use crate::protocols::openai_chat::{self, AssistantTransform, OpenAiChat, PATH as CHAT_PATH};
+use crate::protocols::openai_images::{ImageInput, OpenAiImages};
 use crate::protocols::shared;
 use crate::protocols::system_one::{self, SystemOne};
 use crate::protocols::utils::cache::CacheControl;
@@ -140,6 +142,46 @@ pub fn responses_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> R
         options,
     };
     Ok(language_model_with_route(model_id, ID, route, None, None))
+}
+
+pub fn image_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result<RuntimeModel, AiError> {
+    let (transport, provider_options) = modality_options(settings, &DECLARED);
+    let base_url = settings.string("baseURL").unwrap_or(BASE_URL).to_string();
+    let endpoint = MediaEndpoint::function(std::sync::Arc::new(|_request: &crate::modalities::image::ImageRequest| {
+        crate::protocols::openai_images::PATH.to_string()
+    }))
+    .with_base_url(base_url);
+    Ok(RuntimeModel::Image(ImageModel::streamed(
+        model_id,
+        ID.to_string(),
+        std::sync::Arc::new(OpenAiImages::new(ID, std::sync::Arc::new(image_sizing), ImageInput::References)),
+        endpoint,
+        auth(settings),
+        None,
+        transport,
+        provider_options,
+    )))
+}
+
+fn image_sizing(request: &crate::modalities::image::ImageRequest) -> Option<Map<String, Value>> {
+    let resolution = request.resolution.as_deref().map(|resolution| {
+        let upper = resolution.to_ascii_uppercase();
+        match upper.as_str() {
+            "0.5K" => "512".to_string(),
+            "0.75K" => "768".to_string(),
+            _ => upper,
+        }
+    });
+    let mut sizing = Map::new();
+    if let Some(aspect) = &request.aspect {
+        sizing.insert("aspect_ratio".to_string(), Value::String(aspect.clone()));
+    }
+    if let Some(resolution) =
+        resolution.filter(|resolution| matches!(resolution.as_str(), "512" | "768" | "1K" | "1.5K" | "2K" | "4K"))
+    {
+        sizing.insert("resolution".to_string(), Value::String(resolution));
+    }
+    Some(sizing)
 }
 
 pub fn decision_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result<RuntimeModel, AiError> {

@@ -64,9 +64,21 @@ export const GROUPS: Record<string, { protocols: string[] }> = {
   decisions: {
     protocols: ["system-one", "baseten-system-one", "openai-decisions", "google-decisions", "cloudflare-run-decisions"],
   },
+  images: {
+    protocols: [
+      "openai-images",
+      "alibaba-images",
+      "cloudflare-workers-ai-images",
+      "google-images",
+      "meta-images",
+      "minimax-images",
+      "xai-images",
+      "zai-images",
+    ],
+  },
 }
 
-export const EXPECTED_CASSETTES = 264
+export const EXPECTED_CASSETTES = 286
 const EXPECTED_ADC_CASES = 11
 
 const exporter = `${tree}/exporter`

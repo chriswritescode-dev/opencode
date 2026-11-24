@@ -1,5 +1,6 @@
 pub mod decision;
 pub mod embedding;
+pub mod image;
 
 pub use decision::{
     ChoiceOption, ChoiceProbability, ChoiceValue, DecisionAnswer, DecisionClient, DecisionModel, DecisionPart,
@@ -9,4 +10,8 @@ pub use decision::{
 pub use embedding::{
     EmbeddingClient, EmbeddingInputType, EmbeddingModel, EmbeddingRequest, EmbeddingRequestInput, EmbeddingResponse,
     EmbeddingUsage, EmbeddingValue,
+};
+pub use image::{
+    ImageClient, ImageEvent, ImageJob, ImageModel, ImageRequest, ImageRequestInput, ImageResponse, ImageStatus,
+    MediaUsage, token_usage,
 };

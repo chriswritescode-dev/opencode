@@ -4,7 +4,10 @@ use serde_json::{Map, Value, json};
 
 use crate::Env;
 use crate::ExecutionContext;
+use crate::media::route::MediaEndpoint;
+use crate::modalities::image::ImageModel;
 use crate::protocols::anthropic_messages::{AnthropicMessagesPlain, PATH as MESSAGES_PATH};
+use crate::protocols::minimax_images;
 use crate::protocols::open_responses::{OpenResponses, PATH as RESPONSES_PATH};
 use crate::protocols::openai_chat::{self, OpenAiChat, PATH as CHAT_PATH};
 use crate::protocols::shared::invalid_request;
@@ -107,6 +110,23 @@ pub fn responses_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> R
         options: settings.request_options(&DECLARED),
     };
     Ok(language_model_with_route(model_id, ID, route, None, None))
+}
+
+pub fn image_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result<RuntimeModel, AiError> {
+    let (transport, provider_options) = crate::providers::modality_options(settings, &DECLARED);
+    let endpoint = MediaEndpoint::path(minimax_images::PATH)
+        .with_base_url(settings.string("baseURL").unwrap_or(minimax_images::DEFAULT_BASE_URL));
+    let route = ImageModel::inline(
+        model_id,
+        ID.to_string(),
+        minimax_images::protocol(),
+        endpoint,
+        auth(settings),
+        None,
+        transport,
+        provider_options,
+    );
+    Ok(RuntimeModel::Image(route))
 }
 
 fn auth(settings: &Settings) -> Auth {

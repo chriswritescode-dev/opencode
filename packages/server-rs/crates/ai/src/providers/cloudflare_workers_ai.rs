@@ -2,7 +2,9 @@ use std::sync::Arc;
 
 use crate::Env;
 use crate::media::route::MediaEndpoint;
+use crate::modalities::image::ImageModel;
 use crate::protocols::cloudflare_run_decisions::{self, CloudflareRunDecisions};
+use crate::protocols::cloudflare_workers_ai_images;
 use crate::protocols::openai_chat;
 use crate::providers::cloudflare_shared;
 use crate::providers::{RuntimeModel, Settings, language_model_with_route, modality_options};
@@ -51,6 +53,25 @@ pub fn decision_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Re
         options: transport,
     });
     Ok(RuntimeModel::Decision(route.model(model_id, None, provider_options)))
+}
+
+pub fn image_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result<RuntimeModel, AiError> {
+    let (transport, provider_options) = modality_options(settings, &DECLARED);
+    let endpoint = MediaEndpoint::function(std::sync::Arc::new(|request: &crate::modalities::image::ImageRequest| {
+        format!("/{}", request.model.id)
+    }))
+    .with_base_url(cloudflare_shared::run_base_url(settings, "CloudflareWorkersAI")?);
+    let route = ImageModel::inline(
+        model_id,
+        ID.to_string(),
+        cloudflare_workers_ai_images::protocol(),
+        endpoint,
+        auth(settings),
+        None,
+        transport,
+        provider_options,
+    );
+    Ok(RuntimeModel::Image(route))
 }
 
 fn auth(settings: &Settings) -> Auth {

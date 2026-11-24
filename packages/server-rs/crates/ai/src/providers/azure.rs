@@ -5,6 +5,8 @@ use url::Url;
 
 use crate::Env;
 use crate::media::route::MediaEndpoint;
+use crate::modalities::image::ImageModel;
+use crate::protocols::openai_images::{ImageInput, OpenAiImages, pixel_size};
 use crate::protocols::shared::invalid_request;
 use crate::protocols::{anthropic_messages, open_responses_channel, openai_chat, openai_embeddings, openai_responses};
 use crate::providers::open_responses_options;
@@ -122,6 +124,32 @@ pub fn embedding_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> R
     Ok(RuntimeModel::Embedding(route.model(model_id, provider_options)))
 }
 
+pub fn image_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result<RuntimeModel, AiError> {
+    let (transport, provider_options) = modality_options(settings, &DECLARED);
+    let (base_url, query) = openai_target(settings, model_id)?;
+    let endpoint = MediaEndpoint {
+        base_url: Some(base_url),
+        path: Arc::new(|request: &crate::modalities::image::ImageRequest| {
+            if request.images.is_empty() {
+                crate::protocols::openai_images::PATH.to_string()
+            } else {
+                crate::protocols::openai_images::EDIT_PATH.to_string()
+            }
+        }),
+        query,
+    };
+    Ok(RuntimeModel::Image(ImageModel::streamed(
+        model_id,
+        ID.to_string(),
+        Arc::new(OpenAiImages::new(ID, Arc::new(pixel_size), ImageInput::Edits)),
+        endpoint,
+        auth(settings, "api-key"),
+        None,
+        transport,
+        provider_options,
+    )))
+}
+
 fn auth(settings: &Settings, header: &str) -> Auth {
     Auth::remove("authorization").and_then(api_key(
         ProviderAuthOptions { auth: None, api_key: settings.api_key() },
@@ -131,6 +159,11 @@ fn auth(settings: &Settings, header: &str) -> Auth {
 }
 
 fn openai_endpoint(settings: &Settings, model_id: &str, path: &str) -> Result<Endpoint, AiError> {
+    let (base_url, query) = openai_target(settings, model_id)?;
+    Ok(Endpoint { base_url: Some(base_url), path: PathPart::Static(path.to_string()), query })
+}
+
+fn openai_target(settings: &Settings, model_id: &str) -> Result<(String, StringMap), AiError> {
     let configured_base = settings.string("baseURL");
     let base = match configured_base {
         Some(base) => trim_base_url(base).to_string(),
@@ -153,7 +186,7 @@ fn openai_endpoint(settings: &Settings, model_id: &str, path: &str) -> Result<En
     } else {
         (format!("{base}/v1"), query)
     };
-    Ok(Endpoint { base_url: Some(base_url), path: PathPart::Static(path.to_string()), query })
+    Ok((base_url, query))
 }
 
 fn messages_endpoint(settings: &Settings) -> Result<Endpoint, AiError> {

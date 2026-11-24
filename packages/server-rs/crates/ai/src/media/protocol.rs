@@ -38,10 +38,13 @@ impl Body {
 pub struct DecodeContext<Request> {
     pub request: Request,
     pub provider_metadata_key: String,
+    pub mode: crate::media::route::Mode,
+    pub now_ms: u64,
 }
 
 pub struct TextResponse {
     pub body: String,
+    pub bytes: Vec<u8>,
     pub http: HttpContext,
 }
 

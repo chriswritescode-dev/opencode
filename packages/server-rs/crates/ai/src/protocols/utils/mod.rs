@@ -6,6 +6,7 @@ pub mod claude_model;
 pub mod crc32;
 pub mod gateway_protocol;
 pub mod gemini_generate_content;
+pub mod image_sizing;
 pub mod lifecycle;
 pub mod media_input;
 pub mod media_type;

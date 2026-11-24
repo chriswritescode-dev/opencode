@@ -2491,6 +2491,476 @@ const embeddingScenarios = [
   }),
 ]
 
+const imagePrompt = "A simple flat black circle centered on a plain white background."
+const imageFile = () =>
+  Effect.promise(() => Bun.file(`${tree}/packages/ai/test/fixtures/images/edit-source.jpg`).bytes()).pipe(
+    Effect.map((bytes) => Media.bytes(bytes, "image/jpeg")),
+  )
+const imageVariant = (scenario: Scenario) => ({ group: "images", scenario })
+const openAIImageEditMatch = (incoming: any, recorded: any) =>
+  incoming.method === recorded.method && incoming.url === recorded.url
+const cloudflareImageRedact = {
+  url: (url: string) =>
+    url.replace(/\/client\/v4\/accounts\/[^/]+\/ai\/run\//, "/client/v4/accounts/{account}/ai/run/"),
+}
+const imageScenarios = [
+  imageVariant({
+    cassette: "openai-images/generates-an-image",
+    protocol: "openai-images",
+    operation: "image.generate",
+    provider: {
+      package: "@opencode/ai/providers/openai/images",
+      modelID: "gpt-image-1-mini",
+      settings: { apiKey: "fixture" },
+    },
+    run: (context) => {
+      const model = OpenAI.configure({ apiKey: "fixture" }).image("gpt-image-1-mini")
+      const request = ai.image.request({
+        model,
+        prompt: imagePrompt,
+        aspect: "1:1",
+        providerOptions: { outputFormat: "jpeg", quality: "low", outputCompression: 10 },
+      })
+      return context.operation("image.generate", request, ai.image.generate(request))
+    },
+  }),
+  imageVariant({
+    cassette: "openai-images/edits-an-image",
+    protocol: "openai-images",
+    operation: "image.generate",
+    provider: {
+      package: "@opencode/ai/providers/openai/images",
+      modelID: "gpt-image-1-mini",
+      settings: { apiKey: "fixture" },
+    },
+    match: openAIImageEditMatch,
+    run: (context) =>
+      Effect.gen(function* () {
+        const model = OpenAI.configure({ apiKey: "fixture" }).image("gpt-image-1-mini")
+        const request = ai.image.request({
+          model,
+          prompt: "Keep the simple shape and change it from black to bright green.",
+          images: [yield* imageFile()],
+          providerOptions: { size: "1024x1024", outputFormat: "jpeg", quality: "low", outputCompression: 10 },
+        })
+        return yield* context.operation("image.generate", request, ai.image.generate(request))
+      }),
+  }),
+  imageVariant({
+    cassette: "openai-images/streams-a-partial-image-before-the-final-image",
+    protocol: "openai-images",
+    operation: "image.stream",
+    provider: {
+      package: "@opencode/ai/providers/openai/images",
+      modelID: "gpt-image-1-mini",
+      settings: { apiKey: "fixture" },
+    },
+    run: (context) => {
+      const model = OpenAI.configure({ apiKey: "fixture" }).image("gpt-image-1-mini")
+      const request = ai.image.request({
+        model,
+        prompt: imagePrompt,
+        aspect: "1:1",
+        resolution: "1K",
+        providerOptions: { outputFormat: "jpeg", quality: "low", outputCompression: 10, partialImages: 1 },
+      })
+      return context.operation("image.stream", request, Stream.runCollect(ai.image.stream(request)))
+    },
+  }),
+  imageVariant({
+    cassette: "openrouter-images/renders-gemini-at-the-requested-2k-tier",
+    protocol: "openai-images",
+    operation: "image.generate",
+    provider: {
+      package: "@opencode/ai/providers/openrouter/images",
+      modelID: "google/gemini-3.1-flash-image",
+      settings: { apiKey: "fixture" },
+    },
+    run: (context) => {
+      const model = OpenRouter.configure({ apiKey: "fixture" }).image("google/gemini-3.1-flash-image")
+      const request = ai.image.request({ model, prompt: imagePrompt, aspect: "16:9", resolution: "2K" })
+      return context.operation("image.generate", request, ai.image.generate(request))
+    },
+  }),
+  imageVariant({
+    cassette: "openrouter-images/renders-flux-3-from-an-aspect-ratio-and-tier",
+    protocol: "openai-images",
+    operation: "image.generate",
+    provider: {
+      package: "@opencode/ai/providers/openrouter/images",
+      modelID: "black-forest-labs/flux-3-image-klein",
+      settings: { apiKey: "fixture" },
+    },
+    run: (context) => {
+      const model = OpenRouter.configure({ apiKey: "fixture" }).image("black-forest-labs/flux-3-image-klein")
+      const request = ai.image.request({ model, prompt: imagePrompt, aspect: "16:9", resolution: "1K" })
+      return context.operation("image.generate", request, ai.image.generate(request))
+    },
+  }),
+  imageVariant({
+    cassette: "openrouter-images/edits-an-image-through-input-references",
+    protocol: "openai-images",
+    operation: "image.generate",
+    provider: {
+      package: "@opencode/ai/providers/openrouter/images",
+      modelID: "openai/gpt-image-1-mini",
+      settings: { apiKey: "fixture" },
+    },
+    run: (context) =>
+      Effect.gen(function* () {
+        const model = OpenRouter.configure({ apiKey: "fixture" }).image("openai/gpt-image-1-mini")
+        const request = ai.image.request({
+          model,
+          prompt: "Keep the simple shape and change it from black to bright green.",
+          images: [yield* imageFile()],
+          aspect: "1:1",
+          resolution: "1K",
+          providerOptions: { outputFormat: "jpeg", quality: "low", outputCompression: 10 },
+        })
+        return yield* context.operation("image.generate", request, ai.image.generate(request))
+      }),
+  }),
+  imageVariant({
+    cassette: "vercel-ai-gateway-images/generates-an-image",
+    protocol: "openai-images",
+    operation: "image.generate",
+    provider: {
+      package: "@opencode/ai/providers/vercel-ai-gateway/images",
+      modelID: "meta/muse-image-1.0",
+      settings: { apiKey: "fixture" },
+    },
+    run: (context) => {
+      const model = VercelAIGateway.configure({ apiKey: "fixture" }).image("meta/muse-image-1.0")
+      const request = ai.image.request({ model, prompt: imagePrompt, providerOptions: { outputFormat: "webp" } })
+      return context.operation("image.generate", request, ai.image.generate(request))
+    },
+  }),
+  imageVariant({
+    cassette: "vercel-ai-gateway-images/sizes-grok-through-xai-provider-options",
+    protocol: "openai-images",
+    operation: "image.generate",
+    provider: {
+      package: "@opencode/ai/providers/vercel-ai-gateway/images",
+      modelID: "spacexai/grok-imagine-image",
+      settings: { apiKey: "fixture" },
+    },
+    run: (context) => {
+      const model = VercelAIGateway.configure({ apiKey: "fixture" }).image("spacexai/grok-imagine-image")
+      const request = ai.image.request({ model, prompt: imagePrompt, aspect: "16:9", resolution: "1K" })
+      return context.operation("image.generate", request, ai.image.generate(request))
+    },
+  }),
+  imageVariant({
+    cassette: "alibaba-images/generates-qwen-image-images",
+    protocol: "alibaba-images",
+    operation: "image.generate",
+    provider: {
+      package: "@opencode/ai/providers/alibaba/images",
+      modelID: "qwen-image-2.0",
+      settings: { region: "ap-southeast-1", apiKey: "fixture" },
+    },
+    run: (context) => {
+      const model = Alibaba.configure({ region: "ap-southeast-1", apiKey: "fixture" }).image("qwen-image-2.0")
+      const request = ai.image.request({
+        model,
+        prompt: "A simple flat red circle centered on a plain white background.",
+        n: 2,
+        aspect: "1:1",
+        resolution: "0.5K",
+        providerOptions: { seed: 7, promptExtend: false, watermark: false },
+      })
+      return context.operation("image.generate", request, ai.image.generate(request))
+    },
+  }),
+  imageVariant({
+    cassette: "alibaba-images/generates-wan-images",
+    protocol: "alibaba-images",
+    operation: "image.generate",
+    provider: {
+      package: "@opencode/ai/providers/alibaba/images",
+      modelID: "wan2.7-image",
+      settings: { region: "ap-southeast-1", apiKey: "fixture" },
+    },
+    run: (context) => {
+      const model = Alibaba.configure({ region: "ap-southeast-1", apiKey: "fixture" }).image("wan2.7-image")
+      const request = ai.image.request({
+        model,
+        prompt: "A simple flat blue square centered on a plain white background.",
+        n: 2,
+        resolution: "0.75K",
+        providerOptions: { thinkingMode: false },
+      })
+      return context.operation("image.generate", request, ai.image.generate(request))
+    },
+  }),
+  imageVariant({
+    cassette: "alibaba-images/edits-an-image",
+    protocol: "alibaba-images",
+    operation: "image.generate",
+    provider: {
+      package: "@opencode/ai/providers/alibaba/images",
+      modelID: "qwen-image-2.0",
+      settings: { region: "ap-southeast-1", apiKey: "fixture" },
+    },
+    run: (context) =>
+      Effect.gen(function* () {
+        const model = Alibaba.configure({ region: "ap-southeast-1", apiKey: "fixture" }).image("qwen-image-2.0")
+        const request = ai.image.request({
+          model,
+          prompt: "Keep the simple shape and change it from black to bright purple.",
+          images: [yield* imageFile()],
+          providerOptions: { size: "512*512" },
+        })
+        return yield* context.operation("image.generate", request, ai.image.generate(request))
+      }),
+  }),
+  imageVariant({
+    cassette: "cloudflare-workers-ai-images/generates-a-raw-binary-image",
+    protocol: "cloudflare-workers-ai-images",
+    operation: "image.generate",
+    provider: {
+      package: "@opencode/ai/providers/cloudflare-workers-ai/images",
+      modelID: "@cf/bytedance/stable-diffusion-xl-lightning",
+      settings: { accountId: "fixture-account", apiKey: "fixture" },
+    },
+    redact: cloudflareImageRedact,
+    run: (context) => {
+      const model = CloudflareWorkersAI.configure({ accountId: "fixture-account", apiKey: "fixture" }).image(
+        "@cf/bytedance/stable-diffusion-xl-lightning",
+      )
+      const request = ai.image.request({
+        model,
+        prompt: "A red apple on a wooden table",
+        aspect: "1:1",
+        resolution: "0.25K",
+        providerOptions: { seed: 3, num_steps: 1 },
+      })
+      return context.operation("image.generate", request, ai.image.generate(request))
+    },
+  }),
+  imageVariant({
+    cassette: "cloudflare-workers-ai-images/generates-a-flux-2-image-from-multipart-fields",
+    protocol: "cloudflare-workers-ai-images",
+    operation: "image.generate",
+    provider: {
+      package: "@opencode/ai/providers/cloudflare-workers-ai/images",
+      modelID: "@cf/black-forest-labs/flux-2-klein-4b",
+      settings: { accountId: "fixture-account", apiKey: "fixture" },
+    },
+    redact: cloudflareImageRedact,
+    match: openAIImageEditMatch,
+    run: (context) => {
+      const model = CloudflareWorkersAI.configure({ accountId: "fixture-account", apiKey: "fixture" }).image(
+        "@cf/black-forest-labs/flux-2-klein-4b",
+      )
+      const request = ai.image.request({
+        model,
+        prompt: "A red apple on a wooden table",
+        providerOptions: { width: 64, height: 64, seed: 3, steps: 1 },
+      })
+      return context.operation("image.generate", request, ai.image.generate(request))
+    },
+  }),
+  imageVariant({
+    cassette: "google-images/generates-an-image",
+    protocol: "google-images",
+    operation: "image.generate",
+    provider: {
+      package: "@opencode/ai/providers/google/images",
+      modelID: "gemini-3.1-flash-image",
+      settings: { apiKey: "fixture" },
+    },
+    run: (context) => {
+      const model = Google.configure({ apiKey: "fixture" }).image("gemini-3.1-flash-image")
+      const request = ai.image.request({
+        model,
+        prompt: "A simple flat blue circle centered on a plain white background.",
+        aspect: "1:1",
+      })
+      return context.operation("image.generate", request, ai.image.generate(request))
+    },
+  }),
+  imageVariant({
+    cassette: "google-images/edits-an-image",
+    protocol: "google-images",
+    operation: "image.generate",
+    provider: {
+      package: "@opencode/ai/providers/google/images",
+      modelID: "gemini-3.1-flash-image",
+      settings: { apiKey: "fixture" },
+    },
+    run: (context) =>
+      Effect.gen(function* () {
+        const model = Google.configure({ apiKey: "fixture" }).image("gemini-3.1-flash-image")
+        const request = ai.image.request({
+          model,
+          prompt:
+            "Transform this minimal source into a bright orange sun icon with eight rounded rays on a pale blue background.",
+          images: [yield* imageFile()],
+          aspect: "1:1",
+        })
+        return yield* context.operation("image.generate", request, ai.image.generate(request))
+      }),
+  }),
+  imageVariant({
+    cassette: "meta-images/generates-default-webp-bytes",
+    protocol: "meta-images",
+    operation: "image.generate",
+    provider: {
+      package: "@opencode/ai/providers/meta/images",
+      modelID: "muse-image-1.0",
+      settings: { apiKey: "fixture" },
+    },
+    run: (context) => {
+      const model = Meta.configure({ apiKey: "fixture" }).image("muse-image-1.0")
+      const request = ai.image.request({
+        model,
+        prompt: "A flat black square centered on a plain white background. No text.",
+        n: 1,
+        providerOptions: {
+          reasoningStrength: "low",
+          toolEnablement: { enable_image_search: false, enable_web_search: false, enable_shell: false },
+          size: "256x256",
+        },
+      })
+      return context.operation("image.generate", request, ai.image.generate(request))
+    },
+  }),
+  imageVariant({
+    cassette: "meta-images/edits-image-bytes-and-returns-png",
+    protocol: "meta-images",
+    operation: "image.generate",
+    provider: {
+      package: "@opencode/ai/providers/meta/images",
+      modelID: "muse-image-1.0",
+      settings: { apiKey: "fixture" },
+    },
+    run: (context) =>
+      Effect.gen(function* () {
+        const model = Meta.configure({ apiKey: "fixture" }).image("muse-image-1.0")
+        const request = ai.image.request({
+          model,
+          prompt: "Change the shape to bright purple. Keep the plain white background.",
+          images: [yield* imageFile()],
+          n: 1,
+          providerOptions: {
+            reasoningStrength: "low",
+            toolEnablement: { enable_image_search: false, enable_web_search: false, enable_shell: false },
+            size: "256x256",
+            outputFormat: "png",
+          },
+        })
+        return yield* context.operation("image.generate", request, ai.image.generate(request))
+      }),
+  }),
+  imageVariant({
+    cassette: "minimax-images/generates-an-image",
+    protocol: "minimax-images",
+    operation: "image.generate",
+    provider: {
+      package: "@opencode/ai/providers/minimax/images",
+      modelID: "image-01",
+      settings: { apiKey: "fixture" },
+    },
+    run: (context) => {
+      const model = MiniMax.configure({ apiKey: "fixture" }).image("image-01")
+      const request = ai.image.request({
+        model,
+        prompt: "A simple flat red circle centered on a plain white background.",
+        aspect: "1:1",
+        resolution: "0.5K",
+      })
+      return context.operation("image.generate", request, ai.image.generate(request))
+    },
+  }),
+  imageVariant({
+    cassette: "minimax-images/generates-from-a-subject-reference",
+    protocol: "minimax-images",
+    operation: "image.generate",
+    provider: {
+      package: "@opencode/ai/providers/minimax/images",
+      modelID: "image-01",
+      settings: { apiKey: "fixture" },
+    },
+    run: (context) => {
+      const model = MiniMax.configure({ apiKey: "fixture" }).image("image-01")
+      const request = ai.image.request({
+        model,
+        prompt: "The same woman reading a book in a quiet library, soft window light.",
+        images: [
+          Media.url(
+            "https://cdn.hailuoai.com/prod/2025-08-12-17/video_cover/1754990600020238321-411603868533342214-cover.jpg",
+          ),
+        ],
+        resolution: "0.5K",
+      })
+      return context.operation("image.generate", request, ai.image.generate(request))
+    },
+  }),
+  imageVariant({
+    cassette: "xai-images/generates-an-image",
+    protocol: "xai-images",
+    operation: "image.generate",
+    provider: {
+      package: "@opencode/ai/providers/xai/images",
+      modelID: "grok-imagine-image",
+      settings: { apiKey: "fixture" },
+    },
+    run: (context) => {
+      const model = XAI.configure({ apiKey: "fixture" }).image("grok-imagine-image")
+      const request = ai.image.request({
+        model,
+        prompt: "A simple flat black diamond centered on a plain white background.",
+        aspect: "1:1",
+        resolution: "1K",
+      })
+      return context.operation("image.generate", request, ai.image.generate(request))
+    },
+  }),
+  imageVariant({
+    cassette: "xai-images/edits-an-image",
+    protocol: "xai-images",
+    operation: "image.generate",
+    provider: {
+      package: "@opencode/ai/providers/xai/images",
+      modelID: "grok-imagine-image",
+      settings: { apiKey: "fixture" },
+    },
+    run: (context) =>
+      Effect.gen(function* () {
+        const model = XAI.configure({ apiKey: "fixture" }).image("grok-imagine-image")
+        const request = ai.image.request({
+          model,
+          prompt: "Keep the simple shape and change it from black to bright purple.",
+          images: [yield* imageFile()],
+          aspect: "1:1",
+          resolution: "1K",
+        })
+        return yield* context.operation("image.generate", request, ai.image.generate(request))
+      }),
+  }),
+  imageVariant({
+    cassette: "zai-images/generates-an-image",
+    protocol: "zai-images",
+    operation: "image.generate",
+    provider: {
+      package: "@opencode/ai/providers/zai/images",
+      modelID: "cogview-4-250304",
+      settings: { apiKey: "fixture" },
+    },
+    run: (context) => {
+      const model = ZAI.configure({ apiKey: "fixture" }).image("cogview-4-250304")
+      const request = ai.image.request({
+        model,
+        prompt: "A simple flat red circle centered on a plain white background.",
+        aspect: "1:1",
+        providerOptions: { quality: "standard", userID: "opencode-image-test" },
+      })
+      return context.operation("image.generate", request, ai.image.generate(request))
+    },
+  }),
+]
+
 const decisionQuestions = [
   {
     name: "department",
@@ -4618,6 +5088,7 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
   ...nativeVendorScenarios,
   ...embeddingScenarios,
   ...decisionScenarios,
+  ...imageScenarios,
 ]
 
 const cassettes = []

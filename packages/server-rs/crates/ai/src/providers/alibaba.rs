@@ -4,7 +4,9 @@ use serde_json::json;
 
 use crate::Env;
 use crate::media::route::MediaEndpoint;
+use crate::modalities::image::ImageModel;
 use crate::protocols::alibaba_chat::{self, AlibabaChat};
+use crate::protocols::alibaba_images;
 use crate::protocols::alibaba_messages::AlibabaMessages;
 use crate::protocols::alibaba_responses::AlibabaResponses;
 use crate::protocols::open_responses::PATH as RESPONSES_PATH;
@@ -94,6 +96,21 @@ pub fn embedding_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> R
         max_values: None,
     });
     Ok(RuntimeModel::Embedding(route.model(model_id, provider_options)))
+}
+
+pub fn image_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result<RuntimeModel, AiError> {
+    let (transport, provider_options) = modality_options(settings, &DECLARED);
+    let route = ImageModel::inline(
+        model_id,
+        ID.to_string(),
+        alibaba_images::protocol(),
+        MediaEndpoint::path(alibaba_images::PATH).with_base_url(base_url(settings, "/api/v1")?),
+        auth(settings),
+        None,
+        transport,
+        provider_options,
+    );
+    Ok(RuntimeModel::Image(route))
 }
 
 fn base_url(settings: &Settings, suffix: &str) -> Result<String, AiError> {

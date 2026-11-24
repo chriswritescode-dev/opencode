@@ -1,8 +1,11 @@
 use std::sync::Arc;
 
 use crate::Env;
+use crate::media::route::MediaEndpoint;
+use crate::modalities::image::ImageModel;
 use crate::protocols::zai_chat::{self, ZaiChat};
-use crate::providers::{RuntimeModel, Settings, language_model};
+use crate::protocols::zai_images;
+use crate::providers::{RuntimeModel, Settings, language_model, modality_options};
 use crate::route::auth::{ProviderAuthOptions, api_key};
 use crate::route::endpoint::Endpoint;
 use crate::schema::AiError;
@@ -34,4 +37,25 @@ pub fn model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result<Runt
 
 pub fn chat_model(model_id: &str, settings: &Settings, env: &dyn Env) -> Result<RuntimeModel, AiError> {
     model(model_id, settings, env)
+}
+
+pub fn image_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result<RuntimeModel, AiError> {
+    let (transport, provider_options) = modality_options(settings, &["apiKey", "baseURL"]);
+    let auth =
+        api_key(ProviderAuthOptions { auth: None, api_key: settings.api_key() }, &["ZAI_API_KEY"], |credential| {
+            credential.bearer()
+        });
+    let endpoint = MediaEndpoint::path(zai_images::PATH)
+        .with_base_url(settings.string("baseURL").unwrap_or(zai_images::DEFAULT_BASE_URL));
+    let route = ImageModel::inline(
+        model_id,
+        ID.to_string(),
+        zai_images::protocol(),
+        endpoint,
+        auth,
+        None,
+        transport,
+        provider_options,
+    );
+    Ok(RuntimeModel::Image(route))
 }

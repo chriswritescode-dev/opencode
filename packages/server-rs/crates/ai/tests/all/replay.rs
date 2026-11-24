@@ -13,6 +13,7 @@ use opencode_ai::clock::FixedClock;
 use opencode_ai::id::SequenceIds;
 use opencode_ai::modalities::decision::{DecisionClient, DecisionRequestInput};
 use opencode_ai::modalities::embedding::{EmbeddingClient, EmbeddingRequestInput};
+use opencode_ai::modalities::image::{ImageClient, ImageEvent, ImageRequestInput};
 use opencode_ai::providers::{ProviderPackages, RuntimeModel, Settings};
 use opencode_ai::route::client::LlmClient;
 use opencode_ai::route::compile::StreamOptions;
@@ -291,6 +292,158 @@ fn assert_decision_outcome(
     }
 }
 
+pub async fn replay_image_cassette(cassette: &Cassette) {
+    for (index, step) in cassette.steps.iter().enumerate() {
+        let Some(provider) = step.provider.as_ref() else {
+            panic!("{} step {index} image: the step recorded no provider", cassette.name);
+        };
+        let operation = step.operation.as_deref().unwrap_or_default();
+        assert!(
+            matches!(operation, "image.generate" | "image.stream"),
+            "{} step {index} image: unexpected operation {operation}",
+            cassette.name
+        );
+        let settings = Settings::new(provider.settings.clone());
+        let runtime = ProviderPackages::builtin()
+            .model(&provider.package, &provider.model_id, &settings, &MapEnv::default())
+            .unwrap_or_else(|error| {
+                panic!("{} step {index} provider {}: {}", cassette.name, provider.package, error.message())
+            });
+        let RuntimeModel::Image(model) = runtime else {
+            panic!("{} step {index} image: expected an image model", cassette.name);
+        };
+        assert_eq!(model.id, step.model["id"], "{} step {index} image model.id", cassette.name);
+        assert_eq!(model.provider, step.model["provider"], "{} step {index} image model.provider", cassette.name);
+        assert_eq!(model.route.id(), step.model["route"]["id"], "{} step {index} image model.route.id", cassette.name);
+        let input: ImageRequestInput = serde_json::from_value(step.request.clone())
+            .unwrap_or_else(|error| panic!("{} step {index} image request: {error}", cassette.name));
+        let exchanges = match step.exchanges.as_ref() {
+            Some(exchanges) if !exchanges.is_empty() => exchanges.clone(),
+            _ => panic!("{} step {index} image exchanges: the step recorded no HTTP exchange", cassette.name),
+        };
+        for chunk in [None, Some(CHUNKED_BODY_SIZE)] {
+            let label = match chunk {
+                None => "single-chunk".to_string(),
+                Some(size) => format!("{size}-byte-chunk"),
+            };
+            let sender = Arc::new(RecordedSender {
+                cassette: cassette.name.clone(),
+                step: index,
+                label: label.clone(),
+                chunk,
+                exchanges: Mutex::new(VecDeque::from(exchanges.clone())),
+            });
+            let clock = Arc::new(FixedClock::new(cassette.clock_epoch_ms));
+            let context =
+                ExecutionContext::new(clock.clone(), Arc::new(SequenceIds::new()), Arc::new(MapEnv::default()));
+            let executor = RequestExecutor::new(sender.clone(), None, clock);
+            let request = input.clone().with_model(model.clone());
+            if operation == "image.generate" {
+                let outcome = ImageClient::generate(request, &executor, &context).await;
+                sender.assert_consumed();
+                assert_image_generate_outcome(cassette, index, &label, step, outcome);
+            } else {
+                let items = ImageClient::stream(request, &executor, &context).collect::<Vec<_>>().await;
+                sender.assert_consumed();
+                assert_image_stream_outcome(cassette, index, &label, step, items);
+            }
+        }
+    }
+}
+
+pub async fn replay_image_group(group: &str) -> usize {
+    let corpus = crate::corpus::Corpus::load();
+    let mut steps = 0;
+    for cassette in corpus.cassettes.iter().filter(|cassette| cassette.group == group) {
+        replay_image_cassette(cassette).await;
+        steps += cassette.steps.len();
+    }
+    steps
+}
+
+fn assert_image_generate_outcome(
+    cassette: &Cassette,
+    index: usize,
+    label: &str,
+    step: &Step,
+    outcome: Result<opencode_ai::modalities::image::ImageResponse, AiError>,
+) {
+    match &step.error {
+        Some(recorded) => {
+            let error = match outcome {
+                Err(error) => error,
+                Ok(_) => panic!("{} step {index} {label} image error: the generate call succeeded", cassette.name),
+            };
+            assert_recorded_error(cassette, index, label, recorded, &error);
+        }
+        None => {
+            let response = match outcome {
+                Ok(response) => response,
+                Err(error) => {
+                    panic!("{} step {index} {label} image result: the generate call failed with {error}", cassette.name)
+                }
+            };
+            let actual = serde_json::to_value(&response)
+                .unwrap_or_else(|failure| panic!("{} step {index} {label} image result: {failure}", cassette.name));
+            let Some(expected) = step.result.as_ref() else {
+                panic!("{} step {index} {label} image result: the step recorded no result", cassette.name);
+            };
+            assert_eq!(actual, *expected, "{} step {index} {label} image result", cassette.name);
+        }
+    }
+}
+
+fn assert_image_stream_outcome(
+    cassette: &Cassette,
+    index: usize,
+    label: &str,
+    step: &Step,
+    items: Vec<Result<ImageEvent, AiError>>,
+) {
+    match &step.error {
+        Some(recorded) => {
+            let error = match items.as_slice() {
+                [Err(error)] => error,
+                _ => panic!("{} step {index} {label} image error: expected only the recorded error", cassette.name),
+            };
+            assert_recorded_error(cassette, index, label, recorded, error);
+        }
+        None => {
+            let events = items
+                .into_iter()
+                .map(|item| match item {
+                    Ok(event) => event,
+                    Err(error) => {
+                        panic!("{} step {index} {label} image events: the stream failed with {error}", cassette.name)
+                    }
+                })
+                .map(|event| {
+                    serde_json::to_value(&event).unwrap_or_else(|failure| {
+                        panic!("{} step {index} {label} image events: {failure}", cassette.name)
+                    })
+                })
+                .collect::<Vec<Value>>();
+            let Some(expected) = step.result.as_ref().and_then(Value::as_array) else {
+                panic!("{} step {index} {label} image events: the step recorded no event list", cassette.name);
+            };
+            assert_eq!(events, *expected, "{} step {index} {label} image events", cassette.name);
+        }
+    }
+}
+
+fn assert_recorded_error(
+    cassette: &Cassette,
+    index: usize,
+    label: &str,
+    recorded: &crate::corpus::StepError,
+    error: &AiError,
+) {
+    let reason = serde_json::to_value(&error.reason)
+        .unwrap_or_else(|failure| panic!("{} step {index} {label} error.reason: {failure}", cassette.name));
+    assert_eq!(reason, recorded.reason, "{} step {index} {label} error.reason", cassette.name);
+    assert_eq!(error.is_retryable(), recorded.retryable, "{} step {index} {label} error.retryable", cassette.name);
+}
+
 fn assert_outcome(
     cassette: &Cassette,
     index: usize,
@@ -428,10 +581,10 @@ fn assert_prepared(cassette: &str, step: usize, label: &str, prepared: &Prepared
         .iter()
         .map(|(name, value)| (name.to_lowercase(), value.clone()))
         .collect::<BTreeMap<String, String>>();
-    assert_eq!(headers, prepared.headers, "{cassette} step {step} {label} prepared.headers");
     let sent = request.body.to_vec();
     let recorded =
         body_bytes(&prepared.body, prepared.body_encoding.as_deref(), cassette, step, label, "prepared.body");
+    assert_eq!(headers, prepared.headers, "{cassette} step {step} {label} prepared.headers");
     assert_eq!(sent, recorded, "{cassette} step {step} {label} prepared.body bytes");
     let sent_json: Value = serde_json::from_slice(&sent)
         .unwrap_or_else(|error| panic!("{cassette} step {step} {label} prepared.body: {error}"));
@@ -728,7 +881,7 @@ async fn replay_websocket_cassette(cassette: &Cassette) {
 #[tokio::test]
 async fn every_in_scope_cassette_replays() {
     let corpus = crate::corpus::Corpus::load();
-    assert_eq!(corpus.cassettes.len(), 264, "in-scope cassette count");
+    assert_eq!(corpus.cassettes.len(), 286, "in-scope cassette count");
     let groups = [
         "anthropic-messages",
         "bedrock-converse",
@@ -737,6 +890,7 @@ async fn every_in_scope_cassette_replays() {
         "embeddings",
         "gateways",
         "gemini",
+        "images",
         "native-vendors",
         "open-responses",
         "openai-chat",
@@ -756,6 +910,8 @@ async fn every_in_scope_cassette_replays() {
             replay_embedding_cassette(cassette).await;
         } else if cassette.group == "decisions" {
             replay_decision_cassette(cassette).await;
+        } else if cassette.group == "images" {
+            replay_image_cassette(cassette).await;
         } else if cassette.group == "openai-responses-websocket" {
             replay_websocket_cassette(cassette).await;
         } else {
@@ -763,7 +919,16 @@ async fn every_in_scope_cassette_replays() {
         }
         replayed += 1;
     }
-    assert_eq!(replayed, 264, "replayed cassette count");
+    assert_eq!(replayed, 286, "replayed cassette count");
+}
+
+#[tokio::test]
+async fn image_cassettes() {
+    let corpus = crate::corpus::Corpus::load();
+    let cassettes = corpus.cassettes.iter().filter(|cassette| cassette.group == "images").count();
+    assert_eq!(cassettes, 22, "image cassette count");
+    let steps = replay_image_group("images").await;
+    assert_eq!(steps, 22, "image step count");
 }
 
 #[tokio::test]

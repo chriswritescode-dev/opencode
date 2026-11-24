@@ -320,20 +320,20 @@ impl<Request: MediaRequest> Transport<Request> {
             .as_ref()
             .map(|headers| headers.iter().map(|(name, value)| (name.to_string(), value.to_string())).collect())
             .unwrap_or_default();
-        let (text, bytes, content_type) = match &body {
+        let (text, bytes, content_type, content_length) = match &body {
             Body::Json { value, .. } => {
                 let text = json::encode_body(&Value::Object(value.clone()));
                 let bytes = text.as_bytes().to_vec();
-                (text, bytes, "application/json".to_string())
+                (text, bytes, "application/json".to_string(), true)
             }
             Body::Multipart(form) => {
                 headers.retain(|(name, _)| !name.eq_ignore_ascii_case("content-type"));
                 let boundary = format!("----WebKitFormBoundary{}", context.ids.uuid().replace('-', ""));
                 let bytes = form.serialize(&boundary);
-                ("[multipart/form-data]".to_string(), bytes, format!("multipart/form-data; boundary={boundary}"))
+                ("[multipart/form-data]".to_string(), bytes, format!("multipart/form-data; boundary={boundary}"), false)
             }
             Body::Binary { bytes, content_type, .. } => {
-                (format!("[{content_type}]"), bytes.clone(), content_type.clone())
+                (format!("[{content_type}]"), bytes.clone(), content_type.clone(), true)
             }
         };
         let headers = self.auth.apply(
@@ -347,7 +347,8 @@ impl<Request: MediaRequest> Transport<Request> {
             context.env.as_ref(),
         )?;
         let headers = set_header(headers, "content-type", content_type);
-        let headers = set_header(headers, "content-length", bytes.len().to_string());
+        let headers =
+            if content_length { set_header(headers, "content-length", bytes.len().to_string()) } else { headers };
         let response = executor
             .with_timeout(merged.timeout.clone())
             .execute(PreparedHttp::new("POST", url.to_string(), headers, Bytes::from(bytes)), None)
@@ -356,7 +357,12 @@ impl<Request: MediaRequest> Transport<Request> {
         Ok(Submitted {
             response,
             url: url.to_string(),
-            context: DecodeContext { request: resolved, provider_metadata_key },
+            context: DecodeContext {
+                request: resolved,
+                provider_metadata_key,
+                mode: Mode::Generate,
+                now_ms: context.clock.now_ms(),
+            },
             exchange,
         })
     }
@@ -472,6 +478,7 @@ async fn read_text(response: HttpResponse, url: String) -> Result<TextResponse, 
     }
     Ok(TextResponse {
         body: String::from_utf8_lossy(&bytes).into_owned(),
+        bytes,
         http: HttpContext { url, status, headers: headers.into_iter().collect::<BTreeMap<_, _>>() },
     })
 }
@@ -585,7 +592,7 @@ pub struct QueuedRoute<Request, Response> {
     >,
     pub attach: Arc<
         dyn Fn(
-                &Request,
+                Option<&crate::schema::RequestOptions>,
                 Value,
                 &RequestExecutor,
                 &ExecutionContext,
@@ -678,14 +685,14 @@ where
         let protocol = protocol.clone();
         let transport = transport.clone();
         Arc::new(
-            move |model: &Request,
+            move |model: Option<&crate::schema::RequestOptions>,
                   raw: Value,
                   executor: &RequestExecutor,
                   context: &ExecutionContext|
                   -> BoxFuture<Result<GenerationRoute<Response>, AiError>> {
                 let protocol = protocol.clone();
                 let transport = transport.clone();
-                let exchange = transport.exchange(model.model_transport());
+                let exchange = transport.exchange(model);
                 let executor = executor.clone();
                 let context = context.clone();
                 Box::pin(async move {
@@ -1105,6 +1112,7 @@ where
             Ok(Submitted { response, url, context: decode_context, .. }) => {
                 let http =
                     HttpContext { url, status: response.status, headers: response.headers.iter().cloned().collect() };
+                let decode_context = DecodeContext { mode: run.mode, ..decode_context };
                 let frames = run.protocol.frames(response.body, &decode_context);
                 let state = run.protocol.initial();
                 run.active = Some(Active { frames, state: Some(state), http, request: decode_context.request });

@@ -3,7 +3,10 @@ use std::sync::Arc;
 use serde_json::{Map, Value, json};
 
 use crate::Env;
+use crate::media::route::MediaEndpoint;
+use crate::modalities::image::ImageModel;
 use crate::protocols::anthropic_messages::PATH as MESSAGES_PATH;
+use crate::protocols::meta_images;
 use crate::protocols::meta_messages::MetaMessages;
 use crate::protocols::meta_responses::MetaResponses;
 use crate::protocols::open_responses::PATH as RESPONSES_PATH;
@@ -72,6 +75,25 @@ pub fn messages_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Re
         options: messages_options(settings),
     };
     Ok(language_model_with_route(model_id, ID, route, None, None))
+}
+
+pub fn image_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result<RuntimeModel, AiError> {
+    let transport = crate::providers::modality_options(settings, &DECLARED).0;
+    let endpoint = MediaEndpoint::function(Arc::new(|request: &crate::modalities::image::ImageRequest| {
+        meta_images::path(!request.images.is_empty())
+    }))
+    .with_base_url(base_url(settings));
+    let route = ImageModel::inline(
+        model_id,
+        ID.to_string(),
+        meta_images::protocol(),
+        endpoint,
+        auth(settings),
+        None,
+        transport,
+        None,
+    );
+    Ok(RuntimeModel::Image(route))
 }
 
 fn base_url(settings: &Settings) -> &str {

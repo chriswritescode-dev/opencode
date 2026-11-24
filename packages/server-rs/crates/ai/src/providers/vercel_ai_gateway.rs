@@ -4,9 +4,12 @@ use serde_json::{Map, Number, Value, json};
 
 use crate::Env;
 use crate::media::route::MediaEndpoint;
+use crate::modalities::image::ImageModel;
 use crate::protocols::openai_decisions::{self, OpenAiDecisions};
+use crate::protocols::openai_images::{ImageInput, OpenAiImages, pixel_size};
 use crate::protocols::shared::invalid_request;
 use crate::protocols::utils::gateway_protocol::{GatewayProtocol, Prepare, PreparedBody};
+use crate::protocols::xai_images;
 use crate::protocols::{anthropic_messages, open_responses, openai_chat};
 use crate::providers::{RuntimeModel, Settings, language_model_with_route, modality_options, open_responses_options};
 use crate::route::auth::{Auth, ProviderAuthOptions, api_key};
@@ -104,6 +107,50 @@ pub fn chat_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result
         options: settings.request_options(&DECLARED),
     };
     Ok(language_model_with_route(model_id, ID, route, Some(json!({ "reasoningField": "reasoning" })), None))
+}
+
+pub fn image_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result<RuntimeModel, AiError> {
+    let (transport, provider_options) = modality_options(settings, &DECLARED);
+    let base_url = settings.string("baseURL").unwrap_or(BASE_URL).to_string();
+    let endpoint = MediaEndpoint::function(std::sync::Arc::new(|request: &crate::modalities::image::ImageRequest| {
+        if request.images.is_empty() {
+            crate::protocols::openai_images::PATH.to_string()
+        } else {
+            crate::protocols::openai_images::EDIT_PATH.to_string()
+        }
+    }))
+    .with_base_url(base_url);
+    Ok(RuntimeModel::Image(ImageModel::streamed(
+        model_id,
+        ID.to_string(),
+        std::sync::Arc::new(OpenAiImages::new(ID, std::sync::Arc::new(image_sizing), ImageInput::Edits)),
+        endpoint,
+        auth(settings),
+        None,
+        transport,
+        provider_options,
+    )))
+}
+
+fn image_sizing(request: &crate::modalities::image::ImageRequest) -> Option<Map<String, Value>> {
+    if !(request.model.id.starts_with("spacexai/") || request.model.id.starts_with("xai/")) {
+        return pixel_size(request);
+    }
+    if request.aspect.is_none() && request.resolution.is_none() {
+        return None;
+    }
+    let mut xai = Map::new();
+    if let Some(aspect) = &request.aspect {
+        xai.insert("aspect_ratio".to_string(), Value::String(aspect.clone()));
+    }
+    if let Some(resolution) = xai_images::resolution(request.resolution.as_deref()) {
+        xai.insert("resolution".to_string(), Value::String(resolution));
+    }
+    let mut provider_options = Map::new();
+    provider_options.insert("xai".to_string(), Value::Object(xai));
+    let mut sizing = Map::new();
+    sizing.insert("providerOptions".to_string(), Value::Object(provider_options));
+    Some(sizing)
 }
 
 pub fn decision_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result<RuntimeModel, AiError> {

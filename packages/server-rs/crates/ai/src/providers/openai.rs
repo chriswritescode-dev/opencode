@@ -4,9 +4,11 @@ use serde_json::{Map, Value, json};
 
 use crate::Env;
 use crate::media::route::MediaEndpoint;
+use crate::modalities::image::ImageModel;
 use crate::protocols::openai_chat;
 use crate::protocols::openai_decisions::{self, OpenAiDecisions};
 use crate::protocols::openai_embeddings::{self, OpenAiEmbeddings};
+use crate::protocols::openai_images::{self, ImageInput, OpenAiImages, pixel_size};
 use crate::protocols::openai_responses;
 use crate::providers::open_responses_options;
 use crate::providers::openai_options;
@@ -90,6 +92,60 @@ pub fn embedding_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> R
         max_values: None,
     });
     Ok(RuntimeModel::Embedding(route.model(model_id, provider_options)))
+}
+
+pub fn image_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result<RuntimeModel, AiError> {
+    let declared = ["apiKey", "baseURL", "organization", "project", "queryParams"];
+    let (transport, provider_options) = modality_options(settings, &declared);
+    let mut transport = transport.unwrap_or_default();
+    let mut headers = transport.headers.take().unwrap_or_default();
+    if let Some(organization) = settings.string("organization") {
+        headers.insert("OpenAI-Organization".to_string(), organization.to_string());
+    }
+    if let Some(project) = settings.string("project") {
+        headers.insert("OpenAI-Project".to_string(), project.to_string());
+    }
+    if let Some(existing) = settings.headers() {
+        for (name, value) in existing.iter() {
+            headers.insert(name.to_string(), value.to_string());
+        }
+    }
+    transport.headers = (!headers.is_empty()).then_some(headers);
+    if let Some(query) = settings.query_params() {
+        let mut http = transport.http.clone().unwrap_or_default();
+        let mut merged = http.query.clone().unwrap_or_default();
+        for (key, value) in query.iter() {
+            merged.insert(key.to_string(), value.to_string());
+        }
+        http.query = Some(merged);
+        transport.http = Some(http);
+    }
+    let transport = (transport != RequestOptions::default()).then_some(transport);
+    let base_url = settings.string("baseURL").unwrap_or(openai_images::DEFAULT_BASE_URL).to_string();
+    let image_input = if settings.string("baseURL").is_some_and(|base| base.starts_with("https://chatgpt.com/")) {
+        ImageInput::JsonEdits
+    } else {
+        ImageInput::Edits
+    };
+    let endpoint =
+        MediaEndpoint::function(std::sync::Arc::new(move |request: &crate::modalities::image::ImageRequest| {
+            if image_input != ImageInput::References && !request.images.is_empty() {
+                openai_images::EDIT_PATH.to_string()
+            } else {
+                openai_images::PATH.to_string()
+            }
+        }))
+        .with_base_url(base_url);
+    Ok(RuntimeModel::Image(ImageModel::streamed(
+        model_id,
+        ID.to_string(),
+        std::sync::Arc::new(OpenAiImages::new(ID, std::sync::Arc::new(pixel_size), image_input)),
+        endpoint,
+        auth(settings),
+        None,
+        transport,
+        provider_options,
+    )))
 }
 
 pub fn decision_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result<RuntimeModel, AiError> {
