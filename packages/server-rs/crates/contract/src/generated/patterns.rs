@@ -59,26 +59,29 @@ pub(super) static PATTERN_15: std::sync::LazyLock<regex_lite::Regex> = std::sync
 });
 
 pub(super) static PATTERN_16: std::sync::LazyLock<regex_lite::Regex> =
-    std::sync::LazyLock::new(|| regex_lite::Regex::new("^[a-zA-Z0-9_-]+$").expect("invalid generated pattern"));
+    std::sync::LazyLock::new(|| regex_lite::Regex::new("^media:[0-9a-f]{64}$").expect("invalid generated pattern"));
 
 pub(super) static PATTERN_17: std::sync::LazyLock<regex_lite::Regex> =
+    std::sync::LazyLock::new(|| regex_lite::Regex::new("^[a-zA-Z0-9_-]+$").expect("invalid generated pattern"));
+
+pub(super) static PATTERN_18: std::sync::LazyLock<regex_lite::Regex> =
     std::sync::LazyLock::new(|| regex_lite::Regex::new("^[0-9a-f]{64}$").expect("invalid generated pattern"));
 
-pub(super) static PATTERN_18: std::sync::LazyLock<regex_lite::Regex> = std::sync::LazyLock::new(|| {
+pub(super) static PATTERN_19: std::sync::LazyLock<regex_lite::Regex> = std::sync::LazyLock::new(|| {
     regex_lite::Regex::new(
         "^[+-]?(?:\\d+(?:\\.\\d+)?|\\.\\d+)(?:[Ee][+-]?\\d+)?:[+-]?(?:\\d+(?:\\.\\d+)?|\\.\\d+)(?:[Ee][+-]?\\d+)?$",
     )
     .expect("invalid generated pattern")
 });
 
-pub(super) static PATTERN_19: std::sync::LazyLock<regex_lite::Regex> = std::sync::LazyLock::new(|| {
+pub(super) static PATTERN_20: std::sync::LazyLock<regex_lite::Regex> = std::sync::LazyLock::new(|| {
     regex_lite::Regex::new("^\\d+(?:\\.\\d+)?:\\d+(?:\\.\\d+)?$").expect("invalid generated pattern")
 });
 
-pub(super) static PATTERN_20: std::sync::LazyLock<regex_lite::Regex> =
+pub(super) static PATTERN_21: std::sync::LazyLock<regex_lite::Regex> =
     std::sync::LazyLock::new(|| regex_lite::Regex::new("(?i)^image\\/").expect("invalid generated pattern"));
 
-pub static ALL_PATTERNS: [&std::sync::LazyLock<regex_lite::Regex>; 21] = [
+pub static ALL_PATTERNS: [&std::sync::LazyLock<regex_lite::Regex>; 22] = [
     &PATTERN_0,
     &PATTERN_1,
     &PATTERN_2,
@@ -100,6 +103,7 @@ pub static ALL_PATTERNS: [&std::sync::LazyLock<regex_lite::Regex>; 21] = [
     &PATTERN_18,
     &PATTERN_19,
     &PATTERN_20,
+    &PATTERN_21,
 ];
 
 #[doc(hidden)]

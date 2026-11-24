@@ -28,6 +28,7 @@ enum Election {
 
 pub(crate) async fn run(args: Serve, mut env: ServerEnv, mut watch: Watch) -> std::io::Result<std::process::ExitCode> {
     let paths = Paths::from_vars(|name| env.get(name).map(OsStr::to_os_string))?;
+    std::fs::create_dir_all(&paths.data)?;
     let files = Files::new(&paths, crate::CHANNEL);
     files.migrate(crate::CHANNEL, crate::VERSION);
     let file = files.file;
@@ -68,7 +69,19 @@ pub(crate) async fn run(args: Serve, mut env: ServerEnv, mut watch: Watch) -> st
     std::fs::create_dir_all(&paths.tmp)?;
     let tmp = std::fs::canonicalize(&paths.tmp)?;
     let address = listener.local_addr()?;
-    let running = serve::start(listener, tmp, password.clone(), serve::machine_hostname(&env), cors).await?;
+    let opened = serve::open_state(&env, &paths.data);
+    let failed = opened.is_err();
+    let state = match opened {
+        Ok((state, report)) => {
+            serve::report_warnings(&report);
+            Some(state)
+        }
+        Err(error) => {
+            let _ = writeln!(std::io::stderr(), "error: {error}");
+            None
+        }
+    };
+    let running = serve::start(listener, tmp, password.clone(), serve::machine_hostname(&env), cors, state).await?;
     if generated {
         service_config.password(Some(&password))?;
     }
@@ -83,7 +96,11 @@ pub(crate) async fn run(args: Serve, mut env: ServerEnv, mut watch: Watch) -> st
     if config.remote.is_some() {
         let _ = writeln!(std::io::stderr(), "remote access is not supported by opencode-server yet");
     }
-    running.ready();
+    if failed {
+        running.fail();
+    } else {
+        running.ready();
+    }
     if let Err(error) = serve::write_line(&format!("server listening on {}", registration.url)) {
         running.shutdown().await;
         registration::remove_if_owned(&file, &registration);

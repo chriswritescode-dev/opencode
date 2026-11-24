@@ -24,6 +24,7 @@ const corePaths = [
   "packages/plugin-browser",
   "packages/protocol",
   "packages/schema",
+  "packages/server",
   "packages/util",
 ]
 async function coreMarker() {
