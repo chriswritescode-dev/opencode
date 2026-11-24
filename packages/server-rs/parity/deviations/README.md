@@ -50,6 +50,9 @@ explained nothing print `warning: deviation <id> matched nothing`, and files wit
 - `OR-39-remote-tunnel.md`: a `remote` service route prints a warning instead of starting a tunnel
 - `OR-39-logging.md`: diagnostic lines go to stderr and no log file is written
 - `OR-39-usage-errors.md`: malformed arguments print one fixed usage line and exit with code 1
+- `OR-40-legacy-credential-json.md`: a legacy auth.json the TypeScript parser accepts is rejected whole
+- `OR-40-migration-locking.md`: migrations take the write lock up front and import the Drizzle journal atomically
+- `OR-40-migration-logging.md`: migrations log nothing and return a report instead
 - `OR-44-aws-credentials.md`: Bedrock credentials come only from route configuration, not the AWS default chain
 - `OR-44-bedrock-output.md`: Bedrock frames, cache warnings and SigV4 output carry different wire details
 - `OR-44-client-tls.md`: per-request client certificates are not presented
