@@ -16,8 +16,18 @@ use crate::router;
 use crate::status::{State, Status};
 use crate::ticket::TicketStore;
 
-pub const IMPLEMENTED: &[&str] =
-    &["server.info", "server.pair", "server.connect", "event.subscribe", "experimental.session.log"];
+pub const IMPLEMENTED: &[&str] = &[
+    "server.info",
+    "server.pair",
+    "server.connect",
+    "event.subscribe",
+    "experimental.session.log",
+    "location.get",
+    "location.reload",
+    "debug.heapDump",
+    "debug.location.list",
+    "debug.location.evict",
+];
 
 pub struct Options {
     pub password: String,
@@ -109,6 +119,23 @@ impl App {
                 Some(state) => crate::handlers::session_log::log(state, &raw),
                 None => not_implemented(found.route.identifier),
             },
+            "location.get" => crate::handlers::location::get(self, &raw).await,
+            "location.reload" => match self.services() {
+                Some(services) => crate::handlers::location::reload(services).await,
+                None => crate::services::services_unavailable(),
+            },
+            "debug.heapDump" => match self.services() {
+                Some(services) => crate::handlers::debug::heap_dump(services, &raw).await,
+                None => crate::services::services_unavailable(),
+            },
+            "debug.location.list" => match self.services() {
+                Some(services) => crate::handlers::debug::location_list(services).await,
+                None => crate::services::services_unavailable(),
+            },
+            "debug.location.evict" => match self.services() {
+                Some(services) => crate::handlers::debug::location_evict(services, &raw).await,
+                None => crate::services::services_unavailable(),
+            },
             _ => not_implemented(found.route.identifier),
         }
     }
@@ -132,6 +159,10 @@ impl App {
         if let Some(services) = &self.options.services {
             services.locations.shutdown_all().await;
         }
+    }
+
+    pub fn services(&self) -> Option<&Arc<crate::services::GlobalServices>> {
+        self.options.services.as_ref()
     }
 
     fn authorized<B>(&self, request: &Request<B>) -> bool {

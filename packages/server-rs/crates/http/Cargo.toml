@@ -32,7 +32,7 @@ hyper-util.workspace = true
 log.workspace = true
 rand.workspace = true
 ring.workspace = true
-rustix.workspace = true
+rustix = { workspace = true, features = ["param"] }
 serde_json.workspace = true
 subtle.workspace = true
 tokio.workspace = true

@@ -113,6 +113,11 @@ fn sample_request(operation: &str) -> Option<(&'static str, &'static str)> {
         "server.connect" => Some(("GET", "/auth/connect/x")),
         "event.subscribe" => Some(("GET", "/api/event")),
         "experimental.session.log" => Some(("GET", "/api/experimental/session/ses_test/log")),
+        "location.get" => Some(("GET", "/api/location")),
+        "location.reload" => Some(("POST", "/api/location/reload")),
+        "debug.heapDump" => Some(("POST", "/api/debug/heap-dump")),
+        "debug.location.list" => Some(("GET", "/api/debug/location")),
+        "debug.location.evict" => Some(("DELETE", "/api/debug/location")),
         _ => None,
     }
 }
@@ -144,5 +149,10 @@ fn implemented_lists_the_ported_operations() {
     assert!(opencode_http::app::IMPLEMENTED.contains(&"server.connect"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"event.subscribe"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"experimental.session.log"));
-    assert_eq!(opencode_http::app::IMPLEMENTED.len(), 5);
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"location.get"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"location.reload"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"debug.heapDump"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"debug.location.list"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"debug.location.evict"));
+    assert_eq!(opencode_http::app::IMPLEMENTED.len(), 10);
 }

@@ -64,6 +64,7 @@ A deviation that excepts a recorded cassette from the replay gate also has a `Ca
 - `OR-42-macos-preferences-user.md`: managed preferences take the user name from `$USER` instead of the passwd entry
 - `OR-42-observer-initial-apply.md`: the sources observer applies its initial load instead of returning it
 - `OR-42-watcher-ignore.md`: config watching ignores directories per event and uses one native watcher per target
+- `OR-43-heap-dump.md`: a heap dump writes a JSON memory report instead of a V8 heap snapshot
 - `OR-44-aws-credentials.md`: Bedrock credentials come only from route configuration, not the AWS default chain
 - `OR-44-bedrock-output.md`: Bedrock frames, cache warnings and SigV4 output carry different wire details
 - `OR-44-client-tls.md`: per-request client certificates are not presented

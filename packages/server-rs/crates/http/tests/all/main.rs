@@ -2,8 +2,10 @@ mod auth;
 mod compression;
 mod cors;
 mod coverage;
+mod debug;
 mod event;
 mod info;
+mod location;
 mod pairing;
 mod request_site;
 mod router;
@@ -12,8 +14,9 @@ mod session_log;
 mod status;
 mod ticket;
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use bytes::Bytes;
 use http::Request;
@@ -25,17 +28,38 @@ use opencode_storage::{Database, DatabaseLocation};
 const UNAUTHORIZED_BODY: &str = r#"{"_tag":"UnauthorizedError","message":"Authentication required"}"#;
 
 fn services() -> Arc<GlobalServices> {
+    services_with(Path::new("/tmp/opencode-http-test"), std::env::temp_dir().join("opencode-http-test-home"))
+}
+
+fn services_at(start_directory: &Path) -> Arc<GlobalServices> {
+    services_with(start_directory, temp_directory("services-home"))
+}
+
+fn services_with(start_directory: &Path, home: PathBuf) -> Arc<GlobalServices> {
     let (database, _) = Database::open(DatabaseLocation::Memory, &std::env::temp_dir()).expect("open the database");
-    let paths = GlobalPaths::from_vars(|name| {
-        (name == "HOME").then(|| std::env::temp_dir().join("opencode-http-test-home").into_os_string())
-    })
-    .expect("global paths");
+    let paths =
+        GlobalPaths::from_vars(|name| (name == "HOME").then(|| home.clone().into_os_string())).expect("global paths");
     Arc::new(GlobalServices::new(
         Arc::new(database),
         paths,
-        "/tmp/opencode-http-test".to_owned(),
+        start_directory.to_string_lossy().into_owned(),
         Arc::new(|_: &str| None),
     ))
+}
+
+fn ready_app_with_services(services: Arc<GlobalServices>) -> Arc<App> {
+    let app = App::new(Options {
+        password: "pw".to_owned(),
+        version: "test-version".to_owned(),
+        cors: Vec::new(),
+        tmp: PathBuf::from("/tmp/opencode-http-test"),
+        hostname: None,
+        urls: Arc::new(|| vec!["http://127.0.0.1:4096".to_owned()]),
+        state: None,
+        services: Some(services),
+    });
+    app.status().ready();
+    app
 }
 
 fn app() -> Arc<App> {
@@ -100,6 +124,25 @@ fn basic(user: &str, password: &str) -> String {
 fn authorized(method: &str, uri: &str) -> Request<Bytes> {
     let credential = basic("opencode", "pw");
     request_with(method, uri, &[("authorization", credential.as_str())])
+}
+
+fn authorized_with(method: &str, uri: &str, headers: &[(&str, &str)]) -> Request<Bytes> {
+    let credential = basic("opencode", "pw");
+    let mut all = Vec::with_capacity(headers.len() + 1);
+    all.push(("authorization", credential.as_str()));
+    all.extend_from_slice(headers);
+    request_with(method, uri, &all)
+}
+
+fn temp_directory(name: &str) -> PathBuf {
+    static COUNTER: AtomicU64 = AtomicU64::new(0);
+    let path = std::env::temp_dir().join(format!(
+        "opencode-http-{name}-{}-{}",
+        std::process::id(),
+        COUNTER.fetch_add(1, Ordering::Relaxed)
+    ));
+    std::fs::create_dir_all(&path).expect("create the temp directory");
+    path
 }
 
 async fn text(response: opencode_http::response::Response) -> String {
