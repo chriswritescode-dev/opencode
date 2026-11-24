@@ -82,9 +82,18 @@ export const GROUPS: Record<string, { protocols: string[] }> = {
   speech: {
     protocols: ["openai-speech", "cartesia-speech", "deepgram-speech", "elevenlabs-speech", "google-speech"],
   },
+  transcription: {
+    protocols: [
+      "openai-transcription",
+      "assemblyai-transcription",
+      "deepgram-transcription",
+      "elevenlabs-transcription",
+      "google-transcription",
+    ],
+  },
 }
 
-export const EXPECTED_CASSETTES = 301
+export const EXPECTED_CASSETTES = 312
 const EXPECTED_ADC_CASES = 11
 
 const exporter = `${tree}/exporter`

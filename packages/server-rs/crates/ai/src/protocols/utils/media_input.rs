@@ -2,8 +2,9 @@ use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
 use serde_json::{Map, Number, Value};
 
+use crate::media::protocol::{Query, QueryValue};
 use crate::protocols::utils::media_type::detect_media_type;
-use crate::schema::{MediaAsset, MediaInfo, MediaSource, ProviderMetadata, StringMap};
+use crate::schema::{AiError, MediaAsset, MediaInfo, MediaSource, ProviderMetadata, StringMap};
 
 pub fn ref_id(asset: &MediaAsset, provider: &str) -> Option<String> {
     let MediaSource::Ref { provider: source_provider, id, .. } = &asset.source else {
@@ -65,6 +66,34 @@ pub fn inline_bytes(route: &str, asset: &MediaAsset) -> Result<Vec<u8>, String> 
         }
     };
     BASE64_STANDARD.decode(data).map_err(|_| format!("{route} media contains invalid base64 data"))
+}
+
+pub fn query(route: &str, values: &Map<String, Value>) -> Result<Query, AiError> {
+    let invalid = |key: &str| {
+        crate::protocols::shared::invalid_request(format!("{route} cannot send \"{key}\" as a query parameter"))
+    };
+    let mut query = Vec::with_capacity(values.len());
+    for (key, value) in values {
+        let item = match value {
+            Value::String(value) => QueryValue::One(value.clone()),
+            Value::Number(value) => QueryValue::One(value.to_string()),
+            Value::Bool(value) => QueryValue::One(value.to_string()),
+            Value::Array(items) => QueryValue::Many(
+                items
+                    .iter()
+                    .map(|item| match item {
+                        Value::String(value) => Ok(value.clone()),
+                        Value::Number(value) => Ok(value.to_string()),
+                        Value::Bool(value) => Ok(value.to_string()),
+                        _ => Err(invalid(key)),
+                    })
+                    .collect::<Result<Vec<String>, AiError>>()?,
+            ),
+            _ => return Err(invalid(key)),
+        };
+        query.push((key.clone(), item));
+    }
+    Ok(query)
 }
 
 pub fn decoded_asset(

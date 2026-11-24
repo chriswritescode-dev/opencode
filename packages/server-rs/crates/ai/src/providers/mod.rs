@@ -9,6 +9,7 @@ pub mod amazon_bedrock;
 pub mod amazon_bedrock_mantle;
 pub mod anthropic;
 pub mod anthropic_compatible;
+pub mod assemblyai;
 pub mod azure;
 pub mod baseten;
 pub mod byteplus;
@@ -64,6 +65,7 @@ pub enum RuntimeModel {
     Image(crate::modalities::image::ImageModel),
     Video(crate::modalities::video::VideoModel),
     Speech(crate::modalities::speech::SpeechModel),
+    Transcription(crate::modalities::transcription::TranscriptionModel),
 }
 
 pub(crate) fn modality_options(
@@ -133,6 +135,7 @@ pub struct ProviderPackages {
     entries: BTreeMap<&'static str, Entry>,
     decisions: BTreeMap<&'static str, Entry>,
     speech: BTreeMap<&'static str, Entry>,
+    transcription: BTreeMap<&'static str, Entry>,
 }
 
 impl ProviderPackages {
@@ -266,7 +269,14 @@ impl ProviderPackages {
             ("@opencode/ai/providers/google", google::speech_model as Entry),
             ("@opencode/ai/providers/openai", openai::speech_model as Entry),
         ]);
-        Self { entries, decisions, speech }
+        let transcription = BTreeMap::from([
+            ("@opencode/ai/providers/assemblyai", assemblyai::transcription_model as Entry),
+            ("@opencode/ai/providers/deepgram", deepgram::transcription_model as Entry),
+            ("@opencode/ai/providers/elevenlabs", elevenlabs::transcription_model as Entry),
+            ("@opencode/ai/providers/google", google::transcription_model as Entry),
+            ("@opencode/ai/providers/openai", openai::transcription_model as Entry),
+        ]);
+        Self { entries, decisions, speech, transcription }
     }
 
     pub fn model(
@@ -299,6 +309,17 @@ impl ProviderPackages {
         env: &dyn Env,
     ) -> Result<RuntimeModel, AiError> {
         let entry = self.speech.get(specifier).ok_or_else(|| unknown_package(specifier))?;
+        entry(model_id, settings, env)
+    }
+
+    pub fn transcription(
+        &self,
+        specifier: &str,
+        model_id: &str,
+        settings: &Settings,
+        env: &dyn Env,
+    ) -> Result<RuntimeModel, AiError> {
+        let entry = self.transcription.get(specifier).ok_or_else(|| unknown_package(specifier))?;
         entry(model_id, settings, env)
     }
 }

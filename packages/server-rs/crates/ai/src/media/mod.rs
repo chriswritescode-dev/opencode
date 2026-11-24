@@ -11,7 +11,7 @@ pub use protocol::{
     Body, DecodeContext, Failure, Identity, Query, QueryValue, State, TextResponse, failure, state, status,
 };
 pub use route::{
-    CallResponse, Cancel, Exchange, InlineInput, InlineProtocol, InlineRoute, MediaEndpoint, MediaRequest, Mode,
-    PollContext, QueuedInput, QueuedProtocol, QueuedRoute, ResponseContext, RouteKind, Started, StreamRoute,
-    StreamedInput, StreamedProtocol, Submitted, inline, queued, read_with_retry, streamed,
+    CallResponse, Cancel, Exchange, InlineInput, InlineProtocol, InlineRoute, MediaEndpoint, MediaPrepare,
+    MediaRequest, MediaSend, Mode, PollContext, QueuedInput, QueuedProtocol, QueuedRoute, ResponseContext, RouteKind,
+    Started, StreamRoute, StreamedInput, StreamedProtocol, Submitted, inline, queued, read_with_retry, streamed,
 };

@@ -2,6 +2,7 @@ pub mod decision;
 pub mod embedding;
 pub mod image;
 pub mod speech;
+pub mod transcription;
 pub mod video;
 
 pub use decision::{
@@ -20,4 +21,8 @@ pub use image::{
 pub use speech::{
     SpeechClient, SpeechEvent, SpeechModel, SpeechRequest, SpeechRequestInput, SpeechResponse, SpeechTimestamp,
     SpeechVoice,
+};
+pub use transcription::{
+    TranscriptionClient, TranscriptionEvent, TranscriptionModel, TranscriptionRequest, TranscriptionRequestInput,
+    TranscriptionResponse, TranscriptionSegment, TranscriptionWord,
 };

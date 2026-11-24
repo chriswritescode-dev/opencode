@@ -59,6 +59,46 @@ pub fn detect_media_type(bytes: &[u8]) -> Option<&'static str> {
     None
 }
 
+pub fn extension(media_type: &str) -> Option<&'static str> {
+    let media_type = media_type.split(';').next().unwrap_or_default().trim().to_lowercase();
+    let alias = match media_type.as_str() {
+        "audio/mp3" => Some("mp3"),
+        "audio/m4a" | "audio/x-m4a" => Some("m4a"),
+        "audio/webm" => Some("webm"),
+        "audio/wave" | "audio/x-wav" => Some("wav"),
+        "audio/x-flac" => Some("flac"),
+        _ => None,
+    };
+    if alias.is_some() {
+        return alias;
+    }
+    EXTENSIONS.iter().find(|(_, known)| *known == media_type).map(|(extension, _)| *extension)
+}
+
+const EXTENSIONS: &[(&str, &str)] = &[
+    ("png", "image/png"),
+    ("jpg", "image/jpeg"),
+    ("jpeg", "image/jpeg"),
+    ("gif", "image/gif"),
+    ("webp", "image/webp"),
+    ("avif", "image/avif"),
+    ("heic", "image/heic"),
+    ("heif", "image/heif"),
+    ("pdf", "application/pdf"),
+    ("mp4", "video/mp4"),
+    ("mov", "video/quicktime"),
+    ("webm", "video/webm"),
+    ("mp3", "audio/mpeg"),
+    ("m4a", "audio/mp4"),
+    ("wav", "audio/wav"),
+    ("ogg", "audio/ogg"),
+    ("flac", "audio/flac"),
+    ("aac", "audio/aac"),
+    ("txt", "text/plain"),
+    ("md", "text/markdown"),
+    ("csv", "text/csv"),
+];
+
 fn tag(bytes: &[u8], start: usize, end: usize) -> &[u8] {
     bytes.get(start..end).unwrap_or_default()
 }

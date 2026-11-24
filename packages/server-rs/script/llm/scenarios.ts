@@ -1,7 +1,14 @@
 import "./capture.js"
 import { Effect, Schema, Stream } from "effect"
 import { HttpClientRequest } from "effect/http"
-import { capture, createLoader, multipartFixtures, type Scenario, type ScenarioContext } from "./capture.js"
+import {
+  capture,
+  createLoader,
+  multipartFixtures,
+  type CapturedRequest,
+  type Scenario,
+  type ScenarioContext,
+} from "./capture.js"
 
 const tree = process.env.OPENCODE_UPSTREAM_TREE
 if (!tree) throw new Error("scenarios: OPENCODE_UPSTREAM_TREE is not set")
@@ -17,6 +24,7 @@ const {
   AnthropicCompatible,
   AmazonBedrock,
   AmazonBedrockMantle,
+  AssemblyAI,
   Azure,
   Baseten,
   Cartesia,
@@ -3278,6 +3286,316 @@ const speechScenarios = [
   }),
 ]
 
+const audioFixture = (name: string) =>
+  Effect.promise(() => Bun.file(`${tree}/packages/ai/test/fixtures/audio/${name}`).bytes()).pipe(
+    Effect.map((bytes) => Media.bytes(bytes, "audio/mpeg")),
+  )
+const helloAudio = audioFixture("hello.mp3")
+const dialogAudio = audioFixture("dialog.mp3")
+
+const redactAudio = (body: string) => {
+  const boundary = /^--(\S+)\r\n/.exec(body)?.[1]
+  if (boundary === undefined) return body.includes("\uFFFD") ? "[audio]" : body
+  return body
+    .replaceAll(boundary, "BOUNDARY")
+    .replace(/(filename="[^"]*"\r\nContent-Type: [^\r]*\r\n\r\n)[\s\S]*?(\r\n--BOUNDARY)/, "$1[audio]$2")
+}
+
+const audioContentType = (request: CapturedRequest) => request.headers["content-type"]?.replace(/boundary=.*/, "")
+
+const audioRecording = {
+  redact: { body: redactAudio },
+  match: (incoming: CapturedRequest, recorded: CapturedRequest) =>
+    incoming.method === recorded.method &&
+    incoming.url === recorded.url &&
+    audioContentType(incoming) === audioContentType(recorded) &&
+    incoming.body === recorded.body,
+}
+
+const transcriptionVariant = (scenario: Scenario) => ({ group: "transcription", scenario })
+const assemblyAISettings = { apiKey: "fixture", baseURL: "https://api.eu.assemblyai.com" }
+const transcriptionScenarios = [
+  transcriptionVariant({
+    cassette: "openai-transcription/transcribes-with-a-language-hint",
+    protocol: "openai-transcription",
+    operation: "transcription.generate",
+    provider: {
+      package: "@opencode/ai/providers/openai",
+      modelID: "gpt-transcribe",
+      settings: fixtureSettings,
+      kind: "transcription",
+    },
+    redact: audioRecording.redact,
+    match: audioRecording.match,
+    run: (context) =>
+      Effect.gen(function* () {
+        const model = OpenAI.configure({ apiKey: "fixture" }).transcription("gpt-transcribe")
+        const request = ai.experimental.transcription.request({
+          model,
+          audio: yield* helloAudio,
+          language: "en",
+        })
+        return yield* context.operation(
+          "transcription.generate",
+          request,
+          ai.experimental.transcription.generate(request),
+        )
+      }),
+  }),
+  transcriptionVariant({
+    cassette: "openai-transcription/streams-text-deltas",
+    protocol: "openai-transcription",
+    operation: "transcription.stream",
+    provider: {
+      package: "@opencode/ai/providers/openai",
+      modelID: "gpt-4o-mini-transcribe",
+      settings: fixtureSettings,
+      kind: "transcription",
+    },
+    redact: audioRecording.redact,
+    match: audioRecording.match,
+    run: (context) =>
+      Effect.gen(function* () {
+        const model = OpenAI.configure({ apiKey: "fixture" }).transcription("gpt-4o-mini-transcribe")
+        const request = ai.experimental.transcription.request({ model, audio: yield* helloAudio })
+        return yield* context.operation(
+          "transcription.stream",
+          request,
+          Stream.runCollect(ai.experimental.transcription.stream(request)),
+        )
+      }),
+  }),
+  transcriptionVariant({
+    cassette: "openai-transcription/diarizes-speakers-into-segments",
+    protocol: "openai-transcription",
+    operation: "transcription.generate",
+    provider: {
+      package: "@opencode/ai/providers/openai",
+      modelID: "gpt-4o-transcribe-diarize",
+      settings: fixtureSettings,
+      kind: "transcription",
+    },
+    redact: audioRecording.redact,
+    match: audioRecording.match,
+    run: (context) =>
+      Effect.gen(function* () {
+        const model = OpenAI.configure({ apiKey: "fixture" }).transcription("gpt-4o-transcribe-diarize")
+        const request = ai.experimental.transcription.request({ model, audio: yield* helloAudio, diarize: true })
+        return yield* context.operation(
+          "transcription.generate",
+          request,
+          ai.experimental.transcription.generate(request),
+        )
+      }),
+  }),
+  transcriptionVariant({
+    cassette: "openai-transcription/returns-whisper-word-timestamps",
+    protocol: "openai-transcription",
+    operation: "transcription.generate",
+    provider: {
+      package: "@opencode/ai/providers/openai",
+      modelID: "whisper-1",
+      settings: fixtureSettings,
+      kind: "transcription",
+    },
+    redact: audioRecording.redact,
+    match: audioRecording.match,
+    run: (context) =>
+      Effect.gen(function* () {
+        const model = OpenAI.configure({ apiKey: "fixture" }).transcription("whisper-1")
+        const request = ai.experimental.transcription.request({
+          model,
+          audio: yield* helloAudio,
+          timestamps: "word",
+        })
+        return yield* context.operation(
+          "transcription.generate",
+          request,
+          ai.experimental.transcription.generate(request),
+        )
+      }),
+  }),
+  transcriptionVariant({
+    cassette: "assemblyai-transcription/uploads-submits-and-polls-a-transcript",
+    protocol: "assemblyai-transcription",
+    operation: "transcription.generate",
+    provider: {
+      package: "@opencode/ai/providers/assemblyai",
+      modelID: "universal-3-5-pro",
+      settings: assemblyAISettings,
+      kind: "transcription",
+    },
+    redact: audioRecording.redact,
+    match: audioRecording.match,
+    run: (context) =>
+      Effect.gen(function* () {
+        const model = AssemblyAI.configure(assemblyAISettings).transcription("universal-3-5-pro")
+        const request = ai.experimental.transcription.request({ model, audio: yield* helloAudio, diarize: true })
+        return yield* context.operation(
+          "transcription.generate",
+          request,
+          ai.experimental.transcription.generate(request, {
+            poll: { interval: "10 millis", timeout: "15 minutes" },
+          }),
+        )
+      }),
+  }),
+  transcriptionVariant({
+    cassette: "deepgram-transcription/transcribes-raw-audio-with-speakers-and-word-timestamps",
+    protocol: "deepgram-transcription",
+    operation: "transcription.generate",
+    provider: {
+      package: "@opencode/ai/providers/deepgram",
+      modelID: "nova-3",
+      settings: fixtureSettings,
+      kind: "transcription",
+    },
+    redact: audioRecording.redact,
+    match: audioRecording.match,
+    run: (context) =>
+      Effect.gen(function* () {
+        const model = Deepgram.configure({ apiKey: "fixture" }).transcription("nova-3")
+        const request = ai.experimental.transcription.request({
+          model,
+          audio: yield* helloAudio,
+          diarize: true,
+          timestamps: "word",
+        })
+        yield* context.operation("transcription.generate", request, ai.experimental.transcription.generate(request))
+        yield* context.operation(
+          "transcription.stream",
+          request,
+          Stream.runCollect(ai.experimental.transcription.stream(request)),
+        )
+      }),
+  }),
+  transcriptionVariant({
+    cassette: "deepgram-transcription/splits-utterances-at-speaker-changes",
+    protocol: "deepgram-transcription",
+    operation: "transcription.generate",
+    provider: {
+      package: "@opencode/ai/providers/deepgram",
+      modelID: "nova-3",
+      settings: fixtureSettings,
+      kind: "transcription",
+    },
+    redact: audioRecording.redact,
+    match: audioRecording.match,
+    run: (context) =>
+      Effect.gen(function* () {
+        const model = Deepgram.configure({ apiKey: "fixture" }).transcription("nova-3")
+        const request = ai.experimental.transcription.request({ model, audio: yield* dialogAudio, diarize: true })
+        return yield* context.operation(
+          "transcription.generate",
+          request,
+          ai.experimental.transcription.generate(request),
+        )
+      }),
+  }),
+  transcriptionVariant({
+    cassette: "elevenlabs-transcription/transcribes-audio-with-word-timestamps",
+    protocol: "elevenlabs-transcription",
+    operation: "transcription.generate",
+    provider: {
+      package: "@opencode/ai/providers/elevenlabs",
+      modelID: "scribe_v2",
+      settings: fixtureSettings,
+      kind: "transcription",
+    },
+    redact: audioRecording.redact,
+    match: audioRecording.match,
+    run: (context) =>
+      Effect.gen(function* () {
+        const model = ElevenLabs.configure({ apiKey: "fixture" }).transcription("scribe_v2")
+        const request = ai.experimental.transcription.request({
+          model,
+          audio: yield* helloAudio,
+          timestamps: "word",
+        })
+        yield* context.operation("transcription.generate", request, ai.experimental.transcription.generate(request))
+        yield* context.operation(
+          "transcription.stream",
+          request,
+          Stream.runCollect(ai.experimental.transcription.stream(request)),
+        )
+      }),
+  }),
+  transcriptionVariant({
+    cassette: "elevenlabs-transcription/groups-diarized-words-into-speaker-turns",
+    protocol: "elevenlabs-transcription",
+    operation: "transcription.generate",
+    provider: {
+      package: "@opencode/ai/providers/elevenlabs",
+      modelID: "scribe_v2",
+      settings: fixtureSettings,
+      kind: "transcription",
+    },
+    redact: audioRecording.redact,
+    match: audioRecording.match,
+    run: (context) =>
+      Effect.gen(function* () {
+        const model = ElevenLabs.configure({ apiKey: "fixture" }).transcription("scribe_v2")
+        const request = ai.experimental.transcription.request({ model, audio: yield* dialogAudio, diarize: true })
+        return yield* context.operation(
+          "transcription.generate",
+          request,
+          ai.experimental.transcription.generate(request),
+        )
+      }),
+  }),
+  transcriptionVariant({
+    cassette: "google-transcription/transcribes-with-speakers-and-word-timestamps",
+    protocol: "google-transcription",
+    operation: "transcription.generate",
+    provider: {
+      package: "@opencode/ai/providers/google",
+      modelID: "gemini-3.5-transcribe",
+      settings: fixtureSettings,
+      kind: "transcription",
+    },
+    redact: audioRecording.redact,
+    match: audioRecording.match,
+    run: (context) =>
+      Effect.gen(function* () {
+        const model = Google.configure({ apiKey: "fixture" }).transcription("gemini-3.5-transcribe")
+        const request = ai.experimental.transcription.request({
+          model,
+          audio: yield* helloAudio,
+          diarize: true,
+          language: "en-US",
+        })
+        return yield* context.operation(
+          "transcription.generate",
+          request,
+          ai.experimental.transcription.generate(request),
+        )
+      }),
+  }),
+  transcriptionVariant({
+    cassette: "google-transcription/streams-speaker-turns",
+    protocol: "google-transcription",
+    operation: "transcription.stream",
+    provider: {
+      package: "@opencode/ai/providers/google",
+      modelID: "gemini-3.5-transcribe",
+      settings: fixtureSettings,
+      kind: "transcription",
+    },
+    redact: audioRecording.redact,
+    match: audioRecording.match,
+    run: (context) =>
+      Effect.gen(function* () {
+        const model = Google.configure({ apiKey: "fixture" }).transcription("gemini-3.5-transcribe")
+        const request = ai.experimental.transcription.request({ model, audio: yield* dialogAudio, diarize: true })
+        return yield* context.operation(
+          "transcription.stream",
+          request,
+          Stream.runCollect(ai.experimental.transcription.stream(request)),
+        )
+      }),
+  }),
+]
+
 const decisionQuestions = [
   {
     name: "department",
@@ -5408,6 +5726,7 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
   ...imageScenarios,
   ...videoScenarios,
   ...speechScenarios,
+  ...transcriptionScenarios,
 ]
 
 const cassettes = []

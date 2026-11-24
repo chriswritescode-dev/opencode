@@ -30,6 +30,9 @@ pub enum RouteKind {
     Stream,
 }
 
+pub type MediaSend = Arc<dyn Fn(String, Body) -> BoxFuture<Result<TextResponse, AiError>> + Send + Sync>;
+pub type MediaPrepare<Request> = Arc<dyn Fn(Request, MediaSend) -> BoxFuture<Result<Request, AiError>> + Send + Sync>;
+
 pub trait MediaRequest: Clone + Send + Sync + 'static {
     fn id(&self) -> &str;
     fn provider(&self) -> &ProviderId;
@@ -183,8 +186,9 @@ impl<Request: MediaRequest, Response: Send + 'static> InlineRoute<Request, Respo
         let executor = executor.clone();
         let context = context.clone();
         Box::pin(async move {
-            let submitted =
-                transport.submit(request, provider_metadata_key, unsupported, body_from, executor, context).await?;
+            let submitted = transport
+                .submit(request, provider_metadata_key, unsupported, body_from, None, executor, context)
+                .await?;
             let Submitted { response, url, context, .. } = submitted;
             let text = read_text(response, url).await?;
             decode(&text, &context)
@@ -249,6 +253,53 @@ impl<Request> Transport<Request> {
         let base = trim_base_url(self.endpoint.base_url.as_deref().unwrap_or(""));
         Url::parse(&format!("{base}{path}")).map_err(invalid_url)
     }
+
+    #[allow(clippy::too_many_arguments)]
+    async fn dispatch(
+        &self,
+        method: &str,
+        url: Url,
+        body: &Body,
+        headers: Vec<(String, String)>,
+        timeout: Option<RequestTimeout>,
+        executor: &RequestExecutor,
+        context: &ExecutionContext,
+    ) -> Result<HttpResponse, AiError> {
+        let mut headers = headers;
+        let (text, bytes, content_type, content_length) = match body {
+            Body::Json { value, .. } => {
+                let text = json::encode_body(&Value::Object(value.clone()));
+                let bytes = text.as_bytes().to_vec();
+                (text, bytes, "application/json".to_string(), true)
+            }
+            Body::Multipart(form) => {
+                headers.retain(|(name, _)| !name.eq_ignore_ascii_case("content-type"));
+                let boundary = format!("----WebKitFormBoundary{}", context.ids.uuid().replace('-', ""));
+                let bytes = form.serialize(&boundary);
+                ("[multipart/form-data]".to_string(), bytes, format!("multipart/form-data; boundary={boundary}"), false)
+            }
+            Body::Binary { bytes, content_type, .. } => {
+                (format!("[{content_type}]"), bytes.clone(), content_type.clone(), true)
+            }
+        };
+        let headers = self.auth.apply(
+            AuthInput {
+                method: method.to_string(),
+                url: url.to_string(),
+                body: text,
+                headers,
+                now_ms: context.clock.now_ms(),
+            },
+            context.env.as_ref(),
+        )?;
+        let headers = set_header(headers, "content-type", content_type);
+        let headers =
+            if content_length { set_header(headers, "content-length", bytes.len().to_string()) } else { headers };
+        executor
+            .with_timeout(timeout)
+            .execute(PreparedHttp::new(method, url.to_string(), headers, Bytes::from(bytes)), None)
+            .await
+    }
 }
 
 impl<Request: MediaRequest> Transport<Request> {
@@ -258,27 +309,33 @@ impl<Request: MediaRequest> Transport<Request> {
         Exchange { headers: merged.headers, timeout: merged.timeout, http: merged.http }
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn submit(
         &self,
         request: Request,
         provider_metadata_key: String,
         unsupported: Vec<&'static str>,
         body_from: Arc<dyn Fn(&Request) -> Result<Body, AiError> + Send + Sync>,
+        prepare: Option<MediaPrepare<Request>>,
         executor: RequestExecutor,
         context: ExecutionContext,
     ) -> BoxFuture<Result<Submitted<Request>, AiError>> {
         let transport = self.clone();
         Box::pin(async move {
-            transport.submit_inner(request, provider_metadata_key, unsupported, body_from, executor, context).await
+            transport
+                .submit_inner(request, provider_metadata_key, unsupported, body_from, prepare, executor, context)
+                .await
         })
     }
 
+    #[allow(clippy::too_many_arguments)]
     async fn submit_inner(
         &self,
         request: Request,
         provider_metadata_key: String,
         unsupported: Vec<&'static str>,
         body_from: Arc<dyn Fn(&Request) -> Result<Body, AiError> + Send + Sync>,
+        prepare: Option<MediaPrepare<Request>>,
         executor: RequestExecutor,
         context: ExecutionContext,
     ) -> Result<Submitted<Request>, AiError> {
@@ -307,6 +364,35 @@ impl<Request: MediaRequest> Transport<Request> {
         let provider_options = merge_provider_options(&[request.model_provider_options(), request.provider_options()]);
         let resolved =
             request.resolved(merged.headers.clone(), merged.timeout.clone(), merged.http.clone(), provider_options);
+        let resolved = match prepare {
+            None => resolved,
+            Some(prepare) => {
+                let transport = self.clone();
+                let headers: Vec<(String, String)> = merged
+                    .headers
+                    .as_ref()
+                    .map(|headers| headers.iter().map(|(name, value)| (name.to_string(), value.to_string())).collect())
+                    .unwrap_or_default();
+                let timeout = merged.timeout.clone();
+                let executor = executor.clone();
+                let context = context.clone();
+                let send: MediaSend = Arc::new(move |path, body| {
+                    let transport = transport.clone();
+                    let headers = headers.clone();
+                    let timeout = timeout.clone();
+                    let executor = executor.clone();
+                    let context = context.clone();
+                    Box::pin(async move {
+                        let url = transport.resolve_url(&path)?;
+                        let target = url.to_string();
+                        let response =
+                            transport.dispatch("POST", url, &body, headers, timeout, &executor, &context).await?;
+                        read_text(response, target).await
+                    })
+                });
+                prepare(resolved, send).await?
+            }
+        };
         let body = body_from(&resolved)?;
         let mut url = self.endpoint.render(&resolved)?;
         if let Some(query) = body.query() {
@@ -315,44 +401,13 @@ impl<Request: MediaRequest> Transport<Request> {
         if let Some(query) = merged.http.as_ref().and_then(|http| http.query.as_ref()) {
             apply_string_map(&mut url, query);
         }
-        let mut headers: Vec<(String, String)> = merged
+        let headers: Vec<(String, String)> = merged
             .headers
             .as_ref()
             .map(|headers| headers.iter().map(|(name, value)| (name.to_string(), value.to_string())).collect())
             .unwrap_or_default();
-        let (text, bytes, content_type, content_length) = match &body {
-            Body::Json { value, .. } => {
-                let text = json::encode_body(&Value::Object(value.clone()));
-                let bytes = text.as_bytes().to_vec();
-                (text, bytes, "application/json".to_string(), true)
-            }
-            Body::Multipart(form) => {
-                headers.retain(|(name, _)| !name.eq_ignore_ascii_case("content-type"));
-                let boundary = format!("----WebKitFormBoundary{}", context.ids.uuid().replace('-', ""));
-                let bytes = form.serialize(&boundary);
-                ("[multipart/form-data]".to_string(), bytes, format!("multipart/form-data; boundary={boundary}"), false)
-            }
-            Body::Binary { bytes, content_type, .. } => {
-                (format!("[{content_type}]"), bytes.clone(), content_type.clone(), true)
-            }
-        };
-        let headers = self.auth.apply(
-            AuthInput {
-                method: "POST".to_string(),
-                url: url.to_string(),
-                body: text,
-                headers,
-                now_ms: context.clock.now_ms(),
-            },
-            context.env.as_ref(),
-        )?;
-        let headers = set_header(headers, "content-type", content_type);
-        let headers =
-            if content_length { set_header(headers, "content-length", bytes.len().to_string()) } else { headers };
-        let response = executor
-            .with_timeout(merged.timeout.clone())
-            .execute(PreparedHttp::new("POST", url.to_string(), headers, Bytes::from(bytes)), None)
-            .await?;
+        let response =
+            self.dispatch("POST", url.clone(), &body, headers, merged.timeout.clone(), &executor, &context).await?;
         let exchange = Exchange { headers: merged.headers, timeout: merged.timeout, http: merged.http };
         Ok(Submitted {
             response,
@@ -554,6 +609,9 @@ pub trait QueuedProtocol<Request, Response, Token>: Send + Sync {
     fn token_decode(&self, value: Value) -> Result<Token, AiError>;
     fn token_encode(&self, token: &Token) -> Value;
     fn body_from(&self, request: &Request) -> Result<Body, AiError>;
+    fn prepare(&self) -> Option<MediaPrepare<Request>> {
+        None
+    }
     fn start_decode(
         &self,
         response: &TextResponse,
@@ -642,6 +700,7 @@ where
                             provider_metadata_key,
                             protocol.unsupported().to_vec(),
                             body_from,
+                            protocol.prepare(),
                             executor.clone(),
                             context.clone(),
                         )
@@ -1112,6 +1171,7 @@ where
                 run.provider_metadata_key.clone(),
                 run.protocol.unsupported().to_vec(),
                 body_from,
+                None,
                 run.executor.clone(),
                 run.context.clone(),
             )

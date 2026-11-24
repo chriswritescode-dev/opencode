@@ -6,12 +6,14 @@ use crate::Env;
 use crate::media::route::MediaEndpoint;
 use crate::modalities::image::ImageModel;
 use crate::modalities::speech::SpeechModel;
+use crate::modalities::transcription::TranscriptionModel;
 use crate::protocols::openai_chat;
 use crate::protocols::openai_decisions::{self, OpenAiDecisions};
 use crate::protocols::openai_embeddings::{self, OpenAiEmbeddings};
 use crate::protocols::openai_images::{self, ImageInput, OpenAiImages, pixel_size};
 use crate::protocols::openai_responses;
 use crate::protocols::openai_speech;
+use crate::protocols::openai_transcription;
 use crate::providers::open_responses_options;
 use crate::providers::openai_options;
 use crate::providers::{RuntimeModel, Settings, language_model, modality_options};
@@ -191,8 +193,24 @@ pub fn speech_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Resu
     )))
 }
 
+pub fn transcription_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result<RuntimeModel, AiError> {
+    let (transport, provider_options) = media_options(settings);
+    let endpoint = MediaEndpoint::path(openai_transcription::PATH)
+        .with_base_url(settings.string("baseURL").unwrap_or(openai_transcription::DEFAULT_BASE_URL));
+    Ok(RuntimeModel::Transcription(TranscriptionModel::streamed(
+        model_id,
+        ID.to_string(),
+        Arc::new(openai_transcription::protocol()),
+        endpoint,
+        auth(settings),
+        None,
+        transport,
+        provider_options,
+    )))
+}
+
 pub fn decision_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result<RuntimeModel, AiError> {
-    let (transport, provider_options) = decision_options(settings);
+    let (transport, provider_options) = media_options(settings);
     let route = DecisionRoute::make(DecisionRouteInput {
         id: openai_decisions::ID.to_string(),
         provider: ID.to_string(),
@@ -239,7 +257,7 @@ fn request_options(settings: &Settings) -> Option<RequestOptions> {
     (merged != RequestOptions::default()).then_some(merged)
 }
 
-fn decision_options(settings: &Settings) -> (Option<RequestOptions>, Option<ProviderOptions>) {
+fn media_options(settings: &Settings) -> (Option<RequestOptions>, Option<ProviderOptions>) {
     let (transport, provider_options) = modality_options(settings, &EMBEDDING_DECLARED);
     let mut transport = transport.unwrap_or_default();
     let mut headers = transport.headers.take().unwrap_or_default();

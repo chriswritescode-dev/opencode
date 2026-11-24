@@ -81,7 +81,7 @@ export interface ProviderStep {
   readonly package: string
   readonly modelID: string
   readonly settings: Record<string, unknown>
-  readonly kind?: "decision" | "speech"
+  readonly kind?: "decision" | "speech" | "transcription"
 }
 
 export interface RedactOptions {
@@ -248,6 +248,26 @@ const PROTOCOLS: Record<string, { readonly path: string; readonly transport: str
   "deepgram-speech": { path: "packages/ai/src/protocols/deepgram-speech.ts", transport: "http-json/binary" },
   "elevenlabs-speech": { path: "packages/ai/src/protocols/elevenlabs-speech.ts", transport: "http-json/lines" },
   "google-speech": { path: "packages/ai/src/protocols/google-speech.ts", transport: "http-json/sse" },
+  "openai-transcription": {
+    path: "packages/ai/src/protocols/openai-transcription.ts",
+    transport: "http-json/sse",
+  },
+  "assemblyai-transcription": {
+    path: "packages/ai/src/protocols/assemblyai-transcription.ts",
+    transport: "http-json",
+  },
+  "deepgram-transcription": {
+    path: "packages/ai/src/protocols/deepgram-transcription.ts",
+    transport: "http-json",
+  },
+  "elevenlabs-transcription": {
+    path: "packages/ai/src/protocols/elevenlabs-transcription.ts",
+    transport: "http-json",
+  },
+  "google-transcription": {
+    path: "packages/ai/src/protocols/google-transcription.ts",
+    transport: "http-json/sse",
+  },
 }
 
 const TEXT_CONTENT_TYPES = new Set([
@@ -299,6 +319,8 @@ const normalizeModel = (value: unknown) => {
 const providerAuthHeader = new Map([
   ["@opencode/ai/providers/anthropic", "x-api-key"],
   ["@opencode/ai/providers/anthropic-compatible", "x-api-key"],
+  ["@opencode/ai/providers/assemblyai", "authorization"],
+  ["@opencode/ai/providers/elevenlabs", "xi-api-key"],
   ["@opencode/ai/providers/google", "x-goog-api-key"],
 ])
 
@@ -316,6 +338,8 @@ const describeAuth = (provider: ProviderStep): AuthDescriptor => {
       }
     }
   }
+  if (provider.package === "@opencode/ai/providers/deepgram" && typeof settings.apiKey === "string")
+    return { type: "header", name: "authorization", value: `Token ${settings.apiKey}` }
   if (settings.apiKey === false) return { type: "none" }
   if (typeof settings.apiKey === "string") {
     const header = providerAuthHeader.get(provider.package)
@@ -337,6 +361,7 @@ const providerModel = async (load: Loader, tree: string, provider: ProviderStep)
   const module = await load(`packages/ai/${target.replace(/^\.\//, "")}`)
   if (provider.kind === "decision") return (module.decisionModel ?? module.model)(provider.modelID, settings)
   if (provider.kind === "speech") return module.speech(provider.modelID, settings)
+  if (provider.kind === "transcription") return module.transcription(provider.modelID, settings)
   return module.model(provider.modelID, settings)
 }
 
@@ -413,6 +438,8 @@ export async function capture(tree: string, scenario: Scenario): Promise<Capture
     videoClient,
     speech,
     speechClient,
+    transcription,
+    transcriptionClient,
   ] = await Promise.all([
     load("@opencode/http-recorder"),
     load("@effect/platform-node"),
@@ -429,6 +456,8 @@ export async function capture(tree: string, scenario: Scenario): Promise<Capture
     load("packages/ai/src/video-client.ts"),
     load("packages/ai/src/speech.ts"),
     load("packages/ai/src/speech-client.ts"),
+    load("packages/ai/src/transcription.ts"),
+    load("packages/ai/src/transcription-client.ts"),
   ])
   const HttpRecorder = httpRecorder.HttpRecorder
   const { LLMClient, RequestExecutor, WebSocketTransport } = route
@@ -592,6 +621,29 @@ export async function capture(tree: string, scenario: Scenario): Promise<Capture
           operation === "speech.generate"
             ? encode(speech.SpeechResponse, value)
             : Array.from(value as Array<unknown>).map((event) => encode(speech.SpeechEvent, event)),
+      }
+    }
+    if (operation === "transcription.generate" || operation === "transcription.stream") {
+      return {
+        request: (request: any) => {
+          if (request.fetch !== undefined) throw new Error("capture: request.fetch is not captured")
+          return roundTrip({
+            audio: encode(media.AssetSchema, request.audio),
+            ...(request.language === undefined ? {} : { language: request.language }),
+            ...(request.prompt === undefined ? {} : { prompt: request.prompt }),
+            ...(request.timestamps === undefined ? {} : { timestamps: request.timestamps }),
+            ...(request.diarize === undefined ? {} : { diarize: request.diarize }),
+            ...(request.speakers === undefined ? {} : { speakers: request.speakers }),
+            ...(request.providerOptions === undefined ? {} : { providerOptions: request.providerOptions }),
+            ...(request.headers === undefined ? {} : { headers: request.headers }),
+            ...(request.timeout === undefined ? {} : { timeout: request.timeout }),
+            ...(request.http === undefined ? {} : { http: request.http }),
+          })
+        },
+        result: (value: unknown) =>
+          operation === "transcription.generate"
+            ? encode(transcription.TranscriptionResponse, value)
+            : Array.from(value as Array<unknown>).map((event) => encode(transcription.TranscriptionEvent, event)),
       }
     }
     if (operation !== "embedding.generate")
@@ -827,6 +879,7 @@ export async function capture(tree: string, scenario: Scenario): Promise<Capture
   const imageService = imageClient.ImageClient.layer.pipe(Layer.provide(capturing))
   const videoService = videoClient.VideoClient.layer.pipe(Layer.provide(capturing))
   const speechService = speechClient.SpeechClient.layer.pipe(Layer.provide(capturing))
+  const transcriptionService = transcriptionClient.TranscriptionClient.layer.pipe(Layer.provide(capturing))
   const layer = Layer.mergeAll(
     wrapped,
     embeddingService,
@@ -834,6 +887,7 @@ export async function capture(tree: string, scenario: Scenario): Promise<Capture
     imageService,
     videoService,
     speechService,
+    transcriptionService,
     webSocket,
     capturing,
   )

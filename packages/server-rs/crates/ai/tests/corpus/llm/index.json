@@ -256,6 +256,11 @@
       "group": "anthropic-messages"
     },
     {
+      "cassette": "assemblyai-transcription/uploads-submits-and-polls-a-transcript",
+      "protocol": "assemblyai-transcription",
+      "group": "transcription"
+    },
+    {
       "cassette": "azure/chat-streams-text",
       "protocol": "openai-chat",
       "group": "wrapped-core"
@@ -496,6 +501,16 @@
       "group": "speech"
     },
     {
+      "cassette": "deepgram-transcription/splits-utterances-at-speaker-changes",
+      "protocol": "deepgram-transcription",
+      "group": "transcription"
+    },
+    {
+      "cassette": "deepgram-transcription/transcribes-raw-audio-with-speakers-and-word-timestamps",
+      "protocol": "deepgram-transcription",
+      "group": "transcription"
+    },
+    {
       "cassette": "deepinfra-chat/deepinfra-llama-3-3-70b-text",
       "protocol": "openai-chat",
       "group": "openai-chat"
@@ -559,6 +574,16 @@
       "cassette": "elevenlabs-speech/streams-speech-with-timestamps",
       "protocol": "elevenlabs-speech",
       "group": "speech"
+    },
+    {
+      "cassette": "elevenlabs-transcription/groups-diarized-words-into-speaker-turns",
+      "protocol": "elevenlabs-transcription",
+      "group": "transcription"
+    },
+    {
+      "cassette": "elevenlabs-transcription/transcribes-audio-with-word-timestamps",
+      "protocol": "elevenlabs-transcription",
+      "group": "transcription"
     },
     {
       "cassette": "gemini-cache/reports-cachedcontenttokencount-on-identical-second-call",
@@ -634,6 +659,16 @@
       "cassette": "google-speech/streams-speech",
       "protocol": "google-speech",
       "group": "speech"
+    },
+    {
+      "cassette": "google-transcription/streams-speaker-turns",
+      "protocol": "google-transcription",
+      "group": "transcription"
+    },
+    {
+      "cassette": "google-transcription/transcribes-with-speakers-and-word-timestamps",
+      "protocol": "google-transcription",
+      "group": "transcription"
     },
     {
       "cassette": "google-vertex-embedding/embeds-gemini-embedding-001-one-text-per-predict-request",
@@ -1159,6 +1194,26 @@
       "cassette": "openai-speech/streams-speech",
       "protocol": "openai-speech",
       "group": "speech"
+    },
+    {
+      "cassette": "openai-transcription/diarizes-speakers-into-segments",
+      "protocol": "openai-transcription",
+      "group": "transcription"
+    },
+    {
+      "cassette": "openai-transcription/returns-whisper-word-timestamps",
+      "protocol": "openai-transcription",
+      "group": "transcription"
+    },
+    {
+      "cassette": "openai-transcription/streams-text-deltas",
+      "protocol": "openai-transcription",
+      "group": "transcription"
+    },
+    {
+      "cassette": "openai-transcription/transcribes-with-a-language-hint",
+      "protocol": "openai-transcription",
+      "group": "transcription"
     },
     {
       "cassette": "opencode-decision/decides-choice-score-and-predicate-questions",
