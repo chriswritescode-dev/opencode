@@ -446,6 +446,11 @@
       "group": "decisions"
     },
     {
+      "cassette": "cloudflare-workers-ai-extraction/extracts-invoice-fields",
+      "protocol": "cloudflare-run-extraction",
+      "group": "extraction"
+    },
+    {
       "cassette": "cloudflare-workers-ai-images/generates-a-flux-2-image-from-multipart-fields",
       "protocol": "cloudflare-workers-ai-images",
       "group": "images"

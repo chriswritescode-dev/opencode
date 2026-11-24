@@ -1,0 +1,149 @@
+{
+  "cassette": "cloudflare-workers-ai-extraction/extracts-invoice-fields",
+  "protocol": "cloudflare-run-extraction",
+  "routeId": "cloudflare-run-extraction",
+  "clockEpochMs": 1767323045000,
+  "steps": [
+    {
+      "model": {
+        "id": "@cf/cloudflare/clairic",
+        "provider": "cloudflare-workers-ai",
+        "route": {
+          "id": "cloudflare-run-extraction"
+        }
+      },
+      "request": {
+        "input": "Invoice INV-2291 from Northwind Supply, issued 2026-09-02, net 30. 4 pallets at $250.00 each, shipping $80.00. Contact: Dana Ruiz, Priya Shah.",
+        "fields": {
+          "invoiceNumber": {
+            "type": "text"
+          },
+          "dueDate": {
+            "type": "date",
+            "instructions": "Issue date plus the net payment days"
+          },
+          "total": {
+            "type": "number",
+            "decimals": 2,
+            "unit": "USD",
+            "instructions": "Amount due including shipping"
+          },
+          "contacts": {
+            "type": "list",
+            "items": "text"
+          },
+          "poNumber": {
+            "type": "text",
+            "instructions": "Purchase order number"
+          }
+        }
+      },
+      "provider": {
+        "package": "@opencode/ai/providers/cloudflare-workers-ai",
+        "modelID": "@cf/cloudflare/clairic",
+        "settings": {
+          "accountId": "fixture-account",
+          "apiKey": "fixture"
+        },
+        "kind": "extraction"
+      },
+      "transport": "http",
+      "operation": "extraction.generate",
+      "exchanges": [
+        {
+          "prepared": {
+            "method": "POST",
+            "url": "https://api.cloudflare.com/client/v4/accounts/fixture-account/ai/run/@cf/cloudflare/clairic",
+            "headers": {
+              "authorization": "Bearer fixture",
+              "content-length": "517",
+              "content-type": "application/json"
+            },
+            "body": "{\"model\":\"@cf/cloudflare/clairic\",\"state\":\"Invoice INV-2291 from Northwind Supply, issued 2026-09-02, net 30. 4 pallets at $250.00 each, shipping $80.00. Contact: Dana Ruiz, Priya Shah.\",\"fields\":{\"invoiceNumber\":{\"type\":\"text\"},\"dueDate\":{\"type\":\"date\",\"instructions\":\"Issue date plus the net payment days\"},\"total\":{\"type\":\"number\",\"decimals\":2,\"unit\":\"USD\",\"instructions\":\"Amount due including shipping\"},\"contacts\":{\"type\":\"list\",\"items\":\"text\"},\"poNumber\":{\"type\":\"text\",\"instructions\":\"Purchase order number\"}}}"
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": "{\"result\":{\"model\":\"clairic\",\"answers\":{\"invoiceNumber\":{\"type\":\"text\",\"p_null\":0.000005373362000682391,\"span\":[8,16],\"guess\":\"INV-2291\",\"confidence\":0.9999842643737793,\"value\":\"INV-2291\"},\"dueDate\":{\"type\":\"date\",\"p_null\":0.0000010241710697300732,\"guess\":\"2026-10-02\",\"confidence\":0.9999879599643642,\"value\":\"2026-10-02\"},\"total\":{\"type\":\"number\",\"p_null\":5.380287575462717e-7,\"guess\":1080,\"confidence\":0.9999545827141966,\"value\":1080},\"contacts\":{\"type\":\"list\",\"value\":[\"Dana Ruiz\",\"Priya Shah\"],\"spans\":[[120,129],[131,141]],\"confidence\":0.999993443529213},\"poNumber\":{\"type\":\"text\",\"p_null\":0.9999990463256836,\"span\":[8,16],\"guess\":\"INV-2291\",\"confidence\":0.9991962313652039,\"value\":null}},\"truncated\":false,\"usage\":{\"state_tokens\":61,\"image_tokens\":0,\"schema_tokens\":408,\"input_tokens\":591,\"output_tokens\":0,\"passes\":3}},\"success\":true,\"errors\":[],\"messages\":[]}"
+          }
+        }
+      ],
+      "result": {
+        "answers": {
+          "invoiceNumber": {
+            "value": "INV-2291",
+            "guess": "INV-2291",
+            "nullProbability": 0.000005373362000682391,
+            "confidence": 0.9999842643737793,
+            "span": [
+              8,
+              16
+            ]
+          },
+          "dueDate": {
+            "value": "2026-10-02",
+            "guess": "2026-10-02",
+            "nullProbability": 0.0000010241710697300732,
+            "confidence": 0.9999879599643642
+          },
+          "total": {
+            "value": 1080,
+            "guess": 1080,
+            "nullProbability": 5.380287575462717e-7,
+            "confidence": 0.9999545827141966
+          },
+          "contacts": {
+            "value": [
+              "Dana Ruiz",
+              "Priya Shah"
+            ],
+            "spans": [
+              [
+                120,
+                129
+              ],
+              [
+                131,
+                141
+              ]
+            ],
+            "confidence": 0.999993443529213
+          },
+          "poNumber": {
+            "value": null,
+            "guess": "INV-2291",
+            "nullProbability": 0.9999990463256836,
+            "confidence": 0.9991962313652039,
+            "span": [
+              8,
+              16
+            ]
+          }
+        },
+        "usage": {
+          "inputTokens": 591,
+          "outputTokens": 0,
+          "totalTokens": 591,
+          "providerMetadata": {
+            "cloudflare-workers-ai": {
+              "input_tokens": 591,
+              "output_tokens": 0,
+              "state_tokens": 61,
+              "image_tokens": 0,
+              "schema_tokens": 408,
+              "passes": 3
+            }
+          }
+        },
+        "providerMetadata": {
+          "cloudflare-workers-ai": {
+            "model": "clairic",
+            "truncated": false
+          }
+        }
+      }
+    }
+  ]
+}

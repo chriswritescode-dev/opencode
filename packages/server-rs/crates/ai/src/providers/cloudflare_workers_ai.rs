@@ -2,8 +2,10 @@ use std::sync::Arc;
 
 use crate::Env;
 use crate::media::route::MediaEndpoint;
+use crate::modalities::extraction::{ExtractionModel, ExtractionRequest};
 use crate::modalities::image::ImageModel;
 use crate::protocols::cloudflare_run_decisions::{self, CloudflareRunDecisions};
+use crate::protocols::cloudflare_run_extraction;
 use crate::protocols::cloudflare_workers_ai_images;
 use crate::protocols::openai_chat;
 use crate::providers::cloudflare_shared;
@@ -53,6 +55,23 @@ pub fn decision_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Re
         options: transport,
     });
     Ok(RuntimeModel::Decision(route.model(model_id, None, provider_options)))
+}
+
+pub fn extraction_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result<RuntimeModel, AiError> {
+    let (transport, provider_options) = modality_options(settings, &DECLARED);
+    let endpoint = MediaEndpoint::function(Arc::new(|request: &ExtractionRequest| format!("/{}", request.model.id)))
+        .with_base_url(cloudflare_shared::run_base_url(settings, "CloudflareWorkersAI")?);
+    let model = ExtractionModel::inline(
+        model_id,
+        ID.to_string(),
+        cloudflare_run_extraction::protocol(),
+        endpoint,
+        auth(settings),
+        None,
+        transport,
+        provider_options,
+    );
+    Ok(RuntimeModel::Extraction(model))
 }
 
 pub fn image_model(model_id: &str, settings: &Settings, _env: &dyn Env) -> Result<RuntimeModel, AiError> {

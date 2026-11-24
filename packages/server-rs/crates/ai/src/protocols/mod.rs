@@ -8,6 +8,7 @@ pub mod bedrock_converse;
 pub mod bedrock_event_stream;
 pub mod cartesia_speech;
 pub mod cloudflare_run_decisions;
+pub mod cloudflare_run_extraction;
 pub mod cloudflare_workers_ai_images;
 pub mod cohere_chat;
 pub mod deepgram_speech;

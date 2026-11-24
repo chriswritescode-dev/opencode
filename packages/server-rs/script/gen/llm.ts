@@ -26,6 +26,17 @@ type ExportedError = {
   retryable: boolean
 }
 
+type ExportedRealtime = {
+  clockEpochMs: number
+  cases: Array<{
+    name: string
+    input: Record<string, unknown>
+    requests: Array<unknown>
+    result?: unknown
+    error?: unknown
+  }>
+}
+
 type ExportedAdc = {
   clockEpochMs: number
   cases: Array<{
@@ -91,21 +102,26 @@ export const GROUPS: Record<string, { protocols: string[] }> = {
       "google-transcription",
     ],
   },
+  extraction: { protocols: ["cloudflare-run-extraction"] },
 }
 
-export const EXPECTED_CASSETTES = 312
+export const EXPECTED_CASSETTES = 313
 const EXPECTED_ADC_CASES = 11
+const EXPECTED_REALTIME_CASES = 8
 
 const exporter = `${tree}/exporter`
 await mkdir(exporter, { recursive: true })
-for (const name of ["capture", "scenarios", "errors", "adc"])
+for (const name of ["capture", "scenarios", "errors", "adc", "realtime"])
   await Bun.write(`${exporter}/${name}.ts`, Bun.file(`${root}script/llm/${name}.ts`))
 
 const scenarios = await run<ScenarioOutput>("scenarios")
 const errors = await run<Array<ExportedError>>("errors")
 const adc = await run<ExportedAdc>("adc")
+const realtime = await run<ExportedRealtime>("realtime")
 
 if (adc.cases.length !== EXPECTED_ADC_CASES) fail(`expected ${EXPECTED_ADC_CASES} ADC cases, got ${adc.cases.length}`)
+if (realtime.cases.length !== EXPECTED_REALTIME_CASES)
+  fail(`expected ${EXPECTED_REALTIME_CASES} realtime cases, got ${realtime.cases.length}`)
 
 if (scenarios.cassettes.length !== EXPECTED_CASSETTES)
   fail(`expected ${EXPECTED_CASSETTES} cassettes, got ${scenarios.cassettes.length}`)
@@ -135,8 +151,9 @@ await Bun.write(`${output}/llm/index.json`, `${JSON.stringify({ cassettes: index
 await Bun.write(`${output}/provider-errors.json`, `${JSON.stringify({ errors }, null, 2)}\n`)
 await Bun.write(`${output}/google-adc.json`, `${JSON.stringify(adc, null, 2)}\n`)
 await Bun.write(`${output}/multipart-fixtures.json`, `${JSON.stringify(scenarios.multipartFixtures, null, 2)}\n`)
+await Bun.write(`${output}/realtime.json`, `${JSON.stringify(realtime, null, 2)}\n`)
 console.log(
-  `llm: ${scenarios.cassettes.length} cassettes, ${errors.length} provider errors, ${adc.cases.length} ADC cases -> ${output}`,
+  `llm: ${scenarios.cassettes.length} cassettes, ${errors.length} provider errors, ${adc.cases.length} ADC cases, ${realtime.cases.length} realtime cases -> ${output}`,
 )
 
 async function run<T>(name: string) {

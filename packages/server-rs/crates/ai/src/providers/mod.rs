@@ -66,6 +66,7 @@ pub enum RuntimeModel {
     Video(crate::modalities::video::VideoModel),
     Speech(crate::modalities::speech::SpeechModel),
     Transcription(crate::modalities::transcription::TranscriptionModel),
+    Extraction(crate::modalities::extraction::ExtractionModel),
 }
 
 pub(crate) fn modality_options(
@@ -134,6 +135,7 @@ pub type Entry = fn(&str, &Settings, &dyn Env) -> Result<RuntimeModel, AiError>;
 pub struct ProviderPackages {
     entries: BTreeMap<&'static str, Entry>,
     decisions: BTreeMap<&'static str, Entry>,
+    extractions: BTreeMap<&'static str, Entry>,
     speech: BTreeMap<&'static str, Entry>,
     transcription: BTreeMap<&'static str, Entry>,
 }
@@ -262,6 +264,10 @@ impl ProviderPackages {
             ("@opencode/ai/providers/typesafe-ai/decisions", typesafe_ai::decision_model as Entry),
             ("@opencode/ai/providers/vercel-ai-gateway/decisions", vercel_ai_gateway::decision_model as Entry),
         ]);
+        let extractions = BTreeMap::from([(
+            "@opencode/ai/providers/cloudflare-workers-ai",
+            cloudflare_workers_ai::extraction_model as Entry,
+        )]);
         let speech = BTreeMap::from([
             ("@opencode/ai/providers/cartesia", cartesia::speech_model as Entry),
             ("@opencode/ai/providers/deepgram", deepgram::speech_model as Entry),
@@ -276,7 +282,7 @@ impl ProviderPackages {
             ("@opencode/ai/providers/google", google::transcription_model as Entry),
             ("@opencode/ai/providers/openai", openai::transcription_model as Entry),
         ]);
-        Self { entries, decisions, speech, transcription }
+        Self { entries, decisions, extractions, speech, transcription }
     }
 
     pub fn model(
@@ -309,6 +315,17 @@ impl ProviderPackages {
         env: &dyn Env,
     ) -> Result<RuntimeModel, AiError> {
         let entry = self.speech.get(specifier).ok_or_else(|| unknown_package(specifier))?;
+        entry(model_id, settings, env)
+    }
+
+    pub fn extraction(
+        &self,
+        specifier: &str,
+        model_id: &str,
+        settings: &Settings,
+        env: &dyn Env,
+    ) -> Result<RuntimeModel, AiError> {
+        let entry = self.extractions.get(specifier).ok_or_else(|| unknown_package(specifier))?;
         entry(model_id, settings, env)
     }
 

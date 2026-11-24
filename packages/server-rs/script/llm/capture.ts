@@ -81,7 +81,7 @@ export interface ProviderStep {
   readonly package: string
   readonly modelID: string
   readonly settings: Record<string, unknown>
-  readonly kind?: "decision" | "speech" | "transcription"
+  readonly kind?: "decision" | "speech" | "transcription" | "extraction"
 }
 
 export interface RedactOptions {
@@ -268,6 +268,10 @@ const PROTOCOLS: Record<string, { readonly path: string; readonly transport: str
     path: "packages/ai/src/protocols/google-transcription.ts",
     transport: "http-json/sse",
   },
+  "cloudflare-run-extraction": {
+    path: "packages/ai/src/experimental/cloudflare-run-extraction.ts",
+    transport: "http-json",
+  },
 }
 
 const TEXT_CONTENT_TYPES = new Set([
@@ -362,6 +366,8 @@ const providerModel = async (load: Loader, tree: string, provider: ProviderStep)
   if (provider.kind === "decision") return (module.decisionModel ?? module.model)(provider.modelID, settings)
   if (provider.kind === "speech") return module.speech(provider.modelID, settings)
   if (provider.kind === "transcription") return module.transcription(provider.modelID, settings)
+  if (provider.kind === "extraction")
+    return module.CloudflareWorkersAI.configure(settings).experimental.extraction(provider.modelID)
   return module.model(provider.modelID, settings)
 }
 
@@ -440,6 +446,7 @@ export async function capture(tree: string, scenario: Scenario): Promise<Capture
     speechClient,
     transcription,
     transcriptionClient,
+    extraction,
   ] = await Promise.all([
     load("@opencode/http-recorder"),
     load("@effect/platform-node"),
@@ -458,6 +465,7 @@ export async function capture(tree: string, scenario: Scenario): Promise<Capture
     load("packages/ai/src/speech-client.ts"),
     load("packages/ai/src/transcription.ts"),
     load("packages/ai/src/transcription-client.ts"),
+    load("packages/ai/src/experimental/extraction.ts"),
   ])
   const HttpRecorder = httpRecorder.HttpRecorder
   const { LLMClient, RequestExecutor, WebSocketTransport } = route
@@ -644,6 +652,23 @@ export async function capture(tree: string, scenario: Scenario): Promise<Capture
           operation === "transcription.generate"
             ? encode(transcription.TranscriptionResponse, value)
             : Array.from(value as Array<unknown>).map((event) => encode(transcription.TranscriptionEvent, event)),
+      }
+    }
+    if (operation === "extraction.generate") {
+      return {
+        request: (request: any) => {
+          if (request.fetch !== undefined) throw new Error("capture: request.fetch is not captured")
+          return roundTrip({
+            input: request.input,
+            fields: request.fields,
+            ...(request.referenceDate === undefined ? {} : { referenceDate: request.referenceDate }),
+            ...(request.providerOptions === undefined ? {} : { providerOptions: request.providerOptions }),
+            ...(request.headers === undefined ? {} : { headers: request.headers }),
+            ...(request.timeout === undefined ? {} : { timeout: request.timeout }),
+            ...(request.http === undefined ? {} : { http: request.http }),
+          })
+        },
+        result: (value: unknown) => encode(extraction.ExtractionResponse, value),
       }
     }
     if (operation !== "embedding.generate")

@@ -16,6 +16,7 @@ use opencode_ai::id::SequenceIds;
 use opencode_ai::media::generation::{AwaitOptions, Generation, Poll, Snapshot, Status};
 use opencode_ai::modalities::decision::{DecisionClient, DecisionRequestInput};
 use opencode_ai::modalities::embedding::{EmbeddingClient, EmbeddingRequestInput};
+use opencode_ai::modalities::extraction::{ExtractionClient, ExtractionRequestInput};
 use opencode_ai::modalities::image::{ImageClient, ImageEvent, ImageRequestInput};
 use opencode_ai::modalities::speech::{SpeechClient, SpeechEvent, SpeechRequestInput};
 use opencode_ai::modalities::transcription::{
@@ -296,6 +297,100 @@ fn assert_decision_outcome(
                 panic!("{} step {index} decision result: the step recorded no result", cassette.name);
             };
             assert_eq!(actual, *expected, "{} step {index} decision result", cassette.name);
+        }
+    }
+}
+
+pub async fn replay_extraction_cassette(cassette: &Cassette) {
+    for (index, step) in cassette.steps.iter().enumerate() {
+        let Some(provider) = step.provider.as_ref() else {
+            panic!("{} step {index} extraction: the step recorded no provider", cassette.name);
+        };
+        assert_eq!(step.operation.as_deref(), Some("extraction.generate"), "{} step {index} operation", cassette.name);
+        let settings = Settings::new(provider.settings.clone());
+        let runtime = ProviderPackages::builtin()
+            .extraction(&provider.package, &provider.model_id, &settings, &MapEnv::default())
+            .unwrap_or_else(|error| {
+                panic!("{} step {index} provider {}: {}", cassette.name, provider.package, error.message())
+            });
+        let RuntimeModel::Extraction(model) = runtime else {
+            panic!("{} step {index} extraction: expected an extraction model", cassette.name);
+        };
+        assert_eq!(model.id, step.model["id"], "{} step {index} extraction model.id", cassette.name);
+        assert_eq!(model.provider, step.model["provider"], "{} step {index} extraction model.provider", cassette.name);
+        assert_eq!(
+            model.route.id, step.model["route"]["id"],
+            "{} step {index} extraction model.route.id",
+            cassette.name
+        );
+        let input: ExtractionRequestInput = serde_json::from_value(step.request.clone())
+            .unwrap_or_else(|error| panic!("{} step {index} extraction request: {error}", cassette.name));
+        let request = input.with_model(model);
+        let exchanges = match step.exchanges.as_ref() {
+            Some(exchanges) if !exchanges.is_empty() => exchanges.clone(),
+            _ => panic!("{} step {index} extraction exchanges: the step recorded no HTTP exchange", cassette.name),
+        };
+        let sender = Arc::new(RecordedSender {
+            cassette: cassette.name.clone(),
+            step: index,
+            label: "extraction".to_string(),
+            chunk: None,
+            exchanges: Mutex::new(VecDeque::from(exchanges)),
+        });
+        let clock = Arc::new(FixedClock::new(cassette.clock_epoch_ms));
+        let context = ExecutionContext::new(clock.clone(), Arc::new(SequenceIds::new()), Arc::new(MapEnv::default()));
+        let executor = RequestExecutor::new(sender.clone(), None, clock);
+        let outcome = ExtractionClient::generate(request, &executor, &context).await;
+        sender.assert_consumed();
+        assert_extraction_outcome(cassette, index, step.error.as_ref(), outcome);
+    }
+}
+
+pub async fn replay_extraction_group(group: &str) -> usize {
+    let corpus = crate::corpus::Corpus::load();
+    let mut steps = 0;
+    for cassette in corpus.cassettes.iter().filter(|cassette| cassette.group == group) {
+        replay_extraction_cassette(cassette).await;
+        steps += cassette.steps.len();
+    }
+    steps
+}
+
+fn assert_extraction_outcome(
+    cassette: &Cassette,
+    index: usize,
+    recorded_error: Option<&crate::corpus::StepError>,
+    outcome: Result<opencode_ai::modalities::extraction::ExtractionResponse, AiError>,
+) {
+    match recorded_error {
+        Some(recorded) => {
+            let error = match outcome {
+                Err(error) => error,
+                Ok(_) => panic!("{} step {index} extraction error: the generate call succeeded", cassette.name),
+            };
+            let reason = serde_json::to_value(&error.reason)
+                .unwrap_or_else(|failure| panic!("{} step {index} extraction error.reason: {failure}", cassette.name));
+            assert_eq!(reason, recorded.reason, "{} step {index} extraction error.reason", cassette.name);
+            assert_eq!(
+                error.is_retryable(),
+                recorded.retryable,
+                "{} step {index} extraction error.retryable",
+                cassette.name
+            );
+        }
+        None => {
+            let response = match outcome {
+                Ok(response) => response,
+                Err(error) => {
+                    panic!("{} step {index} extraction result: the generate call failed with {error}", cassette.name)
+                }
+            };
+            let actual = serde_json::to_value(&response)
+                .unwrap_or_else(|failure| panic!("{} step {index} extraction result: {failure}", cassette.name));
+            let Some(expected) = cassette.steps[index].result.as_ref() else {
+                panic!("{} step {index} extraction result: the step recorded no result", cassette.name);
+            };
+            assert_eq!(actual, *expected, "{} step {index} extraction result", cassette.name);
         }
     }
 }
@@ -1436,13 +1531,14 @@ async fn replay_websocket_cassette(cassette: &Cassette) {
 #[tokio::test]
 async fn every_in_scope_cassette_replays() {
     let corpus = crate::corpus::Corpus::load();
-    assert_eq!(corpus.cassettes.len(), 312, "in-scope cassette count");
+    assert_eq!(corpus.cassettes.len(), 313, "in-scope cassette count");
     let groups = [
         "anthropic-messages",
         "bedrock-converse",
         "chat-variants",
         "decisions",
         "embeddings",
+        "extraction",
         "gateways",
         "gemini",
         "images",
@@ -1468,6 +1564,8 @@ async fn every_in_scope_cassette_replays() {
             replay_embedding_cassette(cassette).await;
         } else if cassette.group == "decisions" {
             replay_decision_cassette(cassette).await;
+        } else if cassette.group == "extraction" {
+            replay_extraction_cassette(cassette).await;
         } else if cassette.group == "images" {
             replay_image_cassette(cassette).await;
         } else if cassette.group == "video" {
@@ -1483,7 +1581,7 @@ async fn every_in_scope_cassette_replays() {
         }
         replayed += 1;
     }
-    assert_eq!(replayed, 312, "replayed cassette count");
+    assert_eq!(replayed, 313, "replayed cassette count");
 }
 
 #[tokio::test]
@@ -1529,6 +1627,15 @@ async fn decision_cassettes() {
     assert_eq!(cassettes, 9, "decision cassette count");
     let steps = replay_decision_group("decisions").await;
     assert_eq!(steps, 9, "decision step count");
+}
+
+#[tokio::test]
+async fn extraction_cassettes() {
+    let corpus = crate::corpus::Corpus::load();
+    let cassettes = corpus.cassettes.iter().filter(|cassette| cassette.group == "extraction").count();
+    assert_eq!(cassettes, 1, "extraction cassette count");
+    let steps = replay_extraction_group("extraction").await;
+    assert_eq!(steps, 1, "extraction step count");
 }
 
 #[tokio::test]

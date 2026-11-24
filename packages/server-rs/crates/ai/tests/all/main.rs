@@ -14,6 +14,7 @@ mod protocols;
 mod protocols_utils;
 mod provider_errors;
 mod providers;
+mod realtime;
 mod replay;
 mod schema;
 mod shared;

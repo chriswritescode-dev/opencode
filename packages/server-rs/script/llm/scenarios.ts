@@ -3817,6 +3817,45 @@ const decisionScenarios = [
   }),
 ]
 
+const { Extraction } = await load("packages/ai/src/experimental.ts")
+const extractionVariant = (scenario: Scenario) => ({ group: "extraction", scenario })
+
+const extractionScenarios = [
+  extractionVariant({
+    cassette: "cloudflare-workers-ai-extraction/extracts-invoice-fields",
+    protocol: "cloudflare-run-extraction",
+    operation: "extraction.generate",
+    provider: {
+      package: "@opencode/ai/providers/cloudflare-workers-ai",
+      modelID: "@cf/cloudflare/clairic",
+      settings: { accountId: "fixture-account", apiKey: "fixture" },
+      kind: "extraction",
+    },
+    redact: {
+      url: (url) => url.replace(/\/client\/v4\/accounts\/[^/]+\//, "/client/v4/accounts/{account}/"),
+    },
+    run: (context) => {
+      const model = CloudflareWorkersAI.configure({
+        accountId: "fixture-account",
+        apiKey: "fixture",
+      }).experimental.extraction("@cf/cloudflare/clairic")
+      const request = Extraction.request({
+        model,
+        input:
+          "Invoice INV-2291 from Northwind Supply, issued 2026-09-02, net 30. 4 pallets at $250.00 each, shipping $80.00. Contact: Dana Ruiz, Priya Shah.",
+        fields: {
+          invoiceNumber: { type: "text" },
+          dueDate: { type: "date", instructions: "Issue date plus the net payment days" },
+          total: { type: "number", decimals: 2, unit: "USD", instructions: "Amount due including shipping" },
+          contacts: { type: "list", items: "text" },
+          poNumber: { type: "text", instructions: "Purchase order number" },
+        },
+      })
+      return context.operation("extraction.generate", request, Extraction.generate(request))
+    },
+  }),
+]
+
 const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scenario }> = [
   {
     group: "anthropic-messages",
@@ -5727,6 +5766,7 @@ const scenarios: ReadonlyArray<{ readonly group: string; readonly scenario: Scen
   ...videoScenarios,
   ...speechScenarios,
   ...transcriptionScenarios,
+  ...extractionScenarios,
 ]
 
 const cassettes = []
