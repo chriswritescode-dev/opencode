@@ -97,6 +97,7 @@ pub async fn spawn(config: &Config, runtime: &Runtime) -> Result<Spawned, Sideca
     std::os::unix::process::CommandExt::process_group(command.as_std_mut(), 0);
 
     let mut child = command.spawn().map_err(spawn_failed)?;
+    drop(command);
     let stdout = child.stdout.take().ok_or_else(|| SidecarError::Spawn("the sidecar has no stdout".to_owned()))?;
     let stderr_pipe = child.stderr.take().ok_or_else(|| SidecarError::Spawn("the sidecar has no stderr".to_owned()))?;
     let stderr = Arc::new(Mutex::new(VecDeque::new()));

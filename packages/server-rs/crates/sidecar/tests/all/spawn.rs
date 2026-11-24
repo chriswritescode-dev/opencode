@@ -4,7 +4,9 @@ use std::time::Duration;
 use serde_json::{Value, json};
 use tokio::io::AsyncWriteExt;
 
+use opencode_sidecar::bun::Runtime;
 use opencode_sidecar::config::inherited;
+use opencode_sidecar::error::SidecarError;
 use opencode_sidecar::frame::{self, DEFAULT_MAX_FRAME};
 use opencode_sidecar::protocol::Message;
 use opencode_sidecar::spawn::{Spawned, spawn};
@@ -21,6 +23,21 @@ async fn a_spawned_host_answers_ready_and_echoes() {
     assert!(spawned.pid > 0);
     let value = call(&mut spawned, 1, "host.echo", json!({ "hello": "world" })).await;
     assert_eq!(value, json!({ "hello": "world" }));
+}
+
+#[tokio::test]
+async fn a_runtime_that_exits_before_ready_fails_without_waiting_out_the_handshake() {
+    let dir = opencode_util::temp::tempdir().expect("a directory");
+    let stub = support::script(dir.path(), "bun", "echo gone >&2\nexit 2");
+    let mut config = support::config();
+    config.limits.handshake = Duration::from_secs(30);
+    let runtime = Runtime { bun: stub, opencode: false, version: None };
+
+    let result = tokio::time::timeout(Duration::from_secs(10), spawn(&config, &runtime))
+        .await
+        .expect("the start failed before the handshake timeout");
+
+    assert!(matches!(result, Err(SidecarError::Handshake(_))), "{:?}", result.err());
 }
 
 #[tokio::test]
