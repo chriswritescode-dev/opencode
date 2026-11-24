@@ -1,6 +1,6 @@
 # Operation coverage
 
-Implemented: 10 of 178 operations
+Implemented: 12 of 178 operations
 
 | Operation | Method | Path | Stability | Status |
 | --- | --- | --- | --- | --- |
@@ -96,8 +96,8 @@ Implemented: 10 of 178 operations
 | `credential.update` | PATCH | `/api/credential/{credentialID}` | stable | not implemented (501) |
 | `credential.remove` | DELETE | `/api/credential/{credentialID}` | stable | not implemented (501) |
 | `credential.activate` | POST | `/api/credential/{credentialID}/activate` | stable | not implemented (501) |
-| `project.list` | GET | `/api/project` | stable | not implemented (501) |
-| `project.update` | PATCH | `/api/project/{projectID}` | stable | not implemented (501) |
+| `project.list` | GET | `/api/project` | stable | implemented |
+| `project.update` | PATCH | `/api/project/{projectID}` | stable | implemented |
 | `form.list` | GET | `/api/form` | stable | not implemented (501) |
 | `permission.request.list` | GET | `/api/permission/request` | stable | not implemented (501) |
 | `permission.saved.list` | GET | `/api/permission/saved` | stable | not implemented (501) |

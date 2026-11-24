@@ -27,6 +27,8 @@ pub const IMPLEMENTED: &[&str] = &[
     "debug.heapDump",
     "debug.location.list",
     "debug.location.evict",
+    "project.list",
+    "project.update",
 ];
 
 pub struct Options {
@@ -134,6 +136,14 @@ impl App {
             },
             "debug.location.evict" => match self.services() {
                 Some(services) => crate::handlers::debug::location_evict(services, &raw).await,
+                None => crate::services::services_unavailable(),
+            },
+            "project.list" => match self.services() {
+                Some(services) => crate::handlers::project::list(services, &raw).await,
+                None => crate::services::services_unavailable(),
+            },
+            "project.update" => match self.services() {
+                Some(services) => crate::handlers::project::update(services, &raw).await,
                 None => crate::services::services_unavailable(),
             },
             _ => not_implemented(found.route.identifier),

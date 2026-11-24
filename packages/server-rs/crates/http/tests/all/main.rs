@@ -7,6 +7,7 @@ mod event;
 mod info;
 mod location;
 mod pairing;
+mod project;
 mod request_site;
 mod router;
 mod serve;
