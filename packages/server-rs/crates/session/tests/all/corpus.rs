@@ -11,7 +11,10 @@ use opencode_bus::{
 };
 use opencode_contract::codec::encode_json;
 use opencode_contract::generated::{AbsolutePath, DURABLE_EVENTS, LocationRef, PUBLIC_EVENT_TYPES, WorkspaceID};
-use opencode_session::{ProjectionSettings, SessionProjector};
+use opencode_session::{
+    Cursor, Direction, LastAssistantInput, ListAnchor, ListInput, MessagesInput, Order, ProjectionSettings,
+    SessionProjector, SessionStore,
+};
 use opencode_storage::dump::{Masks, dump};
 use opencode_storage::{Database, DatabaseLocation};
 use serde_json::{Map, Value, json};
@@ -146,6 +149,22 @@ async fn fork_revert() {
         count += 1;
     }
     assert_eq!(count, 6, "the fork-revert group carries every ported fixture");
+}
+
+#[tokio::test]
+async fn store() {
+    let corpus: Value = serde_json::from_str(CORPUS).expect("parse the events corpus");
+    let masks: Masks = serde_json::from_value(corpus["masks"].clone()).expect("read the corpus masks");
+    let mut count = 0;
+    for fixture in corpus["fixtures"].as_array().expect("the corpus carries fixtures") {
+        let name = fixture["name"].as_str().expect("a fixture carries a name");
+        if fixture["group"].as_str().unwrap_or_else(|| panic!("fixture {name} carries no group")) != "store" {
+            continue;
+        }
+        run_fixture(fixture, &masks).await;
+        count += 1;
+    }
+    assert_eq!(count, 6, "the store group carries every ported fixture");
 }
 
 #[tokio::test]
@@ -412,10 +431,35 @@ async fn run_fixture(fixture: &Value, masks: &Masks) {
 
     if let Some(expected) = expected {
         assert!(failed, "fixture {name} records the error {expected:?} and the replay must reach it");
-        for field in ["dump", "frames", "usage", "log"] {
+        for field in ["dump", "frames", "usage", "log", "storeResults"] {
             assert!(fixture[field].is_null(), "fixture {name} records no {field} once it fails");
         }
         return;
+    }
+
+    if let Some(expected_results) = fixture["storeResults"].as_array() {
+        let queries = fixture["store"]
+            .as_array()
+            .unwrap_or_else(|| panic!("fixture {name} carries storeResults without store queries"));
+        let store = SessionStore::new(database.clone());
+        let actual_results = queries.iter().map(|query| run_store_query(&store, name, query)).collect::<Vec<_>>();
+        assert_eq!(
+            actual_results.len(),
+            expected_results.len(),
+            "fixture {name}: the store carries one result per query"
+        );
+        for (index, (actual, expected)) in actual_results.iter().zip(expected_results).enumerate() {
+            let actual = serde_json::from_str::<Value>(actual).unwrap_or_else(|error| {
+                panic!("fixture {name} store query {index}: the actual result is not JSON: {error}")
+            });
+            let expected = expected
+                .as_str()
+                .unwrap_or_else(|| panic!("fixture {name} store query {index}: the recorded result is not a string"));
+            let expected = serde_json::from_str::<Value>(expected).unwrap_or_else(|error| {
+                panic!("fixture {name} store query {index}: the recorded result is not JSON: {error}")
+            });
+            assert_field(name, &format!("store[{index}]"), &actual, &expected);
+        }
     }
 
     let mut sessions: Vec<String> = Vec::new();
@@ -470,6 +514,185 @@ async fn run_fixture(fixture: &Value, masks: &Masks) {
     assert_field(name, "usage", &usage, &fixture["usage"]);
     assert_field(name, "log", &Value::Object(log), &fixture["log"]);
     assert_field(name, "dump", &snapshot, &fixture["dump"]);
+}
+
+fn run_store_query(store: &SessionStore, fixture: &str, query: &Value) -> String {
+    let kind = query["kind"].as_str().unwrap_or_else(|| panic!("fixture {fixture}: a store query carries no kind"));
+    let input = query.get("input").unwrap_or(&Value::Null);
+    match kind {
+        "get" => match store.get(&required_string(query, "sessionID", fixture)) {
+            Ok(Some(info)) => encode_json(&info),
+            Ok(None) => "null".to_string(),
+            Err(_) => database_error(),
+        },
+        "list" => match store.list(&list_input(input, fixture)) {
+            Ok(values) => encode_json(&values),
+            Err(_) => database_error(),
+        },
+        "messages" => match store.messages(&messages_input(input, fixture)) {
+            Ok(values) => encode_json(&values),
+            Err(error) => tagged_error(error.tag()),
+        },
+        "messagesWithRefs" => match store.messages_with_refs(&messages_input(input, fixture)) {
+            Ok(values) => encode_json(&values),
+            Err(error) => tagged_error(error.tag()),
+        },
+        "message" => match store.message(&required_string(query, "messageID", fixture)) {
+            Ok(Some((session_id, message))) => {
+                format!("{{\"sessionID\":{},\"message\":{}}}", encode_json(&session_id), encode_json(&message))
+            }
+            Ok(None) => "null".to_string(),
+            Err(error) => tagged_error(error.tag()),
+        },
+        "messageWithRefs" => match store.message_with_refs(&required_string(query, "messageID", fixture)) {
+            Ok(Some((session_id, message))) => {
+                format!("{{\"sessionID\":{},\"message\":{}}}", encode_json(&session_id), encode_json(&message))
+            }
+            Ok(None) => "null".to_string(),
+            Err(error) => tagged_error(error.tag()),
+        },
+        "lastAssistantAfter" => match store.last_assistant_after(&last_assistant_input(input, fixture)) {
+            Ok(Some(assistant)) => encode_json(&assistant),
+            Ok(None) => "null".to_string(),
+            Err(error) => tagged_error(error.tag()),
+        },
+        "listSuspended" => match store.list_suspended() {
+            Ok(ids) => encode_json(&ids),
+            Err(_) => database_error(),
+        },
+        "claim" => match store.claim(&required_string(query, "sessionID", fixture)) {
+            Ok(()) => "null".to_string(),
+            Err(_) => database_error(),
+        },
+        "release" => match store.release(&required_string(query, "sessionID", fixture)) {
+            Ok(()) => "null".to_string(),
+            Err(_) => database_error(),
+        },
+        "releaseOrphanedChildClaims" => match store.release_orphaned_child_claims() {
+            Ok(()) => "null".to_string(),
+            Err(_) => database_error(),
+        },
+        "countResume" => match store.count_resume(&required_string(query, "sessionID", fixture)) {
+            Ok(Some(count)) => count.to_string(),
+            Ok(None) => "null".to_string(),
+            Err(_) => database_error(),
+        },
+        kind => panic!("fixture {fixture}: unknown store query kind {kind}"),
+    }
+}
+
+fn database_error() -> String {
+    tagged_error("Database")
+}
+
+fn tagged_error(tag: &str) -> String {
+    format!("{{\"error\":\"{tag}\"}}")
+}
+
+fn list_input(input: &Value, fixture: &str) -> ListInput {
+    ListInput {
+        directory: optional_string(input, "directory", fixture),
+        workspace_id: optional_string(input, "workspaceID", fixture),
+        project: optional_string(input, "project", fixture),
+        subpath: optional_string(input, "subpath", fixture),
+        search: optional_string(input, "search", fixture),
+        limit: optional_i64(input, "limit", fixture),
+        order: optional_order(input, fixture),
+        parent_id: match input.get("parentID") {
+            None => None,
+            Some(Value::Null) => Some(None),
+            Some(Value::String(parent_id)) => Some(Some(parent_id.clone())),
+            Some(_) => panic!("fixture {fixture}: parentID must be a string or null"),
+        },
+        archived: optional_bool(input, "archived", fixture),
+        anchor: match input.get("anchor") {
+            None | Some(Value::Null) => None,
+            Some(anchor) => Some(ListAnchor {
+                id: required_string(anchor, "id", fixture),
+                time: anchor
+                    .get("time")
+                    .and_then(Value::as_f64)
+                    .unwrap_or_else(|| panic!("fixture {fixture}: the anchor carries no time")),
+                direction: direction(anchor.get("direction"), fixture),
+            }),
+        },
+    }
+}
+
+fn messages_input(input: &Value, fixture: &str) -> MessagesInput {
+    MessagesInput {
+        session_id: required_string(input, "sessionID", fixture),
+        limit: optional_i64(input, "limit", fixture),
+        order: optional_order(input, fixture),
+        r#type: optional_string(input, "type", fixture),
+        cursor: match input.get("cursor") {
+            None | Some(Value::Null) => None,
+            Some(cursor) => Some(Cursor {
+                id: required_string(cursor, "id", fixture),
+                direction: direction(cursor.get("direction"), fixture),
+            }),
+        },
+    }
+}
+
+fn last_assistant_input(input: &Value, fixture: &str) -> LastAssistantInput {
+    LastAssistantInput {
+        session_id: required_string(input, "sessionID", fixture),
+        after_seq: optional_i64(input, "afterSeq", fixture),
+    }
+}
+
+fn required_string(value: &Value, key: &str, fixture: &str) -> String {
+    value
+        .get(key)
+        .and_then(Value::as_str)
+        .unwrap_or_else(|| panic!("fixture {fixture}: the store query carries no string {key}"))
+        .to_string()
+}
+
+fn optional_string(value: &Value, key: &str, fixture: &str) -> Option<String> {
+    match value.get(key) {
+        None | Some(Value::Null) => None,
+        Some(Value::String(text)) => Some(text.clone()),
+        Some(_) => panic!("fixture {fixture}: {key} must be a string"),
+    }
+}
+
+fn optional_i64(value: &Value, key: &str, fixture: &str) -> Option<i64> {
+    match value.get(key) {
+        None | Some(Value::Null) => None,
+        Some(number) => Some(number.as_i64().unwrap_or_else(|| panic!("fixture {fixture}: {key} must be an integer"))),
+    }
+}
+
+fn optional_bool(value: &Value, key: &str, fixture: &str) -> Option<bool> {
+    match value.get(key) {
+        None | Some(Value::Null) => None,
+        Some(flag) => Some(flag.as_bool().unwrap_or_else(|| panic!("fixture {fixture}: {key} must be a boolean"))),
+    }
+}
+
+fn optional_order(value: &Value, fixture: &str) -> Option<Order> {
+    match value.get("order") {
+        None | Some(Value::Null) => None,
+        Some(order) => Some(order_value(order, fixture)),
+    }
+}
+
+fn order_value(value: &Value, fixture: &str) -> Order {
+    match value.as_str() {
+        Some("asc") => Order::Asc,
+        Some("desc") => Order::Desc,
+        _ => panic!("fixture {fixture}: {value} is not a valid order"),
+    }
+}
+
+fn direction(value: Option<&Value>, fixture: &str) -> Direction {
+    match value.and_then(Value::as_str) {
+        Some("previous") => Direction::Previous,
+        Some("next") => Direction::Next,
+        _ => panic!("fixture {fixture}: the store query carries no valid direction"),
+    }
 }
 
 fn location(value: &Value, fixture: &str, step: usize) -> LocationRef {

@@ -45582,3 +45582,1897 @@ impl crate::codec::Encode for ConfigShellOption {
         out.push('}');
     }
 }
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SessionMessageAgentSelected1Time {
+    pub created: f64,
+}
+
+impl crate::codec::Decode for SessionMessageAgentSelected1Time {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self {
+            created: crate::codec::decode_field_checked(object, "created", path, |value: &f64, path| {
+                if crate::checks::is_finite(*value) { Ok(()) } else { Err(path.at("expected a finite number")) }
+            })?,
+        })
+    }
+}
+
+impl crate::codec::Encode for SessionMessageAgentSelected1Time {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "created", &self.created);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SessionMessageAgentSelected1Type {
+    AgentSwitched,
+}
+
+impl crate::codec::Decode for SessionMessageAgentSelected1Type {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        match value.as_str() {
+            Some("agent-switched") => Ok(Self::AgentSwitched),
+            _ => Err(path.at("expected \"agent-switched\"")),
+        }
+    }
+}
+
+impl crate::codec::Encode for SessionMessageAgentSelected1Type {
+    fn encode(&self, out: &mut String) {
+        crate::codec::write_string(
+            out,
+            match self {
+                Self::AgentSwitched => "agent-switched",
+            },
+        );
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SessionMessageAgentSelected1 {
+    pub id: SessionMessageID,
+    pub metadata: Option<crate::codec::JsonMap<serde_json::Value>>,
+    pub time: SessionMessageAgentSelected1Time,
+    pub r#type: SessionMessageAgentSelected1Type,
+    pub agent: AgentID,
+    pub previous: Option<AgentID>,
+}
+
+impl crate::codec::Decode for SessionMessageAgentSelected1 {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self {
+            id: crate::codec::decode_field(object, "id", path)?,
+            metadata: crate::codec::decode_optional(object, "metadata", path)?,
+            time: crate::codec::decode_field(object, "time", path)?,
+            r#type: crate::codec::decode_field(object, "type", path)?,
+            agent: crate::codec::decode_field(object, "agent", path)?,
+            previous: crate::codec::decode_optional(object, "previous", path)?,
+        })
+    }
+}
+
+impl crate::codec::Encode for SessionMessageAgentSelected1 {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "id", &self.id);
+        crate::codec::write_optional(out, &mut first, "metadata", &self.metadata);
+        crate::codec::write_value(out, &mut first, "time", &self.time);
+        crate::codec::write_value(out, &mut first, "type", &self.r#type);
+        crate::codec::write_value(out, &mut first, "agent", &self.agent);
+        crate::codec::write_optional(out, &mut first, "previous", &self.previous);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SessionMessageModelSelected1Time {
+    pub created: f64,
+}
+
+impl crate::codec::Decode for SessionMessageModelSelected1Time {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self {
+            created: crate::codec::decode_field_checked(object, "created", path, |value: &f64, path| {
+                if crate::checks::is_finite(*value) { Ok(()) } else { Err(path.at("expected a finite number")) }
+            })?,
+        })
+    }
+}
+
+impl crate::codec::Encode for SessionMessageModelSelected1Time {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "created", &self.created);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SessionMessageModelSelected1Type {
+    ModelSwitched,
+}
+
+impl crate::codec::Decode for SessionMessageModelSelected1Type {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        match value.as_str() {
+            Some("model-switched") => Ok(Self::ModelSwitched),
+            _ => Err(path.at("expected \"model-switched\"")),
+        }
+    }
+}
+
+impl crate::codec::Encode for SessionMessageModelSelected1Type {
+    fn encode(&self, out: &mut String) {
+        crate::codec::write_string(
+            out,
+            match self {
+                Self::ModelSwitched => "model-switched",
+            },
+        );
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SessionMessageModelSelected1 {
+    pub id: SessionMessageID,
+    pub metadata: Option<crate::codec::JsonMap<serde_json::Value>>,
+    pub time: SessionMessageModelSelected1Time,
+    pub r#type: SessionMessageModelSelected1Type,
+    pub model: ModelRef,
+    pub previous: Option<ModelRef>,
+}
+
+impl crate::codec::Decode for SessionMessageModelSelected1 {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self {
+            id: crate::codec::decode_field(object, "id", path)?,
+            metadata: crate::codec::decode_optional(object, "metadata", path)?,
+            time: crate::codec::decode_field(object, "time", path)?,
+            r#type: crate::codec::decode_field(object, "type", path)?,
+            model: crate::codec::decode_field(object, "model", path)?,
+            previous: crate::codec::decode_optional(object, "previous", path)?,
+        })
+    }
+}
+
+impl crate::codec::Encode for SessionMessageModelSelected1 {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "id", &self.id);
+        crate::codec::write_optional(out, &mut first, "metadata", &self.metadata);
+        crate::codec::write_value(out, &mut first, "time", &self.time);
+        crate::codec::write_value(out, &mut first, "type", &self.r#type);
+        crate::codec::write_value(out, &mut first, "model", &self.model);
+        crate::codec::write_optional(out, &mut first, "previous", &self.previous);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SessionMessageLocationSwitched1Time {
+    pub created: f64,
+}
+
+impl crate::codec::Decode for SessionMessageLocationSwitched1Time {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self {
+            created: crate::codec::decode_field_checked(object, "created", path, |value: &f64, path| {
+                if crate::checks::is_finite(*value) { Ok(()) } else { Err(path.at("expected a finite number")) }
+            })?,
+        })
+    }
+}
+
+impl crate::codec::Encode for SessionMessageLocationSwitched1Time {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "created", &self.created);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SessionMessageLocationSwitched1Type {
+    LocationSwitched,
+}
+
+impl crate::codec::Decode for SessionMessageLocationSwitched1Type {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        match value.as_str() {
+            Some("location-switched") => Ok(Self::LocationSwitched),
+            _ => Err(path.at("expected \"location-switched\"")),
+        }
+    }
+}
+
+impl crate::codec::Encode for SessionMessageLocationSwitched1Type {
+    fn encode(&self, out: &mut String) {
+        crate::codec::write_string(
+            out,
+            match self {
+                Self::LocationSwitched => "location-switched",
+            },
+        );
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SessionMessageLocationSwitched1Previous {
+    pub location: LocationPublicRef,
+    pub project_id: Option<ProjectID>,
+    pub subpath: Option<RelativePath>,
+}
+
+impl crate::codec::Decode for SessionMessageLocationSwitched1Previous {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self {
+            location: crate::codec::decode_field(object, "location", path)?,
+            project_id: crate::codec::decode_optional(object, "projectID", path)?,
+            subpath: crate::codec::decode_optional(object, "subpath", path)?,
+        })
+    }
+}
+
+impl crate::codec::Encode for SessionMessageLocationSwitched1Previous {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "location", &self.location);
+        crate::codec::write_optional(out, &mut first, "projectID", &self.project_id);
+        crate::codec::write_optional(out, &mut first, "subpath", &self.subpath);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SessionMessageLocationSwitched1 {
+    pub id: SessionMessageID,
+    pub metadata: Option<crate::codec::JsonMap<serde_json::Value>>,
+    pub time: SessionMessageLocationSwitched1Time,
+    pub r#type: SessionMessageLocationSwitched1Type,
+    pub project_id: Option<ProjectID>,
+    pub subpath: Option<RelativePath>,
+    pub location: LocationPublicRef,
+    pub previous: Option<Option<SessionMessageLocationSwitched1Previous>>,
+}
+
+impl crate::codec::Decode for SessionMessageLocationSwitched1 {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self {
+            id: crate::codec::decode_field(object, "id", path)?,
+            metadata: crate::codec::decode_optional(object, "metadata", path)?,
+            time: crate::codec::decode_field(object, "time", path)?,
+            r#type: crate::codec::decode_field(object, "type", path)?,
+            project_id: crate::codec::decode_optional(object, "projectID", path)?,
+            subpath: crate::codec::decode_optional(object, "subpath", path)?,
+            location: crate::codec::decode_field(object, "location", path)?,
+            previous: crate::codec::decode_optional_nullable(object, "previous", path)?,
+        })
+    }
+}
+
+impl crate::codec::Encode for SessionMessageLocationSwitched1 {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "id", &self.id);
+        crate::codec::write_optional(out, &mut first, "metadata", &self.metadata);
+        crate::codec::write_value(out, &mut first, "time", &self.time);
+        crate::codec::write_value(out, &mut first, "type", &self.r#type);
+        crate::codec::write_optional(out, &mut first, "projectID", &self.project_id);
+        crate::codec::write_optional(out, &mut first, "subpath", &self.subpath);
+        crate::codec::write_value(out, &mut first, "location", &self.location);
+        crate::codec::write_optional_nullable(out, &mut first, "previous", &self.previous);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SessionMessageMediaUserTime {
+    pub created: f64,
+}
+
+impl crate::codec::Decode for SessionMessageMediaUserTime {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self {
+            created: crate::codec::decode_field_checked(object, "created", path, |value: &f64, path| {
+                if crate::checks::is_finite(*value) { Ok(()) } else { Err(path.at("expected a finite number")) }
+            })?,
+        })
+    }
+}
+
+impl crate::codec::Encode for SessionMessageMediaUserTime {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "created", &self.created);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PromptMediaRef(pub String);
+
+impl crate::codec::Decode for PromptMediaRef {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let value = <String as crate::codec::Decode>::decode(value, path)?;
+        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_16) {
+            return Err(path.at("expected a string matching the RegExp ^media:[0-9a-f]{64}$"));
+        }
+        Ok(Self(value))
+    }
+}
+
+impl crate::codec::Encode for PromptMediaRef {
+    fn encode(&self, out: &mut String) {
+        crate::codec::write_string(out, &self.0);
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct PromptMediaFileAttachment {
+    pub mime: String,
+    pub source: PromptFileSource,
+    pub name: Option<String>,
+    pub description: Option<String>,
+    pub mention: Option<PromptMention>,
+    pub uri: PromptMediaRef,
+    pub bytes: Option<f64>,
+    pub width: Option<f64>,
+    pub height: Option<f64>,
+}
+
+impl crate::codec::Decode for PromptMediaFileAttachment {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self {
+            mime: crate::codec::decode_field(object, "mime", path)?,
+            source: crate::codec::decode_field(object, "source", path)?,
+            name: crate::codec::decode_optional(object, "name", path)?,
+            description: crate::codec::decode_optional(object, "description", path)?,
+            mention: crate::codec::decode_optional(object, "mention", path)?,
+            uri: crate::codec::decode_field(object, "uri", path)?,
+            bytes: crate::codec::decode_optional_checked(object, "bytes", path, |value: &f64, path| {
+                if crate::checks::is_int(*value) { Ok(()) } else { Err(path.at("expected an integer")) }
+            })?,
+            width: crate::codec::decode_optional_checked(object, "width", path, |value: &f64, path| {
+                if crate::checks::is_int(*value) { Ok(()) } else { Err(path.at("expected an integer")) }
+            })?,
+            height: crate::codec::decode_optional_checked(object, "height", path, |value: &f64, path| {
+                if crate::checks::is_int(*value) { Ok(()) } else { Err(path.at("expected an integer")) }
+            })?,
+        })
+    }
+}
+
+impl crate::codec::Encode for PromptMediaFileAttachment {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "mime", &self.mime);
+        crate::codec::write_value(out, &mut first, "source", &self.source);
+        crate::codec::write_optional(out, &mut first, "name", &self.name);
+        crate::codec::write_optional(out, &mut first, "description", &self.description);
+        crate::codec::write_optional(out, &mut first, "mention", &self.mention);
+        crate::codec::write_value(out, &mut first, "uri", &self.uri);
+        crate::codec::write_optional(out, &mut first, "bytes", &self.bytes);
+        crate::codec::write_optional(out, &mut first, "width", &self.width);
+        crate::codec::write_optional(out, &mut first, "height", &self.height);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum PromptAttachment {
+    FileAttachment(PromptFileAttachment),
+    MediaFileAttachment(PromptMediaFileAttachment),
+}
+
+impl crate::codec::Decode for PromptAttachment {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let mark = path.mark();
+        let member = <PromptFileAttachment as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
+            return Ok(Self::FileAttachment(member));
+        }
+        let mark = path.mark();
+        let member = <PromptMediaFileAttachment as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
+            return Ok(Self::MediaFileAttachment(member));
+        }
+        Err(path.at("no member matched"))
+    }
+}
+
+impl crate::codec::Encode for PromptAttachment {
+    fn encode(&self, out: &mut String) {
+        match self {
+            Self::FileAttachment(value) => <PromptFileAttachment as crate::codec::Encode>::encode(value, out),
+            Self::MediaFileAttachment(value) => <PromptMediaFileAttachment as crate::codec::Encode>::encode(value, out),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SessionMessageMediaUserType {
+    User,
+}
+
+impl crate::codec::Decode for SessionMessageMediaUserType {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        match value.as_str() {
+            Some("user") => Ok(Self::User),
+            _ => Err(path.at("expected \"user\"")),
+        }
+    }
+}
+
+impl crate::codec::Encode for SessionMessageMediaUserType {
+    fn encode(&self, out: &mut String) {
+        crate::codec::write_string(
+            out,
+            match self {
+                Self::User => "user",
+            },
+        );
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SessionMessageMediaUser {
+    pub id: SessionMessageID,
+    pub metadata: Option<crate::codec::JsonMap<serde_json::Value>>,
+    pub time: SessionMessageMediaUserTime,
+    pub text: String,
+    pub files: Option<Vec<PromptAttachment>>,
+    pub agents: Option<Vec<PromptAgentAttachment>>,
+    pub skills: Option<Vec<PromptSkillAttachment>>,
+    pub r#type: SessionMessageMediaUserType,
+}
+
+impl crate::codec::Decode for SessionMessageMediaUser {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self {
+            id: crate::codec::decode_field(object, "id", path)?,
+            metadata: crate::codec::decode_optional(object, "metadata", path)?,
+            time: crate::codec::decode_field(object, "time", path)?,
+            text: crate::codec::decode_field(object, "text", path)?,
+            files: crate::codec::decode_optional(object, "files", path)?,
+            agents: crate::codec::decode_optional(object, "agents", path)?,
+            skills: crate::codec::decode_optional(object, "skills", path)?,
+            r#type: crate::codec::decode_field(object, "type", path)?,
+        })
+    }
+}
+
+impl crate::codec::Encode for SessionMessageMediaUser {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "id", &self.id);
+        crate::codec::write_optional(out, &mut first, "metadata", &self.metadata);
+        crate::codec::write_value(out, &mut first, "time", &self.time);
+        crate::codec::write_value(out, &mut first, "text", &self.text);
+        crate::codec::write_optional(out, &mut first, "files", &self.files);
+        crate::codec::write_optional(out, &mut first, "agents", &self.agents);
+        crate::codec::write_optional(out, &mut first, "skills", &self.skills);
+        crate::codec::write_value(out, &mut first, "type", &self.r#type);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SessionMessageSynthetic1Time {
+    pub created: f64,
+}
+
+impl crate::codec::Decode for SessionMessageSynthetic1Time {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self {
+            created: crate::codec::decode_field_checked(object, "created", path, |value: &f64, path| {
+                if crate::checks::is_finite(*value) { Ok(()) } else { Err(path.at("expected a finite number")) }
+            })?,
+        })
+    }
+}
+
+impl crate::codec::Encode for SessionMessageSynthetic1Time {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "created", &self.created);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SessionMessageSynthetic1Type {
+    Synthetic,
+}
+
+impl crate::codec::Decode for SessionMessageSynthetic1Type {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        match value.as_str() {
+            Some("synthetic") => Ok(Self::Synthetic),
+            _ => Err(path.at("expected \"synthetic\"")),
+        }
+    }
+}
+
+impl crate::codec::Encode for SessionMessageSynthetic1Type {
+    fn encode(&self, out: &mut String) {
+        crate::codec::write_string(
+            out,
+            match self {
+                Self::Synthetic => "synthetic",
+            },
+        );
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SessionMessageSynthetic1 {
+    pub id: SessionMessageID,
+    pub metadata: Option<crate::codec::JsonMap<serde_json::Value>>,
+    pub time: SessionMessageSynthetic1Time,
+    pub text: String,
+    pub description: Option<String>,
+    pub r#type: SessionMessageSynthetic1Type,
+}
+
+impl crate::codec::Decode for SessionMessageSynthetic1 {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self {
+            id: crate::codec::decode_field(object, "id", path)?,
+            metadata: crate::codec::decode_optional(object, "metadata", path)?,
+            time: crate::codec::decode_field(object, "time", path)?,
+            text: crate::codec::decode_field(object, "text", path)?,
+            description: crate::codec::decode_optional(object, "description", path)?,
+            r#type: crate::codec::decode_field(object, "type", path)?,
+        })
+    }
+}
+
+impl crate::codec::Encode for SessionMessageSynthetic1 {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "id", &self.id);
+        crate::codec::write_optional(out, &mut first, "metadata", &self.metadata);
+        crate::codec::write_value(out, &mut first, "time", &self.time);
+        crate::codec::write_value(out, &mut first, "text", &self.text);
+        crate::codec::write_optional(out, &mut first, "description", &self.description);
+        crate::codec::write_value(out, &mut first, "type", &self.r#type);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SessionMessageSystem1Time {
+    pub created: f64,
+}
+
+impl crate::codec::Decode for SessionMessageSystem1Time {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self {
+            created: crate::codec::decode_field_checked(object, "created", path, |value: &f64, path| {
+                if crate::checks::is_finite(*value) { Ok(()) } else { Err(path.at("expected a finite number")) }
+            })?,
+        })
+    }
+}
+
+impl crate::codec::Encode for SessionMessageSystem1Time {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "created", &self.created);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SessionMessageSystem1Type {
+    System,
+}
+
+impl crate::codec::Decode for SessionMessageSystem1Type {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        match value.as_str() {
+            Some("system") => Ok(Self::System),
+            _ => Err(path.at("expected \"system\"")),
+        }
+    }
+}
+
+impl crate::codec::Encode for SessionMessageSystem1Type {
+    fn encode(&self, out: &mut String) {
+        crate::codec::write_string(
+            out,
+            match self {
+                Self::System => "system",
+            },
+        );
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SessionMessageSystem1 {
+    pub id: SessionMessageID,
+    pub metadata: Option<crate::codec::JsonMap<serde_json::Value>>,
+    pub time: SessionMessageSystem1Time,
+    pub r#type: SessionMessageSystem1Type,
+    pub text: String,
+    pub description: Option<String>,
+}
+
+impl crate::codec::Decode for SessionMessageSystem1 {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self {
+            id: crate::codec::decode_field(object, "id", path)?,
+            metadata: crate::codec::decode_optional(object, "metadata", path)?,
+            time: crate::codec::decode_field(object, "time", path)?,
+            r#type: crate::codec::decode_field(object, "type", path)?,
+            text: crate::codec::decode_field(object, "text", path)?,
+            description: crate::codec::decode_optional(object, "description", path)?,
+        })
+    }
+}
+
+impl crate::codec::Encode for SessionMessageSystem1 {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "id", &self.id);
+        crate::codec::write_optional(out, &mut first, "metadata", &self.metadata);
+        crate::codec::write_value(out, &mut first, "time", &self.time);
+        crate::codec::write_value(out, &mut first, "type", &self.r#type);
+        crate::codec::write_value(out, &mut first, "text", &self.text);
+        crate::codec::write_optional(out, &mut first, "description", &self.description);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SessionMessageSkill1Time {
+    pub created: f64,
+}
+
+impl crate::codec::Decode for SessionMessageSkill1Time {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self {
+            created: crate::codec::decode_field_checked(object, "created", path, |value: &f64, path| {
+                if crate::checks::is_finite(*value) { Ok(()) } else { Err(path.at("expected a finite number")) }
+            })?,
+        })
+    }
+}
+
+impl crate::codec::Encode for SessionMessageSkill1Time {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "created", &self.created);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SessionMessageSkill1Type {
+    Skill,
+}
+
+impl crate::codec::Decode for SessionMessageSkill1Type {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        match value.as_str() {
+            Some("skill") => Ok(Self::Skill),
+            _ => Err(path.at("expected \"skill\"")),
+        }
+    }
+}
+
+impl crate::codec::Encode for SessionMessageSkill1Type {
+    fn encode(&self, out: &mut String) {
+        crate::codec::write_string(
+            out,
+            match self {
+                Self::Skill => "skill",
+            },
+        );
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SessionMessageSkill1 {
+    pub id: SessionMessageID,
+    pub metadata: Option<crate::codec::JsonMap<serde_json::Value>>,
+    pub time: SessionMessageSkill1Time,
+    pub r#type: SessionMessageSkill1Type,
+    pub skill: SkillID,
+    pub name: SkillName,
+    pub text: String,
+}
+
+impl crate::codec::Decode for SessionMessageSkill1 {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self {
+            id: crate::codec::decode_field(object, "id", path)?,
+            metadata: crate::codec::decode_optional(object, "metadata", path)?,
+            time: crate::codec::decode_field(object, "time", path)?,
+            r#type: crate::codec::decode_field(object, "type", path)?,
+            skill: crate::codec::decode_field(object, "skill", path)?,
+            name: crate::codec::decode_field(object, "name", path)?,
+            text: crate::codec::decode_field(object, "text", path)?,
+        })
+    }
+}
+
+impl crate::codec::Encode for SessionMessageSkill1 {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "id", &self.id);
+        crate::codec::write_optional(out, &mut first, "metadata", &self.metadata);
+        crate::codec::write_value(out, &mut first, "time", &self.time);
+        crate::codec::write_value(out, &mut first, "type", &self.r#type);
+        crate::codec::write_value(out, &mut first, "skill", &self.skill);
+        crate::codec::write_value(out, &mut first, "name", &self.name);
+        crate::codec::write_value(out, &mut first, "text", &self.text);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SessionMessageShell1Time {
+    pub created: f64,
+    pub completed: Option<f64>,
+}
+
+impl crate::codec::Decode for SessionMessageShell1Time {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self {
+            created: crate::codec::decode_field_checked(object, "created", path, |value: &f64, path| {
+                if crate::checks::is_finite(*value) { Ok(()) } else { Err(path.at("expected a finite number")) }
+            })?,
+            completed: crate::codec::decode_optional_checked(object, "completed", path, |value: &f64, path| {
+                if crate::checks::is_finite(*value) { Ok(()) } else { Err(path.at("expected a finite number")) }
+            })?,
+        })
+    }
+}
+
+impl crate::codec::Encode for SessionMessageShell1Time {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "created", &self.created);
+        crate::codec::write_optional(out, &mut first, "completed", &self.completed);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SessionMessageShell1Type {
+    Shell,
+}
+
+impl crate::codec::Decode for SessionMessageShell1Type {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        match value.as_str() {
+            Some("shell") => Ok(Self::Shell),
+            _ => Err(path.at("expected \"shell\"")),
+        }
+    }
+}
+
+impl crate::codec::Encode for SessionMessageShell1Type {
+    fn encode(&self, out: &mut String) {
+        crate::codec::write_string(
+            out,
+            match self {
+                Self::Shell => "shell",
+            },
+        );
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SessionMessageShell1Status {
+    Running,
+    Exited,
+    Timeout,
+    Killed,
+}
+
+impl crate::codec::Decode for SessionMessageShell1Status {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        match value.as_str() {
+            Some("running") => Ok(Self::Running),
+            Some("exited") => Ok(Self::Exited),
+            Some("timeout") => Ok(Self::Timeout),
+            Some("killed") => Ok(Self::Killed),
+            _ => Err(path.at("expected one of \"running\", \"exited\", \"timeout\", \"killed\"")),
+        }
+    }
+}
+
+impl crate::codec::Encode for SessionMessageShell1Status {
+    fn encode(&self, out: &mut String) {
+        crate::codec::write_string(
+            out,
+            match self {
+                Self::Running => "running",
+                Self::Exited => "exited",
+                Self::Timeout => "timeout",
+                Self::Killed => "killed",
+            },
+        );
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SessionMessageShell1Output {
+    pub output: String,
+    pub cursor: f64,
+    pub size: f64,
+    pub truncated: bool,
+}
+
+impl crate::codec::Decode for SessionMessageShell1Output {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self {
+            output: crate::codec::decode_field(object, "output", path)?,
+            cursor: crate::codec::decode_field_checked(object, "cursor", path, |value: &f64, path| {
+                if !crate::checks::is_int(*value) {
+                    return Err(path.at("expected an integer"));
+                }
+                if !crate::checks::is_greater_than_or_equal_to(*value, 0.0) {
+                    return Err(path.at("expected a value greater than or equal to 0"));
+                }
+                Ok(())
+            })?,
+            size: crate::codec::decode_field_checked(object, "size", path, |value: &f64, path| {
+                if !crate::checks::is_int(*value) {
+                    return Err(path.at("expected an integer"));
+                }
+                if !crate::checks::is_greater_than_or_equal_to(*value, 0.0) {
+                    return Err(path.at("expected a value greater than or equal to 0"));
+                }
+                Ok(())
+            })?,
+            truncated: crate::codec::decode_field(object, "truncated", path)?,
+        })
+    }
+}
+
+impl crate::codec::Encode for SessionMessageShell1Output {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "output", &self.output);
+        crate::codec::write_value(out, &mut first, "cursor", &self.cursor);
+        crate::codec::write_value(out, &mut first, "size", &self.size);
+        crate::codec::write_value(out, &mut first, "truncated", &self.truncated);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SessionMessageShell1 {
+    pub id: SessionMessageID,
+    pub metadata: Option<crate::codec::JsonMap<serde_json::Value>>,
+    pub time: SessionMessageShell1Time,
+    pub r#type: SessionMessageShell1Type,
+    pub shell_id: ShellID,
+    pub command: String,
+    pub status: SessionMessageShell1Status,
+    pub exit: Option<f64>,
+    pub output: Option<SessionMessageShell1Output>,
+}
+
+impl crate::codec::Decode for SessionMessageShell1 {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self {
+            id: crate::codec::decode_field(object, "id", path)?,
+            metadata: crate::codec::decode_optional(object, "metadata", path)?,
+            time: crate::codec::decode_field(object, "time", path)?,
+            r#type: crate::codec::decode_field(object, "type", path)?,
+            shell_id: crate::codec::decode_field(object, "shellID", path)?,
+            command: crate::codec::decode_field(object, "command", path)?,
+            status: crate::codec::decode_field(object, "status", path)?,
+            exit: crate::codec::decode_optional(object, "exit", path)?,
+            output: crate::codec::decode_optional(object, "output", path)?,
+        })
+    }
+}
+
+impl crate::codec::Encode for SessionMessageShell1 {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "id", &self.id);
+        crate::codec::write_optional(out, &mut first, "metadata", &self.metadata);
+        crate::codec::write_value(out, &mut first, "time", &self.time);
+        crate::codec::write_value(out, &mut first, "type", &self.r#type);
+        crate::codec::write_value(out, &mut first, "shellID", &self.shell_id);
+        crate::codec::write_value(out, &mut first, "command", &self.command);
+        crate::codec::write_value(out, &mut first, "status", &self.status);
+        crate::codec::write_optional(out, &mut first, "exit", &self.exit);
+        crate::codec::write_optional(out, &mut first, "output", &self.output);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SessionMessageAssistant1Time {
+    pub created: f64,
+    pub first_token: Option<f64>,
+    pub streamed: Option<f64>,
+    pub completed: Option<f64>,
+}
+
+impl crate::codec::Decode for SessionMessageAssistant1Time {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self {
+            created: crate::codec::decode_field_checked(object, "created", path, |value: &f64, path| {
+                if crate::checks::is_finite(*value) { Ok(()) } else { Err(path.at("expected a finite number")) }
+            })?,
+            first_token: crate::codec::decode_optional_checked(object, "firstToken", path, |value: &f64, path| {
+                if crate::checks::is_finite(*value) { Ok(()) } else { Err(path.at("expected a finite number")) }
+            })?,
+            streamed: crate::codec::decode_optional_checked(object, "streamed", path, |value: &f64, path| {
+                if crate::checks::is_finite(*value) { Ok(()) } else { Err(path.at("expected a finite number")) }
+            })?,
+            completed: crate::codec::decode_optional_checked(object, "completed", path, |value: &f64, path| {
+                if crate::checks::is_finite(*value) { Ok(()) } else { Err(path.at("expected a finite number")) }
+            })?,
+        })
+    }
+}
+
+impl crate::codec::Encode for SessionMessageAssistant1Time {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "created", &self.created);
+        crate::codec::write_optional(out, &mut first, "firstToken", &self.first_token);
+        crate::codec::write_optional(out, &mut first, "streamed", &self.streamed);
+        crate::codec::write_optional(out, &mut first, "completed", &self.completed);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SessionMessageAssistant1Type {
+    Assistant,
+}
+
+impl crate::codec::Decode for SessionMessageAssistant1Type {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        match value.as_str() {
+            Some("assistant") => Ok(Self::Assistant),
+            _ => Err(path.at("expected \"assistant\"")),
+        }
+    }
+}
+
+impl crate::codec::Encode for SessionMessageAssistant1Type {
+    fn encode(&self, out: &mut String) {
+        crate::codec::write_string(
+            out,
+            match self {
+                Self::Assistant => "assistant",
+            },
+        );
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum SessionMessageAssistant1ContentItem {
+    Text(SessionMessageAssistantText),
+    Reasoning(SessionMessageAssistantReasoning),
+    Tool(SessionMessageAssistantTool),
+}
+
+impl crate::codec::Decode for SessionMessageAssistant1ContentItem {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        let tag: String = crate::codec::decode_field(object, "type", path)?;
+        match tag.as_str() {
+            "text" => <SessionMessageAssistantText as crate::codec::Decode>::decode(value, path).map(Self::Text),
+            "reasoning" => {
+                <SessionMessageAssistantReasoning as crate::codec::Decode>::decode(value, path).map(Self::Reasoning)
+            }
+            "tool" => <SessionMessageAssistantTool as crate::codec::Decode>::decode(value, path).map(Self::Tool),
+            _ => Err(path.at("expected a known type")),
+        }
+    }
+}
+
+impl crate::codec::Encode for SessionMessageAssistant1ContentItem {
+    fn encode(&self, out: &mut String) {
+        match self {
+            Self::Text(value) => <SessionMessageAssistantText as crate::codec::Encode>::encode(value, out),
+            Self::Reasoning(value) => <SessionMessageAssistantReasoning as crate::codec::Encode>::encode(value, out),
+            Self::Tool(value) => <SessionMessageAssistantTool as crate::codec::Encode>::encode(value, out),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SessionMessageAssistant1Snapshot {
+    pub start: Option<SnapshotID>,
+    pub end: Option<SnapshotID>,
+    pub files: Option<Vec<RelativePath>>,
+}
+
+impl crate::codec::Decode for SessionMessageAssistant1Snapshot {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self {
+            start: crate::codec::decode_optional(object, "start", path)?,
+            end: crate::codec::decode_optional(object, "end", path)?,
+            files: crate::codec::decode_optional(object, "files", path)?,
+        })
+    }
+}
+
+impl crate::codec::Encode for SessionMessageAssistant1Snapshot {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_optional(out, &mut first, "start", &self.start);
+        crate::codec::write_optional(out, &mut first, "end", &self.end);
+        crate::codec::write_optional(out, &mut first, "files", &self.files);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SessionMessageAssistant1Finish {
+    Stop,
+    Length,
+    ToolCalls,
+    ContentFilter,
+    Error,
+    Unknown,
+}
+
+impl crate::codec::Decode for SessionMessageAssistant1Finish {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        match value.as_str() {
+            Some("stop") => Ok(Self::Stop),
+            Some("length") => Ok(Self::Length),
+            Some("tool-calls") => Ok(Self::ToolCalls),
+            Some("content-filter") => Ok(Self::ContentFilter),
+            Some("error") => Ok(Self::Error),
+            Some("unknown") => Ok(Self::Unknown),
+            _ => Err(path.at(
+                "expected one of \"stop\", \"length\", \"tool-calls\", \"content-filter\", \"error\", \"unknown\"",
+            )),
+        }
+    }
+}
+
+impl crate::codec::Encode for SessionMessageAssistant1Finish {
+    fn encode(&self, out: &mut String) {
+        crate::codec::write_string(
+            out,
+            match self {
+                Self::Stop => "stop",
+                Self::Length => "length",
+                Self::ToolCalls => "tool-calls",
+                Self::ContentFilter => "content-filter",
+                Self::Error => "error",
+                Self::Unknown => "unknown",
+            },
+        );
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SessionMessageAssistant1 {
+    pub id: SessionMessageID,
+    pub metadata: Option<crate::codec::JsonMap<serde_json::Value>>,
+    pub time: SessionMessageAssistant1Time,
+    pub r#type: SessionMessageAssistant1Type,
+    pub agent: AgentID,
+    pub model: ModelRef,
+    pub content: Vec<SessionMessageAssistant1ContentItem>,
+    pub snapshot: Option<SessionMessageAssistant1Snapshot>,
+    pub finish: Option<SessionMessageAssistant1Finish>,
+    pub raw_finish: Option<String>,
+    pub native: Option<SessionMessageNative>,
+    pub cost: Option<MoneyUSD>,
+    pub tokens: Option<TokenUsageInfo>,
+    pub error: Option<SessionStructuredError>,
+    pub retry: Option<SessionMessageAssistantRetry>,
+}
+
+impl crate::codec::Decode for SessionMessageAssistant1 {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self {
+            id: crate::codec::decode_field(object, "id", path)?,
+            metadata: crate::codec::decode_optional(object, "metadata", path)?,
+            time: crate::codec::decode_field(object, "time", path)?,
+            r#type: crate::codec::decode_field(object, "type", path)?,
+            agent: crate::codec::decode_field(object, "agent", path)?,
+            model: crate::codec::decode_field(object, "model", path)?,
+            content: crate::codec::decode_field(object, "content", path)?,
+            snapshot: crate::codec::decode_optional(object, "snapshot", path)?,
+            finish: crate::codec::decode_optional(object, "finish", path)?,
+            raw_finish: crate::codec::decode_optional(object, "rawFinish", path)?,
+            native: crate::codec::decode_optional(object, "native", path)?,
+            cost: crate::codec::decode_optional(object, "cost", path)?,
+            tokens: crate::codec::decode_optional(object, "tokens", path)?,
+            error: crate::codec::decode_optional(object, "error", path)?,
+            retry: crate::codec::decode_optional(object, "retry", path)?,
+        })
+    }
+}
+
+impl crate::codec::Encode for SessionMessageAssistant1 {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "id", &self.id);
+        crate::codec::write_optional(out, &mut first, "metadata", &self.metadata);
+        crate::codec::write_value(out, &mut first, "time", &self.time);
+        crate::codec::write_value(out, &mut first, "type", &self.r#type);
+        crate::codec::write_value(out, &mut first, "agent", &self.agent);
+        crate::codec::write_value(out, &mut first, "model", &self.model);
+        crate::codec::write_value(out, &mut first, "content", &self.content);
+        crate::codec::write_optional(out, &mut first, "snapshot", &self.snapshot);
+        crate::codec::write_optional(out, &mut first, "finish", &self.finish);
+        crate::codec::write_optional(out, &mut first, "rawFinish", &self.raw_finish);
+        crate::codec::write_optional(out, &mut first, "native", &self.native);
+        crate::codec::write_optional(out, &mut first, "cost", &self.cost);
+        crate::codec::write_optional(out, &mut first, "tokens", &self.tokens);
+        crate::codec::write_optional(out, &mut first, "error", &self.error);
+        crate::codec::write_optional(out, &mut first, "retry", &self.retry);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SessionMessageCompactionRunning1Type {
+    Compaction,
+}
+
+impl crate::codec::Decode for SessionMessageCompactionRunning1Type {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        match value.as_str() {
+            Some("compaction") => Ok(Self::Compaction),
+            _ => Err(path.at("expected \"compaction\"")),
+        }
+    }
+}
+
+impl crate::codec::Encode for SessionMessageCompactionRunning1Type {
+    fn encode(&self, out: &mut String) {
+        crate::codec::write_string(
+            out,
+            match self {
+                Self::Compaction => "compaction",
+            },
+        );
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SessionMessageCompactionRunning1Time {
+    pub created: f64,
+}
+
+impl crate::codec::Decode for SessionMessageCompactionRunning1Time {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self {
+            created: crate::codec::decode_field_checked(object, "created", path, |value: &f64, path| {
+                if crate::checks::is_finite(*value) { Ok(()) } else { Err(path.at("expected a finite number")) }
+            })?,
+        })
+    }
+}
+
+impl crate::codec::Encode for SessionMessageCompactionRunning1Time {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "created", &self.created);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SessionMessageCompactionRunning1Status {
+    Running,
+}
+
+impl crate::codec::Decode for SessionMessageCompactionRunning1Status {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        match value.as_str() {
+            Some("running") => Ok(Self::Running),
+            _ => Err(path.at("expected \"running\"")),
+        }
+    }
+}
+
+impl crate::codec::Encode for SessionMessageCompactionRunning1Status {
+    fn encode(&self, out: &mut String) {
+        crate::codec::write_string(
+            out,
+            match self {
+                Self::Running => "running",
+            },
+        );
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SessionMessageCompactionRunning1Reason {
+    Auto,
+    Manual,
+}
+
+impl crate::codec::Decode for SessionMessageCompactionRunning1Reason {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        match value.as_str() {
+            Some("auto") => Ok(Self::Auto),
+            Some("manual") => Ok(Self::Manual),
+            _ => Err(path.at("expected one of \"auto\", \"manual\"")),
+        }
+    }
+}
+
+impl crate::codec::Encode for SessionMessageCompactionRunning1Reason {
+    fn encode(&self, out: &mut String) {
+        crate::codec::write_string(
+            out,
+            match self {
+                Self::Auto => "auto",
+                Self::Manual => "manual",
+            },
+        );
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SessionMessageCompactionRunning1 {
+    pub r#type: SessionMessageCompactionRunning1Type,
+    pub id: SessionMessageID,
+    pub metadata: Option<crate::codec::JsonMap<serde_json::Value>>,
+    pub time: SessionMessageCompactionRunning1Time,
+    pub status: SessionMessageCompactionRunning1Status,
+    pub reason: SessionMessageCompactionRunning1Reason,
+    pub summary: String,
+}
+
+impl crate::codec::Decode for SessionMessageCompactionRunning1 {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self {
+            r#type: crate::codec::decode_field(object, "type", path)?,
+            id: crate::codec::decode_field(object, "id", path)?,
+            metadata: crate::codec::decode_optional(object, "metadata", path)?,
+            time: crate::codec::decode_field(object, "time", path)?,
+            status: crate::codec::decode_field(object, "status", path)?,
+            reason: crate::codec::decode_field(object, "reason", path)?,
+            summary: crate::codec::decode_field(object, "summary", path)?,
+        })
+    }
+}
+
+impl crate::codec::Encode for SessionMessageCompactionRunning1 {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "type", &self.r#type);
+        crate::codec::write_value(out, &mut first, "id", &self.id);
+        crate::codec::write_optional(out, &mut first, "metadata", &self.metadata);
+        crate::codec::write_value(out, &mut first, "time", &self.time);
+        crate::codec::write_value(out, &mut first, "status", &self.status);
+        crate::codec::write_value(out, &mut first, "reason", &self.reason);
+        crate::codec::write_value(out, &mut first, "summary", &self.summary);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SessionMessageCompactionCompleted1Type {
+    Compaction,
+}
+
+impl crate::codec::Decode for SessionMessageCompactionCompleted1Type {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        match value.as_str() {
+            Some("compaction") => Ok(Self::Compaction),
+            _ => Err(path.at("expected \"compaction\"")),
+        }
+    }
+}
+
+impl crate::codec::Encode for SessionMessageCompactionCompleted1Type {
+    fn encode(&self, out: &mut String) {
+        crate::codec::write_string(
+            out,
+            match self {
+                Self::Compaction => "compaction",
+            },
+        );
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SessionMessageCompactionCompleted1Time {
+    pub created: f64,
+}
+
+impl crate::codec::Decode for SessionMessageCompactionCompleted1Time {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self {
+            created: crate::codec::decode_field_checked(object, "created", path, |value: &f64, path| {
+                if crate::checks::is_finite(*value) { Ok(()) } else { Err(path.at("expected a finite number")) }
+            })?,
+        })
+    }
+}
+
+impl crate::codec::Encode for SessionMessageCompactionCompleted1Time {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "created", &self.created);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SessionMessageCompactionCompleted1Status {
+    Completed,
+}
+
+impl crate::codec::Decode for SessionMessageCompactionCompleted1Status {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        match value.as_str() {
+            Some("completed") => Ok(Self::Completed),
+            _ => Err(path.at("expected \"completed\"")),
+        }
+    }
+}
+
+impl crate::codec::Encode for SessionMessageCompactionCompleted1Status {
+    fn encode(&self, out: &mut String) {
+        crate::codec::write_string(
+            out,
+            match self {
+                Self::Completed => "completed",
+            },
+        );
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SessionMessageCompactionCompleted1Reason {
+    Auto,
+    Manual,
+}
+
+impl crate::codec::Decode for SessionMessageCompactionCompleted1Reason {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        match value.as_str() {
+            Some("auto") => Ok(Self::Auto),
+            Some("manual") => Ok(Self::Manual),
+            _ => Err(path.at("expected one of \"auto\", \"manual\"")),
+        }
+    }
+}
+
+impl crate::codec::Encode for SessionMessageCompactionCompleted1Reason {
+    fn encode(&self, out: &mut String) {
+        crate::codec::write_string(
+            out,
+            match self {
+                Self::Auto => "auto",
+                Self::Manual => "manual",
+            },
+        );
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SessionMessageCompactionCompleted1 {
+    pub r#type: SessionMessageCompactionCompleted1Type,
+    pub id: SessionMessageID,
+    pub metadata: Option<crate::codec::JsonMap<serde_json::Value>>,
+    pub time: SessionMessageCompactionCompleted1Time,
+    pub status: SessionMessageCompactionCompleted1Status,
+    pub reason: SessionMessageCompactionCompleted1Reason,
+    pub model: Option<ModelRef>,
+    pub native: Option<SessionMessageNative>,
+    pub summary: String,
+    pub cost: Option<MoneyUSD>,
+    pub tokens: Option<TokenUsageInfo>,
+}
+
+impl crate::codec::Decode for SessionMessageCompactionCompleted1 {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self {
+            r#type: crate::codec::decode_field(object, "type", path)?,
+            id: crate::codec::decode_field(object, "id", path)?,
+            metadata: crate::codec::decode_optional(object, "metadata", path)?,
+            time: crate::codec::decode_field(object, "time", path)?,
+            status: crate::codec::decode_field(object, "status", path)?,
+            reason: crate::codec::decode_field(object, "reason", path)?,
+            model: crate::codec::decode_optional(object, "model", path)?,
+            native: crate::codec::decode_optional(object, "native", path)?,
+            summary: crate::codec::decode_field(object, "summary", path)?,
+            cost: crate::codec::decode_optional(object, "cost", path)?,
+            tokens: crate::codec::decode_optional(object, "tokens", path)?,
+        })
+    }
+}
+
+impl crate::codec::Encode for SessionMessageCompactionCompleted1 {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "type", &self.r#type);
+        crate::codec::write_value(out, &mut first, "id", &self.id);
+        crate::codec::write_optional(out, &mut first, "metadata", &self.metadata);
+        crate::codec::write_value(out, &mut first, "time", &self.time);
+        crate::codec::write_value(out, &mut first, "status", &self.status);
+        crate::codec::write_value(out, &mut first, "reason", &self.reason);
+        crate::codec::write_optional(out, &mut first, "model", &self.model);
+        crate::codec::write_optional(out, &mut first, "native", &self.native);
+        crate::codec::write_value(out, &mut first, "summary", &self.summary);
+        crate::codec::write_optional(out, &mut first, "cost", &self.cost);
+        crate::codec::write_optional(out, &mut first, "tokens", &self.tokens);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SessionMessageCompactionFailed1Type {
+    Compaction,
+}
+
+impl crate::codec::Decode for SessionMessageCompactionFailed1Type {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        match value.as_str() {
+            Some("compaction") => Ok(Self::Compaction),
+            _ => Err(path.at("expected \"compaction\"")),
+        }
+    }
+}
+
+impl crate::codec::Encode for SessionMessageCompactionFailed1Type {
+    fn encode(&self, out: &mut String) {
+        crate::codec::write_string(
+            out,
+            match self {
+                Self::Compaction => "compaction",
+            },
+        );
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SessionMessageCompactionFailed1Time {
+    pub created: f64,
+}
+
+impl crate::codec::Decode for SessionMessageCompactionFailed1Time {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self {
+            created: crate::codec::decode_field_checked(object, "created", path, |value: &f64, path| {
+                if crate::checks::is_finite(*value) { Ok(()) } else { Err(path.at("expected a finite number")) }
+            })?,
+        })
+    }
+}
+
+impl crate::codec::Encode for SessionMessageCompactionFailed1Time {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "created", &self.created);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SessionMessageCompactionFailed1Status {
+    Failed,
+}
+
+impl crate::codec::Decode for SessionMessageCompactionFailed1Status {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        match value.as_str() {
+            Some("failed") => Ok(Self::Failed),
+            _ => Err(path.at("expected \"failed\"")),
+        }
+    }
+}
+
+impl crate::codec::Encode for SessionMessageCompactionFailed1Status {
+    fn encode(&self, out: &mut String) {
+        crate::codec::write_string(
+            out,
+            match self {
+                Self::Failed => "failed",
+            },
+        );
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SessionMessageCompactionFailed1Reason {
+    Auto,
+    Manual,
+}
+
+impl crate::codec::Decode for SessionMessageCompactionFailed1Reason {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        match value.as_str() {
+            Some("auto") => Ok(Self::Auto),
+            Some("manual") => Ok(Self::Manual),
+            _ => Err(path.at("expected one of \"auto\", \"manual\"")),
+        }
+    }
+}
+
+impl crate::codec::Encode for SessionMessageCompactionFailed1Reason {
+    fn encode(&self, out: &mut String) {
+        crate::codec::write_string(
+            out,
+            match self {
+                Self::Auto => "auto",
+                Self::Manual => "manual",
+            },
+        );
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SessionMessageCompactionFailed1 {
+    pub r#type: SessionMessageCompactionFailed1Type,
+    pub id: SessionMessageID,
+    pub metadata: Option<crate::codec::JsonMap<serde_json::Value>>,
+    pub time: SessionMessageCompactionFailed1Time,
+    pub status: SessionMessageCompactionFailed1Status,
+    pub reason: SessionMessageCompactionFailed1Reason,
+    pub error: SessionStructuredError,
+    pub cost: Option<MoneyUSD>,
+    pub tokens: Option<TokenUsageInfo>,
+}
+
+impl crate::codec::Decode for SessionMessageCompactionFailed1 {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self {
+            r#type: crate::codec::decode_field(object, "type", path)?,
+            id: crate::codec::decode_field(object, "id", path)?,
+            metadata: crate::codec::decode_optional(object, "metadata", path)?,
+            time: crate::codec::decode_field(object, "time", path)?,
+            status: crate::codec::decode_field(object, "status", path)?,
+            reason: crate::codec::decode_field(object, "reason", path)?,
+            error: crate::codec::decode_field(object, "error", path)?,
+            cost: crate::codec::decode_optional(object, "cost", path)?,
+            tokens: crate::codec::decode_optional(object, "tokens", path)?,
+        })
+    }
+}
+
+impl crate::codec::Encode for SessionMessageCompactionFailed1 {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "type", &self.r#type);
+        crate::codec::write_value(out, &mut first, "id", &self.id);
+        crate::codec::write_optional(out, &mut first, "metadata", &self.metadata);
+        crate::codec::write_value(out, &mut first, "time", &self.time);
+        crate::codec::write_value(out, &mut first, "status", &self.status);
+        crate::codec::write_value(out, &mut first, "reason", &self.reason);
+        crate::codec::write_value(out, &mut first, "error", &self.error);
+        crate::codec::write_optional(out, &mut first, "cost", &self.cost);
+        crate::codec::write_optional(out, &mut first, "tokens", &self.tokens);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum SessionMessageCompaction1 {
+    Running(SessionMessageCompactionRunning1),
+    Completed(SessionMessageCompactionCompleted1),
+    Failed(SessionMessageCompactionFailed1),
+}
+
+impl crate::codec::Decode for SessionMessageCompaction1 {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        let tag: String = crate::codec::decode_field(object, "status", path)?;
+        match tag.as_str() {
+            "running" => {
+                <SessionMessageCompactionRunning1 as crate::codec::Decode>::decode(value, path).map(Self::Running)
+            }
+            "completed" => {
+                <SessionMessageCompactionCompleted1 as crate::codec::Decode>::decode(value, path).map(Self::Completed)
+            }
+            "failed" => {
+                <SessionMessageCompactionFailed1 as crate::codec::Decode>::decode(value, path).map(Self::Failed)
+            }
+            _ => Err(path.at("expected a known status")),
+        }
+    }
+}
+
+impl crate::codec::Encode for SessionMessageCompaction1 {
+    fn encode(&self, out: &mut String) {
+        match self {
+            Self::Running(value) => <SessionMessageCompactionRunning1 as crate::codec::Encode>::encode(value, out),
+            Self::Completed(value) => <SessionMessageCompactionCompleted1 as crate::codec::Encode>::encode(value, out),
+            Self::Failed(value) => <SessionMessageCompactionFailed1 as crate::codec::Encode>::encode(value, out),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SessionMessageIdle1Time {
+    pub created: f64,
+}
+
+impl crate::codec::Decode for SessionMessageIdle1Time {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self {
+            created: crate::codec::decode_field_checked(object, "created", path, |value: &f64, path| {
+                if crate::checks::is_finite(*value) { Ok(()) } else { Err(path.at("expected a finite number")) }
+            })?,
+        })
+    }
+}
+
+impl crate::codec::Encode for SessionMessageIdle1Time {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "created", &self.created);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SessionMessageIdle1Type {
+    Idle,
+}
+
+impl crate::codec::Decode for SessionMessageIdle1Type {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        match value.as_str() {
+            Some("idle") => Ok(Self::Idle),
+            _ => Err(path.at("expected \"idle\"")),
+        }
+    }
+}
+
+impl crate::codec::Encode for SessionMessageIdle1Type {
+    fn encode(&self, out: &mut String) {
+        crate::codec::write_string(
+            out,
+            match self {
+                Self::Idle => "idle",
+            },
+        );
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SessionMessageIdle1Outcome {
+    Succeeded,
+    Failed,
+    Interrupted,
+}
+
+impl crate::codec::Decode for SessionMessageIdle1Outcome {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        match value.as_str() {
+            Some("succeeded") => Ok(Self::Succeeded),
+            Some("failed") => Ok(Self::Failed),
+            Some("interrupted") => Ok(Self::Interrupted),
+            _ => Err(path.at("expected one of \"succeeded\", \"failed\", \"interrupted\"")),
+        }
+    }
+}
+
+impl crate::codec::Encode for SessionMessageIdle1Outcome {
+    fn encode(&self, out: &mut String) {
+        crate::codec::write_string(
+            out,
+            match self {
+                Self::Succeeded => "succeeded",
+                Self::Failed => "failed",
+                Self::Interrupted => "interrupted",
+            },
+        );
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SessionMessageIdle1 {
+    pub id: SessionMessageID,
+    pub metadata: Option<crate::codec::JsonMap<serde_json::Value>>,
+    pub time: SessionMessageIdle1Time,
+    pub r#type: SessionMessageIdle1Type,
+    pub outcome: SessionMessageIdle1Outcome,
+    pub error: Option<SessionStructuredError>,
+}
+
+impl crate::codec::Decode for SessionMessageIdle1 {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self {
+            id: crate::codec::decode_field(object, "id", path)?,
+            metadata: crate::codec::decode_optional(object, "metadata", path)?,
+            time: crate::codec::decode_field(object, "time", path)?,
+            r#type: crate::codec::decode_field(object, "type", path)?,
+            outcome: crate::codec::decode_field(object, "outcome", path)?,
+            error: crate::codec::decode_optional(object, "error", path)?,
+        })
+    }
+}
+
+impl crate::codec::Encode for SessionMessageIdle1 {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "id", &self.id);
+        crate::codec::write_optional(out, &mut first, "metadata", &self.metadata);
+        crate::codec::write_value(out, &mut first, "time", &self.time);
+        crate::codec::write_value(out, &mut first, "type", &self.r#type);
+        crate::codec::write_value(out, &mut first, "outcome", &self.outcome);
+        crate::codec::write_optional(out, &mut first, "error", &self.error);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum SessionMessageMediaInfo {
+    AgentSelected1(SessionMessageAgentSelected1),
+    ModelSelected1(SessionMessageModelSelected1),
+    LocationSwitched1(SessionMessageLocationSwitched1),
+    MediaUser(SessionMessageMediaUser),
+    Synthetic1(SessionMessageSynthetic1),
+    System1(SessionMessageSystem1),
+    Skill1(SessionMessageSkill1),
+    Shell1(SessionMessageShell1),
+    Assistant1(SessionMessageAssistant1),
+    Compaction1(SessionMessageCompaction1),
+    Idle1(SessionMessageIdle1),
+}
+
+impl crate::codec::Decode for SessionMessageMediaInfo {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let mark = path.mark();
+        let member = <SessionMessageAgentSelected1 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
+            return Ok(Self::AgentSelected1(member));
+        }
+        let mark = path.mark();
+        let member = <SessionMessageModelSelected1 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
+            return Ok(Self::ModelSelected1(member));
+        }
+        let mark = path.mark();
+        let member = <SessionMessageLocationSwitched1 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
+            return Ok(Self::LocationSwitched1(member));
+        }
+        let mark = path.mark();
+        let member = <SessionMessageMediaUser as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
+            return Ok(Self::MediaUser(member));
+        }
+        let mark = path.mark();
+        let member = <SessionMessageSynthetic1 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
+            return Ok(Self::Synthetic1(member));
+        }
+        let mark = path.mark();
+        let member = <SessionMessageSystem1 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
+            return Ok(Self::System1(member));
+        }
+        let mark = path.mark();
+        let member = <SessionMessageSkill1 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
+            return Ok(Self::Skill1(member));
+        }
+        let mark = path.mark();
+        let member = <SessionMessageShell1 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
+            return Ok(Self::Shell1(member));
+        }
+        let mark = path.mark();
+        let member = <SessionMessageAssistant1 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
+            return Ok(Self::Assistant1(member));
+        }
+        let mark = path.mark();
+        let member = <SessionMessageCompaction1 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
+            return Ok(Self::Compaction1(member));
+        }
+        let mark = path.mark();
+        let member = <SessionMessageIdle1 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
+            return Ok(Self::Idle1(member));
+        }
+        Err(path.at("no member matched"))
+    }
+}
+
+impl crate::codec::Encode for SessionMessageMediaInfo {
+    fn encode(&self, out: &mut String) {
+        match self {
+            Self::AgentSelected1(value) => <SessionMessageAgentSelected1 as crate::codec::Encode>::encode(value, out),
+            Self::ModelSelected1(value) => <SessionMessageModelSelected1 as crate::codec::Encode>::encode(value, out),
+            Self::LocationSwitched1(value) => {
+                <SessionMessageLocationSwitched1 as crate::codec::Encode>::encode(value, out)
+            }
+            Self::MediaUser(value) => <SessionMessageMediaUser as crate::codec::Encode>::encode(value, out),
+            Self::Synthetic1(value) => <SessionMessageSynthetic1 as crate::codec::Encode>::encode(value, out),
+            Self::System1(value) => <SessionMessageSystem1 as crate::codec::Encode>::encode(value, out),
+            Self::Skill1(value) => <SessionMessageSkill1 as crate::codec::Encode>::encode(value, out),
+            Self::Shell1(value) => <SessionMessageShell1 as crate::codec::Encode>::encode(value, out),
+            Self::Assistant1(value) => <SessionMessageAssistant1 as crate::codec::Encode>::encode(value, out),
+            Self::Compaction1(value) => <SessionMessageCompaction1 as crate::codec::Encode>::encode(value, out),
+            Self::Idle1(value) => <SessionMessageIdle1 as crate::codec::Encode>::encode(value, out),
+        }
+    }
+}

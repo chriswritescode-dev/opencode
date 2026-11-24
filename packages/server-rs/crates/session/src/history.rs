@@ -1,5 +1,73 @@
+use std::collections::BTreeMap;
+
 use opencode_bus::BusError;
+use opencode_contract::codec::{Decode, Path};
+use opencode_contract::generated::{SessionMessageInfo, SessionMessageMediaInfo};
+use rusqlite::Connection;
 use serde_json::{Map, Value};
+
+use crate::{blob, legacy};
+
+#[derive(Clone)]
+pub(crate) struct MessageRow {
+    pub id: String,
+    pub session_id: String,
+    pub seq: i64,
+    pub r#type: String,
+    pub data: Value,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MessageDecodeError {
+    pub session_id: String,
+    pub message_id: String,
+}
+
+impl std::fmt::Display for MessageDecodeError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(formatter, "Failed to decode message {} in session {}", self.message_id, self.session_id)
+    }
+}
+
+impl std::error::Error for MessageDecodeError {}
+
+#[derive(Debug)]
+pub enum HistoryError {
+    Database(BusError),
+    Decode(MessageDecodeError),
+}
+
+impl From<BusError> for HistoryError {
+    fn from(error: BusError) -> Self {
+        Self::Database(error)
+    }
+}
+
+impl From<rusqlite::Error> for HistoryError {
+    fn from(error: rusqlite::Error) -> Self {
+        Self::Database(BusError::from(error))
+    }
+}
+
+impl HistoryError {
+    pub fn tag(&self) -> &'static str {
+        match self {
+            Self::Decode(_) => "Session.MessageDecodeError",
+            Self::Database(_) => "Database",
+        }
+    }
+}
+
+impl std::fmt::Display for HistoryError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Database(error) => write!(formatter, "{error}"),
+            Self::Decode(error) => write!(formatter, "{error}"),
+        }
+    }
+}
+
+impl std::error::Error for HistoryError {}
 
 pub(crate) fn message_id_from_event(event_id: &str) -> String {
     format!("msg_{}", event_id.strip_prefix("evt_").unwrap_or(event_id))
@@ -49,10 +117,101 @@ pub(crate) fn stored_data(message: &Value) -> Result<Value, BusError> {
 }
 
 pub(crate) fn decode_message_row(id: &str, r#type: &str, data: &str) -> Result<Value, BusError> {
-    let mut object = stored_object(r#type, data)?;
-    object.insert("id".to_string(), Value::String(id.to_string()));
-    object.insert("type".to_string(), Value::String(r#type.to_string()));
-    Ok(Value::Object(object))
+    Ok(Value::Object(message_input(id, r#type, stored_object(r#type, data)?)))
+}
+
+fn message_input(id: &str, r#type: &str, object: Map<String, Value>) -> Map<String, Value> {
+    let mut data = legacy::message(r#type, object);
+    data.insert("id".to_string(), Value::String(id.to_string()));
+    data.insert("type".to_string(), Value::String(r#type.to_string()));
+    data
+}
+
+fn row_input(row: &MessageRow) -> Result<Value, HistoryError> {
+    let Some(object) = row.data.as_object().cloned() else {
+        return Err(decode_error(row));
+    };
+    Ok(Value::Object(message_input(&row.id, &row.r#type, object)))
+}
+
+fn decode_error(row: &MessageRow) -> HistoryError {
+    HistoryError::Decode(MessageDecodeError { session_id: row.session_id.clone(), message_id: row.id.clone() })
+}
+
+pub(crate) fn decode_message_rows(
+    connection: &Connection,
+    rows: &[MessageRow],
+) -> Result<Vec<SessionMessageInfo>, HistoryError> {
+    let rows = blob::hydrate(connection, &with_parts(connection, rows)?)?;
+    rows.iter()
+        .map(|row| {
+            let input = row_input(row)?;
+            SessionMessageInfo::decode(&input, &mut Path::new()).map_err(|_| decode_error(row))
+        })
+        .collect()
+}
+
+pub(crate) fn decode_message_rows_with_refs(
+    connection: &Connection,
+    rows: &[MessageRow],
+) -> Result<Vec<SessionMessageMediaInfo>, HistoryError> {
+    let (rows, meta) = blob::keep_refs(connection, &with_parts(connection, rows)?)?;
+    rows.iter()
+        .map(|row| {
+            let input = row_input(row)?;
+            let mut message =
+                SessionMessageMediaInfo::decode(&input, &mut Path::new()).map_err(|_| decode_error(row))?;
+            if let SessionMessageMediaInfo::MediaUser(user) = &mut message
+                && let Some(files) = &mut user.files
+            {
+                blob::describe(files, &meta);
+            }
+            Ok(message)
+        })
+        .collect()
+}
+
+fn with_parts(connection: &Connection, rows: &[MessageRow]) -> Result<Vec<MessageRow>, HistoryError> {
+    let ids = rows.iter().filter(|row| row.r#type == "assistant").map(|row| row.id.as_str()).collect::<Vec<_>>();
+    if ids.is_empty() {
+        return Ok(rows.to_vec());
+    }
+    let mut statement =
+        connection.prepare("SELECT data FROM session_part WHERE message_id = ?1 ORDER BY ordinal ASC")?;
+    let mut parts = BTreeMap::<String, Vec<Value>>::new();
+    for id in ids {
+        let stored = statement.query_map([id], |row| row.get::<_, String>(0))?.collect::<Result<Vec<_>, _>>()?;
+        if stored.is_empty() {
+            continue;
+        }
+        let values = stored
+            .iter()
+            .map(|data| serde_json::from_str::<Value>(data))
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|error| HistoryError::Database(invalid("session_part", error.to_string())))?;
+        parts.insert(id.to_string(), values);
+    }
+    if parts.is_empty() {
+        return Ok(rows.to_vec());
+    }
+    Ok(rows
+        .iter()
+        .map(|row| {
+            let Some(found) = parts.get(&row.id) else {
+                return row.clone();
+            };
+            let mut data = row.data.clone();
+            let inline = data.get("content").cloned();
+            let content = match inline {
+                Some(Value::Array(inline)) => found.iter().chain(inline.iter()).cloned().collect(),
+                _ => found.clone(),
+            };
+            if let Some(object) = data.as_object_mut() {
+                object.insert("content".to_string(), Value::Array(content));
+            }
+            MessageRow { data, ..row.clone() }
+        })
+        .collect())
 }
 
 pub(crate) fn encode_part(part: &Value) -> Value {
@@ -181,7 +340,7 @@ fn required(object: &Map<String, Value>, r#type: &str, key: &str) -> Result<Valu
 pub(crate) fn decode_part_row(r#type: &str, data: &str) -> Result<Value, BusError> {
     let mut object = stored_object(r#type, data)?;
     object.insert("type".to_string(), Value::String(r#type.to_string()));
-    Ok(Value::Object(object))
+    Ok(legacy::part(Value::Object(object)))
 }
 
 fn stored_object(r#type: &str, data: &str) -> Result<Map<String, Value>, BusError> {

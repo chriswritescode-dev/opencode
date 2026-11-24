@@ -1,11 +1,21 @@
 use std::collections::{BTreeMap, HashSet};
 
 use opencode_bus::BusError;
+use opencode_contract::generated::PromptAttachment;
 use rusqlite::{Connection, OptionalExtension, params};
 use serde_json::Value;
 
+use crate::history::MessageRow;
 use crate::sql::now_millis;
 use crate::stored;
+
+pub(crate) struct Meta {
+    pub bytes: i64,
+    pub width: Option<i64>,
+    pub height: Option<i64>,
+}
+
+pub(crate) type MetaMap = BTreeMap<String, Meta>;
 
 pub(crate) struct Owner {
     pub session_id: String,
@@ -75,6 +85,233 @@ fn hashes_of(items: &[Value]) -> HashSet<String> {
         collect(item, &mut hashes);
     }
     hashes
+}
+
+pub(crate) fn hydrate(connection: &Connection, rows: &[MessageRow]) -> Result<Vec<MessageRow>, BusError> {
+    let mut hashes = HashSet::new();
+    for row in rows {
+        collect(&row.data, &mut hashes);
+    }
+    if hashes.is_empty() {
+        return Ok(rows.to_vec());
+    }
+    let blobs = load_blobs(connection, &hashes)?;
+    Ok(rows
+        .iter()
+        .map(|row| MessageRow {
+            data: rewrite_data(&row.data, &|file| inline_file(file, &blobs), &|item| inline_tool_item(item, &blobs)),
+            ..row.clone()
+        })
+        .collect())
+}
+
+pub(crate) fn keep_refs(connection: &Connection, rows: &[MessageRow]) -> Result<(Vec<MessageRow>, MetaMap), BusError> {
+    let mut hashes = HashSet::new();
+    for row in rows {
+        collect(&row.data, &mut hashes);
+    }
+    let meta = load_meta(connection, &hashes)?;
+    let rows = rows
+        .iter()
+        .map(|row| MessageRow {
+            data: rewrite_data(&row.data, &|file| keep_file(file, &meta), &|item| keep_tool_item(item, &meta)),
+            ..row.clone()
+        })
+        .collect();
+    Ok((rows, meta))
+}
+
+pub(crate) fn describe(files: &mut [PromptAttachment], meta: &MetaMap) {
+    for file in files {
+        let PromptAttachment::MediaFileAttachment(attachment) = file else {
+            continue;
+        };
+        let Some(found) = stored::ref_hash(&attachment.uri.0).and_then(|hash| meta.get(hash)) else {
+            continue;
+        };
+        attachment.bytes = Some(found.bytes as f64);
+        if let Some(width) = found.width {
+            attachment.width = Some(width as f64);
+        }
+        if let Some(height) = found.height {
+            attachment.height = Some(height as f64);
+        }
+    }
+}
+
+fn rewrite_data<F, I>(data: &Value, file: &F, item: &I) -> Value
+where
+    F: Fn(&Value) -> Value,
+    I: Fn(&Value) -> Value,
+{
+    if let Some(files) = data.get("files").and_then(Value::as_array)
+        && files.iter().any(stored::is_file_ref)
+    {
+        return with_field(data, "files", Value::Array(files.iter().map(file).collect()));
+    }
+    if let Some(content) = data.get("content").and_then(Value::as_array)
+        && content.iter().any(|part| tool_items(part).iter().any(stored::is_tool_file_ref))
+    {
+        return with_field(
+            data,
+            "content",
+            Value::Array(content.iter().map(|part| rewrite_part(part, item)).collect()),
+        );
+    }
+    data.clone()
+}
+
+fn rewrite_part<I>(part: &Value, item: &I) -> Value
+where
+    I: Fn(&Value) -> Value,
+{
+    if part.get("type").and_then(Value::as_str) != Some("tool") {
+        return part.clone();
+    }
+    let Some(state) = part.get("state") else {
+        return part.clone();
+    };
+    if !matches!(state.get("status").and_then(Value::as_str), Some("completed" | "error")) {
+        return part.clone();
+    }
+    let Some(content) = state.get("content").and_then(Value::as_array) else {
+        return part.clone();
+    };
+    if !content.iter().any(stored::is_tool_file_ref) {
+        return part.clone();
+    }
+    with_state_content(part, content.iter().map(item).collect())
+}
+
+fn load_blobs(connection: &Connection, hashes: &HashSet<String>) -> Result<BTreeMap<String, String>, BusError> {
+    let mut blobs = BTreeMap::new();
+    for hash in hashes {
+        let data = connection
+            .query_row("SELECT data FROM blob WHERE hash = ?1", [hash], |row| row.get::<_, Vec<u8>>(0))
+            .optional()?;
+        if let Some(data) = data {
+            blobs.insert(hash.clone(), base64_encode(&data));
+        }
+    }
+    Ok(blobs)
+}
+
+fn load_meta(connection: &Connection, hashes: &HashSet<String>) -> Result<MetaMap, BusError> {
+    let mut meta = MetaMap::new();
+    for hash in hashes {
+        let found = connection
+            .query_row(
+                "SELECT bytes, width, height FROM blob WHERE hash = ?1 \
+                 AND EXISTS (SELECT 1 FROM blob_ref WHERE blob_ref.hash = blob.hash)",
+                [hash],
+                |row| Ok(Meta { bytes: row.get(0)?, width: row.get(1)?, height: row.get(2)? }),
+            )
+            .optional()?;
+        if let Some(found) = found {
+            meta.insert(hash.clone(), found);
+        }
+    }
+    Ok(meta)
+}
+
+fn inline_file(file: &Value, blobs: &BTreeMap<String, String>) -> Value {
+    if !stored::is_file_ref(file) {
+        return file.clone();
+    }
+    let data = file.get("uri").and_then(Value::as_str).and_then(stored::ref_hash).and_then(|hash| blobs.get(hash));
+    let Some(data) = data else {
+        return unavailable_file(file);
+    };
+    let mut inlined = file.clone();
+    if let Some(object) = inlined.as_object_mut() {
+        object.shift_remove("uri");
+        object.insert("data".to_string(), Value::String(data.clone()));
+    }
+    inlined
+}
+
+fn inline_tool_item(item: &Value, blobs: &BTreeMap<String, String>) -> Value {
+    if !stored::is_tool_file_ref(item) {
+        return item.clone();
+    }
+    let data = item.get("uri").and_then(Value::as_str).and_then(stored::ref_hash).and_then(|hash| blobs.get(hash));
+    let Some(data) = data else {
+        return unavailable_tool_item(item);
+    };
+    let mime = item.get("mime").and_then(Value::as_str).unwrap_or_default();
+    with_field(item, "uri", Value::String(format!("data:{mime};base64,{data}")))
+}
+
+fn keep_file(file: &Value, meta: &MetaMap) -> Value {
+    if !stored::is_file_ref(file) {
+        return file.clone();
+    }
+    let named =
+        file.get("uri").and_then(Value::as_str).and_then(stored::ref_hash).is_some_and(|hash| meta.contains_key(hash));
+    if named {
+        return file.clone();
+    }
+    unavailable_file(file)
+}
+
+fn keep_tool_item(item: &Value, meta: &MetaMap) -> Value {
+    if !stored::is_tool_file_ref(item) {
+        return item.clone();
+    }
+    let named =
+        item.get("uri").and_then(Value::as_str).and_then(stored::ref_hash).is_some_and(|hash| meta.contains_key(hash));
+    if named {
+        return item.clone();
+    }
+    unavailable_tool_item(item)
+}
+
+fn unavailable_file(file: &Value) -> Value {
+    let mime = file.get("mime").and_then(Value::as_str).unwrap_or_default();
+    let name = file.get("name").and_then(Value::as_str);
+    let mut placeholder = file.clone();
+    if let Some(object) = placeholder.as_object_mut() {
+        object.shift_remove("uri");
+        object.insert("data".to_string(), Value::String(base64_encode(unavailable(mime, name).as_bytes())));
+        object.insert("mime".to_string(), Value::String("text/plain".to_string()));
+    }
+    placeholder
+}
+
+fn unavailable_tool_item(item: &Value) -> Value {
+    let mime = item.get("mime").and_then(Value::as_str).unwrap_or_default();
+    let name = item.get("name").and_then(Value::as_str);
+    let mut text = serde_json::Map::new();
+    text.insert("type".to_string(), Value::String("text".to_string()));
+    text.insert("text".to_string(), Value::String(unavailable(mime, name)));
+    Value::Object(text)
+}
+
+fn unavailable(mime: &str, name: Option<&str>) -> String {
+    match name {
+        Some(name) => format!("[media unavailable: {name} ({mime})]"),
+        None => format!("[media unavailable: {mime}]"),
+    }
+}
+
+const BASE64: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+fn base64_encode(bytes: &[u8]) -> String {
+    let mut encoded = String::with_capacity(bytes.len().div_ceil(3) * 4);
+    for chunk in bytes.chunks(3) {
+        let first = chunk[0];
+        let second = chunk.get(1).copied().unwrap_or(0);
+        let third = chunk.get(2).copied().unwrap_or(0);
+        encoded.push(BASE64[(first >> 2) as usize] as char);
+        encoded.push(BASE64[(((first & 0b11) << 4) | (second >> 4)) as usize] as char);
+        encoded.push(if chunk.len() > 1 {
+            BASE64[(((second & 0b1111) << 2) | (third >> 6)) as usize] as char
+        } else {
+            '='
+        });
+        encoded.push(if chunk.len() > 2 { BASE64[(third & 0b11_1111) as usize] as char } else { '=' });
+    }
+    encoded
 }
 
 fn base64_value(byte: u8) -> Option<u8> {

@@ -2243,7 +2243,7 @@ impl crate::codec::Decode for ExperimentalMcpClientTokenQuery {
         Ok(Self {
             location: crate::codec::decode_optional_nullable(object, "location", path)?,
             name: crate::codec::decode_field_checked(object, "name", path, |value: &String, path| {
-                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_16) {
+                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_17) {
                     Ok(())
                 } else {
                     Err(path.at("expected a string matching the RegExp ^[a-zA-Z0-9_-]+$"))
@@ -2318,7 +2318,7 @@ impl crate::codec::Decode for ExperimentalMcpClientQuery {
         Ok(Self {
             location: crate::codec::decode_optional_nullable(object, "location", path)?,
             name: crate::codec::decode_field_checked(object, "name", path, |value: &String, path| {
-                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_16) {
+                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_17) {
                     Ok(())
                 } else {
                     Err(path.at("expected a string matching the RegExp ^[a-zA-Z0-9_-]+$"))
@@ -6601,7 +6601,7 @@ pub struct MediaHash(pub String);
 impl crate::codec::Decode for MediaHash {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let value = <String as crate::codec::Decode>::decode(value, path)?;
-        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_17) {
+        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_18) {
             return Err(path.at("expected a string matching the RegExp ^[0-9a-f]{64}$"));
         }
         Ok(Self(value))
@@ -11068,10 +11068,10 @@ pub struct GenerateImageAspect(pub String);
 impl crate::codec::Decode for GenerateImageAspect {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let value = <String as crate::codec::Decode>::decode(value, path)?;
-        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_18) {
+        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_19) {
             return Err(path.at("expected a string matching the template literal"));
         }
-        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_19) {
+        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_20) {
             return Err(path.at("expected a string matching the RegExp ^\\d+(?:\\.\\d+)?:\\d+(?:\\.\\d+)?$"));
         }
         Ok(Self(value))
@@ -11267,7 +11267,7 @@ impl crate::codec::Decode for GenerateImageFile {
         Ok(Self {
             data: crate::codec::decode_field(object, "data", path)?,
             mime: crate::codec::decode_field_checked(object, "mime", path, |value: &String, path| {
-                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_20) {
+                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_21) {
                     Ok(())
                 } else {
                     Err(path.at("expected a string matching the RegExp ^image\\/"))
