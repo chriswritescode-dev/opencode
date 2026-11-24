@@ -9,11 +9,13 @@ const stopAll = () => children.forEach((child) => child.kill("SIGKILL"))
 
 process.on("exit", stopAll)
 
-for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"] as const)
-  process.on(signal, () => {
-    stopAll()
-    process.exit(128 + constants.signals[signal])
-  })
+export function stopServersOnSignal() {
+  for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"] as const)
+    process.on(signal, () => {
+      stopAll()
+      process.exit(128 + constants.signals[signal])
+    })
+}
 
 export type RunningServer = { url: string; process: Bun.Subprocess<"pipe", "pipe", "pipe"> }
 

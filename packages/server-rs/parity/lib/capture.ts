@@ -26,12 +26,9 @@ export async function waitForSearchSettled(root: string): Promise<void> {
   while (Date.now() < deadline) {
     const state = await readSearchState(file)
     if (state === "done" || state === "failed") return
-    if (state === "absent") {
-      absentSince ??= Date.now()
-      if (Date.now() - absentSince >= 2_000) return
-    } else {
-      absentSince = undefined
-    }
+    if (state !== "absent") absentSince = undefined
+    if (state === "absent") absentSince ??= Date.now()
+    if (absentSince !== undefined && Date.now() - absentSince >= 2_000) return
     await Bun.sleep(25)
   }
   throw new Error("scenario: search index did not settle within 30 s")

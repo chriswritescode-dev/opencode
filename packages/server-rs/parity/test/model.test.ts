@@ -161,6 +161,7 @@ test("rejects an exhausted script and logs unknown routes", async () => {
     const exhausted = await post(model, "/v1/chat/completions", { model: "test-model" })
     expect(exhausted.status).toBe(500)
     expect(await exhausted.json()).toEqual({ error: "unscripted model request" })
+    expect(model.failures()).toEqual(["unscripted model request"])
     expect(model.unused()).toBe(0)
     const missing = await post(model, "/v1/unknown", { model: "test-model" })
     expect(missing.status).toBe(404)

@@ -16,6 +16,7 @@ import { startModelEndpoint, type ModelEndpoint } from "./lib/model"
 import { normalizeCapture } from "./lib/normalize"
 import { createSandbox, removeSandbox, resetSandbox } from "./lib/sandbox"
 import type { Scenario } from "./lib/scenario"
+import { stopServersOnSignal } from "./lib/server"
 
 const parityRoot = import.meta.dir
 const repositoryRoot = path.resolve(parityRoot, "../../..")
@@ -46,6 +47,7 @@ type Capture = {
 }
 
 async function main() {
+  stopServersOnSignal()
   const options = parseArguments(Bun.argv.slice(2))
   const deviations = await readDeviations(options.deviations)
   requireParityBlocks(deviations)
