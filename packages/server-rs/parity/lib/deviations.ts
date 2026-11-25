@@ -3,8 +3,8 @@ import path from "node:path"
 import type { Difference } from "./compare"
 
 export type DeviationRule = { scenario: string; path: string }
-export type Deviation = { id: string; accepted: boolean; rules: DeviationRule[] | undefined }
-export type Explained = { difference: Difference; id: string }
+export type Deviation = { id: string; accepted: boolean; pending: boolean; rules: DeviationRule[] | undefined }
+export type Explained = { difference: Difference; id: string; pending: boolean }
 
 export async function loadDeviations(directory: string): Promise<Deviation[]> {
   const names = (await fs.readdir(directory))
@@ -14,18 +14,27 @@ export async function loadDeviations(directory: string): Promise<Deviation[]> {
     names.map(async (name) => {
       const id = name.replace(/\.md$/, "")
       const text = await Bun.file(path.join(directory, name)).text()
-      return { id, accepted: isAccepted(text), rules: parseRules(id, text) }
+      const accepted = isAccepted(text)
+      return { id, accepted, pending: !accepted && isPending(text), rules: parseRules(id, text) }
     }),
   )
 }
 
-function isAccepted(text: string) {
-  return text.split(/\r?\n/).some((line) => {
+function acceptedValues(text: string) {
+  return text.split(/\r?\n/).flatMap((line) => {
     const trimmed = line.trim()
-    if (!trimmed.startsWith("Accepted:")) return false
+    if (!trimmed.startsWith("Accepted:")) return []
     const value = trimmed.slice("Accepted:".length).trim()
-    return value.length > 0 && !value.toLowerCase().startsWith("pending")
+    return value.length === 0 ? [] : [value]
   })
+}
+
+function isAccepted(text: string) {
+  return acceptedValues(text).some((value) => !value.toLowerCase().startsWith("pending"))
+}
+
+function isPending(text: string) {
+  return acceptedValues(text).some((value) => value.toLowerCase().startsWith("pending"))
 }
 
 function parseRules(id: string, text: string): DeviationRule[] | undefined {
@@ -55,11 +64,17 @@ function parseRules(id: string, text: string): DeviationRule[] | undefined {
   return found ? rules : undefined
 }
 
-export function explain(differences: Difference[], scenario: string, deviations: Deviation[]) {
+export function explain(
+  differences: Difference[],
+  scenario: string,
+  deviations: Deviation[],
+  allowPending = false,
+) {
   const rules = deviations.flatMap((deviation) =>
-    deviation.accepted && deviation.rules !== undefined
+    (deviation.accepted || (allowPending && deviation.pending)) && deviation.rules !== undefined
       ? deviation.rules.map((rule) => ({
           id: deviation.id,
+          pending: deviation.pending,
           scenario: new Bun.Glob(rule.scenario),
           path: new Bun.Glob(rule.path),
         }))
@@ -70,15 +85,15 @@ export function explain(differences: Difference[], scenario: string, deviations:
   for (const difference of differences) {
     const match = rules.find((rule) => rule.scenario.match(scenario) && rule.path.match(difference.path))
     if (match === undefined) unexplained.push(difference)
-    else explained.push({ difference, id: match.id })
+    else explained.push({ difference, id: match.id, pending: match.pending })
   }
   return { explained, unexplained }
 }
 
 export function deviationWarnings(deviations: Deviation[], matched: Set<string>) {
   return deviations.flatMap((deviation) => {
-    if (!deviation.accepted) return [`warning: deviation ${deviation.id} is not accepted`]
     if (matched.has(deviation.id)) return []
+    if (!deviation.accepted) return [`warning: deviation ${deviation.id} is not accepted`]
     return [`warning: deviation ${deviation.id} matched nothing`]
   })
 }

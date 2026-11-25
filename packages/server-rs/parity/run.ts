@@ -10,7 +10,7 @@ import {
   type RequestRecord,
   type RunCoverage,
 } from "./lib/coverage"
-import { deviationWarnings, explain, loadDeviations, type Deviation } from "./lib/deviations"
+import { deviationWarnings, explain, loadDeviations, type Deviation, type Explained } from "./lib/deviations"
 import { runSide } from "./lib/drive"
 import { startModelEndpoint, type ModelEndpoint } from "./lib/model"
 import { normalizeCapture } from "./lib/normalize"
@@ -25,7 +25,7 @@ const deviationsRoot = path.join(parityRoot, "deviations")
 const outputRoot = process.env.PARITY_OUT_DIR ? path.resolve(process.env.PARITY_OUT_DIR) : path.join(parityRoot, "out")
 const usage =
   "usage: bun run parity/run.ts --candidate <ts|path> [--reference <ts|path>] [--repeat <n>] " +
-  "[--deviations <dir>] [--only <parts>] [--tables <names>] [scenario...]"
+  "[--deviations <dir>] [--only <parts>] [--tables <names>] [--allow-pending] [scenario...]"
 const referencePaths = [
   "packages/cli/src",
   "packages/core/src",
@@ -46,6 +46,7 @@ type Options = {
   files: string[]
   parts: Set<Part>
   tables: string[] | undefined
+  allowPending: boolean
 }
 type Capture = {
   reference: Record<string, unknown>
@@ -58,7 +59,7 @@ async function main() {
   stopServersOnSignal()
   const options = parseArguments(Bun.argv.slice(2))
   const deviations = await readDeviations(options.deviations)
-  requireParityBlocks(deviations)
+  requireParityBlocks(deviations, options.allowPending)
   const candidateEnv = readCandidateEnv()
   await warnAboutPin()
   const files = await scenarioFiles(options.files)
@@ -83,15 +84,15 @@ async function main() {
       }
       await writeOutputs(entry.name, outcome.capture)
       coverageRuns.push({ name: entry.name, ...outcome.capture.coverage })
-      const { explained, unexplained } = explain(outcome.capture.differences, entry.name, deviations)
+      const { explained, unexplained } = explain(
+        outcome.capture.differences,
+        entry.name,
+        deviations,
+        options.allowPending,
+      )
       for (const item of explained) matched.add(item.id)
       if (unexplained.length === 0) {
-        const summary = [...new Set(explained.map((item) => item.id))].sort().join(", ")
-        console.log(
-          explained.length === 0
-            ? `PASS ${entry.name}`
-            : `PASS ${entry.name} (${explained.length} explained by ${summary})`,
-        )
+        console.log(passLine(entry.name, explained))
         continue
       }
       failed = true
@@ -128,8 +129,21 @@ async function readDeviations(directory: string) {
   }
 }
 
-function requireParityBlocks(deviations: Deviation[]) {
-  const missing = deviations.find((deviation) => deviation.accepted && deviation.rules === undefined)
+function passLine(name: string, explained: Explained[]) {
+  const pending = explained.filter((item) => item.pending)
+  if (pending.length > 0) return `PASS ${name} (${pending.length} explained by pending ${explanationIDs(pending)})`
+  if (explained.length === 0) return `PASS ${name}`
+  return `PASS ${name} (${explained.length} explained by ${explanationIDs(explained)})`
+}
+
+function explanationIDs(explained: Explained[]) {
+  return [...new Set(explained.map((item) => item.id))].sort().join(", ")
+}
+
+function requireParityBlocks(deviations: Deviation[], allowPending: boolean) {
+  const missing = deviations.find(
+    (deviation) => (deviation.accepted || (allowPending && deviation.pending)) && deviation.rules === undefined,
+  )
   if (missing === undefined) return
   console.error(`parity: deviation ${missing.id} has no parity block`)
   process.exit(2)
@@ -143,8 +157,13 @@ function parseArguments(argv: string[]): Options {
   let deviations = deviationsRoot
   let parts = new Set<Part>(PARTS)
   let tables: string[] | undefined
+  let allowPending = false
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index]
+    if (argument === "--allow-pending") {
+      allowPending = true
+      continue
+    }
     if (
       argument === "--reference" ||
       argument === "--candidate" ||
@@ -170,7 +189,7 @@ function parseArguments(argv: string[]): Options {
   if (candidate === undefined) usageError("--candidate is required")
   if (tables !== undefined && !parts.has("database")) usageError("--tables requires database in --only")
   if (parts.has("logs") && !parts.has("events")) usageError("--only logs requires events")
-  return { reference, candidate, repeat, deviations, files, parts, tables }
+  return { reference, candidate, repeat, deviations, files, parts, tables, allowPending }
 }
 
 function parseParts(value: string): Set<Part> {

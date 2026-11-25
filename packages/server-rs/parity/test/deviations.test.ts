@@ -63,6 +63,7 @@ test("loads deviations, ignoring the readme and deriving accepted and rules", as
     const deviations = await loadDeviations(directory)
     expect(deviations.map((deviation) => deviation.id)).toEqual(["info-auth", "missing", "no-block", "pending"])
     expect(deviations.map((deviation) => deviation.accepted)).toEqual([true, false, true, false])
+    expect(deviations.map((deviation) => deviation.pending)).toEqual([false, false, false, true])
     expect(deviations.map((deviation) => deviation.rules === undefined)).toEqual([false, true, true, false])
     expect(deviations[0].rules).toEqual([{ scenario: "info-auth", path: "steps/*/body/version" }])
   })
@@ -75,7 +76,7 @@ test("explains matching differences from accepted deviations only", () => {
     candidate: "b",
   })
   const rules = [{ scenario: "info-auth", path: "steps/*/body/version" }]
-  const accepted: Deviation = { id: "accepted", accepted: true, rules }
+  const accepted: Deviation = { id: "accepted", accepted: true, pending: false, rules }
   const result = explain(
     [difference("steps/0/body/version"), difference("steps/1/status")],
     "info-auth",
@@ -83,20 +84,25 @@ test("explains matching differences from accepted deviations only", () => {
   )
   expect(result.explained.map((item) => item.difference.path)).toEqual(["steps/0/body/version"])
   expect(result.explained.map((item) => item.id)).toEqual(["accepted"])
+  expect(result.explained.map((item) => item.pending)).toEqual([false])
   expect(result.unexplained.map((item) => item.path)).toEqual(["steps/1/status"])
-  const pending = explain([difference("steps/0/body/version")], "info-auth", [
-    { ...accepted, id: "pending", accepted: false },
-  ])
+  const pendingDeviation: Deviation = { ...accepted, id: "pending", accepted: false, pending: true }
+  const pending = explain([difference("steps/0/body/version")], "info-auth", [pendingDeviation])
   expect(pending.explained).toEqual([])
   expect(pending.unexplained.map((item) => item.path)).toEqual(["steps/0/body/version"])
+  const allowed = explain([difference("steps/0/body/version")], "info-auth", [pendingDeviation], true)
+  expect(allowed.explained).toEqual([
+    { difference: { path: "steps/0/body/version", reference: "a", candidate: "b" }, id: "pending", pending: true },
+  ])
+  expect(allowed.unexplained).toEqual([])
 })
 
 test("warns about unaccepted deviations and accepted ones that matched nothing", () => {
   const warnings = deviationWarnings(
     [
-      { id: "matched", accepted: true, rules: [{ scenario: "info-auth", path: "steps/*" }] },
-      { id: "unmatched", accepted: true, rules: [{ scenario: "info-auth", path: "steps/*" }] },
-      { id: "pending", accepted: false, rules: undefined },
+      { id: "matched", accepted: true, pending: false, rules: [{ scenario: "info-auth", path: "steps/*" }] },
+      { id: "unmatched", accepted: true, pending: false, rules: [{ scenario: "info-auth", path: "steps/*" }] },
+      { id: "pending", accepted: false, pending: true, rules: undefined },
     ],
     new Set(["matched"]),
   )
@@ -104,6 +110,17 @@ test("warns about unaccepted deviations and accepted ones that matched nothing",
     "warning: deviation unmatched matched nothing",
     "warning: deviation pending is not accepted",
   ])
+})
+
+test("warns about pending deviations only when they matched nothing", () => {
+  const warnings = deviationWarnings(
+    [
+      { id: "matched", accepted: true, pending: false, rules: [{ scenario: "info-auth", path: "steps/*" }] },
+      { id: "pending", accepted: false, pending: true, rules: [{ scenario: "info-auth", path: "steps/*" }] },
+    ],
+    new Set(["matched", "pending"]),
+  )
+  expect(warnings).toEqual([])
 })
 
 test(
@@ -149,6 +166,61 @@ test(
         { PARITY_CANDIDATE_ENV: JSON.stringify({ FAKE_VERSION: "other" }) },
       )
       expect(result.exitCode).toBe(1)
+    })
+  },
+  60_000,
+)
+
+test(
+  "explains differences with a pending acceptance when pending deviations are allowed",
+  async () => {
+    await withTempLedger(async (directory) => {
+      await Bun.write(path.join(directory, "OR-99-version.md"), ledgerText("pending owner", true))
+      const result = await runParity(
+        ["--reference", fakeServer, "--candidate", fakeServer, "--deviations", directory, "--allow-pending", infoScenario],
+        { PARITY_CANDIDATE_ENV: JSON.stringify({ FAKE_VERSION: "other" }) },
+      )
+      expect(result.exitCode).toBe(0)
+      expect(result.output).toContain("PASS info-auth (")
+      expect(result.output).toContain("explained by pending")
+      expect(result.output).toContain("OR-99-version")
+    })
+  },
+  60_000,
+)
+
+test(
+  "still reports differences matched by nothing when pending deviations are allowed",
+  async () => {
+    await withTempLedger(async (directory) => {
+      const result = await runParity(
+        ["--reference", fakeServer, "--candidate", fakeServer, "--deviations", directory, "--allow-pending", infoScenario],
+        { PARITY_CANDIDATE_ENV: JSON.stringify({ FAKE_VERSION: "other" }) },
+      )
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain("steps/0/body/version")
+    })
+  },
+  60_000,
+)
+
+test(
+  "rejects a pending deviation without a parity block when pending deviations are allowed",
+  async () => {
+    await withTempLedger(async (directory) => {
+      await Bun.write(path.join(directory, "OR-99-version.md"), ledgerText("pending owner", false))
+      const result = await runParity([
+        "--reference",
+        fakeServer,
+        "--candidate",
+        fakeServer,
+        "--deviations",
+        directory,
+        "--allow-pending",
+        infoScenario,
+      ])
+      expect(result.exitCode).toBe(2)
+      expect(result.output).toContain("deviation OR-99-version has no parity block")
     })
   },
   60_000,
