@@ -135,6 +135,10 @@ fn walk(
         if !is_directory {
             continue;
         }
+        let parts: Vec<&str> = relative.split('/').collect();
+        if !patterns.iter().any(|pattern| can_descend(&pattern.segments, &parts, 0, 0)) {
+            continue;
+        }
         if symlink && !options.symlink && !patterns.iter().any(|pattern| reaches_literal(&pattern.segments, &relative))
         {
             continue;
@@ -168,6 +172,17 @@ fn reaches_at(segments: &[Segment], parts: &[&str], segment: usize, part: usize)
         return literal.as_deref() == Some(*name);
     }
     matcher.is_match(name) && reaches_at(segments, parts, segment + 1, part + 1)
+}
+
+fn can_descend(segments: &[Segment], parts: &[&str], segment: usize, part: usize) -> bool {
+    if part == parts.len() {
+        return segment < segments.len();
+    }
+    let Some(current) = segments.get(segment) else { return false };
+    let Segment::Part { matcher, .. } = current else {
+        return can_descend(segments, parts, segment + 1, part) || can_descend(segments, parts, segment, part + 1);
+    };
+    matcher.is_match(parts[part]) && can_descend(segments, parts, segment + 1, part + 1)
 }
 
 fn entry_kind(path: &Path) -> Option<Kind> {

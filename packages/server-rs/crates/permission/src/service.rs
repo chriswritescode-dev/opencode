@@ -119,6 +119,7 @@ struct Pending {
     request: PermissionRequest,
     agent: Option<AgentID>,
     deferred: Option<oneshot::Sender<Resolution>>,
+    replying: bool,
 }
 
 struct Evaluation {
@@ -215,10 +216,11 @@ impl PermissionService {
 
     pub async fn reply(&self, input: ReplyInput) -> Result<(), PermissionError> {
         let existing = {
-            let pending = self.lock_pending();
-            let Some(entry) = pending.get(input.request_id.0.as_str()) else {
+            let mut pending = self.lock_pending();
+            let Some(entry) = pending.get_mut(input.request_id.0.as_str()).filter(|entry| !entry.replying) else {
                 return Err(PermissionError::NotFound(input.request_id.clone()));
             };
+            entry.replying = true;
             entry.request.clone()
         };
         self.deps.events.replied(&existing.session_id, &existing.id, input.reply);
@@ -383,7 +385,10 @@ impl PermissionService {
             if pending.contains_key(request.id.0.as_str()) {
                 return Err(PermissionError::Duplicate(request.id));
             }
-            pending.insert(request.id.0.clone(), Pending { request: request.clone(), agent, deferred: Some(sender) });
+            pending.insert(
+                request.id.0.clone(),
+                Pending { request: request.clone(), agent, deferred: Some(sender), replying: false },
+            );
         }
         self.deps.events.asked(&request);
         Ok(receiver)
@@ -416,8 +421,13 @@ impl PermissionService {
     async fn accept(&self, reply: PermissionReply, existing: PermissionRequest) -> Result<(), PermissionError> {
         let save =
             (reply == PermissionReply::Always).then(|| existing.save.clone()).flatten().filter(|save| !save.is_empty());
-        if let Some(save) = save.as_ref() {
-            self.deps.saved.add(&self.deps.project_id, &existing.action, save).map_err(SavedError::from)?;
+        if let Some(save) = save.as_ref()
+            && let Err(error) = self.deps.saved.add(&self.deps.project_id, &existing.action, save)
+        {
+            if let Some(entry) = self.lock_pending().get_mut(existing.id.0.as_str()) {
+                entry.replying = false;
+            }
+            return Err(SavedError::from(error).into());
         }
         let primary = {
             let mut pending = self.lock_pending();
@@ -431,6 +441,7 @@ impl PermissionService {
             let pending = self.lock_pending();
             pending
                 .iter()
+                .filter(|(_, entry)| !entry.replying)
                 .map(|(id, entry)| (id.clone(), entry.request.clone(), entry.agent.clone()))
                 .collect::<Vec<_>>()
         };
