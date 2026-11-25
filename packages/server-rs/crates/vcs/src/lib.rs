@@ -4,3 +4,5 @@ pub mod provider;
 pub mod snapshot;
 pub mod vcs;
 pub mod watcher;
+pub mod worktree;
+pub mod worktree_strategies;

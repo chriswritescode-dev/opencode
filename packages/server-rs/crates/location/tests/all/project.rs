@@ -11,6 +11,7 @@ use opencode_location::project::{
     ResolveOptions, UpdateInput, Vcs,
 };
 use opencode_storage::project as storage_project;
+use opencode_storage::worktree as storage_worktree;
 use opencode_storage::{Database, DatabaseLocation};
 use rusqlite::params;
 use tokio::sync::broadcast;
@@ -426,6 +427,95 @@ async fn linked_worktree_resolves_to_the_main_repository() {
     assert_eq!(project_id, id);
     assert_eq!(previous, "old-id");
     assert!(adopted.is_empty(), "a fresh worktree adopts nothing");
+}
+
+#[tokio::test]
+async fn resolving_a_linked_worktree_stores_both_worktree_rows() {
+    let (_temp, root) = temp_root();
+    let main = directory(&root, "repo");
+    init_repo(&main, true, Some("git@github.com:owner/repo.git")).await;
+    let linked = root.join("linked");
+    git(&main, &["worktree", "add", &path_text(&linked), "-b", "linked"]).await;
+    let database = database();
+    let service = crate::project_service(database.clone());
+
+    let resolved = service
+        .resolve(&LocalEnvironment::new(), &path_text(&linked), ResolveOptions::default())
+        .await
+        .expect("resolves the linked worktree");
+
+    let rows =
+        database.read(|connection| storage_worktree::list(connection, &resolved.id)).expect("lists the worktree rows");
+    let mut stored: Vec<(String, Option<String>)> = rows.into_iter().map(|row| (row.directory, row.strategy)).collect();
+    stored.sort();
+    assert_eq!(stored, vec![(real_path(&linked), Some("git".to_string())), (real_path(&main), None),]);
+}
+
+#[tokio::test]
+async fn sweep_rehomes_a_project_to_a_surviving_main_checkout() {
+    let (_temp, root) = temp_root();
+    let main = directory(&root, "repo");
+    let clone = root.join("clone");
+    init_repo(&main, true, Some("git@github.com:owner/repo.git")).await;
+    git(&root, &["clone", "--no-hardlinks", &path_text(&main), &path_text(&clone)]).await;
+    git(&clone, &["remote", "set-url", "origin", "https://github.com/owner/repo.git"]).await;
+    let database = database();
+    let service = crate::project_service(database.clone());
+    let environment = LocalEnvironment::new();
+
+    let opened = service
+        .resolve(&environment, &path_text(&main), ResolveOptions::default())
+        .await
+        .expect("resolves the main repository");
+    let mirrored =
+        service.resolve(&environment, &path_text(&clone), ResolveOptions::default()).await.expect("resolves the clone");
+    assert_eq!(mirrored.id, opened.id);
+    set_times(&database, &opened.id, 1, 1, 1);
+    std::fs::remove_dir_all(&main).expect("removes the main checkout");
+
+    service.sweep(&environment).await.expect("sweeps the project");
+
+    let stored = service
+        .list(false)
+        .await
+        .expect("lists the project")
+        .into_iter()
+        .find(|project| project.id == opened.id)
+        .expect("the project survives");
+    assert_eq!(stored.canonical, real_path(&clone));
+    assert_eq!(stored.time.archived, None);
+}
+
+#[tokio::test]
+async fn sweep_keeps_a_project_whose_linked_worktrees_survive() {
+    let (_temp, root) = temp_root();
+    let main = directory(&root, "repo");
+    init_repo(&main, true, Some("git@github.com:owner/repo.git")).await;
+    let linked = root.join("linked");
+    git(&main, &["worktree", "add", &path_text(&linked), "-b", "linked"]).await;
+    let database = database();
+    let service = crate::project_service(database.clone());
+    let environment = LocalEnvironment::new();
+
+    let opened = service
+        .resolve(&environment, &path_text(&linked), ResolveOptions::default())
+        .await
+        .expect("resolves the linked worktree");
+    let canonical = opened.canonical.clone();
+    set_times(&database, &opened.id, 1, 1, 1);
+    std::fs::remove_dir_all(&main).expect("removes the main checkout");
+
+    service.sweep(&environment).await.expect("sweeps the project");
+
+    let stored = service
+        .list(false)
+        .await
+        .expect("lists the project")
+        .into_iter()
+        .find(|project| project.id == opened.id)
+        .expect("the project survives");
+    assert_eq!(stored.canonical, canonical, "a linked worktree is never promoted");
+    assert_eq!(stored.time.archived, None);
 }
 
 #[tokio::test]

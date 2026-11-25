@@ -23,6 +23,7 @@ pub struct Fixture {
     pub root: PathBuf,
     pub git: Arc<Git>,
     pub bus: Arc<Bus>,
+    pub database: Arc<Database>,
 }
 
 impl Fixture {
@@ -31,8 +32,9 @@ impl Fixture {
         let root = tmp.path().to_path_buf();
         let git = Arc::new(Git::new(Arc::new(|name: &str| std::env::var_os(name))));
         let (database, _) = Database::open(DatabaseLocation::Memory, &root).expect("opens the in-memory database");
-        let bus = Bus::new(Arc::new(database), BusOptions::default());
-        Fixture { _tmp: tmp, root, git, bus }
+        let database = Arc::new(database);
+        let bus = Bus::new(database.clone(), BusOptions::default());
+        Fixture { _tmp: tmp, root, git, bus, database }
     }
 
     pub fn path(&self, name: &str) -> PathBuf {

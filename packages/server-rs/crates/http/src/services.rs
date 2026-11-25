@@ -33,6 +33,8 @@ use opencode_vcs::hg_provider::HgProvider;
 use opencode_vcs::snapshot::Snapshot;
 use opencode_vcs::vcs::Vcs;
 use opencode_vcs::watcher::{LocationWatcher, LocationWatcherPolicy};
+use opencode_vcs::worktree::{StrategiesLoader, Worktree, WorktreeError};
+use opencode_vcs::worktree_strategies::WorktreeStrategies;
 use serde_json::Value;
 use tokio::task::JoinHandle;
 
@@ -45,6 +47,7 @@ pub struct GlobalServices {
     pub bus: Arc<Bus>,
     pub paths: GlobalPaths,
     pub projects: Arc<ProjectService>,
+    pub worktree: Arc<Worktree>,
     pub locations: LocationMap<LocationServices>,
     pub activity: Activity<LocationServices>,
     pub wellknown: Arc<WellKnown>,
@@ -60,6 +63,7 @@ pub struct LocationServices {
     pub config: ConfigService,
     pub snapshot: Arc<Snapshot>,
     pub vcs: Arc<Vcs>,
+    pub worktree_strategies: Arc<WorktreeStrategies>,
     watcher: LocationWatcher,
     _vcs_registrations: Vec<Registration>,
     _watcher_observer: opencode_config::observer::ObserverHandle,
@@ -99,6 +103,13 @@ impl GlobalServices {
             Box::pin(async move {
                 let info = boot_location(&reference, &projects, environment.as_ref()).await?;
                 let snapshot = Arc::new(Snapshot::new(boot_git.clone(), &info, paths.data.clone()));
+                let worktree_strategies = Arc::new(WorktreeStrategies::new(
+                    boot_git.clone(),
+                    &info.project.id,
+                    &info.project.canonical,
+                    paths.data.clone(),
+                ));
+                let home = paths.home.clone();
                 let config = ConfigService::start(
                     ConfigOptions::from_vars(|name| config_env(name)),
                     ConfigLocation { directory: PathBuf::from(&info.directory), project_id: info.project.id.clone() },
@@ -107,6 +118,7 @@ impl GlobalServices {
                 )
                 .await;
                 snapshot.observe_config(&config).await;
+                worktree_strategies.observe_config(&config, home).await;
                 let vcs = Vcs::new(bus.clone(), &info);
                 let is_hg = info.vcs.as_ref().is_some_and(|vcs| vcs.kind() == "hg");
                 let mut vcs_registrations = Vec::new();
@@ -137,12 +149,26 @@ impl GlobalServices {
                     config,
                     snapshot,
                     vcs,
+                    worktree_strategies,
                     watcher,
                     _vcs_registrations: vcs_registrations,
                     _watcher_observer: watcher_observer,
                 }))
             })
         });
+        let worktree_locations = locations.clone();
+        let load: StrategiesLoader = Arc::new(move |directory: String| {
+            let locations = worktree_locations.clone();
+            Box::pin(async move {
+                let reference = opencode_location::location::LocationRef::new(directory, None);
+                let lease = locations
+                    .get(&reference)
+                    .await
+                    .map_err(|error| WorktreeError::Message(format!("failed to load worktree services: {error}")))?;
+                Ok(lease.services().worktree_strategies.clone())
+            })
+        });
+        let worktree = Arc::new(Worktree::new(database.clone(), bus.clone(), load));
         let activity = Activity::spawn(
             locations.clone(),
             ActivityOptions {
@@ -172,6 +198,7 @@ impl GlobalServices {
             bus,
             paths,
             projects,
+            worktree,
             locations,
             activity,
             wellknown,

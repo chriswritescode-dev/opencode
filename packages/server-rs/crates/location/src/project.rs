@@ -1,11 +1,12 @@
 pub mod icon;
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::path::{Component, Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
 use opencode_storage::StorageError;
 use opencode_storage::project::{self, ProjectMetadataUpdate, ProjectRow};
+use opencode_storage::worktree as storage_worktree;
 use ring::digest::{SHA1_FOR_LEGACY_USE_ONLY, digest};
 use rusqlite::TransactionBehavior;
 use serde_json::Value;
@@ -164,7 +165,6 @@ pub struct ProjectService {
     git: Arc<opencode_git::Git>,
     sender: broadcast::Sender<LocationEvent>,
     cache: Mutex<HashMap<String, GitCacheEntry>>,
-    announced: Mutex<HashSet<(String, String)>>,
     activated: Mutex<HashMap<String, i64>>,
     now: Arc<dyn Fn() -> i64 + Send + Sync>,
 }
@@ -185,7 +185,6 @@ impl ProjectService {
             git,
             sender,
             cache: Mutex::new(HashMap::new()),
-            announced: Mutex::new(HashSet::new()),
             activated: Mutex::new(HashMap::new()),
             now,
         }
@@ -297,8 +296,26 @@ impl ProjectService {
             if matches!(exists(environment.files(), &project.worktree).await, Ok(true) | Err(_)) {
                 continue;
             }
-            let row =
-                self.database.read(|connection| project::set_archived(connection, &project.id, Some((self.now)())))?;
+            let known = self.database.read(|connection| storage_worktree::list(connection, &project.id))?;
+            let mut surviving = Vec::new();
+            for row in known.into_iter().filter(|row| row.directory != project.worktree) {
+                if matches!(exists(environment.files(), &row.directory).await, Ok(true) | Err(_)) {
+                    surviving.push(row);
+                }
+            }
+            // Linked worktrees carry a strategy; only another main checkout can become the canonical directory.
+            let main = surviving.iter().find(|row| row.strategy.is_none());
+            if main.is_none() && !surviving.is_empty() {
+                continue;
+            }
+            let row = match main {
+                Some(main) => {
+                    self.database.read(|connection| project::set_canonical(connection, &project.id, &main.directory))?
+                }
+                None => self
+                    .database
+                    .read(|connection| project::set_archived(connection, &project.id, Some((self.now)())))?,
+            };
             if let Some(row) = row {
                 self.publish(LocationEvent::ProjectUpdated(Project::from_row(row)?));
             }
@@ -347,7 +364,7 @@ impl ProjectService {
             None => false,
         };
         let vcs = project.vcs.as_ref().map(Vcs::kind);
-        let row = self.database.transaction(TransactionBehavior::Immediate, |transaction| {
+        let (row, seeded) = self.database.transaction(TransactionBehavior::Immediate, |transaction| {
             project::upsert(transaction, &project.id, &project.canonical, vcs)?;
             let mut changed = false;
             if previous.as_ref().is_some_and(|row| row.time_archived.is_some()) {
@@ -358,10 +375,23 @@ impl ProjectService {
                 project::set_canonical(transaction, &project.id, &project.canonical)?;
                 changed = true;
             }
-            if !changed {
-                return Ok(None);
+            let mut seeded = Vec::new();
+            if project.vcs.is_some() {
+                let strategy = matches!(project.vcs, Some(Vcs::Git { .. })).then_some("git");
+                let mut directories = vec![(project.canonical.as_str(), None)];
+                if project.directory != project.canonical {
+                    directories.push((project.directory.as_str(), strategy));
+                }
+                for (directory, strategy) in directories {
+                    if storage_worktree::find(transaction, &project.id, directory)?.is_some() {
+                        continue;
+                    }
+                    storage_worktree::insert_ignore(transaction, &project.id, directory, strategy)?;
+                    seeded.push(directory.to_string());
+                }
             }
-            project::get(transaction, &project.id)
+            let row = if changed { project::get(transaction, &project.id)? } else { None };
+            Ok::<(Option<ProjectRow>, Vec<String>), StorageError>((row, seeded))
         })?;
         if let Some(row) = row {
             self.publish(LocationEvent::ProjectUpdated(Project::from_row(row)?));
@@ -371,27 +401,14 @@ impl ProjectService {
             Ok(None) => {}
             Err(error) => log::warn!("project icon refresh failed for {}: {error}", project.id),
         }
-        if project.vcs.is_some() {
-            let mut directories = vec![project.canonical.as_str()];
-            if project.directory != project.canonical {
-                directories.push(project.directory.as_str());
-            }
-            for directory in directories {
-                let key = (project.id.clone(), directory.to_string());
-                {
-                    let mut announced = self.announced.lock().unwrap_or_else(|error| error.into_inner());
-                    if !announced.insert(key) {
-                        continue;
-                    }
-                }
-                let adopted = self.adopted(environment, &project.id, directory).await?;
-                self.publish(LocationEvent::WorktreeResolved {
-                    project_id: project.id.clone(),
-                    directory: directory.to_string(),
-                    previous: project.previous.clone().unwrap_or_else(|| GLOBAL_ID.to_string()),
-                    adopted,
-                });
-            }
+        for directory in seeded {
+            let adopted = self.adopted(environment, &project.id, &directory).await?;
+            self.publish(LocationEvent::WorktreeResolved {
+                project_id: project.id.clone(),
+                directory,
+                previous: project.previous.clone().unwrap_or_else(|| GLOBAL_ID.to_string()),
+                adopted,
+            });
         }
         Ok(())
     }
