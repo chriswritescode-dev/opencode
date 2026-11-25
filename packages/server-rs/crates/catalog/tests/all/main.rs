@@ -1,4 +1,5 @@
 mod credential;
+mod credential_refresh;
 
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};

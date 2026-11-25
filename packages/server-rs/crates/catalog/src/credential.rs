@@ -1,4 +1,9 @@
-use std::sync::Arc;
+use std::collections::HashMap;
+use std::future::Future;
+use std::path::PathBuf;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use opencode_bus::{Bus, BusError, Definition, PublishOptions};
 use opencode_config::seams::{self, CredentialLookup};
@@ -8,8 +13,32 @@ use opencode_storage::credential::{self, CredentialRow, NewCredential};
 use opencode_storage::{Database, StorageError, id};
 use rusqlite::TransactionBehavior;
 use serde_json::Value;
+use tokio::sync::watch;
+
+use crate::lock::with_lock;
 
 pub const REFRESH_MARGIN_MS: i64 = 5 * 60 * 1000;
+
+const REFRESH_TIMEOUT: Duration = Duration::from_secs(30);
+
+pub type RefreshError = Arc<dyn std::error::Error + Send + Sync>;
+
+type Outcome = Result<Option<CredentialOAuth>, RefreshError>;
+type Progress = watch::Receiver<Option<Outcome>>;
+type Start = Option<(u64, watch::Sender<Option<Outcome>>)>;
+
+struct Shared {
+    generation: u64,
+    sender: watch::Sender<Option<Outcome>>,
+}
+
+#[derive(Debug, thiserror::Error)]
+#[error("credential refresh timed out")]
+struct RefreshTimedOut;
+
+#[derive(Debug, thiserror::Error)]
+#[error("credential refresh task ended without a result")]
+struct RefreshAborted;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Info {
@@ -49,6 +78,9 @@ pub enum CredentialError {
 pub struct CredentialService {
     database: Arc<Database>,
     bus: Arc<Bus>,
+    locks: PathBuf,
+    pending: Mutex<HashMap<String, Shared>>,
+    generation: AtomicU64,
 }
 
 struct Removal {
@@ -66,8 +98,14 @@ pub fn expiring_with_margin(value: &CredentialOAuth, now: i64, margin_ms: i64) -
 }
 
 impl CredentialService {
-    pub fn new(database: Arc<Database>, bus: Arc<Bus>) -> Arc<Self> {
-        Arc::new(Self { database, bus })
+    pub fn new(database: Arc<Database>, bus: Arc<Bus>, locks: impl Into<PathBuf>) -> Arc<Self> {
+        Arc::new(Self {
+            database,
+            bus,
+            locks: locks.into(),
+            pending: Mutex::new(HashMap::new()),
+            generation: AtomicU64::new(0),
+        })
     }
 
     pub fn all(&self) -> Result<Vec<Info>, CredentialError> {
@@ -226,6 +264,93 @@ impl CredentialService {
         Ok(())
     }
 
+    pub async fn refresh<F, Fut>(
+        self: &Arc<Self>,
+        id: &CredentialID,
+        stale: impl Fn(&CredentialOAuth, i64) -> bool + Send + Sync + 'static,
+        refresh: F,
+    ) -> Result<Option<CredentialOAuth>, RefreshError>
+    where
+        F: FnOnce(CredentialOAuth) -> Fut + Send + 'static,
+        Fut: Future<Output = Result<CredentialOAuth, RefreshError>> + Send,
+    {
+        let (start, progress) = self.begin(id);
+        if let Some((generation, sender)) = start {
+            let service = self.clone();
+            let key = id.0.clone();
+            tokio::spawn(async move {
+                let outcome = service.refresh_locked(&key, stale, refresh).await;
+                {
+                    let mut pending = service.pending.lock().expect("lock the pending refreshes");
+                    if pending.get(&key).is_some_and(|shared| shared.generation == generation) {
+                        pending.remove(&key);
+                    }
+                }
+                sender.send_replace(Some(outcome));
+            });
+        }
+        settle(progress).await
+    }
+
+    fn begin(&self, id: &CredentialID) -> (Start, Progress) {
+        let mut pending = self.pending.lock().expect("lock the pending refreshes");
+        if let Some(shared) = pending.get(&id.0) {
+            return (None, shared.sender.subscribe());
+        }
+        let generation = self.generation.fetch_add(1, Ordering::Relaxed);
+        let (sender, progress) = watch::channel(None);
+        pending.insert(id.0.clone(), Shared { generation, sender: sender.clone() });
+        (Some((generation, sender)), progress)
+    }
+
+    async fn refresh_locked<F, Fut>(
+        self: &Arc<Self>,
+        id: &str,
+        stale: impl Fn(&CredentialOAuth, i64) -> bool + Send + Sync,
+        refresh: F,
+    ) -> Outcome
+    where
+        F: FnOnce(CredentialOAuth) -> Fut + Send,
+        Fut: Future<Output = Result<CredentialOAuth, RefreshError>> + Send,
+    {
+        let locks = self.locks.clone();
+        let key = format!("credential-refresh:{id}");
+        let service = self.clone();
+        with_lock(&locks, &key, opencode_local::lock::Options::default(), async move {
+            let credential_id = CredentialID(id.to_owned());
+            let Some(current) = service.get(&credential_id).map_err(shared)? else {
+                return Ok(None);
+            };
+            let CredentialValue::Oauth(current) = current.value else {
+                return Ok(None);
+            };
+            if !stale(&current, opencode_util::time::now_ms()) {
+                log::info!("credential refresh skipped credentialID={id} reason=already_refreshed");
+                return Ok(Some(current));
+            }
+            let value = match tokio::time::timeout(REFRESH_TIMEOUT, refresh(current.clone())).await {
+                Ok(value) => value?,
+                Err(_) => return Err(Arc::new(RefreshTimedOut) as RefreshError),
+            };
+            let Some(latest) = service.get(&credential_id).map_err(shared)? else {
+                return Ok(None);
+            };
+            let CredentialValue::Oauth(latest) = latest.value else {
+                return Ok(None);
+            };
+            if latest.access != current.access || latest.refresh != current.refresh {
+                log::warn!("credential refresh discarded credentialID={id} reason=changed_meanwhile");
+                return Ok(Some(latest));
+            }
+            service
+                .update(&credential_id, Update { label: None, value: Some(CredentialValue::Oauth(value.clone())) })
+                .map_err(shared)?;
+            Ok(Some(value))
+        })
+        .await
+        .map_err(|error| Arc::new(error) as RefreshError)?
+    }
+
     fn publish_updated(
         &self,
         integration_id: &IntegrationID,
@@ -256,6 +381,21 @@ impl CredentialService {
         )?;
         Ok(())
     }
+}
+
+async fn settle(mut progress: Progress) -> Outcome {
+    loop {
+        if let Some(outcome) = (*progress.borrow_and_update()).clone() {
+            return outcome;
+        }
+        if progress.changed().await.is_err() {
+            return Err(Arc::new(RefreshAborted));
+        }
+    }
+}
+
+fn shared(error: CredentialError) -> RefreshError {
+    Arc::new(error)
 }
 
 impl CredentialLookup for CredentialService {

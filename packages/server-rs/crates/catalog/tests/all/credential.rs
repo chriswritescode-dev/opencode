@@ -23,7 +23,7 @@ fn setup() -> (TempDir, Arc<Database>, Arc<Bus>, Arc<CredentialService>) {
     let (database, _) = Database::open(DatabaseLocation::Memory, dir.path()).expect("open the database");
     let database = Arc::new(database);
     let bus = Bus::new(database.clone(), BusOptions::default());
-    let service = CredentialService::new(database.clone(), bus.clone());
+    let service = CredentialService::new(database.clone(), bus.clone(), dir.path().join("locks"));
     (dir, database, bus, service)
 }
 
@@ -333,7 +333,7 @@ fn lists_credentials_imported_from_auth_json() {
         Database::open(DatabaseLocation::File(dir.path().join("opencode.db")), dir.path()).expect("open the database");
     let database = Arc::new(database);
     let bus = Bus::new(database.clone(), BusOptions::default());
-    let service = CredentialService::new(database, bus);
+    let service = CredentialService::new(database, bus, dir.path().join("locks"));
 
     let all = service.all().expect("list every credential");
     assert_eq!(all.len(), 1);
