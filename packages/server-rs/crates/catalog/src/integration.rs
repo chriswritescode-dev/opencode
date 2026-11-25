@@ -23,7 +23,7 @@ mod editor;
 pub use attempt::{Attempt, AttemptError, AttemptMode, AttemptStatus, AttemptTime, OAuthConnectInput, OAuthService};
 pub use command::{CommandAttempt, CommandAttemptStatus, CommandConnectInput, CommandError, CommandService};
 pub use connect::{ExternalInput, KeyInput};
-pub use connection::{ConnectionService, StatusInput};
+pub use connection::{ConnectionService, StatusInput, key};
 pub use editor::{Editor, Implementation};
 
 pub const UPDATED: &str = "integration.updated";

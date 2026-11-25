@@ -4,9 +4,11 @@ mod credential;
 mod credential_refresh;
 mod integration;
 mod integration_connect;
+mod model;
 mod models_dev;
 mod models_dev_service;
 mod oauth;
+mod provider;
 mod variant;
 
 use std::path::{Path, PathBuf};
