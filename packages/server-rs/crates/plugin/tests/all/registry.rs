@@ -93,6 +93,58 @@ async fn does_not_retry_a_failed_revision_until_it_changes() {
 }
 
 #[tokio::test]
+async fn does_not_close_a_forgotten_script_slot_when_it_reloads() {
+    let log = log();
+    let registry = registry();
+    registry
+        .activate(vec![local(generation("a", "1", recorder("a", "1", &log, false)))], vec![])
+        .await
+        .expect("the first activation succeeds");
+    registry.forget_script_slots();
+    registry
+        .activate(vec![local(generation("a", "2", recorder("a", "2", &log, false)))], vec![])
+        .await
+        .expect("the reload succeeds");
+    assert_eq!(log_line(&log), "activate:a:1, activate:a:2");
+    registry.close().await;
+    assert_eq!(log_line(&log), "activate:a:1, activate:a:2, close:a:2");
+}
+
+#[tokio::test]
+async fn does_not_close_a_forgotten_script_slot_on_close() {
+    let log = log();
+    let registry = registry();
+    registry
+        .activate(vec![local(generation("a", "1", recorder("a", "1", &log, false)))], vec![])
+        .await
+        .expect("the first activation succeeds");
+    registry.forget_script_slots();
+    registry.close().await;
+    assert_eq!(log_line(&log), "activate:a:1");
+}
+
+#[tokio::test]
+async fn a_failed_reload_does_not_restore_a_forgotten_script_slot() {
+    let log = log();
+    let registry = registry();
+    registry
+        .activate(vec![local(generation("a", "1", recorder("a", "1", &log, false)))], vec![])
+        .await
+        .expect("the first activation succeeds");
+    registry.forget_script_slots();
+    registry
+        .activate(vec![local(generation("a", "2", recorder("a", "2", &log, true)))], vec![])
+        .await
+        .expect("a failed reload is reported");
+    assert_eq!(log_line(&log), "activate:a:1, activate:a:2");
+    let listed = registry.list();
+    assert_eq!(listed.len(), 1);
+    assert!(matches!(listed[0].state, PluginState::Failed { .. }));
+    registry.close().await;
+    assert_eq!(log_line(&log), "activate:a:1, activate:a:2");
+}
+
+#[tokio::test]
 async fn keeps_the_previous_activation_when_a_new_revision_fails() {
     let log = log();
     let registry = registry();
@@ -286,6 +338,11 @@ fn builtin_catalog_matches_the_pin() {
     assert!(native::guarded("opencode.provider.opencode"));
     assert!(native::guarded("opencode.config.policy"));
     assert!(!native::guarded("opencode.tool.read"));
+}
+
+fn local(mut plugin: Generation) -> Generation {
+    plugin.source = Some(Source::Local { path: "/tmp/plugin".to_string() });
+    plugin
 }
 
 fn with_gui(mut plugin: Generation, revision: &str) -> Generation {

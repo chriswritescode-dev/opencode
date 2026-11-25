@@ -18,6 +18,15 @@ pub struct Registry {
     inner: Arc<Inner>,
 }
 
+#[derive(Clone)]
+pub struct WeakRegistry(std::sync::Weak<Inner>);
+
+impl WeakRegistry {
+    pub fn upgrade(&self) -> Option<Registry> {
+        self.0.upgrade().map(|inner| Registry { inner })
+    }
+}
+
 struct Inner {
     location: LocationInfo,
     publish: Arc<dyn Fn() + Send + Sync>,
@@ -36,6 +45,7 @@ struct Slot {
     plugin: Generation,
     activation: Option<Arc<ActivationCell>>,
     error: Option<String>,
+    forgotten: bool,
 }
 
 pub struct ActivationCell {
@@ -116,7 +126,9 @@ impl Registry {
                 .iter()
                 .enumerate()
                 .position(|(index, definition)| match slots.get(index) {
-                    Some(slot) => slot.plugin.id != definition.id || slot.plugin.revision != definition.revision,
+                    Some(slot) => {
+                        slot.forgotten || slot.plugin.id != definition.id || slot.plugin.revision != definition.revision
+                    }
                     None => true,
                 })
                 .unwrap_or(plugins.len());
@@ -143,6 +155,10 @@ impl Registry {
             let Some(activation) = &slot.activation else {
                 continue;
             };
+            if slot.forgotten {
+                activation.handle.lock().await.take();
+                continue;
+            }
             if activation.failure().is_some() {
                 continue;
             }
@@ -165,26 +181,38 @@ impl Registry {
                     plugin: definition.clone(),
                     activation: Some(activation.clone()),
                     error: slot.error.clone(),
+                    forgotten: false,
                 });
                 continue;
             }
 
             match self.load(definition).await {
                 Ok(activation) => {
-                    self.push(Slot { plugin: definition.clone(), activation: Some(activation), error: None });
+                    self.push(Slot {
+                        plugin: definition.clone(),
+                        activation: Some(activation),
+                        error: None,
+                        forgotten: false,
+                    });
                 }
                 Err(error) => {
-                    let restored = match previous_slot.and_then(|slot| slot.activation.clone()) {
-                        Some(fallback) if fallback.failure().is_none() => match self.load(&fallback.plugin).await {
-                            Ok(activation) => Some(activation),
-                            Err(_) => {
-                                log::error!("failed to restore plugin; deactivating");
-                                None
-                            }
-                        },
-                        _ => None,
-                    };
-                    self.push(Slot { plugin: definition.clone(), activation: restored, error: Some(error) });
+                    let restored =
+                        match previous_slot.filter(|slot| !slot.forgotten).and_then(|slot| slot.activation.clone()) {
+                            Some(fallback) if fallback.failure().is_none() => match self.load(&fallback.plugin).await {
+                                Ok(activation) => Some(activation),
+                                Err(_) => {
+                                    log::error!("failed to restore plugin; deactivating");
+                                    None
+                                }
+                            },
+                            _ => None,
+                        };
+                    self.push(Slot {
+                        plugin: definition.clone(),
+                        activation: restored,
+                        error: Some(error),
+                        forgotten: false,
+                    });
                 }
             }
         }
@@ -197,6 +225,24 @@ impl Registry {
 
     pub fn list(&self) -> Vec<Info> {
         self.inner.inventory.lock().expect("the plugin registry lock is never poisoned").clone()
+    }
+
+    pub fn downgrade(&self) -> WeakRegistry {
+        WeakRegistry(Arc::downgrade(&self.inner))
+    }
+
+    pub fn forget_script_slots(&self) {
+        let mut slots = self.inner.slots.lock().expect("the plugin registry lock is never poisoned");
+        for slot in slots.iter_mut() {
+            if slot
+                .plugin
+                .source
+                .as_ref()
+                .is_some_and(|source| matches!(source, Source::Local { .. } | Source::Package { .. }))
+            {
+                slot.forgotten = true;
+            }
+        }
     }
 
     pub fn gui(&self, id: &str) -> Option<Gui> {
@@ -282,6 +328,10 @@ impl Registry {
             let Some(activation) = slot.activation else {
                 continue;
             };
+            if slot.forgotten {
+                activation.handle.lock().await.take();
+                continue;
+            }
             if activation.failure().is_some() {
                 continue;
             }

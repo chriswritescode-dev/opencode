@@ -1,5 +1,5 @@
 use std::collections::{HashMap, HashSet};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -19,6 +19,7 @@ use crate::operations::{self, Operation};
 use crate::registry::{Hold, Registry, error_ref};
 use crate::script;
 use crate::sdk::{InstancePlugins, SdkPlugins};
+use crate::watch::PluginWatcher;
 
 pub use crate::update::Updates;
 
@@ -35,6 +36,7 @@ pub struct SupervisorDeps {
     pub updates: Updates,
     pub location: LocationInfo,
     pub app: AppInfo,
+    pub watcher: Option<Arc<dyn PluginWatcher>>,
     pub modules: broadcast::Receiver<()>,
 }
 
@@ -53,6 +55,8 @@ struct Core {
     location: LocationInfo,
     app: AppInfo,
     updates: Updates,
+    watcher: Option<Arc<dyn PluginWatcher>>,
+    watched: Mutex<HashSet<PathBuf>>,
     running: tokio::sync::Mutex<IndexMap<String, Generation>>,
     packages: Mutex<HashSet<String>>,
     attempted: Mutex<HashMap<String, u64>>,
@@ -90,9 +94,11 @@ struct Resolved {
 
 impl Supervisor {
     pub fn start(deps: SupervisorDeps) -> Supervisor {
-        let SupervisorDeps { registry, config, host, paths, sdk, instance, updates, location, app, modules } = deps;
+        let SupervisorDeps { registry, config, host, paths, sdk, instance, updates, location, app, watcher, modules } =
+            deps;
         let intervals = updates.intervals();
         let updates_changes = updates.changes();
+        let restarts = host.as_ref().and_then(|host| host.restarts());
         let core = Arc::new(Core {
             registry: registry.clone(),
             config: config.clone(),
@@ -103,6 +109,8 @@ impl Supervisor {
             updates,
             location,
             app,
+            watcher,
+            watched: Mutex::new(HashSet::new()),
             running: tokio::sync::Mutex::new(IndexMap::new()),
             packages: Mutex::new(HashSet::new()),
             attempted: Mutex::new(HashMap::new()),
@@ -223,6 +231,17 @@ impl Supervisor {
             })
         });
 
+        if let Some(mut restarts) = restarts {
+            let registry = registry.clone();
+            let trigger = trigger.clone();
+            tasks.push(tokio::spawn(async move {
+                while restarts.changed().await.is_ok() {
+                    registry.forget_script_slots();
+                    trigger();
+                }
+            }));
+        }
+
         Supervisor { core, tasks: Mutex::new(tasks) }
     }
 
@@ -286,6 +305,7 @@ async fn activate(core: Arc<Core>) -> Result<(), String> {
     let post = builtin_post;
     let entries = core.config.entries();
     let operations = operations::scan(&entries, Path::new(&core.location.directory), core.host.as_deref()).await;
+    arm_watches(&core, &entries, &operations);
     let running = core.running.lock().await.clone();
     let input = ResolveInput {
         entries: &entries,
@@ -318,6 +338,25 @@ async fn activate(core: Arc<Core>) -> Result<(), String> {
         spawn_checks(core, resolved, targets, current);
     }
     Ok(())
+}
+
+fn arm_watches(core: &Core, entries: &[Entry], operations: &[Operation]) {
+    let Some(watcher) = core.watcher.as_ref() else { return };
+    for operation in operations {
+        let Operation::Add(add) = operation else { continue };
+        let target = Path::new(&add.target);
+        if !target.is_absolute() || is_directory_source(entries, target, &["plugin", "plugins"]) {
+            continue;
+        }
+        let fresh =
+            core.watched.lock().expect("the plugin supervisor lock is never poisoned").insert(target.to_path_buf());
+        if !fresh {
+            continue;
+        }
+        if let Err(error) = watcher.watch(target) {
+            log::warn!("failed to watch a plugin path, live reload disabled: {}: {error}", target.display());
+        }
+    }
 }
 
 fn package_targets(resolved: &Resolved) -> Vec<String> {

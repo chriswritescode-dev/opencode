@@ -22,6 +22,7 @@ use opencode_plugin::host::{
 use opencode_plugin::registry::Registry;
 use opencode_plugin::sdk::{InstancePlugins, SdkPlugins};
 use opencode_plugin::supervisor::{Supervisor, SupervisorDeps, Updates};
+use opencode_plugin::watch::{ManualWatcher, PluginWatcher};
 use opencode_sidecar::protocol::LocationRef;
 
 pub struct RecordingActivator {
@@ -514,12 +515,7 @@ impl ConfigWorkspace {
     }
 
     pub async fn service(&self) -> ConfigService {
-        let paths = GlobalPaths::from_vars(|name| match name {
-            "HOME" => Some(self.home.clone().into_os_string()),
-            "OPENCODE_CONFIG_DIR" => Some(self.config.clone().into_os_string()),
-            _ => None,
-        })
-        .expect("the workspace paths resolve");
+        let paths = self.paths();
         let options = ConfigOptions {
             project: Some(true),
             global: Some(false),
@@ -537,6 +533,19 @@ impl ConfigWorkspace {
         };
         ConfigService::start(options, location, paths, deps).await
     }
+
+    pub fn paths(&self) -> GlobalPaths {
+        GlobalPaths::from_vars(|name| match name {
+            "HOME" => Some(self.home.clone().into_os_string()),
+            "OPENCODE_CONFIG_DIR" => Some(self.config.clone().into_os_string()),
+            _ => None,
+        })
+        .expect("the workspace paths resolve")
+    }
+
+    pub fn npm_paths(&self) -> NpmPaths {
+        NpmPaths::from(&self.paths())
+    }
 }
 
 impl Default for ConfigWorkspace {
@@ -553,7 +562,8 @@ pub fn supervisor(
     sdk: SdkPlugins,
     instance: Arc<InstancePlugins>,
 ) -> Supervisor {
-    let (_modules, receiver) = tokio::sync::broadcast::channel(1);
+    let watcher = Arc::new(ManualWatcher::new());
+    let modules = watcher.changes();
     Supervisor::start(SupervisorDeps {
         registry,
         config,
@@ -564,6 +574,7 @@ pub fn supervisor(
         updates: Updates::new(host, npm_paths()),
         location,
         app: app(),
-        modules: receiver,
+        watcher: Some(watcher as Arc<dyn PluginWatcher>),
+        modules,
     })
 }

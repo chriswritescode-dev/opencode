@@ -22,6 +22,9 @@ pub trait ScriptHost: Send + Sync {
     fn deactivate(&self, location: LocationRef, activation: String) -> BoxFuture<'static, Result<(), HostError>>;
     fn close_location(&self, location: LocationRef) -> BoxFuture<'static, Result<(), HostError>>;
     fn npm(&self, request: NpmRequest) -> BoxFuture<'static, Result<serde_json::Value, HostError>>;
+    fn restarts(&self) -> Option<tokio::sync::watch::Receiver<u64>> {
+        None
+    }
 }
 
 #[derive(Default, Clone, Debug, PartialEq, Deserialize)]
