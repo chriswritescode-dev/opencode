@@ -210,6 +210,9 @@ impl Harness {
                     opencode_catalog::provider_plugin::amazon_bedrock::register(&self.services, &context, &mut builtin)
                         .await
                 }
+                "azure" => {
+                    opencode_catalog::provider_plugin::azure::register(&self.services, &context, &mut builtin).await
+                }
                 "cloudflare_ai_gateway" => {
                     opencode_catalog::provider_plugin::cloudflare_ai_gateway::register(
                         &self.services,
@@ -560,7 +563,7 @@ async fn builtin_register_inserts_provider_plugins_at_the_provider_slot() {
     )
     .await;
     harness.record(builtin);
-    assert_eq!(harness.registrations.registrations.len(), 51);
+    assert_eq!(harness.registrations.registrations.len(), 54);
 }
 
 pub async fn seed(

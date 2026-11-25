@@ -1,4 +1,5 @@
 pub mod amazon_bedrock;
+pub mod azure;
 pub mod cerebras;
 pub mod chatgpt;
 pub mod cloudflare_ai_gateway;
@@ -259,6 +260,7 @@ pub async fn register(
         };
         match id {
             amazon_bedrock::ID => amazon_bedrock::register(services, context, builtin).await,
+            azure::ID => azure::register(services, context, builtin).await,
             cerebras::ID => cerebras::register(services, context, builtin).await,
             chatgpt::ID => chatgpt::register(services, context, builtin).await,
             cloudflare_ai_gateway::ID => cloudflare_ai_gateway::register(services, context, builtin).await,

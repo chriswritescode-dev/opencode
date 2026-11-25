@@ -1,4 +1,5 @@
 pub mod amazon_bedrock;
+pub mod azure;
 pub mod cerebras;
 pub mod chatgpt;
 pub mod cloudflare_ai_gateway;

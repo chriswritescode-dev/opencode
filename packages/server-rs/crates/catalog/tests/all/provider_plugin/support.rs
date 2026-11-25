@@ -352,13 +352,22 @@ impl CommandRunner for FakeRunner {
 }
 
 pub fn plugin_context_at(harness: &Harness, http: Arc<dyn HttpSender>, workspace_id: Option<&str>) -> PluginContext {
+    plugin_context_with_runner(harness, http, Arc::new(FakeRunner::default()), workspace_id)
+}
+
+pub fn plugin_context_with_runner(
+    harness: &Harness,
+    http: Arc<dyn HttpSender>,
+    runner: Arc<dyn CommandRunner>,
+    workspace_id: Option<&str>,
+) -> PluginContext {
     let environment = harness.environment.clone();
     PluginContext {
         http,
         app: AppInfo { name: "opencode".to_owned(), version: "test".to_owned(), channel: "test".to_owned() },
         env: Arc::new(move |name| environment.get(name).map(OsString::from)),
         kv: Arc::new(NoKv),
-        commands: Arc::new(FakeRunner::default()),
+        commands: runner,
         sessions: Arc::new(FakeSessions::default()),
         hooks: Arc::new(ProviderHooks::default()),
         location: LocationRef {
