@@ -1,5 +1,6 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use futures_util::future::BoxFuture;
 use opencode_git::{Git, Repository};
@@ -142,13 +143,18 @@ impl RepositoryCache {
 
             match status {
                 Status::Cloned => {
+                    let staging = Staging::new(local_path);
                     self.git
-                        .clone_repository(&input.reference.remote, local_path, input.branch.as_deref(), None)
+                        .clone_repository(&input.reference.remote, &staging.path, input.branch.as_deref(), None)
                         .await
                         .map_err(|error| Error::CloneFailed {
                             repository: repository.to_owned(),
                             message: error.message,
                         })?;
+                    tokio::fs::rename(&staging.path, local_path)
+                        .await
+                        .map_err(|error| cache_operation("move cloned cache", local_path, error))?;
+                    staging.keep();
                 }
                 Status::Refreshed => {
                     self.refresh(existing.as_ref(), input, repository).await?;
@@ -275,6 +281,48 @@ impl RepositoryCache {
             .await
             .map_err(|error| Error::LockFailed { local_path: local_path.to_owned(), message: error.to_string() })?
             .map_err(|error| Error::LockFailed { local_path: local_path.to_owned(), message: error.to_string() })
+    }
+}
+
+static STAGING_SEQUENCE: AtomicU64 = AtomicU64::new(0);
+
+struct Staging {
+    path: String,
+    kept: bool,
+}
+
+impl Staging {
+    fn new(local_path: &str) -> Self {
+        let target = Path::new(local_path);
+        let name = target.file_name().map(|name| name.to_string_lossy().into_owned()).unwrap_or_default();
+        let sequence = STAGING_SEQUENCE.fetch_add(1, Ordering::Relaxed);
+        let staged = format!(".{name}.clone-{}-{}-{sequence}", std::process::id(), now_ms());
+        let path = target.with_file_name(staged).to_string_lossy().into_owned();
+        Staging { path, kept: false }
+    }
+
+    fn keep(mut self) {
+        self.kept = true;
+    }
+}
+
+impl Drop for Staging {
+    fn drop(&mut self) {
+        if self.kept {
+            return;
+        }
+        let path = std::mem::take(&mut self.path);
+        let remove = move || {
+            if let Err(error) = std::fs::remove_dir_all(&path)
+                && error.kind() != std::io::ErrorKind::NotFound
+            {
+                log::warn!("failed to remove the partial clone {path}: {error}");
+            }
+        };
+        match tokio::runtime::Handle::try_current() {
+            Ok(handle) => drop(handle.spawn_blocking(remove)),
+            Err(_) => remove(),
+        }
     }
 }
 

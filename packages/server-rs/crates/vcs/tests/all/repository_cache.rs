@@ -1,5 +1,6 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::time::Duration;
 
 use opencode_storage::kv;
 use opencode_util::time::now_ms;
@@ -249,6 +250,62 @@ async fn returns_typed_branch_validation_and_clone_failures() {
     missing.remote = file_url(&fixture.root.join("missing.git"));
     let clone_failure = cache.ensure(request(&missing)).await.expect_err("fails to clone");
     assert!(matches!(clone_failure, Error::CloneFailed { .. }), "{clone_failure:?}");
+}
+
+#[tokio::test]
+async fn an_interrupted_clone_leaves_no_reusable_checkout() {
+    let fixture = Fixture::new();
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.expect("binds a stalled remote");
+    let address = listener.local_addr().expect("reads the stalled remote address");
+    let stalled = tokio::spawn(async move {
+        let mut connections = Vec::new();
+        while let Ok((connection, _)) = listener.accept().await {
+            connections.push(connection);
+        }
+    });
+    let mut stalled_reference = reference("unused");
+    stalled_reference.remote = format!("http://{address}/owner/repo.git");
+    let cache = Arc::new(materializer(&fixture));
+    let parent = fixture.root.join("repos").join("github.com").join("owner");
+    let local_path = parent.join("repo");
+
+    let task = {
+        let cache = cache.clone();
+        let input = request(&stalled_reference);
+        tokio::spawn(async move { cache.ensure(input).await })
+    };
+    tokio::time::timeout(Duration::from_secs(10), async {
+        while !entries(&parent).iter().any(|entry| entry.join(".git").join("config").exists()) {
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .expect("the clone starts");
+    task.abort();
+    let _ = task.await;
+
+    assert!(!local_path.exists());
+    tokio::time::timeout(Duration::from_secs(10), async {
+        while !entries(&parent).is_empty() {
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .expect("the partial clone is removed");
+    stalled.abort();
+
+    let (_source, remote) = git_remote(&fixture).await;
+    let mut working = stalled_reference.clone();
+    working.remote = remote;
+    let cloned = cache.ensure(daily(&working)).await.expect("clones after the interruption");
+    assert_eq!(cloned.status, Status::Cloned);
+    assert_eq!(read(&fixture, &cloned.local_path).await, "one\n");
+}
+
+fn entries(directory: &Path) -> Vec<PathBuf> {
+    std::fs::read_dir(directory)
+        .map(|entries| entries.filter_map(|entry| entry.ok()).map(|entry| entry.path()).collect())
+        .unwrap_or_default()
 }
 
 fn materializer(fixture: &Fixture) -> RepositoryCache {
