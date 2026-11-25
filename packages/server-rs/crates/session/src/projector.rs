@@ -1,15 +1,15 @@
 use std::sync::Arc;
 
 use opencode_bus::{Bus, BusError, Definition, Event, versioned_type};
-use opencode_contract::codec::{Decode, Encode, Path, encode_json};
+use opencode_contract::codec::{Decode, Encode, JsonMap, Path, encode_json};
 use opencode_contract::generated::{
     DURABLE_EVENTS, SessionAgentSelectedData, SessionArchivedData, SessionCompactionEndedData, SessionCreatedData,
     SessionDeletedData, SessionExecutionFailedData, SessionExecutionInterruptedData,
     SessionExecutionInterruptedDataReason, SessionExecutionStartedData, SessionExecutionSucceededData,
-    SessionInstructionsUpdatedData, SessionInstructionsUpdatedDataDeltaValue, SessionMetadataUpdatedData,
-    SessionModelSelectedData, SessionMovedData, SessionPermissionsData, SessionRenamedData, SessionRevertClearedData,
-    SessionRevertCommittedData, SessionRevertStagedData, SessionStepEndedData, SessionStepFailedData,
-    SessionUnarchivedData, SessionUsageRecordedData, SessionViewedData, WorktreeResolvedData,
+    SessionInstructionsUpdatedData, SessionInstructionsUpdatedDataDeltaValue, SessionMetadata,
+    SessionMetadataUpdatedData, SessionModelSelectedData, SessionMovedData, SessionPermissionsData, SessionRenamedData,
+    SessionRevertClearedData, SessionRevertCommittedData, SessionRevertStagedData, SessionStepEndedData,
+    SessionStepFailedData, SessionUnarchivedData, SessionUsageRecordedData, SessionViewedData, WorktreeResolvedData,
 };
 use opencode_storage::Database;
 use opencode_util::path::Flavor;
@@ -630,6 +630,53 @@ fn optional_json<T: Encode>(value: Option<&T>) -> Value {
     value.map_or(Value::Null, |value| Value::Text(encode_json(value)))
 }
 
+const CWD_METADATA_KEY: &str = "$opencode_experimental_cwd";
+
+pub(crate) struct StoredMetadata {
+    pub(crate) cwd: Option<serde_json::Value>,
+    pub(crate) metadata: Option<SessionMetadata>,
+}
+
+pub(crate) fn read_stored(metadata: Option<&SessionMetadata>) -> StoredMetadata {
+    let Some(metadata) = metadata else {
+        return StoredMetadata { cwd: None, metadata: None };
+    };
+    if !metadata.0.iter().any(|(key, _)| key.as_str() == CWD_METADATA_KEY) {
+        return StoredMetadata { cwd: None, metadata: Some(metadata.clone()) };
+    }
+    let cwd = metadata.0.iter().find(|(key, _)| key.as_str() == CWD_METADATA_KEY).and_then(|(_, value)| place(value));
+    let rest = metadata.0.iter().filter(|(key, _)| key.as_str() != CWD_METADATA_KEY).cloned().collect::<Vec<_>>();
+    let metadata = (!rest.is_empty()).then_some(JsonMap(rest));
+    StoredMetadata { cwd, metadata }
+}
+
+pub(crate) fn write_stored(
+    metadata: Option<&SessionMetadata>,
+    cwd: Option<&serde_json::Value>,
+) -> Option<SessionMetadata> {
+    let explicit_key =
+        metadata.is_some_and(|metadata| metadata.0.iter().any(|(key, _)| key.as_str() == CWD_METADATA_KEY));
+    if cwd.is_none() && !explicit_key {
+        return metadata.cloned();
+    }
+    let mut entries = metadata
+        .map(|metadata| {
+            metadata.0.iter().filter(|(key, _)| key.as_str() != CWD_METADATA_KEY).cloned().collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+    if let Some(cwd) = cwd {
+        entries.push((CWD_METADATA_KEY.to_string(), cwd.clone()));
+    }
+    (!entries.is_empty()).then_some(JsonMap(entries))
+}
+
+fn place(value: &serde_json::Value) -> Option<serde_json::Value> {
+    let object = value.as_object()?;
+    let absolute = object.get("absolute")?.as_str()?;
+    let id = object.get("environment")?.as_object()?.get("id")?.as_str()?;
+    Some(serde_json::json!({ "absolute": absolute, "environment": { "id": id } }))
+}
+
 fn project_created(connection: &Connection, event: &Event) -> Result<(), BusError> {
     let data: SessionCreatedData = decode(event)?;
     let created = event.created();
@@ -648,7 +695,7 @@ fn project_created(connection: &Connection, event: &Event) -> Result<(), BusErro
             data.title,
             optional_text(data.agent.map(|agent| agent.0)),
             optional_json(data.model.as_ref()),
-            optional_json(data.metadata.as_ref()),
+            optional_json(write_stored(data.metadata.as_ref(), None).as_ref()),
             optional_json(data.permissions.as_ref()),
             data.version,
             created,
@@ -678,14 +725,35 @@ fn project_renamed(connection: &Connection, event: &Event) -> Result<(), BusErro
 
 fn project_metadata_updated(connection: &Connection, event: &Event) -> Result<(), BusError> {
     let data: SessionMetadataUpdatedData = decode(event)?;
+    let existing = existing_cwd(connection, event, &data.session_id.0)?;
+    let metadata = write_stored(Some(&data.metadata), existing.as_ref());
     set_session(
         connection,
         &data.session_id.0,
         &[
-            Assignment::Value("metadata", Value::Text(encode_json(&data.metadata))),
+            Assignment::Value("metadata", optional_json(metadata.as_ref())),
             Assignment::Value("time_updated", Value::Integer(event.created())),
         ],
     )
+}
+
+fn existing_cwd(
+    connection: &Connection,
+    event: &Event,
+    session_id: &str,
+) -> Result<Option<serde_json::Value>, BusError> {
+    let raw = connection
+        .query_row("SELECT metadata FROM session_v2 WHERE id = ?1", [session_id], |row| row.get::<_, Option<String>>(0))
+        .optional()?;
+    let Some(raw) = raw.flatten() else {
+        return Ok(None);
+    };
+    let value: serde_json::Value = serde_json::from_str(&raw).map_err(|error| invalid(event, error.to_string()))?;
+    let Some(object) = value.as_object() else {
+        return Ok(None);
+    };
+    let metadata = JsonMap(object.iter().map(|(key, value)| (key.clone(), value.clone())).collect::<Vec<_>>());
+    Ok(read_stored(Some(&metadata)).cwd)
 }
 
 fn project_permissions(connection: &Connection, event: &Event) -> Result<(), BusError> {
