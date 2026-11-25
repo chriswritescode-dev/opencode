@@ -39,6 +39,11 @@ pub async fn commit_allow_empty(git: &Git, directory: &Path, message: &str) {
     crate::fixture::git(git, directory, &["commit", "--allow-empty", "-m", message]).await;
 }
 
+pub async fn init_repo(git: &Git, directory: &Path) {
+    init_git(git, directory).await;
+    commit_allow_empty(git, directory, "root").await;
+}
+
 pub struct RemoteFixture {
     pub source: PathBuf,
     pub remote: String,

@@ -1,3 +1,4 @@
+mod capture;
 mod executable;
 mod fixture;
 mod patch;

@@ -39,7 +39,7 @@ impl std::fmt::Display for Operation {
     }
 }
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Clone, Debug, thiserror::Error)]
 #[error("Git {operation} failed: {message}")]
 pub struct OperationError {
     pub operation: Operation,

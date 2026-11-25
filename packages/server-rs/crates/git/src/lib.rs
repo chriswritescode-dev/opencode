@@ -1,10 +1,13 @@
 mod error;
 mod executable;
 mod history;
+mod index;
 mod patch;
 mod repo;
 mod run;
+mod store;
 mod sync;
+mod tree;
 mod worktree;
 
 pub use error::{CommandError, Operation, OperationError, WorktreeError, WorktreeOperation};
@@ -15,6 +18,7 @@ pub use patch::{
 };
 pub use repo::{Repository, Worktree, WorktreeKind};
 pub use run::{RunOptions, RunOutput, SpawnError};
+pub use tree::CaptureInput;
 
 use std::collections::HashMap;
 use std::ffi::{OsStr, OsString};
@@ -26,16 +30,27 @@ use tokio::sync::Mutex as AsyncMutex;
 
 pub type Vars = Arc<dyn Fn(&str) -> Option<OsString> + Send + Sync>;
 
+pub type ExecutionObserver = Arc<dyn Fn(&[String]) + Send + Sync>;
+
 pub struct Git {
     vars: Vars,
     executable: OnceLock<OsString>,
     locks: Mutex<HashMap<String, Arc<AsyncMutex<()>>>>,
     executions: AtomicUsize,
+    observer: Mutex<Option<ExecutionObserver>>,
+    tree: tree::State,
 }
 
 impl Git {
     pub fn new(vars: Vars) -> Self {
-        Git { vars, executable: OnceLock::new(), locks: Mutex::new(HashMap::new()), executions: AtomicUsize::new(0) }
+        Git {
+            vars,
+            executable: OnceLock::new(),
+            locks: Mutex::new(HashMap::new()),
+            executions: AtomicUsize::new(0),
+            observer: Mutex::new(None),
+            tree: tree::State::default(),
+        }
     }
 
     /// Number of git processes this handle started, including failed spawns. Tests use it to
@@ -44,8 +59,19 @@ impl Git {
         self.executions.load(Ordering::Relaxed)
     }
 
+    pub fn set_observer(&self, observer: Option<ExecutionObserver>) {
+        *self.observer.lock().unwrap_or_else(|error| error.into_inner()) = observer;
+    }
+
     pub(crate) fn count_execution(&self) {
         self.executions.fetch_add(1, Ordering::Relaxed);
+    }
+
+    pub(crate) fn notify_observer(&self, args: &[&str]) {
+        let observer = self.observer.lock().unwrap_or_else(|error| error.into_inner()).clone();
+        if let Some(observer) = observer {
+            observer(&args.iter().map(|arg| arg.to_string()).collect::<Vec<_>>());
+        }
     }
 
     pub(crate) fn var(&self, name: &str) -> Option<String> {

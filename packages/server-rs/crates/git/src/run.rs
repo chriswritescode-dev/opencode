@@ -55,6 +55,7 @@ impl Git {
         command.stdin(if stdin.is_some() { Stdio::piped() } else { Stdio::null() });
         command.stdout(Stdio::piped()).stderr(Stdio::piped()).kill_on_drop(true);
         self.count_execution();
+        self.notify_observer(args);
         let mut child = command.spawn().map_err(spawn_error)?;
         let (stdout, stderr, ()) = tokio::join!(
             collect_output(child.stdout.take(), max_output_bytes),
@@ -106,6 +107,48 @@ impl Git {
             directory: Some(repository.worktree.clone()),
             cause: Some(cause.message),
         })
+    }
+
+    pub(crate) async fn repository_operation(
+        &self,
+        operation: Operation,
+        repository: &Repository,
+        args: &[&str],
+        options: RunOptions,
+    ) -> Result<RunOutput, OperationError> {
+        let output = self.repository_run(operation, repository, args, options).await?;
+        if output.status == 0 {
+            return Ok(output);
+        }
+        let stderr = output.stderr_text();
+        let stdout = output.text();
+        let message = if stderr.trim().is_empty() {
+            if stdout.trim().is_empty() { format!("Git {operation} failed") } else { stdout.trim().to_string() }
+        } else {
+            stderr.trim().to_string()
+        };
+        Err(OperationError { operation, message, directory: Some(repository.worktree.clone()), cause: None })
+    }
+
+    pub(crate) async fn repository_operation_retry(
+        &self,
+        operation: Operation,
+        repository: &Repository,
+        args: &[&str],
+        options: RunOptions,
+    ) -> Result<RunOutput, OperationError> {
+        let attempts = if cfg!(windows) { 3 } else { 1 };
+        let mut attempt = 1;
+        loop {
+            match self.repository_operation(operation, repository, args, options.clone()).await {
+                Ok(output) => return Ok(output),
+                Err(error) if cfg!(windows) && error.cause.is_none() && attempt < attempts => {
+                    attempt += 1;
+                    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+                }
+                Err(error) => return Err(error),
+            }
+        }
     }
 }
 
