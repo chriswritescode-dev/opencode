@@ -12,6 +12,7 @@ workspace = true
 
 [dependencies]
 futures-util.workspace = true
+indexmap.workspace = true
 log.workspace = true
 notify.workspace = true
 opencode-bus.workspace = true
@@ -31,3 +32,6 @@ url.workspace = true
 [[test]]
 name = "all"
 path = "tests/all/main.rs"
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }

@@ -366,7 +366,7 @@ fn slot_info(slot: &Slot) -> Info {
     }
 }
 
-fn error_ref() -> String {
+pub(crate) fn error_ref() -> String {
     let bytes: [u8; 4] = rand::random();
     format!("err_{}", bytes.iter().map(|byte| format!("{byte:02x}")).collect::<String>())
 }

@@ -102,7 +102,7 @@ pub struct Loaded {
 pub struct ActivateRequest {
     pub handle: String,
     pub options: serde_json::Map<String, serde_json::Value>,
-    pub location: LocationRef,
+    pub location: serde_json::Value,
     pub app: AppInfo,
 }
 
@@ -123,7 +123,7 @@ pub enum NpmRequest {
     Reject { pkg: String, version: String, paths: NpmPaths },
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize)]
 pub struct NpmPaths {
     pub cache: PathBuf,
     pub state: PathBuf,
@@ -196,4 +196,15 @@ fn tag_name(error: &SidecarError) -> &'static str {
 
 pub fn location_ref(info: &LocationInfo) -> LocationRef {
     LocationRef { directory: info.directory.clone(), workspace_id: info.workspace_id.clone() }
+}
+
+pub fn location_info(info: &LocationInfo) -> serde_json::Value {
+    serde_json::json!({
+        "directory": info.directory,
+        "project": {
+            "id": info.project.id,
+            "directory": info.project.directory,
+            "canonical": info.project.canonical,
+        },
+    })
 }

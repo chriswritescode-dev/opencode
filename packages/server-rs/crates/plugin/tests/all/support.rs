@@ -2,16 +2,26 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use futures_util::future::BoxFuture;
 use opencode_config::entry::{Document, Entry, Origin};
+use opencode_config::options::{ConfigLocation, ConfigOptions, SystemOption};
+use opencode_config::paths::GlobalPaths;
+use opencode_config::seams::NoKv;
+use opencode_config::service::{ConfigService, ServiceDeps};
+use opencode_config::wellknown::WellKnown;
 use opencode_contract::codec::decode_json;
 use opencode_contract::generated::ConfigEntryDocumentInfo;
 use opencode_location::location::{LocationInfo, LocationProject};
-use opencode_plugin::generation::{ActivateContext, Activation, Activator, Generation, Source};
+use opencode_plugin::generation::{ActivateContext, Activation, Activator, Features, Generation, Source};
 use opencode_plugin::host::{
-    ActivateRequest, Entrypoints, HostError, LoadOutcome, LoadRequest, NpmRequest, ScriptHost,
+    ActivateRequest, AppInfo, Entrypoints, HostError, LoadOutcome, LoadRequest, Loaded, NpmPaths, NpmRequest,
+    ScriptHost,
 };
+use opencode_plugin::registry::Registry;
+use opencode_plugin::sdk::{InstancePlugins, SdkPlugins};
+use opencode_plugin::supervisor::{Supervisor, SupervisorDeps, Updates};
 use opencode_sidecar::protocol::LocationRef;
 
 pub struct RecordingActivator {
@@ -20,6 +30,7 @@ pub struct RecordingActivator {
     pub log: Arc<Mutex<Vec<String>>>,
     pub fail: bool,
     pub gate: Option<Arc<tokio::sync::Notify>>,
+    pub entered: Option<Arc<tokio::sync::Notify>>,
 }
 
 impl Activator for RecordingActivator {
@@ -29,7 +40,11 @@ impl Activator for RecordingActivator {
         let log = self.log.clone();
         let fail = self.fail;
         let gate = self.gate.clone();
+        let entered = self.entered.clone();
         Box::pin(async move {
+            if let Some(entered) = entered {
+                entered.notify_one();
+            }
             if let Some(gate) = gate {
                 gate.notified().await;
             }
@@ -78,7 +93,63 @@ pub fn recorder(id: &str, revision: &str, log: &Arc<Mutex<Vec<String>>>, fail: b
         log: log.clone(),
         fail,
         gate: None,
+        entered: None,
     })
+}
+
+pub fn gated(
+    id: &str,
+    revision: &str,
+    log: &Arc<Mutex<Vec<String>>>,
+    gate: Arc<tokio::sync::Notify>,
+    entered: Arc<tokio::sync::Notify>,
+) -> Arc<RecordingActivator> {
+    Arc::new(RecordingActivator {
+        id: id.to_string(),
+        revision: revision.to_string(),
+        log: log.clone(),
+        fail: false,
+        gate: Some(gate),
+        entered: Some(entered),
+    })
+}
+
+pub fn loaded(id: &str, revision: &str, source: Source, handle: &str) -> LoadOutcome {
+    LoadOutcome::Loaded(Loaded {
+        handle: handle.to_string(),
+        id: id.to_string(),
+        features: Features::server_only(),
+        gui: None,
+        revision: revision.to_string(),
+        source,
+    })
+}
+
+pub fn package_source(target: &str, version: &str) -> Source {
+    Source::Package { target: target.to_string(), version: Some(version.to_string()), outdated: false, updating: false }
+}
+
+pub fn local_source(path: &str) -> Source {
+    Source::Local { path: path.to_string() }
+}
+
+pub fn app() -> AppInfo {
+    AppInfo { name: "opencode".to_string(), version: "0.0.0".to_string(), channel: "local".to_string() }
+}
+
+pub fn npm_paths() -> NpmPaths {
+    NpmPaths::default()
+}
+
+pub async fn wait_for(mut predicate: impl FnMut() -> bool) {
+    for _ in 0..5000 {
+        if predicate() {
+            return;
+        }
+        tokio::task::yield_now().await;
+        tokio::time::sleep(Duration::from_millis(1)).await;
+    }
+    panic!("the awaited condition never became true");
 }
 
 pub fn location(dir: &str) -> LocationInfo {
@@ -150,6 +221,8 @@ pub fn entries(json_documents: &[(&str, &str)], directories: &[&Path]) -> Vec<En
 pub struct FakeHost {
     resolve: Arc<Mutex<BTreeMap<PathBuf, Result<Entrypoints, HostError>>>>,
     load: Arc<Mutex<BTreeMap<String, LoadOutcome>>>,
+    installed: Arc<Mutex<BTreeMap<String, LoadOutcome>>>,
+    loads: Arc<Mutex<Vec<(String, bool)>>>,
     npm: Arc<Mutex<BTreeMap<String, serde_json::Value>>>,
     calls: Arc<Mutex<Vec<String>>>,
     gate: Option<Arc<tokio::sync::Notify>>,
@@ -160,6 +233,8 @@ impl FakeHost {
         Self {
             resolve: Arc::new(Mutex::new(BTreeMap::new())),
             load: Arc::new(Mutex::new(BTreeMap::new())),
+            installed: Arc::new(Mutex::new(BTreeMap::new())),
+            loads: Arc::new(Mutex::new(Vec::new())),
             npm: Arc::new(Mutex::new(BTreeMap::new())),
             calls: Arc::new(Mutex::new(Vec::new())),
             gate: None,
@@ -175,6 +250,28 @@ impl FakeHost {
     pub fn failing(self, directory: impl Into<PathBuf>, error: HostError) -> Self {
         self.resolve.lock().expect("the test scripts are never poisoned").insert(directory.into(), Err(error));
         self
+    }
+
+    pub fn loading(self, target: impl Into<String>, outcome: LoadOutcome) -> Self {
+        self.set_load(target, outcome);
+        self
+    }
+
+    pub fn installing(self, target: impl Into<String>, outcome: LoadOutcome) -> Self {
+        self.set_installing(target, outcome);
+        self
+    }
+
+    pub fn set_load(&self, target: impl Into<String>, outcome: LoadOutcome) {
+        self.load.lock().expect("the test scripts are never poisoned").insert(target.into(), outcome);
+    }
+
+    pub fn set_installing(&self, target: impl Into<String>, outcome: LoadOutcome) {
+        self.installed.lock().expect("the test scripts are never poisoned").insert(target.into(), outcome);
+    }
+
+    pub fn loads(&self) -> Vec<(String, bool)> {
+        self.loads.lock().expect("the test log is never poisoned").clone()
     }
 
     pub fn calls(&self) -> Vec<String> {
@@ -212,7 +309,10 @@ impl ScriptHost for FakeHost {
 
     fn load(&self, _location: LocationRef, request: LoadRequest) -> BoxFuture<'static, Result<LoadOutcome, HostError>> {
         let target = request.operation.target;
+        let install = request.install;
         let load = self.load.clone();
+        let installed = self.installed.clone();
+        let loads = self.loads.clone();
         let calls = self.calls.clone();
         let gate = self.gate.clone();
         Box::pin(async move {
@@ -220,7 +320,9 @@ impl ScriptHost for FakeHost {
                 gate.notified().await;
             }
             calls.lock().expect("the test log is never poisoned").push(format!("load:{target}"));
-            Ok(load
+            loads.lock().expect("the test log is never poisoned").push((target.clone(), install));
+            let outcomes = if install { installed } else { load };
+            Ok(outcomes
                 .lock()
                 .expect("the test scripts are never poisoned")
                 .get(&target)
@@ -242,7 +344,7 @@ impl ScriptHost for FakeHost {
                 gate.notified().await;
             }
             calls.lock().expect("the test log is never poisoned").push(format!("activate:{handle}"));
-            Ok("activation".to_string())
+            Ok(format!("activation:{handle}"))
         })
     }
 
@@ -295,4 +397,94 @@ impl ScriptHost for FakeHost {
                 .unwrap_or(serde_json::Value::Null))
         })
     }
+}
+
+pub struct ConfigWorkspace {
+    _temp: TempDir,
+    pub project: PathBuf,
+    pub home: PathBuf,
+    pub config: PathBuf,
+}
+
+impl ConfigWorkspace {
+    pub fn new() -> Self {
+        let temp = TempDir::new();
+        let root = std::fs::canonicalize(temp.path()).expect("canonicalize the temp directory");
+        let project = root.join("project");
+        let home = root.join("home");
+        let config = root.join("config");
+        for directory in [&project, &home, &config] {
+            std::fs::create_dir_all(directory).expect("create the workspace directory");
+        }
+        std::fs::create_dir_all(project.join(".opencode")).expect("create the project config directory");
+        Self { _temp: temp, project, home, config }
+    }
+
+    pub fn write_plugins(&self, plugins: serde_json::Value) {
+        self.write_config(&serde_json::json!({ "plugins": plugins }).to_string());
+    }
+
+    pub fn write_config(&self, json: &str) {
+        std::fs::write(self.project.join(".opencode").join("opencode.json"), json).expect("write the project config");
+    }
+
+    pub fn plugins_dir(&self) -> PathBuf {
+        let directory = self.project.join(".opencode").join("plugins");
+        std::fs::create_dir_all(&directory).expect("create the discovered plugins directory");
+        directory
+    }
+
+    pub async fn service(&self) -> ConfigService {
+        let paths = GlobalPaths::from_vars(|name| match name {
+            "HOME" => Some(self.home.clone().into_os_string()),
+            "OPENCODE_CONFIG_DIR" => Some(self.config.clone().into_os_string()),
+            _ => None,
+        })
+        .expect("the workspace paths resolve");
+        let options = ConfigOptions {
+            project: Some(true),
+            global: Some(false),
+            system: Some(SystemOption::Disabled),
+            claude: Some(false),
+            file: None,
+            content: None,
+        };
+        let location = ConfigLocation { directory: self.project.clone(), project_id: "test".to_owned() };
+        let deps = ServiceDeps {
+            credentials: Arc::new(()),
+            wellknown: Arc::new(WellKnown::new(Arc::new(NoKv))),
+            channel: "local".to_owned(),
+            flag_overrides: None,
+        };
+        ConfigService::start(options, location, paths, deps).await
+    }
+}
+
+impl Default for ConfigWorkspace {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+pub fn supervisor(
+    registry: Registry,
+    config: ConfigService,
+    host: Option<Arc<dyn ScriptHost>>,
+    location: LocationInfo,
+    sdk: SdkPlugins,
+    instance: Arc<InstancePlugins>,
+) -> Supervisor {
+    let (_modules, receiver) = tokio::sync::broadcast::channel(1);
+    Supervisor::start(SupervisorDeps {
+        registry,
+        config,
+        host,
+        paths: npm_paths(),
+        sdk,
+        instance,
+        updates: Updates,
+        location,
+        app: app(),
+        modules: receiver,
+    })
 }
