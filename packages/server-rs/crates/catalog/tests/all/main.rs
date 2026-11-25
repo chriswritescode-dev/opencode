@@ -1,5 +1,7 @@
+mod corpus;
 mod credential;
 mod credential_refresh;
+mod oauth;
 
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};

@@ -7,5 +7,5 @@
     "noUncheckedIndexedAccess": false
   },
   "include": ["script", "test", "host", "parity"],
-  "exclude": ["script/config-corpus"]
+  "exclude": ["script/config-corpus", "script/catalog-corpus"]
 }

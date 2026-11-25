@@ -805,6 +805,7 @@ dependencies = [
  "serde_json",
  "thiserror",
  "tokio",
+ "url",
 ]
 
 [[package]]
