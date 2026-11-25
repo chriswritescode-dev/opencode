@@ -874,6 +874,8 @@ dependencies = [
  "opencode-contract",
  "opencode-local",
  "opencode-location",
+ "opencode-permission",
+ "opencode-registry",
  "opencode-session",
  "opencode-storage",
  "rand",

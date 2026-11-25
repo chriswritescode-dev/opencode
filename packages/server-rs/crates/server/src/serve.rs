@@ -147,6 +147,9 @@ pub(crate) async fn start(
                 paths,
                 start_directory,
                 config_env,
+                state.bus.clone(),
+                crate::VERSION.to_owned(),
+                crate::CHANNEL.to_owned(),
             )))
         }
         None => None,

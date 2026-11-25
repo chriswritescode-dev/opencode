@@ -123,6 +123,11 @@ fn sample_request(operation: &str) -> Option<(&'static str, &'static str)> {
         "config.get" => Some(("GET", "/api/config")),
         "config.shells" => Some(("GET", "/api/config/shell")),
         "experimental.config.update" => Some(("PATCH", "/api/experimental/config")),
+        "agent.list" => Some(("GET", "/api/agent")),
+        "agent.get" => Some(("GET", "/api/agent/build")),
+        "command.list" => Some(("GET", "/api/command")),
+        "skill.list" => Some(("GET", "/api/skill")),
+        "reference.list" => Some(("GET", "/api/reference")),
         _ => None,
     }
 }
@@ -164,5 +169,10 @@ fn implemented_lists_the_ported_operations() {
     assert!(opencode_http::app::IMPLEMENTED.contains(&"config.get"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"config.shells"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"experimental.config.update"));
-    assert_eq!(opencode_http::app::IMPLEMENTED.len(), 15);
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"agent.list"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"agent.get"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"command.list"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"skill.list"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"reference.list"));
+    assert_eq!(opencode_http::app::IMPLEMENTED.len(), 20);
 }

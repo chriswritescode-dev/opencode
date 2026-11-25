@@ -9,6 +9,7 @@ mod info;
 mod location;
 mod pairing;
 mod project;
+mod registry;
 mod request_site;
 mod router;
 mod serve;
@@ -39,13 +40,18 @@ fn services_at(start_directory: &Path) -> Arc<GlobalServices> {
 
 fn services_with(start_directory: &Path, home: PathBuf) -> Arc<GlobalServices> {
     let (database, _) = Database::open(DatabaseLocation::Memory, &std::env::temp_dir()).expect("open the database");
+    let database = Arc::new(database);
     let paths =
         GlobalPaths::from_vars(|name| (name == "HOME").then(|| home.clone().into_os_string())).expect("global paths");
+    let bus = opencode_bus::Bus::new(database.clone(), opencode_bus::BusOptions::default());
     Arc::new(GlobalServices::new(
-        Arc::new(database),
+        database,
         paths,
         start_directory.to_string_lossy().into_owned(),
         Arc::new(|_: &str| None),
+        bus,
+        "test-version".to_owned(),
+        "test".to_owned(),
     ))
 }
 

@@ -32,6 +32,11 @@ pub const IMPLEMENTED: &[&str] = &[
     "config.get",
     "config.shells",
     "experimental.config.update",
+    "agent.list",
+    "agent.get",
+    "command.list",
+    "skill.list",
+    "reference.list",
 ];
 
 pub struct Options {
@@ -175,6 +180,26 @@ impl App {
             },
             "experimental.config.update" => match self.location(&raw).await {
                 Ok(lease) => crate::handlers::config::update(&raw, &lease.config).await,
+                Err(response) => response,
+            },
+            "agent.list" => match self.location(&raw).await {
+                Ok(lease) => crate::handlers::registry::agent_list(&raw, lease.services()).await,
+                Err(response) => response,
+            },
+            "agent.get" => match self.location(&raw).await {
+                Ok(lease) => crate::handlers::registry::agent_get(&raw, lease.services()).await,
+                Err(response) => response,
+            },
+            "command.list" => match self.location(&raw).await {
+                Ok(lease) => crate::handlers::registry::command_list(&raw, lease.services()).await,
+                Err(response) => response,
+            },
+            "skill.list" => match self.location(&raw).await {
+                Ok(lease) => crate::handlers::registry::skill_list(&raw, lease.services()).await,
+                Err(response) => response,
+            },
+            "reference.list" => match self.location(&raw).await {
+                Ok(lease) => crate::handlers::registry::reference_list(&raw, lease.services()).await,
                 Err(response) => response,
             },
             _ => not_implemented(found.route.identifier),

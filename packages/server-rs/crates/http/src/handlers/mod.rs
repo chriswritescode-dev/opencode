@@ -5,4 +5,5 @@ pub mod event;
 pub mod invalid;
 pub mod location;
 pub mod project;
+pub mod registry;
 pub mod session_log;

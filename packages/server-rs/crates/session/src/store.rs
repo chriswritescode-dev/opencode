@@ -107,6 +107,20 @@ impl SessionStore {
         row.as_ref().map(info::from_row).transpose()
     }
 
+    pub fn workspace_id(&self, session_id: &str) -> Result<Option<String>, BusError> {
+        let row = self
+            .db
+            .read(move |connection| {
+                Ok(connection
+                    .query_row("SELECT workspace_id FROM session_v2 WHERE id = ?1", [session_id], |row| {
+                        row.get::<_, Option<String>>(0)
+                    })
+                    .optional()?)
+            })
+            .map_err(BusError::from)?;
+        Ok(row.flatten())
+    }
+
     pub fn list(&self, input: &ListInput) -> Result<Vec<SessionInfo>, BusError> {
         let direction = input.anchor.as_ref().map_or(Direction::Next, |anchor| anchor.direction);
         let requested = input.order.unwrap_or(Order::Desc);

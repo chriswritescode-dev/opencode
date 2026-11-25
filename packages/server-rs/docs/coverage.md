@@ -1,6 +1,6 @@
 # Operation coverage
 
-Implemented: 15 of 178 operations
+Implemented: 20 of 178 operations
 
 | Operation | Method | Path | Stability | Status |
 | --- | --- | --- | --- | --- |
@@ -9,8 +9,8 @@ Implemented: 15 of 178 operations
 | `server.connect` | GET | `/auth/connect/{code}` | stable | implemented |
 | `location.get` | GET | `/api/location` | stable | implemented |
 | `location.reload` | POST | `/api/location/reload` | stable | implemented |
-| `agent.list` | GET | `/api/agent` | stable | not implemented (501) |
-| `agent.get` | GET | `/api/agent/{agentID}` | stable | not implemented (501) |
+| `agent.list` | GET | `/api/agent` | stable | implemented |
+| `agent.get` | GET | `/api/agent/{agentID}` | stable | implemented |
 | `plugin.list` | GET | `/api/plugin` | stable | not implemented (501) |
 | `plugin.gui` | GET | `/api/plugin/gui` | stable | not implemented (501) |
 | `plugin.check` | POST | `/api/plugin/check` | stable | not implemented (501) |
@@ -113,8 +113,8 @@ Implemented: 15 of 178 operations
 | `experimental.fs.write` | POST | `/api/experimental/fs/write` | experimental | not implemented (501) |
 | `experimental.fs.watch` | POST | `/api/experimental/fs/watch` | experimental | not implemented (501) |
 | `experimental.fs.unwatch` | DELETE | `/api/experimental/fs/watch` | experimental | not implemented (501) |
-| `command.list` | GET | `/api/command` | stable | not implemented (501) |
-| `skill.list` | GET | `/api/skill` | stable | not implemented (501) |
+| `command.list` | GET | `/api/command` | stable | implemented |
+| `skill.list` | GET | `/api/skill` | stable | implemented |
 | `rpc.call` | POST | `/api/rpc/{rpcID}/{method}` | stable | not implemented (501) |
 | `event.subscribe` | GET | `/api/event` | stable | implemented |
 | `pty.list` | GET | `/api/pty` | stable | not implemented (501) |
@@ -161,7 +161,7 @@ Implemented: 15 of 178 operations
 | `shell.get` | GET | `/api/shell/{id}` | stable | not implemented (501) |
 | `shell.remove` | DELETE | `/api/shell/{id}` | stable | not implemented (501) |
 | `shell.output` | GET | `/api/shell/{id}/output` | stable | not implemented (501) |
-| `reference.list` | GET | `/api/reference` | stable | not implemented (501) |
+| `reference.list` | GET | `/api/reference` | stable | implemented |
 | `worktree.list` | GET | `/api/worktree` | stable | not implemented (501) |
 | `worktree.create` | POST | `/api/worktree` | stable | not implemented (501) |
 | `worktree.remove` | DELETE | `/api/worktree` | stable | not implemented (501) |
