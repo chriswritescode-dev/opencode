@@ -25,12 +25,14 @@ opencode-ai = { path = "crates/ai" }
 opencode-bus = { path = "crates/bus" }
 opencode-config = { path = "crates/config" }
 opencode-contract = { path = "crates/contract" }
+opencode-git = { path = "crates/git" }
 opencode-http = { path = "crates/http" }
 opencode-location = { path = "crates/location" }
 opencode-server = { path = "crates/server" }
 opencode-sidecar = { path = "crates/sidecar" }
 opencode-session = { path = "crates/session" }
 opencode-storage = { path = "crates/storage" }
+opencode-vcs = { path = "crates/vcs" }
 opencode-api-types = { path = "../cli-rs/crates/api-types" }
 opencode-api = { path = "../cli-rs/crates/api" }
 opencode-local = { path = "../cli-rs/crates/local" }

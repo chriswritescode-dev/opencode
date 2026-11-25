@@ -822,6 +822,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "opencode-git"
+version = "0.1.0"
+dependencies = [
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
 name = "opencode-http"
 version = "0.1.0"
 dependencies = [
@@ -840,6 +848,7 @@ dependencies = [
  "opencode-bus",
  "opencode-config",
  "opencode-contract",
+ "opencode-git",
  "opencode-local",
  "opencode-location",
  "opencode-session",
@@ -880,6 +889,7 @@ dependencies = [
  "indexmap",
  "log",
  "opencode-contract",
+ "opencode-git",
  "opencode-storage",
  "ring",
  "rusqlite",

@@ -54,7 +54,8 @@ pub struct LocationServices {
 
 impl GlobalServices {
     pub fn new(database: Arc<Database>, paths: GlobalPaths, start_directory: String, config_env: ConfigEnv) -> Self {
-        let projects = Arc::new(ProjectService::new(database.clone()));
+        let git = Arc::new(opencode_git::Git::new(config_env.clone()));
+        let projects = Arc::new(ProjectService::new(database.clone(), git));
         let wellknown = Arc::new(WellKnown::new(Arc::new(StorageKv { database: database.clone() })));
         let environment: Arc<dyn Environment> = Arc::new(LocalEnvironment::new());
         let channel = flag::build_channel().to_owned();

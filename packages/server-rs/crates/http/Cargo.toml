@@ -15,6 +15,7 @@ opencode-api-types.workspace = true
 opencode-bus.workspace = true
 opencode-config.workspace = true
 opencode-contract.workspace = true
+opencode-git.workspace = true
 opencode-local.workspace = true
 opencode-location.workspace = true
 opencode-session.workspace = true

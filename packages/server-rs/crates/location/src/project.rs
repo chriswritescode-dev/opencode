@@ -1,4 +1,3 @@
-pub mod git;
 pub mod icon;
 
 use std::collections::{HashMap, HashSet};
@@ -162,6 +161,7 @@ struct GitCacheEntry {
 
 pub struct ProjectService {
     database: Arc<opencode_storage::Database>,
+    git: Arc<opencode_git::Git>,
     sender: broadcast::Sender<LocationEvent>,
     cache: Mutex<HashMap<String, GitCacheEntry>>,
     announced: Mutex<HashSet<(String, String)>>,
@@ -170,14 +170,19 @@ pub struct ProjectService {
 }
 
 impl ProjectService {
-    pub fn new(database: Arc<opencode_storage::Database>) -> Self {
-        Self::with_now(database, Arc::new(opencode_storage::id::now_ms))
+    pub fn new(database: Arc<opencode_storage::Database>, git: Arc<opencode_git::Git>) -> Self {
+        Self::with_now(database, git, Arc::new(opencode_storage::id::now_ms))
     }
 
-    pub fn with_now(database: Arc<opencode_storage::Database>, now: Arc<dyn Fn() -> i64 + Send + Sync>) -> Self {
+    pub fn with_now(
+        database: Arc<opencode_storage::Database>,
+        git: Arc<opencode_git::Git>,
+        now: Arc<dyn Fn() -> i64 + Send + Sync>,
+    ) -> Self {
         let (sender, _) = broadcast::channel(256);
         ProjectService {
             database,
+            git,
             sender,
             cache: Mutex::new(HashMap::new()),
             announced: Mutex::new(HashSet::new()),
@@ -302,8 +307,8 @@ impl ProjectService {
     }
 
     async fn resolve_git(&self, environment: &dyn Environment, dot_git: &str) -> Option<Resolved> {
-        let Some(fingerprint) = git::fingerprint(environment.files(), dot_git).await else {
-            return discover_git(environment, dot_git).await.resolved;
+        let Some(fingerprint) = self.git.fingerprint(dot_git).await else {
+            return discover_git(environment, &self.git, dot_git).await.resolved;
         };
         let key = format!("{dot_git}\0{fingerprint}");
         let cached = {
@@ -316,7 +321,7 @@ impl ProjectService {
             }
             return entry.resolved;
         }
-        let entry = discover_git(environment, dot_git).await;
+        let entry = discover_git(environment, &self.git, dot_git).await;
         if entry.cacheable {
             let mut cache = self.cache.lock().unwrap_or_else(|error| error.into_inner());
             if cache.len() >= GIT_CACHE_CAPACITY
@@ -501,17 +506,16 @@ async fn find_marker(files: &dyn Files, start: &Path, stop: Option<&Path>) -> Op
     None
 }
 
-async fn discover_git(environment: &dyn Environment, dot_git: &str) -> GitCacheEntry {
+async fn discover_git(environment: &dyn Environment, git: &opencode_git::Git, dot_git: &str) -> GitCacheEntry {
     let Some(parent) = Path::new(dot_git).parent() else {
         return GitCacheEntry { resolved: None, cacheable: false };
     };
-    let repository = match git::discover(environment.spawner(), &parent.to_string_lossy()).await {
-        Ok(Some(repository)) => repository,
-        Ok(None) | Err(_) => return GitCacheEntry { resolved: None, cacheable: false },
+    let Some(repository) = git.discover(&parent.to_string_lossy()).await else {
+        return GitCacheEntry { resolved: None, cacheable: false };
     };
     let mut cacheable = true;
     let previous = cached_id(environment.files(), &repository.common_directory).await;
-    let remote = match git::remote_get(environment.spawner(), &repository).await {
+    let remote = match git.remote_get(&repository).await {
         Ok(remote) => remote.and_then(|remote| remote_id(&remote)),
         Err(_) => {
             cacheable = false;
@@ -523,7 +527,7 @@ async fn discover_git(environment: &dyn Environment, dot_git: &str) -> GitCacheE
     } else if let Some(previous) = &previous {
         previous.clone()
     } else {
-        match git::root_commits(environment.spawner(), &repository).await {
+        match git.root_commits(&repository).await {
             Ok(commits) => commits.first().cloned().unwrap_or_else(|| GLOBAL_ID.to_string()),
             Err(_) => {
                 cacheable = false;
@@ -534,10 +538,10 @@ async fn discover_git(environment: &dyn Environment, dot_git: &str) -> GitCacheE
     let canonical = if repository.git_directory == repository.common_directory {
         repository.worktree.clone()
     } else {
-        match git::worktree_list(environment.spawner(), &repository).await {
+        match git.worktree_list(&repository).await {
             Ok(entries) => entries
                 .into_iter()
-                .find(|entry| entry.kind == git::WorktreeKind::Main)
+                .find(|entry| entry.kind == opencode_git::WorktreeKind::Main)
                 .map_or_else(|| repository.worktree.clone(), |entry| entry.directory),
             Err(_) => {
                 cacheable = false;
