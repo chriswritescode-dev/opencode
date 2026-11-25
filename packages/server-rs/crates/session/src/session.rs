@@ -302,9 +302,9 @@ impl Sessions {
 
     pub async fn remove(&self, session_id: &str) -> Result<(), SessionError> {
         self.get(session_id)?;
-        self.execution.interrupt(session_id).await;
         let mut stack = vec![session_id.to_owned()];
         while let Some(current) = stack.pop() {
+            self.execution.interrupt(&current).await;
             let children = self
                 .store
                 .list(&ListInput { parent_id: Some(Some(current.clone())), ..Default::default() })
