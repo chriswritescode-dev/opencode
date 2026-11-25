@@ -23,6 +23,7 @@ undocumented_unsafe_blocks = "deny"
 [workspace.dependencies]
 opencode-ai = { path = "crates/ai" }
 opencode-bus = { path = "crates/bus" }
+opencode-catalog = { path = "crates/catalog" }
 opencode-config = { path = "crates/config" }
 opencode-contract = { path = "crates/contract" }
 opencode-http = { path = "crates/http" }

@@ -791,6 +791,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "opencode-catalog"
+version = "0.1.0"
+dependencies = [
+ "opencode-ai",
+ "opencode-config",
+ "opencode-contract",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "opencode-config"
 version = "0.1.0"
 dependencies = [
@@ -836,8 +847,10 @@ dependencies = [
  "hyper",
  "hyper-util",
  "log",
+ "opencode-ai",
  "opencode-api-types",
  "opencode-bus",
+ "opencode-catalog",
  "opencode-config",
  "opencode-contract",
  "opencode-local",
@@ -962,14 +975,21 @@ dependencies = [
 name = "opencode-session"
 version = "0.1.0"
 dependencies = [
+ "base64",
  "futures-util",
+ "log",
+ "opencode-ai",
  "opencode-bus",
+ "opencode-catalog",
+ "opencode-config",
  "opencode-contract",
+ "opencode-location",
  "opencode-storage",
  "opencode-util",
  "rand",
  "regex-lite",
  "rusqlite",
+ "serde",
  "serde_json",
  "tokio",
 ]

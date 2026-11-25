@@ -32,6 +32,21 @@ pub const IMPLEMENTED: &[&str] = &[
     "config.get",
     "config.shells",
     "experimental.config.update",
+    "session.list",
+    "session.create",
+    "session.get",
+    "session.update",
+    "session.remove",
+    "session.prompt",
+    "session.message.list",
+    "session.inbox.list",
+    "agent.list",
+    "model.list",
+    "session.switchAgent",
+    "session.switchModel",
+    "session.active",
+    "experimental.session.wait",
+    "experimental.job.list",
     "plugin.list",
     "plugin.gui",
     "plugin.check",
@@ -181,6 +196,60 @@ impl App {
                 Ok(lease) => crate::handlers::config::update(&raw, &lease.config).await,
                 Err(response) => response,
             },
+            "session.list" => match self.services() {
+                Some(services) => crate::handlers::session::list(services, &raw),
+                None => crate::services::services_unavailable(),
+            },
+            "session.create" => match self.services() {
+                Some(services) => crate::handlers::session::create(services, &raw).await,
+                None => crate::services::services_unavailable(),
+            },
+            "session.get" => match self.services() {
+                Some(services) => crate::handlers::session::get(services, &raw),
+                None => crate::services::services_unavailable(),
+            },
+            "session.update" => match self.services() {
+                Some(services) => crate::handlers::session::update(services, &raw).await,
+                None => crate::services::services_unavailable(),
+            },
+            "session.remove" => match self.services() {
+                Some(services) => crate::handlers::session::remove(services, &raw).await,
+                None => crate::services::services_unavailable(),
+            },
+            "session.prompt" => match self.services() {
+                Some(services) => crate::handlers::session::prompt(services, &raw),
+                None => crate::services::services_unavailable(),
+            },
+            "session.message.list" => match self.services() {
+                Some(services) => crate::handlers::message::list(services, &raw),
+                None => crate::services::services_unavailable(),
+            },
+            "session.inbox.list" => match self.services() {
+                Some(services) => crate::handlers::session::inbox(services, &raw),
+                None => crate::services::services_unavailable(),
+            },
+            "agent.list" => crate::handlers::agent::list(self, &raw).await,
+            "model.list" => crate::handlers::model::list(self, &raw).await,
+            "session.switchAgent" => match self.services() {
+                Some(services) => crate::handlers::session::switch_agent(services, &raw),
+                None => crate::services::services_unavailable(),
+            },
+            "session.switchModel" => match self.services() {
+                Some(services) => crate::handlers::session::switch_model(services, &raw),
+                None => crate::services::services_unavailable(),
+            },
+            "session.active" => match self.services() {
+                Some(services) => crate::handlers::session::active(services),
+                None => crate::services::services_unavailable(),
+            },
+            "experimental.session.wait" => match self.services() {
+                Some(services) => crate::handlers::session::wait(services, &raw).await,
+                None => crate::services::services_unavailable(),
+            },
+            "experimental.job.list" => match self.services() {
+                Some(services) => crate::handlers::job::list(services, &raw).await,
+                None => crate::services::services_unavailable(),
+            },
             "plugin.list" => match self.location(&raw).await {
                 Ok(lease) => crate::handlers::plugin::list(&raw, lease.services()).await,
                 Err(response) => response,
@@ -219,7 +288,16 @@ impl App {
         let Some(services) = &self.options.services else {
             return Err(crate::services::services_unavailable());
         };
-        let reference = opencode_location::resolve::request_ref(request, &services.start_directory);
+        let reference = match request.path_params.iter().find(|(name, _)| name == "sessionID") {
+            Some((_, id)) => match &services.sessions {
+                Some(sessions) => match opencode_location::resolve::resolve_session_location(sessions.store(), id) {
+                    Ok(reference) => reference,
+                    Err(error) => return Err(crate::services::session_location_error(error)),
+                },
+                None => opencode_location::resolve::request_ref(request, &services.start_directory),
+            },
+            None => opencode_location::resolve::request_ref(request, &services.start_directory),
+        };
         match services.locations.get(&reference).await {
             Ok(lease) => Ok(lease),
             Err(error) => Err(crate::services::location_error(error)),
@@ -228,6 +306,7 @@ impl App {
 
     pub async fn shutdown(&self) {
         if let Some(services) = &self.options.services {
+            services.shutdown_executions().await;
             services.locations.shutdown_all().await;
         }
     }

@@ -165,17 +165,24 @@ pub(crate) async fn start(
                     channel: opencode_config::flag::build_channel().to_owned(),
                 },
             });
-            Some(Arc::new(opencode_http::services::GlobalServices::new(
+            let mut services = opencode_http::services::GlobalServices::new(
                 state.db.clone(),
                 paths,
                 start_directory,
                 config_env,
                 state.bus.clone(),
                 plugins,
-            )))
+            );
+            services.attach_sessions(state.bus.clone(), state.store.clone(), crate::VERSION.to_owned());
+            Some(Arc::new(services))
         }
         None => None,
     };
+    if let Some(state) = &state
+        && let Some(services) = &services
+    {
+        opencode_http::services::bridge_location_events(services, state.bus.clone());
+    }
     let app = opencode_http::app::App::new(opencode_http::app::Options {
         password,
         version: crate::VERSION.to_owned(),

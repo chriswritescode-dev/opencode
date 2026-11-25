@@ -45,7 +45,7 @@ A deviation that excepts a recorded cassette from the replay gate also has a `Ca
 - `OR-38-lone-surrogates.md`: the strict round-trip corpus skips samples with unpaired UTF-16 surrogates
 - `OR-38-request-bodies.md`: request bodies decode into the wire representation
 - `OR-38-request-non-finite-numbers.md`: non-finite numbers in string slots are rejected
-- `OR-39-not-implemented-operations.md`: a contract operation without a handler answers 501; fifteen routes are implemented
+- `OR-39-not-implemented-operations.md`: a contract operation without a handler answers 501; implemented routes are listed in IMPLEMENTED
 - `OR-39-persistent-pty-capability.md`: server info always reports the persistent PTY capability as unavailable
 - `OR-39-port-owner.md`: a port-in-use message names no owning process
 - `OR-39-wildcard-urls.md`: a wildcard bind reports only one loopback URL in server info
@@ -65,7 +65,6 @@ A deviation that excepts a recorded cassette from the replay gate also has a `Ca
 - `OR-42-observer-initial-apply.md`: the sources observer applies its initial load instead of returning it
 - `OR-42-watcher-ignore.md`: config watching ignores directories per event and uses one native watcher per target
 - `OR-43-heap-dump.md`: a heap dump writes a JSON memory report instead of a V8 heap snapshot
-- `OR-43-location-events.md`: project, worktree and location events are not published on the event feed
 - `OR-43-project-query-decode-messages.md`: a project.list query decode failure carries the contract decoder's message text
 - `OR-43-storage-failure-messages.md`: an unexpected 500 always carries the generic message, never a readable storage failure
 - `OR-44-aws-credentials.md`: Bedrock credentials come only from route configuration, not the AWS default chain
@@ -96,4 +95,8 @@ A deviation that excepts a recorded cassette from the replay gate also has a `Ca
 - `OR-45-xai-responses-websocket.md`: xAI streams over HTTP only and has no chat route
 - `OR-45-extraction.md`: extraction validates requests less strictly and forwards provider options
 - `OR-45-corpus-normalisation.md`: the corpus normalises transport noise and replay skips some byte comparisons
+- `OR-49-registry-events.md`: plugin and catalog registries publish no updated events
+- `OR-49-prompt-attachments.md`: prompt file attachments and skills are rejected instead of materialized
+- `OR-49-title-generation.md`: an empty title does not regenerate the session title
+- `OR-49-tool-definitions.md`: requests omit the `skill` tool definition TypeScript sends when every tool is denied
 - `OR-61-sidecar-environment.md`: plugins run in a sidecar with an allowlisted environment instead of inside the server

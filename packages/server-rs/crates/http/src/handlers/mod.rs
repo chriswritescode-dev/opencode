@@ -1,9 +1,14 @@
+pub mod agent;
 pub mod config;
 pub mod debug;
 pub mod defect;
 pub mod event;
 pub mod invalid;
+pub mod job;
 pub mod location;
+pub mod message;
+pub mod model;
 pub mod plugin;
 pub mod project;
+pub mod session;
 pub mod session_log;

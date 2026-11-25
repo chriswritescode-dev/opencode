@@ -4,6 +4,8 @@ use rusqlite::types::Value as SqlValue;
 use rusqlite::{Connection, OptionalExtension, params_from_iter};
 use serde_json::{Map, Value};
 
+use crate::instructions::apply_hash_delta;
+
 const ENTRY_INSERT_BATCH: usize = 10;
 
 pub(crate) fn apply(
@@ -18,9 +20,9 @@ pub(crate) fn apply(
         })
         .optional()?;
     let Some(stored) = stored else {
-        return initialize(connection, session_id, seq, &apply_hash_delta(Vec::new(), delta));
+        return initialize(connection, session_id, seq, &apply_hash_delta(&[], delta));
     };
-    let current = apply_hash_delta(decode_values(&stored)?, delta);
+    let current = apply_hash_delta(&decode_values(&stored)?, delta);
     connection.execute(
         "UPDATE instruction_state SET through_seq = ?1, current_values = ?2 WHERE session_id = ?3",
         rusqlite::params![seq, encode_values(&current), session_id],
@@ -88,20 +90,7 @@ pub(crate) fn initialize_entries(
     Ok(())
 }
 
-fn apply_hash_delta(mut values: Vec<(String, String)>, delta: &[(String, Option<String>)]) -> Vec<(String, String)> {
-    for (key, value) in delta {
-        match value {
-            Some(value) => match values.iter_mut().find(|(existing, _)| existing == key) {
-                Some((_, current)) => *current = value.clone(),
-                None => values.push((key.clone(), value.clone())),
-            },
-            None => values.retain(|(existing, _)| existing != key),
-        }
-    }
-    values
-}
-
-fn decode_values(text: &str) -> Result<Vec<(String, String)>, BusError> {
+pub(crate) fn decode_values(text: &str) -> Result<Vec<(String, String)>, BusError> {
     let object: Map<String, Value> = serde_json::from_str(text).map_err(|error| invalid(error.to_string()))?;
     object
         .into_iter()

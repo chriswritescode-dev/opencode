@@ -1,3 +1,4 @@
+mod agent;
 mod auth;
 mod compression;
 mod config;
@@ -7,16 +8,20 @@ mod debug;
 mod event;
 mod info;
 mod location;
+mod model;
 mod pairing;
 mod plugin;
 mod project;
 mod request_site;
 mod router;
+mod search;
 mod serve;
+mod session;
 mod session_log;
 mod status;
 mod ticket;
 
+use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -52,6 +57,54 @@ fn services_with(start_directory: &Path, home: PathBuf) -> Arc<GlobalServices> {
         bus,
         global_plugins(),
     ))
+}
+
+fn services_with_config(start_directory: &Path, config: &str) -> Arc<GlobalServices> {
+    let (database, _) = Database::open(DatabaseLocation::Memory, &std::env::temp_dir()).expect("open the database");
+    let database = Arc::new(database);
+    let home = temp_directory("services-config-home");
+    let paths =
+        GlobalPaths::from_vars(|name| (name == "HOME").then(|| home.clone().into_os_string())).expect("global paths");
+    let bus = opencode_bus::Bus::new(database.clone(), opencode_bus::BusOptions::default());
+    let config = config.to_owned();
+    Arc::new(GlobalServices::new(
+        database,
+        paths,
+        start_directory.to_string_lossy().into_owned(),
+        Arc::new(move |name: &str| (name == "OPENCODE_CONFIG_CONTENT").then(|| OsString::from(&config))),
+        bus,
+        global_plugins(),
+    ))
+}
+
+fn session_app(start_directory: &Path) -> (Arc<App>, Arc<opencode_http::state::ServerState>) {
+    let (state, _) = opencode_http::state::ServerState::open(DatabaseLocation::Memory, &std::env::temp_dir())
+        .expect("open the state");
+    let state = Arc::new(state);
+    let home = temp_directory("session-home");
+    let paths =
+        GlobalPaths::from_vars(|name| (name == "HOME").then(|| home.clone().into_os_string())).expect("global paths");
+    let mut services = GlobalServices::new(
+        state.db.clone(),
+        paths,
+        start_directory.to_string_lossy().into_owned(),
+        Arc::new(|_: &str| None),
+        state.bus.clone(),
+        global_plugins(),
+    );
+    services.attach_sessions(state.bus.clone(), state.store.clone(), "test-version".to_owned());
+    let app = App::new(Options {
+        password: "pw".to_owned(),
+        version: "test-version".to_owned(),
+        cors: Vec::new(),
+        tmp: PathBuf::from("/tmp/opencode-http-test"),
+        hostname: None,
+        urls: Arc::new(|| vec!["http://127.0.0.1:4096".to_owned()]),
+        state: Some(state.clone()),
+        services: Some(Arc::new(services)),
+    });
+    app.status().ready();
+    (app, state)
 }
 
 fn global_plugins() -> Arc<opencode_plugin::GlobalPlugins> {
