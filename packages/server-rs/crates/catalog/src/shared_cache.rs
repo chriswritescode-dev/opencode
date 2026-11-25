@@ -84,7 +84,9 @@ impl SharedCache {
             });
             let entry = entries.entry(key.to_owned()).or_insert_with(|| Entry::new(now));
             entry.read = now;
-            entry.unread = entry.unread.max(age.saturating_mul(2));
+            if age != Duration::MAX {
+                entry.unread = entry.unread.max(age.saturating_mul(2));
+            }
             let fresh =
                 !force && entry.last.as_ref().is_some_and(|last| now.saturating_duration_since(last.time) < age);
             if fresh {

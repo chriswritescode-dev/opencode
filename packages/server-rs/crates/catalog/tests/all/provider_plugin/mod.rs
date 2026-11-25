@@ -1,4 +1,11 @@
 pub mod cerebras;
+pub mod databricks;
 pub mod helpers;
+pub mod kilo;
+pub mod llmgateway;
+pub mod nvidia;
+pub mod openai_context_caps;
+pub mod openrouter;
 pub mod registration;
 pub mod support;
+pub mod zenmux;

@@ -318,3 +318,22 @@ async fn drops_entries_unread_for_24_hours() {
     assert_eq!(joined.await.expect("join the second slow caller").expect("the joined slow load"), "slow");
     assert_eq!(counts.lock().expect("the counts lock is never poisoned").get("slow").copied(), Some(1));
 }
+
+#[tokio::test(start_paused = true)]
+async fn drops_entries_read_only_with_an_infinite_interval_after_24_hours() {
+    let cache = SharedCache::new();
+    let counts: Arc<Mutex<HashMap<&'static str, usize>>> = Arc::new(Mutex::new(HashMap::new()));
+    let infinite = Some(Duration::MAX);
+
+    let first =
+        cache.get("switched", infinite, false, counter(counts.clone(), "switched")).await.expect("the first load");
+    assert_eq!(first, "switched");
+
+    tokio::time::advance(Duration::from_secs(24 * 60 * 60 + 1)).await;
+    let expired = cache
+        .get("switched", infinite, false, counter(counts.clone(), "switched"))
+        .await
+        .expect_err("the infinite-interval entry expired");
+    assert_eq!(expired, OFFLINE);
+    assert_eq!(counts.lock().expect("the counts lock is never poisoned").get("switched").copied(), Some(2));
+}

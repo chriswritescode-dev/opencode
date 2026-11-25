@@ -124,7 +124,7 @@ async fn switch_settings(
     providers.reload().await;
 }
 
-async fn read_stored_credential(
+pub(crate) async fn read_stored_credential(
     integrations: &IntegrationService,
     credentials: &CredentialService,
     integration_id: &IntegrationID,

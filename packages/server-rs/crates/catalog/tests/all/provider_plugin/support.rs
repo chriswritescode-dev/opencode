@@ -12,7 +12,10 @@ use opencode_catalog::provider_plugin::{
     AppInfo, CommandOutput, CommandRunner, PluginContext, SessionAccess, SessionRef, UserMessage,
 };
 use opencode_config::seams::NoKv;
-use opencode_contract::generated::{AbsolutePath, AgentID, LocationRef, ModelRef, SessionID};
+use opencode_contract::codec::{JsonMap, decode_json};
+use opencode_contract::generated::{
+    AbsolutePath, AgentID, LocationRef, ModelRef, ProviderID, ProviderInfo, ProviderSettings, SessionID,
+};
 
 use crate::builtin::Harness;
 
@@ -165,10 +168,11 @@ impl CommandRunner for FakeRunner {
 }
 
 pub fn plugin_context(harness: &Harness) -> PluginContext {
+    let environment = harness.environment.clone();
     PluginContext {
         http: Arc::new(RecordedSender::default()),
         app: AppInfo { name: "opencode".to_owned(), version: "test".to_owned(), channel: "test".to_owned() },
-        env: Arc::new(|_| None),
+        env: Arc::new(move |name| environment.get(name).map(OsString::from)),
         kv: Arc::new(NoKv),
         commands: Arc::new(FakeRunner::default()),
         sessions: Arc::new(FakeSessions::default()),
@@ -179,4 +183,48 @@ pub fn plugin_context(harness: &Harness) -> PluginContext {
         },
         shared_cache: opencode_catalog::shared_cache::SharedCache::new(),
     }
+}
+
+pub fn headers(provider: &ProviderInfo) -> Option<HashMap<String, String>> {
+    provider.headers.as_ref().map(|headers| headers.0.iter().cloned().collect())
+}
+
+pub fn base_url(provider: &ProviderInfo) -> Option<String> {
+    let settings = provider.settings.as_ref()?;
+    let (_, value) = settings.rest.0.iter().find(|(key, _)| key == "baseURL")?;
+    value.as_str().map(str::to_owned)
+}
+
+pub fn provider_settings(base_url: &str) -> ProviderSettings {
+    decode_json(&serde_json::json!({ "baseURL": base_url }).to_string()).expect("the provider settings decode")
+}
+
+pub async fn seed_provider(
+    harness: &Harness,
+    id: &str,
+    package: &str,
+    base_url: Option<&str>,
+    headers: Option<Vec<(&str, &str)>>,
+) -> opencode_location::state::Registration {
+    let id = ProviderID(id.to_owned());
+    let package = package.to_owned();
+    let settings = base_url.map(provider_settings);
+    let headers = headers
+        .map(|headers| JsonMap(headers.into_iter().map(|(name, value)| (name.to_owned(), value.to_owned())).collect()));
+    harness
+        .services
+        .provider
+        .transform(move |editor| {
+            editor.update(&id, |provider| {
+                provider.package = package.clone();
+                if let Some(settings) = settings.clone() {
+                    provider.settings = Some(settings);
+                }
+                if let Some(headers) = headers.clone() {
+                    provider.headers = Some(headers);
+                }
+            });
+            Ok(())
+        })
+        .await
 }

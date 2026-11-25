@@ -1,18 +1,25 @@
 pub mod cerebras;
+pub mod databricks;
 pub mod hooks;
 pub mod http;
+pub mod kilo;
+pub mod llmgateway;
 pub mod neon;
+pub mod nvidia;
+pub mod openai_context_caps;
+pub mod openrouter;
 pub mod prompt_cache_key;
 pub mod refresh;
 pub mod settings;
 pub mod storage;
+pub mod zenmux;
 
 use std::ffi::OsString;
 use std::io;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use opencode_contract::generated::{AgentID, LocationRef, ModelRef, SessionID};
+use opencode_contract::generated::{AgentID, LocationRef, ModelRef, ProviderInfo, SessionID};
 
 use crate::integration::ConfigEnv;
 
@@ -194,6 +201,30 @@ pub const ORDER: [Slot; 30] = [
     Slot::Elsewhere { id: "opencode.provider.claude-agent", owner: "OR-64" },
 ];
 
+pub(crate) fn base_url(provider: &ProviderInfo) -> Option<&str> {
+    provider.settings.as_ref()?.rest.0.iter().find(|(key, _)| key == "baseURL")?.1.as_str()
+}
+
+pub(crate) fn set_headers(provider: &mut ProviderInfo, entries: &[(&str, &str)]) {
+    let headers = provider.headers.get_or_insert_with(Default::default);
+    for (name, value) in entries {
+        match headers.0.iter_mut().find(|(key, _)| key == name) {
+            Some((_, existing)) => *existing = (*value).to_owned(),
+            None => headers.0.push(((*name).to_owned(), (*value).to_owned())),
+        }
+    }
+}
+
+pub(crate) fn default_headers(provider: &mut ProviderInfo, entries: &[(&str, &str)]) {
+    let headers = provider.headers.get_or_insert_with(Default::default);
+    for (name, value) in entries {
+        if headers.0.iter().any(|(key, _)| key == name) {
+            continue;
+        }
+        headers.0.push(((*name).to_owned(), (*value).to_owned()));
+    }
+}
+
 pub async fn register(
     services: &crate::builtin::Services,
     context: &PluginContext,
@@ -205,8 +236,15 @@ pub async fn register(
         };
         match id {
             cerebras::ID => cerebras::register(services, context, builtin).await,
-            prompt_cache_key::ID => prompt_cache_key::register(services, context, builtin).await,
+            databricks::ID => databricks::register(services, context, builtin).await,
+            kilo::ID => kilo::register(services, context, builtin).await,
+            llmgateway::ID => llmgateway::register(services, context, builtin).await,
             neon::ID => neon::register(services, context, builtin).await,
+            nvidia::ID => nvidia::register(services, context, builtin).await,
+            openai_context_caps::ID => openai_context_caps::register(services, context, builtin).await,
+            openrouter::ID => openrouter::register(services, context, builtin).await,
+            prompt_cache_key::ID => prompt_cache_key::register(services, context, builtin).await,
+            zenmux::ID => zenmux::register(services, context, builtin).await,
             _ => {}
         }
     }

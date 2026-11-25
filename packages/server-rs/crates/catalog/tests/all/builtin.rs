@@ -49,6 +49,7 @@ pub struct Harness {
     _temp: TempDir,
     pub services: Services,
     pub registrations: Builtin,
+    pub environment: HashMap<String, String>,
 }
 
 pub struct Input {
@@ -164,7 +165,7 @@ impl Harness {
         );
         let services =
             Services { bus, config: config_service, credentials, models_dev, wellknown, integration, provider, model };
-        Self { _temp: temp, services, registrations: builtin::Builtin::default() }
+        Self { _temp: temp, services, registrations: builtin::Builtin::default(), environment: input.environment }
     }
 
     pub async fn credential(&self, integration_id: &str, value: CredentialValue) {
@@ -218,6 +219,35 @@ impl Harness {
                 }
                 "neon" => {
                     opencode_catalog::provider_plugin::neon::register(&self.services, &context, &mut builtin).await
+                }
+                "kilo" => {
+                    opencode_catalog::provider_plugin::kilo::register(&self.services, &context, &mut builtin).await
+                }
+                "llmgateway" => {
+                    opencode_catalog::provider_plugin::llmgateway::register(&self.services, &context, &mut builtin)
+                        .await
+                }
+                "nvidia" => {
+                    opencode_catalog::provider_plugin::nvidia::register(&self.services, &context, &mut builtin).await
+                }
+                "openrouter" => {
+                    opencode_catalog::provider_plugin::openrouter::register(&self.services, &context, &mut builtin)
+                        .await
+                }
+                "zenmux" => {
+                    opencode_catalog::provider_plugin::zenmux::register(&self.services, &context, &mut builtin).await
+                }
+                "databricks" => {
+                    opencode_catalog::provider_plugin::databricks::register(&self.services, &context, &mut builtin)
+                        .await
+                }
+                "openai_context_caps" => {
+                    opencode_catalog::provider_plugin::openai_context_caps::register(
+                        &self.services,
+                        &context,
+                        &mut builtin,
+                    )
+                    .await
                 }
                 _ => panic!("unknown provider plugin: {name}"),
             }
@@ -486,7 +516,7 @@ async fn builtin_register_inserts_provider_plugins_at_the_provider_slot() {
     )
     .await;
     harness.record(builtin);
-    assert_eq!(harness.registrations.registrations.len(), 10);
+    assert_eq!(harness.registrations.registrations.len(), 20);
 }
 
 pub async fn seed(
