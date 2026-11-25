@@ -495,14 +495,14 @@ fn is_available(definition: &Definition, by_id: &HashMap<String, IntegrationInfo
     definition.provider.integration_id.is_none() && integration.is_none()
 }
 
-fn json_object(value: &impl Encode) -> aisdk_native::JsonMap {
+pub(crate) fn json_object(value: &impl Encode) -> aisdk_native::JsonMap {
     let Ok(Value::Object(map)) = serde_json::from_str::<Value>(&encode_json(value)) else {
         return aisdk_native::JsonMap::new();
     };
     map
 }
 
-fn decode_object<T: Decode>(map: aisdk_native::JsonMap) -> T {
+pub(crate) fn decode_object<T: Decode>(map: aisdk_native::JsonMap) -> T {
     T::decode(&Value::Object(map), &mut codec::Path::new()).expect("catalog settings decode")
 }
 

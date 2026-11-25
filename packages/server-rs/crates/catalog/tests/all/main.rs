@@ -14,6 +14,8 @@ mod models_dev;
 mod models_dev_service;
 mod oauth;
 mod provider;
+mod resolver;
+mod retry;
 mod variant;
 
 use std::path::{Path, PathBuf};
