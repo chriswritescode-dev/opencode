@@ -53,7 +53,7 @@ The Rust replacement for the TypeScript OpenCode server process, the `opencode-s
 - `opencode-location` (`crates/location`) ports the Location layer: the transform registry (`State` and external
   blocks), project identity, environments, the workspace connect seam, the Location map, lifecycle and the idle
   sweep. `crates/http/src/services.rs` is the only composer of per-Location services
-  (`LocationServices`), and `opencode-storage` owns the `workspace` and `project` queries the crate calls. Boots and
+  (`LocationServices`), and `opencode-storage` owns the `workspace`, `project` and `worktree` queries the crate calls. Boots and
   project changes publish `LocationEvent` on a broadcast channel that is not yet bridged to `opencode-bus` (pending
   deviation `OR-43-location-events`); session-row resolution
   waits for a `SessionLookup` from OR-49. `State` notifications are infallible (`BoxFuture<()>`), so the port omits

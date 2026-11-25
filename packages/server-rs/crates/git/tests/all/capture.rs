@@ -145,6 +145,23 @@ async fn skips_repeat_ignore_checks_for_oversized_and_info_exclude_only_untracke
 }
 
 #[tokio::test]
+async fn treats_a_zero_maximum_untracked_file_bytes_as_no_limit() {
+    let temp = TempDir::new();
+    let git = fixture::handle();
+    let setup = setup(&git, &temp, &[("a.txt", "a\n")]).await;
+    write(setup.project.join("large.txt"), "too large\n").await;
+
+    let tree = git.tree_capture(capture_input(&setup, Some(0))).await.expect("captures the tree");
+    let entries = fixture::git(
+        &git,
+        temp.path(),
+        &["--git-dir", setup.store.git_directory.as_str(), "ls-tree", "--name-only", tree.as_str()],
+    )
+    .await;
+    assert_eq!(entries.lines().filter(|line| !line.is_empty()).collect::<Vec<_>>(), ["a.txt", "large.txt"]);
+}
+
+#[tokio::test]
 async fn seeds_and_rebuilds_the_store_from_a_source_with_a_split_index() {
     let temp = TempDir::new();
     let git = fixture::handle();

@@ -5,6 +5,7 @@ pub mod reference;
 pub mod repository;
 pub mod repository_cache;
 pub mod snapshot;
+mod task_set;
 pub mod vcs;
 pub mod watcher;
 pub mod worktree;

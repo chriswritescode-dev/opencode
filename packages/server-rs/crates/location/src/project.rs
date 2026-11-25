@@ -309,12 +309,12 @@ impl ProjectService {
                 continue;
             }
             let row = match main {
-                Some(main) => {
-                    self.database.read(|connection| project::set_canonical(connection, &project.id, &main.directory))?
-                }
+                Some(main) => self
+                    .database
+                    .read(|connection| project::sweep_canonical(connection, &project.id, &main.directory, cutoff))?,
                 None => self
                     .database
-                    .read(|connection| project::set_archived(connection, &project.id, Some((self.now)())))?,
+                    .read(|connection| project::sweep_archive(connection, &project.id, (self.now)(), cutoff))?,
             };
             if let Some(row) = row {
                 self.publish(LocationEvent::ProjectUpdated(Project::from_row(row)?));

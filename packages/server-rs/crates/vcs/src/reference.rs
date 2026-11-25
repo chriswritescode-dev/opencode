@@ -11,10 +11,11 @@ use opencode_contract::generated::{ConfigEntryDocumentInfoReferencesValue, Locat
 use opencode_location::state::{self, Options, Registration, State};
 use opencode_util::path::Flavor;
 use serde_json::{Map, Value};
-use tokio::task::JoinHandle;
+use tokio::task::{JoinHandle, JoinSet};
 
 use crate::repository;
 use crate::repository_cache::{EnsureInput, Materializer, Refresh};
+use crate::task_set;
 
 pub type Vars = repository::Vars;
 
@@ -106,6 +107,7 @@ pub struct Reference {
     repos: PathBuf,
     vars: Vars,
     task: Mutex<Option<JoinHandle<()>>>,
+    tasks: Arc<Mutex<JoinSet<()>>>,
     registration: Mutex<Option<Registration>>,
     observer: Mutex<Option<ObserverHandle>>,
 }
@@ -118,12 +120,14 @@ impl Reference {
         repos: PathBuf,
         vars: Vars,
     ) -> Arc<Self> {
+        let tasks = Arc::new(Mutex::new(JoinSet::new()));
         let notify = {
             let bus = bus.clone();
             let location = location.clone();
             let cache = cache.clone();
             let repos = repos.clone();
             let vars = vars.clone();
+            let tasks = tasks.clone();
             state::changes(
                 |data: &Data| format!("{:?}", data.sources),
                 move |data: Arc<Data>| {
@@ -132,9 +136,10 @@ impl Reference {
                     let cache = cache.clone();
                     let repos = repos.clone();
                     let vars = vars.clone();
+                    let tasks = tasks.clone();
                     Box::pin(async move {
                         let infos = infos(&data.sources, &repos, &vars);
-                        tokio::spawn(refresh(infos, cache, vars));
+                        task_set::spawn(&tasks, refresh(infos, cache, vars));
                         let options = PublishOptions { location: Some(location), ..Default::default() };
                         let data = Value::Object(Map::new());
                         if let Err(error) = bus.publish(&Definition::ephemeral(EVENT_UPDATED), data, options) {
@@ -155,6 +160,7 @@ impl Reference {
             repos,
             vars,
             task: Mutex::new(None),
+            tasks,
             registration: Mutex::new(None),
             observer: Mutex::new(None),
         });
@@ -224,9 +230,11 @@ impl Reference {
         *self.registration.lock().unwrap_or_else(|error| error.into_inner()) = Some(registration);
         let slot = entries.clone();
         let state = self.state.clone();
+        let tasks = self.tasks.clone();
         let observer = opencode_config::observer::observe(config, move |entries| {
             *slot.write().unwrap_or_else(|error| error.into_inner()) = entries.to_vec();
-            state.invalidate();
+            let state = state.clone();
+            task_set::spawn(&tasks, async move { state.reload().await });
         });
         *self.observer.lock().unwrap_or_else(|error| error.into_inner()) = Some(observer);
     }
@@ -235,6 +243,7 @@ impl Reference {
         if let Some(task) = self.task.lock().unwrap_or_else(|error| error.into_inner()).take() {
             task.abort();
         }
+        task_set::abort_all(&self.tasks);
     }
 }
 
@@ -243,6 +252,7 @@ impl Drop for Reference {
         if let Some(task) = self.task.get_mut().unwrap_or_else(|error| error.into_inner()).take() {
             task.abort();
         }
+        task_set::abort_all(&self.tasks);
     }
 }
 

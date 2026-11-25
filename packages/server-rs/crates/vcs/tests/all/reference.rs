@@ -5,6 +5,11 @@ use std::time::Duration;
 
 use futures_util::future::BoxFuture;
 use opencode_config::entry::{Document, Entry, Origin};
+use opencode_config::options::{ConfigLocation, ConfigOptions, SystemOption};
+use opencode_config::paths::GlobalPaths;
+use opencode_config::seams::NoKv;
+use opencode_config::service::{ConfigService, ServiceDeps};
+use opencode_config::wellknown::WellKnown;
 use opencode_contract::codec::decode_json;
 use opencode_contract::generated::{AbsolutePath, ConfigEntryDocumentInfo, LocationRef};
 use opencode_location::state::{self, Registration};
@@ -75,6 +80,37 @@ fn build(fixture: &Fixture, cache: Arc<dyn Materializer>) -> (Arc<Reference>, Lo
     let location = LocationRef { directory: AbsolutePath("/tmp/location".to_owned()), workspace_id: None };
     let reference = Reference::new(fixture.bus.clone(), location.clone(), cache, fixture.root.join("repos"), vars());
     (reference, location)
+}
+
+async fn start_config(project: &Path, home: &Path) -> ConfigService {
+    std::fs::create_dir_all(home).expect("creates the home directory");
+    let config = home.join("config");
+    std::fs::create_dir_all(&config).expect("creates the config directory");
+    let paths = GlobalPaths::from_vars(|name| match name {
+        "HOME" => Some(home.as_os_str().to_owned()),
+        "OPENCODE_CONFIG_DIR" => Some(config.as_os_str().to_owned()),
+        _ => None,
+    })
+    .expect("builds the paths");
+    ConfigService::start(
+        ConfigOptions {
+            project: Some(true),
+            global: Some(false),
+            system: Some(SystemOption::Disabled),
+            claude: Some(false),
+            file: None,
+            content: None,
+        },
+        ConfigLocation { directory: project.to_path_buf(), project_id: "reference-project".to_owned() },
+        paths,
+        ServiceDeps {
+            credentials: Arc::new(()),
+            wellknown: Arc::new(WellKnown::new(Arc::new(NoKv))),
+            channel: "local".to_owned(),
+            flag_overrides: None,
+        },
+    )
+    .await
 }
 
 fn local(path: &str) -> Source {
@@ -407,6 +443,40 @@ async fn preserves_reference_precedence_and_insertion_order_across_documents() {
         .await;
 
     assert_eq!(names(&reference).await, vec!["external", "shared", "first", "second", "location", "home", "absolute"]);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn reloads_and_publishes_after_a_configuration_change() {
+    let fixture = Fixture::new();
+    let cache = MockCache::new();
+    let (reference, location) = build(&fixture, cache.clone());
+    let project = fixture.path("project");
+    std::fs::create_dir_all(&project).expect("creates the project directory");
+    let home = fixture.path("home");
+    std::fs::write(project.join("opencode.json"), r#"{"references":{"docs":"./docs"}}"#)
+        .expect("writes the first config");
+    let config = start_config(&project, &home).await;
+    let mut subscription = fixture.bus.subscribe(&["reference.updated"], Some(location));
+
+    reference.observe_config(&config, &project.to_string_lossy(), &home.to_string_lossy()).await;
+    let initial = tokio::time::timeout(Duration::from_secs(5), subscription.recv())
+        .await
+        .expect("publishes the initial update")
+        .expect("the subscription stays open");
+    assert_eq!(initial.r#type(), "reference.updated");
+    assert_eq!(names(&reference).await, vec!["docs".to_owned()]);
+
+    std::fs::write(project.join("opencode.json"), r#"{"references":{"sdk":{"repository":"owner/repo"}}}"#)
+        .expect("writes the next config");
+    config.reload().await;
+
+    let updated = tokio::time::timeout(Duration::from_secs(5), subscription.recv())
+        .await
+        .expect("publishes the changed update")
+        .expect("the subscription stays open");
+    assert_eq!(updated.r#type(), "reference.updated");
+    assert_eq!(names(&reference).await, vec!["sdk".to_owned()]);
+    wait_for("a reference materialization", || !cache.operations().is_empty()).await;
 }
 
 fn document(path: Option<&str>, references: &str) -> Entry {

@@ -755,7 +755,7 @@ async fn index_fingerprint(path: &str) -> Option<String> {
 }
 
 async fn oversized_stamp(input: &CaptureInput, file: &str) -> Option<String> {
-    let maximum = input.maximum_untracked_file_bytes?;
+    let maximum = input.maximum_untracked_file_bytes.filter(|maximum| *maximum > 0)?;
     let metadata = tokio::fs::metadata(join(&input.repository.worktree, file)).await.ok()?;
     if !metadata.is_file() || metadata.len() <= maximum {
         return None;

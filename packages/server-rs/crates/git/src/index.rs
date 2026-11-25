@@ -110,7 +110,7 @@ impl Git {
             },
         };
         let mut skipped = Vec::new();
-        if let Some(maximum) = maximum_untracked_file_bytes {
+        if let Some(maximum) = maximum_untracked_file_bytes.filter(|maximum| *maximum > 0) {
             for item in &changes.untracked {
                 if excluded.contains(item) {
                     continue;

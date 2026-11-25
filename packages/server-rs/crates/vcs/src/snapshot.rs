@@ -11,6 +11,9 @@ use opencode_location::project::Vcs;
 use opencode_location::state::{Options, Registration, State, TransformError};
 use opencode_util::path::{Flavor, realpath};
 use ring::digest::{SHA1_FOR_LEGACY_USE_ONLY, digest};
+use tokio::task::JoinSet;
+
+use crate::task_set;
 
 const PACK_INTERVAL: Duration = Duration::from_secs(10 * 60);
 const MAXIMUM_UNTRACKED_FILE_BYTES: u64 = 2 * 1024 * 1024;
@@ -95,6 +98,7 @@ pub struct Snapshot {
     observer: Mutex<Option<ObserverHandle>>,
     slot: Arc<RepositorySlot>,
     last_pack_check: Mutex<Option<Instant>>,
+    tasks: Mutex<JoinSet<()>>,
 }
 
 impl Snapshot {
@@ -129,6 +133,7 @@ impl Snapshot {
             observer: Mutex::new(None),
             slot,
             last_pack_check: Mutex::new(None),
+            tasks: Mutex::new(JoinSet::new()),
         }
     }
 
@@ -245,6 +250,18 @@ impl Snapshot {
         *self.observer.lock().unwrap_or_else(|error| error.into_inner()) = Some(observer);
     }
 
+    pub fn close(&self) {
+        task_set::abort_all(&self.tasks);
+        let interrupted = capture_failure("Snapshot repository discovery was interrupted");
+        let _ = self.slot.result.send_if_modified(|current| {
+            if current.is_some() {
+                return false;
+            }
+            *current = Some(Err(interrupted.clone()));
+            true
+        });
+    }
+
     async fn capture_inner(&self) -> Result<String, SnapshotError> {
         let resolved = self.repository().await?;
         let scope = self.scope(&resolved.worktree)?;
@@ -298,7 +315,7 @@ impl Snapshot {
         }
         let git = self.git.clone();
         let repository = repository.clone();
-        tokio::spawn(async move {
+        task_set::spawn(&self.tasks, async move {
             if let Err(error) = git.objects_pack(&repository).await {
                 log::warn!("failed to pack snapshot objects: {error}");
             }
@@ -314,7 +331,7 @@ impl Snapshot {
         if self.slot.started.compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire).is_ok() {
             let provider = self.slot.provider.clone();
             let result = self.slot.result.clone();
-            tokio::spawn(async move {
+            task_set::spawn(&self.tasks, async move {
                 let value = provider().await;
                 result.send_replace(Some(value));
             });
@@ -328,6 +345,12 @@ impl Snapshot {
                 return Err(capture_failure("Snapshot repository discovery was interrupted"));
             }
         }
+    }
+}
+
+impl Drop for Snapshot {
+    fn drop(&mut self) {
+        task_set::abort_all(&self.tasks);
     }
 }
 

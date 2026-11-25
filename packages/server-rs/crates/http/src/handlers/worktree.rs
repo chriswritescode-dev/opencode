@@ -79,7 +79,7 @@ pub async fn refresh(services: &GlobalServices, raw: &RawRequest) -> response::R
 }
 
 fn error_response(error: WorktreeError) -> response::Response {
-    match error {
+    match &error {
         WorktreeError::ProjectNotFound(project_id) => response::bytes(
             StatusCode::NOT_FOUND,
             "application/json",
@@ -89,13 +89,16 @@ fn error_response(error: WorktreeError) -> response::Response {
                 message: format!("Project not found: {project_id}"),
             }),
         ),
+        WorktreeError::Storage(_) | WorktreeError::Message(_) => {
+            crate::handlers::defect::response("failed to handle worktree request", &error)
+        }
         error => response::bytes(
             StatusCode::BAD_REQUEST,
             "application/json",
             encode_json(&opencode_contract::generated::WorktreeError {
                 tag: WorktreeErrorTag::WorktreeError,
                 name: WorktreeErrorName::WorktreeError,
-                data: WorktreeErrorData { message: message(&error), force_required: error.force_required().map(Some) },
+                data: WorktreeErrorData { message: message(error), force_required: error.force_required().map(Some) },
             }),
         ),
     }

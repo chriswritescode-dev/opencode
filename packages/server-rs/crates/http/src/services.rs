@@ -253,6 +253,7 @@ impl opencode_location::map::LocationServices for LocationServices {
         Box::pin(async move {
             self.watcher.shutdown();
             self.vcs.close();
+            self.snapshot.close();
             self.reference.close();
             self.lifecycle.shutdown().await;
         })

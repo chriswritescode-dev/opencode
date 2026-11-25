@@ -63,12 +63,7 @@ impl Git {
             feed_stdin(child.stdin.take(), stdin),
         );
         let status = child.wait().await.map_err(spawn_error)?;
-        Ok(RunOutput {
-            status: status.code().unwrap_or(1),
-            truncated: stdout.1 || stderr.1,
-            stdout: stdout.0,
-            stderr: stderr.0,
-        })
+        Ok(RunOutput { status: status.code().unwrap_or(1), truncated: stdout.1, stdout: stdout.0, stderr: stderr.0 })
     }
 
     pub(crate) async fn command(&self, directory: &str, args: &[&str]) -> Result<RunOutput, CommandError> {
