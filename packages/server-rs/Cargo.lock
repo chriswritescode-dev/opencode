@@ -995,6 +995,7 @@ dependencies = [
 name = "opencode-registry"
 version = "0.1.0"
 dependencies = [
+ "futures-util",
  "http-body-util",
  "hyper",
  "hyper-util",
@@ -1007,6 +1008,7 @@ dependencies = [
  "opencode-location",
  "opencode-permission",
  "opencode-util",
+ "opencode-vcs",
  "rand",
  "regex-lite",
  "reqwest",

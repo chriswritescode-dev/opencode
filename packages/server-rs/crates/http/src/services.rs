@@ -44,7 +44,7 @@ use opencode_registry::builtin::{self, Activation};
 use opencode_registry::command::CommandService;
 use opencode_registry::instructions::Source;
 use opencode_registry::instructions::discovery::{InstructionDiscovery, InstructionOptions};
-use opencode_registry::reference::{NoRefresh, ReferenceService};
+use opencode_registry::reference::{CacheRefresh, ReferenceService};
 use opencode_registry::skill::SkillService;
 use opencode_session::SessionStore;
 use opencode_session::execution::{Placed, Placement};
@@ -53,7 +53,6 @@ use opencode_session::search_build::SessionSearchBuild;
 use opencode_storage::Database;
 use opencode_vcs::git_provider::GitProvider;
 use opencode_vcs::hg_provider::HgProvider;
-use opencode_vcs::reference::Reference;
 use opencode_vcs::repository_cache::RepositoryCache;
 use opencode_vcs::snapshot::Snapshot;
 use opencode_vcs::vcs::Vcs;
@@ -179,7 +178,6 @@ pub struct LocationServices {
     pub config: ConfigService,
     pub snapshot: Arc<Snapshot>,
     pub vcs: Arc<Vcs>,
-    pub reference: Arc<Reference>,
     pub worktree_strategies: Arc<WorktreeStrategies>,
     watcher: LocationWatcher,
     _vcs_registrations: Vec<Registration>,
@@ -288,14 +286,6 @@ impl GlobalServices {
                 .await;
                 snapshot.observe_config(&config).await;
                 worktree_strategies.observe_config(&config, &home).await;
-                let reference = Reference::new(
-                    bus.clone(),
-                    location.clone(),
-                    boot_repository_cache.clone(),
-                    repos.clone(),
-                    config_env.clone(),
-                );
-                reference.observe_config(&config, &info.directory, &home.to_string_lossy()).await;
                 let vcs = Vcs::new(bus.clone(), &info);
                 let is_hg = info.vcs.as_ref().is_some_and(|vcs| vcs.kind() == "hg");
                 let mut vcs_registrations = Vec::new();
@@ -320,7 +310,12 @@ impl GlobalServices {
                 let agents = AgentService::new(events.clone());
                 let commands = CommandService::new(events.clone());
                 let skills = SkillService::new(events.clone());
-                let references = ReferenceService::new(events.clone(), repos, Arc::new(NoRefresh));
+                let references = ReferenceService::new(
+                    events.clone(),
+                    repos,
+                    config_env.clone(),
+                    Arc::new(CacheRefresh::new(boot_repository_cache, config_env.clone())),
+                );
                 let string_env: StringEnv = {
                     let config_env = config_env.clone();
                     Arc::new(move |name: &str| config_env(name).map(|value| value.to_string_lossy().into_owned()))
@@ -404,7 +399,6 @@ impl GlobalServices {
                     config,
                     snapshot,
                     vcs,
-                    reference,
                     worktree_strategies,
                     watcher,
                     _vcs_registrations: vcs_registrations,
@@ -604,7 +598,7 @@ impl opencode_location::map::LocationServices for LocationServices {
             self.watcher.shutdown();
             self.vcs.close();
             self.snapshot.close();
-            self.reference.close();
+            self.references.close();
             self.lifecycle.shutdown().await;
         })
     }

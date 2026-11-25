@@ -88,6 +88,20 @@ fn parses_host_path_and_scp_remote_references() {
             protocol: None,
         }
     );
+
+    let credentialed = remote("user:pass@example.com:owner/repo");
+    assert_eq!(credentialed.host, "example.com");
+    assert_eq!(credentialed.segments, ["owner", "repo"]);
+    assert_eq!(credentialed.remote, "user:pass@example.com:owner/repo");
+    assert_eq!(credentialed.label, "example.com/owner/repo");
+}
+
+#[test]
+fn applies_javascript_whitespace_and_line_terminator_rules() {
+    assert_eq!(remote("\u{feff}owner/repo\u{feff}").path, "owner/repo");
+    assert_eq!(remote("owner\u{a0}/repo").segments, ["owner", "repo"]);
+    assert!(parse("github:own\u{feff}er/repo", &vars()).is_none());
+    assert!(parse("host:owner\nrepo", &vars()).is_none());
 }
 
 #[test]

@@ -1,5 +1,4 @@
 mod git;
-mod reference;
 mod repository;
 mod repository_cache;
 mod snapshot;

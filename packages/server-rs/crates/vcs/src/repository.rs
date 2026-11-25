@@ -167,7 +167,7 @@ pub fn same(left: &Reference, right: &Reference) -> bool {
 }
 
 fn normalize_input(input: &str) -> String {
-    let input = input.trim();
+    let input = input.trim_matches(is_js_whitespace);
     let input = input.strip_prefix("git+").unwrap_or(input);
     let input = input.split_once('#').map_or(input, |(head, _)| head);
     input.trim_end_matches('/').to_owned()
@@ -178,7 +178,13 @@ fn trim_git_suffix(input: &str) -> &str {
 }
 
 fn parts(input: &str) -> Vec<String> {
-    input.split('/').map(str::trim).map(trim_git_suffix).filter(|part| !part.is_empty()).map(str::to_owned).collect()
+    input
+        .split('/')
+        .map(|part| part.trim_matches(is_js_whitespace))
+        .map(trim_git_suffix)
+        .filter(|part| !part.is_empty())
+        .map(str::to_owned)
+        .collect()
 }
 
 fn safe_host(input: &str) -> bool {
@@ -189,7 +195,7 @@ fn safe_segment(input: &str) -> bool {
     input != "."
         && input != ".."
         && !input.contains(':')
-        && !input.chars().any(|c| c.is_whitespace() || matches!(c, '/' | '\\'))
+        && !input.chars().any(|c| is_js_whitespace(c) || matches!(c, '/' | '\\'))
 }
 
 fn host_like(input: &str) -> bool {
@@ -204,27 +210,27 @@ fn github_shorthand(input: &str) -> Option<(&str, &str)> {
     if segments.next().is_some() {
         return None;
     }
-    let valid = |part: &str| !part.is_empty() && !part.chars().any(char::is_whitespace);
+    let valid = |part: &str| !part.is_empty() && !part.chars().any(is_js_whitespace);
     (valid(owner) && valid(repo)).then_some((owner, repo))
 }
 
 fn scp_parts(input: &str) -> Option<(&str, &str)> {
     input
         .find('@')
-        .filter(|at| !input[..*at].chars().any(|c| c == '/' || c.is_whitespace()))
+        .filter(|at| !input[..*at].chars().any(|c| c == '/' || is_js_whitespace(c)))
         .and_then(|at| scp_from(input, at + 1))
         .or_else(|| scp_from(input, 0))
 }
 
 fn scp_from(input: &str, start: usize) -> Option<(&str, &str)> {
     let rest = input.get(start..)?;
-    let (offset, _) = rest.char_indices().find(|(_, c)| *c == ':' || *c == '/' || c.is_whitespace())?;
+    let (offset, _) = rest.char_indices().find(|(_, c)| *c == ':' || *c == '/' || is_js_whitespace(*c))?;
     if input.as_bytes().get(start + offset) != Some(&b':') {
         return None;
     }
     let host = &input[start..start + offset];
     let path = &input[start + offset + 1..];
-    (!host.is_empty() && !path.is_empty()).then_some((host, path))
+    (!host.is_empty() && !path.is_empty() && !path.chars().any(is_line_terminator)).then_some((host, path))
 }
 
 fn github_remote(pathname: &str, vars: &Vars) -> String {
@@ -283,4 +289,16 @@ fn build_file(url: &Url, remote: &str) -> Option<FileReference> {
         label: file_path,
         protocol: Some("file:".to_owned()),
     })
+}
+
+pub fn is_js_whitespace(c: char) -> bool {
+    matches!(
+        c,
+        '\t' | '\n' | '\u{000b}' | '\u{000c}' | '\r' | ' ' | '\u{00a0}' | '\u{1680}' | '\u{2000}'
+            ..='\u{200a}' | '\u{2028}' | '\u{2029}' | '\u{202f}' | '\u{205f}' | '\u{3000}' | '\u{feff}'
+    )
+}
+
+fn is_line_terminator(c: char) -> bool {
+    matches!(c, '\n' | '\r' | '\u{2028}' | '\u{2029}')
 }
