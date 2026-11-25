@@ -558,9 +558,33 @@ function release(incoming) {
 var fs2 = process.getBuiltinModule("node:fs");
 var retained = [];
 var aborts = 0;
+var PLUGIN_METHODS = [
+  "npm.add",
+  "npm.resolve",
+  "npm.check",
+  "npm.update",
+  "npm.follows",
+  "npm.reject",
+  "plugin.resolve",
+  "plugin.load",
+  "plugin.activate",
+  "plugin.deactivate",
+  "plugin.close"
+];
 function register(connection, options) {
   connection.register("host.echo", echo);
   connection.register("host.memory", memory);
+  let plugin;
+  const pluginHandlers = () => plugin ??= import(new URL(import.meta.url.endsWith(".js") ? "./plugins.js" : "./plugin/index.ts", import.meta.url).href).then((module) => module.handlers);
+  for (const name of PLUGIN_METHODS) {
+    connection.register(name, async (ctx, params, bytes) => {
+      const handlers = await pluginHandlers();
+      const handler = handlers[name];
+      if (handler === undefined)
+        throw new Error(`unknown plugin method ${name}`);
+      return handler(ctx, params, bytes);
+    });
+  }
   if (!options.test)
     return;
   connection.register("host.sleep", sleep);
