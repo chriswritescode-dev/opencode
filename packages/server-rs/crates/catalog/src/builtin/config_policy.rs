@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
-use opencode_bus::Bus;
 use opencode_config::entry::{Entry, Origin};
 use opencode_config::observer::observe;
 use opencode_config::policy::{self, Action, Effect};
@@ -26,11 +25,12 @@ pub async fn register(services: &Services, builtin: &mut Builtin) {
         }
     }));
 
+    let subscription = services.bus.subscribe(&SUBSCRIBED, None);
     let accounts = Arc::new(RwLock::new(read_accounts(&services.credentials)));
     builtin.tasks.push(tokio::spawn(subscribe_credentials(
-        services.bus.clone(),
         services.credentials.clone(),
         services.provider.clone(),
+        subscription,
         accounts.clone(),
     )));
 
@@ -112,12 +112,11 @@ fn account(value: &CredentialValue) -> Option<String> {
 }
 
 async fn subscribe_credentials(
-    bus: Arc<Bus>,
     credentials: Arc<CredentialService>,
     provider: Arc<ProviderService>,
+    mut subscription: opencode_bus::Subscription,
     accounts: Arc<RwLock<HashMap<String, Option<String>>>>,
 ) {
-    let mut subscription = bus.subscribe(&SUBSCRIBED, None);
     while subscription.recv().await.is_some() {
         let next = read_accounts(&credentials);
         let changed = {

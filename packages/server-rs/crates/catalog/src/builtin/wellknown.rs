@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use opencode_config::wellknown::WellKnown;
 use opencode_contract::generated::{
     IntegrationCommandMethod, IntegrationCommandMethodType, IntegrationID, IntegrationMethod, IntegrationMethodID,
 };
@@ -13,6 +12,7 @@ use crate::integration::{Implementation, IntegrationService};
 
 pub async fn register(services: &Services, builtin: &mut Builtin) {
     services.wellknown.entries().await;
+    let updates = services.wellknown.subscribe();
 
     let transform = services
         .integration
@@ -44,15 +44,14 @@ pub async fn register(services: &Services, builtin: &mut Builtin) {
         .await;
     builtin.registrations.push(transform);
 
-    builtin.tasks.push(tokio::spawn(reload(services.integration.clone(), services.wellknown.clone())));
+    builtin.tasks.push(tokio::spawn(reload(services.integration.clone(), updates)));
 }
 
 fn host(origin: &str) -> String {
     Url::parse(origin).ok().and_then(|url| url.host_str().map(str::to_owned)).unwrap_or_else(|| origin.to_owned())
 }
 
-async fn reload(integration: Arc<IntegrationService>, wellknown: Arc<WellKnown>) {
-    let mut updates = wellknown.subscribe();
+async fn reload(integration: Arc<IntegrationService>, mut updates: broadcast::Receiver<()>) {
     loop {
         match updates.recv().await {
             Ok(()) | Err(broadcast::error::RecvError::Lagged(_)) => integration.reload().await,
