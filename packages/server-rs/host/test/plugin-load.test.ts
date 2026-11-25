@@ -4,7 +4,7 @@ import os from "node:os"
 import path from "node:path"
 
 import { installRuntime } from "../src/plugin/runtime"
-import { activate, deactivate } from "../src/plugin/activate"
+import { activate, close, deactivate } from "../src/plugin/activate"
 import { load, type LoadParams } from "../src/plugin/load"
 import type { NpmPaths } from "../src/plugin/npm"
 import type { Context } from "../src/connection"
@@ -127,6 +127,50 @@ test("ignores a deactivate for another location", async () => {
 
     await deactivate(result.activation, { directory: first })
     expect(await readFile(closed, "utf8")).toBe("closed")
+  } finally {
+    await rm(directory, { recursive: true, force: true })
+  }
+})
+
+test("closes every activation of a location when a finalizer fails", async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "opencode-plugin-load-"))
+  const location = { directory }
+  const marker = path.join(directory, "closed.txt")
+  try {
+    await writeFiles(directory, {
+      "index.ts": `
+        import { Effect } from "effect"
+        import { appendFileSync } from "node:fs"
+        export default {
+          id: "closing",
+          effect: (ctx) =>
+            Effect.gen(function* () {
+              yield* Effect.addFinalizer(() =>
+                Effect.sync(() => {
+                  if (ctx.options.fail) throw new Error("finalizer failed")
+                  appendFileSync(${JSON.stringify(marker)}, "closed")
+                }),
+              )
+            }),
+        }
+      `,
+    })
+
+    const ctx = connection(directory)
+    const loaded = await load(loadParams(directory), ctx)
+    if ("pending" in loaded) throw new Error("unexpected pending load")
+    const list = async () => (await ctx.call("plugin.list", null)).value
+    await activate({ handle: loaded.handle, options: {}, location, app }, list, location)
+    await activate({ handle: loaded.handle, options: { fail: true }, location, app }, list, location)
+
+    const error = await close(location).then(
+      () => undefined,
+      (cause: unknown) => cause,
+    )
+    expect(error).toBeInstanceOf(Error)
+    expect((error as Error).name).toBe("PluginCloseFailed")
+    expect((error as Error).message).toContain("finalizer failed")
+    expect(await readFile(marker, "utf8")).toBe("closed")
   } finally {
     await rm(directory, { recursive: true, force: true })
   }

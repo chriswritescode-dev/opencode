@@ -9,10 +9,11 @@ use opencode_plugin::registry::Registry;
 use opencode_plugin::sdk::{InstancePlugins, SdkPlugins};
 use opencode_plugin::supervisor::Supervisor;
 use opencode_plugin::update::INTERVAL;
+use opencode_plugin::{GlobalPlugins, LocationPlugins, PluginRouter, Updates};
 use serde_json::json;
 
 use crate::support::{
-    ConfigWorkspace, FakeHost, gated, loaded, local_source, location, log_entries, package_source, recorder,
+    ConfigWorkspace, FakeHost, app, gated, loaded, local_source, location, log_entries, package_source, recorder,
     supervisor, wait_for,
 };
 
@@ -692,4 +693,35 @@ async fn marks_outdated_and_updating_sources_in_the_inventory() {
     wait_for(|| package_decorations(&registry, target).is_some_and(|(_, updating)| !updating)).await;
 
     supervisor.shutdown().await;
+}
+
+#[tokio::test(start_paused = true)]
+async fn a_superseded_location_does_not_close_the_host_location() {
+    let workspace = ConfigWorkspace::new();
+    let (_target, host) = configured_plugin(&workspace, "greeter");
+    let location = location(workspace.project.to_str().expect("the project path is UTF-8"));
+    let paths = workspace.npm_paths();
+    let script_host: Arc<dyn ScriptHost> = host.clone();
+    let global = GlobalPlugins {
+        host: Some(script_host.clone()),
+        router: PluginRouter::default(),
+        sdk: SdkPlugins::default(),
+        updates: Updates::new(Some(script_host), paths.clone()),
+        paths,
+        app: app(),
+    };
+    let config = workspace.service().await;
+    let first = LocationPlugins::start(&global, location.clone(), config.clone(), Arc::new(|| {})).await;
+    let second = LocationPlugins::start(&global, location, config, Arc::new(|| {})).await;
+    first.await_activation().await;
+    second.await_activation().await;
+
+    first.shutdown().await;
+    assert!(
+        !host.calls().iter().any(|call| call == "close_location"),
+        "a superseded location must not close the replacement's host state"
+    );
+
+    second.shutdown().await;
+    assert!(host.calls().iter().any(|call| call == "close_location"));
 }

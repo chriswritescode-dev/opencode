@@ -32,6 +32,10 @@ struct Harness {
 
 impl Harness {
     async fn start(workspace: ConfigWorkspace) -> Option<Harness> {
+        Harness::start_with(workspace, Duration::ZERO).await
+    }
+
+    async fn start_with(workspace: ConfigWorkspace, backoff: Duration) -> Option<Harness> {
         let location = location(workspace.project.to_str().expect("the project path is UTF-8"));
         let registry = Registry::new(location.clone(), Arc::new(|| {}));
         let config = workspace.service().await;
@@ -40,7 +44,7 @@ impl Harness {
         let router = PluginRouter::default();
         let mut handlers = Handlers::new();
         router.handlers(&mut handlers);
-        let mut sidecar_config = sidecar_config(&workspace);
+        let mut sidecar_config = sidecar_config(&workspace, backoff);
         let Some(runtime) = sidecar_config.runtime().await else {
             eprintln!("skipping: neither Bun nor an opencode runtime was found");
             return None;
@@ -72,7 +76,7 @@ impl Harness {
     }
 }
 
-fn sidecar_config(workspace: &ConfigWorkspace) -> Config {
+fn sidecar_config(workspace: &ConfigWorkspace, backoff: Duration) -> Config {
     let vars = ["PATH"]
         .into_iter()
         .filter_map(|name| std::env::var_os(name).map(|value| (OsString::from(name), value)))
@@ -80,8 +84,8 @@ fn sidecar_config(workspace: &ConfigWorkspace) -> Config {
         .collect::<Vec<_>>();
     let mut config = Config::new(vars, workspace.project.clone(), std::env::temp_dir());
     config.test_methods = true;
-    config.limits.backoff_initial = Duration::ZERO;
-    config.limits.backoff_max = Duration::ZERO;
+    config.limits.backoff_initial = backoff;
+    config.limits.backoff_max = backoff;
     config.limits.handshake = Duration::from_secs(30);
     config
 }
@@ -514,7 +518,7 @@ async fn reactivates_script_plugins_after_a_sidecar_restart() {
     let close = workspace.project.join("close.log");
     write(&plugins.join("greeter.ts"), &effect_plugin("greeter", &setup, Some(&close)));
 
-    let Some(harness) = Harness::start(workspace).await else { return };
+    let Some(harness) = Harness::start_with(workspace, Duration::from_millis(400)).await else { return };
     harness.registry.await_activation().await;
     assert_eq!(read(&setup).lines().count(), 1);
 

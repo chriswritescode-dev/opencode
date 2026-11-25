@@ -65,6 +65,16 @@ impl PluginRouter {
     }
 }
 
+impl RouterGuard {
+    pub fn is_current(&self) -> bool {
+        self.routes
+            .lock()
+            .expect("the plugin router is never poisoned")
+            .get(&self.key)
+            .is_some_and(|route| route.id == self.id)
+    }
+}
+
 impl Drop for RouterGuard {
     fn drop(&mut self) {
         let mut routes = self.routes.lock().expect("the plugin router is never poisoned");

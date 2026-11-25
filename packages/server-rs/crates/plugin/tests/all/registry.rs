@@ -73,6 +73,22 @@ async fn closes_the_suffix_in_reverse_order() {
 }
 
 #[tokio::test]
+async fn retries_a_forgotten_slot_after_a_failed_load() {
+    let log = log();
+    let registry = registry();
+    let plugin = |fail: bool| local(generation("a", "1", recorder("a", "1", &log, fail)));
+    registry.activate(vec![plugin(false)], vec![]).await.expect("the first activation succeeds");
+    registry.forget_script_slots().await;
+    assert!(registry.has_forgotten_slots());
+    registry.activate(vec![plugin(true)], vec![]).await.expect("a failed reload is reported");
+    assert!(registry.has_forgotten_slots(), "a forgotten slot stays retryable after a failed load");
+    assert!(matches!(registry.list()[0].state, PluginState::Failed { .. }));
+    registry.activate(vec![plugin(false)], vec![]).await.expect("the retry succeeds");
+    assert!(!registry.has_forgotten_slots());
+    assert_eq!(log_line(&log), "activate:a:1, activate:a:1, activate:a:1");
+}
+
+#[tokio::test]
 async fn does_not_retry_a_failed_revision_until_it_changes() {
     let log = log();
     let registry = registry();
@@ -100,7 +116,7 @@ async fn does_not_close_a_forgotten_script_slot_when_it_reloads() {
         .activate(vec![local(generation("a", "1", recorder("a", "1", &log, false)))], vec![])
         .await
         .expect("the first activation succeeds");
-    registry.forget_script_slots();
+    registry.forget_script_slots().await;
     registry
         .activate(vec![local(generation("a", "2", recorder("a", "2", &log, false)))], vec![])
         .await
@@ -118,7 +134,7 @@ async fn does_not_close_a_forgotten_script_slot_on_close() {
         .activate(vec![local(generation("a", "1", recorder("a", "1", &log, false)))], vec![])
         .await
         .expect("the first activation succeeds");
-    registry.forget_script_slots();
+    registry.forget_script_slots().await;
     registry.close().await;
     assert_eq!(log_line(&log), "activate:a:1");
 }
@@ -131,7 +147,7 @@ async fn a_failed_reload_does_not_restore_a_forgotten_script_slot() {
         .activate(vec![local(generation("a", "1", recorder("a", "1", &log, false)))], vec![])
         .await
         .expect("the first activation succeeds");
-    registry.forget_script_slots();
+    registry.forget_script_slots().await;
     registry
         .activate(vec![local(generation("a", "2", recorder("a", "2", &log, true)))], vec![])
         .await

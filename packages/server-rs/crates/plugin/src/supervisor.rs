@@ -236,8 +236,18 @@ impl Supervisor {
             let trigger = trigger.clone();
             tasks.push(tokio::spawn(async move {
                 while restarts.changed().await.is_ok() {
-                    registry.forget_script_slots();
+                    registry.forget_script_slots().await;
                     trigger();
+                    let mut delay = Duration::from_millis(250);
+                    loop {
+                        registry.await_activation().await;
+                        if !registry.has_forgotten_slots() {
+                            break;
+                        }
+                        tokio::time::sleep(delay).await;
+                        delay = delay.saturating_mul(2).min(Duration::from_secs(30));
+                        trigger();
+                    }
                 }
             }));
         }
@@ -246,6 +256,10 @@ impl Supervisor {
     }
 
     pub async fn shutdown(&self) {
+        self.shutdown_with(true).await;
+    }
+
+    pub async fn shutdown_with(&self, close_host_location: bool) {
         let tasks = {
             let mut tasks = self.tasks.lock().expect("the plugin supervisor task lock is never poisoned");
             let mut taken = std::mem::take(&mut *tasks);
@@ -257,7 +271,8 @@ impl Supervisor {
             task.abort();
         }
         self.core.registry.close().await;
-        if self.core.script_loaded.load(Ordering::SeqCst)
+        if close_host_location
+            && self.core.script_loaded.load(Ordering::SeqCst)
             && let Some(host) = &self.core.host
             && let Err(error) = host.close_location(location_ref(&self.core.location)).await
         {

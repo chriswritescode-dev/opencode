@@ -45,9 +45,15 @@ export async function deactivate(activation: string, location: LocationRef) {
 export async function close(location: LocationRef) {
   const key = locationKey(location)
   const scopes = [...activations.entries()].filter(([, entry]) => entry.locationKey === key).reverse()
+  const failures: Cause.Cause<never>[] = []
   for (const [activation, entry] of scopes) {
     activations.delete(activation)
-    await Effect.runPromise(Scope.close(entry.scope, Exit.void))
+    const exit = await Effect.runPromiseExit(Scope.close(entry.scope, Exit.void))
+    if (Exit.isFailure(exit)) failures.push(exit.cause)
   }
   forget(location)
+  if (failures.length === 0) return
+  const error = new Error(failures.map((cause) => Cause.pretty(cause)).join("\n"))
+  error.name = "PluginCloseFailed"
+  throw error
 }

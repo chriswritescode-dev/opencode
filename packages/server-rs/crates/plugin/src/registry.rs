@@ -196,6 +196,7 @@ impl Registry {
                     });
                 }
                 Err(error) => {
+                    let forgotten = previous_slot.is_some_and(|slot| slot.forgotten);
                     let restored =
                         match previous_slot.filter(|slot| !slot.forgotten).and_then(|slot| slot.activation.clone()) {
                             Some(fallback) if fallback.failure().is_none() => match self.load(&fallback.plugin).await {
@@ -207,12 +208,7 @@ impl Registry {
                             },
                             _ => None,
                         };
-                    self.push(Slot {
-                        plugin: definition.clone(),
-                        activation: restored,
-                        error: Some(error),
-                        forgotten: false,
-                    });
+                    self.push(Slot { plugin: definition.clone(), activation: restored, error: Some(error), forgotten });
                 }
             }
         }
@@ -231,7 +227,8 @@ impl Registry {
         WeakRegistry(Arc::downgrade(&self.inner))
     }
 
-    pub fn forget_script_slots(&self) {
+    pub async fn forget_script_slots(&self) {
+        let _guard = self.inner.lock.lock().await;
         let mut slots = self.inner.slots.lock().expect("the plugin registry lock is never poisoned");
         for slot in slots.iter_mut() {
             if slot
@@ -243,6 +240,10 @@ impl Registry {
                 slot.forgotten = true;
             }
         }
+    }
+
+    pub fn has_forgotten_slots(&self) -> bool {
+        self.inner.slots.lock().expect("the plugin registry lock is never poisoned").iter().any(|slot| slot.forgotten)
     }
 
     pub fn gui(&self, id: &str) -> Option<Gui> {

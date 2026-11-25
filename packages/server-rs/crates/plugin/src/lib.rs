@@ -49,7 +49,7 @@ pub struct GlobalPlugins {
 pub struct LocationPlugins {
     supervisor: Supervisor,
     _watcher: Arc<dyn PluginWatcher>,
-    _guard: RouterGuard,
+    guard: RouterGuard,
 }
 
 impl LocationPlugins {
@@ -75,7 +75,7 @@ impl LocationPlugins {
             watcher: Some(watcher.clone()),
             modules: watcher.changes(),
         });
-        LocationPlugins { supervisor, _watcher: watcher, _guard: guard }
+        LocationPlugins { supervisor, _watcher: watcher, guard }
     }
 
     pub fn registry(&self) -> &Registry {
@@ -87,6 +87,6 @@ impl LocationPlugins {
     }
 
     pub async fn shutdown(&self) {
-        self.supervisor.shutdown().await;
+        self.supervisor.shutdown_with(self.guard.is_current()).await;
     }
 }
