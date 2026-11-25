@@ -1,3 +1,4 @@
+mod hooks;
 pub mod models;
 pub mod oauth;
 
@@ -41,7 +42,6 @@ const TITLE_TIMEOUT: Duration = Duration::from_secs(20);
 #[derive(Clone, Debug, Default, PartialEq)]
 struct Discovery {
     base_url: Option<String>,
-    #[allow(dead_code)]
     token: Option<String>,
     models: Option<models::Snapshot>,
     connection: Option<ConnectionInfo>,
@@ -54,11 +54,7 @@ pub struct UtilityTitleInput<'a> {
     pub app: &'a AppInfo,
 }
 
-#[derive(Clone, Debug, PartialEq)]
-pub struct UtilityTitleMessage {
-    pub role: String,
-    pub content: Vec<String>,
-}
+pub type UtilityTitleMessage = crate::provider_plugin::hooks::TitleMessage;
 
 pub struct UtilityTitleRequest<'a> {
     pub session_id: &'a str,
@@ -201,7 +197,7 @@ pub async fn register_with(services: &Services, context: &PluginContext, builtin
     let load_provider_id = provider_id.clone();
     let load_integration_id = integration_id.clone();
 
-    let discovered = refresh::start(
+    let discovered = Arc::new(refresh::start(
         &services.bus,
         refresh::Start::<Discovery, Infallible> {
             integration_id: INTEGRATION_ID.to_owned(),
@@ -335,13 +331,14 @@ pub async fn register_with(services: &Services, context: &PluginContext, builtin
                 Box::pin(async move { providers.reload().await })
             }),
         },
-    );
+    ));
 
     let provider_registration = services
         .provider
         .transform({
             let provider_id = provider_id.clone();
             let login = login.clone();
+            let discovered = discovered.clone();
             move |editor| {
                 let Some(item) = editor.get(&provider_id) else {
                     return Ok(());
@@ -393,6 +390,8 @@ pub async fn register_with(services: &Services, context: &PluginContext, builtin
         })
         .await;
     builtin.registrations.push(model_registration);
+
+    hooks::register(services, context, builtin, &provider_id, &discovered);
 }
 
 pub fn models_key(connection: Option<&ConnectionInfo>, url: &str, headers: &[(String, String)]) -> String {

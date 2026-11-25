@@ -96,11 +96,20 @@ pub struct Compaction {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct TitleMessage {
+    pub role: String,
+    pub content: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct Title {
     pub session_id: SessionID,
     pub agent: AgentID,
     pub model: ModelRef,
     pub kind: RequestKind,
+    pub system: Vec<String>,
+    pub messages: Vec<TitleMessage>,
+    pub max_tokens: Option<f64>,
     pub result: Option<String>,
 }
 

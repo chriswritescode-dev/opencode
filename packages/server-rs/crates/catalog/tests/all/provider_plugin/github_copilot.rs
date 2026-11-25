@@ -1,25 +1,32 @@
-use std::sync::Arc;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::collections::HashMap;
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+use bytes::Bytes;
+use indexmap::IndexMap;
 use opencode_ai::route::executor::PreparedHttp;
 use opencode_catalog::builtin::Builtin;
 use opencode_catalog::integration::{Implementation, OAuthImplementation, OAuthMode};
 use opencode_catalog::provider_plugin::github_copilot::{
     self, ID, Options, UtilityTitleInput, UtilityTitleMessage, UtilityTitleRequest, models, oauth,
 };
-use opencode_catalog::provider_plugin::{AppInfo, ORDER, PluginContext};
+use opencode_catalog::provider_plugin::hooks::{
+    Compaction, HttpRequest, ModelRequest, ModelResolve, ProviderHooks, RequestKind, Title,
+};
+use opencode_catalog::provider_plugin::{AppInfo, ORDER, PluginContext, SessionRef, UserMessage};
 use opencode_contract::codec::{JsonMap, decode_json};
 use opencode_contract::generated::{
-    ConnectionCredentialInfo, ConnectionCredentialInfoMethod, ConnectionCredentialInfoType, ConnectionInfo,
+    AgentID, ConnectionCredentialInfo, ConnectionCredentialInfoMethod, ConnectionCredentialInfoType, ConnectionInfo,
     CredentialID, CredentialOAuth, CredentialOAuthType, CredentialValue, FormField1, FormValue, IntegrationEnvMethod,
     IntegrationEnvMethodType, IntegrationID, IntegrationKeyMethod, IntegrationKeyMethodType, IntegrationMethod,
-    IntegrationMethodID, IntegrationOAuthMethodType, ModelInfo, ProviderID, ProviderInfoActivation,
+    IntegrationMethodID, IntegrationOAuthMethodType, ModelInfo, ModelRef, ProviderID, ProviderInfoActivation,
+    SessionID,
 };
 use serde_json::{Value, json};
 
 use crate::builtin::{Harness, Input, start};
-use crate::provider_plugin::support::{Exchange, RecordedSender, Reply, Routes, plugin_context_with};
+use crate::provider_plugin::support::{Exchange, FakeSessions, RecordedSender, Reply, Routes, plugin_context_with};
 
 const PROVIDER_ID: &str = "github-copilot";
 
@@ -94,17 +101,91 @@ fn decode_models(values: Vec<Value>) -> Vec<ModelInfo> {
 }
 
 fn oauth(metadata: Option<Value>) -> CredentialValue {
+    oauth_with("token", metadata)
+}
+
+fn oauth_with(access: &str, metadata: Option<Value>) -> CredentialValue {
     CredentialValue::Oauth(CredentialOAuth {
         r#type: CredentialOAuthType::Oauth,
         method_id: IntegrationMethodID(oauth::METHOD_ID.to_owned()),
-        access: "token".to_owned(),
-        refresh: "token".to_owned(),
+        access: access.to_owned(),
+        refresh: access.to_owned(),
         expires: 0.0,
         metadata: metadata.map(|value| match value {
             Value::Object(object) => JsonMap(object.into_iter().collect()),
             _ => panic!("the credential metadata is a JSON object"),
         }),
     })
+}
+
+fn session_fixture() -> (FakeSessions, SessionID, SessionID) {
+    let parent = SessionID("ses_parent".to_owned());
+    let child = SessionID("ses_child".to_owned());
+    let sessions = FakeSessions {
+        sessions: HashMap::from([
+            (parent.0.clone(), SessionRef { id: parent.clone(), parent_id: None, fork_session_id: None }),
+            (child.0.clone(), SessionRef { id: child.clone(), parent_id: Some(parent.clone()), fork_session_id: None }),
+        ]),
+        messages: HashMap::<String, UserMessage>::new(),
+        agents: HashMap::new(),
+    };
+    (sessions, parent, child)
+}
+
+async fn register_hooks(harness: &mut Harness, sessions: FakeSessions, routes: Arc<Routes>) -> Arc<ProviderHooks> {
+    let mut context = plugin_context_with(harness, routes);
+    context.sessions = Arc::new(sessions);
+    let hooks = context.hooks.clone();
+    register_copilot(harness, context, None).await;
+    hooks
+}
+
+fn model_request(provider: &str, session: &SessionID) -> ModelRequest {
+    ModelRequest {
+        session_id: session.clone(),
+        agent: AgentID("build".to_owned()),
+        model: ModelRef { id: "gpt-5.4".to_owned(), provider_id: ProviderID(provider.to_owned()), variant: None },
+        kind: RequestKind::Primary,
+        base_url: None,
+        headers: IndexMap::new(),
+    }
+}
+
+fn http_request(url: &str, headers: &[(&str, &str)], body: Value) -> HttpRequest {
+    HttpRequest {
+        session_id: SessionID("ses_test".to_owned()),
+        agent: AgentID("build".to_owned()),
+        model: ModelRef { id: "gpt-5.4".to_owned(), provider_id: provider_id(), variant: None },
+        kind: RequestKind::Primary,
+        request: PreparedHttp::new(
+            "POST",
+            url,
+            headers.iter().map(|(name, value)| ((*name).to_owned(), (*value).to_owned())).collect(),
+            Bytes::from(serde_json::to_vec(&body).expect("the request body serializes")),
+        ),
+    }
+}
+
+fn interaction_headers(value: &[(&str, &str)]) -> IndexMap<String, String> {
+    value.iter().map(|(name, header)| ((*name).to_owned(), (*header).to_owned())).collect()
+}
+
+async fn resolve(hooks: &ProviderHooks, session: &SessionID, kind: RequestKind) -> Option<String> {
+    let event = hooks
+        .trigger_model_resolve(ModelResolve {
+            session_id: session.clone(),
+            agent: AgentID("build".to_owned()),
+            kind,
+            model: ModelRef { id: "auto".to_owned(), provider_id: provider_id(), variant: None },
+        })
+        .await;
+    (event.model.id != "auto").then_some(event.model.id)
+}
+
+async fn token(hooks: &ProviderHooks, session: &SessionID, model_id: &str) -> Option<String> {
+    let mut request = model_request(PROVIDER_ID, session);
+    request.model.id = model_id.to_owned();
+    hooks.trigger_model_request(request).await.headers.get("Copilot-Session-Token").cloned()
 }
 
 fn setting(model: &ModelInfo, key: &str) -> Option<String> {
@@ -877,4 +958,428 @@ async fn exchanges_enterprise_device_flow_credentials() {
     let token: Value = serde_json::from_slice(&requests[1].body).expect("the token request body");
     assert_eq!(token["grant_type"], json!("urn:ietf:params:oauth:grant-type:device_code"));
     assert_eq!(token["device_code"], json!("dev"));
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn adds_copilot_authentication_and_request_metadata_headers_to_openai_requests() {
+    let mut harness = start(Input::new(Vec::new())).await;
+    let hooks = register_hooks(&mut harness, FakeSessions::default(), Routes::new()).await;
+
+    let event = hooks
+        .trigger_http_request(http_request(
+            &format!("{COPILOT_API}/chat/completions"),
+            &[("content-type", "application/json"), ("authorization", "Bearer token")],
+            json!({
+                "messages": [{
+                    "role": "user",
+                    "content": [{ "type": "image_url", "image_url": { "url": "data:image/png" } }]
+                }]
+            }),
+        ))
+        .await;
+
+    assert_eq!(header(&event.request, "authorization").as_deref(), Some("Bearer token"));
+    assert_eq!(header(&event.request, "x-initiator").as_deref(), Some("user"));
+    assert_eq!(header(&event.request, "copilot-vision-request").as_deref(), Some("true"));
+    assert_eq!(header(&event.request, "x-github-api-version").as_deref(), Some(oauth::API_VERSION));
+    assert_eq!(header(&event.request, "openai-intent").as_deref(), Some("conversation-edits"));
+    assert_eq!(header(&event.request, "anthropic-beta"), None);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn adds_copilot_authentication_to_native_anthropic_requests() {
+    let mut harness = start(Input::new(Vec::new())).await;
+    let hooks = register_hooks(&mut harness, FakeSessions::default(), Routes::new()).await;
+
+    let event = hooks
+        .trigger_http_request(http_request(
+            &format!("{COPILOT_API}/v1/messages"),
+            &[
+                ("content-type", "application/json"),
+                ("x-api-key", "token"),
+                ("anthropic-beta", "interleaved-thinking-2025-05-14,thinking-binding-controls-2026-08-01"),
+            ],
+            json!({
+                "messages": [{ "role": "user", "content": [{ "type": "text", "text": "hello" }] }]
+            }),
+        ))
+        .await;
+
+    assert_eq!(header(&event.request, "authorization").as_deref(), Some("Bearer token"));
+    assert_eq!(header(&event.request, "x-api-key"), None);
+    assert_eq!(header(&event.request, "x-initiator").as_deref(), Some("user"));
+    assert_eq!(
+        header(&event.request, "anthropic-beta").as_deref(),
+        Some("interleaved-thinking-2025-05-14,thinking-binding-controls-2026-08-01")
+    );
+    assert_eq!(header(&event.request, "x-github-api-version").as_deref(), Some(oauth::API_VERSION));
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn flags_images_returned_by_tools_in_responses_requests() {
+    let mut harness = start(Input::new(Vec::new())).await;
+    let hooks = register_hooks(&mut harness, FakeSessions::default(), Routes::new()).await;
+
+    let event = hooks
+        .trigger_http_request(http_request(
+            &format!("{COPILOT_API}/responses"),
+            &[("authorization", "Bearer token")],
+            json!({
+                "input": [
+                    { "role": "user", "content": [{ "type": "input_text", "text": "Take a screenshot." }] },
+                    { "type": "function_call", "call_id": "call_1", "name": "screenshot", "arguments": "{}" },
+                    {
+                        "type": "function_call_output",
+                        "call_id": "call_1",
+                        "output": [{ "type": "input_image", "image_url": "data:image/png;base64,AAAA" }]
+                    }
+                ]
+            }),
+        ))
+        .await;
+
+    assert_eq!(header(&event.request, "copilot-vision-request").as_deref(), Some("true"));
+    assert_eq!(header(&event.request, "x-initiator").as_deref(), Some("agent"));
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn treats_tool_images_moved_into_a_chat_completions_user_message_as_agent_initiated() {
+    let mut harness = start(Input::new(Vec::new())).await;
+    let hooks = register_hooks(&mut harness, FakeSessions::default(), Routes::new()).await;
+
+    let event = hooks
+        .trigger_http_request(http_request(
+            &format!("{COPILOT_API}/chat/completions"),
+            &[("authorization", "Bearer token")],
+            json!({
+                "messages": [
+                    { "role": "user", "content": "Take a screenshot." },
+                    {
+                        "role": "assistant",
+                        "content": null,
+                        "tool_calls": [{
+                            "id": "call_1",
+                            "type": "function",
+                            "function": { "name": "screenshot", "arguments": "{}" }
+                        }]
+                    },
+                    { "role": "tool", "tool_call_id": "call_1", "content": "" },
+                    { "role": "user", "content": [{ "type": "image_url", "image_url": { "url": "data:image/png;base64,AAAA" } }] }
+                ]
+            }),
+        ))
+        .await;
+
+    assert_eq!(header(&event.request, "x-initiator").as_deref(), Some("agent"));
+    assert_eq!(header(&event.request, "copilot-vision-request").as_deref(), Some("true"));
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn keeps_a_declared_agent_initiator_when_the_body_looks_user_initiated() {
+    let mut harness = start(Input::new(Vec::new())).await;
+    let hooks = register_hooks(&mut harness, FakeSessions::default(), Routes::new()).await;
+
+    let event = hooks
+        .trigger_http_request(http_request(
+            &format!("{COPILOT_API}/responses"),
+            &[("authorization", "Bearer token"), ("x-initiator", "agent")],
+            json!({
+                "input": [{ "role": "user", "content": [{ "type": "input_text", "text": "summarize" }] }]
+            }),
+        ))
+        .await;
+
+    assert_eq!(header(&event.request, "x-initiator").as_deref(), Some("agent"));
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn classifies_main_loop_steps_as_agent_interactions() {
+    let (sessions, parent, _child) = session_fixture();
+    let mut harness = start(Input::new(Vec::new())).await;
+    let hooks = register_hooks(&mut harness, sessions, Routes::new()).await;
+
+    let event = hooks.trigger_model_request(model_request(PROVIDER_ID, &parent)).await;
+
+    assert_eq!(
+        event.headers,
+        interaction_headers(&[("X-Interaction-Type", "conversation-agent"), ("X-Interaction-Id", "ses_parent")])
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn classifies_child_session_steps_as_subagent_interactions() {
+    let (sessions, _parent, child) = session_fixture();
+    let mut harness = start(Input::new(Vec::new())).await;
+    let hooks = register_hooks(&mut harness, sessions, Routes::new()).await;
+
+    let event = hooks.trigger_model_request(model_request(PROVIDER_ID, &child)).await;
+
+    assert_eq!(
+        event.headers,
+        interaction_headers(&[
+            ("X-Interaction-Type", "conversation-subagent"),
+            ("X-Interaction-Id", "ses_parent"),
+            ("x-initiator", "agent"),
+        ])
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn classifies_title_generation_as_a_background_interaction() {
+    let (sessions, parent, _child) = session_fixture();
+    let mut harness = start(Input::new(Vec::new())).await;
+    let hooks = register_hooks(&mut harness, sessions, Routes::new()).await;
+
+    let mut request = model_request(PROVIDER_ID, &parent);
+    request.kind = RequestKind::Title;
+    let event = hooks.trigger_model_request(request).await;
+
+    assert_eq!(
+        event.headers,
+        interaction_headers(&[
+            ("X-Interaction-Type", "conversation-background"),
+            ("X-Interaction-Id", "ses_parent"),
+            ("x-initiator", "agent"),
+        ])
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn classifies_compaction_requests_by_kind_rather_than_agent() {
+    let (sessions, _parent, child) = session_fixture();
+    let mut harness = start(Input::new(Vec::new())).await;
+    let hooks = register_hooks(&mut harness, sessions, Routes::new()).await;
+
+    let mut request = model_request(PROVIDER_ID, &child);
+    request.kind = RequestKind::Compaction;
+    let event = hooks.trigger_model_request(request).await;
+
+    assert_eq!(
+        event.headers,
+        interaction_headers(&[
+            ("X-Interaction-Type", "conversation-compaction"),
+            ("X-Interaction-Id", "ses_parent"),
+            ("x-initiator", "agent"),
+        ])
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn does_not_classify_by_agent_name() {
+    let (sessions, parent, _child) = session_fixture();
+    let mut harness = start(Input::new(Vec::new())).await;
+    let hooks = register_hooks(&mut harness, sessions, Routes::new()).await;
+
+    let mut request = model_request(PROVIDER_ID, &parent);
+    request.agent = AgentID("compaction".to_owned());
+    let event = hooks.trigger_model_request(request).await;
+
+    assert_eq!(
+        event.headers,
+        interaction_headers(&[("X-Interaction-Type", "conversation-agent"), ("X-Interaction-Id", "ses_parent")])
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn ignores_other_providers_model_requests() {
+    let (sessions, parent, _child) = session_fixture();
+    let mut harness = start(Input::new(Vec::new())).await;
+    let hooks = register_hooks(&mut harness, sessions, Routes::new()).await;
+
+    let event = hooks.trigger_model_request(model_request("openai", &parent)).await;
+
+    assert!(event.headers.is_empty());
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn classifies_session_generation_requests_as_agent_interactions() {
+    let (sessions, parent, _child) = session_fixture();
+    let mut harness = start(Input::new(Vec::new())).await;
+    let hooks = register_hooks(&mut harness, sessions, Routes::new()).await;
+
+    let mut request = model_request(PROVIDER_ID, &parent);
+    request.kind = RequestKind::Generate;
+    let event = hooks.trigger_model_request(request).await;
+
+    assert_eq!(
+        event.headers,
+        interaction_headers(&[("X-Interaction-Type", "conversation-agent"), ("X-Interaction-Id", "ses_parent")])
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn sends_the_utility_title_request_through_the_hosts_fetch() {
+    let mut harness = start(Input::new(Vec::new())).await;
+    let _seeded = seed_provider(&harness, Vec::new(), false).await;
+    harness.credential(PROVIDER_ID, oauth(None)).await;
+
+    let routes = Routes::new();
+    routes.route_json("GET", PUBLIC_USER, json!({}));
+    routes.route_json(
+        "GET",
+        &format!("{COPILOT_API}/models"),
+        json!({
+            "data": [{
+                "model_picker_enabled": true,
+                "id": "gpt-4o-mini",
+                "name": "GPT-4o mini",
+                "version": "gpt-4o-mini",
+                "capabilities": {
+                    "family": "gpt-4o-mini",
+                    "limits": { "max_output_tokens": 1, "max_prompt_tokens": 1 },
+                    "supports": { "tool_calls": true }
+                }
+            }]
+        }),
+    );
+    routes.route_json(
+        "POST",
+        &format!("{COPILOT_API}/chat/completions"),
+        json!({ "choices": [{ "message": { "content": "Faster Python" } }] }),
+    );
+    let hooks = register_hooks(&mut harness, FakeSessions::default(), routes.clone()).await;
+    wait_for_model(&harness, "gpt-4o-mini").await;
+
+    let event = hooks
+        .trigger_title(Title {
+            session_id: SessionID("ses_title".to_owned()),
+            agent: AgentID("title".to_owned()),
+            model: ModelRef { id: "gpt-5".to_owned(), provider_id: provider_id(), variant: None },
+            kind: RequestKind::Title,
+            system: title_system(),
+            messages: title_messages(),
+            max_tokens: Some(32.0),
+            result: None,
+        })
+        .await;
+
+    assert_eq!(event.result.as_deref(), Some("Faster Python"));
+    assert_eq!(routes.count("POST", &format!("{COPILOT_API}/chat/completions")), 1);
+    assert_eq!(routes.count("POST", &format!("{COPILOT_API}/v1/chat/completions")), 0);
+}
+
+fn remote_model(id: &str, extra: Value) -> Value {
+    let mut value = json!({
+        "model_picker_enabled": false,
+        "id": id,
+        "name": id,
+        "version": id,
+        "supported_endpoints": ["/chat/completions"],
+        "capabilities": {
+            "family": id,
+            "limits": { "max_prompt_tokens": 128000, "max_output_tokens": 64000 },
+            "supports": { "tool_calls": true }
+        }
+    });
+    if let Value::Object(extra) = extra {
+        value.as_object_mut().expect("the remote model template is an object").extend(extra);
+    }
+    value
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn routes_auto_through_copilots_router_and_keeps_the_pick_until_compaction() {
+    let base = "https://copilot.test";
+    let pick = Arc::new(Mutex::new("routed".to_owned()));
+    let available = Arc::new(AtomicBool::new(true));
+
+    let mut harness = start(Input::new(Vec::new())).await;
+    let _seeded = seed_provider(&harness, Vec::new(), false).await;
+    harness.credential(PROVIDER_ID, oauth(Some(json!({ "apiEndpoint": base })))).await;
+
+    let routes = Routes::new();
+    routes.set_status("GET", PUBLIC_USER, 404);
+    routes.route_json(
+        "GET",
+        &format!("{base}/models"),
+        json!({
+            "data": [
+                remote_model("routed", json!({ "billing": { "auto_discount": 0.1 } })),
+                remote_model("other", json!({ "billing": { "auto_discount": 0.1 } })),
+                remote_model("fallback", json!({ "is_chat_fallback": true }))
+            ]
+        }),
+    );
+    routes.route_with("POST", &format!("{base}/auto"), {
+        let pick = pick.clone();
+        let available = available.clone();
+        move |_| {
+            if !available.load(Ordering::SeqCst) {
+                return Reply::status(503);
+            }
+            let selected = pick.lock().expect("the auto pick lock is never poisoned").clone();
+            Reply::json(json!({
+                "session_token": format!("token-{selected}"),
+                "expires_at": 4_000_000_000.0,
+                "selected_model": { "id": selected }
+            }))
+        }
+    });
+    let (sessions, parent, child) = session_fixture();
+    let hooks = register_hooks(&mut harness, sessions, routes.clone()).await;
+    wait_for_model(&harness, "auto").await;
+
+    let models = harness.services.model.available(None).await.expect("the available models");
+    let ids: Vec<&str> =
+        models.iter().filter(|model| model.provider_id == provider_id()).map(|model| model.id.as_str()).collect();
+    assert_eq!(ids, ["auto"]);
+
+    let auto = format!("{base}/auto");
+    assert_eq!(resolve(&hooks, &parent, RequestKind::Title).await, None);
+    assert_eq!(routes.count("POST", &auto), 0);
+
+    assert_eq!(resolve(&hooks, &parent, RequestKind::Primary).await.as_deref(), Some("routed"));
+    assert_eq!(resolve(&hooks, &parent, RequestKind::Primary).await.as_deref(), Some("routed"));
+    assert_eq!(resolve(&hooks, &parent, RequestKind::Generate).await.as_deref(), Some("routed"));
+    assert_eq!(routes.count("POST", &auto), 1);
+    let first = routes
+        .requests()
+        .into_iter()
+        .find(|request| request.method == "POST" && request.url == auto)
+        .expect("the auto request");
+    let body: Value = serde_json::from_slice(&first.body).expect("the auto request body");
+    assert_eq!(body, json!({ "prompt": "" }));
+
+    assert_eq!(token(&hooks, &parent, "routed").await.as_deref(), Some("token-routed"));
+    assert_eq!(token(&hooks, &parent, "other").await, None);
+
+    *pick.lock().expect("the auto pick lock is never poisoned") = "other".to_owned();
+    let _compacted = hooks
+        .trigger_compaction(Compaction {
+            session_id: parent.clone(),
+            agent: AgentID("compaction".to_owned()),
+            model: ModelRef { id: "routed".to_owned(), provider_id: provider_id(), variant: None },
+            kind: RequestKind::Primary,
+            options: IndexMap::new(),
+            result: None,
+        })
+        .await;
+    assert_eq!(token(&hooks, &parent, "routed").await.as_deref(), Some("token-routed"));
+
+    assert_eq!(resolve(&hooks, &parent, RequestKind::Primary).await.as_deref(), Some("other"));
+    assert_eq!(token(&hooks, &parent, "other").await.as_deref(), Some("token-other"));
+    assert_eq!(routes.count("POST", &auto), 2);
+    let last = routes
+        .requests()
+        .into_iter()
+        .filter(|request| request.method == "POST" && request.url == auto)
+        .last()
+        .expect("the auto request");
+    assert_eq!(header(&last, "authorization").as_deref(), Some("Bearer token"));
+
+    *pick.lock().expect("the auto pick lock is never poisoned") = "routed".to_owned();
+    harness.credential(PROVIDER_ID, oauth_with("second", Some(json!({ "apiEndpoint": base })))).await;
+    wait_until(|| routes.count("GET", &format!("{base}/models")) >= 2).await;
+    tokio::time::sleep(Duration::from_millis(50)).await;
+    assert_eq!(resolve(&hooks, &parent, RequestKind::Primary).await.as_deref(), Some("routed"));
+    let last = routes
+        .requests()
+        .into_iter()
+        .filter(|request| request.method == "POST" && request.url == auto)
+        .last()
+        .expect("the auto request");
+    assert_eq!(header(&last, "authorization").as_deref(), Some("Bearer second"));
+
+    available.store(false, Ordering::SeqCst);
+    assert_eq!(resolve(&hooks, &child, RequestKind::Primary).await.as_deref(), Some("fallback"));
 }
