@@ -16,9 +16,11 @@ indexmap.workspace = true
 opencode-config.workspace = true
 opencode-contract.workspace = true
 opencode-storage.workspace = true
+regex-lite.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
+url.workspace = true
 
 [[test]]
 name = "all"

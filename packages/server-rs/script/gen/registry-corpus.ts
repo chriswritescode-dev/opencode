@@ -10,7 +10,7 @@ const targets = [
     directory: "crates/registry/tests/corpus",
     areas: ["markdown", "scan", "agents", "commands", "instructions", "skills", "references"],
   },
-  { directory: "crates/permission/tests/corpus", areas: ["evaluate"] },
+  { directory: "crates/permission/tests/corpus", areas: ["evaluate", "forms"] },
 ]
 
 for (const target of targets) {

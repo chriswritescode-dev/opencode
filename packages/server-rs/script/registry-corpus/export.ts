@@ -11,6 +11,7 @@ import { ConfigSkillPlugin } from "@opencode/core/config/plugin/skill"
 import { ConfigMarkdown } from "@opencode/core/config/markdown"
 import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
 import { Watcher } from "@opencode/core/filesystem/watcher"
+import { Form } from "@opencode/core/form"
 import { InstructionDiscovery } from "@opencode/core/instruction-discovery"
 import { InstructionBuiltIns } from "@opencode/core/instructions/builtins"
 import { Instructions } from "@opencode/core/instructions/index"
@@ -84,6 +85,7 @@ else if (area === "instructions") await exportInstructions()
 else if (area === "skills") await exportSkills()
 else if (area === "references") await exportReferences()
 else if (area === "evaluate") exportEvaluate()
+else if (area === "forms") exportForms()
 else {
   console.error(`corpus: unknown area ${area ?? ""}`)
   process.exit(1)
@@ -371,6 +373,446 @@ function evaluateOn(
         (rule) => Wildcard.match(action, rule.action) && Wildcard.match(resource, rule.resource, ignoreCase),
       ) ?? { action, resource: "*", effect: "ask" }
   )
+}
+
+function exportForms() {
+  const stringOptions = [
+    { value: "dev", label: "Development" },
+    { value: "prod", label: "Production" },
+  ]
+  const tagOptions = [
+    { value: "go", label: "Go" },
+    { value: "ts", label: "TypeScript" },
+  ]
+  const cases: FormCase[] = [
+    {
+      name: "fields-empty",
+      fields: [],
+    },
+    {
+      name: "fields-duplicate-key",
+      fields: [
+        { key: "name", type: "string" },
+        { key: "name", type: "string" },
+      ],
+    },
+    {
+      name: "fields-duplicate-key-after-external",
+      fields: [
+        { key: "approve", type: "external", url: "https://example.com/approve" },
+        { key: "approve", type: "string" },
+      ],
+    },
+    {
+      name: "fields-when-missing-field",
+      fields: [{ key: "name", type: "string", when: [{ key: "missing", op: "eq", value: "x" }] }],
+    },
+    {
+      name: "fields-when-later-field",
+      fields: [
+        { key: "name", type: "string", when: [{ key: "flag", op: "eq", value: true }] },
+        { key: "flag", type: "boolean" },
+      ],
+    },
+    {
+      name: "fields-when-boolean-value-mismatch",
+      fields: [
+        { key: "flag", type: "boolean" },
+        { key: "name", type: "string", when: [{ key: "flag", op: "eq", value: "yes" }] },
+      ],
+    },
+    {
+      name: "fields-when-number-value-mismatch",
+      fields: [
+        { key: "count", type: "number" },
+        { key: "name", type: "string", when: [{ key: "count", op: "eq", value: "5" }] },
+      ],
+    },
+    {
+      name: "fields-when-integer-value-mismatch",
+      fields: [
+        { key: "count", type: "integer" },
+        { key: "name", type: "string", when: [{ key: "count", op: "eq", value: true }] },
+      ],
+    },
+    {
+      name: "fields-when-string-value-mismatch",
+      fields: [
+        { key: "mode", type: "string" },
+        { key: "name", type: "string", when: [{ key: "mode", op: "eq", value: 3 }] },
+      ],
+    },
+    {
+      name: "fields-when-string-option-outside",
+      fields: [
+        { key: "env", type: "string", options: stringOptions },
+        { key: "name", type: "string", when: [{ key: "env", op: "eq", value: "staging" }] },
+      ],
+    },
+    {
+      name: "fields-when-string-option-custom",
+      fields: [
+        { key: "env", type: "string", options: stringOptions, custom: true },
+        { key: "name", type: "string", when: [{ key: "env", op: "eq", value: "staging" }] },
+      ],
+    },
+    {
+      name: "fields-when-multiselect-option-outside",
+      fields: [
+        { key: "tags", type: "multiselect", options: tagOptions },
+        { key: "notes", type: "string", when: [{ key: "tags", op: "eq", value: "rs" }] },
+      ],
+    },
+    {
+      name: "fields-when-multiselect-option-custom",
+      fields: [
+        { key: "tags", type: "multiselect", options: tagOptions, custom: true },
+        { key: "notes", type: "string", when: [{ key: "tags", op: "eq", value: "rs" }] },
+      ],
+    },
+    {
+      name: "fields-when-chain-valid",
+      fields: [
+        { key: "flag", type: "boolean" },
+        { key: "count", type: "number", when: [{ key: "flag", op: "eq", value: true }] },
+        { key: "note", type: "string", when: [{ key: "count", op: "eq", value: 1 }] },
+      ],
+    },
+    {
+      name: "fields-when-multi-condition-valid",
+      fields: [
+        { key: "mode", type: "string", options: stringOptions },
+        { key: "flag", type: "boolean" },
+        {
+          key: "name",
+          type: "string",
+          when: [
+            { key: "mode", op: "eq", value: "dev" },
+            { key: "flag", op: "eq", value: true },
+          ],
+        },
+      ],
+    },
+    {
+      name: "answer-unknown-key",
+      fields: [{ key: "name", type: "string" }],
+      answer: { name: "Ada", extra: "x" },
+    },
+    {
+      name: "answer-missing-required",
+      fields: [{ key: "name", type: "string", required: true }],
+      answer: {},
+    },
+    {
+      name: "answer-empty-required",
+      fields: [{ key: "name", type: "string", required: true }],
+      answer: { name: "" },
+    },
+    {
+      name: "answer-optional-absent",
+      fields: [{ key: "name", type: "string" }],
+      answer: {},
+    },
+    {
+      name: "answer-string-wrong-type",
+      fields: [{ key: "name", type: "string" }],
+      answer: { name: 5 },
+    },
+    {
+      name: "answer-string-min-length",
+      fields: [{ key: "name", type: "string", minLength: 3 }],
+      answer: { name: "ab" },
+    },
+    {
+      name: "answer-string-max-length",
+      fields: [{ key: "name", type: "string", maxLength: 3 }],
+      answer: { name: "abcd" },
+    },
+    {
+      name: "answer-string-utf16-length",
+      fields: [{ key: "name", type: "string", maxLength: 1 }],
+      answer: { name: "😀" },
+    },
+    {
+      name: "answer-pattern-match",
+      fields: [{ key: "code", type: "string", pattern: "^[a-z]+$" }],
+      answer: { code: "abc" },
+    },
+    {
+      name: "answer-pattern-mismatch",
+      fields: [{ key: "code", type: "string", pattern: "^[a-z]+$" }],
+      answer: { code: "ABC" },
+    },
+    {
+      name: "answer-pattern-invalid",
+      fields: [{ key: "code", type: "string", pattern: "(" }],
+      answer: { code: "abc" },
+    },
+    {
+      name: "answer-email-valid",
+      fields: [{ key: "email", type: "string", format: "email" }],
+      answer: { email: "user@example.com" },
+    },
+    {
+      name: "answer-email-invalid",
+      fields: [{ key: "email", type: "string", format: "email" }],
+      answer: { email: "user@example" },
+    },
+    {
+      name: "answer-uri-https",
+      fields: [{ key: "link", type: "string", format: "uri" }],
+      answer: { link: "https://example.com/path" },
+    },
+    {
+      name: "answer-uri-mailto",
+      fields: [{ key: "link", type: "string", format: "uri" }],
+      answer: { link: "mailto:user@example.com" },
+    },
+    {
+      name: "answer-uri-relative",
+      fields: [{ key: "link", type: "string", format: "uri" }],
+      answer: { link: "relative/path" },
+    },
+    {
+      name: "answer-uri-invalid",
+      fields: [{ key: "link", type: "string", format: "uri" }],
+      answer: { link: "://invalid" },
+    },
+    {
+      name: "answer-date-valid",
+      fields: [{ key: "day", type: "string", format: "date" }],
+      answer: { day: "2024-02-29" },
+    },
+    {
+      name: "answer-date-not-leap",
+      fields: [{ key: "day", type: "string", format: "date" }],
+      answer: { day: "2023-02-29" },
+    },
+    {
+      name: "answer-date-single-digit",
+      fields: [{ key: "day", type: "string", format: "date" }],
+      answer: { day: "2024-2-29" },
+    },
+    {
+      name: "answer-datetime-valid",
+      fields: [{ key: "at", type: "string", format: "date-time" }],
+      answer: { at: "2024-02-29T10:30:00Z" },
+    },
+    {
+      name: "answer-datetime-rollover",
+      fields: [{ key: "at", type: "string", format: "date-time" }],
+      answer: { at: "2024-02-30" },
+    },
+    {
+      name: "answer-datetime-month-out-of-range",
+      fields: [{ key: "at", type: "string", format: "date-time" }],
+      answer: { at: "2024-13-01" },
+    },
+    {
+      name: "answer-datetime-garbage",
+      fields: [{ key: "at", type: "string", format: "date-time" }],
+      answer: { at: "not-a-date" },
+    },
+    {
+      name: "answer-datetime-midnight-24",
+      fields: [{ key: "at", type: "string", format: "date-time" }],
+      answer: { at: "2024-02-29T24:00:00Z" },
+    },
+    {
+      name: "answer-datetime-midnight-24-seconds",
+      fields: [{ key: "at", type: "string", format: "date-time" }],
+      answer: { at: "2024-02-29T24:00:01Z" },
+    },
+    {
+      name: "answer-string-option-invalid",
+      fields: [{ key: "env", type: "string", options: stringOptions }],
+      answer: { env: "staging" },
+    },
+    {
+      name: "answer-string-option-valid",
+      fields: [{ key: "env", type: "string", options: stringOptions }],
+      answer: { env: "dev" },
+    },
+    {
+      name: "answer-string-option-custom",
+      fields: [{ key: "env", type: "string", options: stringOptions, custom: true }],
+      answer: { env: "staging" },
+    },
+    {
+      name: "answer-number-valid",
+      fields: [{ key: "count", type: "number" }],
+      answer: { count: 5 },
+    },
+    {
+      name: "answer-number-wrong-type",
+      fields: [{ key: "count", type: "number" }],
+      answer: { count: "5" },
+    },
+    {
+      name: "answer-number-minimum",
+      fields: [{ key: "count", type: "number", minimum: 10 }],
+      answer: { count: 5 },
+    },
+    {
+      name: "answer-number-maximum",
+      fields: [{ key: "count", type: "number", maximum: 10 }],
+      answer: { count: 11 },
+    },
+    {
+      name: "answer-integer-valid",
+      fields: [{ key: "count", type: "integer" }],
+      answer: { count: 5 },
+    },
+    {
+      name: "answer-integer-fraction",
+      fields: [{ key: "count", type: "integer" }],
+      answer: { count: 1.5 },
+    },
+    {
+      name: "answer-boolean-wrong-type",
+      fields: [{ key: "enabled", type: "boolean" }],
+      answer: { enabled: "yes" },
+    },
+    {
+      name: "answer-multiselect-wrong-type",
+      fields: [{ key: "tags", type: "multiselect", options: tagOptions }],
+      answer: { tags: "go" },
+    },
+    {
+      name: "answer-multiselect-required-empty",
+      fields: [{ key: "tags", type: "multiselect", options: tagOptions, required: true }],
+      answer: { tags: [] },
+    },
+    {
+      name: "answer-multiselect-min-items",
+      fields: [{ key: "tags", type: "multiselect", options: tagOptions, minItems: 2 }],
+      answer: { tags: ["go"] },
+    },
+    {
+      name: "answer-multiselect-max-items",
+      fields: [{ key: "tags", type: "multiselect", options: tagOptions, maxItems: 1 }],
+      answer: { tags: ["go", "ts"] },
+    },
+    {
+      name: "answer-multiselect-option-invalid",
+      fields: [{ key: "tags", type: "multiselect", options: tagOptions }],
+      answer: { tags: ["rs"] },
+    },
+    {
+      name: "answer-multiselect-option-custom",
+      fields: [{ key: "tags", type: "multiselect", options: tagOptions, custom: true }],
+      answer: { tags: ["rs"] },
+    },
+    {
+      name: "answer-external-absent",
+      fields: [{ key: "approve", type: "external", url: "https://example.com/approve" }],
+      answer: {},
+    },
+    {
+      name: "answer-external-false",
+      fields: [{ key: "approve", type: "external", url: "https://example.com/approve" }],
+      answer: { approve: false },
+    },
+    {
+      name: "answer-external-string",
+      fields: [{ key: "approve", type: "external", url: "https://example.com/approve" }],
+      answer: { approve: "yes" },
+    },
+    {
+      name: "answer-external-true",
+      fields: [
+        { key: "approve", type: "external", url: "https://example.com/approve" },
+        { key: "name", type: "string", required: true },
+      ],
+      answer: { approve: true, name: "ok" },
+    },
+    {
+      name: "answer-when-gated-required-satisfied",
+      fields: [
+        { key: "flag", type: "boolean" },
+        { key: "name", type: "string", required: true, when: [{ key: "flag", op: "eq", value: true }] },
+      ],
+      answer: { flag: true, name: "ok" },
+    },
+    {
+      name: "answer-when-inactive-answered",
+      fields: [
+        { key: "flag", type: "boolean" },
+        { key: "name", type: "string", required: true, when: [{ key: "flag", op: "eq", value: true }] },
+      ],
+      answer: { flag: false, name: "ok" },
+    },
+    {
+      name: "answer-when-active-required-missing",
+      fields: [
+        { key: "flag", type: "boolean" },
+        { key: "name", type: "string", required: true, when: [{ key: "flag", op: "eq", value: true }] },
+      ],
+      answer: { flag: true },
+    },
+    {
+      name: "answer-when-cascade-hidden-answered",
+      fields: [
+        { key: "flag", type: "boolean" },
+        { key: "name", type: "string", required: true, when: [{ key: "flag", op: "eq", value: true }] },
+        { key: "note", type: "string", when: [{ key: "name", op: "eq", value: "x" }] },
+      ],
+      answer: { flag: false, note: "hello" },
+    },
+    {
+      name: "answer-when-neq-multiselect-included",
+      fields: [
+        { key: "tags", type: "multiselect", options: tagOptions },
+        { key: "notes", type: "string", required: true, when: [{ key: "tags", op: "neq", value: "ts" }] },
+      ],
+      answer: { tags: ["ts"] },
+    },
+    {
+      name: "answer-when-neq-multiselect-empty",
+      fields: [
+        { key: "tags", type: "multiselect", options: tagOptions },
+        { key: "notes", type: "string", required: true, when: [{ key: "tags", op: "neq", value: "ts" }] },
+      ],
+      answer: { tags: [] },
+    },
+    {
+      name: "answer-when-neq-multiselect-other",
+      fields: [
+        { key: "tags", type: "multiselect", options: tagOptions },
+        { key: "notes", type: "string", required: true, when: [{ key: "tags", op: "neq", value: "ts" }] },
+      ],
+      answer: { tags: ["go"] },
+    },
+    {
+      name: "answer-when-eq-multiselect-multi",
+      fields: [
+        { key: "tags", type: "multiselect", options: tagOptions },
+        { key: "notes", type: "string", required: true, when: [{ key: "tags", op: "eq", value: "go" }] },
+      ],
+      answer: { tags: ["go", "ts"], notes: "ok" },
+    },
+    {
+      name: "answer-when-empty-condition-active",
+      fields: [{ key: "name", type: "string", required: true, when: [] }],
+      answer: {},
+    },
+  ]
+  const lines = cases.map((item) =>
+    JSON.stringify({
+      name: item.name,
+      fields: item.fields,
+      ...(item.answer === undefined ? {} : { answer: item.answer }),
+      validateFields: Form.validateFields(item.fields) ?? null,
+      ...(item.answer === undefined ? {} : { validateAnswer: Form.validateAnswer(item.fields, item.answer) ?? null }),
+    }),
+  )
+  process.stdout.write(`[\n${lines.join(",\n")}\n]\n`)
+}
+
+interface FormCase {
+  name: string
+  fields: ReadonlyArray<Form.Field>
+  answer?: Form.Answer
 }
 
 function exportMarkdown() {

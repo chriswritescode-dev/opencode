@@ -931,9 +931,11 @@ dependencies = [
  "opencode-config",
  "opencode-contract",
  "opencode-storage",
+ "regex-lite",
  "serde_json",
  "thiserror",
  "tokio",
+ "url",
 ]
 
 [[package]]
