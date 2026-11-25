@@ -29,11 +29,14 @@ fn services_with_flags(
         "OPENCODE_FLAGS" => flags.clone().map(OsString::from),
         _ => None,
     };
+    let bus = opencode_bus::Bus::new(database.clone(), opencode_bus::BusOptions::default());
     let services = Arc::new(GlobalServices::new(
         database.clone(),
         paths,
         start_directory.to_string_lossy().into_owned(),
         Arc::new(environment),
+        bus,
+        crate::global_plugins(),
     ));
     (services, database)
 }

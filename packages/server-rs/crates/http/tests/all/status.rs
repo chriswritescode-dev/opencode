@@ -18,8 +18,14 @@ fn ready_app_with_state() -> Arc<App> {
         (name == "HOME").then(|| std::env::temp_dir().join("opencode-http-test-home").into_os_string())
     })
     .expect("global paths");
-    let mut services =
-        GlobalServices::new(state.db.clone(), paths, "/tmp/opencode-http-test".to_owned(), Arc::new(|_: &str| None));
+    let mut services = GlobalServices::new(
+        state.db.clone(),
+        paths,
+        "/tmp/opencode-http-test".to_owned(),
+        Arc::new(|_: &str| None),
+        state.bus.clone(),
+        crate::global_plugins(),
+    );
     services.attach_sessions(state.bus.clone(), state.store.clone(), "test-version".to_owned());
     let app = App::new(Options {
         password: "pw".to_owned(),
@@ -148,6 +154,10 @@ fn sample_request(operation: &str) -> Option<(&'static str, &'static str)> {
         "session.active" => Some(("GET", "/api/session/active")),
         "experimental.session.wait" => Some(("POST", "/api/experimental/session/ses_test/wait")),
         "experimental.job.list" => Some(("GET", "/api/experimental/job")),
+        "plugin.list" => Some(("GET", "/api/plugin")),
+        "plugin.gui" => Some(("GET", "/api/plugin/gui?id=missing")),
+        "plugin.check" => Some(("POST", "/api/plugin/check")),
+        "plugin.update" => Some(("POST", "/api/plugin/update")),
         _ => None,
     }
 }
@@ -163,12 +173,12 @@ async fn unknown_paths_are_an_empty_404() {
 #[tokio::test]
 async fn unimplemented_routes_are_501() {
     let app = ready_app();
-    let response = app.handle(authorized("GET", "/api/plugin")).await;
+    let response = app.handle(authorized("GET", "/api/agent/missing-agent")).await;
     assert_eq!(response.status(), StatusCode::NOT_IMPLEMENTED);
     assert_eq!(content_type(&response), Some("application/json"));
     assert_eq!(
         text(response).await,
-        r#"{"_tag":"UnknownError","message":"opencode-server does not implement plugin.list yet"}"#
+        r#"{"_tag":"UnknownError","message":"opencode-server does not implement agent.get yet"}"#
     );
 }
 
@@ -204,5 +214,9 @@ fn implemented_lists_the_ported_operations() {
     assert!(opencode_http::app::IMPLEMENTED.contains(&"session.active"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"experimental.session.wait"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"experimental.job.list"));
-    assert_eq!(opencode_http::app::IMPLEMENTED.len(), 30);
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"plugin.list"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"plugin.gui"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"plugin.check"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"plugin.update"));
+    assert_eq!(opencode_http::app::IMPLEMENTED.len(), 34);
 }

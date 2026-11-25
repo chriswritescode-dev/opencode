@@ -10,6 +10,7 @@ mod info;
 mod location;
 mod model;
 mod pairing;
+mod plugin;
 mod project;
 mod request_site;
 mod router;
@@ -44,27 +45,35 @@ fn services_at(start_directory: &Path) -> Arc<GlobalServices> {
 
 fn services_with(start_directory: &Path, home: PathBuf) -> Arc<GlobalServices> {
     let (database, _) = Database::open(DatabaseLocation::Memory, &std::env::temp_dir()).expect("open the database");
+    let database = Arc::new(database);
     let paths =
         GlobalPaths::from_vars(|name| (name == "HOME").then(|| home.clone().into_os_string())).expect("global paths");
+    let bus = opencode_bus::Bus::new(database.clone(), opencode_bus::BusOptions::default());
     Arc::new(GlobalServices::new(
-        Arc::new(database),
+        database,
         paths,
         start_directory.to_string_lossy().into_owned(),
         Arc::new(|_: &str| None),
+        bus,
+        global_plugins(),
     ))
 }
 
 fn services_with_config(start_directory: &Path, config: &str) -> Arc<GlobalServices> {
     let (database, _) = Database::open(DatabaseLocation::Memory, &std::env::temp_dir()).expect("open the database");
+    let database = Arc::new(database);
     let home = temp_directory("services-config-home");
     let paths =
         GlobalPaths::from_vars(|name| (name == "HOME").then(|| home.clone().into_os_string())).expect("global paths");
+    let bus = opencode_bus::Bus::new(database.clone(), opencode_bus::BusOptions::default());
     let config = config.to_owned();
     Arc::new(GlobalServices::new(
-        Arc::new(database),
+        database,
         paths,
         start_directory.to_string_lossy().into_owned(),
         Arc::new(move |name: &str| (name == "OPENCODE_CONFIG_CONTENT").then(|| OsString::from(&config))),
+        bus,
+        global_plugins(),
     ))
 }
 
@@ -80,6 +89,8 @@ fn session_app(start_directory: &Path) -> (Arc<App>, Arc<opencode_http::state::S
         paths,
         start_directory.to_string_lossy().into_owned(),
         Arc::new(|_: &str| None),
+        state.bus.clone(),
+        global_plugins(),
     );
     services.attach_sessions(state.bus.clone(), state.store.clone(), "test-version".to_owned());
     let app = App::new(Options {
@@ -94,6 +105,21 @@ fn session_app(start_directory: &Path) -> (Arc<App>, Arc<opencode_http::state::S
     });
     app.status().ready();
     (app, state)
+}
+
+fn global_plugins() -> Arc<opencode_plugin::GlobalPlugins> {
+    Arc::new(opencode_plugin::GlobalPlugins {
+        host: None,
+        router: opencode_plugin::PluginRouter::default(),
+        sdk: opencode_plugin::SdkPlugins::default(),
+        updates: opencode_plugin::Updates::new(None, opencode_plugin::NpmPaths::default()),
+        paths: opencode_plugin::NpmPaths::default(),
+        app: opencode_plugin::AppInfo {
+            name: "opencode".to_owned(),
+            version: "test-version".to_owned(),
+            channel: "local".to_owned(),
+        },
+    })
 }
 
 fn ready_app_with_services(services: Arc<GlobalServices>) -> Arc<App> {

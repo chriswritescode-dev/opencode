@@ -1,6 +1,6 @@
 # Operation coverage
 
-Implemented: 30 of 178 operations
+Implemented: 34 of 178 operations
 
 | Operation | Method | Path | Stability | Status |
 | --- | --- | --- | --- | --- |
@@ -11,10 +11,10 @@ Implemented: 30 of 178 operations
 | `location.reload` | POST | `/api/location/reload` | stable | implemented |
 | `agent.list` | GET | `/api/agent` | stable | implemented |
 | `agent.get` | GET | `/api/agent/{agentID}` | stable | not implemented (501) |
-| `plugin.list` | GET | `/api/plugin` | stable | not implemented (501) |
-| `plugin.gui` | GET | `/api/plugin/gui` | stable | not implemented (501) |
-| `plugin.check` | POST | `/api/plugin/check` | stable | not implemented (501) |
-| `plugin.update` | POST | `/api/plugin/update` | stable | not implemented (501) |
+| `plugin.list` | GET | `/api/plugin` | stable | implemented |
+| `plugin.gui` | GET | `/api/plugin/gui` | stable | implemented |
+| `plugin.check` | POST | `/api/plugin/check` | stable | implemented |
+| `plugin.update` | POST | `/api/plugin/update` | stable | implemented |
 | `session.list` | GET | `/api/session` | stable | implemented |
 | `session.create` | POST | `/api/session` | stable | implemented |
 | `experimental.session.stats` | GET | `/api/experimental/session/stats` | experimental | not implemented (501) |

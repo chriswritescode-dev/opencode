@@ -30,6 +30,7 @@ use opencode_location::map::Lease;
 use opencode_location::map::LocationMap;
 use opencode_location::project::{ProjectService, SWEEP_INTERVAL_MS};
 use opencode_location::resolve::SessionLocationError;
+use opencode_plugin::{GlobalPlugins, LocationPlugins};
 use opencode_session::agent::Agents;
 use opencode_session::execution::{Placed, Placement};
 use opencode_session::instructions::BuiltinsInput;
@@ -140,6 +141,8 @@ pub struct GlobalServices {
     pub environment: ConfigEnv,
     pub local_environment: Arc<dyn Environment>,
     pub sessions: Option<opencode_session::Sessions>,
+    pub bus: Arc<Bus>,
+    pub plugins: Arc<GlobalPlugins>,
     sweep: JoinHandle<()>,
 }
 
@@ -150,11 +153,19 @@ pub struct LocationServices {
     pub config: ConfigService,
     pub catalog: Arc<RwLock<Catalog>>,
     pub agents: Arc<RwLock<Agents>>,
+    pub plugins: LocationPlugins,
     _config_observer: ObserverHandle,
 }
 
 impl GlobalServices {
-    pub fn new(database: Arc<Database>, paths: GlobalPaths, start_directory: String, config_env: ConfigEnv) -> Self {
+    pub fn new(
+        database: Arc<Database>,
+        paths: GlobalPaths,
+        start_directory: String,
+        config_env: ConfigEnv,
+        bus: Arc<Bus>,
+        plugins: Arc<GlobalPlugins>,
+    ) -> Self {
         let projects = Arc::new(ProjectService::new(database.clone()));
         let wellknown = Arc::new(WellKnown::new(Arc::new(StorageKv { database: database.clone() })));
         let environment: Arc<dyn Environment> = Arc::new(LocalEnvironment::new());
@@ -167,6 +178,8 @@ impl GlobalServices {
         let boot_paths = paths.clone();
         let boot_wellknown = wellknown.clone();
         let boot_search = search.clone();
+        let boot_bus = bus.clone();
+        let boot_plugins = plugins.clone();
         let locations = LocationMap::new(move |reference| {
             let projects = boot_projects.clone();
             let environment = boot_environment.clone();
@@ -176,6 +189,8 @@ impl GlobalServices {
             let search = boot_search.clone();
             let channel = channel.clone();
             let flag_overrides = flag_overrides.clone();
+            let bus = boot_bus.clone();
+            let plugins = boot_plugins.clone();
             Box::pin(async move {
                 let info = boot_location(&reference, &projects, environment.as_ref()).await?;
                 let home = paths.home.clone();
@@ -214,7 +229,21 @@ impl GlobalServices {
                 if sqlite_fts_enabled(&config) {
                     search.start();
                 }
+                let reference = LocationRef {
+                    directory: AbsolutePath(info.directory.clone()),
+                    workspace_id: info.workspace_id.clone().map(WorkspaceID),
+                };
+                let publish: Arc<dyn Fn() + Send + Sync> = Arc::new(move || {
+                    if let Err(error) = bus.publish(
+                        &Definition::ephemeral("plugin.updated"),
+                        serde_json::json!({}),
+                        PublishOptions { location: Some(reference.clone()), ..Default::default() },
+                    ) {
+                        log::warn!("failed to publish plugin.updated: {error}");
+                    }
+                });
                 let lifecycle = Lifecycle::start(projects, &info).await?;
+                let plugins = LocationPlugins::start(plugins.as_ref(), info.clone(), config.clone(), publish).await;
                 Ok(Arc::new(LocationServices {
                     info,
                     lifecycle,
@@ -222,6 +251,7 @@ impl GlobalServices {
                     config,
                     catalog,
                     agents,
+                    plugins,
                     _config_observer,
                 }))
             })
@@ -262,6 +292,8 @@ impl GlobalServices {
             environment: config_env,
             local_environment: environment,
             sessions: None,
+            bus,
+            plugins,
             sweep,
         }
     }
@@ -382,8 +414,15 @@ impl opencode_location::map::LocationServices for LocationServices {
     }
 
     fn close(&self) -> BoxFuture<'_, ()> {
-        Box::pin(async move { self.lifecycle.shutdown().await })
+        Box::pin(async move {
+            self.plugins.shutdown().await;
+            self.lifecycle.shutdown().await;
+        })
     }
+}
+
+pub fn public_ref(info: &LocationInfo) -> LocationPublicRef {
+    LocationPublicRef { directory: AbsolutePath(info.directory.clone()) }
 }
 
 struct StorageKv {

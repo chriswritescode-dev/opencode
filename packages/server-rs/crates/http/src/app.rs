@@ -47,6 +47,10 @@ pub const IMPLEMENTED: &[&str] = &[
     "session.active",
     "experimental.session.wait",
     "experimental.job.list",
+    "plugin.list",
+    "plugin.gui",
+    "plugin.check",
+    "plugin.update",
 ];
 
 pub struct Options {
@@ -245,6 +249,32 @@ impl App {
             "experimental.job.list" => match self.services() {
                 Some(services) => crate::handlers::job::list(services, &raw).await,
                 None => crate::services::services_unavailable(),
+            },
+            "plugin.list" => match self.location(&raw).await {
+                Ok(lease) => crate::handlers::plugin::list(&raw, lease.services()).await,
+                Err(response) => response,
+            },
+            "plugin.gui" => match self.location(&raw).await {
+                Ok(lease) => crate::handlers::plugin::gui(&raw, lease.services()).await,
+                Err(response) => response,
+            },
+            "plugin.check" => match self.location(&raw).await {
+                Ok(lease) => match self.services() {
+                    Some(services) => {
+                        crate::handlers::plugin::check(&raw, lease.services(), &services.plugins.updates).await
+                    }
+                    None => crate::services::services_unavailable(),
+                },
+                Err(response) => response,
+            },
+            "plugin.update" => match self.location(&raw).await {
+                Ok(lease) => match self.services() {
+                    Some(services) => {
+                        crate::handlers::plugin::update(&raw, lease.services(), &services.plugins.updates).await
+                    }
+                    None => crate::services::services_unavailable(),
+                },
+                Err(response) => response,
             },
             _ => not_implemented(found.route.identifier),
         }
