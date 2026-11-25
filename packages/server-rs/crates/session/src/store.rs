@@ -1,7 +1,10 @@
 use std::sync::Arc;
 
 use opencode_bus::BusError;
-use opencode_contract::generated::{SessionInfo, SessionMessageAssistant, SessionMessageInfo, SessionMessageMediaInfo};
+use opencode_contract::generated::{
+    SessionID, SessionInfo, SessionMessageAssistant, SessionMessageInfo, SessionMessageMediaInfo,
+};
+use opencode_location::location::LocationRef;
 use opencode_storage::{Database, StorageError};
 use rusqlite::types::Value;
 use rusqlite::{OptionalExtension, params, params_from_iter};
@@ -46,6 +49,7 @@ pub struct ListAnchor {
     pub direction: Direction,
 }
 
+#[derive(Default)]
 pub struct ListInput {
     pub directory: Option<String>,
     pub workspace_id: Option<String>,
@@ -84,6 +88,7 @@ pub enum SessionMessage {
 
 pub type Overlay = Arc<dyn Fn(&mut Vec<SessionMessage>) + Send + Sync>;
 
+#[derive(Clone)]
 pub struct SessionStore {
     db: Arc<Database>,
     overlay: Overlay,
@@ -105,6 +110,20 @@ impl SessionStore {
             .read(move |connection| Ok(connection.query_row(&sql, [session_id], info::read).optional()?))
             .map_err(BusError::from)?;
         row.as_ref().map(info::from_row).transpose()
+    }
+
+    pub fn session_location(&self, session_id: &str) -> Result<Option<LocationRef>, BusError> {
+        let row = self
+            .db
+            .read(move |connection| {
+                Ok(connection
+                    .query_row("SELECT directory, workspace_id FROM session_v2 WHERE id = ?1", [session_id], |row| {
+                        Ok((row.get::<_, String>(0)?, row.get::<_, Option<String>>(1)?))
+                    })
+                    .optional()?)
+            })
+            .map_err(BusError::from)?;
+        Ok(row.map(|(directory, workspace_id)| LocationRef::new(directory, workspace_id)))
     }
 
     pub fn list(&self, input: &ListInput) -> Result<Vec<SessionInfo>, BusError> {
@@ -460,6 +479,12 @@ fn stored_rows(statement: &mut rusqlite::Statement<'_>, values: Vec<Value>) -> r
 impl From<StorageError> for HistoryError {
     fn from(error: StorageError) -> Self {
         Self::Database(error.into())
+    }
+}
+
+impl opencode_location::resolve::SessionLookup for SessionStore {
+    fn location(&self, id: &SessionID) -> Result<Option<LocationRef>, String> {
+        self.session_location(&id.0).map_err(|error| error.to_string())
     }
 }
 

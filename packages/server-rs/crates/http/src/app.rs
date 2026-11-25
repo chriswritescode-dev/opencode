@@ -32,6 +32,11 @@ pub const IMPLEMENTED: &[&str] = &[
     "config.get",
     "config.shells",
     "experimental.config.update",
+    "session.list",
+    "session.create",
+    "session.get",
+    "session.update",
+    "session.remove",
 ];
 
 pub struct Options {
@@ -177,6 +182,26 @@ impl App {
                 Ok(lease) => crate::handlers::config::update(&raw, &lease.config).await,
                 Err(response) => response,
             },
+            "session.list" => match self.services() {
+                Some(services) => crate::handlers::session::list(services, &raw),
+                None => crate::services::services_unavailable(),
+            },
+            "session.create" => match self.services() {
+                Some(services) => crate::handlers::session::create(services, &raw).await,
+                None => crate::services::services_unavailable(),
+            },
+            "session.get" => match self.services() {
+                Some(services) => crate::handlers::session::get(services, &raw),
+                None => crate::services::services_unavailable(),
+            },
+            "session.update" => match self.services() {
+                Some(services) => crate::handlers::session::update(services, &raw).await,
+                None => crate::services::services_unavailable(),
+            },
+            "session.remove" => match self.services() {
+                Some(services) => crate::handlers::session::remove(services, &raw).await,
+                None => crate::services::services_unavailable(),
+            },
             _ => not_implemented(found.route.identifier),
         }
     }
@@ -189,7 +214,16 @@ impl App {
         let Some(services) = &self.options.services else {
             return Err(crate::services::services_unavailable());
         };
-        let reference = opencode_location::resolve::request_ref(request, &services.start_directory);
+        let reference = match request.path_params.iter().find(|(name, _)| name == "sessionID") {
+            Some((_, id)) => match &services.sessions {
+                Some(sessions) => match opencode_location::resolve::resolve_session_location(sessions.store(), id) {
+                    Ok(reference) => reference,
+                    Err(error) => return Err(crate::services::session_location_error(error)),
+                },
+                None => opencode_location::resolve::request_ref(request, &services.start_directory),
+            },
+            None => opencode_location::resolve::request_ref(request, &services.start_directory),
+        };
         match services.locations.get(&reference).await {
             Ok(lease) => Ok(lease),
             Err(error) => Err(crate::services::location_error(error)),

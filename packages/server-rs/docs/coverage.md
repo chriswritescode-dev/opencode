@@ -1,6 +1,6 @@
 # Operation coverage
 
-Implemented: 15 of 178 operations
+Implemented: 20 of 178 operations
 
 | Operation | Method | Path | Stability | Status |
 | --- | --- | --- | --- | --- |
@@ -15,15 +15,15 @@ Implemented: 15 of 178 operations
 | `plugin.gui` | GET | `/api/plugin/gui` | stable | not implemented (501) |
 | `plugin.check` | POST | `/api/plugin/check` | stable | not implemented (501) |
 | `plugin.update` | POST | `/api/plugin/update` | stable | not implemented (501) |
-| `session.list` | GET | `/api/session` | stable | not implemented (501) |
-| `session.create` | POST | `/api/session` | stable | not implemented (501) |
+| `session.list` | GET | `/api/session` | stable | implemented |
+| `session.create` | POST | `/api/session` | stable | implemented |
 | `experimental.session.stats` | GET | `/api/experimental/session/stats` | experimental | not implemented (501) |
 | `experimental.session.import` | POST | `/api/experimental/session/import` | experimental | not implemented (501) |
 | `experimental.session.export` | GET | `/api/experimental/session/{sessionID}/export` | experimental | not implemented (501) |
 | `session.active` | GET | `/api/session/active` | stable | not implemented (501) |
-| `session.get` | GET | `/api/session/{sessionID}` | stable | not implemented (501) |
-| `session.remove` | DELETE | `/api/session/{sessionID}` | stable | not implemented (501) |
-| `session.update` | PATCH | `/api/session/{sessionID}` | stable | not implemented (501) |
+| `session.get` | GET | `/api/session/{sessionID}` | stable | implemented |
+| `session.remove` | DELETE | `/api/session/{sessionID}` | stable | implemented |
+| `session.update` | PATCH | `/api/session/{sessionID}` | stable | implemented |
 | `session.fork` | POST | `/api/session/{sessionID}/fork` | stable | not implemented (501) |
 | `session.switchAgent` | POST | `/api/session/{sessionID}/agent` | stable | not implemented (501) |
 | `session.switchModel` | POST | `/api/session/{sessionID}/model` | stable | not implemented (501) |

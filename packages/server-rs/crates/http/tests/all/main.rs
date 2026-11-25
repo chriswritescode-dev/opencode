@@ -13,6 +13,7 @@ mod request_site;
 mod router;
 mod search;
 mod serve;
+mod session;
 mod session_log;
 mod status;
 mod ticket;
@@ -48,6 +49,34 @@ fn services_with(start_directory: &Path, home: PathBuf) -> Arc<GlobalServices> {
         start_directory.to_string_lossy().into_owned(),
         Arc::new(|_: &str| None),
     ))
+}
+
+fn session_app(start_directory: &Path) -> (Arc<App>, Arc<opencode_http::state::ServerState>) {
+    let (state, _) = opencode_http::state::ServerState::open(DatabaseLocation::Memory, &std::env::temp_dir())
+        .expect("open the state");
+    let state = Arc::new(state);
+    let home = temp_directory("session-home");
+    let paths =
+        GlobalPaths::from_vars(|name| (name == "HOME").then(|| home.clone().into_os_string())).expect("global paths");
+    let mut services = GlobalServices::new(
+        state.db.clone(),
+        paths,
+        start_directory.to_string_lossy().into_owned(),
+        Arc::new(|_: &str| None),
+    );
+    services.attach_sessions(state.bus.clone(), state.store.clone(), "test-version".to_owned());
+    let app = App::new(Options {
+        password: "pw".to_owned(),
+        version: "test-version".to_owned(),
+        cors: Vec::new(),
+        tmp: PathBuf::from("/tmp/opencode-http-test"),
+        hostname: None,
+        urls: Arc::new(|| vec!["http://127.0.0.1:4096".to_owned()]),
+        state: Some(state.clone()),
+        services: Some(Arc::new(services)),
+    });
+    app.status().ready();
+    (app, state)
 }
 
 fn ready_app_with_services(services: Arc<GlobalServices>) -> Arc<App> {

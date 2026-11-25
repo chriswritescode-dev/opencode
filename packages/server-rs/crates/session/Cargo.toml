@@ -11,8 +11,10 @@ autotests = false
 workspace = true
 
 [dependencies]
+base64.workspace = true
 opencode-bus.workspace = true
 opencode-contract.workspace = true
+opencode-location.workspace = true
 opencode-storage.workspace = true
 opencode-util = { workspace = true, features = ["ring"] }
 log.workspace = true

@@ -937,10 +937,12 @@ dependencies = [
 name = "opencode-session"
 version = "0.1.0"
 dependencies = [
+ "base64",
  "futures-util",
  "log",
  "opencode-bus",
  "opencode-contract",
+ "opencode-location",
  "opencode-storage",
  "opencode-util",
  "rand",

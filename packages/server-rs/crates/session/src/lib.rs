@@ -11,6 +11,7 @@ mod legacy;
 mod message_updater;
 mod parts;
 mod projector;
+mod session;
 mod settings;
 mod slug;
 mod sql;
@@ -19,6 +20,7 @@ mod stored;
 mod usage;
 
 pub use projector::SessionProjector;
+pub use session::{CreateInput, SessionError, Sessions, UpdateInput};
 pub use settings::ProjectionSettings;
 pub use store::{
     Cursor, Direction, LastAssistantInput, ListAnchor, ListInput, MessagesInput, Order, Overlay, SessionMessage,

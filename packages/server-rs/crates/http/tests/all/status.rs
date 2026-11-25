@@ -2,7 +2,9 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use http::StatusCode;
+use opencode_config::paths::GlobalPaths;
 use opencode_http::app::{App, Options};
+use opencode_http::services::GlobalServices;
 use opencode_http::state::ServerState;
 use opencode_http::status::{State, Status};
 use opencode_storage::DatabaseLocation;
@@ -11,6 +13,14 @@ use crate::{app, authorized, ready_app, text};
 
 fn ready_app_with_state() -> Arc<App> {
     let (state, _) = ServerState::open(DatabaseLocation::Memory, Path::new("/tmp")).expect("open the state");
+    let state = Arc::new(state);
+    let paths = GlobalPaths::from_vars(|name| {
+        (name == "HOME").then(|| std::env::temp_dir().join("opencode-http-test-home").into_os_string())
+    })
+    .expect("global paths");
+    let mut services =
+        GlobalServices::new(state.db.clone(), paths, "/tmp/opencode-http-test".to_owned(), Arc::new(|_: &str| None));
+    services.attach_sessions(state.bus.clone(), state.store.clone(), "test-version".to_owned());
     let app = App::new(Options {
         password: "pw".to_owned(),
         version: "test-version".to_owned(),
@@ -18,8 +28,8 @@ fn ready_app_with_state() -> Arc<App> {
         tmp: PathBuf::from("/tmp/opencode-http-test"),
         hostname: None,
         urls: Arc::new(|| vec!["http://127.0.0.1:4096".to_owned()]),
-        state: Some(Arc::new(state)),
-        services: Some(crate::services()),
+        state: Some(state),
+        services: Some(Arc::new(services)),
     });
     app.status().ready();
     app
@@ -123,6 +133,11 @@ fn sample_request(operation: &str) -> Option<(&'static str, &'static str)> {
         "config.get" => Some(("GET", "/api/config")),
         "config.shells" => Some(("GET", "/api/config/shell")),
         "experimental.config.update" => Some(("PATCH", "/api/experimental/config")),
+        "session.list" => Some(("GET", "/api/session")),
+        "session.create" => Some(("POST", "/api/session")),
+        "session.get" => Some(("GET", "/api/session/ses_test")),
+        "session.remove" => Some(("DELETE", "/api/session/ses_test")),
+        "session.update" => Some(("PATCH", "/api/session/ses_test")),
         _ => None,
     }
 }
@@ -138,12 +153,12 @@ async fn unknown_paths_are_an_empty_404() {
 #[tokio::test]
 async fn unimplemented_routes_are_501() {
     let app = ready_app();
-    let response = app.handle(authorized("GET", "/api/session")).await;
+    let response = app.handle(authorized("GET", "/api/agent")).await;
     assert_eq!(response.status(), StatusCode::NOT_IMPLEMENTED);
     assert_eq!(content_type(&response), Some("application/json"));
     assert_eq!(
         text(response).await,
-        r#"{"_tag":"UnknownError","message":"opencode-server does not implement session.list yet"}"#
+        r#"{"_tag":"UnknownError","message":"opencode-server does not implement agent.list yet"}"#
     );
 }
 
@@ -164,5 +179,10 @@ fn implemented_lists_the_ported_operations() {
     assert!(opencode_http::app::IMPLEMENTED.contains(&"config.get"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"config.shells"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"experimental.config.update"));
-    assert_eq!(opencode_http::app::IMPLEMENTED.len(), 15);
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"session.list"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"session.create"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"session.get"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"session.update"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"session.remove"));
+    assert_eq!(opencode_http::app::IMPLEMENTED.len(), 20);
 }

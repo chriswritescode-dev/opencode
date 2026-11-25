@@ -27,6 +27,7 @@ use opencode_location::lifecycle::Lifecycle;
 use opencode_location::location::{BootError, LocationInfo, boot_location};
 use opencode_location::map::LocationMap;
 use opencode_location::project::{ProjectService, SWEEP_INTERVAL_MS};
+use opencode_location::resolve::SessionLocationError;
 use opencode_session::search_build::SessionSearchBuild;
 use opencode_storage::Database;
 use serde_json::Value;
@@ -47,6 +48,8 @@ pub struct GlobalServices {
     pub search: Arc<SessionSearchBuild>,
     pub start_directory: String,
     pub environment: ConfigEnv,
+    pub local_environment: Arc<dyn Environment>,
+    pub sessions: Option<opencode_session::Sessions>,
     sweep: JoinHandle<()>,
 }
 
@@ -145,8 +148,24 @@ impl GlobalServices {
             search,
             start_directory,
             environment: config_env,
+            local_environment: environment,
+            sessions: None,
             sweep,
         }
+    }
+
+    pub fn attach_sessions(&mut self, bus: Arc<Bus>, store: opencode_session::SessionStore, version: String) {
+        self.sessions = Some(opencode_session::Sessions::new(
+            store,
+            bus,
+            self.projects.clone(),
+            self.local_environment.clone(),
+            version,
+        ));
+    }
+
+    pub fn sessions(&self) -> Option<&opencode_session::Sessions> {
+        self.sessions.as_ref()
     }
 
     pub fn subscribe_events(&self) -> tokio::sync::broadcast::Receiver<LocationEvent> {
@@ -324,6 +343,20 @@ pub fn location_error(error: BootError) -> response::Response {
         ),
         error @ (BootError::Project(_) | BootError::Panicked) => {
             crate::handlers::defect::response("failed to boot location", error)
+        }
+    }
+}
+
+pub fn session_location_error(error: SessionLocationError) -> response::Response {
+    match error {
+        SessionLocationError::SessionNotFound(error) => {
+            response::bytes(StatusCode::NOT_FOUND, "application/json", encode_json(&error))
+        }
+        SessionLocationError::InvalidRequest(error) => {
+            response::bytes(StatusCode::BAD_REQUEST, "application/json", encode_json(&error))
+        }
+        SessionLocationError::Lookup(message) => {
+            crate::handlers::defect::response("failed to resolve session location", message)
         }
     }
 }

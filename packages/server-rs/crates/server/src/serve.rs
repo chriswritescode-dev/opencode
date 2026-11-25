@@ -142,12 +142,10 @@ pub(crate) async fn start(
                 env.vars().map(|(name, value)| (name.to_os_string(), value.to_os_string())).collect();
             let config_env: opencode_http::services::ConfigEnv =
                 Arc::new(move |name: &str| vars.get(OsStr::new(name)).cloned());
-            Some(Arc::new(opencode_http::services::GlobalServices::new(
-                state.db.clone(),
-                paths,
-                start_directory,
-                config_env,
-            )))
+            let mut services =
+                opencode_http::services::GlobalServices::new(state.db.clone(), paths, start_directory, config_env);
+            services.attach_sessions(state.bus.clone(), state.store.clone(), crate::VERSION.to_owned());
+            Some(Arc::new(services))
         }
         None => None,
     };
