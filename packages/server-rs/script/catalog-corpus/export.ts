@@ -100,6 +100,14 @@ function oauth() {
       state,
       result: pasted("http://127.0.0.1:1455/callback?state=state-1&error=access_denied"),
     },
+    "pasted.empty-error-description": {
+      call: "pasted",
+      text: "http://127.0.0.1:1455/callback?state=state-1&error=access_denied&error_description=&code=code-1",
+      state,
+      result: pasted(
+        "http://127.0.0.1:1455/callback?state=state-1&error=access_denied&error_description=&code=code-1",
+      ),
+    },
     "pasted.missing-code": {
       call: "pasted",
       text: "http://127.0.0.1:1455/callback?state=state-1",
