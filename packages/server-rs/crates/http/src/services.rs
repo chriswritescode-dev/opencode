@@ -1,11 +1,12 @@
 use std::ffi::OsString;
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
 use futures_util::future::BoxFuture;
 use http::StatusCode;
 use opencode_bus::{Bus, Definition, PublishOptions};
+use opencode_catalog::Catalog;
 use opencode_config::entry::Entry;
 use opencode_config::flag;
 use opencode_config::observer::{ObserverHandle, observe};
@@ -28,6 +29,7 @@ use opencode_location::location::{BootError, LocationInfo, boot_location};
 use opencode_location::map::LocationMap;
 use opencode_location::project::{ProjectService, SWEEP_INTERVAL_MS};
 use opencode_location::resolve::SessionLocationError;
+use opencode_session::agent::Agents;
 use opencode_session::search_build::SessionSearchBuild;
 use opencode_storage::Database;
 use serde_json::Value;
@@ -58,6 +60,8 @@ pub struct LocationServices {
     pub lifecycle: Lifecycle,
     pub environment: Arc<dyn Environment>,
     pub config: ConfigService,
+    pub catalog: Arc<RwLock<Catalog>>,
+    pub agents: Arc<RwLock<Agents>>,
     _config_observer: ObserverHandle,
 }
 
@@ -86,6 +90,7 @@ impl GlobalServices {
             let flag_overrides = flag_overrides.clone();
             Box::pin(async move {
                 let info = boot_location(&reference, &projects, environment.as_ref()).await?;
+                let home = paths.home.clone();
                 let config = ConfigService::start(
                     ConfigOptions::from_vars(|name| config_env(name)),
                     ConfigLocation { directory: PathBuf::from(&info.directory), project_id: info.project.id.clone() },
@@ -93,15 +98,26 @@ impl GlobalServices {
                     ServiceDeps { credentials: Arc::new(()), wellknown, channel, flag_overrides },
                 )
                 .await;
+                let entries = config.entries();
+                let catalog = Arc::new(RwLock::new(Catalog::from_entries(&entries)));
+                let agents = Arc::new(RwLock::new(Agents::from_entries(&entries, &home.to_string_lossy())));
                 let observer_projects = projects.clone();
                 let observer_directory = info.directory.clone();
                 let observer_workspace_id = info.workspace_id.clone();
+                let observer_catalog = catalog.clone();
+                let observer_agents = agents.clone();
+                let observer_home = home.clone();
                 let flags = config.clone();
                 let build = search.clone();
                 let _config_observer = observe(&config, move |_| {
                     if sqlite_fts_enabled(&flags) {
                         build.start();
                     }
+                    let entries = flags.entries();
+                    *observer_catalog.write().expect("the catalog lock is never poisoned") =
+                        Catalog::from_entries(&entries);
+                    *observer_agents.write().expect("the agents lock is never poisoned") =
+                        Agents::from_entries(&entries, &observer_home.to_string_lossy());
                     observer_projects.publish(LocationEvent::ConfigUpdated {
                         directory: observer_directory.clone(),
                         workspace_id: observer_workspace_id.clone(),
@@ -111,7 +127,15 @@ impl GlobalServices {
                     search.start();
                 }
                 let lifecycle = Lifecycle::start(projects, &info).await?;
-                Ok(Arc::new(LocationServices { info, lifecycle, environment, config, _config_observer }))
+                Ok(Arc::new(LocationServices {
+                    info,
+                    lifecycle,
+                    environment,
+                    config,
+                    catalog,
+                    agents,
+                    _config_observer,
+                }))
             })
         });
         let activity = Activity::spawn(

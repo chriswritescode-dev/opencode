@@ -1,6 +1,6 @@
 # Operation coverage
 
-Implemented: 23 of 178 operations
+Implemented: 27 of 178 operations
 
 | Operation | Method | Path | Stability | Status |
 | --- | --- | --- | --- | --- |
@@ -9,7 +9,7 @@ Implemented: 23 of 178 operations
 | `server.connect` | GET | `/auth/connect/{code}` | stable | implemented |
 | `location.get` | GET | `/api/location` | stable | implemented |
 | `location.reload` | POST | `/api/location/reload` | stable | implemented |
-| `agent.list` | GET | `/api/agent` | stable | not implemented (501) |
+| `agent.list` | GET | `/api/agent` | stable | implemented |
 | `agent.get` | GET | `/api/agent/{agentID}` | stable | not implemented (501) |
 | `plugin.list` | GET | `/api/plugin` | stable | not implemented (501) |
 | `plugin.gui` | GET | `/api/plugin/gui` | stable | not implemented (501) |
@@ -25,8 +25,8 @@ Implemented: 23 of 178 operations
 | `session.remove` | DELETE | `/api/session/{sessionID}` | stable | implemented |
 | `session.update` | PATCH | `/api/session/{sessionID}` | stable | implemented |
 | `session.fork` | POST | `/api/session/{sessionID}/fork` | stable | not implemented (501) |
-| `session.switchAgent` | POST | `/api/session/{sessionID}/agent` | stable | not implemented (501) |
-| `session.switchModel` | POST | `/api/session/{sessionID}/model` | stable | not implemented (501) |
+| `session.switchAgent` | POST | `/api/session/{sessionID}/agent` | stable | implemented |
+| `session.switchModel` | POST | `/api/session/{sessionID}/model` | stable | implemented |
 | `session.move` | POST | `/api/session/{sessionID}/move` | stable | not implemented (501) |
 | `session.prompt` | POST | `/api/session/{sessionID}/prompt` | stable | implemented |
 | `session.command` | POST | `/api/session/{sessionID}/command` | stable | not implemented (501) |
@@ -59,7 +59,7 @@ Implemented: 23 of 178 operations
 | `session.environment` | PUT | `/api/session/{sessionID}/environment` | stable | not implemented (501) |
 | `session.view` | POST | `/api/session/{sessionID}/view` | stable | not implemented (501) |
 | `session.message.list` | GET | `/api/session/{sessionID}/message` | stable | implemented |
-| `model.list` | GET | `/api/model` | stable | not implemented (501) |
+| `model.list` | GET | `/api/model` | stable | implemented |
 | `model.default` | GET | `/api/model/default` | stable | not implemented (501) |
 | `experimental.generate.text` | POST | `/api/experimental/generate/text` | experimental | not implemented (501) |
 | `experimental.generate.textLegacy` | POST | `/api/experimental/generate` | experimental | not implemented (501) |

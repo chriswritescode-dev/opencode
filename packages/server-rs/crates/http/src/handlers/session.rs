@@ -1,7 +1,8 @@
 use http::StatusCode;
 use opencode_contract::codec::encode_json;
 use opencode_contract::generated::operations::{
-    session_create, session_get, session_inbox_list, session_list, session_prompt, session_remove, session_update,
+    session_create, session_get, session_inbox_list, session_list, session_prompt, session_remove,
+    session_switch_agent, session_switch_model, session_update,
 };
 use opencode_contract::generated::requests;
 use opencode_contract::generated::{
@@ -169,6 +170,44 @@ pub fn inbox(services: &GlobalServices, raw: &RawRequest) -> response::Response 
             response::bytes(StatusCode::OK, "application/json", encode_json(&SessionInboxListResponse { data }))
         }
         Err(error) => defect::response("failed to list session inbox", error),
+    }
+}
+
+pub fn switch_agent(services: &GlobalServices, raw: &RawRequest) -> response::Response {
+    let Some(sessions) = services.sessions() else {
+        return crate::services::services_unavailable();
+    };
+    let params = match session_switch_agent::decode_params(raw) {
+        Ok(params) => params,
+        Err(error) => return invalid::request(invalid::Kind::Params, error),
+    };
+    let body = match session_switch_agent::decode_body(raw) {
+        Ok(body) => body,
+        Err(error) => return invalid::request(invalid::Kind::Body, error),
+    };
+    match sessions.switch_agent(&params.session_id.0, &body.agent.0) {
+        Ok(()) => response::empty(StatusCode::NO_CONTENT),
+        Err(error) => error_response(error),
+    }
+}
+
+pub fn switch_model(services: &GlobalServices, raw: &RawRequest) -> response::Response {
+    let Some(sessions) = services.sessions() else {
+        return crate::services::services_unavailable();
+    };
+    let params = match session_switch_model::decode_params(raw) {
+        Ok(params) => params,
+        Err(error) => return invalid::request(invalid::Kind::Params, error),
+    };
+    let body = match session_switch_model::decode_body(raw) {
+        Ok(body) => body,
+        Err(error) => return invalid::request(invalid::Kind::Body, error),
+    };
+    let model =
+        ModelRef { id: body.model.id, provider_id: ProviderID(body.model.provider_id.0), variant: body.model.variant };
+    match sessions.switch_model(&params.session_id.0, &model) {
+        Ok(()) => response::empty(StatusCode::NO_CONTENT),
+        Err(error) => error_response(error),
     }
 }
 

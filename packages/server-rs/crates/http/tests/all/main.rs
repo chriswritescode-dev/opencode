@@ -1,3 +1,4 @@
+mod agent;
 mod auth;
 mod compression;
 mod config;
@@ -7,6 +8,7 @@ mod debug;
 mod event;
 mod info;
 mod location;
+mod model;
 mod pairing;
 mod project;
 mod request_site;
@@ -18,6 +20,7 @@ mod session_log;
 mod status;
 mod ticket;
 
+use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -48,6 +51,20 @@ fn services_with(start_directory: &Path, home: PathBuf) -> Arc<GlobalServices> {
         paths,
         start_directory.to_string_lossy().into_owned(),
         Arc::new(|_: &str| None),
+    ))
+}
+
+fn services_with_config(start_directory: &Path, config: &str) -> Arc<GlobalServices> {
+    let (database, _) = Database::open(DatabaseLocation::Memory, &std::env::temp_dir()).expect("open the database");
+    let home = temp_directory("services-config-home");
+    let paths =
+        GlobalPaths::from_vars(|name| (name == "HOME").then(|| home.clone().into_os_string())).expect("global paths");
+    let config = config.to_owned();
+    Arc::new(GlobalServices::new(
+        Arc::new(database),
+        paths,
+        start_directory.to_string_lossy().into_owned(),
+        Arc::new(move |name: &str| (name == "OPENCODE_CONFIG_CONTENT").then(|| OsString::from(&config))),
     ))
 }
 

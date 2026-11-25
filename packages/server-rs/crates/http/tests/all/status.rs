@@ -141,6 +141,10 @@ fn sample_request(operation: &str) -> Option<(&'static str, &'static str)> {
         "session.prompt" => Some(("POST", "/api/session/ses_test/prompt")),
         "session.message.list" => Some(("GET", "/api/session/ses_test/message")),
         "session.inbox.list" => Some(("GET", "/api/session/ses_test/inbox")),
+        "agent.list" => Some(("GET", "/api/agent")),
+        "model.list" => Some(("GET", "/api/model")),
+        "session.switchAgent" => Some(("POST", "/api/session/ses_test/agent")),
+        "session.switchModel" => Some(("POST", "/api/session/ses_test/model")),
         _ => None,
     }
 }
@@ -156,12 +160,12 @@ async fn unknown_paths_are_an_empty_404() {
 #[tokio::test]
 async fn unimplemented_routes_are_501() {
     let app = ready_app();
-    let response = app.handle(authorized("GET", "/api/agent")).await;
+    let response = app.handle(authorized("GET", "/api/plugin")).await;
     assert_eq!(response.status(), StatusCode::NOT_IMPLEMENTED);
     assert_eq!(content_type(&response), Some("application/json"));
     assert_eq!(
         text(response).await,
-        r#"{"_tag":"UnknownError","message":"opencode-server does not implement agent.list yet"}"#
+        r#"{"_tag":"UnknownError","message":"opencode-server does not implement plugin.list yet"}"#
     );
 }
 
@@ -190,5 +194,9 @@ fn implemented_lists_the_ported_operations() {
     assert!(opencode_http::app::IMPLEMENTED.contains(&"session.prompt"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"session.message.list"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"session.inbox.list"));
-    assert_eq!(opencode_http::app::IMPLEMENTED.len(), 23);
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"agent.list"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"model.list"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"session.switchAgent"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"session.switchModel"));
+    assert_eq!(opencode_http::app::IMPLEMENTED.len(), 27);
 }

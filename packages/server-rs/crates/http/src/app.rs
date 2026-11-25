@@ -40,6 +40,10 @@ pub const IMPLEMENTED: &[&str] = &[
     "session.prompt",
     "session.message.list",
     "session.inbox.list",
+    "agent.list",
+    "model.list",
+    "session.switchAgent",
+    "session.switchModel",
 ];
 
 pub struct Options {
@@ -215,6 +219,16 @@ impl App {
             },
             "session.inbox.list" => match self.services() {
                 Some(services) => crate::handlers::session::inbox(services, &raw),
+                None => crate::services::services_unavailable(),
+            },
+            "agent.list" => crate::handlers::agent::list(self, &raw).await,
+            "model.list" => crate::handlers::model::list(self, &raw).await,
+            "session.switchAgent" => match self.services() {
+                Some(services) => crate::handlers::session::switch_agent(services, &raw),
+                None => crate::services::services_unavailable(),
+            },
+            "session.switchModel" => match self.services() {
+                Some(services) => crate::handlers::session::switch_model(services, &raw),
                 None => crate::services::services_unavailable(),
             },
             _ => not_implemented(found.route.identifier),

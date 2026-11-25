@@ -6,10 +6,10 @@ use opencode_bus::{Bus, Definition, Event, PublishOptions};
 use opencode_contract::codec::{Decode, Encode, Path, encode_json, write_optional, write_value};
 use opencode_contract::generated::requests::{SessionsQuery, SessionsQueryOrder};
 use opencode_contract::generated::{
-    AbsolutePath, AgentID, ModelRef, PermissionRuleset, ProjectID, RelativePath, SessionArchivedData,
-    SessionCreatedData, SessionDeletedData, SessionID, SessionInboxUser, SessionInfo, SessionMetadata,
-    SessionMetadataUpdatedData, SessionPermissionsData, SessionRenamedData, SessionUnarchivedData, SessionsCursor,
-    SessionsResponse, SessionsResponseCursor, WorkspaceID,
+    AbsolutePath, AgentID, ModelRef, PermissionRuleset, ProjectID, RelativePath, SessionAgentSelectedData,
+    SessionArchivedData, SessionCreatedData, SessionDeletedData, SessionID, SessionInboxUser, SessionInfo,
+    SessionMetadata, SessionMetadataUpdatedData, SessionModelSelectedData, SessionPermissionsData, SessionRenamedData,
+    SessionUnarchivedData, SessionsCursor, SessionsResponse, SessionsResponseCursor, WorkspaceID,
 };
 use opencode_location::environment::Environment;
 use opencode_location::location::LocationRef;
@@ -19,7 +19,7 @@ use opencode_util::path::Flavor;
 use serde_json::{Map, Value};
 
 use crate::prompt::{self, NoopExecution, PromptInput, SessionExecution};
-use crate::store::{Direction, ListAnchor, ListInput, Order, SessionStore};
+use crate::store::{Direction, LastAssistantInput, ListAnchor, ListInput, Order, SessionStore};
 
 const DEFAULT_LIST_LIMIT: i64 = 50;
 
@@ -232,6 +232,47 @@ impl Sessions {
                 )?;
             }
         }
+        Ok(())
+    }
+
+    pub fn switch_agent(&self, session_id: &str, agent: &str) -> Result<(), SessionError> {
+        let session = self.get(session_id)?;
+        let current = match &session.agent {
+            Some(current) => Some(current.0.clone()),
+            None => self
+                .store
+                .last_assistant_after(&LastAssistantInput { session_id: session_id.to_owned(), after_seq: None })
+                .ok()
+                .flatten()
+                .map(|assistant| assistant.agent.0),
+        };
+        if current.as_deref() == Some(agent) {
+            return Ok(());
+        }
+        let data = SessionAgentSelectedData {
+            session_id: SessionID(session_id.to_owned()),
+            agent: AgentID(agent.to_owned()),
+            previous: session.agent.clone(),
+        };
+        self.publish("session.agent.selected", &data, PublishOptions::default())?;
+        Ok(())
+    }
+
+    pub fn switch_model(&self, session_id: &str, model: &ModelRef) -> Result<(), SessionError> {
+        let session = self.get(session_id)?;
+        if let Some(current) = &session.model
+            && current.provider_id.0 == model.provider_id.0
+            && current.id == model.id
+            && current.variant.as_deref().unwrap_or("default") == model.variant.as_deref().unwrap_or("default")
+        {
+            return Ok(());
+        }
+        let data = SessionModelSelectedData {
+            session_id: SessionID(session_id.to_owned()),
+            model: model.clone(),
+            previous: session.model.clone(),
+        };
+        self.publish("session.model.selected", &data, PublishOptions::default())?;
         Ok(())
     }
 

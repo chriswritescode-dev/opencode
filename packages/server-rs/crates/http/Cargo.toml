@@ -13,6 +13,7 @@ workspace = true
 [dependencies]
 opencode-api-types.workspace = true
 opencode-bus.workspace = true
+opencode-catalog.workspace = true
 opencode-config.workspace = true
 opencode-contract.workspace = true
 opencode-local.workspace = true

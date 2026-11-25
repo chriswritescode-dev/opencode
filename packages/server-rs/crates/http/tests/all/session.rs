@@ -538,3 +538,76 @@ async fn messages_list_pages_filters_and_rejects_bad_cursors() {
         })
     );
 }
+
+#[tokio::test]
+async fn switch_model_publishes_only_on_change() {
+    let start = temp_directory("session-switch-model-start");
+    let (app, state) = session_app(&start);
+    let id = session_id(&create(&app, "{}").await);
+    let uri = format!("/api/session/{id}/model");
+    let payload = json!({ "model": { "id": "anthropic-test/test-model", "providerID": "anthropic-test" } }).to_string();
+    let mut events = state.bus.subscribe(&["session.model.selected"], None);
+
+    let response = app.handle(json_request("POST", &uri, &payload)).await;
+    assert_eq!(response.status(), StatusCode::NO_CONTENT);
+    assert!(text(response).await.is_empty());
+    let event = events.try_recv().expect("a session.model.selected event");
+    assert_eq!(event.r#type(), "session.model.selected");
+    assert_eq!(event.data()["model"]["id"], "anthropic-test/test-model");
+    assert_eq!(event.data()["model"]["providerID"], "anthropic-test");
+    assert!(event.data()["previous"].is_null());
+    assert!(events.try_recv().is_none());
+
+    let response = app.handle(json_request("POST", &uri, &payload)).await;
+    assert_eq!(response.status(), StatusCode::NO_CONTENT);
+    assert!(events.try_recv().is_none());
+
+    assert_eq!(get(&app, &id).await["data"]["model"]["id"], "anthropic-test/test-model");
+}
+
+#[tokio::test]
+async fn switch_agent_publishes_only_on_change() {
+    let start = temp_directory("session-switch-agent-start");
+    let (app, state) = session_app(&start);
+    let id = session_id(&create(&app, "{}").await);
+    let uri = format!("/api/session/{id}/agent");
+    let payload = json!({ "agent": "plan" }).to_string();
+    let mut events = state.bus.subscribe(&["session.agent.selected"], None);
+
+    let response = app.handle(json_request("POST", &uri, &payload)).await;
+    assert_eq!(response.status(), StatusCode::NO_CONTENT);
+    assert!(text(response).await.is_empty());
+    let event = events.try_recv().expect("a session.agent.selected event");
+    assert_eq!(event.r#type(), "session.agent.selected");
+    assert_eq!(event.data()["agent"], "plan");
+    assert!(event.data()["previous"].is_null());
+    assert!(events.try_recv().is_none());
+
+    let response = app.handle(json_request("POST", &uri, &payload)).await;
+    assert_eq!(response.status(), StatusCode::NO_CONTENT);
+    assert!(events.try_recv().is_none());
+
+    assert_eq!(get(&app, &id).await["data"]["agent"], "plan");
+}
+
+#[tokio::test]
+async fn switch_routes_reject_unknown_sessions() {
+    let start = temp_directory("session-switch-missing-start");
+    let (app, _) = session_app(&start);
+    let missing = json!({
+        "_tag": "SessionNotFoundError",
+        "sessionID": "ses_missing",
+        "message": "Session not found: ses_missing",
+    });
+    for (uri, payload) in [
+        ("/api/session/ses_missing/agent", json!({ "agent": "plan" })),
+        (
+            "/api/session/ses_missing/model",
+            json!({ "model": { "id": "anthropic-test/test-model", "providerID": "anthropic-test" } }),
+        ),
+    ] {
+        let response = app.handle(json_request("POST", uri, &payload.to_string())).await;
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+        assert_eq!(json_body(response).await, missing);
+    }
+}

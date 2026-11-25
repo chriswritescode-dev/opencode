@@ -1,3 +1,4 @@
+pub mod agent;
 pub mod search_build;
 pub mod search_index;
 
