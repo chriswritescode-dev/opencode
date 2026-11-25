@@ -79,3 +79,37 @@ async fn checkout_refuses_option_like_branches_and_remotes() {
     assert_eq!(remote.operation, opencode_git::Operation::Checkout);
     assert_eq!(git.branch(&repository).await, Some("main".to_string()));
 }
+
+#[tokio::test]
+async fn checkout_fails_for_a_name_that_is_only_a_path() {
+    let temp = TempDir::new();
+    let root = std::fs::canonicalize(temp.path()).expect("canonicalizes the temporary directory");
+    let git = fixture::handle();
+    let remote = fixture::git_remote(&git, &root).await;
+    let target = root.join("checkout");
+    let repository = git.clone_repository(&remote.remote, text(&target), None, None).await.expect("clones the remote");
+    tokio::fs::write(target.join("README.md"), "local\n").await.expect("changes the tracked file");
+
+    let error =
+        git.checkout_remote_branch(&repository, "origin", "README.md", false).await.expect_err("rejects the path");
+
+    assert_eq!(error.operation, opencode_git::Operation::Checkout);
+    assert_eq!(fixture::read(&target.join("README.md")).await, "local\n");
+    assert_eq!(git.branch(&repository).await, Some("main".to_string()));
+}
+
+#[tokio::test]
+async fn reset_refuses_option_like_revisions() {
+    let temp = TempDir::new();
+    let root = std::fs::canonicalize(temp.path()).expect("canonicalizes the temporary directory");
+    let git = fixture::handle();
+    let remote = fixture::git_remote(&git, &root).await;
+    let target = root.join("checkout");
+    let repository = git.clone_repository(&remote.remote, text(&target), None, None).await.expect("clones the remote");
+    tokio::fs::write(target.join("README.md"), "local\n").await.expect("changes the tracked file");
+
+    let error = git.reset_hard(&repository, "-q").await.expect_err("rejects the revision");
+
+    assert_eq!(error.operation, opencode_git::Operation::Reset);
+    assert_eq!(fixture::read(&target.join("README.md")).await, "local\n");
+}

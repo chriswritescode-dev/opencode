@@ -93,11 +93,20 @@ impl Git {
                 cause: None,
             });
         }
-        let args = if reset { vec!["checkout", "-B", branch, &reference] } else { vec!["checkout", branch] };
+        let args =
+            if reset { vec!["checkout", "-B", branch, &reference, "--"] } else { vec!["checkout", branch, "--"] };
         self.operation(Operation::Checkout, &repository.worktree, &args).await
     }
 
     pub async fn reset_hard(&self, repository: &Repository, revision: &str) -> Result<(), OperationError> {
-        self.operation(Operation::Reset, &repository.worktree, &["reset", "--hard", revision]).await
+        if revision.starts_with('-') {
+            return Err(OperationError {
+                operation: Operation::Reset,
+                message: format!("Invalid reset revision: {revision}"),
+                directory: Some(repository.worktree.clone()),
+                cause: None,
+            });
+        }
+        self.operation(Operation::Reset, &repository.worktree, &["reset", "--hard", revision, "--"]).await
     }
 }
