@@ -17,6 +17,23 @@ Runs a scenario against the TypeScript reference server and a candidate server, 
 - Each run writes `parity/out/<scenario>/reference.json`, `candidate.json` and `differences.json`, and, once at least one scenario has been captured, `parity/out/coverage.md` and `parity/out/coverage.json`. Each repetition overwrites the previous files.
 - At startup the harness reads `packages/server-rs/upstream-pin`. When that commit exists in the clone and the TypeScript reference differs from it under the pinned source directories, a warning line names the number of changed files.
 
+## Scenarios
+
+`parity/scenarios` currently holds:
+
+- `agent-model-list`: `GET /api/agent` and `GET /api/model`.
+- `config-routes`: `GET /api/config`, `GET /api/config/shell`, `PATCH /api/experimental/config`, then a re-read.
+- `debug-routes`: `POST /api/debug/heap-dump`.
+- `file-read`: `GET /api/fs/read` for an existing and a missing file, and `GET /api/fs/list`.
+- `info-auth`: `GET /api/info` with basic, query and no credentials.
+- `location`: a location reload and a subdirectory Location load, each waiting for `plugin.updated`.
+- `location-routes`: the location, debug-location list, evict and reload routes, and directory-scoped loads including a missing directory.
+- `project-routes`: project list and update, and archived-query validation.
+- `prompt-text`: a text prompt through the Anthropic route.
+- `prompt-text-only`: a text prompt through the Anthropic route with every tool denied, so the model request has an empty tool list.
+- `prompt-tool`: a scripted `read` tool call.
+- `session-create-list`: session create with and without a title, the `session.created` events, list and get.
+
 ## Steps
 
 Each scenario runs its `steps` in order. `http` and `ws` steps add an entry to `steps`; `waitEvent` and `files` steps do not.
