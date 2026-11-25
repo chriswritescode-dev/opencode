@@ -62,6 +62,7 @@ const pinned: BunPlugin = {
       if (!args.importer.endsWith("packages/plugin/src/source.bun.ts")) return
       return { path: path.join(root, "host/src/plugin/runtime.ts") }
     })
+    build.onResolve({ filter: /^node-gyp(?:\/.*)?$/ }, () => ({ path: "node-gyp", external: true }))
   },
 }
 
@@ -70,6 +71,10 @@ const plugins = await Bun.build({
   target: "bun",
   format: "esm",
   minify: true,
+  define: {
+    __dirname: JSON.stringify("/__sidecar__"),
+    __filename: JSON.stringify("/__sidecar__/index.js"),
+  },
   plugins: [pinned],
 })
 if (!plugins.success) {
