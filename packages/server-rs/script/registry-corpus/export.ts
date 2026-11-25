@@ -4,7 +4,9 @@ import { Command } from "@opencode/core/command"
 import { Config } from "@opencode/core/config"
 import { ConfigAgentPlugin } from "@opencode/core/config/plugin/agent"
 import { ConfigCommandPlugin } from "@opencode/core/config/plugin/command"
+import { ConfigCompatibilityPlugin } from "@opencode/core/config/plugin/compatibility"
 import { ConfigInstructionPlugin } from "@opencode/core/config/plugin/instruction"
+import { ConfigSkillPlugin } from "@opencode/core/config/plugin/skill"
 import { ConfigMarkdown } from "@opencode/core/config/markdown"
 import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
 import { Watcher } from "@opencode/core/filesystem/watcher"
@@ -17,13 +19,18 @@ import { Mcp } from "@opencode/core/mcp/index"
 import { AgentPlugin } from "@opencode/core/plugin/agent"
 import { CommandPlugin } from "@opencode/core/plugin/command"
 import { PlanPlugin } from "@opencode/core/plugin/plan"
+import { SkillPlugin } from "@opencode/core/plugin/skill"
 import { Project } from "@opencode/core/project"
 import { AbsolutePath } from "@opencode/core/schema"
 import { Session } from "@opencode/core/session"
 import { SessionExecution } from "@opencode/core/session/execution"
 import { SubagentJob } from "@opencode/core/session/subagent-job"
 import { ShellSelect } from "@opencode/core/shell/select"
+import { Skill } from "@opencode/core/skill"
+import { SkillDiscovery } from "@opencode/core/skill/discovery"
+import { SkillInstructions } from "@opencode/core/skill/instructions"
 import { Directory, Document, Info } from "@opencode/schema/config"
+import { ConfigPolicy } from "@opencode/schema/config/policy"
 import { SessionInbox } from "@opencode/schema/session-inbox"
 import { SessionMessage } from "@opencode/schema/session-message"
 import { canonicalJson } from "@opencode/core/util/canonical-json"
@@ -40,6 +47,7 @@ import { tempGlobalLayer } from "./fixture/global"
 import { location } from "./fixture/location"
 import { emptyConfigLayer, emptyMcpLayer, testLocationLayer } from "./fixture/mcp"
 import { offlineModels } from "./fixture/models"
+import { registerIntegrationPolicy, setOrganizationPolicy } from "./fixture/policy"
 import { readInitial } from "./lib/instructions"
 import { agentHost, host } from "./plugin/host"
 
@@ -67,6 +75,7 @@ else if (area === "scan") await exportScan()
 else if (area === "agents") await exportAgents()
 else if (area === "commands") await exportCommands()
 else if (area === "instructions") await exportInstructions()
+else if (area === "skills") await exportSkills()
 else {
   console.error(`corpus: unknown area ${area ?? ""}`)
   process.exit(1)
@@ -1320,5 +1329,248 @@ function exportCanonical() {
     values,
     canonical: values.map((value) => canonicalJson(value)),
     hashes: values.map((value) => Instructions.hash(value)),
+  }
+}
+
+type SkillCase = {
+  name: string
+  files?: Record<string, string>
+  directories?: string[]
+  documents?: Array<Record<string, unknown>>
+  integration?: Record<string, unknown>
+  compatibility?: { claude: string[]; agents: string[] }
+  policies?: Array<ConfigPolicy.Info>
+  home: string
+  directory: string
+  app: { version: string; channel: string }
+}
+
+function scrubSkillDiagnostics(content: string) {
+  const prefixes = ["- opencode version: ", "- install/channel: ", "- OS: ", "- Terminal: ", "- Shell: "]
+  return content
+    .split("\n")
+    .map((line) => {
+      const prefix = prefixes.find((item) => line.startsWith(item))
+      return prefix === undefined ? line : `${prefix}<value>`
+    })
+    .join("\n")
+}
+
+function skillLayer() {
+  return Layer.merge(
+    AppNodeBuilder.build(LayerNode.group([Skill.node, SkillInstructions.node, Bus.node, FSUtil.node])),
+    Watcher.testLayer,
+  )
+}
+
+async function exportSkills() {
+  const app = { version: "1.2.3", channel: "beta" }
+  const localPolicies: Array<ConfigPolicy.Info> = [{ action: "skill.use", resource: "*", effect: "allow" }]
+  const organizationPolicies: Array<ConfigPolicy.Info> = [
+    { action: "skill.use", resource: "*", effect: "deny" },
+    { action: "skill.use", resource: "opencode", effect: "allow" },
+  ]
+  const cases: SkillCase[] = [
+    {
+      name: "builtins",
+      documents: [
+        {
+          plugins: ["package-plugin", "-disabled", "local.ts", { package: "package-plugin", options: { enabled: true } }],
+        },
+      ],
+      home: "home",
+      directory: "project",
+      app,
+    },
+    {
+      name: "config-sources",
+      files: {
+        "opencode/skill/deploy/SKILL.md": `---
+name: Deploy
+description: Ship it
+---
+# Deploy`,
+        "opencode/skills/opencode/SKILL.md": `---
+name: Config OpenCode
+description: Configured override
+---
+# Config OpenCode`,
+        "opencode/skills/loose.md": `---
+name: Loose
+description: Loose skill
+---
+# Loose`,
+        "opencode/skills/node_modules/skip/SKILL.md": `---
+name: Skipped
+description: Must not load
+---
+# Skipped`,
+        "opencode/skills/.hidden/SKILL.md": `---
+name: Hidden
+description: Must not load
+---
+# Hidden`,
+        "opencode/skills/a/b/c/d/e/f/g/SKILL.md": `---
+name: Deep
+description: Too deep
+---
+# Deep`,
+        "home/shared/manual/SKILL.md": `---
+name: Manual
+description: Manual only
+metadata:
+  opencode/autoinvoke: false
+---
+# Manual`,
+        "project/relative/tool.md": `---
+name: Tool
+description: Tool skill
+---
+# Tool`,
+        "project/relative/nested/SKILL.md": `---
+name: Nested
+---
+# Nested`,
+        "project/relative/broken.md": "---\ndescription: foo: bar\nmetadata: [\n---\n# broken",
+      },
+      directories: ["opencode"],
+      documents: [{ skills: ["~/shared", "./relative"] }],
+      home: "home",
+      directory: "project",
+      app,
+    },
+    {
+      name: "compatibility",
+      files: {
+        "claude/skills/review/SKILL.md": `---
+name: Review
+description: Claude review
+---
+# Review`,
+        "claude/skills/loose.md": `---
+name: Claude Loose
+description: Claude loose
+---
+# Claude Loose`,
+        "agents/skills/check/SKILL.md": `---
+name: Check
+description: Agent check
+---
+# Check`,
+      },
+      compatibility: { claude: ["claude"], agents: ["agents"] },
+      home: "home",
+      directory: "project",
+      app,
+    },
+    {
+      name: "policy",
+      files: {
+        "opencode/skills/team/SKILL.md": `---
+name: Team
+description: Team skill
+---
+# Team`,
+        "opencode/skills/deploy/SKILL.md": `---
+name: Deploy
+description: Deploy skill
+---
+# Deploy`,
+      },
+      directories: ["opencode"],
+      documents: [{ policies: localPolicies }],
+      integration: { policies: organizationPolicies },
+      policies: organizationPolicies,
+      home: "home",
+      directory: "project",
+      app,
+    },
+  ]
+  const output: string[] = []
+  for (const item of cases) output.push(await exportSkillCase(item))
+  process.stdout.write(`[\n${output.join(",\n")}\n]\n`)
+}
+
+async function exportSkillCase(item: SkillCase) {
+  const root = await mkdtemp(path.join(tmpdir(), "opencode-skill-case-"))
+  try {
+    const canonical = await realpath(root)
+    const absolute = (relative: string) => path.join(canonical, relative)
+    await mkdir(absolute(item.home), { recursive: true })
+    await mkdir(absolute(item.directory), { recursive: true })
+    for (const [file, content] of Object.entries(item.files ?? {})) {
+      const target = absolute(file)
+      await mkdir(path.dirname(target), { recursive: true })
+      await writeFile(target, content)
+    }
+    const entries: Array<Directory | Document> = [
+      ...(item.directories ?? []).map(
+        (directory) => new Directory({ type: "directory", path: AbsolutePath.make(absolute(directory)) }),
+      ),
+      ...(item.documents ?? []).map(
+        (document) => new Document({ type: "document", info: decodeConfig(document) }),
+      ),
+    ]
+    const compatibility = item.compatibility && {
+      claude: item.compatibility.claude.map((directory) => AbsolutePath.make(absolute(directory))),
+      agents: item.compatibility.agents.map((directory) => AbsolutePath.make(absolute(directory))),
+    }
+    const program = Effect.gen(function* () {
+      const service = yield* Skill.Service
+      const pluginHost = host({
+        app: { name: "test", ...item.app },
+        skill: {
+          list: () => Effect.die("unused skill.list"),
+          transform: service.transform,
+          reload: service.reload,
+        },
+      })
+      yield* SkillPlugin.Plugin.effect(pluginHost)
+      if (compatibility) yield* ConfigCompatibilityPlugin.Plugin.effect(pluginHost)
+      yield* ConfigSkillPlugin.Plugin.effect(pluginHost).pipe(
+        Effect.provideService(SkillDiscovery.Service, SkillDiscovery.Service.of({ pull: () => Effect.succeed([]) })),
+        Effect.provideService(Global.Service, Global.Service.of({ ...Global.make(), home: absolute(item.home) })),
+        Effect.provideService(
+          Location.Service,
+          Location.Service.of(location({ directory: AbsolutePath.make(absolute(item.directory)) })),
+        ),
+      )
+      if (item.policies) {
+        yield* setOrganizationPolicy(item.policies)
+        yield* registerIntegrationPolicy({ skill: service, events: (yield* Bus.Service).subscribe() })
+      }
+      const list = (yield* service.list()).map((skill: Skill.Info) =>
+        skill.id === "report" ? { ...skill, content: scrubSkillDiagnostics(skill.content) } : skill,
+      )
+      const instructions = yield* SkillInstructions.Service
+      const guidance = yield* instructions.load([]).pipe(Effect.flatMap(readInitial))
+      return {
+        name: item.name,
+        files: item.files ?? {},
+        directories: item.directories ?? [],
+        documents: item.documents ?? [],
+        ...(item.integration === undefined ? {} : { integration: item.integration }),
+        ...(compatibility === undefined ? {} : { compatibility: item.compatibility }),
+        home: item.home,
+        directory: item.directory,
+        app: item.app,
+        list,
+        guidance: guidance.text,
+      }
+    })
+    const result = await Effect.runPromise(
+      program.pipe(
+        Effect.scoped,
+        Effect.provide(skillLayer()),
+        Effect.provide(Config.testLayer(entries, compatibility)),
+        Effect.provide(Logger.layer([])),
+      ),
+    )
+    console.error(
+      `skills ${item.name}: ${result.list.map((skill: Skill.Info) => skill.id).join(", ")} (guidance ${result.guidance.split("\n").length} lines)`,
+    )
+    return JSON.stringify(result).replaceAll(JSON.stringify(canonical).slice(1, -1), "{{root}}")
+  } finally {
+    await rm(root, { recursive: true, force: true })
   }
 }

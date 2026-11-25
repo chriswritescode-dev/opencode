@@ -5,6 +5,7 @@ mod corpus;
 mod instructions;
 mod markdown;
 mod scan;
+mod skill;
 mod watch;
 
 use std::path::{Path, PathBuf};
