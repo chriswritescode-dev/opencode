@@ -1145,6 +1145,14 @@ pub fn normalize_action(action: &str) -> &str {
         "write" | "patch" | "apply_patch" => "edit",
         "task" => "subagent",
         "bash" => "shell",
+        _ => renamed_tool(action),
+    }
+}
+
+pub fn renamed_tool(action: &str) -> &str {
+    match action {
+        "experimental_image_generate" => "generate_image",
+        "experimental_video_generate" => "generate_video",
         _ => action,
     }
 }

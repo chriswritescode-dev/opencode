@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use opencode_contract::codec::encode_json;
 use opencode_contract::generated::ConfigEntryDocumentInfo;
 
-use crate::generated::flags::{OPT_IN_ONLY, REGISTRY, WILDCARD};
+use crate::generated::flags::{LOCAL_ONLY, OPT_IN_ONLY, REGISTRY, WILDCARD};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum FlagSource {
@@ -38,6 +38,9 @@ pub fn resolve(
     REGISTRY
         .iter()
         .map(|(key, _)| {
+            if LOCAL_ONLY.contains(key) && !on_by_default(channel) {
+                return (*key, FlagState { enabled: false, source: FlagSource::Default });
+            }
             let opt_in_only = OPT_IN_ONLY.contains(key);
             let override_value = env.get(*key).copied().or((all && !opt_in_only).then_some(true));
             let value = settings.as_ref().and_then(|settings| settings.get(*key)).and_then(configured_value);

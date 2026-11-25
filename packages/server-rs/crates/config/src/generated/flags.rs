@@ -45,3 +45,4 @@ pub const REGISTRY: &[(&str, &str)] = &[
 ];
 
 pub const OPT_IN_ONLY: &[&str] = &["todo", "opencode_api"];
+pub const LOCAL_ONLY: &[&str] = &["opencode_api"];

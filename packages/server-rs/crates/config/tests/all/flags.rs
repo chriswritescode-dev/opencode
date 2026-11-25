@@ -10,7 +10,7 @@ use crate::support::area;
 #[test]
 fn every_flag_case_matches_the_pinned_typescript() {
     let cases = area("flags");
-    assert_eq!(cases.len(), 26, "expected 26 flag cases, found {}", cases.len());
+    assert_eq!(cases.len(), 30, "expected 30 flag cases, found {}", cases.len());
     for case in &cases {
         let decoded: Vec<ConfigEntryDocumentInfo> = case.value["entries"]
             .as_array()

@@ -206,7 +206,9 @@ pub fn normalize(input: &Value) -> Normalized {
         canonical_agent,
     );
     let migrated_agents = merge_maps(&legacy_agents, &mode_agents, &["agents".to_owned()], &mut diagnostics);
-    let native_agents = decode_map(input.get("agents"), &["agents".to_owned()], &mut diagnostics, decode_agent_entry);
+    let renamed_agents = input.get("agents").map(rename_agent_permissions);
+    let native_agents =
+        decode_map(renamed_agents.as_ref(), &["agents".to_owned()], &mut diagnostics, decode_agent_entry);
     diagnose_agent_unsupported(input.get("agent"), &["agent".to_owned()], &mut diagnostics);
     diagnose_agent_unsupported(input.get("mode"), &["mode".to_owned()], &mut diagnostics);
     merge_map(
@@ -239,8 +241,9 @@ pub fn normalize(input: &Value) -> Normalized {
 
     let mut permissions = migrate_tools(input.get("tools"), &mut diagnostics);
     permissions.extend(migrate_permissions(input.get("permission"), &mut diagnostics));
+    let renamed_permissions = input.get("permissions").map(rename_tools);
     permissions.extend(decode_list(
-        input.get("permissions"),
+        renamed_permissions.as_ref(),
         &["permissions".to_owned()],
         &mut diagnostics,
         decode_encoded::<PermissionRule>,
@@ -1157,6 +1160,38 @@ fn is_enabled_only_mcp(value: &Value) -> bool {
 fn is_direct_legacy_mcp(value: &Value) -> bool {
     let Value::Object(map) = value else { return false };
     matches!(map.get("type").and_then(Value::as_str), Some("local" | "remote"))
+}
+
+fn rename_tools(value: &Value) -> Value {
+    let Value::Array(items) = value else { return value.clone() };
+    Value::Array(
+        items
+            .iter()
+            .map(|item| {
+                let Value::Object(entry) = item else { return item.clone() };
+                let Some(Value::String(action)) = entry.get("action") else { return item.clone() };
+                let mut renamed = entry.clone();
+                renamed.insert("action".to_owned(), Value::String(v1::renamed_tool(action).to_owned()));
+                Value::Object(renamed)
+            })
+            .collect(),
+    )
+}
+
+fn rename_agent_permissions(value: &Value) -> Value {
+    let Value::Object(agents) = value else { return value.clone() };
+    Value::Object(
+        agents
+            .iter()
+            .map(|(name, agent)| {
+                let Value::Object(entry) = agent else { return (name.clone(), agent.clone()) };
+                let Some(permissions) = entry.get("permissions") else { return (name.clone(), agent.clone()) };
+                let mut renamed = entry.clone();
+                renamed.insert("permissions".to_owned(), rename_tools(permissions));
+                (name.clone(), Value::Object(renamed))
+            })
+            .collect(),
+    )
 }
 
 fn decode_map(
