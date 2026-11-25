@@ -1,4 +1,5 @@
 mod corpus;
+mod search_index;
 mod store;
 mod usage;
 

@@ -938,6 +938,7 @@ name = "opencode-session"
 version = "0.1.0"
 dependencies = [
  "futures-util",
+ "log",
  "opencode-bus",
  "opencode-contract",
  "opencode-storage",
@@ -945,6 +946,7 @@ dependencies = [
  "rand",
  "regex-lite",
  "rusqlite",
+ "serde",
  "serde_json",
  "tokio",
 ]

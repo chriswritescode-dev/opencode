@@ -7,6 +7,7 @@ use futures_util::future::BoxFuture;
 use http::StatusCode;
 use opencode_config::entry::Entry;
 use opencode_config::flag;
+use opencode_config::observer::{ObserverHandle, observe};
 use opencode_config::options::{ConfigLocation, ConfigOptions};
 use opencode_config::paths::GlobalPaths;
 use opencode_config::seams::KvStore;
@@ -25,6 +26,7 @@ use opencode_location::lifecycle::Lifecycle;
 use opencode_location::location::{BootError, LocationInfo, boot_location};
 use opencode_location::map::LocationMap;
 use opencode_location::project::{ProjectService, SWEEP_INTERVAL_MS};
+use opencode_session::search_build::SessionSearchBuild;
 use opencode_storage::Database;
 use serde_json::Value;
 use tokio::task::JoinHandle;
@@ -40,6 +42,7 @@ pub struct GlobalServices {
     pub locations: LocationMap<LocationServices>,
     pub activity: Activity<LocationServices>,
     pub wellknown: Arc<WellKnown>,
+    pub search: Arc<SessionSearchBuild>,
     pub start_directory: String,
     pub environment: ConfigEnv,
     sweep: JoinHandle<()>,
@@ -50,6 +53,7 @@ pub struct LocationServices {
     pub lifecycle: Lifecycle,
     pub environment: Arc<dyn Environment>,
     pub config: ConfigService,
+    _search_observer: ObserverHandle,
 }
 
 impl GlobalServices {
@@ -57,6 +61,7 @@ impl GlobalServices {
         let projects = Arc::new(ProjectService::new(database.clone()));
         let wellknown = Arc::new(WellKnown::new(Arc::new(StorageKv { database: database.clone() })));
         let environment: Arc<dyn Environment> = Arc::new(LocalEnvironment::new());
+        let search = Arc::new(SessionSearchBuild::new(database.clone()));
         let channel = flag::build_channel().to_owned();
         let flag_overrides = config_env("OPENCODE_FLAGS").map(|value| value.to_string_lossy().into_owned());
         let boot_projects = projects.clone();
@@ -64,12 +69,14 @@ impl GlobalServices {
         let boot_config_env = config_env.clone();
         let boot_paths = paths.clone();
         let boot_wellknown = wellknown.clone();
+        let boot_search = search.clone();
         let locations = LocationMap::new(move |reference| {
             let projects = boot_projects.clone();
             let environment = boot_environment.clone();
             let config_env = boot_config_env.clone();
             let paths = boot_paths.clone();
             let wellknown = boot_wellknown.clone();
+            let search = boot_search.clone();
             let channel = channel.clone();
             let flag_overrides = flag_overrides.clone();
             Box::pin(async move {
@@ -81,8 +88,18 @@ impl GlobalServices {
                     ServiceDeps { credentials: Arc::new(()), wellknown, channel, flag_overrides },
                 )
                 .await;
+                let flags = config.clone();
+                let build = search.clone();
+                let _search_observer = observe(&config, move |_| {
+                    if sqlite_fts_enabled(&flags) {
+                        build.start();
+                    }
+                });
+                if sqlite_fts_enabled(&config) {
+                    search.start();
+                }
                 let lifecycle = Lifecycle::start(projects, &info).await?;
-                Ok(Arc::new(LocationServices { info, lifecycle, environment, config }))
+                Ok(Arc::new(LocationServices { info, lifecycle, environment, config, _search_observer }))
             })
         });
         let activity = Activity::spawn(
@@ -116,6 +133,7 @@ impl GlobalServices {
             locations,
             activity,
             wellknown,
+            search,
             start_directory,
             environment: config_env,
             sweep,
@@ -179,6 +197,10 @@ impl KvStore for StorageKv {
             }
         })
     }
+}
+
+fn sqlite_fts_enabled(config: &ConfigService) -> bool {
+    config.flags().into_iter().any(|(key, state)| key == "sqlite_fts" && state.enabled)
 }
 
 fn configured_idle_timeout(config: &ConfigService) -> Option<IdleTimeout> {

@@ -1,3 +1,6 @@
+pub mod search_build;
+pub mod search_index;
+
 mod blob;
 mod fork;
 mod history;

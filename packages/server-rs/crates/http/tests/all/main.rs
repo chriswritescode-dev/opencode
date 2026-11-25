@@ -11,6 +11,7 @@ mod pairing;
 mod project;
 mod request_site;
 mod router;
+mod search;
 mod serve;
 mod session_log;
 mod status;

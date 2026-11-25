@@ -15,9 +15,11 @@ opencode-bus.workspace = true
 opencode-contract.workspace = true
 opencode-storage.workspace = true
 opencode-util = { workspace = true, features = ["ring"] }
+log.workspace = true
 rand.workspace = true
 regex-lite.workspace = true
 rusqlite.workspace = true
+serde.workspace = true
 serde_json.workspace = true
 tokio.workspace = true
 
