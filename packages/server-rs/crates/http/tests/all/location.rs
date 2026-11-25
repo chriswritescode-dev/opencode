@@ -21,6 +21,10 @@ async fn body_json(response: opencode_http::response::Response) -> Value {
     serde_json::from_str(&text(response).await).expect("a JSON body")
 }
 
+async fn hg_available() -> bool {
+    tokio::process::Command::new("hg").arg("--version").output().await.is_ok_and(|output| output.status.success())
+}
+
 #[tokio::test]
 async fn location_get_resolves_the_header_query_and_start_directory() {
     let start = temp_directory("location-start");
@@ -170,6 +174,10 @@ async fn evicting_a_leased_location_keeps_the_lease_and_reboots_the_next_get() {
 
 #[tokio::test]
 async fn hg_locations_expose_the_mercurial_provider() {
+    if !hg_available().await {
+        eprintln!("mercurial is not installed; skipping");
+        return;
+    }
     let start = temp_directory("location-hg-provider");
     let init = tokio::process::Command::new("hg")
         .arg("init")
@@ -194,6 +202,10 @@ async fn hg_locations_expose_the_mercurial_provider() {
 
 #[tokio::test]
 async fn markerless_locations_can_initialize_mercurial() {
+    if !hg_available().await {
+        eprintln!("mercurial is not installed; skipping");
+        return;
+    }
     let start = temp_directory("location-hg-init");
     let services = services_at(&start);
     let reference = LocationRef::new(start.to_string_lossy().into_owned(), None);
