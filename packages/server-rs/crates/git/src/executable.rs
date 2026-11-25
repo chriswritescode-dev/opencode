@@ -92,8 +92,12 @@ fn darwin_git_executable(resolved: Option<&str>, developer_dirs: &[String], exis
 }
 
 fn posix_absolute(value: &str) -> String {
+    let resolved = match std::env::current_dir() {
+        Ok(current) if !value.starts_with('/') => format!("{}/{}", current.to_string_lossy(), value),
+        _ => value.to_string(),
+    };
     let mut segments: Vec<&str> = Vec::new();
-    for segment in value.split('/') {
+    for segment in resolved.split('/') {
         match segment {
             "" | "." => {}
             ".." => {

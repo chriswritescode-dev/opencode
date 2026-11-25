@@ -79,6 +79,16 @@ fn leaves_lookup_to_the_process_on_linux() {
     assert_eq!(resolve_git_executable(Platform::Linux, Some("/usr/bin/git"), &[], |_| true), "git");
 }
 
+#[cfg(unix)]
+#[test]
+fn resolves_relative_macos_candidates_against_the_working_directory() {
+    let current = std::env::current_dir().expect("a working directory");
+    let expected = format!("{}/bin/git", current.to_string_lossy());
+    assert_eq!(resolve_git_executable(Platform::Darwin, Some("bin/git"), &[], |_| false), expected);
+    let expected = format!("{}/git", current.to_string_lossy());
+    assert_eq!(resolve_git_executable(Platform::Darwin, Some("./git"), &[], |_| false), expected);
+}
+
 #[test]
 fn falls_back_to_path_lookup_when_git_is_unresolved() {
     assert_eq!(resolve_git_executable(Platform::Windows, None, &[], |_| false), "git");
