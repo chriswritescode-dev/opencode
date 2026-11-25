@@ -15,11 +15,11 @@ use opencode_contract::generated::{
     SessionExecutionInterruptedDataReason, SessionExecutionStartedData, SessionExecutionSucceededData, SessionID,
     WorkspaceID,
 };
+use opencode_registry::agent::AgentService;
 use rusqlite::Connection;
 use serde_json::Value;
 use tokio::sync::watch;
 
-use crate::agent::Agents;
 use crate::context::ContextError;
 use crate::instructions::BuiltinsInput;
 use crate::runner::Runner;
@@ -72,7 +72,7 @@ impl SessionExecution for NoopExecution {
 
 pub trait Placed: Send + Sync {
     fn catalog(&self) -> &Catalog;
-    fn agents(&self) -> &Agents;
+    fn agents(&self) -> &AgentService;
     fn builtins(&self) -> &BuiltinsInput;
     fn env(&self) -> &dyn Env;
     fn location(&self) -> Option<&LocationRef>;

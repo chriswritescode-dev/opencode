@@ -115,6 +115,7 @@ impl Runner {
                 session_id,
                 list,
             )
+            .await
             .map_err(ExecutionError::Context)?;
             let assistant_id = format!("msg_{}", opencode_storage::id::ascending());
             log::debug!("running session step {step} for {session_id}");

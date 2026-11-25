@@ -9,7 +9,6 @@ use opencode_contract::codec::decode_json;
 use opencode_contract::generated::{ConfigEntryDocumentInfo, SessionInboxDelivery};
 use opencode_location::environment::local::LocalEnvironment;
 use opencode_location::project::ProjectService;
-use opencode_session::agent::Agents;
 use opencode_session::context::{self, LoadInput};
 use opencode_session::instruction_state;
 use opencode_session::instructions::{self, BuiltinsInput, List};
@@ -19,7 +18,7 @@ use opencode_storage::{Database, DatabaseLocation};
 use opencode_util::time::Zone;
 use serde_json::{Value, json};
 
-use crate::TempDir;
+use crate::{TempDir, TestAgents, test_agents};
 
 const FIXED_NOW: i64 = 1_800_000_000_000;
 
@@ -29,7 +28,7 @@ struct Setup {
     bus: Arc<Bus>,
     store: SessionStore,
     catalog: Catalog,
-    agents: Agents,
+    agents: TestAgents,
     list: List,
     work: String,
 }
@@ -79,7 +78,7 @@ fn config_value(build_system: Option<&str>) -> Value {
     })
 }
 
-fn setup(build_system: Option<&str>) -> Setup {
+async fn setup(build_system: Option<&str>) -> Setup {
     let dir = TempDir::new();
     let work_path = dir.path().join("work");
     std::fs::create_dir_all(&work_path).expect("create the work directory");
@@ -118,7 +117,7 @@ fn setup(build_system: Option<&str>) -> Setup {
         origin: Origin::File,
     });
     let catalog = Catalog::from_entries(std::slice::from_ref(&entry));
-    let agents = Agents::from_entries(std::slice::from_ref(&entry), "/home/test");
+    let agents = test_agents(std::slice::from_ref(&entry), "/home/test").await;
 
     let sessions = Sessions::new(
         store.clone(),
@@ -161,9 +160,9 @@ fn substitute(value: &mut Value, root: &str, date: &str, platform: &str) {
     }
 }
 
-#[test]
-fn prepared_request_matches_the_typescript_body() {
-    let setup = setup(None);
+#[tokio::test]
+async fn prepared_request_matches_the_typescript_body() {
+    let setup = setup(None).await;
     instruction_state::prepare(&setup.database, &setup.bus, &setup.list, "ses_1")
         .expect("prepare the builtin instructions");
     let env = MapEnv::default();
@@ -172,13 +171,14 @@ fn prepared_request_matches_the_typescript_body() {
             database: &setup.database,
             store: &setup.store,
             catalog: &setup.catalog,
-            agents: &setup.agents,
+            agents: &setup.agents.service,
             env: &env,
             builtins: setup.builtins(),
         },
         "ses_1",
         setup.list,
     )
+    .await
     .expect("load the session context");
     let request = model_request::prepare(&loaded, &app());
     let compiled = opencode_ai::route::compile::compile(
@@ -206,9 +206,9 @@ fn prepared_request_matches_the_typescript_body() {
     assert_eq!(actual, expected);
 }
 
-#[test]
-fn configured_agent_system_replaces_the_default_prompt() {
-    let setup = setup(Some("You are a test agent."));
+#[tokio::test]
+async fn configured_agent_system_replaces_the_default_prompt() {
+    let setup = setup(Some("You are a test agent.")).await;
     instruction_state::prepare(&setup.database, &setup.bus, &setup.list, "ses_1")
         .expect("prepare the builtin instructions");
     let env = MapEnv::default();
@@ -217,13 +217,14 @@ fn configured_agent_system_replaces_the_default_prompt() {
             database: &setup.database,
             store: &setup.store,
             catalog: &setup.catalog,
-            agents: &setup.agents,
+            agents: &setup.agents.service,
             env: &env,
             builtins: setup.builtins(),
         },
         "ses_1",
         setup.list,
     )
+    .await
     .expect("load the session context");
     let request = model_request::prepare(&loaded, &app());
     let SystemPart::Text { text, .. } = request.system.first().expect("the request carries a system prompt");

@@ -46,7 +46,6 @@ use opencode_registry::instructions::discovery::{InstructionDiscovery, Instructi
 use opencode_registry::reference::{NoRefresh, ReferenceService};
 use opencode_registry::skill::SkillService;
 use opencode_session::SessionStore;
-use opencode_session::agent::Agents;
 use opencode_session::execution::{Placed, Placement};
 use opencode_session::instructions::BuiltinsInput;
 use opencode_session::search_build::SessionSearchBuild;
@@ -77,9 +76,8 @@ struct LocationPlacement {
 }
 
 struct PlacedLocation {
-    _lease: Lease<LocationServices>,
+    lease: Lease<LocationServices>,
     catalog: Catalog,
-    agents: Agents,
     builtins: BuiltinsInput,
     env: Arc<dyn opencode_ai::Env>,
     location: LocationRef,
@@ -99,7 +97,6 @@ impl Placement for LocationPlacement {
             let lease = locations.get(&reference).await.map_err(|error| error.to_string())?;
             let entries = lease.services().config.entries();
             let catalog = Catalog::from_entries(&entries);
-            let agents = Agents::from_entries(&entries, &paths.home.to_string_lossy());
             let tmp = std::fs::canonicalize(&paths.tmp).unwrap_or_else(|_| paths.tmp.clone());
             let builtins = BuiltinsInput {
                 directory: lease.services().info.directory.clone(),
@@ -109,11 +106,10 @@ impl Placement for LocationPlacement {
             };
             let placed = PlacedLocation {
                 catalog,
-                agents,
                 builtins,
                 env,
                 location: opencode_session::execution::contract_location(&reference),
-                _lease: lease,
+                lease,
             };
             Ok(Arc::new(placed) as Arc<dyn Placed>)
         })
@@ -125,8 +121,8 @@ impl Placed for PlacedLocation {
         &self.catalog
     }
 
-    fn agents(&self) -> &Agents {
-        &self.agents
+    fn agents(&self) -> &AgentService {
+        &self.lease.services().agents
     }
 
     fn builtins(&self) -> &BuiltinsInput {
@@ -142,7 +138,7 @@ impl Placed for PlacedLocation {
     }
 
     fn is_closed(&self) -> bool {
-        self._lease.services().lifecycle.is_closed()
+        self.lease.services().lifecycle.is_closed()
     }
 }
 

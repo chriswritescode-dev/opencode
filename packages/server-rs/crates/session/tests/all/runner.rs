@@ -14,7 +14,7 @@ use opencode_contract::generated::{
 };
 use opencode_location::environment::local::LocalEnvironment;
 use opencode_location::project::ProjectService;
-use opencode_session::agent::Agents;
+use opencode_registry::agent::AgentService;
 use opencode_session::instructions::BuiltinsInput;
 use opencode_session::model_request::AppInfo;
 use opencode_session::runner::Runner;
@@ -27,7 +27,7 @@ use serde_json::{Value, json};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 
-use crate::TempDir;
+use crate::{TempDir, TestAgents, test_agents};
 
 const FIXED_NOW: i64 = 1_800_000_000_000;
 const CASSETTE: &str = include_str!(
@@ -84,7 +84,7 @@ fn config_value(port: u16) -> Value {
 
 struct TestPlaced {
     catalog: Catalog,
-    agents: Agents,
+    agents: TestAgents,
     builtins: BuiltinsInput,
     env: MapEnv,
     closed: AtomicBool,
@@ -95,8 +95,8 @@ impl Placed for TestPlaced {
         &self.catalog
     }
 
-    fn agents(&self) -> &Agents {
-        &self.agents
+    fn agents(&self) -> &AgentService {
+        &self.agents.service
     }
 
     fn builtins(&self) -> &BuiltinsInput {
@@ -129,21 +129,21 @@ impl Placement for TestPlacement {
     }
 }
 
-fn test_placed(entry: &Entry, work: &str, root: &Path, closed: bool) -> TestPlaced {
+async fn test_placed(entry: &Entry, work: &str, root: &Path, closed: bool) -> TestPlaced {
     TestPlaced {
         catalog: Catalog::from_entries(std::slice::from_ref(entry)),
-        agents: Agents::from_entries(std::slice::from_ref(entry), "/home/test"),
+        agents: test_agents(std::slice::from_ref(entry), "/home/test").await,
         builtins: builtins_input(work, root),
         env: MapEnv::new([("ANTHROPIC_API_KEY".to_owned(), "parity".to_owned())]),
         closed: AtomicBool::new(closed),
     }
 }
 
-fn setup(port: u16) -> Setup {
-    setup_placements(port, false)
+async fn setup(port: u16) -> Setup {
+    setup_placements(port, false).await
 }
 
-fn setup_placements(port: u16, closed_first: bool) -> Setup {
+async fn setup_placements(port: u16, closed_first: bool) -> Setup {
     let dir = TempDir::new();
     let work_path = dir.path().join("work");
     std::fs::create_dir_all(&work_path).expect("create the work directory");
@@ -180,11 +180,11 @@ fn setup_placements(port: u16, closed_first: bool) -> Setup {
     });
     let placements = if closed_first {
         vec![
-            Arc::new(test_placed(&entry, &work, dir.path(), true)),
-            Arc::new(test_placed(&entry, &work, dir.path(), false)),
+            Arc::new(test_placed(&entry, &work, dir.path(), true).await),
+            Arc::new(test_placed(&entry, &work, dir.path(), false).await),
         ]
     } else {
-        vec![Arc::new(test_placed(&entry, &work, dir.path(), false))]
+        vec![Arc::new(test_placed(&entry, &work, dir.path(), false).await)]
     };
     let placement = TestPlacement { placements, calls: AtomicUsize::new(0) };
     let runner = Runner::new(store.clone(), bus.clone(), database.clone(), Arc::new(placement), app());
@@ -390,7 +390,7 @@ fn idle_outcome(store: &SessionStore) -> SessionMessageIdleOutcome {
 #[tokio::test]
 async fn drain_streams_text_and_settles_the_step() {
     let port = start_server(Response::cassette()).await;
-    let setup = setup(port);
+    let setup = setup(port).await;
     let mut subscription = setup.bus.subscribe_all(None);
     prompt(&setup.sessions);
     let events = collect_until(&mut subscription, "session.execution.succeeded").await;
@@ -445,7 +445,7 @@ async fn drain_streams_text_and_settles_the_step() {
 #[tokio::test]
 async fn a_closed_placement_reloads_the_location_instead_of_succeeding() {
     let port = start_server(Response::cassette()).await;
-    let setup = setup_placements(port, true);
+    let setup = setup_placements(port, true).await;
     let mut subscription = setup.bus.subscribe_all(None);
     prompt(&setup.sessions);
     let events = collect_until(&mut subscription, "session.execution.succeeded").await;
@@ -459,7 +459,7 @@ async fn a_closed_placement_reloads_the_location_instead_of_succeeding() {
 #[tokio::test]
 async fn drain_reports_a_rejected_request() {
     let port = start_server(Response::rejection()).await;
-    let setup = setup(port);
+    let setup = setup(port).await;
     let mut subscription = setup.bus.subscribe_all(None);
     prompt(&setup.sessions);
     let events = collect_until(&mut subscription, "session.execution.failed").await;
@@ -482,7 +482,7 @@ async fn drain_reports_a_rejected_request() {
 #[tokio::test]
 async fn removing_a_running_session_interrupts_the_drain_first() {
     let port = start_server(Response::cassette().delayed()).await;
-    let setup = setup(port);
+    let setup = setup(port).await;
     let mut subscription = setup.bus.subscribe_all(None);
     prompt(&setup.sessions);
     let mut events = collect_until(&mut subscription, "session.step.started").await;
@@ -506,7 +506,7 @@ async fn removing_a_running_session_interrupts_the_drain_first() {
 #[tokio::test]
 async fn interrupting_a_streaming_step_flushes_partial_output() {
     let port = start_server(Response::cassette().delayed_after_first_delta()).await;
-    let setup = setup(port);
+    let setup = setup(port).await;
     let mut subscription = setup.bus.subscribe_all(None);
     prompt(&setup.sessions);
     let mut events = collect_until(&mut subscription, "session.text.delta").await;
@@ -539,7 +539,7 @@ async fn interrupting_a_streaming_step_flushes_partial_output() {
 
 #[tokio::test]
 async fn removing_a_session_waits_for_the_execution_to_go_idle() {
-    let setup = setup(0);
+    let setup = setup(0).await;
     let execution = Arc::new(BlockingExecution::new());
     let sessions = Sessions::new(
         setup.store.clone(),
@@ -607,7 +607,7 @@ impl SessionExecution for BlockingExecution {
 #[tokio::test]
 async fn every_wake_drains_its_prompt() {
     let port = start_server(Response::cassette()).await;
-    let setup = setup(port);
+    let setup = setup(port).await;
     let rounds = 20;
     for _ in 0..rounds {
         prompt(&setup.sessions);

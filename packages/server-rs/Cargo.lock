@@ -1061,6 +1061,7 @@ dependencies = [
  "opencode-config",
  "opencode-contract",
  "opencode-location",
+ "opencode-registry",
  "opencode-storage",
  "opencode-util",
  "rand",
