@@ -245,7 +245,11 @@ async fn route(state: &State, session_id: &SessionID) -> Option<Pick> {
         });
     }
     let fallback = snapshot.values().find(|model| model.0.is_chat_fallback == Some(true)).or_else(|| {
-        snapshot.values().find(|model| model.0.billing.as_ref().is_some_and(|billing| billing.auto_discount.is_some()))
+        snapshot.values().find(|model| {
+            model.0.billing.as_ref().is_some_and(|billing| {
+                billing.auto_discount.is_some_and(|discount| discount != 0.0 && !discount.is_nan())
+            })
+        })
     })?;
     Some(Pick { model: fallback.0.id.clone(), account: token, token: None, until: now + ROUTE_TTL })
 }

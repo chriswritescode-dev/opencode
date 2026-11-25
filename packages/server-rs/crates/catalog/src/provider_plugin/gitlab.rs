@@ -146,7 +146,7 @@ impl OAuthImplementation for GitlabOAuth {
         let default_instance_url = self.default_instance_url.clone();
         Some(Box::new(move |value| {
             let instance_url = credential_instance_url(value.metadata.as_ref(), &env, &default_instance_url);
-            url::Url::parse(&instance_url).ok()?.host_str().map(str::to_owned)
+            url::Url::parse(&instance_url).ok().map(|url| url_host(&url))
         }))
     }
 
@@ -410,9 +410,9 @@ async fn begin_authorization(
         .filter(|value| !value.is_empty())
         .unwrap_or_else(|| resolve_default_instance_url(&env, &default_instance_url));
     let url = url::Url::parse(&requested).map_err(|_| error("Invalid GitLab instance URL"))?;
-    let instance_url = format!("{}{}", &url[..url::Position::BeforePath], url.path().trim_end_matches('/'));
-    if override_client.is_none() && url.host_str() != Some(GITLAB_COM_HOST) {
-        let host = url.host_str().unwrap_or_default();
+    let instance_url = format!("{}{}", url.origin().ascii_serialization(), url.path().trim_end_matches('/'));
+    let host = url_host(&url);
+    if override_client.is_none() && host != GITLAB_COM_HOST {
         return Err(error(format!(
             "The bundled GitLab OAuth application only exists on {GITLAB_COM_HOST}. To sign in to {host}, register an OAuth application there with redirect URI {REDIRECT_URI} and the `{OAUTH_SCOPE}` scope (not marked \"Confidential\"), then set GITLAB_OAUTH_CLIENT_ID to its application ID."
         )));
@@ -714,6 +714,14 @@ fn bind_error(failure: io::Error) -> AuthorizationError {
 
 fn error(message: impl Into<String>) -> AuthorizationError {
     AuthorizationError::new(io::Error::other(message.into()))
+}
+
+fn url_host(url: &url::Url) -> String {
+    let host = url.host_str().unwrap_or_default();
+    match url.port() {
+        Some(port) => format!("{host}:{port}"),
+        None => host.to_owned(),
+    }
 }
 
 #[derive(Deserialize)]

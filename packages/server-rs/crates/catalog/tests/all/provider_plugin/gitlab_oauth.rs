@@ -392,6 +392,19 @@ async fn fails_early_for_self_managed_instances_without_gitlab_oauth_client_id()
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn treats_gitlab_com_on_a_non_default_port_as_self_managed() {
+    let routes = Routes::new();
+    let mut harness = start(Input::new(Vec::new())).await;
+    add_plugin(&mut harness, routes.clone()).await;
+    let error = try_connect(&harness, Some(answer("https://gitlab.com:8443")))
+        .await
+        .expect_err("gitlab.com on another port needs its own client ID");
+    let AttemptError::Authorization(error) = error else { panic!("the GitLab login fails before binding") };
+    assert!(error.message().contains("To sign in to gitlab.com:8443,"));
+    assert!(routes.requests().is_empty());
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn refreshes_an_oauth_credential_using_its_stored_instance_url_and_includes_redirect_uri() {
     let routes = Routes::new();
     let mut harness = start(Input::new(Vec::new())).await;
