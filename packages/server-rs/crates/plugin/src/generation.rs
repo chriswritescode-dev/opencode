@@ -10,16 +10,29 @@ use opencode_contract::generated::{
     PluginStateFailedStatus,
 };
 use opencode_location::location::LocationInfo;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "lowercase")]
 pub enum Source {
     Builtin,
-    Package { target: String, version: Option<String>, outdated: bool, updating: bool },
-    Local { path: String },
+    Package {
+        target: String,
+        #[serde(default)]
+        version: Option<String>,
+        #[serde(default)]
+        outdated: bool,
+        #[serde(default)]
+        updating: bool,
+    },
+    Local {
+        path: String,
+    },
     Sdk,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(default)]
 pub struct Features {
     pub server: bool,
     pub tui: bool,
@@ -33,10 +46,11 @@ impl Features {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Gui {
     pub file: PathBuf,
     pub revision: String,
+    #[serde(default)]
     pub options: serde_json::Map<String, serde_json::Value>,
 }
 

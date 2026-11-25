@@ -8,7 +8,7 @@ use opencode_plugin::generation::{Features, Generation, Gui, Info, PluginState, 
 use opencode_plugin::native;
 use opencode_plugin::registry::{ActivateError, Registry};
 
-use crate::support::{entries, generation, location, log_line, recorder};
+use crate::support::{generation, location, log_entries, log_line, recorder};
 
 fn registry() -> Registry {
     Registry::new(location("."), Arc::new(|| {}))
@@ -193,7 +193,7 @@ async fn disable_marks_the_plugin_failed_and_closes_it() {
         }
         PluginState::Active => panic!("the disabled plugin should be failed"),
     }
-    assert!(entries(&log).iter().any(|entry| entry == "close:x:1"));
+    assert!(log_entries(&log).iter().any(|entry| entry == "close:x:1"));
 }
 
 #[tokio::test]
@@ -234,7 +234,7 @@ async fn rejects_duplicate_ids() {
         )
         .await;
     assert!(matches!(result, Err(ActivateError::DuplicateId(id)) if id == "a"));
-    assert!(entries(&log).is_empty());
+    assert!(log_entries(&log).is_empty());
 }
 
 #[test]
