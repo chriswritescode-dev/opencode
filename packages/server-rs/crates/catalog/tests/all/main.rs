@@ -17,6 +17,7 @@ mod provider;
 mod provider_plugin;
 mod resolver;
 mod retry;
+mod shared_cache;
 mod variant;
 
 use std::path::{Path, PathBuf};

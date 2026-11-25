@@ -177,5 +177,6 @@ pub fn plugin_context(harness: &Harness) -> PluginContext {
             directory: AbsolutePath(harness.root().to_string_lossy().into_owned()),
             workspace_id: None,
         },
+        shared_cache: opencode_catalog::shared_cache::SharedCache::new(),
     }
 }

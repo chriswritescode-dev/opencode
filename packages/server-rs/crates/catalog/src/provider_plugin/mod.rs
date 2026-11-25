@@ -3,6 +3,9 @@ pub mod hooks;
 pub mod http;
 pub mod neon;
 pub mod prompt_cache_key;
+pub mod refresh;
+pub mod settings;
+pub mod storage;
 
 use std::ffi::OsString;
 use std::io;
@@ -140,6 +143,7 @@ pub struct PluginContext {
     pub sessions: Arc<dyn SessionAccess>,
     pub hooks: Arc<hooks::ProviderHooks>,
     pub location: LocationRef,
+    pub shared_cache: Arc<crate::shared_cache::SharedCache>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
