@@ -42,14 +42,14 @@ pub fn fold_settings(entries: &[Entry], id: &str, initial: Option<ProviderSettin
 }
 
 pub async fn active_credential(
-    services: &Services,
+    integrations: &IntegrationService,
     integration_id: &IntegrationID,
 ) -> (Option<ConnectionInfo>, Option<CredentialValue>) {
-    let Ok(connection) = services.integration.connection().active(integration_id).await else {
+    let Ok(connection) = integrations.connection().active(integration_id).await else {
         return (None, None);
     };
     let credential = match connection.as_ref() {
-        Some(connection) => services.integration.connection().resolve(connection).await.ok().flatten(),
+        Some(connection) => integrations.connection().resolve(connection).await.ok().flatten(),
         None => None,
     };
     (connection, credential)

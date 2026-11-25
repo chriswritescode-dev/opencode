@@ -247,8 +247,17 @@ impl Harness {
                     opencode_catalog::provider_plugin::llmgateway::register(&self.services, &context, &mut builtin)
                         .await
                 }
+                "lmstudio" => {
+                    opencode_catalog::provider_plugin::lmstudio::register(&self.services, &context, &mut builtin).await
+                }
                 "nvidia" => {
                     opencode_catalog::provider_plugin::nvidia::register(&self.services, &context, &mut builtin).await
+                }
+                "ollama" => {
+                    opencode_catalog::provider_plugin::ollama::register(&self.services, &context, &mut builtin).await
+                }
+                "vllm" => {
+                    opencode_catalog::provider_plugin::vllm::register(&self.services, &context, &mut builtin).await
                 }
                 "openrouter" => {
                     opencode_catalog::provider_plugin::openrouter::register(&self.services, &context, &mut builtin)
@@ -540,7 +549,7 @@ async fn builtin_register_inserts_provider_plugins_at_the_provider_slot() {
     )
     .await;
     harness.record(builtin);
-    assert_eq!(harness.registrations.registrations.len(), 29);
+    assert_eq!(harness.registrations.registrations.len(), 35);
 }
 
 pub async fn seed(

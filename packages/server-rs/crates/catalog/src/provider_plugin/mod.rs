@@ -8,14 +8,18 @@ pub mod hooks;
 pub mod http;
 pub mod kilo;
 pub mod llmgateway;
+pub mod lmstudio;
+pub mod local;
 pub mod neon;
 pub mod nvidia;
+pub mod ollama;
 pub mod openai_context_caps;
 pub mod openrouter;
 pub mod prompt_cache_key;
 pub mod refresh;
 pub mod settings;
 pub mod storage;
+pub mod vllm;
 pub mod zenmux;
 
 use std::ffi::OsString;
@@ -255,11 +259,14 @@ pub async fn register(
             google_vertex::ID => google_vertex::register(services, context, builtin).await,
             kilo::ID => kilo::register(services, context, builtin).await,
             llmgateway::ID => llmgateway::register(services, context, builtin).await,
+            lmstudio::ID => lmstudio::register(services, context, builtin).await,
             neon::ID => neon::register(services, context, builtin).await,
             nvidia::ID => nvidia::register(services, context, builtin).await,
+            ollama::ID => ollama::register(services, context, builtin).await,
             openai_context_caps::ID => openai_context_caps::register(services, context, builtin).await,
             openrouter::ID => openrouter::register(services, context, builtin).await,
             prompt_cache_key::ID => prompt_cache_key::register(services, context, builtin).await,
+            vllm::ID => vllm::register(services, context, builtin).await,
             zenmux::ID => zenmux::register(services, context, builtin).await,
             _ => {}
         }

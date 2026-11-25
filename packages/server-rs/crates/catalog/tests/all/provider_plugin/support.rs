@@ -14,7 +14,7 @@ use opencode_catalog::provider_plugin::{
 use opencode_config::seams::NoKv;
 use opencode_contract::codec::{JsonMap, decode_json};
 use opencode_contract::generated::{
-    AbsolutePath, AgentID, LocationRef, ModelRef, ProviderID, ProviderInfo, ProviderSettings, SessionID,
+    AbsolutePath, AgentID, LocationRef, ModelRef, ProviderID, ProviderInfo, ProviderSettings, SessionID, WorkspaceID,
 };
 use serde_json::Value;
 
@@ -101,6 +101,189 @@ impl HttpSender for RecordedSender {
     }
 }
 
+#[derive(Clone)]
+pub struct Reply {
+    pub status: u16,
+    pub body: Vec<u8>,
+}
+
+impl Reply {
+    pub fn json(value: Value) -> Self {
+        Self::json_status(value, 200)
+    }
+
+    pub fn json_status(value: Value, status: u16) -> Self {
+        Self { status, body: serde_json::to_vec(&value).expect("a route reply serializes") }
+    }
+
+    pub fn empty() -> Self {
+        Self { status: 200, body: Vec::new() }
+    }
+
+    pub fn status(status: u16) -> Self {
+        Self { status, body: Vec::new() }
+    }
+}
+
+struct Route {
+    method: String,
+    url: String,
+    body_contains: Option<String>,
+    respond: Box<dyn Fn(&PreparedHttp) -> Reply + Send + Sync>,
+}
+
+pub struct Routes {
+    routes: Arc<Mutex<Vec<Route>>>,
+    requests: Arc<Mutex<Vec<PreparedHttp>>>,
+    held: Arc<Mutex<Vec<(String, String)>>>,
+    arrived: Arc<tokio::sync::Semaphore>,
+    release: Arc<tokio::sync::Semaphore>,
+}
+
+impl Routes {
+    pub fn new() -> Arc<Self> {
+        Arc::new(Self {
+            routes: Arc::new(Mutex::new(Vec::new())),
+            requests: Arc::new(Mutex::new(Vec::new())),
+            held: Arc::new(Mutex::new(Vec::new())),
+            arrived: Arc::new(tokio::sync::Semaphore::new(0)),
+            release: Arc::new(tokio::sync::Semaphore::new(0)),
+        })
+    }
+
+    pub fn route_json(&self, method: &str, url: &str, value: Value) {
+        self.route_with(method, url, move |_| Reply::json(value.clone()));
+    }
+
+    pub fn route_json_for(&self, method: &str, url: &str, body_contains: &str, value: Value) {
+        self.routes.lock().expect("the routed replies lock is never poisoned").push(Route {
+            method: method.to_owned(),
+            url: url.to_owned(),
+            body_contains: Some(body_contains.to_owned()),
+            respond: Box::new(move |_| Reply::json(value.clone())),
+        });
+    }
+
+    pub fn route_status_for(&self, method: &str, url: &str, body_contains: &str, status: u16) {
+        self.routes.lock().expect("the routed replies lock is never poisoned").push(Route {
+            method: method.to_owned(),
+            url: url.to_owned(),
+            body_contains: Some(body_contains.to_owned()),
+            respond: Box::new(move |_| Reply::status(status)),
+        });
+    }
+
+    pub fn route_with(
+        &self,
+        method: &str,
+        url: &str,
+        respond: impl Fn(&PreparedHttp) -> Reply + Send + Sync + 'static,
+    ) {
+        self.routes.lock().expect("the routed replies lock is never poisoned").push(Route {
+            method: method.to_owned(),
+            url: url.to_owned(),
+            body_contains: None,
+            respond: Box::new(respond),
+        });
+    }
+
+    pub fn set_json(&self, method: &str, url: &str, value: Value) {
+        self.remove(method, url);
+        self.route_json(method, url, value);
+    }
+
+    pub fn set_status(&self, method: &str, url: &str, status: u16) {
+        self.remove(method, url);
+        self.route_with(method, url, move |_| Reply::status(status));
+    }
+
+    pub fn remove(&self, method: &str, url: &str) {
+        self.routes
+            .lock()
+            .expect("the routed replies lock is never poisoned")
+            .retain(|route| !(route.method.eq_ignore_ascii_case(method) && route.url == url));
+    }
+
+    pub fn requests(&self) -> Vec<PreparedHttp> {
+        self.requests.lock().expect("the routed requests lock is never poisoned").clone()
+    }
+
+    pub fn count(&self, method: &str, url: &str) -> usize {
+        self.requests()
+            .iter()
+            .filter(|request| request.method.eq_ignore_ascii_case(method) && request.url == url)
+            .count()
+    }
+
+    pub fn hold(&self, method: &str, url: &str) {
+        self.held.lock().expect("the routed holds lock is never poisoned").push((method.to_owned(), url.to_owned()));
+    }
+
+    pub async fn arrived(&self) {
+        let _permit = self.arrived.acquire().await;
+    }
+
+    pub fn release(&self) {
+        self.release.add_permits(1);
+    }
+}
+
+impl HttpSender for Routes {
+    fn send(&self, request: PreparedHttp) -> BoxFuture<Result<HttpResponse, AiError>> {
+        self.requests.lock().expect("the routed requests lock is never poisoned").push(request.clone());
+        let routes = self.routes.clone();
+        let held = self.held.clone();
+        let arrived = self.arrived.clone();
+        let release = self.release.clone();
+        Box::pin(async move {
+            let hold = held
+                .lock()
+                .expect("the routed holds lock is never poisoned")
+                .iter()
+                .any(|(method, url)| method.eq_ignore_ascii_case(&request.method) && *url == request.url);
+            if hold {
+                arrived.add_permits(1);
+                let _permit = release.acquire().await;
+            }
+            let reply = {
+                let routes = routes.lock().expect("the routed replies lock is never poisoned");
+                routes
+                    .iter()
+                    .find(|route| {
+                        route.method.eq_ignore_ascii_case(&request.method)
+                            && route.url == request.url
+                            && route
+                                .body_contains
+                                .as_ref()
+                                .is_none_or(|needle| String::from_utf8_lossy(&request.body).contains(needle.as_str()))
+                    })
+                    .map(|route| (route.respond)(&request))
+            };
+            let Some(reply) = reply else {
+                return Err(AiError {
+                    reason: AiErrorReason::Transport {
+                        message: format!("no route for {}", request.url),
+                        body: None,
+                        http: None,
+                        transport: TransportKind::Http,
+                        operation: TransportOperation::Request,
+                        code: None,
+                        url: Some(request.url),
+                        phase: None,
+                        delivery: None,
+                        recovery: None,
+                    },
+                });
+            };
+            Ok(HttpResponse {
+                status: reply.status,
+                headers: vec![("content-type".to_owned(), "application/json".to_owned())],
+                body: Box::pin(futures_util::stream::once(async move { Ok(bytes::Bytes::from(reply.body)) })),
+            })
+        })
+    }
+}
+
 #[derive(Default)]
 pub struct FakeSessions {
     pub sessions: HashMap<String, SessionRef>,
@@ -168,10 +351,10 @@ impl CommandRunner for FakeRunner {
     }
 }
 
-pub fn plugin_context(harness: &Harness) -> PluginContext {
+pub fn plugin_context_at(harness: &Harness, http: Arc<dyn HttpSender>, workspace_id: Option<&str>) -> PluginContext {
     let environment = harness.environment.clone();
     PluginContext {
-        http: Arc::new(RecordedSender::default()),
+        http,
         app: AppInfo { name: "opencode".to_owned(), version: "test".to_owned(), channel: "test".to_owned() },
         env: Arc::new(move |name| environment.get(name).map(OsString::from)),
         kv: Arc::new(NoKv),
@@ -180,10 +363,18 @@ pub fn plugin_context(harness: &Harness) -> PluginContext {
         hooks: Arc::new(ProviderHooks::default()),
         location: LocationRef {
             directory: AbsolutePath(harness.root().to_string_lossy().into_owned()),
-            workspace_id: None,
+            workspace_id: workspace_id.map(|id| WorkspaceID(id.to_owned())),
         },
         shared_cache: opencode_catalog::shared_cache::SharedCache::new(),
     }
+}
+
+pub fn plugin_context_with(harness: &Harness, http: Arc<dyn HttpSender>) -> PluginContext {
+    plugin_context_at(harness, http, None)
+}
+
+pub fn plugin_context(harness: &Harness) -> PluginContext {
+    plugin_context_at(harness, Arc::new(RecordedSender::default()), None)
 }
 
 pub fn headers(provider: &ProviderInfo) -> Option<HashMap<String, String>> {
