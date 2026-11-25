@@ -9,6 +9,9 @@ import { rustBinary, sandbox } from "./support"
 
 test("service contenders elect one owner and stop cleanly", async () => {
   await using box = await sandbox()
+  const pluginRoot = box.env.HOME
+  if (typeof pluginRoot !== "string" || pluginRoot.length === 0) throw new Error("Sandbox has no HOME directory")
+  await fs.mkdir(path.join(pluginRoot, ".opencode", "plugins"), { recursive: true })
   const processes: Array<ReturnType<typeof Bun.spawn>> = []
   const stderr: Array<Promise<string>> = []
   let registration: string | undefined
@@ -50,6 +53,12 @@ test("service contenders elect one owner and stop cleanly", async () => {
       signal: AbortSignal.timeout(5_000),
     })
     expect(tokenOpenApi.status).toBe(200)
+
+    const plugin = path.join(pluginRoot, ".opencode", "plugins", "smoke.ts")
+    if ((await pluginIDs(info.url, headers, pluginRoot)).includes("smoke"))
+      throw new Error("Smoke plugin existed before creation")
+    await fs.writeFile(plugin, pluginSource())
+    await waitForPlugin(info.url, headers, pluginRoot, plugin)
 
     const unauthorizedInfo = await fetch(new URL("/api/info", info.url), {
       signal: AbortSignal.timeout(5_000),
@@ -126,4 +135,33 @@ async function removedWithin(file: string) {
     await Bun.sleep(25)
   }
   return false
+}
+
+function pluginSource() {
+  return 'export default { id: "smoke", setup: async () => {} }\n'
+}
+
+async function pluginIDs(url: string, headers: HeadersInit, directory: string) {
+  const endpoint = new URL("/api/plugin", url)
+  endpoint.searchParams.set("location[directory]", directory)
+  const response = await fetch(endpoint, { headers, signal: AbortSignal.timeout(5_000) })
+  if (response.status !== 200) throw new Error(`Plugin list returned ${response.status}`)
+  const body: unknown = await response.json()
+  if (typeof body !== "object" || body === null || !("data" in body) || !Array.isArray(body.data)) {
+    throw new Error("Service returned an invalid plugin list")
+  }
+  return body.data.flatMap((plugin) =>
+    typeof plugin === "object" && plugin !== null && "id" in plugin && typeof plugin.id === "string" ? [plugin.id] : [],
+  )
+}
+
+async function waitForPlugin(url: string, headers: HeadersInit, directory: string, plugin: string) {
+  const deadline = Date.now() + 10_000
+  let attempt = 0
+  while (Date.now() < deadline) {
+    if ((await pluginIDs(url, headers, directory)).includes("smoke")) return
+    await Bun.sleep(25)
+    if (++attempt % 10 === 0) await fs.writeFile(plugin, `${pluginSource()}// watcher retry ${attempt}\n`)
+  }
+  throw new Error("Service did not discover the created plugin")
 }

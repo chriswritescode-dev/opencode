@@ -5,6 +5,7 @@ use std::time::Duration;
 
 use futures_util::future::BoxFuture;
 use http::StatusCode;
+use opencode_bus::{Bus, Definition, PublishOptions};
 use opencode_config::entry::Entry;
 use opencode_config::flag;
 use opencode_config::options::{ConfigLocation, ConfigOptions};
@@ -16,7 +17,7 @@ use opencode_contract::codec::encode_json;
 use opencode_contract::generated::{
     AbsolutePath, ConfigEntryDocumentInfoExperimentalLocationIdleTimeout,
     ConfigEntryDocumentInfoExperimentalLocationIdleTimeoutBool, LocationNotFoundError, LocationNotFoundErrorTag,
-    LocationPublicRef, ServiceUnavailableError, ServiceUnavailableErrorTag,
+    LocationPublicRef, LocationRef, ServiceUnavailableError, ServiceUnavailableErrorTag, WorkspaceID,
 };
 use opencode_location::activity::{Activity, ActivityOptions, IdleTimeout};
 use opencode_location::environment::{Environment, local::LocalEnvironment};
@@ -25,6 +26,7 @@ use opencode_location::lifecycle::Lifecycle;
 use opencode_location::location::{BootError, LocationInfo, boot_location};
 use opencode_location::map::LocationMap;
 use opencode_location::project::{ProjectService, SWEEP_INTERVAL_MS};
+use opencode_plugin::{GlobalPlugins, LocationPlugins};
 use opencode_storage::Database;
 use serde_json::Value;
 use tokio::task::JoinHandle;
@@ -42,6 +44,8 @@ pub struct GlobalServices {
     pub wellknown: Arc<WellKnown>,
     pub start_directory: String,
     pub environment: ConfigEnv,
+    pub bus: Arc<Bus>,
+    pub plugins: Arc<GlobalPlugins>,
     sweep: JoinHandle<()>,
 }
 
@@ -50,10 +54,18 @@ pub struct LocationServices {
     pub lifecycle: Lifecycle,
     pub environment: Arc<dyn Environment>,
     pub config: ConfigService,
+    pub plugins: LocationPlugins,
 }
 
 impl GlobalServices {
-    pub fn new(database: Arc<Database>, paths: GlobalPaths, start_directory: String, config_env: ConfigEnv) -> Self {
+    pub fn new(
+        database: Arc<Database>,
+        paths: GlobalPaths,
+        start_directory: String,
+        config_env: ConfigEnv,
+        bus: Arc<Bus>,
+        plugins: Arc<GlobalPlugins>,
+    ) -> Self {
         let projects = Arc::new(ProjectService::new(database.clone()));
         let wellknown = Arc::new(WellKnown::new(Arc::new(StorageKv { database: database.clone() })));
         let environment: Arc<dyn Environment> = Arc::new(LocalEnvironment::new());
@@ -64,6 +76,8 @@ impl GlobalServices {
         let boot_config_env = config_env.clone();
         let boot_paths = paths.clone();
         let boot_wellknown = wellknown.clone();
+        let boot_bus = bus.clone();
+        let boot_plugins = plugins.clone();
         let locations = LocationMap::new(move |reference| {
             let projects = boot_projects.clone();
             let environment = boot_environment.clone();
@@ -72,6 +86,8 @@ impl GlobalServices {
             let wellknown = boot_wellknown.clone();
             let channel = channel.clone();
             let flag_overrides = flag_overrides.clone();
+            let bus = boot_bus.clone();
+            let plugins = boot_plugins.clone();
             Box::pin(async move {
                 let info = boot_location(&reference, &projects, environment.as_ref()).await?;
                 let config = ConfigService::start(
@@ -81,8 +97,22 @@ impl GlobalServices {
                     ServiceDeps { credentials: Arc::new(()), wellknown, channel, flag_overrides },
                 )
                 .await;
+                let reference = LocationRef {
+                    directory: AbsolutePath(info.directory.clone()),
+                    workspace_id: info.workspace_id.clone().map(WorkspaceID),
+                };
+                let publish: Arc<dyn Fn() + Send + Sync> = Arc::new(move || {
+                    if let Err(error) = bus.publish(
+                        &Definition::ephemeral("plugin.updated"),
+                        serde_json::json!({}),
+                        PublishOptions { location: Some(reference.clone()), ..Default::default() },
+                    ) {
+                        log::warn!("failed to publish plugin.updated: {error}");
+                    }
+                });
                 let lifecycle = Lifecycle::start(projects, &info).await?;
-                Ok(Arc::new(LocationServices { info, lifecycle, environment, config }))
+                let plugins = LocationPlugins::start(plugins.as_ref(), info.clone(), config.clone(), publish).await;
+                Ok(Arc::new(LocationServices { info, lifecycle, environment, config, plugins }))
             })
         });
         let activity = Activity::spawn(
@@ -118,6 +148,8 @@ impl GlobalServices {
             wellknown,
             start_directory,
             environment: config_env,
+            bus,
+            plugins,
             sweep,
         }
     }
@@ -143,8 +175,15 @@ impl opencode_location::map::LocationServices for LocationServices {
     }
 
     fn close(&self) -> BoxFuture<'_, ()> {
-        Box::pin(async move { self.lifecycle.shutdown().await })
+        Box::pin(async move {
+            self.plugins.shutdown().await;
+            self.lifecycle.shutdown().await;
+        })
     }
+}
+
+pub fn public_ref(info: &LocationInfo) -> LocationPublicRef {
+    LocationPublicRef { directory: AbsolutePath(info.directory.clone()) }
 }
 
 struct StorageKv {

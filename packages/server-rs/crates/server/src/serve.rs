@@ -124,6 +124,9 @@ pub(crate) async fn start(
 ) -> std::io::Result<Running> {
     let address = listener.local_addr()?;
     let urls = Arc::new(move || connection_urls(address));
+    let plugin_router = opencode_plugin::PluginRouter::default();
+    let mut handlers = opencode_sidecar::connection::Handlers::default();
+    plugin_router.handlers(&mut handlers);
     #[cfg(unix)]
     let sidecar = opencode_sidecar::supervisor::Sidecar::new(
         opencode_sidecar::config::Config::new(
@@ -131,8 +134,15 @@ pub(crate) async fn start(
             std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/")),
             tmp.clone(),
         ),
-        opencode_sidecar::connection::Handlers::default(),
+        handlers,
     );
+    #[cfg(not(unix))]
+    let _ = handlers;
+    #[cfg(unix)]
+    let host: Option<Arc<dyn opencode_plugin::ScriptHost>> =
+        Some(Arc::new(opencode_plugin::SidecarHost::new(sidecar.clone())));
+    #[cfg(not(unix))]
+    let host: Option<Arc<dyn opencode_plugin::ScriptHost>> = None;
     let services = match &state {
         Some(state) => {
             let paths = opencode_config::paths::GlobalPaths::from_vars(|name| env.get(name).map(OsStr::to_os_string))?
@@ -142,11 +152,26 @@ pub(crate) async fn start(
                 env.vars().map(|(name, value)| (name.to_os_string(), value.to_os_string())).collect();
             let config_env: opencode_http::services::ConfigEnv =
                 Arc::new(move |name: &str| vars.get(OsStr::new(name)).cloned());
+            let npm_paths = opencode_plugin::NpmPaths::from(&paths);
+            let plugins = Arc::new(opencode_plugin::GlobalPlugins {
+                host: host.clone(),
+                router: plugin_router.clone(),
+                sdk: opencode_plugin::SdkPlugins::default(),
+                updates: opencode_plugin::Updates::new(host.clone(), npm_paths.clone()),
+                paths: npm_paths,
+                app: opencode_plugin::AppInfo {
+                    name: "opencode".to_owned(),
+                    version: crate::VERSION.to_owned(),
+                    channel: opencode_config::flag::build_channel().to_owned(),
+                },
+            });
             Some(Arc::new(opencode_http::services::GlobalServices::new(
                 state.db.clone(),
                 paths,
                 start_directory,
                 config_env,
+                state.bus.clone(),
+                plugins,
             )))
         }
         None => None,

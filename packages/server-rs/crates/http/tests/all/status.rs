@@ -123,6 +123,10 @@ fn sample_request(operation: &str) -> Option<(&'static str, &'static str)> {
         "config.get" => Some(("GET", "/api/config")),
         "config.shells" => Some(("GET", "/api/config/shell")),
         "experimental.config.update" => Some(("PATCH", "/api/experimental/config")),
+        "plugin.list" => Some(("GET", "/api/plugin")),
+        "plugin.gui" => Some(("GET", "/api/plugin/gui?id=missing")),
+        "plugin.check" => Some(("POST", "/api/plugin/check")),
+        "plugin.update" => Some(("POST", "/api/plugin/update")),
         _ => None,
     }
 }
@@ -164,5 +168,9 @@ fn implemented_lists_the_ported_operations() {
     assert!(opencode_http::app::IMPLEMENTED.contains(&"config.get"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"config.shells"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"experimental.config.update"));
-    assert_eq!(opencode_http::app::IMPLEMENTED.len(), 15);
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"plugin.list"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"plugin.gui"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"plugin.check"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"plugin.update"));
+    assert_eq!(opencode_http::app::IMPLEMENTED.len(), 19);
 }

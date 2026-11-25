@@ -4,5 +4,6 @@ pub mod defect;
 pub mod event;
 pub mod invalid;
 pub mod location;
+pub mod plugin;
 pub mod project;
 pub mod session_log;

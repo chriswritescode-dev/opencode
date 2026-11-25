@@ -32,6 +32,10 @@ pub const IMPLEMENTED: &[&str] = &[
     "config.get",
     "config.shells",
     "experimental.config.update",
+    "plugin.list",
+    "plugin.gui",
+    "plugin.check",
+    "plugin.update",
 ];
 
 pub struct Options {
@@ -175,6 +179,32 @@ impl App {
             },
             "experimental.config.update" => match self.location(&raw).await {
                 Ok(lease) => crate::handlers::config::update(&raw, &lease.config).await,
+                Err(response) => response,
+            },
+            "plugin.list" => match self.location(&raw).await {
+                Ok(lease) => crate::handlers::plugin::list(&raw, lease.services()).await,
+                Err(response) => response,
+            },
+            "plugin.gui" => match self.location(&raw).await {
+                Ok(lease) => crate::handlers::plugin::gui(&raw, lease.services()).await,
+                Err(response) => response,
+            },
+            "plugin.check" => match self.location(&raw).await {
+                Ok(lease) => match self.services() {
+                    Some(services) => {
+                        crate::handlers::plugin::check(&raw, lease.services(), &services.plugins.updates).await
+                    }
+                    None => crate::services::services_unavailable(),
+                },
+                Err(response) => response,
+            },
+            "plugin.update" => match self.location(&raw).await {
+                Ok(lease) => match self.services() {
+                    Some(services) => {
+                        crate::handlers::plugin::update(&raw, lease.services(), &services.plugins.updates).await
+                    }
+                    None => crate::services::services_unavailable(),
+                },
                 Err(response) => response,
             },
             _ => not_implemented(found.route.identifier),

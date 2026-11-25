@@ -48,6 +48,8 @@ async fn the_host_sees_only_the_allowlisted_environment() {
     config.directory = project.path().to_owned();
     config.vars.push((OsString::from("OPENCODE_PASSWORD"), OsString::from("hunter2")));
     config.vars.push((OsString::from("OPENCODE_SERVER_PASSWORD"), OsString::from("hunter2")));
+    config.vars.push((OsString::from("npm_config_registry"), OsString::from("https://registry.example.invalid/")));
+    config.vars.push((OsString::from("NODE_EXTRA_CA_CERTS"), OsString::from("/tmp/opencode-test-ca.pem")));
     let Some(runtime) = support::runtime(&config).await else { return };
 
     let mut spawned = spawn(&config, &runtime).await.expect("a spawned host");
@@ -55,6 +57,8 @@ async fn the_host_sees_only_the_allowlisted_environment() {
 
     let names = value.as_array().expect("a list").iter().map(|name| name.as_str().expect("a name")).collect::<Vec<_>>();
     assert!(names.contains(&"PATH"), "an allowlisted PATH reaches the host");
+    assert!(names.contains(&"npm_config_registry"), "an npm registry setting reaches the host");
+    assert!(names.contains(&"NODE_EXTRA_CA_CERTS"), "an extra CA bundle reaches the host");
     for forbidden in ["OPENCODE_PASSWORD", "OPENCODE_SERVER_PASSWORD", "SIDECAR_DOTENV"] {
         assert!(!names.contains(&forbidden), "{forbidden} must not reach the host");
     }
