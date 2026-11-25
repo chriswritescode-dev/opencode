@@ -338,7 +338,8 @@ fn handle() -> Arc<Git> {
 }
 
 async fn git(git: &Git, directory: &Path, args: &[&str]) {
-    let options = RunOptions { cwd: Some(text(directory).to_owned()), ..Default::default() };
+    let options =
+        RunOptions { cwd: Some(text(directory).to_owned()), env: crate::support::identity_env(), ..Default::default() };
     let output = git.execute(args, options).await.expect("git starts");
     assert_eq!(output.status, 0, "git {} failed: {}", args.join(" "), output.stderr_text());
 }

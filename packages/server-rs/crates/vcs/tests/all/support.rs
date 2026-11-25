@@ -18,6 +18,18 @@ use opencode_vcs::vcs::Vcs;
 const REPOSITORY_CONFIG: &str =
     "\n[core]\n\tfsmonitor = false\n[commit]\n\tgpgsign = false\n[user]\n\temail = test@opencode.test\n\tname = Test\n";
 
+pub fn identity_env() -> Vec<(String, String)> {
+    [
+        ("GIT_AUTHOR_NAME", "Test"),
+        ("GIT_AUTHOR_EMAIL", "test@opencode.test"),
+        ("GIT_COMMITTER_NAME", "Test"),
+        ("GIT_COMMITTER_EMAIL", "test@opencode.test"),
+    ]
+    .into_iter()
+    .map(|(name, value)| (name.to_string(), value.to_string()))
+    .collect()
+}
+
 pub struct Fixture {
     _tmp: TempDir,
     pub root: PathBuf,
@@ -51,7 +63,7 @@ impl Fixture {
     }
 
     pub async fn git(&self, directory: &Path, args: &[&str]) {
-        let options = RunOptions { cwd: Some(text(directory)), ..Default::default() };
+        let options = RunOptions { cwd: Some(text(directory)), env: identity_env(), ..Default::default() };
         let output = self.git.execute(args, options).await.expect("git starts");
         assert_eq!(output.status, 0, "git {} failed: {}", args.join(" "), output.stderr_text());
     }
@@ -59,7 +71,10 @@ impl Fixture {
     pub async fn git_env(&self, directory: &Path, args: &[&str], env: &[(&str, &str)]) {
         let options = RunOptions {
             cwd: Some(text(directory)),
-            env: env.iter().map(|(name, value)| ((*name).to_owned(), (*value).to_owned())).collect(),
+            env: identity_env()
+                .into_iter()
+                .chain(env.iter().map(|(name, value)| ((*name).to_owned(), (*value).to_owned())))
+                .collect(),
             ..Default::default()
         };
         let output = self.git.execute(args, options).await.expect("git starts");

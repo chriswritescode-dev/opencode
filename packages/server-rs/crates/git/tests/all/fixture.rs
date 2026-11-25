@@ -9,6 +9,13 @@ use crate::text;
 const REPOSITORY_CONFIG: &str =
     "\n[core]\n\tfsmonitor = false\n[commit]\n\tgpgsign = false\n[user]\n\temail = test@opencode.test\n\tname = Test\n";
 
+const GIT_IDENTITY: [(&str, &str); 4] = [
+    ("GIT_AUTHOR_NAME", "Test"),
+    ("GIT_AUTHOR_EMAIL", "test@opencode.test"),
+    ("GIT_COMMITTER_NAME", "Test"),
+    ("GIT_COMMITTER_EMAIL", "test@opencode.test"),
+];
+
 pub fn handle() -> Arc<Git> {
     Arc::new(Git::new(Arc::new(|name: &str| std::env::var_os(name))))
 }
@@ -16,7 +23,11 @@ pub fn handle() -> Arc<Git> {
 pub async fn git(git: &Git, directory: &Path, args: &[&str]) -> String {
     let options = RunOptions {
         cwd: Some(directory.to_string_lossy().into_owned()),
-        env: vec![("GIT_ALLOW_PROTOCOL".to_string(), "file".to_string())],
+        env: GIT_IDENTITY
+            .into_iter()
+            .chain([("GIT_ALLOW_PROTOCOL", "file")])
+            .map(|(name, value)| (name.to_string(), value.to_string()))
+            .collect(),
         ..Default::default()
     };
     let output = git.execute(args, options).await.expect("git starts");
