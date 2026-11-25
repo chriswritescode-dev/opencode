@@ -193,7 +193,7 @@ impl OAuthService<'_> {
                 let Some(service) = service.upgrade() else {
                     return;
                 };
-                settle(&service, &attempt_id, outcome).await;
+                let _ = settle(&service, &attempt_id, outcome).await;
             });
         }
         Ok(Attempt { attempt_id, url, instructions, mode: attempt_mode, paste, time })
@@ -304,10 +304,10 @@ impl OAuthService<'_> {
                 let error = outcome.as_ref().err().cloned();
                 let service = self.service.clone();
                 let attempt_id = attempt_id.clone();
-                let _ = tokio::spawn(async move { settle(&service, &attempt_id, outcome).await }).await;
-                match error {
-                    Some(error) => Err(error.into()),
-                    None => Ok(()),
+                let persistence = tokio::spawn(async move { settle(&service, &attempt_id, outcome).await }).await;
+                match (error, persistence) {
+                    (Some(error), _) | (None, Ok(Err(error))) => Err(error.into()),
+                    _ => Ok(()),
                 }
             }
         }
@@ -344,13 +344,16 @@ async fn settle(
     service: &Arc<IntegrationService>,
     attempt_id: &IntegrationAttemptID,
     outcome: Result<CredentialOAuth, AuthorizationError>,
-) {
+) -> Result<(), AuthorizationError> {
     match claim(service, attempt_id, &outcome) {
-        Claim::None => {}
-        Claim::Failed(scope) => scope.cancel(),
+        Claim::None => Ok(()),
+        Claim::Failed(scope) => {
+            scope.cancel();
+            Ok(())
+        }
         Claim::Success(claimed) => {
             let Ok(value) = outcome else {
-                return;
+                return Ok(());
             };
             let label = match claimed.label.as_deref() {
                 Some(label) => Some(label.to_owned()),
@@ -358,8 +361,9 @@ async fn settle(
             };
             let persistence =
                 create_credential(service, &claimed.integration_id, label, CredentialValue::Oauth(value)).await;
-            record(service, attempt_id, &claimed, persistence);
+            record(service, attempt_id, &claimed, persistence.clone());
             claimed.scope.cancel();
+            persistence
         }
     }
 }

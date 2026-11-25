@@ -253,7 +253,7 @@ async fn execute(
     let stdout = child.stdout.take().expect("the command stdout is piped");
     let stderr_service = service.clone();
     let stderr_attempt = attempt_id.clone();
-    let stderr_task = tokio::spawn(async move {
+    let mut stderr_task = tokio::spawn(async move {
         let mut reader = stderr;
         let mut message = String::new();
         let mut buffer = [0u8; 4096];
@@ -272,7 +272,7 @@ async fn execute(
         }
         message
     });
-    let stdout_task = tokio::spawn(async move {
+    let mut stdout_task = tokio::spawn(async move {
         let mut reader = stdout;
         let mut bytes = Vec::new();
         let _ = reader.read_to_end(&mut bytes).await;
@@ -289,8 +289,16 @@ async fn execute(
         Ok(status) => status,
         Err(error) => return Some(Err(AuthorizationError::new(error))),
     };
-    let stderr_message = stderr_task.await.unwrap_or_default();
-    let stdout = stdout_task.await.unwrap_or_default();
+    let (stderr_message, stdout) = tokio::select! {
+        _ = scope.cancelled() => {
+            stderr_task.abort();
+            stdout_task.abort();
+            return None;
+        }
+        outputs = async { ((&mut stderr_task).await, (&mut stdout_task).await) } => outputs,
+    };
+    let stderr_message = stderr_message.unwrap_or_default();
+    let stdout = stdout.unwrap_or_default();
     if !status.success() {
         let stderr_message = stderr_message.trim();
         let message = if stderr_message.is_empty() {

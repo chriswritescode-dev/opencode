@@ -219,8 +219,8 @@ impl ProviderService {
             }
             let by_id: HashMap<String, IntegrationInfo> =
                 connections.into_iter().map(|integration| (integration.id.0.clone(), integration)).collect();
-            let available: Vec<Definition> =
-                records.entries.values().filter(|definition| is_available(definition, &by_id)).cloned().collect();
+            let available: Vec<&Definition> =
+                records.entries.values().filter(|definition| is_available(definition, &by_id)).collect();
             let mut cached = self.cached.lock().expect("lock the provider snapshot cache");
             if let Some(entry) = cached.as_ref()
                 && Arc::ptr_eq(&entry.records, &records)
@@ -235,6 +235,7 @@ impl ProviderService {
                 return Ok(entry.value.clone());
             }
             let providers = available.iter().map(|definition| definition.provider.clone()).collect();
+            let available = available.into_iter().cloned().collect();
             let value = Arc::new(Snapshot { records: records.clone(), available, providers });
             *cached = Some(Cached { records, value: value.clone() });
             return Ok(value);
