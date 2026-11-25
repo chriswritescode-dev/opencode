@@ -15,11 +15,12 @@ Reason: OR-43 owns the Location layer, and bridging its channel to the bus is le
 scenarios run without `waitEvent` steps and are compared with `--only steps,database`, so no parity run covers these
 events yet; the strict run due in OR-49 does.
 
-Since OR-53, `ProjectService::persist` writes the `worktree` rows in the project transaction and sends
-`worktree.resolved` on the channel only for directories it newly inserted, while TypeScript commits the row and the
-durable event together. Until the bridge lands, a directory first resolved by the Rust server keeps its row but has no
-durable `worktree.resolved`, so the session projector never moves its sessions; the bridge must publish the event in
-the same commit and backfill rows recorded without one.
+Since OR-53, `ProjectService::persist` computes a directory's adopted projects before inserting its `worktree` row,
+then sends `worktree.resolved` on the channel after the row commits, while TypeScript commits the row and the durable
+event together. A directory whose adoption or insert fails keeps no row, so the next resolve retries it; however the
+channel is not durable, so a resolved directory keeps its row without a durable `worktree.resolved`, and the session
+projector never moves its sessions. The bridge must publish the event in the same commit and backfill rows recorded
+without one.
 
 Accepted: pending owner
 
