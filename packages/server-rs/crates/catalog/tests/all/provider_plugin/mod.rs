@@ -1,4 +1,7 @@
+pub mod amazon_bedrock;
 pub mod cerebras;
+pub mod cloudflare_ai_gateway;
+pub mod cloudflare_workers_ai;
 pub mod databricks;
 pub mod helpers;
 pub mod kilo;

@@ -206,6 +206,26 @@ impl Harness {
         let mut builtin = Builtin::default();
         for name in names {
             match *name {
+                "amazon_bedrock" => {
+                    opencode_catalog::provider_plugin::amazon_bedrock::register(&self.services, &context, &mut builtin)
+                        .await
+                }
+                "cloudflare_ai_gateway" => {
+                    opencode_catalog::provider_plugin::cloudflare_ai_gateway::register(
+                        &self.services,
+                        &context,
+                        &mut builtin,
+                    )
+                    .await
+                }
+                "cloudflare_workers_ai" => {
+                    opencode_catalog::provider_plugin::cloudflare_workers_ai::register(
+                        &self.services,
+                        &context,
+                        &mut builtin,
+                    )
+                    .await
+                }
                 "cerebras" => {
                     opencode_catalog::provider_plugin::cerebras::register(&self.services, &context, &mut builtin).await
                 }
@@ -516,7 +536,7 @@ async fn builtin_register_inserts_provider_plugins_at_the_provider_slot() {
     )
     .await;
     harness.record(builtin);
-    assert_eq!(harness.registrations.registrations.len(), 20);
+    assert_eq!(harness.registrations.registrations.len(), 26);
 }
 
 pub async fn seed(

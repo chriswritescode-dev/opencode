@@ -16,6 +16,7 @@ use opencode_contract::codec::{JsonMap, decode_json};
 use opencode_contract::generated::{
     AbsolutePath, AgentID, LocationRef, ModelRef, ProviderID, ProviderInfo, ProviderSettings, SessionID,
 };
+use serde_json::Value;
 
 use crate::builtin::Harness;
 
@@ -197,6 +198,33 @@ pub fn base_url(provider: &ProviderInfo) -> Option<String> {
 
 pub fn provider_settings(base_url: &str) -> ProviderSettings {
     decode_json(&serde_json::json!({ "baseURL": base_url }).to_string()).expect("the provider settings decode")
+}
+
+pub fn provider_settings_from(value: Value) -> ProviderSettings {
+    decode_json(&value.to_string()).expect("the provider settings decode")
+}
+
+pub fn settings_json(provider: &ProviderInfo) -> Option<Value> {
+    provider.settings.as_ref().map(|settings| {
+        serde_json::from_str(&opencode_contract::codec::encode_json(settings)).expect("the provider settings json")
+    })
+}
+
+pub async fn wait_for_setting(harness: &Harness, id: &str, key: &str, value: &str) -> ProviderInfo {
+    tokio::time::timeout(std::time::Duration::from_secs(2), async {
+        loop {
+            let provider = harness.services.provider.get(&ProviderID(id.to_owned())).await.unwrap().unwrap();
+            let matches = settings_json(&provider)
+                .and_then(|settings| settings.get(key).and_then(Value::as_str).map(|current| current == value))
+                .unwrap_or(false);
+            if matches {
+                return provider;
+            }
+            tokio::task::yield_now().await;
+        }
+    })
+    .await
+    .expect("the provider setting settles")
 }
 
 pub async fn seed_provider(

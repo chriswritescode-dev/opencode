@@ -1,4 +1,7 @@
+pub mod amazon_bedrock;
 pub mod cerebras;
+pub mod cloudflare_ai_gateway;
+pub mod cloudflare_workers_ai;
 pub mod databricks;
 pub mod hooks;
 pub mod http;
@@ -19,7 +22,7 @@ use std::io;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use opencode_contract::generated::{AgentID, LocationRef, ModelRef, ProviderInfo, SessionID};
+use opencode_contract::generated::{AgentID, LocationRef, ModelRef, ProviderInfo, ProviderSettings, SessionID};
 
 use crate::integration::ConfigEnv;
 
@@ -202,7 +205,15 @@ pub const ORDER: [Slot; 30] = [
 ];
 
 pub(crate) fn base_url(provider: &ProviderInfo) -> Option<&str> {
-    provider.settings.as_ref()?.rest.0.iter().find(|(key, _)| key == "baseURL")?.1.as_str()
+    setting(provider.settings.as_ref(), "baseURL")
+}
+
+pub(crate) fn setting<'a>(settings: Option<&'a ProviderSettings>, key: &str) -> Option<&'a str> {
+    settings?.rest.0.iter().find(|(name, _)| name == key)?.1.as_str()
+}
+
+pub(crate) fn env_value(env: &ConfigEnv, name: &str) -> Option<String> {
+    (env)(name).map(|value| value.to_string_lossy().into_owned()).filter(|value| !value.is_empty())
 }
 
 pub(crate) fn set_headers(provider: &mut ProviderInfo, entries: &[(&str, &str)]) {
@@ -235,7 +246,10 @@ pub async fn register(
             continue;
         };
         match id {
+            amazon_bedrock::ID => amazon_bedrock::register(services, context, builtin).await,
             cerebras::ID => cerebras::register(services, context, builtin).await,
+            cloudflare_ai_gateway::ID => cloudflare_ai_gateway::register(services, context, builtin).await,
+            cloudflare_workers_ai::ID => cloudflare_workers_ai::register(services, context, builtin).await,
             databricks::ID => databricks::register(services, context, builtin).await,
             kilo::ID => kilo::register(services, context, builtin).await,
             llmgateway::ID => llmgateway::register(services, context, builtin).await,
