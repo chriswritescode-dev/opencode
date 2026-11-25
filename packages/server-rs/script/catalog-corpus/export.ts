@@ -10,19 +10,58 @@ import { ModelsDev } from "@opencode/core/models-dev"
 import { Plugin } from "@opencode/core/plugin"
 import { PluginHost } from "@opencode/core/plugin/host"
 import { ModelsDevPlugin } from "@opencode/core/plugin/models-dev"
+import { AmazonBedrockPlugin } from "@opencode/core/plugin/provider/amazon-bedrock"
+import { AzurePlugin } from "@opencode/core/plugin/provider/azure"
+import { CerebrasPlugin } from "@opencode/core/plugin/provider/cerebras"
+import { ChatGPTPlugin } from "@opencode/core/plugin/provider/chatgpt"
+import { CloudflareAIGatewayPlugin } from "@opencode/core/plugin/provider/cloudflare-ai-gateway"
+import { CloudflareWorkersAIPlugin } from "@opencode/core/plugin/provider/cloudflare-workers-ai"
+import { DatabricksPlugin } from "@opencode/core/plugin/provider/databricks"
+import { DigitalOceanPlugin } from "@opencode/core/plugin/provider/digitalocean"
+import { GithubCopilotPlugin } from "@opencode/core/plugin/provider/github-copilot"
+import { GitLabPlugin } from "@opencode/core/plugin/provider/gitlab"
+import { GoogleVertexPlugin } from "@opencode/core/plugin/provider/google-vertex"
+import { KiloPlugin } from "@opencode/core/plugin/provider/kilo"
+import { LLMGatewayPlugin } from "@opencode/core/plugin/provider/llmgateway"
+import { LMStudioPlugin } from "@opencode/core/plugin/provider/lmstudio"
+import { ModalPlugin } from "@opencode/core/plugin/provider/modal"
+import { NeonPlugin } from "@opencode/core/plugin/provider/neon"
+import { NvidiaPlugin } from "@opencode/core/plugin/provider/nvidia"
+import { OllamaPlugin } from "@opencode/core/plugin/provider/ollama"
+import { OpenAIPlugin } from "@opencode/core/plugin/provider/openai"
+import { OpenAIContextCapsPlugin } from "@opencode/core/plugin/provider/openai-context-caps"
+import { OpenRouterPlugin } from "@opencode/core/plugin/provider/openrouter"
+import { PoePlugin } from "@opencode/core/plugin/provider/poe"
+import { PromptCacheKeyPlugin } from "@opencode/core/plugin/provider/prompt-cache-key"
+import { SnowflakeCortexPlugin } from "@opencode/core/plugin/provider/snowflake-cortex"
+import { VLLMPlugin } from "@opencode/core/plugin/provider/vllm"
+import { XAIPlugin } from "@opencode/core/plugin/provider/xai"
+import { ZenmuxPlugin } from "@opencode/core/plugin/provider/zenmux"
 import { WellKnownPlugin } from "@opencode/core/wellknown/plugin"
 import { Document, Info } from "@opencode/schema/config"
 import { mkdtemp, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { PluginTestLayer } from "./plugin/fixture"
+import { makePluginTestLayer } from "./plugin/fixture"
 import { OauthCallbackPage } from "@opencode/core/oauth/page"
 import { OauthRedirect } from "@opencode/core/oauth/redirect"
+import { Credential } from "@opencode/core/credential"
 import { Provider } from "@opencode/core/provider"
 import { Variant } from "@opencode/core/variant"
+import { LayerNodePlatform } from "@opencode/util/effect/app-node-platform"
 import { Context, Effect, Layer, Schema } from "effect"
+import { HttpClient } from "effect/http"
 
 const area = process.argv[2]
+
+const CorpusLayer = makePluginTestLayer(undefined, undefined, [
+  LayerNodePlatform.httpClient.replace(
+    Layer.succeed(
+      HttpClient.HttpClient,
+      HttpClient.make((request) => Effect.fail(new Error(`corpus refuses ${request.method} ${request.url}`))),
+    ),
+  ),
+])
 
 function oauth() {
   const state = "state-1"
@@ -823,6 +862,33 @@ async function catalog() {
     models_dev: ModelsDevPlugin,
     config_provider: ConfigProviderPlugin.Plugin,
     config_policy: ConfigPolicyPlugin.Plugin,
+    amazon_bedrock: AmazonBedrockPlugin,
+    azure: AzurePlugin,
+    cerebras: CerebrasPlugin,
+    chatgpt: ChatGPTPlugin,
+    cloudflare_ai_gateway: CloudflareAIGatewayPlugin,
+    cloudflare_workers_ai: CloudflareWorkersAIPlugin,
+    databricks: DatabricksPlugin,
+    digitalocean: DigitalOceanPlugin,
+    github_copilot: GithubCopilotPlugin,
+    gitlab: GitLabPlugin,
+    google_vertex: GoogleVertexPlugin,
+    kilo: KiloPlugin,
+    llmgateway: LLMGatewayPlugin,
+    lmstudio: LMStudioPlugin,
+    modal: ModalPlugin,
+    neon: NeonPlugin,
+    nvidia: NvidiaPlugin,
+    ollama: OllamaPlugin,
+    openai: OpenAIPlugin,
+    openai_context_caps: OpenAIContextCapsPlugin,
+    openrouter: OpenRouterPlugin,
+    poe: PoePlugin,
+    prompt_cache_key: PromptCacheKeyPlugin,
+    snowflake_cortex: SnowflakeCortexPlugin,
+    vllm: VLLMPlugin,
+    xai: XAIPlugin,
+    zenmux: ZenmuxPlugin,
   }
   const plain = (value: unknown) => JSON.parse(JSON.stringify(value))
   const run = async (name: string, input: any) => {
@@ -846,6 +912,17 @@ async function catalog() {
         Effect.gen(function* () {
           const context = yield* Effect.context<any>()
           const host = yield* PluginHost.make(Context.get(context, Plugin.Service), "test")
+          if (Array.isArray(input.credentials)) {
+            const credentials = Context.get(context, Credential.Service)
+            for (const entry of input.credentials)
+              yield* credentials.create({
+                id: Credential.ID.make(entry.id),
+                integrationID: Integration.ID.make(entry.integrationID),
+                value: entry.value,
+                label: entry.label,
+                activate: entry.activate,
+              })
+          }
           for (const name of input.plugins as (keyof typeof effects)[]) {
             const effect = effects[name]
               .effect(host)
@@ -884,7 +961,7 @@ async function catalog() {
             },
             integrations: yield* integrations.list(),
           }
-        }).pipe(Effect.provide(PluginTestLayer), Effect.scoped),
+        }).pipe(Effect.provide(CorpusLayer), Effect.scoped),
       )
       return plain(result)
     } finally {
@@ -895,6 +972,7 @@ async function catalog() {
   const api = (sdk: string, base = "https://api.acme.test/v1") => ({
     "generate-content": { base_url: base, sdk: { opencodeai: sdk } },
   })
+  const sdkOnly = (name: string) => ({ "generate-content": { sdk: { opencodeai: name } } })
   const chat = (id: string, overview: Record<string, unknown> = {}) => ({
     id,
     type: "chat",
@@ -1135,6 +1213,592 @@ async function catalog() {
             },
           },
         ],
+      },
+    ],
+    [
+      "plugin.amazon_bedrock",
+      {
+        plugins: ["models_dev", "amazon_bedrock"],
+        activate: true,
+        entries: [{ experimental: { recommended_api: false } }],
+        environment: { AWS_ACCESS_KEY_ID: "AKIAIOSFODNN7EXAMPLE" },
+        models: {
+          "amazon-bedrock": {
+            id: "amazon-bedrock",
+            name: "Amazon Bedrock",
+            env: ["AWS_ACCESS_KEY_ID"],
+            models: {
+              "anthropic.claude-sonnet-4": chat("anthropic.claude-sonnet-4", {
+                api: api("@opencode/ai/providers/amazon-bedrock"),
+              }),
+            },
+          },
+        },
+      },
+    ],
+    [
+      "plugin.azure",
+      {
+        plugins: ["models_dev", "azure"],
+        activate: true,
+        entries: [{ experimental: { recommended_api: false } }],
+        environment: { AZURE_RESOURCE_NAME: "my-models", PATH: "/nonexistent" },
+        models: {
+          azure: {
+            id: "azure",
+            name: "Azure",
+            env: ["AZURE_API_KEY"],
+            models: {
+              "gpt-5": chat("gpt-5", { api: sdkOnly("@opencode/ai/providers/azure/responses") }),
+            },
+          },
+        },
+      },
+    ],
+    [
+      "plugin.cerebras",
+      {
+        plugins: ["models_dev", "cerebras"],
+        activate: true,
+        entries: [{ experimental: { recommended_api: false } }],
+        models: {
+          cerebras: {
+            id: "cerebras",
+            name: "Cerebras",
+            env: ["CEREBRAS_API_KEY"],
+            models: {
+              "llama-3.3-70b": chat("llama-3.3-70b", {
+                api: api("@opencode/ai/providers/cerebras", "https://api.cerebras.ai/v1"),
+              }),
+            },
+          },
+        },
+      },
+    ],
+    [
+      "plugin.chatgpt",
+      {
+        plugins: ["models_dev", "chatgpt"],
+        activate: true,
+        entries: [{ experimental: { recommended_api: false } }],
+        models: {
+          openai: {
+            id: "openai",
+            name: "OpenAI",
+            env: ["OPENAI_API_KEY"],
+            models: {
+              "gpt-5": chat("gpt-5", { api: api("@opencode/ai/providers/openai", "https://api.openai.com/v1") }),
+            },
+          },
+        },
+      },
+    ],
+    [
+      "plugin.cloudflare_ai_gateway",
+      {
+        plugins: ["models_dev", "cloudflare_ai_gateway"],
+        activate: true,
+        entries: [{ experimental: { recommended_api: false } }],
+        environment: { CLOUDFLARE_ACCOUNT_ID: "account-1", CLOUDFLARE_GATEWAY_ID: "gateway-1" },
+        models: {
+          "cloudflare-ai-gateway": {
+            id: "cloudflare-ai-gateway",
+            name: "Cloudflare AI Gateway",
+            env: ["CLOUDFLARE_API_TOKEN"],
+            models: {
+              "gpt-5": chat("gpt-5", { api: sdkOnly("@opencode/ai/providers/cloudflare-ai-gateway") }),
+            },
+          },
+        },
+      },
+    ],
+    [
+      "plugin.cloudflare_workers_ai",
+      {
+        plugins: ["models_dev", "cloudflare_workers_ai"],
+        activate: true,
+        entries: [{ experimental: { recommended_api: false } }],
+        environment: { CLOUDFLARE_ACCOUNT_ID: "account-1" },
+        models: {
+          "cloudflare-workers-ai": {
+            id: "cloudflare-workers-ai",
+            name: "Cloudflare Workers AI",
+            env: ["CLOUDFLARE_API_KEY"],
+            models: {
+              "@cf/meta/llama": chat("@cf/meta/llama", {
+                api: sdkOnly("@opencode/ai/providers/cloudflare-workers-ai"),
+              }),
+            },
+          },
+        },
+      },
+    ],
+    [
+      "plugin.databricks",
+      {
+        plugins: ["models_dev", "databricks"],
+        activate: true,
+        entries: [{ experimental: { recommended_api: false } }],
+        environment: { DATABRICKS_HOST: "dbc-1234.cloud.databricks.com" },
+        models: {
+          databricks: {
+            id: "databricks",
+            name: "Databricks",
+            env: ["DATABRICKS_TOKEN"],
+            models: {
+              "databricks-claude-sonnet-4": chat("databricks-claude-sonnet-4", {
+                api: api(
+                  "@opencode/ai/providers/openai-compatible",
+                  "https://${DATABRICKS_HOST}/serving-endpoints",
+                ),
+              }),
+            },
+          },
+        },
+      },
+    ],
+    [
+      "plugin.digitalocean",
+      {
+        plugins: ["models_dev", "digitalocean"],
+        activate: true,
+        entries: [{ experimental: { recommended_api: false } }],
+        models: {
+          digitalocean: {
+            id: "digitalocean",
+            name: "DigitalOcean",
+            env: ["DIGITALOCEAN_ACCESS_TOKEN"],
+            models: {
+              "llama3.3-70b": chat("llama3.3-70b", {
+                api: api("@opencode/ai/providers/openai-compatible", "https://api.digitalocean.com/v2/ai"),
+              }),
+            },
+          },
+        },
+      },
+    ],
+    [
+      "plugin.github_copilot",
+      {
+        plugins: ["models_dev", "github_copilot"],
+        activate: true,
+        entries: [{ experimental: { recommended_api: false } }],
+        models: {
+          "github-copilot": {
+            id: "github-copilot",
+            name: "GitHub Copilot",
+            env: ["GITHUB_TOKEN"],
+            models: {
+              "gpt-5": chat("gpt-5", { api: sdkOnly("@opencode/ai/providers/openai") }),
+              "gpt-5-chat-latest": chat("gpt-5-chat-latest", {
+                api: sdkOnly("@opencode/ai/providers/openai"),
+              }),
+            },
+          },
+        },
+      },
+    ],
+    [
+      "plugin.gitlab",
+      {
+        plugins: ["models_dev", "gitlab"],
+        activate: true,
+        entries: [{ experimental: { recommended_api: false } }],
+        models: {
+          gitlab: {
+            id: "gitlab",
+            name: "GitLab",
+            env: ["GITLAB_TOKEN"],
+            models: {
+              "duo-chat-opus": chat("duo-chat-opus", { api: sdkOnly("aisdk:gitlab-ai-provider") }),
+            },
+          },
+        },
+      },
+    ],
+    [
+      "plugin.google_vertex",
+      {
+        plugins: ["models_dev", "google_vertex"],
+        activate: true,
+        entries: [{ experimental: { recommended_api: false } }],
+        environment: { GOOGLE_VERTEX_PROJECT: "my-project", GOOGLE_VERTEX_LOCATION: "us-central1" },
+        models: {
+          "google-vertex": {
+            id: "google-vertex",
+            name: "Google Vertex",
+            env: ["GOOGLE_VERTEX_API_KEY"],
+            models: {
+              "gemini-2.5-pro": chat("gemini-2.5-pro", {
+                api: sdkOnly("@opencode/ai/providers/google-vertex"),
+              }),
+            },
+          },
+        },
+      },
+    ],
+    [
+      "plugin.kilo",
+      {
+        plugins: ["models_dev", "kilo"],
+        activate: true,
+        entries: [{ experimental: { recommended_api: false } }],
+        models: {
+          kilo: {
+            id: "kilo",
+            name: "Kilo",
+            env: ["KILO_API_KEY"],
+            models: {
+              "kilo-chat": chat("kilo-chat", {
+                api: api("@opencode/ai/providers/openai-compatible", "https://api.kilo.ai/api/gateway"),
+              }),
+            },
+          },
+        },
+      },
+    ],
+    [
+      "plugin.llmgateway",
+      {
+        plugins: ["models_dev", "llmgateway"],
+        activate: true,
+        entries: [{ experimental: { recommended_api: false } }],
+        models: {
+          llmgateway: {
+            id: "llmgateway",
+            name: "LLM Gateway",
+            env: ["LLM_GATEWAY_API_KEY"],
+            models: {
+              "gpt-5": chat("gpt-5", {
+                api: api("@opencode/ai/providers/openai-compatible", "https://api.llmgateway.io/v1"),
+              }),
+            },
+          },
+        },
+      },
+    ],
+    [
+      "plugin.lmstudio",
+      {
+        plugins: ["models_dev", "lmstudio"],
+        activate: true,
+        entries: [
+          {
+            experimental: { recommended_api: false },
+            providers: { lmstudio: { settings: { baseURL: "http://127.0.0.1:1/v1" } } },
+          },
+        ],
+        models: {
+          lmstudio: {
+            id: "lmstudio",
+            name: "LM Studio",
+            env: ["LMSTUDIO_API_KEY"],
+            models: {
+              "local-model": chat("local-model", {
+                api: api("@opencode/ai/providers/openai-compatible", "http://127.0.0.1:1/v1"),
+              }),
+            },
+          },
+        },
+      },
+    ],
+    [
+      "plugin.modal",
+      {
+        plugins: ["models_dev", "modal"],
+        activate: true,
+        entries: [{ experimental: { recommended_api: false } }],
+        models: {
+          modal: {
+            id: "modal",
+            name: "Modal",
+            env: ["MODAL_PROXY_TOKEN"],
+            models: {
+              "modal-model": chat("modal-model", {
+                api: sdkOnly("@opencode/ai/providers/openai-compatible"),
+              }),
+            },
+          },
+        },
+      },
+    ],
+    [
+      "plugin.neon",
+      {
+        plugins: ["models_dev", "neon"],
+        activate: true,
+        entries: [{ experimental: { recommended_api: false } }],
+        models: {
+          neon: {
+            id: "neon",
+            name: "Neon",
+            env: ["NEON_API_KEY"],
+            models: {
+              "neon-model": chat("neon-model", {
+                api: api("@opencode/ai/providers/openai-compatible", "https://br.neon.tech/v1"),
+              }),
+            },
+          },
+        },
+      },
+    ],
+    [
+      "plugin.nvidia",
+      {
+        plugins: ["models_dev", "nvidia"],
+        activate: true,
+        entries: [{ experimental: { recommended_api: false } }],
+        models: {
+          nvidia: {
+            id: "nvidia",
+            name: "NVIDIA",
+            env: ["NVIDIA_API_KEY"],
+            models: {
+              "deepseek-ai/deepseek-v4-pro": chat("deepseek-ai/deepseek-v4-pro", {
+                api: api("@opencode/ai/providers/openai-compatible", "https://integrate.api.nvidia.com/v1"),
+              }),
+            },
+          },
+        },
+      },
+    ],
+    [
+      "plugin.ollama",
+      {
+        plugins: ["models_dev", "ollama"],
+        activate: true,
+        entries: [
+          {
+            experimental: { recommended_api: false },
+            providers: { ollama: { settings: { baseURL: "http://127.0.0.1:1/v1" } } },
+          },
+        ],
+        models: {
+          ollama: {
+            id: "ollama",
+            name: "Ollama",
+            env: ["OLLAMA_API_KEY"],
+            models: {
+              "llama3.2": chat("llama3.2", {
+                api: api("@opencode/ai/providers/openai-compatible", "http://127.0.0.1:1/v1"),
+              }),
+            },
+          },
+        },
+      },
+    ],
+    [
+      "plugin.openai",
+      {
+        plugins: ["models_dev", "openai"],
+        activate: true,
+        entries: [{ experimental: { recommended_api: false } }],
+        models: {
+          openai: {
+            id: "openai",
+            name: "OpenAI",
+            env: ["OPENAI_API_KEY"],
+            models: {
+              "gpt-5": chat("gpt-5", { api: api("@opencode/ai/providers/openai", "https://api.openai.com/v1") }),
+            },
+          },
+        },
+      },
+    ],
+    [
+      "plugin.openai_context_caps",
+      {
+        plugins: ["models_dev", "openai_context_caps"],
+        activate: true,
+        entries: [{ experimental: { recommended_api: false } }],
+        credentials: [
+          {
+            id: "cred-openai-context-caps",
+            integrationID: "openai",
+            label: "default",
+            value: {
+              type: "oauth",
+              methodID: "chatgpt-browser",
+              refresh: "refresh-1",
+              access: "access-1",
+              expires: 4102444800000,
+            },
+            activate: true,
+          },
+        ],
+        models: {
+          openai: {
+            id: "openai",
+            name: "OpenAI",
+            env: ["OPENAI_API_KEY"],
+            models: {
+              "gpt-5": chat("gpt-5", {
+                api: api("@opencode/ai/providers/openai", "https://api.openai.com/v1"),
+                limit: { context: 600000, input: 600000, output: 128000 },
+              }),
+              "gpt-6.1": chat("gpt-6.1", {
+                api: api("@opencode/ai/providers/openai", "https://api.openai.com/v1"),
+                limit: { context: 600000, input: 600000, output: 128000 },
+              }),
+            },
+          },
+        },
+      },
+    ],
+    [
+      "plugin.openrouter",
+      {
+        plugins: ["models_dev", "openrouter"],
+        activate: true,
+        entries: [{ experimental: { recommended_api: false } }],
+        models: {
+          openrouter: {
+            id: "openrouter",
+            name: "OpenRouter",
+            env: ["OPENROUTER_API_KEY"],
+            models: {
+              "gpt-5-chat-latest": chat("gpt-5-chat-latest", {
+                api: api("@opencode/ai/providers/openrouter", "https://openrouter.ai/api/v1"),
+              }),
+              "normal-model": chat("normal-model", {
+                api: api("@opencode/ai/providers/openrouter", "https://openrouter.ai/api/v1"),
+              }),
+            },
+          },
+        },
+      },
+    ],
+    [
+      "plugin.poe",
+      {
+        plugins: ["models_dev", "poe"],
+        activate: true,
+        entries: [{ experimental: { recommended_api: false } }],
+        models: {
+          poe: {
+            id: "poe",
+            name: "Poe",
+            env: ["POE_API_KEY"],
+            models: {
+              "poe-chat": chat("poe-chat", {
+                api: api("@opencode/ai/providers/openai-compatible", "https://api.poe.com/v1"),
+              }),
+            },
+          },
+        },
+      },
+    ],
+    [
+      "plugin.prompt_cache_key",
+      {
+        plugins: ["models_dev", "prompt_cache_key"],
+        activate: true,
+        entries: [{ experimental: { recommended_api: false } }],
+        models: {
+          venice: {
+            id: "venice",
+            name: "Venice",
+            env: ["VENICE_API_KEY"],
+            models: {
+              "venice-uncensored": chat("venice-uncensored", {
+                api: api("@opencode/ai/providers/openai-compatible", "https://api.venice.ai/api/v1"),
+              }),
+            },
+          },
+        },
+      },
+    ],
+    [
+      "plugin.snowflake_cortex",
+      {
+        plugins: ["models_dev", "snowflake_cortex"],
+        activate: true,
+        entries: [{ experimental: { recommended_api: false } }],
+        environment: { SNOWFLAKE_ACCOUNT: "myorg-myaccount" },
+        models: {
+          "snowflake-cortex": {
+            id: "snowflake-cortex",
+            name: "Snowflake Cortex",
+            env: ["SNOWFLAKE_CORTEX_TOKEN"],
+            models: {
+              "claude-3-5-sonnet": chat("claude-3-5-sonnet", {
+                api: api(
+                  "@opencode/ai/providers/openai-compatible",
+                  "https://${SNOWFLAKE_ACCOUNT}.snowflakecomputing.com/api/v2/cortex/v1",
+                ),
+              }),
+              "llama3.1-70b": chat("llama3.1-70b", {
+                api: api(
+                  "@opencode/ai/providers/openai-compatible",
+                  "https://${SNOWFLAKE_ACCOUNT}.snowflakecomputing.com/api/v2/cortex/v1",
+                ),
+              }),
+            },
+          },
+        },
+      },
+    ],
+    [
+      "plugin.vllm",
+      {
+        plugins: ["models_dev", "vllm"],
+        activate: true,
+        entries: [
+          {
+            experimental: { recommended_api: false },
+            providers: { vllm: { settings: { baseURL: "http://127.0.0.1:1/v1" } } },
+          },
+        ],
+        models: {
+          vllm: {
+            id: "vllm",
+            name: "vLLM",
+            env: ["VLLM_API_KEY"],
+            models: {
+              "vllm-model": chat("vllm-model", {
+                api: api("@opencode/ai/providers/openai-compatible", "http://127.0.0.1:1/v1"),
+              }),
+            },
+          },
+        },
+      },
+    ],
+    [
+      "plugin.xai",
+      {
+        plugins: ["models_dev", "xai"],
+        activate: true,
+        entries: [{ experimental: { recommended_api: false } }],
+        models: {
+          xai: {
+            id: "xai",
+            name: "xAI",
+            env: ["XAI_API_KEY"],
+            models: {
+              "grok-4": chat("grok-4", { api: api("@opencode/ai/providers/xai", "https://api.x.ai/v1") }),
+            },
+          },
+        },
+      },
+    ],
+    [
+      "plugin.zenmux",
+      {
+        plugins: ["models_dev", "zenmux"],
+        activate: true,
+        entries: [{ experimental: { recommended_api: false } }],
+        models: {
+          zenmux: {
+            id: "zenmux",
+            name: "ZenMux",
+            env: ["ZENMUX_API_KEY"],
+            models: {
+              "zenmux-model": chat("zenmux-model", {
+                api: api("@opencode/ai/providers/openai-compatible", "https://zenmux.ai/api/v1"),
+              }),
+            },
+          },
+        },
       },
     ],
   ]

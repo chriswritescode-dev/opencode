@@ -232,6 +232,9 @@ impl Harness {
                 "cerebras" => {
                     opencode_catalog::provider_plugin::cerebras::register(&self.services, &context, &mut builtin).await
                 }
+                "chatgpt" => {
+                    opencode_catalog::provider_plugin::chatgpt::register(&self.services, &context, &mut builtin).await
+                }
                 "prompt_cache_key" => {
                     opencode_catalog::provider_plugin::prompt_cache_key::register(
                         &self.services,
@@ -291,6 +294,9 @@ impl Harness {
                     opencode_catalog::provider_plugin::google_vertex::register(&self.services, &context, &mut builtin)
                         .await
                 }
+                "openai" => {
+                    opencode_catalog::provider_plugin::openai::register(&self.services, &context, &mut builtin).await
+                }
                 "openai_context_caps" => {
                     opencode_catalog::provider_plugin::openai_context_caps::register(
                         &self.services,
@@ -299,6 +305,16 @@ impl Harness {
                     )
                     .await
                 }
+                "poe" => opencode_catalog::provider_plugin::poe::register(&self.services, &context, &mut builtin).await,
+                "snowflake_cortex" => {
+                    opencode_catalog::provider_plugin::snowflake_cortex::register(
+                        &self.services,
+                        &context,
+                        &mut builtin,
+                    )
+                    .await
+                }
+                "xai" => opencode_catalog::provider_plugin::xai::register(&self.services, &context, &mut builtin).await,
                 _ => panic!("unknown provider plugin: {name}"),
             }
         }
