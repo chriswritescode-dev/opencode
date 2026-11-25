@@ -1,9 +1,13 @@
 use std::sync::{Arc, Mutex};
 
 use indexmap::IndexMap;
+use opencode_catalog::builtin::{Builtin, Deps, Services};
 use opencode_catalog::provider_plugin::hooks::{ModelRequest, ProviderHooks, RequestKind};
 use opencode_catalog::provider_plugin::{ORDER, Slot};
-use opencode_contract::generated::{AgentID, IntegrationID, IntegrationMethod, ModelRef, ProviderID, SessionID};
+use opencode_contract::generated::{
+    AgentID, IntegrationEnvMethodType, IntegrationExternalMethodType, IntegrationID, IntegrationInfo,
+    IntegrationKeyMethodType, IntegrationMethod, IntegrationOAuthMethodType, ModelRef, ProviderID, SessionID,
+};
 
 use crate::builtin::{Input, start};
 use crate::provider_plugin::support::plugin_context;
@@ -56,6 +60,87 @@ async fn order_matches_the_pinned_provider_plugin_list() {
     assert!(
         matches!(ORDER[29], Slot::Elsewhere { id, owner } if id == "opencode.provider.claude-agent" && owner == "OR-64")
     );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn every_native_slot_is_handled_by_provider_plugin_register() {
+    let harness = start(Input::new(Vec::new())).await;
+    let context = plugin_context(&harness);
+    let mut builtin = Builtin::default();
+    let dispatched = opencode_catalog::provider_plugin::register(&harness.services, &context, &mut builtin).await;
+
+    let expected: Vec<&str> = ORDER
+        .iter()
+        .filter_map(|slot| match slot {
+            Slot::Native(id) => Some(*id),
+            Slot::Elsewhere { .. } => None,
+        })
+        .collect();
+    assert_eq!(dispatched, expected);
+    assert_eq!(dispatched.len(), 27);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn native_plugins_register_their_integrations_with_an_empty_catalog() {
+    let mut harness = start(Input::new(Vec::new())).await;
+    let context = plugin_context(&harness);
+    let builtin = opencode_catalog::builtin::register(
+        Services {
+            bus: harness.services.bus.clone(),
+            config: harness.services.config.clone(),
+            credentials: harness.services.credentials.clone(),
+            models_dev: harness.services.models_dev.clone(),
+            wellknown: harness.services.wellknown.clone(),
+            integration: harness.services.integration.clone(),
+            provider: harness.services.provider.clone(),
+            model: harness.services.model.clone(),
+        },
+        Deps { provider_plugins: Some(context), external: None },
+    )
+    .await;
+    harness.record(builtin);
+
+    let expected: [(&str, Vec<ExpectedMethod>); 15] = [
+        ("amazon-bedrock", vec![env(&["AWS_BEARER_TOKEN_BEDROCK"]), ExpectedMethod::Key, external("aws-profile")]),
+        ("azure", vec![env(&["AZURE_API_KEY", "AZURE_COGNITIVE_SERVICES_API_KEY"]), ExpectedMethod::Key]),
+        ("cloudflare-ai-gateway", vec![ExpectedMethod::Key]),
+        (
+            "cloudflare-workers-ai",
+            vec![
+                env(&["CLOUDFLARE_API_KEY", "CLOUDFLARE_WORKERS_AI_TOKEN", "CLOUDFLARE_API_TOKEN"]),
+                ExpectedMethod::Key,
+            ],
+        ),
+        ("databricks", vec![env(&["DATABRICKS_TOKEN"])]),
+        ("digitalocean", vec![oauth("browser")]),
+        ("github-copilot", vec![env(&["COPILOT_GITHUB_TOKEN"]), oauth("device")]),
+        ("gitlab", vec![oauth("pkce")]),
+        ("google-vertex", vec![env(&["GOOGLE_VERTEX_API_KEY"]), external("google-adc")]),
+        ("modal", vec![env(&["MODAL_PROXY_TOKEN"])]),
+        ("neon", vec![env(&["NEON_AI_GATEWAY_TOKEN"])]),
+        (
+            "snowflake-cortex",
+            vec![ExpectedMethod::Key, env(&["SNOWFLAKE_CORTEX_TOKEN", "SNOWFLAKE_CORTEX_PAT"]), oauth("browser")],
+        ),
+        ("openai", vec![oauth("chatgpt-token-sharing"), oauth("chatgpt-browser"), oauth("chatgpt-headless")]),
+        ("poe", vec![oauth("browser")]),
+        ("xai", vec![oauth("device"), ExpectedMethod::Key]),
+    ];
+
+    for (id, expected_methods) in expected {
+        let integration = harness
+            .services
+            .integration
+            .get(&IntegrationID(id.to_owned()))
+            .await
+            .unwrap()
+            .unwrap_or_else(|| panic!("the {id} integration is registered"));
+        assert_eq!(methods(&integration), expected_methods, "{id}");
+    }
+
+    for id in ["lmstudio", "ollama", "vllm"] {
+        assert!(harness.services.integration.get(&IntegrationID(id.to_owned())).await.unwrap().is_none(), "{id}");
+    }
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -144,6 +229,52 @@ async fn hooks_run_in_registration_order_ignore_other_providers_and_remove_on_dr
     drop(all);
     hooks.trigger_model_request(model_request("b")).await;
     assert_eq!(*events.lock().expect("the hook events lock is never poisoned"), ["all", "filtered", "all"]);
+}
+
+#[derive(Debug, PartialEq)]
+enum ExpectedMethod {
+    Env(Vec<String>),
+    Key,
+    Oauth(String),
+    External(String),
+}
+
+fn env(names: &[&str]) -> ExpectedMethod {
+    ExpectedMethod::Env(names.iter().map(|name| (*name).to_owned()).collect())
+}
+
+fn oauth(id: &str) -> ExpectedMethod {
+    ExpectedMethod::Oauth(id.to_owned())
+}
+
+fn external(id: &str) -> ExpectedMethod {
+    ExpectedMethod::External(id.to_owned())
+}
+
+fn methods(integration: &IntegrationInfo) -> Vec<ExpectedMethod> {
+    integration
+        .methods
+        .iter()
+        .map(|method| match method {
+            IntegrationMethod::Env(method) => {
+                assert_eq!(method.r#type, IntegrationEnvMethodType::Env);
+                ExpectedMethod::Env(method.names.clone())
+            }
+            IntegrationMethod::Key(method) => {
+                assert_eq!(method.r#type, IntegrationKeyMethodType::Key);
+                ExpectedMethod::Key
+            }
+            IntegrationMethod::Oauth(method) => {
+                assert_eq!(method.r#type, IntegrationOAuthMethodType::Oauth);
+                ExpectedMethod::Oauth(method.id.0.clone())
+            }
+            IntegrationMethod::External(method) => {
+                assert_eq!(method.r#type, IntegrationExternalMethodType::External);
+                ExpectedMethod::External(method.id.0.clone())
+            }
+            IntegrationMethod::Command(method) => panic!("unexpected command method {}", method.id.0),
+        })
+        .collect()
 }
 
 fn model_request(provider: &str) -> ModelRequest {

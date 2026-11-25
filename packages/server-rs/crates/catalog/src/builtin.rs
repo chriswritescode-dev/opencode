@@ -48,7 +48,7 @@ pub async fn register(services: Services, deps: Deps) -> Builtin {
     wellknown::register(&services, &mut builtin).await;
     models_dev::register(&services, &mut builtin).await;
     if let Some(context) = deps.provider_plugins.as_ref() {
-        crate::provider_plugin::register(&services, context, &mut builtin).await;
+        let _ = crate::provider_plugin::register(&services, context, &mut builtin).await;
     }
     if let Some(block) = deps.external {
         builtin.registrations.push(services.provider.block(block).await);

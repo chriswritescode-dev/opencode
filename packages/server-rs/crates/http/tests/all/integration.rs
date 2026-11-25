@@ -530,6 +530,23 @@ async fn command_connect_runs_a_wellknown_login() {
 }
 
 #[tokio::test]
+async fn production_boot_registers_the_native_provider_plugins() {
+    let (services, app, reference) = boot("integration-native-plugins").await;
+    let _lease = services.locations.get(&reference).await.expect("boot the location");
+
+    let response = app.handle(authorized("GET", "/api/integration/github-copilot")).await;
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = body_json(response).await;
+    assert_eq!(body["data"]["id"], "github-copilot");
+    let methods = body["data"]["methods"].as_array().expect("an integration method list");
+    assert!(methods.iter().any(|method| method["type"] == "oauth" && method["id"] == "device"));
+    assert!(methods.iter().any(|method| {
+        method["type"] == "env"
+            && method["names"].as_array().is_some_and(|names| names.iter().any(|name| name == "COPILOT_GITHUB_TOKEN"))
+    }));
+}
+
+#[tokio::test]
 async fn invalid_bodies_are_400() {
     let (_services, app, _reference) = boot("integration-invalid").await;
     for (uri, expected) in [

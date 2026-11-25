@@ -256,7 +256,8 @@ pub async fn register(
     services: &crate::builtin::Services,
     context: &PluginContext,
     builtin: &mut crate::builtin::Builtin,
-) {
+) -> Vec<&'static str> {
+    let mut dispatched = Vec::new();
     for slot in ORDER {
         let Slot::Native(id) = slot else {
             continue;
@@ -289,7 +290,9 @@ pub async fn register(
             vllm::ID => vllm::register(services, context, builtin).await,
             xai::ID => xai::register(services, context, builtin).await,
             zenmux::ID => zenmux::register(services, context, builtin).await,
-            _ => {}
+            _ => continue,
         }
+        dispatched.push(id);
     }
+    dispatched
 }

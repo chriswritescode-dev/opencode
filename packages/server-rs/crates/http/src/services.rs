@@ -5,6 +5,8 @@ use std::time::Duration;
 
 use futures_util::future::BoxFuture;
 use http::StatusCode;
+use opencode_ai::HttpSender;
+use opencode_ai::route::executor::ReqwestSender;
 use opencode_bus::Bus;
 use opencode_catalog::builtin::{self, Builtin};
 use opencode_catalog::credential::CredentialService;
@@ -12,6 +14,10 @@ use opencode_catalog::integration::{CommandEnv, IntegrationService};
 use opencode_catalog::model::ModelService;
 use opencode_catalog::models_dev::{ModelsDevService, Options};
 use opencode_catalog::provider::ProviderService;
+use opencode_catalog::provider_plugin::gitlab::NoDiscovery;
+use opencode_catalog::provider_plugin::hooks::ProviderHooks;
+use opencode_catalog::provider_plugin::{AppInfo, CommandRunner, NoSessions, PluginContext, TokioCommandRunner};
+use opencode_catalog::shared_cache::SharedCache;
 use opencode_config::entry::Entry;
 use opencode_config::flag;
 use opencode_config::options::{ConfigLocation, ConfigOptions};
@@ -63,6 +69,7 @@ pub struct LocationServices {
     pub integrations: Arc<IntegrationService>,
     pub providers: Arc<ProviderService>,
     pub models: Arc<ModelService>,
+    pub provider_hooks: Arc<ProviderHooks>,
     registrations: Mutex<Option<Builtin>>,
 }
 
@@ -97,6 +104,14 @@ impl GlobalServices {
         let environment: Arc<dyn Environment> = Arc::new(LocalEnvironment::new());
         let channel = flag::build_channel().to_owned();
         let flag_overrides = config_env("OPENCODE_FLAGS").map(|value| value.to_string_lossy().into_owned());
+        let http: Arc<dyn HttpSender> = Arc::new(ReqwestSender::new());
+        let app = AppInfo {
+            name: "opencode".to_owned(),
+            version: option_env!("OPENCODE_VERSION").unwrap_or("local").to_owned(),
+            channel: flag::build_channel().to_owned(),
+        };
+        let commands: Arc<dyn CommandRunner> = Arc::new(TokioCommandRunner);
+        let shared_cache = SharedCache::new();
         let boot_projects = projects.clone();
         let boot_environment = environment.clone();
         let boot_config_env = config_env.clone();
@@ -106,6 +121,11 @@ impl GlobalServices {
         let boot_models_dev = models_dev.clone();
         let boot_bus = bus.clone();
         let boot_command_env = command_env.clone();
+        let boot_http = http.clone();
+        let boot_app = app.clone();
+        let boot_commands = commands.clone();
+        let boot_shared_cache = shared_cache.clone();
+        let boot_database = database.clone();
         let locations = LocationMap::new(move |reference| {
             let projects = boot_projects.clone();
             let environment = boot_environment.clone();
@@ -116,6 +136,11 @@ impl GlobalServices {
             let models_dev = boot_models_dev.clone();
             let bus = boot_bus.clone();
             let command_env = boot_command_env.clone();
+            let http = boot_http.clone();
+            let app = boot_app.clone();
+            let commands = boot_commands.clone();
+            let shared_cache = boot_shared_cache.clone();
+            let database = boot_database.clone();
             let channel = channel.clone();
             let flag_overrides = flag_overrides.clone();
             Box::pin(async move {
@@ -145,7 +170,8 @@ impl GlobalServices {
                     command_env,
                 );
                 let providers = ProviderService::new(integrations.clone(), bus.clone(), location.clone());
-                let models = ModelService::new(providers.clone(), bus.clone(), location, config_env.clone());
+                let models = ModelService::new(providers.clone(), bus.clone(), location.clone(), config_env.clone());
+                let provider_hooks = Arc::new(ProviderHooks::default());
                 let registrations = builtin::register(
                     builtin::Services {
                         bus: bus.clone(),
@@ -157,7 +183,21 @@ impl GlobalServices {
                         provider: providers.clone(),
                         model: models.clone(),
                     },
-                    builtin::Deps::default(),
+                    builtin::Deps {
+                        provider_plugins: Some(PluginContext {
+                            http,
+                            app,
+                            env: config_env.clone(),
+                            kv: Arc::new(StorageKv { database }),
+                            commands,
+                            sessions: Arc::new(NoSessions),
+                            hooks: provider_hooks.clone(),
+                            location,
+                            shared_cache,
+                            gitlab_discovery: Arc::new(NoDiscovery),
+                        }),
+                        external: None,
+                    },
                 )
                 .await;
                 Ok(Arc::new(LocationServices {
@@ -168,6 +208,7 @@ impl GlobalServices {
                     integrations,
                     providers,
                     models,
+                    provider_hooks,
                     registrations: Mutex::new(Some(registrations)),
                 }))
             })
