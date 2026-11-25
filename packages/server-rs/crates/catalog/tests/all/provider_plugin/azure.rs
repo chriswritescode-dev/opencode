@@ -596,6 +596,30 @@ async fn publishes_the_management_list_only_after_its_last_page() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn stops_following_a_repeated_deployment_page() {
+    let mut harness = start(Input::new(Vec::new())).await;
+    install_az(&mut harness);
+    let runner = cli_runner();
+    let azure = fake_azure();
+    let looped = azure.deployments_url();
+    azure.routes.route_with("GET", &looped, {
+        let looped = looped.clone();
+        move |_| management_page(vec![managed("mini", "gpt-5-mini", "Succeeded")], Some(looped.clone()))
+    });
+    azure.routes.route_json(
+        "GET",
+        &azure.resource_url("test-resource"),
+        json!({ "data": [listed("from-resource", "gpt-5-nano", "succeeded")] }),
+    );
+    let _seeded = seed_catalog(&harness).await;
+    connect(&harness, cli_credential("test-resource")).await;
+    register(&mut harness, &azure, runner, azure.options()).await;
+
+    assert_eq!(eventually_ids(&harness, |ids| ids == ["from-resource"]).await, ["from-resource"]);
+    assert_eq!(path_count(&azure.routes, "/deployments?api-version=2024-10-01"), 1);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn keeps_the_last_complete_list_when_a_later_page_fails() {
     let mut harness = start(Input::new(Vec::new())).await;
     install_az(&mut harness);

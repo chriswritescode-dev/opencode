@@ -76,6 +76,10 @@ const DEFAULT_EXPIRES_SECONDS: f64 = 3600.0;
 
 const REVOKE_TIMEOUT: Duration = Duration::from_secs(5);
 
+const TOKEN_TIMEOUT: Duration = Duration::from_secs(10);
+
+const JWKS_TIMEOUT: Duration = Duration::from_secs(5);
+
 const FALLBACK_MODELS: [&str; 22] = [
     "gpt-5.5",
     "gpt-5.5-fast",
@@ -583,6 +587,9 @@ async fn handle(state: &str, responses: &CallbackResponses, request: Request) ->
         return Some((404, "", "Not found".to_owned()));
     }
     let params = parse_query(&request.query);
+    if param(&params, "state") != Some(state) {
+        return Some((400, "text/html", page::error(INVALID_STATE, Some(page_options()))));
+    }
     let failure =
         param(&params, "error_description").or_else(|| param(&params, "error")).filter(|detail| !detail.is_empty());
     if let Some(failure) = failure {
@@ -593,10 +600,6 @@ async fn handle(state: &str, responses: &CallbackResponses, request: Request) ->
         send(responses, Err(MISSING_CODE.to_owned()));
         return Some((400, "text/html", page::error(MISSING_CODE, Some(page_options()))));
     };
-    if param(&params, "state") != Some(state) {
-        send(responses, Err(INVALID_STATE.to_owned()));
-        return Some((400, "text/html", page::error(INVALID_STATE, Some(page_options()))));
-    }
     let Some(sender) = responses.lock().expect("lock the ChatGPT authorization callback").take() else {
         return Some((409, "", "OAuth callback already received".to_owned()));
     };
@@ -771,7 +774,7 @@ async fn check_id_token(
         return None;
     }
     let signature = decode_base64(signature)?;
-    let response = http::send(http, http::get(jwks_url, Vec::new()), None).await.ok()?;
+    let response = http::send(http, http::get(jwks_url, Vec::new()), Some(JWKS_TIMEOUT)).await.ok()?;
     let keys: Value = serde_json::from_slice(&response.body).ok()?;
     let keys = keys.get("keys")?.as_array()?;
     let message = format!("{header_segment}.{payload}");
@@ -803,7 +806,7 @@ async fn request<T: serde::de::DeserializeOwned>(
     user_agent: &str,
     fields: &[(&str, &str)],
 ) -> Result<T, AuthorizationError> {
-    match http::send(http, http::form(TOKEN_URL, headers(user_agent), fields), None).await {
+    match http::send(http, http::form(TOKEN_URL, headers(user_agent), fields), Some(TOKEN_TIMEOUT)).await {
         Ok(response) => {
             serde_json::from_slice(&response.body).map_err(|failure| error(format!("Request failed: {failure}")))
         }

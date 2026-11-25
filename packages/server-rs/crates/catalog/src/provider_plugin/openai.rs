@@ -533,6 +533,9 @@ fn handle(state: &str, responses: &CallbackResponses, request: Request) -> Reply
         return (404, "", "Not found".to_owned());
     }
     let params = parse_query(&request.query);
+    if param(&params, "state") != Some(state) {
+        return (400, "text/html", page::error("Invalid OAuth state", Some(page_options())));
+    }
     let failure = match param(&params, "error_description") {
         Some(detail) => Some(detail),
         None => param(&params, "error"),
@@ -546,10 +549,6 @@ fn handle(state: &str, responses: &CallbackResponses, request: Request) -> Reply
         respond(responses, Err("Missing authorization code".to_owned()));
         return (400, "text/html", page::error("Missing authorization code", Some(page_options())));
     };
-    if param(&params, "state") != Some(state) {
-        respond(responses, Err("Invalid OAuth state".to_owned()));
-        return (400, "text/html", page::error("Invalid OAuth state", Some(page_options())));
-    }
     respond(responses, Ok(code.to_owned()));
     (200, "text/html", page::success(Some(page_options())))
 }
@@ -594,7 +593,7 @@ async fn begin_headless(
         ),
     )
     .await?;
-    let interval = Duration::from_millis(interval_seconds(&device.interval) + POLLING_SAFETY_MARGIN_MS);
+    let interval = Duration::from_millis(interval_millis(&device.interval) + POLLING_SAFETY_MARGIN_MS);
     let instructions = format!("Enter code: {}", device.user_code);
     let callback: AutoCallback = Box::new({
         let http = http.clone();
@@ -744,7 +743,7 @@ fn claim(token: &str) -> Option<String> {
         .map(str::to_owned)
 }
 
-fn interval_seconds(value: &str) -> u64 {
+fn interval_millis(value: &str) -> u64 {
     let text = value.trim_start();
     let (sign, text) = match text.strip_prefix('-') {
         Some(rest) => (-1, rest),
@@ -755,7 +754,7 @@ fn interval_seconds(value: &str) -> u64 {
         Ok(0) | Err(_) => 5,
         Ok(seconds) => seconds * sign,
     };
-    seconds.max(1) as u64
+    (seconds.max(1) as u64).saturating_mul(1000)
 }
 
 fn error(message: impl Into<String>) -> AuthorizationError {

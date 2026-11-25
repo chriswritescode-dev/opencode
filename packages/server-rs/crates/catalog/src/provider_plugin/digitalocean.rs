@@ -319,6 +319,10 @@ fn handle(state: &str, responses: &CallbackResponses, request: Request) -> (u16,
     }
     if request.method == "POST" && request.path == TOKEN_PATH {
         let body = serde_json::from_slice::<CallbackBody>(&request.body).unwrap_or_default();
+        if body.state.as_deref() != Some(state) {
+            let message = "Invalid OAuth state".to_owned();
+            return (400, "application/json", serde_json::json!({ "error": message }).to_string());
+        }
         let error = body
             .error_description
             .as_deref()
@@ -329,7 +333,6 @@ fn handle(state: &str, responses: &CallbackResponses, request: Request) -> (u16,
             Some(error) => Some(error.to_owned()),
             None => match access {
                 None => Some("Missing access token".to_owned()),
-                Some(_) if body.state.as_deref() != Some(state) => Some("Invalid OAuth state".to_owned()),
                 Some(_) => None,
             },
         };

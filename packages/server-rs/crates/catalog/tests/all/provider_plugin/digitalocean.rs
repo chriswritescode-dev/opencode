@@ -201,15 +201,17 @@ fn model_settings(model: &ModelInfo) -> Option<Value> {
     Some(serde_json::from_str(&opencode_contract::codec::encode_json(settings)).expect("the model settings json"))
 }
 
-async fn rejects_callback(body: &str, message: &str) {
+async fn rejects_callback(body: Value, message: &str) {
     let _guard = PORT.lock().await;
     let mut harness = start(Input::new(Vec::new())).await;
     add_plugin(&mut harness, Routes::new(), Options::default()).await;
     let attempt = connect(&harness).await;
+    let mut body = body;
+    body["state"] = json!(authorization_state(&attempt));
     let response = opencode_config::http::client()
         .post("http://localhost:1456/auth/token")
         .header(reqwest::header::CONTENT_TYPE, "application/json")
-        .body(body.to_owned())
+        .body(body.to_string())
         .send()
         .await
         .expect("post the DigitalOcean token");
@@ -222,6 +224,21 @@ async fn rejects_callback(body: &str, message: &str) {
     assert_eq!(harness.services.credentials.list(&integration_id()).expect("list the DigitalOcean credentials"), []);
     let retry = connect(&harness).await;
     cancel(&harness, &retry).await;
+}
+
+fn authorization_state(attempt: &Attempt) -> String {
+    let url = url::Url::parse(&attempt.url).expect("the DigitalOcean authorization url");
+    param(&url, "state").expect("the DigitalOcean authorization state")
+}
+
+async fn attempt_status(harness: &Harness, attempt: &Attempt) -> AttemptStatus {
+    harness
+        .services
+        .integration
+        .oauth()
+        .status(&integration_id(), &attempt.attempt_id)
+        .await
+        .expect("the DigitalOcean attempt status")
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -485,26 +502,56 @@ async fn completes_browser_oauth_independently_of_router_discovery_and_releases_
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn rejects_mismatched_state_and_releases_the_listener() {
-    rejects_callback(&json!({ "access_token": "token", "state": "wrong" }).to_string(), "Invalid OAuth state").await;
+async fn ignores_a_token_post_with_the_wrong_state() {
+    let _guard = PORT.lock().await;
+    let mut harness = start(Input::new(Vec::new())).await;
+    add_plugin(&mut harness, Routes::new(), Options::default()).await;
+    let attempt = connect(&harness).await;
+    let response = opencode_config::http::client()
+        .post("http://localhost:1456/auth/token")
+        .header(reqwest::header::CONTENT_TYPE, "application/json")
+        .body(json!({ "access_token": "token", "state": "wrong" }).to_string())
+        .send()
+        .await
+        .expect("post the DigitalOcean token");
+    assert_eq!(response.status(), 400);
+    let body: Value = response.json().await.expect("the DigitalOcean token error");
+    assert_eq!(body["error"], json!("Invalid OAuth state"));
+    assert!(matches!(attempt_status(&harness, &attempt).await, AttemptStatus::Pending { .. }));
+    cancel(&harness, &attempt).await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn ignores_malformed_json_and_keeps_the_attempt_pending() {
+    let _guard = PORT.lock().await;
+    let mut harness = start(Input::new(Vec::new())).await;
+    add_plugin(&mut harness, Routes::new(), Options::default()).await;
+    let attempt = connect(&harness).await;
+    let response = opencode_config::http::client()
+        .post("http://localhost:1456/auth/token")
+        .header(reqwest::header::CONTENT_TYPE, "application/json")
+        .body("not-json")
+        .send()
+        .await
+        .expect("post the DigitalOcean token");
+    assert_eq!(response.status(), 400);
+    let body: Value = response.json().await.expect("the DigitalOcean token error");
+    assert_eq!(body["error"], json!("Invalid OAuth state"));
+    assert!(matches!(attempt_status(&harness, &attempt).await, AttemptStatus::Pending { .. }));
+    cancel(&harness, &attempt).await;
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn rejects_missing_token_and_releases_the_listener() {
-    rejects_callback(&json!({}).to_string(), "Missing access token").await;
-}
-
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn rejects_malformed_json_and_releases_the_listener() {
-    rejects_callback("not-json", "Missing access token").await;
+    rejects_callback(json!({}), "Missing access token").await;
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn rejects_provider_denial_and_releases_the_listener() {
-    rejects_callback(&json!({ "error": "access_denied", "error_description": "Denied" }).to_string(), "Denied").await;
+    rejects_callback(json!({ "error": "access_denied", "error_description": "Denied" }), "Denied").await;
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn rejects_provider_denial_without_a_description_and_releases_the_listener() {
-    rejects_callback(&json!({ "error": "access_denied", "error_description": "" }).to_string(), "access_denied").await;
+    rejects_callback(json!({ "error": "access_denied", "error_description": "" }), "access_denied").await;
 }
