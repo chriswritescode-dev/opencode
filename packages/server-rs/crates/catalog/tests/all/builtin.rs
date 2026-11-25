@@ -10,6 +10,7 @@ use opencode_catalog::integration::{ConfigEnv, IntegrationService};
 use opencode_catalog::model::ModelService;
 use opencode_catalog::models_dev::service::{ModelsDevService, Options};
 use opencode_catalog::provider::ProviderService;
+use opencode_catalog::provider_plugin::PluginContext;
 use opencode_config::options::{ConfigLocation, ConfigOptions, SystemOption};
 use opencode_config::paths::GlobalPaths;
 use opencode_config::seams::{BoxFuture, KvStore};
@@ -195,6 +196,30 @@ impl Harness {
                 "config_provider" => builtin::config_provider::register(&self.services, &mut builtin).await,
                 "config_policy" => builtin::config_policy::register(&self.services, &mut builtin).await,
                 _ => unreachable!(),
+            }
+        }
+        self.record(builtin);
+    }
+
+    pub async fn register_provider_plugins(&mut self, names: &[&str], context: PluginContext) {
+        let mut builtin = Builtin::default();
+        for name in names {
+            match *name {
+                "cerebras" => {
+                    opencode_catalog::provider_plugin::cerebras::register(&self.services, &context, &mut builtin).await
+                }
+                "prompt_cache_key" => {
+                    opencode_catalog::provider_plugin::prompt_cache_key::register(
+                        &self.services,
+                        &context,
+                        &mut builtin,
+                    )
+                    .await
+                }
+                "neon" => {
+                    opencode_catalog::provider_plugin::neon::register(&self.services, &context, &mut builtin).await
+                }
+                _ => panic!("unknown provider plugin: {name}"),
             }
         }
         self.record(builtin);
@@ -440,6 +465,28 @@ async fn builtin_register_composes_every_transform_in_order() {
     let ids: Vec<String> =
         harness.services.provider.all().await.unwrap().into_iter().map(|provider| provider.id.0).collect();
     assert_eq!(ids, ["acme", "custom"]);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn builtin_register_inserts_provider_plugins_at_the_provider_slot() {
+    let mut harness = start(Input::new(vec![providers_config()]).models(acme_catalog("Acme"))).await;
+    let context = crate::provider_plugin::support::plugin_context(&harness);
+    let builtin = builtin::register(
+        Services {
+            bus: harness.services.bus.clone(),
+            config: harness.services.config.clone(),
+            credentials: harness.services.credentials.clone(),
+            models_dev: harness.services.models_dev.clone(),
+            wellknown: harness.services.wellknown.clone(),
+            integration: harness.services.integration.clone(),
+            provider: harness.services.provider.clone(),
+            model: harness.services.model.clone(),
+        },
+        builtin::Deps { provider_plugins: Some(context), external: None },
+    )
+    .await;
+    harness.record(builtin);
+    assert_eq!(harness.registrations.registrations.len(), 10);
 }
 
 pub async fn seed(

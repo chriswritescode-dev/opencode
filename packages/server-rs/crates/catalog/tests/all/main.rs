@@ -14,6 +14,7 @@ mod models_dev;
 mod models_dev_service;
 mod oauth;
 mod provider;
+mod provider_plugin;
 mod resolver;
 mod retry;
 mod variant;

@@ -7,6 +7,7 @@ pub mod model;
 pub mod models_dev;
 pub mod oauth;
 pub mod provider;
+pub mod provider_plugin;
 pub mod resolver;
 pub mod retry;
 pub mod variant;
