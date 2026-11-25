@@ -2,7 +2,7 @@ import { mkdir } from "node:fs/promises"
 import { upstreamCoreTree } from "../upstream"
 
 const root = new URL("../..", import.meta.url).pathname
-const areas = ["oauth", "aisdk-native"]
+const areas = ["oauth", "aisdk-native", "variants"]
 const corpusRoot = `${root}target/catalog-corpus`
 const corpusHome = `${corpusRoot}/home`
 const temp = `${corpusRoot}/tmp`

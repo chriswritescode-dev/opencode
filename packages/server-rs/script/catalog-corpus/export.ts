@@ -1,7 +1,9 @@
 import { AISDKNative } from "@opencode/core/aisdk-native"
+import { Model } from "@opencode/core/model"
 import { OauthCallbackPage } from "@opencode/core/oauth/page"
 import { OauthRedirect } from "@opencode/core/oauth/redirect"
 import { Provider } from "@opencode/core/provider"
+import { Variant } from "@opencode/core/variant"
 import { Effect } from "effect"
 
 const area = process.argv[2]
@@ -371,7 +373,299 @@ function aisdkNative() {
   return cases
 }
 
-const builders: Record<string, () => Record<string, unknown>> = { oauth, "aisdk-native": aisdkNative }
+const VARIANT_PACKAGES = [
+  "@opencode/ai/providers/openai",
+  "@opencode/ai/providers/openai/responses",
+  "@opencode/ai/providers/azure",
+  "@opencode/ai/providers/azure/responses",
+  "@opencode/ai/providers/amazon-bedrock/mantle",
+  "@opencode/ai/providers/amazon-bedrock/mantle/responses",
+  "@opencode/ai/providers/alibaba/responses",
+  "@opencode/ai/providers/meta",
+  "@opencode/ai/providers/meta/responses",
+  "@opencode/ai/providers/minimax/responses",
+  "@opencode/ai/providers/moonshot/responses",
+  "@opencode/ai/providers/zai-coding-plan/responses",
+  "@opencode/ai/providers/openai-compatible/responses",
+  "@opencode/ai/providers/openai-compatible-responses",
+  "@opencode/ai/providers/google-vertex/responses",
+  "@opencode/ai/providers/xai",
+  "@opencode/ai/providers/digitalocean/responses",
+  "@opencode/ai/providers/openrouter/responses",
+  "@opencode/ai/providers/venice/responses",
+  "@opencode/ai/providers/openai-compatible",
+  "@opencode/ai/providers/openai/chat",
+  "@opencode/ai/providers/azure/chat",
+  "@opencode/ai/providers/amazon-bedrock/mantle/chat",
+  "@opencode/ai/providers/google-vertex/chat",
+  "@opencode/ai/providers/alibaba",
+  "@opencode/ai/providers/alibaba/chat",
+  "@opencode/ai/providers/baseten",
+  "@opencode/ai/providers/cerebras",
+  "@opencode/ai/providers/cloudflare-workers-ai",
+  "@opencode/ai/providers/cohere/chat",
+  "@opencode/ai/providers/deepinfra",
+  "@opencode/ai/providers/deepseek",
+  "@opencode/ai/providers/digitalocean",
+  "@opencode/ai/providers/fireworks",
+  "@opencode/ai/providers/groq",
+  "@opencode/ai/providers/meta/chat",
+  "@opencode/ai/providers/minimax/chat",
+  "@opencode/ai/providers/mistral",
+  "@opencode/ai/providers/google-vertex/mistral",
+  "@opencode/ai/providers/moonshot",
+  "@opencode/ai/providers/moonshot/chat",
+  "@opencode/ai/providers/togetherai",
+  "@opencode/ai/providers/venice",
+  "@opencode/ai/providers/zai",
+  "@opencode/ai/providers/zai/chat",
+  "@opencode/ai/providers/zai-coding-plan",
+  "@opencode/ai/providers/zai-coding-plan/chat",
+  "@opencode/ai/providers/anthropic",
+  "@opencode/ai/providers/anthropic-compatible",
+  "@opencode/ai/providers/amazon-bedrock/mantle/messages",
+  "@opencode/ai/providers/azure/messages",
+  "@opencode/ai/providers/google-vertex/messages",
+  "@opencode/ai/providers/google-vertex-messages",
+  "@opencode/ai/providers/alibaba/messages",
+  "@opencode/ai/providers/meta/messages",
+  "@opencode/ai/providers/minimax",
+  "@opencode/ai/providers/minimax/messages",
+  "@opencode/ai/providers/moonshot/messages",
+  "@opencode/ai/providers/zai-coding-plan/messages",
+  "@opencode/ai/providers/google",
+  "@opencode/ai/providers/google-vertex",
+  "@opencode/ai/providers/google-vertex/gemini",
+  "@opencode/ai/providers/google/images",
+  "@opencode/ai/providers/google-vertex/images",
+  "@opencode/ai/providers/google/interactions",
+  "@opencode/ai/providers/google-vertex/interactions",
+  "@opencode/ai/providers/amazon-bedrock",
+  "@opencode/ai/providers/cohere",
+  "@opencode/ai/providers/openrouter",
+  "aisdk:venice-ai-sdk-provider",
+  "@opencode/ai/providers/cloudflare-ai-gateway",
+  "@opencode/ai/providers/vercel-ai-gateway",
+  "@opencode/ai/providers/vercel-ai-gateway/chat",
+  "@opencode/ai/providers/vercel-ai-gateway/messages",
+  "@opencode/ai/providers/vercel-ai-gateway/responses",
+  "aisdk:@ai-sdk/gateway",
+  "aisdk:@jerome-benoit/sap-ai-provider-v2",
+  "aisdk:gitlab-ai-provider",
+]
+
+function variants() {
+  const cases: Record<string, unknown> = {}
+
+  function variantCase(
+    name: string,
+    packageName: string,
+    modelID: string,
+    output: number,
+    supports: Variant.Support[],
+    providerID = "sample",
+  ) {
+    const model = Model.Info.default(Provider.ID.make(providerID), Model.ID.make(modelID)) as Model.MutableInfo
+    model.package = packageName
+    model.modelID = Model.ID.make(modelID)
+    model.limit = { ...model.limit, output }
+    cases[name] = {
+      call: "resolve",
+      model: { id: modelID, modelID, providerID, package: packageName, output },
+      supports,
+      result: Variant.resolve(Model.Info.make(model), supports).map((item) => ({ ...item, id: String(item.id) })),
+    }
+  }
+
+  const sets: [string, Variant.Support[]][] = [
+    ["toggle", [{ type: "toggle" }]],
+    ["effort", [{ type: "effort" }]],
+    ["budget", [{ type: "budget_tokens" }]],
+  ]
+
+  for (const packageName of VARIANT_PACKAGES) {
+    for (const [suffix, supports] of sets) {
+      variantCase(`${packageName}.${suffix}`, packageName, "test-model", 32000, supports)
+    }
+    variantCase(`${packageName}.budget-large`, packageName, "test-model", 262144, [{ type: "budget_tokens" }])
+    variantCase(`${packageName}.mixed`, packageName, "test-model", 64000, [
+      { type: "toggle" },
+      { type: "effort" },
+      { type: "budget_tokens" },
+    ])
+  }
+
+  variantCase(
+    "anthropic.opus-4-5",
+    "@opencode/ai/providers/anthropic",
+    "claude-opus-4-5",
+    32000,
+    [{ type: "effort", values: ["low", "high"] }, { type: "budget_tokens", min: 1024 }],
+  )
+  variantCase("anthropic.sonnet-3-7-version-first", "@opencode/ai/providers/anthropic", "claude-3-7-sonnet", 32000, [
+    { type: "effort" },
+  ])
+  variantCase("anthropic.opus-6", "@opencode/ai/providers/anthropic", "claude-opus-6", 32000, [{ type: "effort" }])
+  variantCase("anthropic.haiku-budget-64k", "@opencode/ai/providers/anthropic", "claude-haiku-4-5", 64000, [
+    { type: "budget_tokens", min: 1024, max: 64000 },
+  ])
+  variantCase("cloudflare-gateway.xai", "@opencode/ai/providers/cloudflare-ai-gateway", "xai/grok-4.6", 32000, [
+    { type: "effort", values: ["low", "high"] },
+  ])
+  variantCase(
+    "cloudflare-gateway.anthropic",
+    "@opencode/ai/providers/cloudflare-ai-gateway",
+    "anthropic/claude-sonnet-4-6",
+    32000,
+    [{ type: "effort", values: ["low", "high"] }],
+  )
+  variantCase("vercel.alibaba-budget", "@opencode/ai/providers/vercel-ai-gateway", "alibaba/qwen-3-32b", 38912, [
+    { type: "toggle" },
+    { type: "budget_tokens", min: 1, max: 38912 },
+  ])
+  variantCase(
+    "nvidia.deepseek",
+    "@opencode/ai/providers/openai-compatible",
+    "deepseek-ai/deepseek-v4-pro",
+    32000,
+    [{ type: "effort", values: ["none", "high", "max"] }],
+    "nvidia",
+  )
+  variantCase(
+    "nvidia.kimi-mixed",
+    "@opencode/ai/providers/openai-compatible",
+    "moonshotai/kimi-k3",
+    32000,
+    [{ type: "toggle" }, { type: "effort", values: ["low", "high", "max"] }],
+    "nvidia",
+  )
+  variantCase(
+    "nvidia.glm-toggle",
+    "@opencode/ai/providers/openai-compatible",
+    "zai-org/GLM-5.2",
+    32000,
+    [{ type: "toggle" }],
+    "nvidia",
+  )
+  variantCase(
+    "nvidia.nemotron-budget",
+    "@opencode/ai/providers/openai-compatible",
+    "nvidia/nemotron-3-super",
+    32000,
+    [{ type: "budget_tokens", min: 1024 }],
+    "nvidia",
+  )
+  variantCase(
+    "nvidia.nemotron-budget-large",
+    "@opencode/ai/providers/openai-compatible",
+    "nvidia/nemotron-3-super",
+    262144,
+    [{ type: "budget_tokens" }],
+    "nvidia",
+  )
+  variantCase(
+    "nvidia.nemotron-mixed",
+    "@opencode/ai/providers/openai-compatible",
+    "nvidia/nemotron-3-super",
+    64000,
+    [{ type: "toggle" }, { type: "effort" }, { type: "budget_tokens" }],
+    "nvidia",
+  )
+  variantCase("zai.glm-5-3-effort", "@opencode/ai/providers/zai", "glm-5.3", 32000, [
+    { type: "toggle" },
+    { type: "effort", values: ["low", "high", "max"] },
+  ])
+  variantCase("zai.glm-4-7-toggle", "@opencode/ai/providers/zai", "glm-4.7", 32000, [{ type: "toggle" }])
+  variantCase("alibaba.budget-cap", "@opencode/ai/providers/alibaba/chat", "kimi-k2.6", 262144, [
+    { type: "toggle" },
+    { type: "budget_tokens" },
+  ])
+  variantCase("alibaba.chat-effort", "@opencode/ai/providers/alibaba", "qwen3.8-max", 32000, [
+    { type: "toggle" },
+    { type: "effort", values: ["low", "medium", "xhigh"] },
+    { type: "budget_tokens", min: 0, max: 262144 },
+  ])
+  variantCase(
+    "bedrock.claude-budget",
+    "@opencode/ai/providers/amazon-bedrock",
+    "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+    64000,
+    [{ type: "budget_tokens", min: 1024 }],
+  )
+  variantCase("bedrock.grok-effort", "@opencode/ai/providers/amazon-bedrock", "us.xai.grok-4.6", 32000, [
+    { type: "effort", values: ["low", "xhigh"] },
+  ])
+  variantCase("bedrock.nova-effort", "@opencode/ai/providers/amazon-bedrock", "us.amazon.nova-2-lite-v1:0", 32000, [
+    { type: "effort", values: ["low", "xhigh"] },
+  ])
+  variantCase(
+    "google.interactions-toggle",
+    "@opencode/ai/providers/google/interactions",
+    "gemma-4-31b-it",
+    32000,
+    [{ type: "toggle" }],
+  )
+  variantCase("minimax.messages-toggle", "@opencode/ai/providers/minimax/messages", "MiniMax-M3", 32000, [
+    { type: "toggle" },
+  ])
+  variantCase("moonshot.k3-messages", "@opencode/ai/providers/moonshot/messages", "k3", 32000, [
+    { type: "toggle" },
+    { type: "effort", values: ["low", "high", "max"] },
+  ])
+  variantCase("moonshot.k2-6-chat", "@opencode/ai/providers/moonshot/chat", "kimi-k2.6", 32000, [{ type: "toggle" }])
+  variantCase(
+    "gitlab.opus-effort",
+    "aisdk:gitlab-ai-provider",
+    "duo-chat-opus-5-5",
+    32000,
+    [{ type: "effort", values: ["low", "medium", "high", "xhigh", "max"] }],
+    "gitlab",
+  )
+  variantCase(
+    "sap.anthropic-effort",
+    "aisdk:@jerome-benoit/sap-ai-provider-v2",
+    "anthropic.claude-sonnet-4-6",
+    32000,
+    [{ type: "effort", values: ["low", "high"] }],
+  )
+  variantCase("sap.gemini-toggle", "aisdk:@jerome-benoit/sap-ai-provider-v2", "gemini-2.5-pro", 32000, [
+    { type: "toggle" },
+  ])
+  variantCase(
+    "workers-ai.effort",
+    "@opencode/ai/providers/cloudflare-workers-ai",
+    "@cf/deepseek-ai/deepseek-v4-flash-0731",
+    32000,
+    [{ type: "effort", values: ["none", "low", "high", "max"] }],
+  )
+  variantCase("cohere.budget", "@opencode/ai/providers/cohere", "command-a-reasoning-08-2025", 32000, [
+    { type: "toggle" },
+    { type: "budget_tokens", min: 1 },
+  ])
+  variantCase("baseten.glm-effort", "@opencode/ai/providers/baseten", "zai-org/GLM-5.2", 32000, [
+    { type: "effort", values: ["none", "high", "max"] },
+  ])
+  variantCase("deepinfra.glm-effort", "@opencode/ai/providers/deepinfra", "zai-org/GLM-5.2", 32000, [
+    { type: "toggle" },
+    { type: "effort", values: ["low", "high", "xhigh"] },
+  ])
+  variantCase("openrouter.budget", "@opencode/ai/providers/openrouter", "test-model", 32000, [
+    { type: "toggle" },
+    { type: "budget_tokens" },
+  ])
+  variantCase("venice.toggle", "@opencode/ai/providers/venice", "test-model", 32000, [{ type: "toggle" }])
+  variantCase("xai.responses-effort", "@opencode/ai/providers/xai", "grok-4.6", 32000, [
+    { type: "effort", values: ["low", "medium", "high", "xhigh"] },
+  ])
+  variantCase("zai-coding-plan.messages-forced", "@opencode/ai/providers/zai-coding-plan/messages", "glm-5.3", 32000, [
+    { type: "toggle" },
+    { type: "effort", values: ["low", "high", "max"] },
+  ])
+
+  return cases
+}
+
+const builders: Record<string, () => Record<string, unknown>> = { oauth, "aisdk-native": aisdkNative, variants }
 
 const build = area === undefined ? undefined : builders[area]
 

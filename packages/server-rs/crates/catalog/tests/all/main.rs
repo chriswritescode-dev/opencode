@@ -5,6 +5,7 @@ mod credential_refresh;
 mod integration;
 mod integration_connect;
 mod oauth;
+mod variant;
 
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
