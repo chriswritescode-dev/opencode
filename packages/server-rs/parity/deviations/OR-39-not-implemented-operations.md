@@ -11,12 +11,13 @@ Rust: `crates/http/src/app.rs:19` lists the implemented operations in `IMPLEMENT
 `location.reload`, `debug.heapDump`, `debug.location.list`, `debug.location.evict`, `project.list`, `project.update`,
 `config.get`, `config.shells`, `experimental.config.update`, `session.list`, `session.create`, `session.get`,
 `session.update`, `session.remove`, `session.prompt`, `session.message.list`, `session.inbox.list`, `agent.list`,
-`model.list`, `session.switchAgent`, `session.switchModel`). That list grows
-as handler tasks land. `not_implemented` in `crates/http/src/app.rs:332` answers every other matched route with
+`model.list`, `session.switchAgent`, `session.switchModel`, `session.active`, `experimental.session.wait`,
+`experimental.job.list`). That list grows
+as handler tasks land. `not_implemented` in `crates/http/src/app.rs:348` answers every other matched route with
 status `501 Not Implemented` and an `UnknownError` body whose message is
 `opencode-server does not implement <identifier> yet`. `docs/coverage.md` is generated from `IMPLEMENTED`
 (`OPENCODE_UPDATE_COVERAGE=1`) and marks every route `implemented` or `not implemented (501)`. `exempt` in
-`crates/http/src/app.rs:348` exempts only the pairing connect link and ticketed connect routes, so the machine-link
+`crates/http/src/app.rs:364` exempts only the pairing connect link and ticketed connect routes, so the machine-link
 upgrade requires credentials and answers 401 before the 501 body.
 
 Reason: the remaining routes belong to the tasks named in the OR-39 plan and will land on the same router, so the

@@ -2,6 +2,8 @@ mod agent;
 mod corpus;
 mod instructions;
 mod model_request;
+mod retry;
+mod runner;
 mod search_index;
 mod store;
 mod usage;

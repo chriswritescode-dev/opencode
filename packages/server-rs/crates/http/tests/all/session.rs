@@ -352,7 +352,7 @@ async fn prompt_admits_a_user_item_and_is_idempotent() {
     let session = session_id(&create(&app, "{}").await);
     let mut events = state.bus.subscribe(&["session.inbox.enqueued"], None);
 
-    let body = prompt(&app, &session, json!({ "text": "say hi" })).await;
+    let body = prompt(&app, &session, json!({ "text": "say hi", "resume": false })).await;
     let data = &body["data"];
     let id = data["id"].as_str().expect("a message id").to_owned();
     assert!(id.starts_with("msg_"));
@@ -373,7 +373,7 @@ async fn prompt_admits_a_user_item_and_is_idempotent() {
     assert_eq!(items.len(), 1);
     assert_eq!(&items[0], data);
 
-    let repeated = prompt(&app, &session, json!({ "id": id, "text": "different" })).await;
+    let repeated = prompt(&app, &session, json!({ "id": id, "text": "different", "resume": false })).await;
     assert_eq!(&repeated["data"], data);
     assert!(events.try_recv().is_none());
     assert_eq!(inbox(&app, &session).await["data"].as_array().expect("an inbox list").len(), 1);
@@ -386,7 +386,7 @@ async fn prompt_conflicts_when_the_message_id_is_reused() {
     let first = session_id(&create(&app, "{}").await);
     let second = session_id(&create(&app, "{}").await);
 
-    let body = prompt(&app, &first, json!({ "id": "msg_conflict", "text": "one" })).await;
+    let body = prompt(&app, &first, json!({ "id": "msg_conflict", "text": "one", "resume": false })).await;
     assert_eq!(body["data"]["payload"]["text"], "one");
 
     let response = app
@@ -407,7 +407,7 @@ async fn prompt_conflicts_when_the_message_id_is_reused() {
     );
 
     deliver(&state, &first, "msg_conflict");
-    let repeated = prompt(&app, &first, json!({ "id": "msg_conflict", "text": "again" })).await;
+    let repeated = prompt(&app, &first, json!({ "id": "msg_conflict", "text": "again", "resume": false })).await;
     assert_eq!(repeated["data"]["payload"]["text"], "one");
     assert_eq!(repeated["data"]["delivery"], "steer");
 
@@ -481,7 +481,7 @@ async fn messages_list_pages_filters_and_rejects_bad_cursors() {
     let (app, state) = session_app(&start);
     let session = session_id(&create(&app, "{}").await);
     for (id, text) in [("msg_a", "a"), ("msg_b", "b"), ("msg_c", "c")] {
-        prompt(&app, &session, json!({ "id": id, "text": text })).await;
+        prompt(&app, &session, json!({ "id": id, "text": text, "resume": false })).await;
     }
     for id in ["msg_a", "msg_b", "msg_c"] {
         deliver(&state, &session, id);
@@ -610,4 +610,53 @@ async fn switch_routes_reject_unknown_sessions() {
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
         assert_eq!(json_body(response).await, missing);
     }
+}
+
+#[tokio::test]
+async fn active_lists_no_executions() {
+    let start = temp_directory("session-active-start");
+    let (app, _) = session_app(&start);
+
+    let response = app.handle(json_request("GET", "/api/session/active", "")).await;
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(json_body(response).await, json!({ "data": {} }));
+}
+
+#[tokio::test]
+async fn wait_rejects_unknown_sessions_and_returns_no_content_for_idle_sessions() {
+    let start = temp_directory("session-wait-start");
+    let (app, _) = session_app(&start);
+    let missing = json!({
+        "_tag": "SessionNotFoundError",
+        "sessionID": "ses_missing",
+        "message": "Session not found: ses_missing",
+    });
+
+    let response = app.handle(json_request("POST", "/api/experimental/session/ses_missing/wait", "")).await;
+    assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    assert_eq!(json_body(response).await, missing);
+
+    let id = session_id(&create(&app, "{}").await);
+    let response = app.handle(json_request("POST", &format!("/api/experimental/session/{id}/wait"), "")).await;
+    assert_eq!(response.status(), StatusCode::NO_CONTENT);
+    assert!(text(response).await.is_empty());
+}
+
+#[tokio::test]
+async fn job_list_returns_no_jobs_and_rejects_unknown_sessions() {
+    let start = temp_directory("session-job-list-start");
+    let (app, _) = session_app(&start);
+
+    let response = app.handle(json_request("GET", "/api/experimental/job", "")).await;
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(json_body(response).await, json!({ "data": [] }));
+
+    let missing = json!({
+        "_tag": "SessionNotFoundError",
+        "sessionID": "ses_missing",
+        "message": "Session not found: ses_missing",
+    });
+    let response = app.handle(json_request("GET", "/api/experimental/job?sessionID=ses_missing", "")).await;
+    assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    assert_eq!(json_body(response).await, missing);
 }

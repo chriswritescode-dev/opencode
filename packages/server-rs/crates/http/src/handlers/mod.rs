@@ -4,6 +4,7 @@ pub mod debug;
 pub mod defect;
 pub mod event;
 pub mod invalid;
+pub mod job;
 pub mod location;
 pub mod message;
 pub mod model;

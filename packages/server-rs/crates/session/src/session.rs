@@ -18,7 +18,8 @@ use opencode_storage::id;
 use opencode_util::path::Flavor;
 use serde_json::{Map, Value};
 
-use crate::prompt::{self, NoopExecution, PromptInput, SessionExecution};
+use crate::execution::{NoopExecution, SessionExecution};
+use crate::prompt::{self, PromptInput};
 use crate::store::{Direction, LastAssistantInput, ListAnchor, ListInput, Order, SessionStore};
 
 const DEFAULT_LIST_LIMIT: i64 = 50;
@@ -91,6 +92,22 @@ impl Sessions {
         &self.store
     }
 
+    pub fn execution(&self) -> &Arc<dyn SessionExecution> {
+        &self.execution
+    }
+
+    pub async fn wait_idle(&self, session_id: &str) {
+        self.execution.wait_idle(session_id).await;
+    }
+
+    pub fn active(&self) -> Vec<String> {
+        self.execution.active()
+    }
+
+    pub async fn shutdown(&self) {
+        self.execution.shutdown().await;
+    }
+
     pub fn prompt(&self, session_id: &str, input: PromptInput) -> Result<SessionInboxUser, SessionError> {
         self.get(session_id)?;
         let message_id = input.id.clone().unwrap_or_else(|| format!("msg_{}", id::ascending()));
@@ -101,21 +118,28 @@ impl Sessions {
             return Ok(item);
         }
         let data = prompt::enqueued(&message_id, session_id, &input);
-        let event = match self.publish("session.inbox.enqueued", &data, PublishOptions::default()) {
-            Ok(event) => event,
-            Err(error) => {
-                return match prompt::existing(&self.store, session_id, &message_id, input.delivery) {
-                    Ok(Some(item)) => {
-                        if input.resume {
-                            self.execution.wake(session_id);
+        let location = self
+            .store
+            .session_location(session_id)
+            .ok()
+            .flatten()
+            .map(|location| crate::execution::contract_location(&location));
+        let event =
+            match self.publish("session.inbox.enqueued", &data, PublishOptions { location, ..Default::default() }) {
+                Ok(event) => event,
+                Err(error) => {
+                    return match prompt::existing(&self.store, session_id, &message_id, input.delivery) {
+                        Ok(Some(item)) => {
+                            if input.resume {
+                                self.execution.wake(session_id);
+                            }
+                            Ok(item)
                         }
-                        Ok(item)
-                    }
-                    Ok(None) => Err(error),
-                    Err(conflict) => Err(conflict),
-                };
-            }
-        };
+                        Ok(None) => Err(error),
+                        Err(conflict) => Err(conflict),
+                    };
+                }
+            };
         if input.resume {
             self.execution.wake(session_id);
         }
@@ -278,6 +302,7 @@ impl Sessions {
 
     pub async fn remove(&self, session_id: &str) -> Result<(), SessionError> {
         self.get(session_id)?;
+        self.execution.interrupt(session_id).await;
         let mut stack = vec![session_id.to_owned()];
         while let Some(current) = stack.pop() {
             let children = self

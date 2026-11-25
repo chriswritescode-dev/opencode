@@ -18,16 +18,6 @@ pub struct PromptInput {
     pub resume: bool,
 }
 
-pub trait SessionExecution: Send + Sync {
-    fn wake(&self, session_id: &str);
-}
-
-pub struct NoopExecution;
-
-impl SessionExecution for NoopExecution {
-    fn wake(&self, _session_id: &str) {}
-}
-
 pub(crate) fn existing(
     store: &SessionStore,
     session_id: &str,

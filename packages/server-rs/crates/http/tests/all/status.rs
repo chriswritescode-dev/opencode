@@ -145,6 +145,9 @@ fn sample_request(operation: &str) -> Option<(&'static str, &'static str)> {
         "model.list" => Some(("GET", "/api/model")),
         "session.switchAgent" => Some(("POST", "/api/session/ses_test/agent")),
         "session.switchModel" => Some(("POST", "/api/session/ses_test/model")),
+        "session.active" => Some(("GET", "/api/session/active")),
+        "experimental.session.wait" => Some(("POST", "/api/experimental/session/ses_test/wait")),
+        "experimental.job.list" => Some(("GET", "/api/experimental/job")),
         _ => None,
     }
 }
@@ -198,5 +201,8 @@ fn implemented_lists_the_ported_operations() {
     assert!(opencode_http::app::IMPLEMENTED.contains(&"model.list"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"session.switchAgent"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"session.switchModel"));
-    assert_eq!(opencode_http::app::IMPLEMENTED.len(), 27);
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"session.active"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"experimental.session.wait"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"experimental.job.list"));
+    assert_eq!(opencode_http::app::IMPLEMENTED.len(), 30);
 }

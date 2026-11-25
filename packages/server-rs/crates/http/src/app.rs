@@ -44,6 +44,9 @@ pub const IMPLEMENTED: &[&str] = &[
     "model.list",
     "session.switchAgent",
     "session.switchModel",
+    "session.active",
+    "experimental.session.wait",
+    "experimental.job.list",
 ];
 
 pub struct Options {
@@ -231,6 +234,18 @@ impl App {
                 Some(services) => crate::handlers::session::switch_model(services, &raw),
                 None => crate::services::services_unavailable(),
             },
+            "session.active" => match self.services() {
+                Some(services) => crate::handlers::session::active(services),
+                None => crate::services::services_unavailable(),
+            },
+            "experimental.session.wait" => match self.services() {
+                Some(services) => crate::handlers::session::wait(services, &raw).await,
+                None => crate::services::services_unavailable(),
+            },
+            "experimental.job.list" => match self.services() {
+                Some(services) => crate::handlers::job::list(services, &raw).await,
+                None => crate::services::services_unavailable(),
+            },
             _ => not_implemented(found.route.identifier),
         }
     }
@@ -261,6 +276,7 @@ impl App {
 
     pub async fn shutdown(&self) {
         if let Some(services) = &self.options.services {
+            services.shutdown_executions().await;
             services.locations.shutdown_all().await;
         }
     }

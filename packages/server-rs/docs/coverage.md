@@ -1,6 +1,6 @@
 # Operation coverage
 
-Implemented: 27 of 178 operations
+Implemented: 30 of 178 operations
 
 | Operation | Method | Path | Stability | Status |
 | --- | --- | --- | --- | --- |
@@ -20,7 +20,7 @@ Implemented: 27 of 178 operations
 | `experimental.session.stats` | GET | `/api/experimental/session/stats` | experimental | not implemented (501) |
 | `experimental.session.import` | POST | `/api/experimental/session/import` | experimental | not implemented (501) |
 | `experimental.session.export` | GET | `/api/experimental/session/{sessionID}/export` | experimental | not implemented (501) |
-| `session.active` | GET | `/api/session/active` | stable | not implemented (501) |
+| `session.active` | GET | `/api/session/active` | stable | implemented |
 | `session.get` | GET | `/api/session/{sessionID}` | stable | implemented |
 | `session.remove` | DELETE | `/api/session/{sessionID}` | stable | implemented |
 | `session.update` | PATCH | `/api/session/{sessionID}` | stable | implemented |
@@ -34,7 +34,7 @@ Implemented: 27 of 178 operations
 | `session.synthetic` | POST | `/api/session/{sessionID}/synthetic` | stable | not implemented (501) |
 | `session.shell` | POST | `/api/session/{sessionID}/shell` | stable | not implemented (501) |
 | `session.compact` | POST | `/api/session/{sessionID}/compact` | stable | not implemented (501) |
-| `experimental.session.wait` | POST | `/api/experimental/session/{sessionID}/wait` | experimental | not implemented (501) |
+| `experimental.session.wait` | POST | `/api/experimental/session/{sessionID}/wait` | experimental | implemented |
 | `session.revert.stage` | POST | `/api/session/{sessionID}/revert/stage` | stable | not implemented (501) |
 | `session.revert.clear` | DELETE | `/api/session/{sessionID}/revert` | stable | not implemented (501) |
 | `session.revert.commit` | POST | `/api/session/{sessionID}/revert/commit` | stable | not implemented (501) |
@@ -150,7 +150,7 @@ Implemented: 27 of 178 operations
 | `experimental.artifacts.update` | PATCH | `/api/experimental/artifacts/{artifactID}` | experimental | not implemented (501) |
 | `experimental.artifacts.delete` | DELETE | `/api/experimental/artifacts/{artifactID}` | experimental | not implemented (501) |
 | `experimental.artifacts.view` | GET | `/api/experimental/artifacts/{artifactID}/view/*` | experimental | not implemented (501) |
-| `experimental.job.list` | GET | `/api/experimental/job` | experimental | not implemented (501) |
+| `experimental.job.list` | GET | `/api/experimental/job` | experimental | implemented |
 | `experimental.job.cancel` | POST | `/api/experimental/job/{id}/cancel` | experimental | not implemented (501) |
 | `experimental.machine.link` | GET | `/api/experimental/machine/link` | experimental | not implemented (501) |
 | `experimental.machine.list` | GET | `/api/experimental/machine` | experimental | not implemented (501) |

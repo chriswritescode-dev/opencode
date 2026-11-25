@@ -254,6 +254,33 @@ impl SessionStore {
         rows.into_iter().map(decode_inbox).collect()
     }
 
+    pub fn promotable(&self, session_id: &str, include_queued: bool) -> Result<Vec<String>, BusError> {
+        let session_id = session_id.to_owned();
+        self.db
+            .read(move |connection| {
+                let mut statement = connection.prepare(
+                    "SELECT id FROM session_inbox WHERE session_id = ?1 AND delivery = 'steer' \
+                     ORDER BY enqueued_seq ASC",
+                )?;
+                let steers = statement
+                    .query_map([session_id.as_str()], |row| row.get::<_, String>(0))?
+                    .collect::<Result<Vec<_>, _>>()?;
+                if !steers.is_empty() || !include_queued {
+                    return Ok(steers);
+                }
+                let queued = connection
+                    .query_row(
+                        "SELECT id FROM session_inbox WHERE session_id = ?1 AND delivery = 'queue' \
+                         ORDER BY enqueued_seq ASC LIMIT 1",
+                        [session_id.as_str()],
+                        |row| row.get::<_, String>(0),
+                    )
+                    .optional()?;
+                Ok(queued.into_iter().collect())
+            })
+            .map_err(BusError::from)
+    }
+
     pub fn message_with_refs(
         &self,
         message_id: &str,
@@ -328,11 +355,7 @@ impl SessionStore {
     pub fn claim(&self, session_id: &str) -> Result<(), BusError> {
         self.db
             .read(|connection| {
-                connection.execute(
-                    "UPDATE session_v2 SET time_suspended = ?1, time_updated = time_updated \
-                     WHERE id = ?2 AND time_suspended IS NULL",
-                    params![now_millis(), session_id],
-                )?;
+                claim_in(connection, session_id)?;
                 Ok(())
             })
             .map_err(BusError::from)
@@ -341,11 +364,7 @@ impl SessionStore {
     pub fn release(&self, session_id: &str) -> Result<(), BusError> {
         self.db
             .read(|connection| {
-                connection.execute(
-                    "UPDATE session_v2 SET time_suspended = NULL, resume_attempts = 0, \
-                     time_updated = time_updated WHERE id = ?1",
-                    [session_id],
-                )?;
+                release_in(connection, session_id)?;
                 Ok(())
             })
             .map_err(BusError::from)
@@ -546,6 +565,24 @@ impl From<StorageError> for HistoryError {
     fn from(error: StorageError) -> Self {
         Self::Database(error.into())
     }
+}
+
+pub(crate) fn claim_in(connection: &rusqlite::Connection, session_id: &str) -> rusqlite::Result<()> {
+    connection.execute(
+        "UPDATE session_v2 SET time_suspended = ?1, time_updated = time_updated \
+         WHERE id = ?2 AND time_suspended IS NULL",
+        params![now_millis(), session_id],
+    )?;
+    Ok(())
+}
+
+pub(crate) fn release_in(connection: &rusqlite::Connection, session_id: &str) -> rusqlite::Result<()> {
+    connection.execute(
+        "UPDATE session_v2 SET time_suspended = NULL, resume_attempts = 0, \
+         time_updated = time_updated WHERE id = ?1",
+        [session_id],
+    )?;
+    Ok(())
 }
 
 impl opencode_location::resolve::SessionLookup for SessionStore {

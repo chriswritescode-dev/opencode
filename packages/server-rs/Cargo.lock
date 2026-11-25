@@ -847,6 +847,7 @@ dependencies = [
  "hyper",
  "hyper-util",
  "log",
+ "opencode-ai",
  "opencode-api-types",
  "opencode-bus",
  "opencode-catalog",

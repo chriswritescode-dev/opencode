@@ -1,14 +1,15 @@
 use http::StatusCode;
-use opencode_contract::codec::encode_json;
+use opencode_contract::codec::{JsonMap, encode_json};
 use opencode_contract::generated::operations::{
-    session_create, session_get, session_inbox_list, session_list, session_prompt, session_remove,
-    session_switch_agent, session_switch_model, session_update,
+    experimental_session_wait, session_create, session_get, session_inbox_list, session_list, session_prompt,
+    session_remove, session_switch_agent, session_switch_model, session_update,
 };
 use opencode_contract::generated::requests;
 use opencode_contract::generated::{
     ConflictError, ConflictErrorTag, InvalidCursorError, InvalidCursorErrorTag, ModelRef, PermissionEffect,
-    PermissionRule, PermissionRuleset, PromptAgentAttachment, PromptMention, ProviderID, SessionCreateResponse,
-    SessionGetResponse, SessionInboxDelivery, SessionInboxListResponse, SessionNotFoundError, SessionNotFoundErrorTag,
+    PermissionRule, PermissionRuleset, PromptAgentAttachment, PromptMention, ProviderID, SessionActive,
+    SessionActiveResponse, SessionActiveResponseData, SessionActiveType, SessionCreateResponse, SessionGetResponse,
+    SessionInboxDelivery, SessionInboxListResponse, SessionNotFoundError, SessionNotFoundErrorTag,
     SessionPromptResponse,
 };
 use opencode_contract::request::RawRequest;
@@ -79,6 +80,34 @@ pub fn list(services: &GlobalServices, raw: &RawRequest) -> response::Response {
         Ok(list) => response::bytes(StatusCode::OK, "application/json", encode_json(&list)),
         Err(error) => error_response(error),
     }
+}
+
+pub fn active(services: &GlobalServices) -> response::Response {
+    let Some(sessions) = services.sessions() else {
+        return crate::services::services_unavailable();
+    };
+    let entries =
+        sessions.active().into_iter().map(|id| (id, SessionActive { r#type: SessionActiveType::Running })).collect();
+    response::bytes(
+        StatusCode::OK,
+        "application/json",
+        encode_json(&SessionActiveResponse { data: SessionActiveResponseData(JsonMap(entries)) }),
+    )
+}
+
+pub async fn wait(services: &GlobalServices, raw: &RawRequest) -> response::Response {
+    let Some(sessions) = services.sessions() else {
+        return crate::services::services_unavailable();
+    };
+    let params = match experimental_session_wait::decode_params(raw) {
+        Ok(params) => params,
+        Err(error) => return invalid::request(invalid::Kind::Params, error),
+    };
+    if let Err(error) = sessions.get(&params.session_id.0) {
+        return error_response(error);
+    }
+    sessions.wait_idle(&params.session_id.0).await;
+    response::empty(StatusCode::NO_CONTENT)
 }
 
 pub async fn update(services: &GlobalServices, raw: &RawRequest) -> response::Response {

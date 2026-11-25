@@ -26,10 +26,13 @@ use opencode_location::environment::{Environment, local::LocalEnvironment};
 use opencode_location::events::LocationEvent;
 use opencode_location::lifecycle::Lifecycle;
 use opencode_location::location::{BootError, LocationInfo, boot_location};
+use opencode_location::map::Lease;
 use opencode_location::map::LocationMap;
 use opencode_location::project::{ProjectService, SWEEP_INTERVAL_MS};
 use opencode_location::resolve::SessionLocationError;
 use opencode_session::agent::Agents;
+use opencode_session::execution::{Placed, Placement};
+use opencode_session::instructions::BuiltinsInput;
 use opencode_session::search_build::SessionSearchBuild;
 use opencode_storage::Database;
 use serde_json::Value;
@@ -39,6 +42,91 @@ use tokio::task::JoinHandle;
 use crate::response;
 
 pub type ConfigEnv = Arc<dyn Fn(&str) -> Option<OsString> + Send + Sync>;
+
+struct ConfigAiEnv(ConfigEnv);
+
+impl opencode_ai::Env for ConfigAiEnv {
+    fn var(&self, name: &str) -> Option<String> {
+        (self.0)(name).map(|value| value.to_string_lossy().into_owned())
+    }
+}
+
+struct LocationPlacement {
+    locations: LocationMap<LocationServices>,
+    store: opencode_session::SessionStore,
+    paths: GlobalPaths,
+    env: Arc<dyn opencode_ai::Env>,
+}
+
+struct PlacedLocation {
+    _lease: Lease<LocationServices>,
+    catalog: Catalog,
+    agents: Agents,
+    builtins: BuiltinsInput,
+    env: Arc<dyn opencode_ai::Env>,
+    location: LocationRef,
+}
+
+impl Placement for LocationPlacement {
+    fn place(&self, session_id: String) -> BoxFuture<'static, Result<Arc<dyn Placed>, String>> {
+        let locations = self.locations.clone();
+        let store = self.store.clone();
+        let paths = self.paths.clone();
+        let env = self.env.clone();
+        Box::pin(async move {
+            let reference = store
+                .session_location(&session_id)
+                .map_err(|error| error.to_string())?
+                .ok_or_else(|| format!("Session not found: {session_id}"))?;
+            let lease = locations.get(&reference).await.map_err(|error| error.to_string())?;
+            let entries = lease.services().config.entries();
+            let catalog = Catalog::from_entries(&entries);
+            let agents = Agents::from_entries(&entries, &paths.home.to_string_lossy());
+            let tmp = std::fs::canonicalize(&paths.tmp).unwrap_or_else(|_| paths.tmp.clone());
+            let builtins = BuiltinsInput {
+                directory: lease.services().info.directory.clone(),
+                workspace_root: lease.services().info.project.directory.clone(),
+                vcs: lease.services().info.vcs.as_ref().map(|vcs| vcs.kind().to_owned()),
+                tmp: tmp.to_string_lossy().into_owned(),
+            };
+            let placed = PlacedLocation {
+                catalog,
+                agents,
+                builtins,
+                env,
+                location: opencode_session::execution::contract_location(&reference),
+                _lease: lease,
+            };
+            Ok(Arc::new(placed) as Arc<dyn Placed>)
+        })
+    }
+}
+
+impl Placed for PlacedLocation {
+    fn catalog(&self) -> &Catalog {
+        &self.catalog
+    }
+
+    fn agents(&self) -> &Agents {
+        &self.agents
+    }
+
+    fn builtins(&self) -> &BuiltinsInput {
+        &self.builtins
+    }
+
+    fn env(&self) -> &dyn opencode_ai::Env {
+        self.env.as_ref()
+    }
+
+    fn location(&self) -> Option<&LocationRef> {
+        Some(&self.location)
+    }
+
+    fn is_closed(&self) -> bool {
+        self._lease.services().lifecycle.is_closed()
+    }
+}
 
 pub struct GlobalServices {
     pub database: Arc<Database>,
@@ -179,13 +267,34 @@ impl GlobalServices {
     }
 
     pub fn attach_sessions(&mut self, bus: Arc<Bus>, store: opencode_session::SessionStore, version: String) {
-        self.sessions = Some(opencode_session::Sessions::new(
-            store,
-            bus,
-            self.projects.clone(),
-            self.local_environment.clone(),
-            version,
+        let placement = Arc::new(LocationPlacement {
+            locations: self.locations.clone(),
+            store: store.clone(),
+            paths: self.paths.clone(),
+            env: Arc::new(ConfigAiEnv(self.environment.clone())),
+        });
+        let runner = Arc::new(opencode_session::runner::Runner::new(
+            store.clone(),
+            bus.clone(),
+            self.database.clone(),
+            placement,
+            opencode_session::model_request::AppInfo {
+                name: "opencode".into(),
+                channel: "local".into(),
+                version: version.clone(),
+            },
         ));
+        let execution = opencode_session::execution::Execution::new(bus.clone(), runner);
+        self.sessions = Some(
+            opencode_session::Sessions::new(store, bus, self.projects.clone(), self.local_environment.clone(), version)
+                .with_execution(execution),
+        );
+    }
+
+    pub async fn shutdown_executions(&self) {
+        if let Some(sessions) = &self.sessions {
+            sessions.shutdown().await;
+        }
     }
 
     pub fn sessions(&self) -> Option<&opencode_session::Sessions> {

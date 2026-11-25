@@ -1,7 +1,7 @@
 use opencode_bus::{Bus, BusError, Definition, PublishOptions};
 use opencode_contract::codec::{JsonMap, encode_json};
 use opencode_contract::generated::{
-    InstructionHash, SessionID, SessionInstructionsUpdatedData, SessionInstructionsUpdatedDataDeltaValue,
+    InstructionHash, LocationRef, SessionID, SessionInstructionsUpdatedData, SessionInstructionsUpdatedDataDeltaValue,
     SessionInstructionsUpdatedDataDeltaValueString,
 };
 use opencode_storage::Database;
@@ -43,6 +43,16 @@ pub fn observe(db: &Database, list: &[Source], session_id: &str) -> Result<Obser
 }
 
 pub fn commit(db: &Database, bus: &Bus, list: &[Source], observation: &Observation) -> Result<(), BusError> {
+    commit_at(db, bus, list, observation, None)
+}
+
+pub fn commit_at(
+    db: &Database,
+    bus: &Bus,
+    list: &[Source],
+    observation: &Observation,
+    location: Option<LocationRef>,
+) -> Result<(), BusError> {
     if !observation.initial && observation.delta.is_empty() {
         return Ok(());
     }
@@ -76,6 +86,7 @@ pub fn commit(db: &Database, bus: &Bus, list: &[Source], observation: &Observati
     });
     let blobs = observation.blobs.clone();
     let options = PublishOptions {
+        location,
         metadata,
         commit: Some(Box::new(move |connection: &Connection, _seq: i64| {
             for (hash, value) in &blobs {
@@ -93,7 +104,17 @@ pub fn commit(db: &Database, bus: &Bus, list: &[Source], observation: &Observati
 }
 
 pub fn prepare(db: &Database, bus: &Bus, list: &[Source], session_id: &str) -> Result<(), BusError> {
-    commit(db, bus, list, &observe(db, list, session_id)?)
+    prepare_at(db, bus, list, session_id, None)
+}
+
+pub fn prepare_at(
+    db: &Database,
+    bus: &Bus,
+    list: &[Source],
+    session_id: &str,
+    location: Option<LocationRef>,
+) -> Result<(), BusError> {
+    commit_at(db, bus, list, &observe(db, list, session_id)?, location)
 }
 
 pub fn initial(db: &Database, session_id: &str, list: &[Source]) -> Result<Vec<Rendered>, BusError> {
