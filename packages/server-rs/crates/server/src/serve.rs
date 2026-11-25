@@ -147,6 +147,7 @@ pub(crate) async fn start(
                 paths,
                 start_directory,
                 config_env,
+                state.bus.clone(),
             )))
         }
         None => None,

@@ -5,6 +5,7 @@ use std::time::Duration;
 
 use futures_util::future::BoxFuture;
 use http::StatusCode;
+use opencode_bus::Bus;
 use opencode_config::entry::Entry;
 use opencode_config::flag;
 use opencode_config::options::{ConfigLocation, ConfigOptions};
@@ -25,8 +26,12 @@ use opencode_location::lifecycle::Lifecycle;
 use opencode_location::location::{BootError, LocationInfo, boot_location};
 use opencode_location::map::LocationMap;
 use opencode_location::project::{ProjectService, SWEEP_INTERVAL_MS};
+use opencode_location::state::Registration;
 use opencode_storage::Database;
+use opencode_vcs::git_provider::GitProvider;
 use opencode_vcs::snapshot::Snapshot;
+use opencode_vcs::vcs::Vcs;
+use opencode_vcs::watcher::{LocationWatcher, LocationWatcherPolicy};
 use serde_json::Value;
 use tokio::task::JoinHandle;
 
@@ -52,10 +57,20 @@ pub struct LocationServices {
     pub environment: Arc<dyn Environment>,
     pub config: ConfigService,
     pub snapshot: Arc<Snapshot>,
+    pub vcs: Arc<Vcs>,
+    watcher: LocationWatcher,
+    _vcs_registration: Option<Registration>,
+    _watcher_observer: opencode_config::observer::ObserverHandle,
 }
 
 impl GlobalServices {
-    pub fn new(database: Arc<Database>, paths: GlobalPaths, start_directory: String, config_env: ConfigEnv) -> Self {
+    pub fn new(
+        database: Arc<Database>,
+        paths: GlobalPaths,
+        start_directory: String,
+        config_env: ConfigEnv,
+        bus: Arc<Bus>,
+    ) -> Self {
         let git = Arc::new(opencode_git::Git::new(config_env.clone()));
         let boot_git = git.clone();
         let projects = Arc::new(ProjectService::new(database.clone(), git));
@@ -68,6 +83,7 @@ impl GlobalServices {
         let boot_config_env = config_env.clone();
         let boot_paths = paths.clone();
         let boot_wellknown = wellknown.clone();
+        let boot_bus = bus.clone();
         let locations = LocationMap::new(move |reference| {
             let projects = boot_projects.clone();
             let environment = boot_environment.clone();
@@ -77,9 +93,10 @@ impl GlobalServices {
             let channel = channel.clone();
             let flag_overrides = flag_overrides.clone();
             let boot_git = boot_git.clone();
+            let bus = boot_bus.clone();
             Box::pin(async move {
                 let info = boot_location(&reference, &projects, environment.as_ref()).await?;
-                let snapshot = Arc::new(Snapshot::new(boot_git, &info, paths.data.clone()));
+                let snapshot = Arc::new(Snapshot::new(boot_git.clone(), &info, paths.data.clone()));
                 let config = ConfigService::start(
                     ConfigOptions::from_vars(|name| config_env(name)),
                     ConfigLocation { directory: PathBuf::from(&info.directory), project_id: info.project.id.clone() },
@@ -88,8 +105,37 @@ impl GlobalServices {
                 )
                 .await;
                 snapshot.observe_config(&config).await;
+                let vcs = Vcs::new(bus.clone(), &info);
+                let vcs_registration = if matches!(info.vcs, Some(opencode_location::project::Vcs::Hg { .. })) {
+                    None
+                } else {
+                    let provider = Arc::new(GitProvider::new(
+                        boot_git.clone(),
+                        info.directory.clone(),
+                        info.project.directory.clone(),
+                    ));
+                    let registration = vcs.transform(move |editor| editor.add(provider.clone())).await;
+                    Some(registration)
+                };
+                let policy = LocationWatcherPolicy::new();
+                policy.set(watcher_ignore(&config.entries()));
+                let policy_slot = policy.clone();
+                let watcher_observer = opencode_config::observer::observe(&config, move |entries| {
+                    policy_slot.set(watcher_ignore(entries))
+                });
+                let watcher = LocationWatcher::start(boot_git, bus, &info, policy);
                 let lifecycle = Lifecycle::start(projects, &info).await?;
-                Ok(Arc::new(LocationServices { info, lifecycle, environment, config, snapshot }))
+                Ok(Arc::new(LocationServices {
+                    info,
+                    lifecycle,
+                    environment,
+                    config,
+                    snapshot,
+                    vcs,
+                    watcher,
+                    _vcs_registration: vcs_registration,
+                    _watcher_observer: watcher_observer,
+                }))
             })
         });
         let activity = Activity::spawn(
@@ -150,8 +196,24 @@ impl opencode_location::map::LocationServices for LocationServices {
     }
 
     fn close(&self) -> BoxFuture<'_, ()> {
-        Box::pin(async move { self.lifecycle.shutdown().await })
+        Box::pin(async move {
+            self.watcher.shutdown();
+            self.vcs.close();
+            self.lifecycle.shutdown().await;
+        })
     }
+}
+
+fn watcher_ignore(entries: &[Entry]) -> Vec<String> {
+    entries
+        .iter()
+        .flat_map(|entry| match entry {
+            Entry::Document(document) => {
+                document.info.watcher.as_ref().and_then(|watcher| watcher.ignore.clone()).unwrap_or_default()
+            }
+            Entry::Directory { .. } => Vec::new(),
+        })
+        .collect()
 }
 
 struct StorageKv {
