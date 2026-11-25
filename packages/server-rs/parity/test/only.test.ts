@@ -127,7 +127,7 @@ export default defineScenario({
 `
 }
 
-test("compares only the selected parts without opening the event feed", async () => {
+test("compares only the selected parts when the candidate rejects the event feed", async () => {
   await withTempDir("parity-only-", async (directory) => {
     const scenario = path.join(directory, "reject-events.scenario.ts")
     const source = scenarioSource('{ http: { method: "GET", path: "/api/info" } }', {
