@@ -6,12 +6,16 @@ mod cors;
 mod coverage;
 mod debug;
 mod event;
+mod form;
 mod info;
 mod location;
 mod model;
 mod pairing;
+mod permission;
+mod permission_oracle;
 mod plugin;
 mod project;
+mod registry;
 mod request_site;
 mod router;
 mod search;
@@ -56,6 +60,8 @@ fn services_with(start_directory: &Path, home: PathBuf) -> Arc<GlobalServices> {
         Arc::new(|_: &str| None),
         bus,
         global_plugins(),
+        "test-version".to_owned(),
+        "test".to_owned(),
     ))
 }
 
@@ -74,6 +80,8 @@ fn services_with_config(start_directory: &Path, config: &str) -> Arc<GlobalServi
         Arc::new(move |name: &str| (name == "OPENCODE_CONFIG_CONTENT").then(|| OsString::from(&config))),
         bus,
         global_plugins(),
+        "test-version".to_owned(),
+        "test".to_owned(),
     ))
 }
 
@@ -91,6 +99,8 @@ fn session_app(start_directory: &Path) -> (Arc<App>, Arc<opencode_http::state::S
         Arc::new(|_: &str| None),
         state.bus.clone(),
         global_plugins(),
+        "test-version".to_owned(),
+        "test".to_owned(),
     );
     services.attach_sessions(state.bus.clone(), state.store.clone(), "test-version".to_owned());
     let app = App::new(Options {

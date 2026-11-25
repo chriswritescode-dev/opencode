@@ -25,6 +25,8 @@ fn ready_app_with_state() -> Arc<App> {
         Arc::new(|_: &str| None),
         state.bus.clone(),
         crate::global_plugins(),
+        "test-version".to_owned(),
+        "test".to_owned(),
     );
     services.attach_sessions(state.bus.clone(), state.store.clone(), "test-version".to_owned());
     let app = App::new(Options {
@@ -139,6 +141,25 @@ fn sample_request(operation: &str) -> Option<(&'static str, &'static str)> {
         "config.get" => Some(("GET", "/api/config")),
         "config.shells" => Some(("GET", "/api/config/shell")),
         "experimental.config.update" => Some(("PATCH", "/api/experimental/config")),
+        "agent.list" => Some(("GET", "/api/agent")),
+        "agent.get" => Some(("GET", "/api/agent/build")),
+        "command.list" => Some(("GET", "/api/command")),
+        "skill.list" => Some(("GET", "/api/skill")),
+        "reference.list" => Some(("GET", "/api/reference")),
+        "form.list" => Some(("GET", "/api/form")),
+        "permission.request.list" => Some(("GET", "/api/permission/request")),
+        "permission.saved.list" => Some(("GET", "/api/permission/saved")),
+        "permission.saved.update" => Some(("PATCH", "/api/permission/saved/psv_test")),
+        "permission.saved.remove" => Some(("DELETE", "/api/permission/saved/psv_test")),
+        "session.permission.create" => Some(("POST", "/api/session/ses_test/permission")),
+        "session.permission.list" => Some(("GET", "/api/session/ses_test/permission")),
+        "session.permission.get" => Some(("GET", "/api/session/ses_test/permission/per_test")),
+        "session.permission.reply" => Some(("POST", "/api/session/ses_test/permission/per_test/reply")),
+        "session.form.list" => Some(("GET", "/api/session/ses_test/form")),
+        "session.form.create" => Some(("POST", "/api/session/ses_test/form")),
+        "session.form.get" => Some(("GET", "/api/session/ses_test/form/frm_test")),
+        "session.form.cancel" => Some(("DELETE", "/api/session/ses_test/form/frm_test")),
+        "session.form.reply" => Some(("POST", "/api/session/ses_test/form/frm_test/reply")),
         "session.list" => Some(("GET", "/api/session")),
         "session.create" => Some(("POST", "/api/session")),
         "session.get" => Some(("GET", "/api/session/ses_test")),
@@ -147,7 +168,6 @@ fn sample_request(operation: &str) -> Option<(&'static str, &'static str)> {
         "session.prompt" => Some(("POST", "/api/session/ses_test/prompt")),
         "session.message.list" => Some(("GET", "/api/session/ses_test/message")),
         "session.inbox.list" => Some(("GET", "/api/session/ses_test/inbox")),
-        "agent.list" => Some(("GET", "/api/agent")),
         "model.list" => Some(("GET", "/api/model")),
         "session.switchAgent" => Some(("POST", "/api/session/ses_test/agent")),
         "session.switchModel" => Some(("POST", "/api/session/ses_test/model")),
@@ -173,12 +193,12 @@ async fn unknown_paths_are_an_empty_404() {
 #[tokio::test]
 async fn unimplemented_routes_are_501() {
     let app = ready_app();
-    let response = app.handle(authorized("GET", "/api/agent/missing-agent")).await;
+    let response = app.handle(authorized("GET", "/api/experimental/session/stats")).await;
     assert_eq!(response.status(), StatusCode::NOT_IMPLEMENTED);
     assert_eq!(content_type(&response), Some("application/json"));
     assert_eq!(
         text(response).await,
-        r#"{"_tag":"UnknownError","message":"opencode-server does not implement agent.get yet"}"#
+        r#"{"_tag":"UnknownError","message":"opencode-server does not implement session.stats yet"}"#
     );
 }
 
@@ -199,6 +219,29 @@ fn implemented_lists_the_ported_operations() {
     assert!(opencode_http::app::IMPLEMENTED.contains(&"config.get"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"config.shells"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"experimental.config.update"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"agent.list"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"agent.get"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"command.list"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"skill.list"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"reference.list"));
+    for operation in [
+        "form.list",
+        "permission.request.list",
+        "permission.saved.list",
+        "permission.saved.update",
+        "permission.saved.remove",
+        "session.permission.create",
+        "session.permission.list",
+        "session.permission.get",
+        "session.permission.reply",
+        "session.form.list",
+        "session.form.create",
+        "session.form.get",
+        "session.form.cancel",
+        "session.form.reply",
+    ] {
+        assert!(opencode_http::app::IMPLEMENTED.contains(&operation), "{operation}");
+    }
     assert!(opencode_http::app::IMPLEMENTED.contains(&"session.list"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"session.create"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"session.get"));
@@ -207,7 +250,6 @@ fn implemented_lists_the_ported_operations() {
     assert!(opencode_http::app::IMPLEMENTED.contains(&"session.prompt"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"session.message.list"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"session.inbox.list"));
-    assert!(opencode_http::app::IMPLEMENTED.contains(&"agent.list"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"model.list"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"session.switchAgent"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"session.switchModel"));
@@ -218,5 +260,5 @@ fn implemented_lists_the_ported_operations() {
     assert!(opencode_http::app::IMPLEMENTED.contains(&"plugin.gui"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"plugin.check"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"plugin.update"));
-    assert_eq!(opencode_http::app::IMPLEMENTED.len(), 34);
+    assert_eq!(opencode_http::app::IMPLEMENTED.len(), 52);
 }

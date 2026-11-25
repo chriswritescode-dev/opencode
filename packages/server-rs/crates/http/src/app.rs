@@ -32,6 +32,25 @@ pub const IMPLEMENTED: &[&str] = &[
     "config.get",
     "config.shells",
     "experimental.config.update",
+    "agent.list",
+    "agent.get",
+    "command.list",
+    "skill.list",
+    "reference.list",
+    "form.list",
+    "permission.request.list",
+    "permission.saved.list",
+    "permission.saved.update",
+    "permission.saved.remove",
+    "session.permission.create",
+    "session.permission.list",
+    "session.permission.get",
+    "session.permission.reply",
+    "session.form.list",
+    "session.form.create",
+    "session.form.get",
+    "session.form.cancel",
+    "session.form.reply",
     "session.list",
     "session.create",
     "session.get",
@@ -40,7 +59,6 @@ pub const IMPLEMENTED: &[&str] = &[
     "session.prompt",
     "session.message.list",
     "session.inbox.list",
-    "agent.list",
     "model.list",
     "session.switchAgent",
     "session.switchModel",
@@ -228,7 +246,6 @@ impl App {
                 Some(services) => crate::handlers::session::inbox(services, &raw),
                 None => crate::services::services_unavailable(),
             },
-            "agent.list" => crate::handlers::agent::list(self, &raw).await,
             "model.list" => crate::handlers::model::list(self, &raw).await,
             "session.switchAgent" => match self.services() {
                 Some(services) => crate::handlers::session::switch_agent(services, &raw),
@@ -276,6 +293,58 @@ impl App {
                 },
                 Err(response) => response,
             },
+            "agent.list" => match self.location(&raw).await {
+                Ok(lease) => crate::handlers::registry::agent_list(&raw, lease.services()).await,
+                Err(response) => response,
+            },
+            "agent.get" => match self.location(&raw).await {
+                Ok(lease) => crate::handlers::registry::agent_get(&raw, lease.services()).await,
+                Err(response) => response,
+            },
+            "command.list" => match self.location(&raw).await {
+                Ok(lease) => crate::handlers::registry::command_list(&raw, lease.services()).await,
+                Err(response) => response,
+            },
+            "skill.list" => match self.location(&raw).await {
+                Ok(lease) => crate::handlers::registry::skill_list(&raw, lease.services()).await,
+                Err(response) => response,
+            },
+            "reference.list" => match self.location(&raw).await {
+                Ok(lease) => crate::handlers::registry::reference_list(&raw, lease.services()).await,
+                Err(response) => response,
+            },
+            "form.list" => match self.location(&raw).await {
+                Ok(lease) => crate::handlers::form::list(&raw, lease.services()),
+                Err(response) => response,
+            },
+            "permission.request.list" => match self.location(&raw).await {
+                Ok(lease) => crate::handlers::permission::request_list(&raw, lease.services()),
+                Err(response) => response,
+            },
+            "permission.saved.list" => match self.location(&raw).await {
+                Ok(lease) => match self.services() {
+                    Some(services) => crate::handlers::permission::saved_list(&raw, services, lease.services()),
+                    None => crate::services::services_unavailable(),
+                },
+                Err(response) => response,
+            },
+            "permission.saved.update" => match self.services() {
+                Some(services) => crate::handlers::permission::saved_update(&raw, services),
+                None => crate::services::services_unavailable(),
+            },
+            "permission.saved.remove" => match self.services() {
+                Some(services) => crate::handlers::permission::saved_remove(&raw, services),
+                None => crate::services::services_unavailable(),
+            },
+            "session.permission.create" => crate::handlers::permission::session_create(self, &raw).await,
+            "session.permission.list" => crate::handlers::permission::session_list(self, &raw).await,
+            "session.permission.get" => crate::handlers::permission::session_get(self, &raw).await,
+            "session.permission.reply" => crate::handlers::permission::session_reply(self, &raw).await,
+            "session.form.list" => crate::handlers::form::session_list(self, &raw).await,
+            "session.form.create" => crate::handlers::form::session_create(self, &raw).await,
+            "session.form.get" => crate::handlers::form::session_get(self, &raw).await,
+            "session.form.cancel" => crate::handlers::form::session_cancel(self, &raw).await,
+            "session.form.reply" => crate::handlers::form::session_reply(self, &raw).await,
             _ => not_implemented(found.route.identifier),
         }
     }
@@ -302,6 +371,33 @@ impl App {
             Ok(lease) => Ok(lease),
             Err(error) => Err(crate::services::location_error(error)),
         }
+    }
+
+    #[allow(clippy::result_large_err)]
+    pub async fn session_location(
+        &self,
+        session_id: &str,
+    ) -> Result<opencode_location::map::Lease<crate::services::LocationServices>, response::Response> {
+        let Some(services) = &self.options.services else {
+            return Err(crate::services::services_unavailable());
+        };
+        let reference = session_reference(services, session_id)?;
+        match services.locations.get(&reference).await {
+            Ok(lease) => Ok(lease),
+            Err(error) => Err(crate::services::location_error(error)),
+        }
+    }
+
+    #[allow(clippy::result_large_err)]
+    pub async fn session_location_live(
+        &self,
+        session_id: &str,
+    ) -> Result<Option<Arc<crate::services::LocationServices>>, response::Response> {
+        let Some(services) = &self.options.services else {
+            return Err(crate::services::services_unavailable());
+        };
+        let reference = session_reference(services, session_id)?;
+        Ok(services.locations.services(&reference).await)
     }
 
     pub async fn shutdown(&self) {
@@ -373,6 +469,15 @@ fn raw_request(request: &Request<Bytes>, path_params: Vec<(String, String)>) -> 
             .collect(),
         body: request.body().to_vec(),
     }
+}
+
+#[allow(clippy::result_large_err)]
+fn session_reference(
+    services: &crate::services::GlobalServices,
+    session_id: &str,
+) -> Result<opencode_location::location::LocationRef, response::Response> {
+    opencode_location::resolve::resolve_session_location(&services.store, session_id)
+        .map_err(crate::services::session_location_error)
 }
 
 fn not_implemented(identifier: &str) -> response::Response {

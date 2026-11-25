@@ -172,6 +172,8 @@ pub(crate) async fn start(
                 config_env,
                 state.bus.clone(),
                 plugins,
+                crate::VERSION.to_owned(),
+                crate::CHANNEL.to_owned(),
             );
             services.attach_sessions(state.bus.clone(), state.store.clone(), crate::VERSION.to_owned());
             Some(Arc::new(services))

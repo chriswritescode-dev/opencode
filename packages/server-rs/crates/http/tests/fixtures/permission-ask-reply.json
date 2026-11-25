@@ -1,0 +1,193 @@
+{
+  "steps": [
+    {
+      "body": {
+        "data": {
+          "cost": 0,
+          "id": "<ses:1>",
+          "location": {
+            "directory": "<root>/work"
+          },
+          "projectID": "19dd751a4c982d985912d2a1890f1fbdec0f4153",
+          "time": {
+            "created": "<time>",
+            "updated": "<time>"
+          },
+          "tokens": {
+            "cache": {
+              "read": 0,
+              "write": 0
+            },
+            "input": 0,
+            "output": 0,
+            "reasoning": 0
+          }
+        }
+      },
+      "headers": {
+        "content-type": "application/json",
+        "vary": "Origin, Accept-Encoding"
+      },
+      "status": 200
+    },
+    {
+      "body": {
+        "data": {
+          "effect": "ask",
+          "id": "<per:1>"
+        }
+      },
+      "headers": {
+        "content-type": "application/json",
+        "vary": "Origin, Accept-Encoding"
+      },
+      "status": 200
+    },
+    {
+      "body": {
+        "data": [
+          {
+            "action": "bash",
+            "id": "<per:1>",
+            "resources": [
+              "ls"
+            ],
+            "save": [
+              "ls *"
+            ],
+            "sessionID": "<ses:1>"
+          }
+        ]
+      },
+      "headers": {
+        "content-type": "application/json",
+        "vary": "Origin, Accept-Encoding"
+      },
+      "status": 200
+    },
+    {
+      "body": {
+        "data": [
+          {
+            "action": "bash",
+            "id": "<per:1>",
+            "resources": [
+              "ls"
+            ],
+            "save": [
+              "ls *"
+            ],
+            "sessionID": "<ses:1>"
+          }
+        ],
+        "location": {
+          "directory": "<root>/work"
+        }
+      },
+      "headers": {
+        "content-type": "application/json",
+        "vary": "Origin, Accept-Encoding"
+      },
+      "status": 200
+    },
+    {
+      "body": {
+        "data": {
+          "action": "bash",
+          "id": "<per:1>",
+          "resources": [
+            "ls"
+          ],
+          "save": [
+            "ls *"
+          ],
+          "sessionID": "<ses:1>"
+        }
+      },
+      "headers": {
+        "content-type": "application/json",
+        "vary": "Origin, Accept-Encoding"
+      },
+      "status": 200
+    },
+    {
+      "body": "",
+      "headers": {
+        "vary": "Origin"
+      },
+      "status": 204
+    },
+    {
+      "body": {
+        "data": [
+          {
+            "action": "bash",
+            "id": "<psv:1>",
+            "projectID": "19dd751a4c982d985912d2a1890f1fbdec0f4153",
+            "resource": "ls *",
+            "time": {
+              "created": "<time>",
+              "updated": "<time>"
+            }
+          }
+        ]
+      },
+      "headers": {
+        "content-type": "application/json",
+        "vary": "Origin, Accept-Encoding"
+      },
+      "status": 200
+    },
+    {
+      "body": {
+        "data": {
+          "effect": "allow",
+          "id": "<per:2>"
+        }
+      },
+      "headers": {
+        "content-type": "application/json",
+        "vary": "Origin, Accept-Encoding"
+      },
+      "status": 200
+    },
+    {
+      "body": {
+        "_tag": "PermissionNotFoundError",
+        "message": "Permission request not found: per_unknown",
+        "requestID": "per_unknown"
+      },
+      "headers": {
+        "content-type": "application/json",
+        "vary": "Origin, Accept-Encoding"
+      },
+      "status": 404
+    },
+    {
+      "body": {
+        "data": {
+          "action": "bash",
+          "id": "<psv:1>",
+          "projectID": "19dd751a4c982d985912d2a1890f1fbdec0f4153",
+          "resource": "ls -lh",
+          "time": {
+            "created": "<time>",
+            "updated": "<time>"
+          }
+        }
+      },
+      "headers": {
+        "content-type": "application/json",
+        "vary": "Origin, Accept-Encoding"
+      },
+      "status": 200
+    },
+    {
+      "body": "",
+      "headers": {
+        "vary": "Origin"
+      },
+      "status": 204
+    }
+  ]
+}

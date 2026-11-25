@@ -77,6 +77,8 @@ async fn shells_uses_the_server_path() {
         Arc::new(env),
         bus,
         crate::global_plugins(),
+        "test-version".to_owned(),
+        "test".to_owned(),
     ));
     let app = ready_app_with_services(services.clone());
 

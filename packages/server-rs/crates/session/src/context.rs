@@ -3,9 +3,9 @@ use std::fmt;
 use opencode_ai::{Env, Model, RuntimeModel};
 use opencode_catalog::Catalog;
 use opencode_contract::generated::{AgentInfo, ModelInfo, ModelRef, SessionInfo, SessionMessageInfo};
+use opencode_registry::agent::AgentService;
 use opencode_storage::Database;
 
-use crate::agent::Agents;
 use crate::instruction_state;
 use crate::instructions::{self, BuiltinsInput, List, Rendered};
 use crate::store::{MessagesInput, Order, SessionStore};
@@ -29,7 +29,7 @@ pub struct LoadInput<'a> {
     pub database: &'a Database,
     pub store: &'a SessionStore,
     pub catalog: &'a Catalog,
-    pub agents: &'a Agents,
+    pub agents: &'a AgentService,
     pub env: &'a dyn Env,
     pub builtins: BuiltinsInput,
 }
@@ -38,6 +38,7 @@ pub struct LoadInput<'a> {
 pub enum ContextError {
     SessionNotFound(String),
     AgentNotFound { session_id: String, agent_id: String },
+    Agents(String),
     ModelNotSelected { session_id: String },
     ModelUnavailable { provider_id: String, model_id: String },
     ModelResolution(String),
@@ -51,6 +52,7 @@ impl fmt::Display for ContextError {
         match self {
             Self::SessionNotFound(session_id) => write!(formatter, "Session not found: {session_id}"),
             Self::AgentNotFound { agent_id, .. } => write!(formatter, "Agent not found: \"{agent_id}\""),
+            Self::Agents(message) => write!(formatter, "Agents unavailable: {message}"),
             Self::ModelNotSelected { session_id } => {
                 write!(formatter, "No model is available for session {session_id}")
             }
@@ -67,15 +69,15 @@ impl fmt::Display for ContextError {
 
 impl std::error::Error for ContextError {}
 
-pub fn load(input: &LoadInput<'_>, session_id: &str) -> Result<Loaded, ContextError> {
+pub async fn load(input: &LoadInput<'_>, session_id: &str) -> Result<Loaded, ContextError> {
     let list = instructions::builtins(input.builtins.clone())
         .map_err(|error| ContextError::Instructions(error.to_string()))?;
-    load_with(input, session_id, list)
+    load_with(input, session_id, list).await
 }
 
-pub fn load_with(input: &LoadInput<'_>, session_id: &str, list: List) -> Result<Loaded, ContextError> {
+pub async fn load_with(input: &LoadInput<'_>, session_id: &str, list: List) -> Result<Loaded, ContextError> {
     let session = require_session(input.store, session_id)?;
-    let agent = require_agent(input.agents, &session)?;
+    let agent = require_agent(input.agents, &session).await?;
     let model = require_model(input.catalog, &session, &agent, session_id)?;
     let runtime = resolve_runtime(input.catalog, input.env, &model)?;
     let initial = instruction_state::initial(input.database, session_id, &list)
@@ -100,8 +102,11 @@ fn require_session(store: &SessionStore, session_id: &str) -> Result<SessionInfo
         .ok_or_else(|| ContextError::SessionNotFound(session_id.to_owned()))
 }
 
-fn require_agent(agents: &Agents, session: &SessionInfo) -> Result<AgentInfo, ContextError> {
-    let selection = agents.select(session.agent.as_ref().map(|id| id.0.as_str()));
+async fn require_agent(agents: &AgentService, session: &SessionInfo) -> Result<AgentInfo, ContextError> {
+    let selection = agents
+        .select(session.agent.as_ref().map(|id| id.0.as_str()))
+        .await
+        .map_err(|error| ContextError::Agents(error.to_string()))?;
     let Some(info) = selection.info else {
         let agent_id = session.agent.as_ref().map_or(selection.id, |id| id.0.clone());
         return Err(ContextError::AgentNotFound { session_id: session.id.0.clone(), agent_id });

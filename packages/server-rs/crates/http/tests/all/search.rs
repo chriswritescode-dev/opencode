@@ -37,6 +37,8 @@ fn services_with_flags(
         Arc::new(environment),
         bus,
         crate::global_plugins(),
+        "test-version".to_owned(),
+        "test".to_owned(),
     ));
     (services, database)
 }
