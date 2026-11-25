@@ -6,6 +6,7 @@ import { ConfigAgentPlugin } from "@opencode/core/config/plugin/agent"
 import { ConfigCommandPlugin } from "@opencode/core/config/plugin/command"
 import { ConfigCompatibilityPlugin } from "@opencode/core/config/plugin/compatibility"
 import { ConfigInstructionPlugin } from "@opencode/core/config/plugin/instruction"
+import { ConfigReferencePlugin } from "@opencode/core/config/plugin/reference"
 import { ConfigSkillPlugin } from "@opencode/core/config/plugin/skill"
 import { ConfigMarkdown } from "@opencode/core/config/markdown"
 import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
@@ -21,6 +22,9 @@ import { CommandPlugin } from "@opencode/core/plugin/command"
 import { PlanPlugin } from "@opencode/core/plugin/plan"
 import { SkillPlugin } from "@opencode/core/plugin/skill"
 import { Project } from "@opencode/core/project"
+import { Reference } from "@opencode/core/reference"
+import { ReferenceInstructions } from "@opencode/core/reference/instructions"
+import { RepositoryCache } from "@opencode/core/repository-cache"
 import { AbsolutePath } from "@opencode/core/schema"
 import { Session } from "@opencode/core/session"
 import { SessionExecution } from "@opencode/core/session/execution"
@@ -76,6 +80,7 @@ else if (area === "agents") await exportAgents()
 else if (area === "commands") await exportCommands()
 else if (area === "instructions") await exportInstructions()
 else if (area === "skills") await exportSkills()
+else if (area === "references") await exportReferences()
 else {
   console.error(`corpus: unknown area ${area ?? ""}`)
   process.exit(1)
@@ -1570,6 +1575,146 @@ async function exportSkillCase(item: SkillCase) {
       `skills ${item.name}: ${result.list.map((skill: Skill.Info) => skill.id).join(", ")} (guidance ${result.guidance.split("\n").length} lines)`,
     )
     return JSON.stringify(result).replaceAll(JSON.stringify(canonical).slice(1, -1), "{{root}}")
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+}
+
+type ReferenceCase = {
+  name: string
+  documents: Array<Record<string, unknown>>
+}
+
+function referenceLayer(input: { home: string; repos: string }) {
+  const globalLayer = Layer.succeed(
+    Global.Service,
+    Global.Service.of(Global.make({ home: input.home, repos: input.repos })),
+  )
+  const cache = Layer.mock(RepositoryCache.Service, {
+    ensure: () => Effect.die("unexpected Git materialization"),
+  })
+  return AppNodeBuilder.build(LayerNode.group([Reference.node, ReferenceInstructions.node, Bus.node]), [
+    Global.node.replace(globalLayer),
+    RepositoryCache.node.replace(cache),
+  ])
+}
+
+async function exportReferences() {
+  const cases: ReferenceCase[] = [
+    {
+      name: "local-sources",
+      documents: [
+        {
+          references: {
+            docs: "./docs",
+            shared: "~/shared",
+            notes: { path: "notes", description: "Notes for the team", hidden: true },
+            plain: "./plain",
+          },
+        },
+      ],
+    },
+    {
+      name: "git-sources",
+      documents: [
+        {
+          references: {
+            sdk: "owner/repo",
+            branch: {
+              repository: "gitlab.com/group/repo",
+              branch: "feature/x",
+              description: "Branch docs",
+              hidden: true,
+            },
+            scp: "git@github.com:owner/scp.git",
+            port: "ssh://git@example.com:2222/owner/repo",
+            url: "https://github.com/owner/url.git",
+            invalid: "invalid",
+            "invalid-branch": { repository: "owner/repo", branch: "../escape" },
+            file: "file:///docs",
+          },
+        },
+      ],
+    },
+    {
+      name: "invalid-aliases",
+      documents: [
+        {
+          references: {
+            "": "owner/repo",
+            "bad/alias": "owner/repo",
+            "bad alias": "owner/repo",
+            "bad,alias": "owner/repo",
+            "bad`alias": "owner/repo",
+            ok: "owner/repo",
+          },
+        },
+      ],
+    },
+    {
+      name: "later-documents-win",
+      documents: [
+        { references: { docs: "./first" } },
+        { references: { docs: { path: "./second", description: "Second docs" } } },
+      ],
+    },
+  ]
+  const output: string[] = []
+  for (const item of cases) output.push(await exportReferenceCase(item))
+  process.stdout.write(`[\n${output.join(",\n")}\n]\n`)
+}
+
+async function exportReferenceCase(item: ReferenceCase) {
+  const root = await mkdtemp(path.join(tmpdir(), "opencode-reference-case-"))
+  try {
+    const canonical = await realpath(root)
+    const absolute = (relative: string) => path.join(canonical, relative)
+    const home = absolute("home")
+    const directory = absolute("project")
+    const repos = absolute("repos")
+    await mkdir(home, { recursive: true })
+    await mkdir(directory, { recursive: true })
+    const entries: Array<Document> = item.documents.map(
+      (document) => new Document({ type: "document", info: decodeConfig(document) }),
+    )
+    const program = Effect.gen(function* () {
+      const service = yield* Reference.Service
+      yield* ConfigReferencePlugin.Plugin.effect(
+        host({ reference: { list: service.list, transform: service.transform, reload: service.reload } }),
+      ).pipe(
+        Effect.provideService(Global.Service, Global.Service.of(Global.make({ home, repos }))),
+        Effect.provideService(
+          Location.Service,
+          Location.Service.of(location({ directory: AbsolutePath.make(directory) })),
+        ),
+      )
+      const list = yield* service.list()
+      const instructions = yield* ReferenceInstructions.Service
+      const guidance = yield* instructions.load().pipe(Effect.flatMap(readInitial))
+      return {
+        name: item.name,
+        home,
+        directory,
+        repos,
+        documents: item.documents,
+        list,
+        guidance: guidance.text,
+      }
+    })
+    const result = await Effect.runPromise(
+      program.pipe(
+        Effect.scoped,
+        Effect.provide(referenceLayer({ home, repos })),
+        Effect.provide(Config.testLayer(entries)),
+        Effect.provide(Logger.layer([])),
+      ),
+    )
+    console.error(
+      `references ${item.name}: ${result.list.map((reference: Reference.Info) => reference.name).join(", ")}`,
+    )
+    return JSON.stringify(result)
+      .replaceAll(JSON.stringify(repos).slice(1, -1), "{{repos}}")
+      .replaceAll(JSON.stringify(canonical).slice(1, -1), "{{root}}")
   } finally {
     await rm(root, { recursive: true, force: true })
   }

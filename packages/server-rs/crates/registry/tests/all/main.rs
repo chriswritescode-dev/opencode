@@ -4,6 +4,7 @@ mod config_agent;
 mod corpus;
 mod instructions;
 mod markdown;
+mod reference;
 mod scan;
 mod skill;
 mod skill_discovery;
