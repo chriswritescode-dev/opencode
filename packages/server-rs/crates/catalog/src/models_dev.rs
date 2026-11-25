@@ -1,6 +1,9 @@
 pub mod normalize;
+pub mod service;
 pub mod source;
 pub mod v1;
+
+pub use service::{CATALOG_PATH, DEFAULT_SOURCE, ModelsDevError, ModelsDevService, Options, body_digest, cache_key};
 
 use std::io::Read;
 use std::sync::LazyLock;

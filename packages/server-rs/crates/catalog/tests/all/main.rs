@@ -5,6 +5,7 @@ mod credential_refresh;
 mod integration;
 mod integration_connect;
 mod models_dev;
+mod models_dev_service;
 mod oauth;
 mod variant;
 
