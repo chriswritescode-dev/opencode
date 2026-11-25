@@ -1,5 +1,6 @@
 use std::path::Path;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::time::Duration;
 
 use futures_util::future::BoxFuture;
@@ -86,6 +87,7 @@ struct TestPlaced {
     agents: Agents,
     builtins: BuiltinsInput,
     env: MapEnv,
+    closed: AtomicBool,
 }
 
 impl Placed for TestPlaced {
@@ -110,22 +112,38 @@ impl Placed for TestPlaced {
     }
 
     fn is_closed(&self) -> bool {
-        false
+        self.closed.load(Ordering::SeqCst)
     }
 }
 
 struct TestPlacement {
-    placed: Arc<TestPlaced>,
+    placements: Vec<Arc<TestPlaced>>,
+    calls: AtomicUsize,
 }
 
 impl Placement for TestPlacement {
     fn place(&self, _session_id: String) -> BoxFuture<'static, Result<Arc<dyn Placed>, String>> {
-        let placed = self.placed.clone();
+        let index = self.calls.fetch_add(1, Ordering::SeqCst).min(self.placements.len() - 1);
+        let placed = self.placements[index].clone();
         Box::pin(async move { Ok(placed as Arc<dyn Placed>) })
     }
 }
 
+fn test_placed(entry: &Entry, work: &str, root: &Path, closed: bool) -> TestPlaced {
+    TestPlaced {
+        catalog: Catalog::from_entries(std::slice::from_ref(entry)),
+        agents: Agents::from_entries(std::slice::from_ref(entry), "/home/test"),
+        builtins: builtins_input(work, root),
+        env: MapEnv::new([("ANTHROPIC_API_KEY".to_owned(), "parity".to_owned())]),
+        closed: AtomicBool::new(closed),
+    }
+}
+
 fn setup(port: u16) -> Setup {
+    setup_placements(port, false)
+}
+
+fn setup_placements(port: u16, closed_first: bool) -> Setup {
     let dir = TempDir::new();
     let work_path = dir.path().join("work");
     std::fs::create_dir_all(&work_path).expect("create the work directory");
@@ -160,13 +178,16 @@ fn setup(port: u16) -> Setup {
             .expect("decode the config document"),
         origin: Origin::File,
     });
-    let placed = Arc::new(TestPlaced {
-        catalog: Catalog::from_entries(std::slice::from_ref(&entry)),
-        agents: Agents::from_entries(std::slice::from_ref(&entry), "/home/test"),
-        builtins: builtins_input(&work, dir.path()),
-        env: MapEnv::new([("ANTHROPIC_API_KEY".to_owned(), "parity".to_owned())]),
-    });
-    let runner = Runner::new(store.clone(), bus.clone(), database.clone(), Arc::new(TestPlacement { placed }), app());
+    let placements = if closed_first {
+        vec![
+            Arc::new(test_placed(&entry, &work, dir.path(), true)),
+            Arc::new(test_placed(&entry, &work, dir.path(), false)),
+        ]
+    } else {
+        vec![Arc::new(test_placed(&entry, &work, dir.path(), false))]
+    };
+    let placement = TestPlacement { placements, calls: AtomicUsize::new(0) };
+    let runner = Runner::new(store.clone(), bus.clone(), database.clone(), Arc::new(placement), app());
     let sessions = Sessions::new(
         store.clone(),
         bus.clone(),
@@ -417,6 +438,20 @@ async fn drain_streams_text_and_settles_the_step() {
     let value: Value = serde_json::from_str(&encode_json(assistant)).expect("encode the assistant message");
     assert_eq!(value["content"], json!([{ "type": "text", "text": "Hello!" }]));
     assert_eq!(value["finish"], json!("stop"));
+    assert_eq!(idle_outcome(&setup.store), SessionMessageIdleOutcome::Succeeded);
+    assert_eq!(time_suspended(&setup.database), None);
+}
+
+#[tokio::test]
+async fn a_closed_placement_reloads_the_location_instead_of_succeeding() {
+    let port = start_server(Response::cassette()).await;
+    let setup = setup_placements(port, true);
+    let mut subscription = setup.bus.subscribe_all(None);
+    prompt(&setup.sessions);
+    let events = collect_until(&mut subscription, "session.execution.succeeded").await;
+    let types = events.iter().map(|event| event.r#type()).collect::<Vec<_>>();
+    assert!(types.contains(&"session.inbox.delivered"));
+    assert!(types.contains(&"session.step.ended"));
     assert_eq!(idle_outcome(&setup.store), SessionMessageIdleOutcome::Succeeded);
     assert_eq!(time_suspended(&setup.database), None);
 }

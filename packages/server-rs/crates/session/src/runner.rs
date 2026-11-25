@@ -61,11 +61,10 @@ impl Runner {
     }
 
     pub async fn drain(&self, session_id: &str, mut cancel: watch::Receiver<bool>) -> Result<(), ExecutionError> {
-        let placed = tokio::select! {
+        let mut placed = tokio::select! {
             _ = cancel.changed() => return Err(ExecutionError::Interrupted),
             placed = self.placement.place(session_id.to_owned()) => placed.map_err(ExecutionError::Placement)?,
         };
-        let location = placed.location().cloned();
         let mut step = 1u64;
         let mut continuation = false;
         let mut consecutive_lengths = 0u32;
@@ -74,8 +73,15 @@ impl Runner {
                 return Err(ExecutionError::Interrupted);
             }
             if placed.is_closed() {
-                return Ok(());
+                placed = tokio::select! {
+                    _ = cancel.changed() => return Err(ExecutionError::Interrupted),
+                    placed = self.placement.place(session_id.to_owned()) => {
+                        placed.map_err(ExecutionError::Placement)?
+                    }
+                };
+                continue;
             }
+            let location = placed.location().cloned();
             let list = instructions::builtins(placed.builtins().clone())
                 .map_err(|error| ExecutionError::Message(error.to_string()))?;
             if !continuation {
