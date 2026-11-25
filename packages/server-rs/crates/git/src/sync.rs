@@ -74,7 +74,7 @@ impl Git {
     ) -> Result<(), OperationError> {
         let spec = format!("refs/heads/{branch}:refs/remotes/{remote}/{branch}");
         let spec = if force { format!("+{spec}") } else { spec };
-        self.operation(Operation::Fetch, &repository.worktree, &["fetch", remote, &spec]).await
+        self.operation(Operation::Fetch, &repository.worktree, &["fetch", "--end-of-options", remote, &spec]).await
     }
 
     pub async fn checkout_remote_branch(
@@ -85,6 +85,14 @@ impl Git {
         reset: bool,
     ) -> Result<(), OperationError> {
         let reference = format!("{remote}/{branch}");
+        if remote.starts_with('-') || branch.starts_with('-') {
+            return Err(OperationError {
+                operation: Operation::Checkout,
+                message: format!("Invalid checkout reference: {reference}"),
+                directory: Some(repository.worktree.clone()),
+                cause: None,
+            });
+        }
         let args = if reset { vec!["checkout", "-B", branch, &reference] } else { vec!["checkout", branch] };
         self.operation(Operation::Checkout, &repository.worktree, &args).await
     }

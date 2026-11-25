@@ -44,3 +44,38 @@ async fn fetches_checks_out_and_resets_remote_changes() {
     assert_eq!(git.branch(&repository).await, Some("feature/docs".to_string()));
     assert_eq!(fixture::read(&target.join("README.md")).await, "feature\n");
 }
+
+#[tokio::test]
+async fn fetch_treats_an_option_like_remote_as_a_repository_argument() {
+    let temp = TempDir::new();
+    let root = std::fs::canonicalize(temp.path()).expect("canonicalizes the temporary directory");
+    let git = fixture::handle();
+    let remote = fixture::git_remote(&git, &root).await;
+    let target = root.join("checkout");
+    let repository = git.clone_repository(&remote.remote, text(&target), None, None).await.expect("clones the remote");
+    let marker = root.join("upload-pack-ran");
+
+    let error = git
+        .fetch_branch(&repository, &format!("--upload-pack=touch {}", text(&marker)), "main", false)
+        .await
+        .expect_err("fetches fail for the option-like remote");
+
+    assert!(!marker.exists(), "the remote is never executed as an upload-pack command");
+    assert!(!error.message.contains("unknown option"), "the remote is treated as a repository: {}", error.message);
+}
+
+#[tokio::test]
+async fn checkout_refuses_option_like_branches_and_remotes() {
+    let temp = TempDir::new();
+    let root = std::fs::canonicalize(temp.path()).expect("canonicalizes the temporary directory");
+    let git = fixture::handle();
+    let remote = fixture::git_remote(&git, &root).await;
+    let target = root.join("checkout");
+    let repository = git.clone_repository(&remote.remote, text(&target), None, None).await.expect("clones the remote");
+
+    let branch = git.checkout_remote_branch(&repository, "origin", "-f", false).await.expect_err("rejects the branch");
+    assert_eq!(branch.operation, opencode_git::Operation::Checkout);
+    let remote = git.checkout_remote_branch(&repository, "-f", "main", true).await.expect_err("rejects the remote");
+    assert_eq!(remote.operation, opencode_git::Operation::Checkout);
+    assert_eq!(git.branch(&repository).await, Some("main".to_string()));
+}
