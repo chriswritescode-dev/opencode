@@ -10,9 +10,9 @@ named in the row needs it.
 | --- | --- | --- | --- | --- | --- |
 | process helpers | `oc-tools` | Spawning and supervising child processes, output capture and timeouts | `shell` | OR-52 | `packages/util/src/cross-spawn-spawner.ts`, `packages/util/src/execute-output.ts`; `opencode_util::job` only runs a foreground terminal program and waits for it |
 | PTY | `oc-tools` | Pseudo-terminal allocation, resize and teardown | `shell` | OR-52 | the `packages/process-daemon` client protocol and `packages/core/src/pty/protocol.ts` |
-| git | `oc-tools` | Git command wrappers and repository inspection | `vcs` | OR-53 | `packages/core/src/git.ts` |
+| git | `oc-tools` | Git command wrappers and repository inspection | `git` | OR-53 | `packages/core/src/git.ts`, `packages/core/src/util/git-executable.ts`; OR-53 ported from the TypeScript at the pin and imported no first-attempt code, because that branch is not visible in this checkout |
 | search | `oc-tools` | Ripgrep-backed file and content search | `fs` | OR-51 | `packages/core/src/filesystem/search.ts` |
-| diff | `oc-tools` | Unified diff generation and parsing | `vcs` | OR-53 | `packages/core/src/session/diff.ts` |
+| diff | `oc-tools` | Unified diff generation and parsing | `git` | OR-53 | `packages/core/src/vcs/patch.ts`, `packages/core/src/git.ts`; OR-53 ported from the TypeScript at the pin and imported no first-attempt code, because that branch is not visible in this checkout |
 | patch | `oc-tools` | Applying patches to files | `tool` | OR-51 | `packages/core/src/tool/plugin/patch.ts`, `packages/core/src/vcs/patch.ts` |
 | watcher | `oc-tools` | Filesystem watcher with debounce | `fs` | OR-51 | `packages/core/src/filesystem/watcher.ts` |
 | image helpers | `oc-tools` | Image decode, resize and format checks | `tool` | OR-51 | `packages/core/src/image.ts` |
@@ -30,7 +30,7 @@ named in the row needs it.
 | number helpers | `oc-schema` | Number parsing and formatting that match JavaScript | `contract` | OR-38 | OR-38 used `opencode_api_types::js` (`number_to_string`) and imported no first-attempt code: the helpers already match the TypeScript behaviour, and the first-attempt branches are not visible in this checkout. |
 | wildcard helpers | `oc-schema` | Glob-style pattern matching for permission rules | `config` | OR-50 | `packages/core/src/util/wildcard.ts`; OR-42 ported it from the pinned TypeScript in `opencode_config::wildcard`, the first-attempt code was not visible in this checkout, and OR-50 reuses `opencode_config::wildcard` |
 | response validator | `oc-contract` | Validates responses against the committed schema | `parity/` | not imported (OR-37) | `packages/protocol/src/client.ts` and `packages/protocol/openapi.json` at the pin |
-| git fixtures | `oc-testkit` | Temporary git repositories for tests | `vcs` tests | OR-53 | `packages/core/test/fixture/git.ts` |
+| git fixtures | `oc-testkit` | Temporary git repositories for tests | `git` tests | OR-53 | `packages/core/test/fixture/git.ts`; OR-53 ported from the TypeScript at the pin and imported no first-attempt code, because that branch is not visible in this checkout |
 | server scaffold | `oc-server` | Authentication, CORS, event stream and error scaffolding | `http` | OR-39 | no first-attempt code was imported because the first-attempt branches are not visible in this checkout, and OR-39 ported the modules from the pinned TypeScript instead |
 
 ## Not reused
