@@ -288,6 +288,29 @@ async fn shares_failures_and_allows_a_later_refresh() {
 }
 
 #[tokio::test]
+async fn a_panicking_refresh_fails_waiters_and_allows_a_later_refresh() {
+    let (_dir, _database, _bus, service, _locks) = setup();
+    let id = create(&service);
+
+    let failed = tokio::time::timeout(
+        Duration::from_secs(1),
+        service.refresh(&id, |_, _| true, |_| async { panic!("refresh panicked") }),
+    )
+    .await
+    .expect("a panicking refresh reports an aborted refresh instead of hanging")
+    .expect_err("the refresh fails");
+
+    assert_eq!(failed.to_string(), "credential refresh task ended without a result");
+
+    let value = oauth("new-access", "new-refresh", 9_007_199_254_740_991);
+    let expected = value.clone();
+    let result = service.refresh(&id, |_, _| true, move |_| async move { Ok(value) }).await.expect("refresh again");
+
+    assert_eq!(result, Some(expected.clone()));
+    assert_eq!(stored(&service, &id), expected);
+}
+
+#[tokio::test]
 async fn waits_for_another_process_holding_the_refresh_lock() {
     let (_dir, _database, _bus, service, locks) = setup();
     let id = create(&service);

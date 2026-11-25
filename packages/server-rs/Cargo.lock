@@ -794,11 +794,13 @@ dependencies = [
 name = "opencode-catalog"
 version = "0.1.0"
 dependencies = [
+ "indexmap",
  "log",
  "opencode-bus",
  "opencode-config",
  "opencode-contract",
  "opencode-local",
+ "opencode-location",
  "opencode-storage",
  "opencode-util",
  "rusqlite",

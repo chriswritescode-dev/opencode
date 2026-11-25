@@ -1,6 +1,7 @@
 mod corpus;
 mod credential;
 mod credential_refresh;
+mod integration;
 mod oauth;
 
 use std::path::{Path, PathBuf};

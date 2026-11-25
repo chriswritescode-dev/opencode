@@ -29,7 +29,22 @@ type Start = Option<(u64, watch::Sender<Option<Outcome>>)>;
 
 struct Shared {
     generation: u64,
-    sender: watch::Sender<Option<Outcome>>,
+    progress: Progress,
+}
+
+struct PendingEntry {
+    service: Arc<CredentialService>,
+    key: String,
+    generation: u64,
+}
+
+impl Drop for PendingEntry {
+    fn drop(&mut self) {
+        let mut pending = self.service.pending.lock().expect("lock the pending refreshes");
+        if pending.get(&self.key).is_some_and(|shared| shared.generation == self.generation) {
+            pending.remove(&self.key);
+        }
+    }
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -279,13 +294,9 @@ impl CredentialService {
             let service = self.clone();
             let key = id.0.clone();
             tokio::spawn(async move {
+                let guard = PendingEntry { service: service.clone(), key: key.clone(), generation };
                 let outcome = service.refresh_locked(&key, stale, refresh).await;
-                {
-                    let mut pending = service.pending.lock().expect("lock the pending refreshes");
-                    if pending.get(&key).is_some_and(|shared| shared.generation == generation) {
-                        pending.remove(&key);
-                    }
-                }
+                drop(guard);
                 sender.send_replace(Some(outcome));
             });
         }
@@ -295,11 +306,11 @@ impl CredentialService {
     fn begin(&self, id: &CredentialID) -> (Start, Progress) {
         let mut pending = self.pending.lock().expect("lock the pending refreshes");
         if let Some(shared) = pending.get(&id.0) {
-            return (None, shared.sender.subscribe());
+            return (None, shared.progress.clone());
         }
         let generation = self.generation.fetch_add(1, Ordering::Relaxed);
         let (sender, progress) = watch::channel(None);
-        pending.insert(id.0.clone(), Shared { generation, sender: sender.clone() });
+        pending.insert(id.0.clone(), Shared { generation, progress: progress.clone() });
         (Some((generation, sender)), progress)
     }
 
