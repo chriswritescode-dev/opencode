@@ -17,11 +17,13 @@ pub mod nvidia;
 pub mod ollama;
 pub mod openai_context_caps;
 pub mod openrouter;
+pub mod poe;
 pub mod prompt_cache_key;
 pub mod refresh;
 pub mod settings;
 pub mod storage;
 pub mod vllm;
+pub mod xai;
 pub mod zenmux;
 
 use std::ffi::OsString;
@@ -269,8 +271,10 @@ pub async fn register(
             ollama::ID => ollama::register(services, context, builtin).await,
             openai_context_caps::ID => openai_context_caps::register(services, context, builtin).await,
             openrouter::ID => openrouter::register(services, context, builtin).await,
+            poe::ID => poe::register(services, context, builtin).await,
             prompt_cache_key::ID => prompt_cache_key::register(services, context, builtin).await,
             vllm::ID => vllm::register(services, context, builtin).await,
+            xai::ID => xai::register(services, context, builtin).await,
             zenmux::ID => zenmux::register(services, context, builtin).await,
             _ => {}
         }

@@ -1,5 +1,6 @@
-use std::convert::Infallible;
+use std::future::Future;
 use std::io;
+use std::pin::Pin;
 use std::sync::Arc;
 
 use bytes::Bytes;
@@ -11,11 +12,16 @@ use hyper_util::rt::TokioIo;
 use tokio::net::TcpListener;
 use tokio::task::JoinHandle;
 
-type Handler = dyn Fn(Request) -> (u16, &'static str, String) + Send + Sync;
+pub type Reply = (u16, &'static str, String);
+
+pub type HandlerFuture = Pin<Box<dyn Future<Output = Option<Reply>> + Send>>;
+
+type Handler = dyn Fn(Request) -> HandlerFuture + Send + Sync;
 
 pub struct Request {
     pub method: String,
     pub path: String,
+    pub query: String,
     pub body: Bytes,
 }
 
@@ -28,7 +34,20 @@ impl CallbackServer {
     pub async fn bind(
         host: &str,
         port: u16,
-        handler: impl Fn(Request) -> (u16, &'static str, String) + Send + Sync + 'static,
+        handler: impl Fn(Request) -> Reply + Send + Sync + 'static,
+    ) -> io::Result<Self> {
+        let handler = Arc::new(handler);
+        Self::bind_async(host, port, move |request| {
+            let handler = handler.clone();
+            Box::pin(async move { Some(handler(request)) })
+        })
+        .await
+    }
+
+    pub async fn bind_async(
+        host: &str,
+        port: u16,
+        handler: impl Fn(Request) -> HandlerFuture + Send + Sync + 'static,
     ) -> io::Result<Self> {
         let listener = TcpListener::bind((host, port)).await?;
         let port = listener.local_addr()?.port();
@@ -48,6 +67,10 @@ impl Drop for CallbackServer {
     }
 }
 
+#[derive(Debug, thiserror::Error)]
+#[error("the callback connection closed without a response")]
+struct ConnectionClosed;
+
 async fn accept(listener: TcpListener, handler: Arc<Handler>) {
     loop {
         let Ok((stream, _)) = listener.accept().await else {
@@ -57,21 +80,28 @@ async fn accept(listener: TcpListener, handler: Arc<Handler>) {
         tokio::spawn(async move {
             let service = service_fn(move |request| {
                 let handler = Arc::clone(&handler);
-                async move { Ok::<_, Infallible>(respond(handler.as_ref(), request).await) }
+                async move { respond(handler.as_ref(), request).await }
             });
             let _ = http1::Builder::new().serve_connection(TokioIo::new(stream), service).await;
         });
     }
 }
 
-async fn respond(handler: &Handler, request: hyper::Request<Incoming>) -> hyper::Response<Full<Bytes>> {
+async fn respond(
+    handler: &Handler,
+    request: hyper::Request<Incoming>,
+) -> Result<hyper::Response<Full<Bytes>>, ConnectionClosed> {
     let method = request.method().as_str().to_owned();
     let path = request.uri().path().to_owned();
+    let query = request.uri().query().unwrap_or("").to_owned();
     let Ok(collected) = BodyExt::collect(Limited::new(request.into_body(), 64 * 1024)).await else {
-        return reply(413, "text/plain", "Payload too large".to_owned());
+        return Ok(reply(413, "text/plain", "Payload too large".to_owned()));
     };
-    let (status, content_type, body) = handler(Request { method, path, body: collected.to_bytes() });
-    reply(status, content_type, body)
+    let Some((status, content_type, body)) = handler(Request { method, path, query, body: collected.to_bytes() }).await
+    else {
+        return Err(ConnectionClosed);
+    };
+    Ok(reply(status, content_type, body))
 }
 
 fn reply(status: u16, content_type: &str, body: String) -> hyper::Response<Full<Bytes>> {
