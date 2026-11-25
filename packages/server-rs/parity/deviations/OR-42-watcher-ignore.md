@@ -1,7 +1,7 @@
 # OR-42: config watching ignores directories per event and uses one native watcher per target
 
 TypeScript: `ConfigWatch.plan` puts `ignore: FSUtil.ignoreGlobs` on every directory target
-(`packages/core/src/config/watch.ts:64` at the pinned commit `73a0eae88de47f10068a0f9dc7a743638fa3d830`), and
+(`packages/core/src/config/watch.ts:64` at the pinned commit `e54fbacb3d3aebc85f0e5ada0a5c490cc9333a91`), and
 `@parcel/watcher` applies that list natively, so ignored subtrees are never watched.
 `FilesystemWatcher.subscribe` opens the subscription through an `RcMap` keyed by target, type, ignore and names
 (`packages/core/src/filesystem/watcher.ts:138`), so one host subscription serves every subscriber of the same target.

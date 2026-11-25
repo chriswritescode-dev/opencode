@@ -2,10 +2,10 @@
 
 TypeScript: `Config.load` reads each existing config file through `FSUtil.readFileStringSafe`, which swallows only
 `NotFound` and access-denied (`PermissionDenied` or `EPERM`) failures and returns `undefined` for those, rethrowing
-everything else (`packages/util/src/fs-util.ts:63-69`); `load` runs the result through `Effect.orDie`
+everything else (`packages/util/src/fs-util.ts:63-70`); `load` runs the result through `Effect.orDie`
 (`packages/core/src/config.ts:290-324`). `ConfigDiscovery.discover` resolves each candidate through `FSUtil.resolve`,
 which maps the same two reasons to the unresolved path and `Effect.orDie`s every other error
-(`packages/util/src/fs-util.ts:81-93`), and discovery itself is `Effect.orDie`d
+(`packages/util/src/fs-util.ts:82-94`), and discovery itself is `Effect.orDie`d
 (`packages/core/src/config/discovery.ts:120-124`). A failure such as `EISDIR`, `EIO` or `ELOOP` therefore fails the
 whole load.
 

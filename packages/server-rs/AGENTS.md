@@ -105,11 +105,11 @@ Before merging, the whole package must pass:
   `--tables <names>` to restrict what is compared without changing what a scenario runs; the parts, the table filter
   and the `events` and `logs` dependencies are documented in `parity/README.md`. After
   `bun run cargo build -q -p opencode-server`, the strict binary run is
-  `bun run parity --candidate target/debug/opencode-server parity/scenarios/agent-model-list.scenario.ts parity/scenarios/session-create-list.scenario.ts parity/scenarios/debug-routes.scenario.ts`,
-  and `bun run parity --candidate target/debug/opencode-server --allow-pending parity/scenarios/prompt-text-only.scenario.ts parity/scenarios/project-routes.scenario.ts parity/scenarios/location-routes.scenario.ts parity/scenarios/config-routes.scenario.ts`
-  passes with `project-routes` explained only by `OR-43-project-query-decode-messages`, `prompt-text-only` only by
-  `OR-49-tool-definitions`, and `location-routes` and `config-routes` only by `OR-49-registry-events` until OR-46,
-  OR-50 and OR-62 land the plugin and catalog registry events.
+  `bun run parity --candidate target/debug/opencode-server parity/scenarios/session-create-list.scenario.ts parity/scenarios/debug-routes.scenario.ts parity/scenarios/agent-model-list.scenario.ts parity/scenarios/prompt-text-only.scenario.ts`,
+  and `bun run parity --candidate target/debug/opencode-server --allow-pending parity/scenarios/project-routes.scenario.ts parity/scenarios/location-routes.scenario.ts parity/scenarios/config-routes.scenario.ts`
+  passes with `project-routes` explained only by `OR-43-project-query-decode-messages`, and `location-routes` and
+  `config-routes` only by `OR-49-registry-events` until OR-46, OR-50 and OR-62 land the plugin and catalog registry
+  events.
 - `bun run test:shell`, which needs `bun install` and a debug build of `opencode-server`
 - `bun run test:host`
 
@@ -117,6 +117,30 @@ Before merging, the whole package must pass:
 
 Each crate keeps one integration test binary, `tests/all/main.rs`, with one module per area. Add tests as a module
 there, not as a new `tests/*.rs`.
+
+## Re-sync
+
+Advancing `upstream-pin` is its own task. Work through these steps in order and record the measured times in
+`docs/resync-<n>.md`.
+
+1. Fetch the target commit and merge it with `git merge --no-ff`; never rebase.
+2. Run `bun run drift:report <commit>`, which writes `docs/resync-<n>.md`.
+3. Write the commit into `upstream-pin`.
+4. Run `bun install`, so the upstream packages link for the generators.
+5. Run every generator under `script/gen/`.
+6. Fix the compile errors the new contract causes.
+7. Update pinned counts in tests from the failing assertions' `found` values.
+8. Regenerate `docs/coverage.md` with `OPENCODE_UPDATE_COVERAGE=1`.
+9. Classify every upstream change in a ported area as absorbed or deferred, and name the owning task for each
+   deferred item in `docs/resync-<n>.md`.
+10. Port the absorbed changes test-first.
+11. Re-check every deviation citation whose cited TypeScript file changed between the pins, and the pin hash in
+    every deviation.
+12. Run the checks in `## Checks`.
+
+In re-sync 1, steps 1-8 took 501 s together; the four porting phases (step 10) took 646 s, 651 s, 469 s and
+1166 s; the ledger, re-sync record and full checks (steps 9, 11 and 12) took 1065 s, all recorded in
+`docs/resync-1.md`.
 
 ## Rules
 

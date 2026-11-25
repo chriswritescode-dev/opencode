@@ -3,8 +3,8 @@
 TypeScript: Effect 4.1.0 `Duration` parses a duration string with `parseNanos` and `fromMillisString` over `BigInt`
 nanoseconds (`effect/src/Duration.ts` in the pinned dependency version), so any magnitude and any number of
 fractional digits decodes. `Schema.DurationFromString` reaches it for `experimental.location_idle_timeout`
-(`packages/schema/src/config/experimental.ts:62` at the pinned commit
-`73a0eae88de47f10068a0f9dc7a743638fa3d830`), `warming.interval` (`packages/schema/src/config/warming.ts:10`) and
+(`packages/schema/src/config/experimental.ts:63` at the pinned commit
+`e54fbacb3d3aebc85f0e5ada0a5c490cc9333a91`), `warming.interval` (`packages/schema/src/config/warming.ts:10`) and
 `warming.duration` (`:16`).
 
 Rust: `crates/config/src/normalize.rs` `parse_nanos` (`:1491-1509`) and `from_millis_string` (`:1526-1538`) use

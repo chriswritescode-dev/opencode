@@ -1,6 +1,6 @@
 # OR-39: a contract operation without a handler answers 501 instead of TypeScript's implementation
 
-TypeScript: the server implements every contract route. `packages/server/src/routes.ts:110-123` builds the full
+TypeScript: the server implements every contract route. `packages/server/src/routes.ts:119-126` builds the full
 route table through `createRoutes`, and `packages/server/src/handlers.ts` registers a handler group for each route,
 so any advertised operation has a working endpoint. The machine-link WebSocket upgrade
 (`/api/experimental/machine/link`) is exempt from password authentication while the `machines` flag is on
