@@ -1,14 +1,25 @@
+import { Agent } from "@opencode/core/agent"
+import { Bus } from "@opencode/core/bus"
 import { ConfigMarkdown } from "@opencode/core/config/markdown"
+import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
+import { Location } from "@opencode/core/location"
+import { AgentPlugin } from "@opencode/core/plugin/agent"
+import { PlanPlugin } from "@opencode/core/plugin/plan"
+import { Project } from "@opencode/core/project"
+import { AbsolutePath } from "@opencode/core/schema"
 import { FSUtil } from "@opencode/util/fs-util"
 import { LayerNode } from "@opencode/util/effect/layer-node"
-import { Effect, Logger } from "effect"
+import { Global } from "@opencode/util/global"
+import { Effect, Layer, Logger } from "effect"
 import { mkdir, rm, symlink, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
+import { agentHost, host } from "./plugin/host"
 
 const area = process.argv[2]
 if (area === "markdown") exportMarkdown()
 else if (area === "scan") await exportScan()
+else if (area === "agents") await exportAgents()
 else {
   console.error(`corpus: unknown area ${area ?? ""}`)
   process.exit(1)
@@ -369,6 +380,43 @@ function scanCases(): Array<ScanCase> {
       },
     },
     {
+      name: "scan-symlink-globstar-no-follow",
+      platform: "unix",
+      files: {
+        "f.md": "f",
+        "real/s.md": "secret",
+        link: { type: "symlink", target: "real" },
+      },
+      operation: {
+        kind: "scan",
+        root: "",
+        pattern: "**/*",
+        options: { dot: true, symlink: false, include_files_only: true, ignore: [] },
+      },
+    },
+    {
+      name: "scan-symlink-literal-globstar",
+      platform: "unix",
+      files: { "real/s.md": "secret", link: { type: "symlink", target: "real" } },
+      operation: {
+        kind: "scan",
+        root: "",
+        pattern: "link/**/*.md",
+        options: { dot: true, symlink: false, include_files_only: true, ignore: [] },
+      },
+    },
+    {
+      name: "scan-symlink-literal-segment",
+      platform: "unix",
+      files: { "real/s.md": "secret", link: { type: "symlink", target: "real" } },
+      operation: {
+        kind: "scan",
+        root: "",
+        pattern: "link/*.md",
+        options: { dot: true, symlink: false, include_files_only: true, ignore: [] },
+      },
+    },
+    {
       name: "up-names",
       files: nested,
       operation: { kind: "up", names: ["AGENTS.md", "CLAUDE.md"], start: "nested/deep", stop: "." },
@@ -379,4 +427,51 @@ function scanCases(): Array<ScanCase> {
       operation: { kind: "up", names: ["AGENTS.md", "CLAUDE.md"], start: "nested/deep", stop: "nested" },
     },
   ].sort((a, b) => (a.name < b.name ? -1 : 1))
+}
+
+async function exportAgents() {
+  const home = "{{home}}"
+  const global = Global.make({ home })
+  const globalLayer = Layer.succeed(Global.Service, Global.Service.of(global))
+  const location = new Location.Info({
+    directory: AbsolutePath.make("/workspace"),
+    project: {
+      id: Project.ID.global,
+      directory: AbsolutePath.make("/workspace"),
+      canonical: AbsolutePath.make("/workspace"),
+    },
+  })
+  const locationLayer = Layer.succeed(Location.Service, Location.Service.of(location))
+  const layer = AppNodeBuilder.build(LayerNode.group([Agent.node, Bus.node, Location.node]), [
+    Global.node.replace(globalLayer),
+    Location.node.replace(locationLayer),
+  ])
+  const tool = {
+    transform: () => Effect.die("unused tool.transform"),
+    reload: () => Effect.die("unused tool.reload"),
+    list: () => Effect.die("unused tool.list"),
+    hook: () => Effect.succeed({ dispose: Effect.void }),
+  }
+  const program = Effect.gen(function* () {
+    const agent = yield* Agent.Service
+    yield* AgentPlugin.Plugin.effect(host({ agent: agentHost(agent), tool }))
+    yield* PlanPlugin.Plugin.effect(
+      host({
+        agent: agentHost(agent),
+        tool,
+        session: { hook: () => Effect.succeed({ dispose: Effect.void }) },
+      }),
+    ).pipe(Effect.provideService(Global.Service, Global.Service.of(global)))
+    return {
+      name: "builtins",
+      home,
+      list: yield* agent.list(),
+      select: yield* agent.select(),
+      resolve: yield* agent.resolve(),
+    }
+  })
+  const output = await Effect.runPromise(
+    program.pipe(Effect.scoped, Effect.provide(layer), Effect.provide(Logger.layer([]))),
+  )
+  process.stdout.write(`[\n${JSON.stringify(output)}\n]\n`)
 }

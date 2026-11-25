@@ -1,3 +1,4 @@
+mod agent;
 mod corpus;
 mod markdown;
 mod scan;

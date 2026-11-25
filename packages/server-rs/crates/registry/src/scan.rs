@@ -31,7 +31,8 @@ pub fn scan(root: &Path, pattern: &str, options: ScanOptions<'_>) -> Vec<PathBuf
     if patterns.is_empty() {
         return Vec::new();
     }
-    let ignore: Vec<Regex> = options.ignore.iter().flat_map(|pattern| compile(pattern)).collect();
+    let ignore: Vec<Regex> =
+        options.ignore.iter().flat_map(|pattern| compile(pattern).into_iter().map(|pattern| pattern.regex)).collect();
     let mut results = Vec::new();
     let mut ancestors = Vec::new();
     if let Ok(path) = root.canonicalize() {
@@ -91,10 +92,20 @@ enum Kind {
     Directory,
 }
 
+struct Pattern {
+    regex: Regex,
+    segments: Vec<Segment>,
+}
+
+enum Segment {
+    Globstar,
+    Part { matcher: Regex, literal: Option<String> },
+}
+
 fn walk(
     directory: &Path,
     prefix: &str,
-    patterns: &[Regex],
+    patterns: &[Pattern],
     ignore: &[Regex],
     options: &ScanOptions<'_>,
     ancestors: &mut Vec<PathBuf>,
@@ -113,16 +124,19 @@ fn walk(
             continue;
         }
         let Some(kind) = entry_kind(&path) else { continue };
-        if patterns.iter().any(|pattern| pattern.is_match(&relative))
-            && (!matches!(kind, Kind::Directory) || !options.include_files_only)
+        let symlink = entry.file_type().is_ok_and(|file| file.is_symlink());
+        let is_directory = matches!(kind, Kind::Directory);
+        let reported_directory = is_directory && !(symlink && !options.symlink);
+        if patterns.iter().any(|pattern| pattern.regex.is_match(&relative))
+            && (!reported_directory || !options.include_files_only)
         {
             results.push(path.clone());
         }
-        if !matches!(kind, Kind::Directory) {
+        if !is_directory {
             continue;
         }
-        let symlink = entry.file_type().is_ok_and(|file| file.is_symlink());
-        if symlink && !options.symlink {
+        if symlink && !options.symlink && !patterns.iter().any(|pattern| reaches_literal(&pattern.segments, &relative))
+        {
             continue;
         }
         let Ok(canonical) = path.canonicalize() else { continue };
@@ -133,6 +147,27 @@ fn walk(
         walk(&path, &relative, patterns, ignore, options, ancestors, results);
         ancestors.pop();
     }
+}
+
+fn reaches_literal(segments: &[Segment], relative: &str) -> bool {
+    let parts: Vec<&str> = relative.split('/').collect();
+    reaches_at(segments, &parts, 0, 0)
+}
+
+fn reaches_at(segments: &[Segment], parts: &[&str], segment: usize, part: usize) -> bool {
+    let Some(current) = segments.get(segment) else { return false };
+    if matches!(current, Segment::Globstar) {
+        if reaches_at(segments, parts, segment + 1, part) {
+            return true;
+        }
+        return part + 1 < parts.len() && reaches_at(segments, parts, segment, part + 1);
+    }
+    let Some(name) = parts.get(part) else { return false };
+    let Segment::Part { matcher, literal } = current else { return false };
+    if part + 1 == parts.len() {
+        return literal.as_deref() == Some(*name);
+    }
+    matcher.is_match(name) && reaches_at(segments, parts, segment + 1, part + 1)
 }
 
 fn entry_kind(path: &Path) -> Option<Kind> {
@@ -162,9 +197,30 @@ fn same_directory(a: &Path, b: &Path) -> bool {
     }
 }
 
-fn compile(pattern: &str) -> Vec<Regex> {
+fn compile(pattern: &str) -> Vec<Pattern> {
     let normalized = pattern.replace('\\', "/");
-    expand_braces(&normalized).into_iter().filter_map(|pattern| Regex::new(&translate(&pattern)).ok()).collect()
+    expand_braces(&normalized)
+        .into_iter()
+        .filter_map(|pattern| {
+            let regex = Regex::new(&translate(&pattern)).ok()?;
+            let segments = pattern
+                .split('/')
+                .map(|segment| {
+                    if segment == "**" {
+                        return Some(Segment::Globstar);
+                    }
+                    let matcher = Regex::new(&format!("^{}$", translate_segment(segment))).ok()?;
+                    Some(Segment::Part { matcher, literal: literal_segment(segment) })
+                })
+                .collect::<Option<Vec<_>>>()?;
+            Some(Pattern { regex, segments })
+        })
+        .collect()
+}
+
+fn literal_segment(segment: &str) -> Option<String> {
+    let literal = !segment.bytes().any(|byte| matches!(byte, b'*' | b'?' | b'[' | b'{'));
+    literal.then(|| segment.to_owned())
 }
 
 fn translate(pattern: &str) -> String {
