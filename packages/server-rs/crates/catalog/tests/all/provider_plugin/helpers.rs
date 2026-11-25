@@ -21,7 +21,7 @@ use tokio::sync::{Notify, watch};
 use crate::builtin::{Harness, Input};
 
 #[derive(Default)]
-struct MemoryKv {
+pub(crate) struct MemoryKv {
     values: Mutex<Map<String, Value>>,
 }
 
