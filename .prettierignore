@@ -5,3 +5,4 @@ packages/client/src/generated-effect/
 packages/plugins/figma/skills/
 packages/server-rs/host/src/protocol.gen.ts
 packages/server-rs/crates/sidecar/host/host.js
+packages/server-rs/crates/sidecar/host/plugins.js
