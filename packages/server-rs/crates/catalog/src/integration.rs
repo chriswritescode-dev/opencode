@@ -254,6 +254,16 @@ impl IntegrationService {
         Ok(())
     }
 
+    pub fn shutdown(&self) {
+        attempt::shutdown(self);
+        command::shutdown(self);
+        if let Ok(mut cleanup) = self.cleanup.lock()
+            && let Some(task) = cleanup.take()
+        {
+            task.abort();
+        }
+    }
+
     pub(crate) fn project_entry(&self, entry: &IntegrationEntry, connections: Vec<ConnectionInfo>) -> IntegrationInfo {
         let statuses = self.statuses.lock().expect("lock integration statuses");
         let mut info = entry.info.clone();
@@ -274,13 +284,7 @@ pub(crate) fn status_key(integration_id: &IntegrationID, connection: &Connection
 
 impl Drop for IntegrationService {
     fn drop(&mut self) {
-        attempt::shutdown(self);
-        command::shutdown(self);
-        if let Ok(mut cleanup) = self.cleanup.lock()
-            && let Some(task) = cleanup.take()
-        {
-            task.abort();
-        }
+        self.shutdown();
     }
 }
 

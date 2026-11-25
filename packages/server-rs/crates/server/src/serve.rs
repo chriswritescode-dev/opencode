@@ -140,13 +140,17 @@ pub(crate) async fn start(
             let start_directory = opencode_local::paths::current_dir()?.to_string_lossy().into_owned();
             let vars: HashMap<OsString, OsString> =
                 env.vars().map(|(name, value)| (name.to_os_string(), value.to_os_string())).collect();
+            let command_env: Arc<Vec<(OsString, OsString)>> =
+                Arc::new(vars.iter().map(|(name, value)| (name.clone(), value.clone())).collect());
             let config_env: opencode_http::services::ConfigEnv =
                 Arc::new(move |name: &str| vars.get(OsStr::new(name)).cloned());
             Some(Arc::new(opencode_http::services::GlobalServices::new(
                 state.db.clone(),
+                state.bus.clone(),
                 paths,
                 start_directory,
                 config_env,
+                command_env,
             )))
         }
         None => None,

@@ -16,12 +16,14 @@ mod session_log;
 mod status;
 mod ticket;
 
+use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use bytes::Bytes;
 use http::Request;
+use opencode_bus::{Bus, BusOptions};
 use opencode_config::paths::GlobalPaths;
 use opencode_http::app::{App, Options};
 use opencode_http::services::GlobalServices;
@@ -39,13 +41,17 @@ fn services_at(start_directory: &Path) -> Arc<GlobalServices> {
 
 fn services_with(start_directory: &Path, home: PathBuf) -> Arc<GlobalServices> {
     let (database, _) = Database::open(DatabaseLocation::Memory, &std::env::temp_dir()).expect("open the database");
+    let database = Arc::new(database);
+    let bus = Bus::new(database.clone(), BusOptions::default());
     let paths =
         GlobalPaths::from_vars(|name| (name == "HOME").then(|| home.clone().into_os_string())).expect("global paths");
     Arc::new(GlobalServices::new(
-        Arc::new(database),
+        database,
+        bus,
         paths,
         start_directory.to_string_lossy().into_owned(),
-        Arc::new(|_: &str| None),
+        Arc::new(|name: &str| (name == "OPENCODE_DISABLE_MODELS_FETCH").then(|| OsString::from("1"))),
+        Arc::new(Vec::new()),
     ))
 }
 

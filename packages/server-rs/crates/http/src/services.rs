@@ -1,10 +1,17 @@
 use std::ffi::OsString;
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use futures_util::future::BoxFuture;
 use http::StatusCode;
+use opencode_bus::Bus;
+use opencode_catalog::builtin::{self, Builtin};
+use opencode_catalog::credential::CredentialService;
+use opencode_catalog::integration::{CommandEnv, IntegrationService};
+use opencode_catalog::model::ModelService;
+use opencode_catalog::models_dev::{ModelsDevService, Options};
+use opencode_catalog::provider::ProviderService;
 use opencode_config::entry::Entry;
 use opencode_config::flag;
 use opencode_config::options::{ConfigLocation, ConfigOptions};
@@ -16,7 +23,7 @@ use opencode_contract::codec::encode_json;
 use opencode_contract::generated::{
     AbsolutePath, ConfigEntryDocumentInfoExperimentalLocationIdleTimeout,
     ConfigEntryDocumentInfoExperimentalLocationIdleTimeoutBool, LocationNotFoundError, LocationNotFoundErrorTag,
-    LocationPublicRef, ServiceUnavailableError, ServiceUnavailableErrorTag,
+    LocationPublicRef, LocationRef, ServiceUnavailableError, ServiceUnavailableErrorTag, WorkspaceID,
 };
 use opencode_location::activity::{Activity, ActivityOptions, IdleTimeout};
 use opencode_location::environment::{Environment, local::LocalEnvironment};
@@ -40,9 +47,12 @@ pub struct GlobalServices {
     pub locations: LocationMap<LocationServices>,
     pub activity: Activity<LocationServices>,
     pub wellknown: Arc<WellKnown>,
+    pub credentials: Arc<CredentialService>,
+    pub models_dev: Arc<ModelsDevService>,
     pub start_directory: String,
     pub environment: ConfigEnv,
     sweep: JoinHandle<()>,
+    credentials_task: JoinHandle<()>,
 }
 
 pub struct LocationServices {
@@ -50,10 +60,32 @@ pub struct LocationServices {
     pub lifecycle: Lifecycle,
     pub environment: Arc<dyn Environment>,
     pub config: ConfigService,
+    pub integrations: Arc<IntegrationService>,
+    pub providers: Arc<ProviderService>,
+    pub models: Arc<ModelService>,
+    registrations: Mutex<Option<Builtin>>,
 }
 
 impl GlobalServices {
-    pub fn new(database: Arc<Database>, paths: GlobalPaths, start_directory: String, config_env: ConfigEnv) -> Self {
+    pub fn new(
+        database: Arc<Database>,
+        bus: Arc<Bus>,
+        paths: GlobalPaths,
+        start_directory: String,
+        config_env: ConfigEnv,
+        command_env: CommandEnv,
+    ) -> Self {
+        let credentials = CredentialService::new(database.clone(), bus.clone(), paths.state.join("locks"));
+        let models_dev = ModelsDevService::new(
+            database.clone(),
+            bus.clone(),
+            Options::from_vars(|name| config_env(name)),
+            format!(
+                "opencode/{}/{}/opencode",
+                flag::build_channel(),
+                option_env!("OPENCODE_VERSION").unwrap_or("local")
+            ),
+        );
         let projects = Arc::new(ProjectService::new(database.clone()));
         let wellknown = Arc::new(WellKnown::new(Arc::new(StorageKv { database: database.clone() })));
         let environment: Arc<dyn Environment> = Arc::new(LocalEnvironment::new());
@@ -64,12 +96,20 @@ impl GlobalServices {
         let boot_config_env = config_env.clone();
         let boot_paths = paths.clone();
         let boot_wellknown = wellknown.clone();
+        let boot_credentials = credentials.clone();
+        let boot_models_dev = models_dev.clone();
+        let boot_bus = bus.clone();
+        let boot_command_env = command_env.clone();
         let locations = LocationMap::new(move |reference| {
             let projects = boot_projects.clone();
             let environment = boot_environment.clone();
             let config_env = boot_config_env.clone();
             let paths = boot_paths.clone();
             let wellknown = boot_wellknown.clone();
+            let credentials = boot_credentials.clone();
+            let models_dev = boot_models_dev.clone();
+            let bus = boot_bus.clone();
+            let command_env = boot_command_env.clone();
             let channel = channel.clone();
             let flag_overrides = flag_overrides.clone();
             Box::pin(async move {
@@ -78,11 +118,52 @@ impl GlobalServices {
                     ConfigOptions::from_vars(|name| config_env(name)),
                     ConfigLocation { directory: PathBuf::from(&info.directory), project_id: info.project.id.clone() },
                     paths,
-                    ServiceDeps { credentials: Arc::new(()), wellknown, channel, flag_overrides },
+                    ServiceDeps {
+                        credentials: credentials.clone(),
+                        wellknown: wellknown.clone(),
+                        channel,
+                        flag_overrides,
+                    },
                 )
                 .await;
+                let location = LocationRef {
+                    directory: AbsolutePath(info.directory.clone()),
+                    workspace_id: info.workspace_id.clone().map(WorkspaceID),
+                };
                 let lifecycle = Lifecycle::start(projects, &info).await?;
-                Ok(Arc::new(LocationServices { info, lifecycle, environment, config }))
+                let integrations = IntegrationService::new(
+                    credentials.clone(),
+                    bus.clone(),
+                    location.clone(),
+                    config_env.clone(),
+                    command_env,
+                );
+                let providers = ProviderService::new(integrations.clone(), bus.clone(), location.clone());
+                let models = ModelService::new(providers.clone(), bus.clone(), location, config_env.clone());
+                let registrations = builtin::register(
+                    builtin::Services {
+                        bus: bus.clone(),
+                        config: config.clone(),
+                        credentials: credentials.clone(),
+                        models_dev,
+                        wellknown,
+                        integration: integrations.clone(),
+                        provider: providers.clone(),
+                        model: models.clone(),
+                    },
+                    builtin::Deps::default(),
+                )
+                .await;
+                Ok(Arc::new(LocationServices {
+                    info,
+                    lifecycle,
+                    environment,
+                    config,
+                    integrations,
+                    providers,
+                    models,
+                    registrations: Mutex::new(Some(registrations)),
+                }))
             })
         });
         let activity = Activity::spawn(
@@ -109,6 +190,20 @@ impl GlobalServices {
                 }
             }
         });
+        let mut credential_switched = bus.subscribe(&["credential.switched"], None);
+        let credentials_locations = locations.clone();
+        let credentials_task = tokio::spawn(async move {
+            while let Some(event) = credential_switched.recv().await {
+                let Some(integration_id) = event.data().get("integrationID").and_then(Value::as_str) else {
+                    continue;
+                };
+                for reference in credentials_locations.keys().await {
+                    if let Some(services) = credentials_locations.services(&reference).await {
+                        services.config.credential_switched(integration_id).await;
+                    }
+                }
+            }
+        });
         GlobalServices {
             database,
             paths,
@@ -116,9 +211,12 @@ impl GlobalServices {
             locations,
             activity,
             wellknown,
+            credentials,
+            models_dev,
             start_directory,
             environment: config_env,
             sweep,
+            credentials_task,
         }
     }
 
@@ -134,6 +232,7 @@ impl GlobalServices {
 impl Drop for GlobalServices {
     fn drop(&mut self) {
         self.sweep.abort();
+        self.credentials_task.abort();
     }
 }
 
@@ -143,7 +242,11 @@ impl opencode_location::map::LocationServices for LocationServices {
     }
 
     fn close(&self) -> BoxFuture<'_, ()> {
-        Box::pin(async move { self.lifecycle.shutdown().await })
+        Box::pin(async move {
+            drop(self.registrations.lock().expect("lock the builtin registrations").take());
+            self.integrations.shutdown();
+            self.lifecycle.shutdown().await;
+        })
     }
 }
 

@@ -866,6 +866,7 @@ dependencies = [
  "log",
  "opencode-api-types",
  "opencode-bus",
+ "opencode-catalog",
  "opencode-config",
  "opencode-contract",
  "opencode-local",
