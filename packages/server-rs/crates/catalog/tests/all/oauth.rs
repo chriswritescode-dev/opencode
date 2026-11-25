@@ -1,3 +1,4 @@
+use opencode_catalog::oauth::callback::CallbackServer;
 use opencode_catalog::oauth::page::{BootstrapOptions, CallbackPageOptions, bootstrap, success};
 use opencode_catalog::oauth::redirect::{RedirectError, submit};
 use tokio::sync::oneshot;
@@ -56,6 +57,33 @@ async fn submit_sends_a_provider_error() {
     assert_eq!(result, Ok(()));
     assert!(callback.is_none());
     assert_eq!(rx.await, Ok(Err("access_denied".to_owned())));
+}
+
+#[tokio::test]
+async fn callback_server_holds_its_port_and_releases_it_on_drop() {
+    let host = "127.0.0.1";
+    let first =
+        CallbackServer::bind(host, 0, |_| (200, "text/plain", String::new())).await.expect("bind the callback server");
+    let port = first.port();
+
+    let Err(error) = CallbackServer::bind(host, port, |_| (200, "text/plain", String::new())).await else {
+        panic!("a second callback server must not bind a port already in use")
+    };
+    assert_eq!(error.kind(), std::io::ErrorKind::AddrInUse);
+
+    drop(first);
+    let second = tokio::time::timeout(std::time::Duration::from_secs(1), async {
+        loop {
+            match CallbackServer::bind(host, port, |_| (200, "text/plain", String::new())).await {
+                Ok(server) => return server,
+                Err(error) if error.kind() == std::io::ErrorKind::AddrInUse => tokio::task::yield_now().await,
+                Err(error) => panic!("rebind the callback port: {error}"),
+            }
+        }
+    })
+    .await
+    .expect("the callback port is released after the first server drops");
+    assert_eq!(second.port(), port);
 }
 
 #[tokio::test]

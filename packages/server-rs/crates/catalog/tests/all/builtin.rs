@@ -273,6 +273,10 @@ impl Harness {
                     opencode_catalog::provider_plugin::databricks::register(&self.services, &context, &mut builtin)
                         .await
                 }
+                "digitalocean" => {
+                    opencode_catalog::provider_plugin::digitalocean::register(&self.services, &context, &mut builtin)
+                        .await
+                }
                 "google_vertex" => {
                     opencode_catalog::provider_plugin::google_vertex::register(&self.services, &context, &mut builtin)
                         .await
@@ -552,7 +556,7 @@ async fn builtin_register_inserts_provider_plugins_at_the_provider_slot() {
     )
     .await;
     harness.record(builtin);
-    assert_eq!(harness.registrations.registrations.len(), 37);
+    assert_eq!(harness.registrations.registrations.len(), 39);
 }
 
 pub async fn seed(
