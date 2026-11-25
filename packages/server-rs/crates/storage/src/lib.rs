@@ -7,6 +7,7 @@ pub mod id;
 pub mod kv;
 pub mod migration;
 pub mod path;
+pub mod permission;
 pub mod project;
 pub mod workspace;
 pub mod worktree;

@@ -66,12 +66,20 @@ async fn shells_uses_the_server_path() {
     let path = "/nonexistent-opencode-test-path";
     let (database, _) = Database::open(DatabaseLocation::Memory, &std::env::temp_dir()).expect("open the database");
     let database = Arc::new(database);
-    let bus = opencode_bus::Bus::new(database.clone(), opencode_bus::BusOptions::default());
     let paths =
         GlobalPaths::from_vars(|name| (name == "HOME").then(|| home.clone().into_os_string())).expect("global paths");
     let env = move |name: &str| (name == "PATH").then(|| OsString::from(path));
-    let services =
-        Arc::new(GlobalServices::new(database, paths, start.to_string_lossy().into_owned(), Arc::new(env), bus));
+    let bus = opencode_bus::Bus::new(database.clone(), opencode_bus::BusOptions::default());
+    let services = Arc::new(GlobalServices::new(
+        database,
+        paths,
+        start.to_string_lossy().into_owned(),
+        Arc::new(env),
+        bus,
+        crate::global_plugins(),
+        "test-version".to_owned(),
+        "test".to_owned(),
+    ));
     let app = ready_app_with_services(services.clone());
 
     let response = app.handle(authorized("GET", "/api/config/shell")).await;

@@ -23,11 +23,15 @@ undocumented_unsafe_blocks = "deny"
 [workspace.dependencies]
 opencode-ai = { path = "crates/ai" }
 opencode-bus = { path = "crates/bus" }
+opencode-catalog = { path = "crates/catalog" }
 opencode-config = { path = "crates/config" }
 opencode-contract = { path = "crates/contract" }
 opencode-git = { path = "crates/git" }
 opencode-http = { path = "crates/http" }
 opencode-location = { path = "crates/location" }
+opencode-permission = { path = "crates/permission" }
+opencode-plugin = { path = "crates/plugin" }
+opencode-registry = { path = "crates/registry" }
 opencode-server = { path = "crates/server" }
 opencode-sidecar = { path = "crates/sidecar" }
 opencode-session = { path = "crates/session" }
@@ -69,6 +73,7 @@ tokio-tungstenite = { version = "0.30", features = ["rustls-tls-native-roots"] }
 tokio-util = "0.7"
 ts-rs = { version = "12", default-features = false, features = ["serde-compat", "serde-json-impl", "no-serde-warnings"] }
 url = "2"
+yaml-rust2 = "0.13"
 
 [profile.dev]
 debug = "line-tables-only"

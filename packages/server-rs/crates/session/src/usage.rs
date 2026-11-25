@@ -10,7 +10,7 @@ pub fn spawn_usage_publisher(bus: Arc<Bus>, database: Arc<Database>) -> JoinHand
         bus.subscribe(&["session.step.ended", "session.step.failed", "session.usage.recorded"], None);
     tokio::spawn(async move {
         while let Some(event) = subscription.recv().await {
-            if let Err(error) = publish(&bus, &database, &event) {
+            if let Err(error) = publish_for_event(&bus, &database, &event) {
                 eprintln!(
                     "Session usage publisher failed: eventID={} eventType={} error={error}",
                     event.id(),
@@ -22,7 +22,7 @@ pub fn spawn_usage_publisher(bus: Arc<Bus>, database: Arc<Database>) -> JoinHand
     })
 }
 
-fn publish(bus: &Bus, database: &Database, event: &Event) -> Result<(), BusError> {
+fn publish_for_event(bus: &Bus, database: &Database, event: &Event) -> Result<(), BusError> {
     let data = event.data();
     let session_id = match event.r#type() {
         "session.usage.recorded" | "session.step.ended" => data.get("sessionID").and_then(serde_json::Value::as_str),
@@ -39,6 +39,10 @@ fn publish(bus: &Bus, database: &Database, event: &Event) -> Result<(), BusError
     let Some(session_id) = session_id else {
         return Ok(());
     };
+    publish_session_usage(bus, database, session_id)
+}
+
+fn publish_session_usage(bus: &Bus, database: &Database, session_id: &str) -> Result<(), BusError> {
     let row = database.read(|connection| {
         Ok(connection
             .query_row(
