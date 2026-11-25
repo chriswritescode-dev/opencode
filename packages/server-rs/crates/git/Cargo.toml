@@ -12,6 +12,7 @@ workspace = true
 
 [dependencies]
 log.workspace = true
+serde.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 

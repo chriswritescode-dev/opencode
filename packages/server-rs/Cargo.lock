@@ -826,6 +826,7 @@ name = "opencode-git"
 version = "0.1.0"
 dependencies = [
  "log",
+ "serde",
  "serde_json",
  "thiserror",
  "tokio",

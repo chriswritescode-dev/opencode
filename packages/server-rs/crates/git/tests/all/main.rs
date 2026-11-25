@@ -1,9 +1,11 @@
 mod capture;
 mod executable;
 mod fixture;
+mod objects;
 mod patch;
 mod repo;
 mod sync;
+mod tree;
 mod worktree;
 
 use std::path::{Path, PathBuf};

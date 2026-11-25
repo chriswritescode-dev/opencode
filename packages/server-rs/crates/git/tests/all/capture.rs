@@ -1,8 +1,8 @@
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
-use opencode_git::{CaptureInput, Git, Repository, RunOptions};
+use opencode_git::{CaptureInput, FileDiffStatus, Git, Repository, RunOptions};
 
 use crate::fixture;
 use crate::{TempDir, text};
@@ -157,7 +157,10 @@ async fn seeds_and_rebuilds_the_store_from_a_source_with_a_split_index() {
     let files = git.tree_files(&setup.store, &before, &after).await.expect("lists the changed files");
     assert_eq!(files, ["a.txt"]);
 
-    write(setup.project.join("a.txt"), "one\n").await;
+    Box::pin(git.tree_restore(&setup.store, &BTreeMap::from([("a.txt".to_string(), before.clone())])))
+        .await
+        .expect("restores the tracked file");
+    assert_eq!(fixture::read(&setup.project.join("a.txt")).await, "one\n");
     let store_directory = Path::new(&setup.store.git_directory);
     write(store_directory.join("index"), "not an index").await;
     assert_eq!(
@@ -294,6 +297,21 @@ async fn refresh_handles_check_ignore_exit_codes() {
             let after = git.tree_write(&setup.store, None).await.expect("writes the refreshed tree");
             let files = git.tree_files(&setup.store, &before, &after).await.expect("lists the changed files");
             assert_eq!(files, ["scope/allowed.txt", "scope/ignored name.txt"]);
+            let statuses = git
+                .tree_diff(&setup.store, &before, &after, None, None)
+                .await
+                .expect("diffs the trees")
+                .iter()
+                .map(|diff| diff.status)
+                .collect::<Vec<_>>();
+            assert_eq!(
+                statuses,
+                if exit_code == 0 {
+                    [FileDiffStatus::Modified, FileDiffStatus::Deleted]
+                } else {
+                    [FileDiffStatus::Modified, FileDiffStatus::Modified]
+                }
+            );
         }
     }
 }

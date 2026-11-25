@@ -215,7 +215,7 @@ pub(crate) fn join(base: &str, path: &str) -> String {
     Path::new(base).join(path).to_string_lossy().into_owned()
 }
 
-fn now_millis() -> u128 {
+pub(crate) fn now_millis() -> u128 {
     std::time::SystemTime::now().duration_since(UNIX_EPOCH).map(|elapsed| elapsed.as_millis()).unwrap_or_default()
 }
 

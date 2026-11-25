@@ -2,6 +2,7 @@ mod error;
 mod executable;
 mod history;
 mod index;
+mod objects;
 mod patch;
 mod repo;
 mod run;
@@ -18,7 +19,7 @@ pub use patch::{
 };
 pub use repo::{Repository, Worktree, WorktreeKind};
 pub use run::{RunOptions, RunOutput, SpawnError};
-pub use tree::CaptureInput;
+pub use tree::{CaptureInput, FileDiff, FileDiffStatus};
 
 use std::collections::HashMap;
 use std::ffi::{OsStr, OsString};
