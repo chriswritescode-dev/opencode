@@ -91,6 +91,7 @@ pub enum PublicEvent {
     FormReplied(FormReplied),
     FormCancelled(FormCancelled),
     WebsearchUpdated(WebsearchUpdated),
+    ExperimentalPushUpdated(ExperimentalPushUpdated),
     ArtifactUpdated(ArtifactUpdated),
     SessionStatus(SessionStatusUpdated),
     SessionIdle(SessionIdle),
@@ -330,6 +331,8 @@ impl crate::codec::Decode for PublicEvent {
             "websearch.updated" => {
                 <WebsearchUpdated as crate::codec::Decode>::decode(value, path).map(Self::WebsearchUpdated)
             }
+            "experimental.push.updated" => <ExperimentalPushUpdated as crate::codec::Decode>::decode(value, path)
+                .map(Self::ExperimentalPushUpdated),
             "artifact.updated" => {
                 <ArtifactUpdated as crate::codec::Decode>::decode(value, path).map(Self::ArtifactUpdated)
             }
@@ -484,6 +487,9 @@ impl crate::codec::Encode for PublicEvent {
             Self::FormReplied(value) => <FormReplied as crate::codec::Encode>::encode(value, out),
             Self::FormCancelled(value) => <FormCancelled as crate::codec::Encode>::encode(value, out),
             Self::WebsearchUpdated(value) => <WebsearchUpdated as crate::codec::Encode>::encode(value, out),
+            Self::ExperimentalPushUpdated(value) => {
+                <ExperimentalPushUpdated as crate::codec::Encode>::encode(value, out)
+            }
             Self::ArtifactUpdated(value) => <ArtifactUpdated as crate::codec::Encode>::encode(value, out),
             Self::SessionStatus(value) => <SessionStatusUpdated as crate::codec::Encode>::encode(value, out),
             Self::SessionIdle(value) => <SessionIdle as crate::codec::Encode>::encode(value, out),
@@ -1150,7 +1156,7 @@ impl crate::codec::Encode for DurableEvent {
     }
 }
 
-pub static PUBLIC_EVENT_TYPES: [&str; 101] = [
+pub static PUBLIC_EVENT_TYPES: [&str; 102] = [
     "location.shutdown",
     "models-dev.refreshed",
     "credential.updated",
@@ -1237,6 +1243,7 @@ pub static PUBLIC_EVENT_TYPES: [&str; 101] = [
     "form.replied",
     "form.cancelled",
     "websearch.updated",
+    "experimental.push.updated",
     "artifact.updated",
     "session.status",
     "session.idle",

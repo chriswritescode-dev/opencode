@@ -157,6 +157,77 @@ export const fixtures: Fixture[] = [
     ],
   },
   {
+    name: "created-stores-cwd",
+    group: "session",
+    start: project,
+    logAfter: [0],
+    steps: [
+      {
+        kind: "publish",
+        id: "evt_1",
+        created: 1000,
+        type: "session.created",
+        data: {
+          sessionID: "ses_1",
+          projectID: "prj_1",
+          location: { directory: "/repo" },
+          slug: "slug",
+          metadata: {
+            owner: "test",
+            $opencode_experimental_cwd: { absolute: "/repo/work", environment: { id: "local" } },
+          },
+          version: "1",
+        },
+      },
+    ],
+    store: [{ kind: "get", sessionID: "ses_1" }],
+  },
+  {
+    name: "created-only-cwd-metadata",
+    group: "session",
+    start: project,
+    logAfter: [0],
+    steps: [
+      {
+        kind: "publish",
+        id: "evt_1",
+        created: 1000,
+        type: "session.created",
+        data: {
+          sessionID: "ses_1",
+          projectID: "prj_1",
+          location: { directory: "/repo" },
+          slug: "slug",
+          metadata: { $opencode_experimental_cwd: { absolute: "/repo/work", environment: { id: "local" } } },
+          version: "1",
+        },
+      },
+    ],
+    store: [{ kind: "get", sessionID: "ses_1" }],
+  },
+  {
+    name: "metadata-update-keeps-cwd",
+    group: "session",
+    start: [
+      ...project,
+      `INSERT INTO session_v2 (id, project_id, slug, directory, metadata, version, time_created, time_updated) VALUES ('ses_1', 'prj_1', 'slug', '/repo', '{"keep":"x","$opencode_experimental_cwd":{"absolute":"/repo/work","environment":{"id":"local"}}}', '1', 1000, 1000)`,
+    ],
+    logAfter: [0],
+    steps: [
+      {
+        kind: "publish",
+        id: "evt_1",
+        created: 2000,
+        type: "session.metadata.updated",
+        data: { sessionID: "ses_1", metadata: { owner: "test", flag: true } },
+      },
+    ],
+    store: [
+      { kind: "get", sessionID: "ses_1" },
+      { kind: "list", input: {} },
+    ],
+  },
+  {
     name: "created-no-persist",
     group: "session",
     persist: false,

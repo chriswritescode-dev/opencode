@@ -542,13 +542,13 @@ pub fn from_request(request: &LlmRequest, model: &Model) -> Result<Value, AiErro
         Some(tool_choice) => Some(lower_tool_choice(tool_choice)?),
         None => None,
     };
-    let (tools, flattened) = shared::flatten_tool_request(request);
-    let messages = lower_messages(&flattened)?;
+    let definitions = shared::flatten_tools(&request.tools);
+    let messages = lower_messages(request)?;
     let mut body = Map::new();
     body.insert("model".to_string(), Value::String(model.id.clone()));
     body.insert("messages".to_string(), Value::Array(messages));
-    if !tools.is_empty() {
-        body.insert("tools".to_string(), Value::Array(tools.iter().map(lower_tool).collect()));
+    if !definitions.is_empty() {
+        body.insert("tools".to_string(), Value::Array(definitions.iter().map(lower_tool).collect()));
     }
     if let Some(tool_choice) = tool_choice {
         body.insert("tool_choice".to_string(), tool_choice);

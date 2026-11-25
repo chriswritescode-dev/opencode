@@ -1,7 +1,7 @@
 # OR-61: plugins run in a sidecar with an allowlisted environment
 
 TypeScript: plugin modules are imported into the server process (`packages/core/src/plugin/module.ts:174`,
-`Host.load`) and run against the in-process host (`packages/core/src/plugin/host.ts:53`), so they read the server's
+`Host.load`) and run against the in-process host (`packages/core/src/plugin/host.ts:55`), so they read the server's
 whole `process.env` and see its working directory.
 
 Rust: the sidecar starts Bun in a private temporary directory with `env_clear` and only the `NAMES`, `LC_*` and

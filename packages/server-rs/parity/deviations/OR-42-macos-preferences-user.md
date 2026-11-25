@@ -3,7 +3,7 @@
 TypeScript: `ConfigDiscovery.discover` builds the macOS MDM preference paths from `os.userInfo().username`, falling
 back to `"user"` when that lookup fails, and keeps the first path that is a file
 (`packages/core/src/config/discovery.ts:144` at the pinned commit
-`73a0eae88de47f10068a0f9dc7a743638fa3d830`).
+`e54fbacb3d3aebc85f0e5ada0a5c490cc9333a91`).
 
 Rust: `crates/config/src/discovery.rs` `preferences` takes the name from `std::env::var("USER")`, falls back to
 `"user"`, and passes it to `preference_paths`, which checks the per-user plist first and the machine-wide one second

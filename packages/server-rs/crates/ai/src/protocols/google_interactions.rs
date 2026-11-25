@@ -395,8 +395,8 @@ fn generation_config(request: &LlmRequest, options: &Options, tool_choice: Optio
 
 fn from_request(request: &LlmRequest, model: &Model) -> Result<Value, AiError> {
     let options = decode_options(request.provider_options.as_ref())?;
-    let (tools, flattened) = shared::flatten_tool_request(request);
-    if tools.iter().any(|tool| tool.native.is_some()) {
+    let definitions = shared::flatten_tools(&request.tools);
+    if definitions.iter().any(|tool| tool.native.is_some()) {
         return Err(shared::invalid_request("Google Interactions hosted tools are not supported"));
     }
     if request.generation.top_k.is_some()
@@ -414,7 +414,7 @@ fn from_request(request: &LlmRequest, model: &Model) -> Result<Value, AiError> {
     let metadata_key = model.route.provider_metadata_key.clone().unwrap_or_else(|| model.provider.clone());
     let mut body = Map::new();
     body.insert("model".to_string(), Value::String(model.id.clone()));
-    body.insert("input".to_string(), Value::Array(lower_messages(&flattened, &metadata_key)?));
+    body.insert("input".to_string(), Value::Array(lower_messages(request, &metadata_key)?));
     body.insert("stream".to_string(), Value::Bool(true));
     body.insert("store".to_string(), Value::Bool(options.store.unwrap_or(false)));
     if let Some(previous_interaction_id) = &options.previous_interaction_id {
@@ -433,8 +433,8 @@ fn from_request(request: &LlmRequest, model: &Model) -> Result<Value, AiError> {
     if let Some(safety_settings) = options.safety_settings.as_ref() {
         body.insert("safety_settings".to_string(), lower_safety_settings(safety_settings));
     }
-    if !tools.is_empty() {
-        body.insert("tools".to_string(), Value::Array(tools.iter().map(lower_tool).collect()));
+    if !definitions.is_empty() {
+        body.insert("tools".to_string(), Value::Array(definitions.iter().map(lower_tool).collect()));
     }
     body.insert("generation_config".to_string(), generation_config(request, &options, tool_choice));
     Ok(Value::Object(body))

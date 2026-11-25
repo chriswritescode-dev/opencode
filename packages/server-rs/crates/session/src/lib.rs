@@ -1,4 +1,5 @@
 pub mod agent;
+pub mod agent_instructions;
 pub mod context;
 pub mod execution;
 pub mod instruction_state;

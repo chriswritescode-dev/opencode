@@ -9,18 +9,14 @@ pub const REGISTRY: &[(&str, &str)] = &[
     ("media_blob", "Store new session media once in a deduplicated blob table instead of inline in every message row."),
     ("artifacts", "Enable experimental artifacts backed by pluggable providers."),
     (
-        "video_generate",
-        "Enable experimental video generation: the HTTP API that starts a video job and stores the result, and the agent tool that saves the videos into the workspace.",
-    ),
-    (
         "console_watches",
         "Watch Slack threads, GitHub pull requests, issues, commits and Actions runs, and the workspace's MCP servers' events through OpenCode Console, and wake sessions when they change.",
     ),
-    (
-        "mcp_events",
-        "Enable experimental MCP Events, a draft MCP extension: declare support to MCP servers and read the events of servers that offer them.",
-    ),
     ("recommended_api", "Use each model's recommended API from models.dev instead of the first API it lists."),
+    (
+        "model_speeds",
+        "Offer a model's faster and slower service tiers (fast, flex…) as speeds of that model: one entry in the model picker with a speed selector, instead of a separate entry per tier such as gpt-5.5-fast.",
+    ),
     ("full_codemode", "Enable the full Code Mode work in progress."),
     (
         "machines",
@@ -35,9 +31,18 @@ pub const REGISTRY: &[(&str, &str)] = &[
         "Load a personal config dir for each project from ~/.config/opencode/project/<project-id>/, read like an extra .opencode dir that ranks above the repo's own, and let home memory keep the skills it builds for the user there.",
     ),
     (
+        "opencode_api",
+        "Let Code Mode scripts call the OpenCode HTTP API with fetch(\"opencode:///api/...\"), in-process and already signed in, with no permission checks. Only in local and dev builds, and off there until you opt in with OPENCODE_FLAGS=opencode_api or experimental.opencode_api: true.",
+    ),
+    (
+        "mcp_skills",
+        "Load skills from MCP servers that offer them (the io.modelcontextprotocol/skills extension), named <server>:<skill>. A server that offers skills no longer has its instructions included.",
+    ),
+    (
         "sqlite_fts",
         "Build an SQLite full-text index of session titles and message text in the background, and enable the opencode.session.search and opencode.session.read tools. The index covers every session in the database and starts while any loaded location enables it; SQLite keeps it current from then on, also after this is turned off.",
     ),
 ];
 
-pub const OPT_IN_ONLY: &[&str] = &["todo"];
+pub const OPT_IN_ONLY: &[&str] = &["todo", "opencode_api"];
+pub const LOCAL_ONLY: &[&str] = &["opencode_api"];

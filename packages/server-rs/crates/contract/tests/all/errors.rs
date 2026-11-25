@@ -15,10 +15,10 @@ fn sample_input<'a>(corpus: &'a Value, tag: &str) -> &'a str {
 
 #[test]
 fn the_error_status_table_has_the_expected_shape() {
-    assert_eq!(ERROR_STATUS.len(), 44, "expected 44 error statuses, found {}", ERROR_STATUS.len());
+    assert_eq!(ERROR_STATUS.len(), 46, "expected 46 error statuses, found {}", ERROR_STATUS.len());
 
     let tags: BTreeSet<&str> = ERROR_STATUS.iter().map(|(tag, _)| *tag).collect();
-    assert_eq!(tags.len(), 44, "expected 44 unique error tags, found {}", tags.len());
+    assert_eq!(tags.len(), 46, "expected 46 unique error tags, found {}", tags.len());
 
     let mut sorted: Vec<(&str, u16)> = ERROR_STATUS.to_vec();
     sorted.sort();

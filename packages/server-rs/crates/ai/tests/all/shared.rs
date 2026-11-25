@@ -2,16 +2,16 @@ use serde_json::{Number, json};
 
 use opencode_ai::protocols::shared;
 use opencode_ai::protocols::shared::{
-    flatten_tool_request, inline_media, reported_billing, tool_file_media, tool_result_text, wrapped_system_update,
+    flatten_request, inline_media, reported_billing, tool_file_media, tool_result_text, wrapped_system_update,
 };
 use opencode_ai::schema::{
     AssistantMessage, CacheHint, CacheHintType, ContentPart, LlmRequest, MediaAsset, MediaPart, MediaSource, Message,
-    SystemMessage, TextPart, ToolCallPart, ToolContent, ToolDefinition, ToolEntry, ToolNamespace, ToolResultPart,
-    ToolResultValue,
+    SystemMessage, TextPart, ToolCallPart, ToolChanges, ToolChoice, ToolChoiceType, ToolContent, ToolDefinition,
+    ToolEntry, ToolNamespace, ToolResultPart, ToolResultValue,
 };
 
 #[test]
-fn flatten_tool_request_flattens_namespaces_and_sanitizes_undeclared_names() {
+fn flatten_request_flattens_namespaces_and_sanitizes_undeclared_names() {
     let request = LlmRequest {
         tools: vec![ToolEntry::Namespace(ToolNamespace {
             name: "files".to_string(),
@@ -28,8 +28,16 @@ fn flatten_tool_request_flattens_namespaces_and_sanitizes_undeclared_names() {
         ..Default::default()
     };
 
-    let (tools, flattened) = flatten_tool_request(&request);
-    assert_eq!(tools.iter().map(|tool| tool.name.as_str()).collect::<Vec<&str>>(), vec!["files_read"]);
+    let flattened = flatten_request(&request);
+    let tools = flattened
+        .tools
+        .iter()
+        .map(|tool| match tool {
+            ToolEntry::Tool(tool) => tool.name.as_str(),
+            ToolEntry::Namespace(namespace) => namespace.name.as_str(),
+        })
+        .collect::<Vec<&str>>();
+    assert_eq!(tools, vec!["files_read"]);
     let Message::Assistant(message) = &flattened.messages[0] else {
         panic!("expected assistant message");
     };
@@ -43,6 +51,72 @@ fn flatten_tool_request_flattens_namespaces_and_sanitizes_undeclared_names() {
     };
     assert_eq!(dotted.name, "a_b_c");
     assert_eq!(dotted.namespace, None);
+}
+
+#[test]
+fn flatten_request_flattens_a_forced_choice_only_for_namespaced_tools() {
+    let request = |choice: &str| LlmRequest {
+        tools: vec![
+            ToolEntry::Tool(tool_definition("foo_bar")),
+            ToolEntry::Namespace(ToolNamespace {
+                name: "crm".to_string(),
+                description: None,
+                tools: vec![ToolEntry::Tool(tool_definition("customer.lookup"))],
+            }),
+        ],
+        tool_choice: Some(ToolChoice {
+            r#type: ToolChoiceType::Tool,
+            name: Some(choice.to_string()),
+            disable_parallel_tool_use: None,
+        }),
+        ..Default::default()
+    };
+    let choice = |request: &LlmRequest| flatten_request(request).tool_choice.and_then(|choice| choice.name);
+
+    assert_eq!(choice(&request("crm.customer.lookup")).as_deref(), Some("crm_customer.lookup"));
+    assert_eq!(choice(&request("foo.bar")).as_deref(), Some("foo.bar"));
+    assert_eq!(choice(&request("foo_bar")).as_deref(), Some("foo_bar"));
+}
+
+#[test]
+fn flatten_request_flattens_system_tool_updates_and_names_withdrawn_tools() {
+    let request = LlmRequest {
+        tools: vec![ToolEntry::Namespace(ToolNamespace {
+            name: "crm".to_string(),
+            description: None,
+            tools: vec![ToolEntry::Tool(tool_definition("lookup"))],
+        })],
+        messages: vec![Message::System(SystemMessage {
+            id: None,
+            content: Vec::new(),
+            tools: Some(ToolChanges {
+                add: vec![ToolEntry::Namespace(ToolNamespace {
+                    name: "billing".to_string(),
+                    description: None,
+                    tools: vec![ToolEntry::Tool(tool_definition("charge"))],
+                })],
+                remove: vec!["crm".to_string()],
+            }),
+        })],
+        ..Default::default()
+    };
+
+    let flattened = flatten_request(&request);
+    let Message::System(system) = &flattened.messages[0] else {
+        panic!("expected system message");
+    };
+    let changes = system.tools.as_ref().expect("system tool changes");
+    let ToolEntry::Tool(added) = &changes.add[0] else {
+        panic!("expected flattened tool");
+    };
+    assert_eq!(changes.add.len(), 1);
+    assert_eq!(added.name, "billing_charge");
+    assert_eq!(changes.remove, vec!["crm_lookup".to_string()]);
+    let ToolEntry::Tool(declared) = &flattened.tools[0] else {
+        panic!("expected flattened tool");
+    };
+    assert_eq!(flattened.tools.len(), 1);
+    assert_eq!(declared.name, "crm_lookup");
 }
 
 #[test]

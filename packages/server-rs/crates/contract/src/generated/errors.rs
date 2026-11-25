@@ -36,12 +36,14 @@ pub enum ApiError {
     ProviderRequestError(ProviderRequestError),
     PtyFeatureUnsupportedError(PtyFeatureUnsupportedError),
     PtyNotFoundError(PtyNotFoundError),
+    PushDeviceNotFoundError(PushDeviceNotFoundError),
     RpcError(RpcError),
     RpcInternalError(RpcInternalError),
     ServiceUnavailableError(ServiceUnavailableError),
     SessionBusyError(SessionBusyError),
     SessionNotFoundError(SessionNotFoundError),
     ShellNotFoundError(ShellNotFoundError),
+    SkillLoadError(SkillLoadError),
     SkillNotFoundError(SkillNotFoundError),
     UnauthorizedError(UnauthorizedError),
     UnknownError(UnknownError),
@@ -85,12 +87,14 @@ impl ApiError {
             Self::ProviderRequestError(_) => "ProviderRequestError",
             Self::PtyFeatureUnsupportedError(_) => "PtyFeatureUnsupportedError",
             Self::PtyNotFoundError(_) => "PtyNotFoundError",
+            Self::PushDeviceNotFoundError(_) => "PushDeviceNotFoundError",
             Self::RpcError(_) => "RpcError",
             Self::RpcInternalError(_) => "RpcInternalError",
             Self::ServiceUnavailableError(_) => "ServiceUnavailableError",
             Self::SessionBusyError(_) => "SessionBusyError",
             Self::SessionNotFoundError(_) => "SessionNotFoundError",
             Self::ShellNotFoundError(_) => "ShellNotFoundError",
+            Self::SkillLoadError(_) => "SkillLoadError",
             Self::SkillNotFoundError(_) => "SkillNotFoundError",
             Self::UnauthorizedError(_) => "UnauthorizedError",
             Self::UnknownError(_) => "UnknownError",
@@ -134,12 +138,14 @@ impl ApiError {
             Self::ProviderRequestError(_) => 502,
             Self::PtyFeatureUnsupportedError(_) => 501,
             Self::PtyNotFoundError(_) => 404,
+            Self::PushDeviceNotFoundError(_) => 404,
             Self::RpcError(_) => 400,
             Self::RpcInternalError(_) => 500,
             Self::ServiceUnavailableError(_) => 503,
             Self::SessionBusyError(_) => 409,
             Self::SessionNotFoundError(_) => 404,
             Self::ShellNotFoundError(_) => 404,
+            Self::SkillLoadError(_) => 502,
             Self::SkillNotFoundError(_) => 404,
             Self::UnauthorizedError(_) => 401,
             Self::UnknownError(_) => 500,
@@ -244,6 +250,8 @@ impl crate::codec::Decode for ApiError {
             "PtyNotFoundError" => {
                 <PtyNotFoundError as crate::codec::Decode>::decode(value, path).map(Self::PtyNotFoundError)
             }
+            "PushDeviceNotFoundError" => <PushDeviceNotFoundError as crate::codec::Decode>::decode(value, path)
+                .map(Self::PushDeviceNotFoundError),
             "RpcError" => <RpcError as crate::codec::Decode>::decode(value, path).map(Self::RpcError),
             "RpcInternalError" => {
                 <RpcInternalError as crate::codec::Decode>::decode(value, path).map(Self::RpcInternalError)
@@ -259,6 +267,7 @@ impl crate::codec::Decode for ApiError {
             "ShellNotFoundError" => {
                 <ShellNotFoundError as crate::codec::Decode>::decode(value, path).map(Self::ShellNotFoundError)
             }
+            "SkillLoadError" => <SkillLoadError as crate::codec::Decode>::decode(value, path).map(Self::SkillLoadError),
             "SkillNotFoundError" => {
                 <SkillNotFoundError as crate::codec::Decode>::decode(value, path).map(Self::SkillNotFoundError)
             }
@@ -314,12 +323,14 @@ impl crate::codec::Encode for ApiError {
             Self::ProviderRequestError(value) => crate::codec::Encode::encode(value, out),
             Self::PtyFeatureUnsupportedError(value) => crate::codec::Encode::encode(value, out),
             Self::PtyNotFoundError(value) => crate::codec::Encode::encode(value, out),
+            Self::PushDeviceNotFoundError(value) => crate::codec::Encode::encode(value, out),
             Self::RpcError(value) => crate::codec::Encode::encode(value, out),
             Self::RpcInternalError(value) => crate::codec::Encode::encode(value, out),
             Self::ServiceUnavailableError(value) => crate::codec::Encode::encode(value, out),
             Self::SessionBusyError(value) => crate::codec::Encode::encode(value, out),
             Self::SessionNotFoundError(value) => crate::codec::Encode::encode(value, out),
             Self::ShellNotFoundError(value) => crate::codec::Encode::encode(value, out),
+            Self::SkillLoadError(value) => crate::codec::Encode::encode(value, out),
             Self::SkillNotFoundError(value) => crate::codec::Encode::encode(value, out),
             Self::UnauthorizedError(value) => crate::codec::Encode::encode(value, out),
             Self::UnknownError(value) => crate::codec::Encode::encode(value, out),
@@ -331,7 +342,7 @@ impl crate::codec::Encode for ApiError {
     }
 }
 
-pub static ERROR_STATUS: [(&str, u16); 44] = [
+pub static ERROR_STATUS: [(&str, u16); 46] = [
     ("AgentNotFoundError", 404),
     ("ArtifactNotFoundError", 404),
     ("AutomationNotFoundError", 404),
@@ -363,12 +374,14 @@ pub static ERROR_STATUS: [(&str, u16); 44] = [
     ("ProviderRequestError", 502),
     ("PtyFeatureUnsupportedError", 501),
     ("PtyNotFoundError", 404),
+    ("PushDeviceNotFoundError", 404),
     ("RpcError", 400),
     ("RpcInternalError", 500),
     ("ServiceUnavailableError", 503),
     ("SessionBusyError", 409),
     ("SessionNotFoundError", 404),
     ("ShellNotFoundError", 404),
+    ("SkillLoadError", 502),
     ("SkillNotFoundError", 404),
     ("UnauthorizedError", 401),
     ("UnknownError", 500),

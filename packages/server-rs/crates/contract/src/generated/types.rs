@@ -1788,6 +1788,60 @@ impl crate::codec::Encode for PtyNotFoundError {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PushDeviceNotFoundErrorTag {
+    PushDeviceNotFoundError,
+}
+
+impl crate::codec::Decode for PushDeviceNotFoundErrorTag {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        match value.as_str() {
+            Some("PushDeviceNotFoundError") => Ok(Self::PushDeviceNotFoundError),
+            _ => Err(path.at("expected \"PushDeviceNotFoundError\"")),
+        }
+    }
+}
+
+impl crate::codec::Encode for PushDeviceNotFoundErrorTag {
+    fn encode(&self, out: &mut String) {
+        crate::codec::write_string(
+            out,
+            match self {
+                Self::PushDeviceNotFoundError => "PushDeviceNotFoundError",
+            },
+        );
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct PushDeviceNotFoundError {
+    pub tag: PushDeviceNotFoundErrorTag,
+    pub device_id: String,
+    pub message: String,
+}
+
+impl crate::codec::Decode for PushDeviceNotFoundError {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self {
+            tag: crate::codec::decode_field(object, "_tag", path)?,
+            device_id: crate::codec::decode_field(object, "deviceID", path)?,
+            message: crate::codec::decode_field(object, "message", path)?,
+        })
+    }
+}
+
+impl crate::codec::Encode for PushDeviceNotFoundError {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "_tag", &self.tag);
+        crate::codec::write_value(out, &mut first, "deviceID", &self.device_id);
+        crate::codec::write_value(out, &mut first, "message", &self.message);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RpcErrorTag {
     RpcError,
 }
@@ -2140,6 +2194,60 @@ impl crate::codec::Encode for ShellNotFoundError {
         let mut first = true;
         crate::codec::write_value(out, &mut first, "_tag", &self.tag);
         crate::codec::write_value(out, &mut first, "id", &self.id);
+        crate::codec::write_value(out, &mut first, "message", &self.message);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SkillLoadErrorTag {
+    SkillLoadError,
+}
+
+impl crate::codec::Decode for SkillLoadErrorTag {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        match value.as_str() {
+            Some("SkillLoadError") => Ok(Self::SkillLoadError),
+            _ => Err(path.at("expected \"SkillLoadError\"")),
+        }
+    }
+}
+
+impl crate::codec::Encode for SkillLoadErrorTag {
+    fn encode(&self, out: &mut String) {
+        crate::codec::write_string(
+            out,
+            match self {
+                Self::SkillLoadError => "SkillLoadError",
+            },
+        );
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SkillLoadError {
+    pub tag: SkillLoadErrorTag,
+    pub skill: SkillID,
+    pub message: String,
+}
+
+impl crate::codec::Decode for SkillLoadError {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self {
+            tag: crate::codec::decode_field(object, "_tag", path)?,
+            skill: crate::codec::decode_field(object, "skill", path)?,
+            message: crate::codec::decode_field(object, "message", path)?,
+        })
+    }
+}
+
+impl crate::codec::Encode for SkillLoadError {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "_tag", &self.tag);
+        crate::codec::write_value(out, &mut first, "skill", &self.skill);
         crate::codec::write_value(out, &mut first, "message", &self.message);
         out.push('}');
     }
@@ -5453,7 +5561,7 @@ pub struct InstructionHash(pub String);
 impl crate::codec::Decode for InstructionHash {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let value = <String as crate::codec::Decode>::decode(value, path)?;
-        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_3) {
+        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_4) {
             return Err(path.at("expected a string matching the RegExp ^[a-f0-9]{64}$"));
         }
         Ok(Self(value))
@@ -5474,7 +5582,7 @@ impl crate::codec::Decode for SessionForkedDataInstructions {
         let object = crate::codec::as_object(value, path)?;
         let mut entries = Vec::with_capacity(object.len());
         for (key, item) in object {
-            if !crate::checks::is_pattern(key.as_str(), &crate::generated::patterns::PATTERN_2) {
+            if !crate::checks::is_pattern(key.as_str(), &crate::generated::patterns::PATTERN_3) {
                 continue;
             }
             path.push_key(key);
@@ -5498,7 +5606,7 @@ pub struct InstructionEntryKey(pub String);
 impl crate::codec::Decode for InstructionEntryKey {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let value = <String as crate::codec::Decode>::decode(value, path)?;
-        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_4) {
+        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_5) {
             return Err(path.at("expected a string matching the RegExp ^[a-z0-9][a-z0-9._-]*$"));
         }
         Ok(Self(value))
@@ -5878,7 +5986,7 @@ pub struct PromptBase64(pub String);
 impl crate::codec::Decode for PromptBase64 {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let value = <String as crate::codec::Decode>::decode(value, path)?;
-        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_5) {
+        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_6) {
             return Err(path.at("expected a string matching the RegExp ^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$"));
         }
         Ok(Self(value))
@@ -13470,7 +13578,7 @@ pub struct ProjectVcs(pub String);
 impl crate::codec::Decode for ProjectVcs {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let value = <String as crate::codec::Decode>::decode(value, path)?;
-        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_6) {
+        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_7) {
             return Err(path.at("expected a string matching the RegExp ^[a-z][a-z0-9._-]*$"));
         }
         Ok(Self(value))
@@ -17038,6 +17146,87 @@ impl crate::codec::Encode for WebsearchUpdated {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ExperimentalPushUpdatedType {
+    ExperimentalPushUpdated,
+}
+
+impl crate::codec::Decode for ExperimentalPushUpdatedType {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        match value.as_str() {
+            Some("experimental.push.updated") => Ok(Self::ExperimentalPushUpdated),
+            _ => Err(path.at("expected \"experimental.push.updated\"")),
+        }
+    }
+}
+
+impl crate::codec::Encode for ExperimentalPushUpdatedType {
+    fn encode(&self, out: &mut String) {
+        crate::codec::write_string(
+            out,
+            match self {
+                Self::ExperimentalPushUpdated => "experimental.push.updated",
+            },
+        );
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ExperimentalPushUpdatedData;
+
+impl crate::codec::Decode for ExperimentalPushUpdatedData {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        crate::codec::as_object(value, path)?;
+        Ok(Self)
+    }
+}
+
+impl crate::codec::Encode for ExperimentalPushUpdatedData {
+    fn encode(&self, out: &mut String) {
+        out.push_str("{}");
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ExperimentalPushUpdated {
+    pub id: EventID,
+    pub created: f64,
+    pub metadata: Option<crate::codec::JsonMap<serde_json::Value>>,
+    pub r#type: ExperimentalPushUpdatedType,
+    pub location: Option<LocationRef>,
+    pub data: ExperimentalPushUpdatedData,
+}
+
+impl crate::codec::Decode for ExperimentalPushUpdated {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self {
+            id: crate::codec::decode_field(object, "id", path)?,
+            created: crate::codec::decode_field_checked(object, "created", path, |value: &f64, path| {
+                if crate::checks::is_finite(*value) { Ok(()) } else { Err(path.at("expected a finite number")) }
+            })?,
+            metadata: crate::codec::decode_optional(object, "metadata", path)?,
+            r#type: crate::codec::decode_field(object, "type", path)?,
+            location: crate::codec::decode_optional(object, "location", path)?,
+            data: crate::codec::decode_field(object, "data", path)?,
+        })
+    }
+}
+
+impl crate::codec::Encode for ExperimentalPushUpdated {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "id", &self.id);
+        crate::codec::write_value(out, &mut first, "created", &self.created);
+        crate::codec::write_optional(out, &mut first, "metadata", &self.metadata);
+        crate::codec::write_value(out, &mut first, "type", &self.r#type);
+        crate::codec::write_optional(out, &mut first, "location", &self.location);
+        crate::codec::write_value(out, &mut first, "data", &self.data);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ArtifactUpdatedType {
     ArtifactUpdated,
 }
@@ -19040,7 +19229,7 @@ impl crate::codec::Decode for V2EventRpc {
             })?,
             metadata: crate::codec::decode_optional_nullable(object, "metadata", path)?,
             r#type: crate::codec::decode_field_checked(object, "type", path, |value: &String, path| {
-                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_7) {
+                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_8) {
                     Ok(())
                 } else {
                     Err(path.at("expected a string matching the template literal"))
@@ -20578,10 +20767,10 @@ pub struct ProviderCacheTTL(pub String);
 impl crate::codec::Decode for ProviderCacheTTL {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let value = <String as crate::codec::Decode>::decode(value, path)?;
-        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_8) {
+        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_9) {
             return Err(path.at("expected a string matching the template literal"));
         }
-        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_9) {
+        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_10) {
             return Err(path.at("expected a string matching the RegExp ^\\d+(ms|s|m|h|d)$"));
         }
         Ok(Self(value))
@@ -20925,6 +21114,65 @@ impl crate::codec::Encode for ProviderRequest {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct AgentInfoInstructionsObject {
+    pub selected: String,
+    pub unselected: String,
+}
+
+impl crate::codec::Decode for AgentInfoInstructionsObject {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self {
+            selected: crate::codec::decode_field(object, "selected", path)?,
+            unselected: crate::codec::decode_field(object, "unselected", path)?,
+        })
+    }
+}
+
+impl crate::codec::Encode for AgentInfoInstructionsObject {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "selected", &self.selected);
+        crate::codec::write_value(out, &mut first, "unselected", &self.unselected);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum AgentInfoInstructions {
+    String(String),
+    Object(AgentInfoInstructionsObject),
+}
+
+impl crate::codec::Decode for AgentInfoInstructions {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let mark = path.mark();
+        let member = <String as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
+            return Ok(Self::String(member));
+        }
+        let mark = path.mark();
+        let member = <AgentInfoInstructionsObject as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
+            return Ok(Self::Object(member));
+        }
+        Err(path.at("no member matched"))
+    }
+}
+
+impl crate::codec::Encode for AgentInfoInstructions {
+    fn encode(&self, out: &mut String) {
+        match self {
+            Self::String(value) => <String as crate::codec::Encode>::encode(value, out),
+            Self::Object(value) => <AgentInfoInstructionsObject as crate::codec::Encode>::encode(value, out),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AgentInfoMode {
     Subagent,
@@ -20978,6 +21226,7 @@ pub struct AgentInfo {
     pub model: Option<ModelRef>,
     pub request: ProviderRequest,
     pub system: Option<String>,
+    pub instructions: Option<AgentInfoInstructions>,
     pub description: Option<String>,
     pub mode: AgentInfoMode,
     pub hidden: bool,
@@ -20995,6 +21244,7 @@ impl crate::codec::Decode for AgentInfo {
             model: crate::codec::decode_optional(object, "model", path)?,
             request: crate::codec::decode_field(object, "request", path)?,
             system: crate::codec::decode_optional(object, "system", path)?,
+            instructions: crate::codec::decode_optional(object, "instructions", path)?,
             description: crate::codec::decode_optional(object, "description", path)?,
             mode: crate::codec::decode_field(object, "mode", path)?,
             hidden: crate::codec::decode_field(object, "hidden", path)?,
@@ -21022,6 +21272,7 @@ impl crate::codec::Encode for AgentInfo {
         crate::codec::write_optional(out, &mut first, "model", &self.model);
         crate::codec::write_value(out, &mut first, "request", &self.request);
         crate::codec::write_optional(out, &mut first, "system", &self.system);
+        crate::codec::write_optional(out, &mut first, "instructions", &self.instructions);
         crate::codec::write_optional(out, &mut first, "description", &self.description);
         crate::codec::write_value(out, &mut first, "mode", &self.mode);
         crate::codec::write_value(out, &mut first, "hidden", &self.hidden);
@@ -28841,6 +29092,56 @@ impl crate::codec::Encode for ModelVariant {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct ModelSpeed {
+    pub base: String,
+    pub id: String,
+    pub faster: bool,
+}
+
+impl crate::codec::Decode for ModelSpeed {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self {
+            base: crate::codec::decode_field(object, "base", path)?,
+            id: crate::codec::decode_field(object, "id", path)?,
+            faster: crate::codec::decode_field(object, "faster", path)?,
+        })
+    }
+}
+
+impl crate::codec::Encode for ModelSpeed {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "base", &self.base);
+        crate::codec::write_value(out, &mut first, "id", &self.id);
+        crate::codec::write_value(out, &mut first, "faster", &self.faster);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ModelInfoExperimental {
+    pub speed: Option<ModelSpeed>,
+}
+
+impl crate::codec::Decode for ModelInfoExperimental {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self { speed: crate::codec::decode_optional(object, "speed", path)? })
+    }
+}
+
+impl crate::codec::Encode for ModelInfoExperimental {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_optional(out, &mut first, "speed", &self.speed);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct ModelInfoTime {
     pub released: f64,
 }
@@ -29080,6 +29381,7 @@ pub struct ModelInfo {
     pub body: Option<crate::codec::JsonMap<serde_json::Value>>,
     pub capabilities: ModelCapabilities,
     pub variants: Vec<ModelVariant>,
+    pub experimental: Option<ModelInfoExperimental>,
     pub time: ModelInfoTime,
     pub cost: Vec<ModelCost>,
     pub status: ModelInfoStatus,
@@ -29105,6 +29407,7 @@ impl crate::codec::Decode for ModelInfo {
             body: crate::codec::decode_optional(object, "body", path)?,
             capabilities: crate::codec::decode_field(object, "capabilities", path)?,
             variants: crate::codec::decode_field(object, "variants", path)?,
+            experimental: crate::codec::decode_optional(object, "experimental", path)?,
             time: crate::codec::decode_field(object, "time", path)?,
             cost: crate::codec::decode_field(object, "cost", path)?,
             status: crate::codec::decode_field(object, "status", path)?,
@@ -29132,6 +29435,7 @@ impl crate::codec::Encode for ModelInfo {
         crate::codec::write_optional(out, &mut first, "body", &self.body);
         crate::codec::write_value(out, &mut first, "capabilities", &self.capabilities);
         crate::codec::write_value(out, &mut first, "variants", &self.variants);
+        crate::codec::write_optional(out, &mut first, "experimental", &self.experimental);
         crate::codec::write_value(out, &mut first, "time", &self.time);
         crate::codec::write_value(out, &mut first, "cost", &self.cost);
         crate::codec::write_value(out, &mut first, "status", &self.status);
@@ -39151,6 +39455,424 @@ impl crate::codec::Encode for ExperimentalMachineAddResponse {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct PushSettings {
+    pub paused: bool,
+    pub until: Option<f64>,
+}
+
+impl crate::codec::Decode for PushSettings {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self {
+            paused: crate::codec::decode_field(object, "paused", path)?,
+            until: crate::codec::decode_optional_checked(object, "until", path, |value: &f64, path| {
+                if !crate::checks::is_int(*value) {
+                    return Err(path.at("expected an integer"));
+                }
+                if !crate::checks::is_greater_than_or_equal_to(*value, 0.0) {
+                    return Err(path.at("expected a value greater than or equal to 0"));
+                }
+                Ok(())
+            })?,
+        })
+    }
+}
+
+impl crate::codec::Encode for PushSettings {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "paused", &self.paused);
+        crate::codec::write_optional(out, &mut first, "until", &self.until);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PushPlatform {
+    Android,
+    Ios,
+}
+
+impl crate::codec::Decode for PushPlatform {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        match value.as_str() {
+            Some("android") => Ok(Self::Android),
+            Some("ios") => Ok(Self::Ios),
+            _ => Err(path.at("expected one of \"android\", \"ios\"")),
+        }
+    }
+}
+
+impl crate::codec::Encode for PushPlatform {
+    fn encode(&self, out: &mut String) {
+        crate::codec::write_string(
+            out,
+            match self {
+                Self::Android => "android",
+                Self::Ios => "ios",
+            },
+        );
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PushLevel {
+    All,
+    Attention,
+    None,
+}
+
+impl crate::codec::Decode for PushLevel {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        match value.as_str() {
+            Some("all") => Ok(Self::All),
+            Some("attention") => Ok(Self::Attention),
+            Some("none") => Ok(Self::None),
+            _ => Err(path.at("expected one of \"all\", \"attention\", \"none\"")),
+        }
+    }
+}
+
+impl crate::codec::Encode for PushLevel {
+    fn encode(&self, out: &mut String) {
+        crate::codec::write_string(
+            out,
+            match self {
+                Self::All => "all",
+                Self::Attention => "attention",
+                Self::None => "none",
+            },
+        );
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct PushDeviceSettings {
+    pub default: PushLevel,
+}
+
+impl crate::codec::Decode for PushDeviceSettings {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self { default: crate::codec::decode_field(object, "default", path)? })
+    }
+}
+
+impl crate::codec::Encode for PushDeviceSettings {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "default", &self.default);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct PushBell {
+    pub level: PushLevel,
+    pub until: Option<f64>,
+}
+
+impl crate::codec::Decode for PushBell {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self {
+            level: crate::codec::decode_field(object, "level", path)?,
+            until: crate::codec::decode_optional_checked(object, "until", path, |value: &f64, path| {
+                if !crate::checks::is_int(*value) {
+                    return Err(path.at("expected an integer"));
+                }
+                if !crate::checks::is_greater_than_or_equal_to(*value, 0.0) {
+                    return Err(path.at("expected a value greater than or equal to 0"));
+                }
+                Ok(())
+            })?,
+        })
+    }
+}
+
+impl crate::codec::Encode for PushBell {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "level", &self.level);
+        crate::codec::write_optional(out, &mut first, "until", &self.until);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct PushDeviceTime {
+    pub created: f64,
+    pub updated: f64,
+}
+
+impl crate::codec::Decode for PushDeviceTime {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self {
+            created: crate::codec::decode_field_checked(object, "created", path, |value: &f64, path| {
+                if !crate::checks::is_int(*value) {
+                    return Err(path.at("expected an integer"));
+                }
+                if !crate::checks::is_greater_than_or_equal_to(*value, 0.0) {
+                    return Err(path.at("expected a value greater than or equal to 0"));
+                }
+                Ok(())
+            })?,
+            updated: crate::codec::decode_field_checked(object, "updated", path, |value: &f64, path| {
+                if !crate::checks::is_int(*value) {
+                    return Err(path.at("expected an integer"));
+                }
+                if !crate::checks::is_greater_than_or_equal_to(*value, 0.0) {
+                    return Err(path.at("expected a value greater than or equal to 0"));
+                }
+                Ok(())
+            })?,
+        })
+    }
+}
+
+impl crate::codec::Encode for PushDeviceTime {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "created", &self.created);
+        crate::codec::write_value(out, &mut first, "updated", &self.updated);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct PushDevice {
+    pub id: PushDeviceID,
+    pub name: String,
+    pub platform: PushPlatform,
+    pub expires_at: f64,
+    pub settings: PushDeviceSettings,
+    pub paused: bool,
+    pub sessions: crate::codec::JsonMap<PushBell>,
+    pub time: PushDeviceTime,
+}
+
+impl crate::codec::Decode for PushDevice {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self {
+            id: crate::codec::decode_field(object, "id", path)?,
+            name: crate::codec::decode_field(object, "name", path)?,
+            platform: crate::codec::decode_field(object, "platform", path)?,
+            expires_at: crate::codec::decode_field_checked(object, "expiresAt", path, |value: &f64, path| {
+                if !crate::checks::is_int(*value) {
+                    return Err(path.at("expected an integer"));
+                }
+                if !crate::checks::is_greater_than_or_equal_to(*value, 0.0) {
+                    return Err(path.at("expected a value greater than or equal to 0"));
+                }
+                Ok(())
+            })?,
+            settings: crate::codec::decode_field(object, "settings", path)?,
+            paused: crate::codec::decode_field(object, "paused", path)?,
+            sessions: crate::codec::decode_field(object, "sessions", path)?,
+            time: crate::codec::decode_field(object, "time", path)?,
+        })
+    }
+}
+
+impl crate::codec::Encode for PushDevice {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "id", &self.id);
+        crate::codec::write_value(out, &mut first, "name", &self.name);
+        crate::codec::write_value(out, &mut first, "platform", &self.platform);
+        crate::codec::write_value(out, &mut first, "expiresAt", &self.expires_at);
+        crate::codec::write_value(out, &mut first, "settings", &self.settings);
+        crate::codec::write_value(out, &mut first, "paused", &self.paused);
+        crate::codec::write_value(out, &mut first, "sessions", &self.sessions);
+        crate::codec::write_value(out, &mut first, "time", &self.time);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct PushInfo {
+    pub settings: PushSettings,
+    pub devices: Vec<PushDevice>,
+    pub sessions: crate::codec::JsonMap<PushBell>,
+}
+
+impl crate::codec::Decode for PushInfo {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self {
+            settings: crate::codec::decode_field(object, "settings", path)?,
+            devices: crate::codec::decode_field(object, "devices", path)?,
+            sessions: crate::codec::decode_field(object, "sessions", path)?,
+        })
+    }
+}
+
+impl crate::codec::Encode for PushInfo {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "settings", &self.settings);
+        crate::codec::write_value(out, &mut first, "devices", &self.devices);
+        crate::codec::write_value(out, &mut first, "sessions", &self.sessions);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ExperimentalPushGetResponse {
+    pub data: PushInfo,
+}
+
+impl crate::codec::Decode for ExperimentalPushGetResponse {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self { data: crate::codec::decode_field(object, "data", path)? })
+    }
+}
+
+impl crate::codec::Encode for ExperimentalPushGetResponse {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "data", &self.data);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct PushRegistered {
+    pub public_key: String,
+}
+
+impl crate::codec::Decode for PushRegistered {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self { public_key: crate::codec::decode_field(object, "publicKey", path)? })
+    }
+}
+
+impl crate::codec::Encode for PushRegistered {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "publicKey", &self.public_key);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ExperimentalPushDeviceRegisterResponse {
+    pub data: PushRegistered,
+}
+
+impl crate::codec::Decode for ExperimentalPushDeviceRegisterResponse {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self { data: crate::codec::decode_field(object, "data", path)? })
+    }
+}
+
+impl crate::codec::Encode for ExperimentalPushDeviceRegisterResponse {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "data", &self.data);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ExperimentalPushDeviceUpdateResponse {
+    pub data: PushDevice,
+}
+
+impl crate::codec::Decode for ExperimentalPushDeviceUpdateResponse {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self { data: crate::codec::decode_field(object, "data", path)? })
+    }
+}
+
+impl crate::codec::Encode for ExperimentalPushDeviceUpdateResponse {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "data", &self.data);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ExperimentalPushDeviceSessionSetResponse {
+    pub data: PushBell,
+}
+
+impl crate::codec::Decode for ExperimentalPushDeviceSessionSetResponse {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self { data: crate::codec::decode_field(object, "data", path)? })
+    }
+}
+
+impl crate::codec::Encode for ExperimentalPushDeviceSessionSetResponse {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "data", &self.data);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ExperimentalPushSessionSetResponse {
+    pub data: PushBell,
+}
+
+impl crate::codec::Decode for ExperimentalPushSessionSetResponse {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self { data: crate::codec::decode_field(object, "data", path)? })
+    }
+}
+
+impl crate::codec::Encode for ExperimentalPushSessionSetResponse {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "data", &self.data);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ExperimentalPushSettingsSetResponse {
+    pub data: PushSettings,
+}
+
+impl crate::codec::Decode for ExperimentalPushSettingsSetResponse {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self { data: crate::codec::decode_field(object, "data", path)? })
+    }
+}
+
+impl crate::codec::Encode for ExperimentalPushSettingsSetResponse {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "data", &self.data);
+        out.push('}');
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ShellInfo1Status {
     Running,
@@ -41579,7 +42301,7 @@ pub struct ConfigEntryDocumentInfoModelString(pub String);
 impl crate::codec::Decode for ConfigEntryDocumentInfoModelString {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let value = <String as crate::codec::Decode>::decode(value, path)?;
-        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_10) {
+        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_11) {
             return Err(path.at("expected a string matching the RegExp ^[^/#]+\\/[^#]+(?:#[^#]+)?$"));
         }
         Ok(Self(value))
@@ -41604,21 +42326,21 @@ impl crate::codec::Decode for ConfigEntryDocumentInfoModelObject {
         let object = crate::codec::as_object(value, path)?;
         Ok(Self {
             provider_id: crate::codec::decode_field_checked(object, "providerID", path, |value: &String, path| {
-                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_11) {
+                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_12) {
                     Ok(())
                 } else {
                     Err(path.at("expected a string matching the RegExp ^[^/#]+$"))
                 }
             })?,
             model: crate::codec::decode_field_checked(object, "model", path, |value: &String, path| {
-                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_12) {
+                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_13) {
                     Ok(())
                 } else {
                     Err(path.at("expected a string matching the RegExp ^[^#]+$"))
                 }
             })?,
             variant: crate::codec::decode_optional_checked(object, "variant", path, |value: &String, path| {
-                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_12) {
+                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_13) {
                     Ok(())
                 } else {
                     Err(path.at("expected a string matching the RegExp ^[^#]+$"))
@@ -41864,7 +42586,7 @@ pub struct ConfigEntryDocumentInfoAgentsValueModelString(pub String);
 impl crate::codec::Decode for ConfigEntryDocumentInfoAgentsValueModelString {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let value = <String as crate::codec::Decode>::decode(value, path)?;
-        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_10) {
+        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_11) {
             return Err(path.at("expected a string matching the RegExp ^[^/#]+\\/[^#]+(?:#[^#]+)?$"));
         }
         Ok(Self(value))
@@ -41889,21 +42611,21 @@ impl crate::codec::Decode for ConfigEntryDocumentInfoAgentsValueModelObject {
         let object = crate::codec::as_object(value, path)?;
         Ok(Self {
             provider_id: crate::codec::decode_field_checked(object, "providerID", path, |value: &String, path| {
-                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_11) {
+                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_12) {
                     Ok(())
                 } else {
                     Err(path.at("expected a string matching the RegExp ^[^/#]+$"))
                 }
             })?,
             model: crate::codec::decode_field_checked(object, "model", path, |value: &String, path| {
-                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_12) {
+                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_13) {
                     Ok(())
                 } else {
                     Err(path.at("expected a string matching the RegExp ^[^#]+$"))
                 }
             })?,
             variant: crate::codec::decode_optional_checked(object, "variant", path, |value: &String, path| {
-                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_12) {
+                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_13) {
                     Ok(())
                 } else {
                     Err(path.at("expected a string matching the RegExp ^[^#]+$"))
@@ -42043,7 +42765,7 @@ impl crate::codec::Decode for ConfigEntryDocumentInfoAgentsValue {
             mode: crate::codec::decode_optional(object, "mode", path)?,
             hidden: crate::codec::decode_optional(object, "hidden", path)?,
             color: crate::codec::decode_optional_checked(object, "color", path, |value: &String, path| {
-                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_13) {
+                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_14) {
                     Ok(())
                 } else {
                     Err(path.at("expected a string matching the RegExp ^#[0-9a-fA-F]{6}$"))
@@ -43003,7 +43725,7 @@ pub struct ConfigCompactionPercent(pub String);
 impl crate::codec::Decode for ConfigCompactionPercent {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let value = <String as crate::codec::Decode>::decode(value, path)?;
-        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_14) {
+        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_15) {
             return Err(path.at("expected a string matching the RegExp ^([1-9]\\d?(\\.\\d+)?)%$"));
         }
         Ok(Self(value))
@@ -43111,7 +43833,7 @@ pub struct ConfigEntryDocumentInfoCommandsValueModelString(pub String);
 impl crate::codec::Decode for ConfigEntryDocumentInfoCommandsValueModelString {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let value = <String as crate::codec::Decode>::decode(value, path)?;
-        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_10) {
+        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_11) {
             return Err(path.at("expected a string matching the RegExp ^[^/#]+\\/[^#]+(?:#[^#]+)?$"));
         }
         Ok(Self(value))
@@ -43136,21 +43858,21 @@ impl crate::codec::Decode for ConfigEntryDocumentInfoCommandsValueModelObject {
         let object = crate::codec::as_object(value, path)?;
         Ok(Self {
             provider_id: crate::codec::decode_field_checked(object, "providerID", path, |value: &String, path| {
-                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_11) {
+                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_12) {
                     Ok(())
                 } else {
                     Err(path.at("expected a string matching the RegExp ^[^/#]+$"))
                 }
             })?,
             model: crate::codec::decode_field_checked(object, "model", path, |value: &String, path| {
-                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_12) {
+                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_13) {
                     Ok(())
                 } else {
                     Err(path.at("expected a string matching the RegExp ^[^#]+$"))
                 }
             })?,
             variant: crate::codec::decode_optional_checked(object, "variant", path, |value: &String, path| {
-                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_12) {
+                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_13) {
                     Ok(())
                 } else {
                     Err(path.at("expected a string matching the RegExp ^[^#]+$"))
@@ -44646,7 +45368,7 @@ impl crate::codec::Decode for ConfigEntryDocumentInfoProvidersValueModelsValue {
                 "releaseDate",
                 path,
                 |value: &String, path| {
-                    if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_15) {
+                    if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_16) {
                         Ok(())
                     } else {
                         Err(path.at("expected a string matching the RegExp ^\\d{4}-\\d{2}(-\\d{2})?$"))
@@ -44743,7 +45465,7 @@ pub struct ConfigEntryDocumentInfoExperimentalVideoGenerateObjectModelString(pub
 impl crate::codec::Decode for ConfigEntryDocumentInfoExperimentalVideoGenerateObjectModelString {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let value = <String as crate::codec::Decode>::decode(value, path)?;
-        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_10) {
+        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_11) {
             return Err(path.at("expected a string matching the RegExp ^[^/#]+\\/[^#]+(?:#[^#]+)?$"));
         }
         Ok(Self(value))
@@ -44768,21 +45490,21 @@ impl crate::codec::Decode for ConfigEntryDocumentInfoExperimentalVideoGenerateOb
         let object = crate::codec::as_object(value, path)?;
         Ok(Self {
             provider_id: crate::codec::decode_field_checked(object, "providerID", path, |value: &String, path| {
-                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_11) {
+                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_12) {
                     Ok(())
                 } else {
                     Err(path.at("expected a string matching the RegExp ^[^/#]+$"))
                 }
             })?,
             model: crate::codec::decode_field_checked(object, "model", path, |value: &String, path| {
-                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_12) {
+                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_13) {
                     Ok(())
                 } else {
                     Err(path.at("expected a string matching the RegExp ^[^#]+$"))
                 }
             })?,
             variant: crate::codec::decode_optional_checked(object, "variant", path, |value: &String, path| {
-                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_12) {
+                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_13) {
                     Ok(())
                 } else {
                     Err(path.at("expected a string matching the RegExp ^[^#]+$"))
@@ -44913,7 +45635,7 @@ pub struct ConfigEntryDocumentInfoExperimentalImageGenerateObjectModelString(pub
 impl crate::codec::Decode for ConfigEntryDocumentInfoExperimentalImageGenerateObjectModelString {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let value = <String as crate::codec::Decode>::decode(value, path)?;
-        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_10) {
+        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_11) {
             return Err(path.at("expected a string matching the RegExp ^[^/#]+\\/[^#]+(?:#[^#]+)?$"));
         }
         Ok(Self(value))
@@ -44938,21 +45660,21 @@ impl crate::codec::Decode for ConfigEntryDocumentInfoExperimentalImageGenerateOb
         let object = crate::codec::as_object(value, path)?;
         Ok(Self {
             provider_id: crate::codec::decode_field_checked(object, "providerID", path, |value: &String, path| {
-                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_11) {
+                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_12) {
                     Ok(())
                 } else {
                     Err(path.at("expected a string matching the RegExp ^[^/#]+$"))
                 }
             })?,
             model: crate::codec::decode_field_checked(object, "model", path, |value: &String, path| {
-                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_12) {
+                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_13) {
                     Ok(())
                 } else {
                     Err(path.at("expected a string matching the RegExp ^[^#]+$"))
                 }
             })?,
             variant: crate::codec::decode_optional_checked(object, "variant", path, |value: &String, path| {
-                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_12) {
+                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_13) {
                     Ok(())
                 } else {
                     Err(path.at("expected a string matching the RegExp ^[^#]+$"))
@@ -45249,15 +45971,17 @@ pub struct ConfigEntryDocumentInfoExperimental {
     pub todo: Option<bool>,
     pub media_blob: Option<bool>,
     pub artifacts: Option<bool>,
-    pub video_generate: Option<ConfigEntryDocumentInfoExperimentalVideoGenerate>,
     pub console_watches: Option<bool>,
-    pub mcp_events: Option<bool>,
     pub recommended_api: Option<bool>,
+    pub model_speeds: Option<bool>,
     pub full_codemode: Option<bool>,
     pub machines: Option<bool>,
     pub home_memory: Option<bool>,
     pub project_overlay: Option<bool>,
+    pub opencode_api: Option<bool>,
+    pub mcp_skills: Option<bool>,
     pub sqlite_fts: Option<bool>,
+    pub video_generate: Option<ConfigEntryDocumentInfoExperimentalVideoGenerate>,
     pub part_rows: Option<bool>,
     pub image_generate: Option<ConfigEntryDocumentInfoExperimentalImageGenerate>,
     pub subagent_depth: Option<f64>,
@@ -45275,15 +45999,17 @@ impl crate::codec::Decode for ConfigEntryDocumentInfoExperimental {
             todo: crate::codec::decode_optional(object, "todo", path)?,
             media_blob: crate::codec::decode_optional(object, "media_blob", path)?,
             artifacts: crate::codec::decode_optional(object, "artifacts", path)?,
-            video_generate: crate::codec::decode_optional(object, "video_generate", path)?,
             console_watches: crate::codec::decode_optional(object, "console_watches", path)?,
-            mcp_events: crate::codec::decode_optional(object, "mcp_events", path)?,
             recommended_api: crate::codec::decode_optional(object, "recommended_api", path)?,
+            model_speeds: crate::codec::decode_optional(object, "model_speeds", path)?,
             full_codemode: crate::codec::decode_optional(object, "full_codemode", path)?,
             machines: crate::codec::decode_optional(object, "machines", path)?,
             home_memory: crate::codec::decode_optional(object, "home_memory", path)?,
             project_overlay: crate::codec::decode_optional(object, "project_overlay", path)?,
+            opencode_api: crate::codec::decode_optional(object, "opencode_api", path)?,
+            mcp_skills: crate::codec::decode_optional(object, "mcp_skills", path)?,
             sqlite_fts: crate::codec::decode_optional(object, "sqlite_fts", path)?,
+            video_generate: crate::codec::decode_optional(object, "video_generate", path)?,
             part_rows: crate::codec::decode_optional(object, "part_rows", path)?,
             image_generate: crate::codec::decode_optional(object, "image_generate", path)?,
             subagent_depth: crate::codec::decode_optional_checked(
@@ -45316,15 +46042,17 @@ impl crate::codec::Encode for ConfigEntryDocumentInfoExperimental {
         crate::codec::write_optional(out, &mut first, "todo", &self.todo);
         crate::codec::write_optional(out, &mut first, "media_blob", &self.media_blob);
         crate::codec::write_optional(out, &mut first, "artifacts", &self.artifacts);
-        crate::codec::write_optional(out, &mut first, "video_generate", &self.video_generate);
         crate::codec::write_optional(out, &mut first, "console_watches", &self.console_watches);
-        crate::codec::write_optional(out, &mut first, "mcp_events", &self.mcp_events);
         crate::codec::write_optional(out, &mut first, "recommended_api", &self.recommended_api);
+        crate::codec::write_optional(out, &mut first, "model_speeds", &self.model_speeds);
         crate::codec::write_optional(out, &mut first, "full_codemode", &self.full_codemode);
         crate::codec::write_optional(out, &mut first, "machines", &self.machines);
         crate::codec::write_optional(out, &mut first, "home_memory", &self.home_memory);
         crate::codec::write_optional(out, &mut first, "project_overlay", &self.project_overlay);
+        crate::codec::write_optional(out, &mut first, "opencode_api", &self.opencode_api);
+        crate::codec::write_optional(out, &mut first, "mcp_skills", &self.mcp_skills);
         crate::codec::write_optional(out, &mut first, "sqlite_fts", &self.sqlite_fts);
+        crate::codec::write_optional(out, &mut first, "video_generate", &self.video_generate);
         crate::codec::write_optional(out, &mut first, "part_rows", &self.part_rows);
         crate::codec::write_optional(out, &mut first, "image_generate", &self.image_generate);
         crate::codec::write_optional(out, &mut first, "subagent_depth", &self.subagent_depth);
@@ -45913,7 +46641,7 @@ pub struct PromptMediaRef(pub String);
 impl crate::codec::Decode for PromptMediaRef {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let value = <String as crate::codec::Decode>::decode(value, path)?;
-        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_16) {
+        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_17) {
             return Err(path.at("expected a string matching the RegExp ^media:[0-9a-f]{64}$"));
         }
         Ok(Self(value))

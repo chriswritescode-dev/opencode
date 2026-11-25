@@ -78,6 +78,10 @@ impl Protocol for GatewayProtocol {
     fn tool_updates(&self) -> Option<ToolUpdateEncoding> {
         self.inner.tool_updates()
     }
+
+    fn namespaces(&self) -> bool {
+        self.inner.namespaces()
+    }
 }
 
 struct GatewayState {

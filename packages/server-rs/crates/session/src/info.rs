@@ -9,6 +9,8 @@ use opencode_contract::generated::{
 use rusqlite::Row;
 use serde_json::Value;
 
+use crate::projector::read_stored;
+
 pub(crate) const COLUMNS: &str = "id, project_id, title, parent_id, fork_session_id, fork_boundary, agent, model, \
      cost, tokens_input, tokens_output, tokens_reasoning, tokens_cache_read, tokens_cache_write, directory, path, \
      metadata, permission, revert, idle_outcome, time_created, time_updated, time_busy, time_idle, time_viewed, \
@@ -123,7 +125,7 @@ pub(crate) fn from_row(row: &SessionRow) -> Result<SessionInfo, BusError> {
         },
         title: row.title.clone(),
         subpath: row.path.as_deref().filter(|path| !path.is_empty()).map(|path| RelativePath(path.to_string())),
-        metadata: stored::<SessionMetadata>(row.metadata.as_deref())?,
+        metadata: read_stored(stored::<SessionMetadata>(row.metadata.as_deref())?.as_ref()).metadata,
         permissions: stored::<PermissionRuleset>(row.permission.as_deref())?,
         revert: revert(row.revert.as_deref())?,
         location: LocationPublicRef { directory: AbsolutePath(row.directory.clone()) },

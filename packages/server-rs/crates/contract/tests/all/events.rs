@@ -28,7 +28,7 @@ fn the_public_event_types_match_the_pinned_list() {
     let expected: Vec<&str> =
         fixture["public"].as_array().unwrap().iter().map(|value| value.as_str().unwrap()).collect();
 
-    assert_eq!(PUBLIC_EVENT_TYPES.len(), 101, "expected 101 public event types, found {}", PUBLIC_EVENT_TYPES.len());
+    assert_eq!(PUBLIC_EVENT_TYPES.len(), 102, "expected 102 public event types, found {}", PUBLIC_EVENT_TYPES.len());
     assert_eq!(PUBLIC_EVENT_TYPES.as_slice(), expected.as_slice(), "public event types differ from the pin");
 
     let unique: BTreeSet<&str> = PUBLIC_EVENT_TYPES.iter().copied().collect();

@@ -23,7 +23,15 @@ const DAY_MS = 86_400_000
 const NEW_MODEL_DAYS = 30
 const NEW_MODEL_LIMIT = 8
 
-export async function loadHomePage() {
+export async function loadHomePage(): Promise<HomePageData> {
+  if (import.meta.env.DEV && !process.env.DATA_DATABASE_HOST) {
+    const { loadPublicHomePage } = await import("./page-data.public")
+    return loadPublicHomePage()
+  }
+  return loadDatabaseHomePage()
+}
+
+async function loadDatabaseHomePage() {
   const [stats, catalog] = await Promise.all([runStatsEffect(getStatsHomeData()), loadModelCatalog()])
   const link = <T extends { model: string; provider: string }>(entry: T) => ({
     ...entry,
@@ -32,10 +40,10 @@ export async function loadHomePage() {
   })
   return {
     updatedAt: stats.updatedAt,
-    usage: stats.usage.Go["2M"],
-    users: stats.users.Go["2M"],
+    usage: { daily: stats.usage.Go["2M"], weekly: stats.weekly.usage },
+    users: { daily: stats.users.Go["2M"], weekly: stats.weekly.users },
     leaderboard: { daily: stats.leaderboard.Go["1D"].map(link), weekly: stats.leaderboard.Go["1W"].map(link) },
-    market: stats.market["2M"],
+    market: { daily: stats.market["2M"], weekly: stats.weekly.market },
     tokenCost: priceTokenCostFromCatalog(stats.tokenCost.Go, catalog),
     cacheRatio: stats.cacheRatio.Go,
     sessionCost: stats.sessionCost.Go,
@@ -47,7 +55,7 @@ export async function loadHomePage() {
   }
 }
 
-export type HomePageData = Awaited<ReturnType<typeof loadHomePage>>
+export type HomePageData = Awaited<ReturnType<typeof loadDatabaseHomePage>>
 
 export async function loadLabPage(labParam: string) {
   const [catalog, home] = await Promise.all([loadModelCatalog(), runStatsEffect(getStatsHomeData())])

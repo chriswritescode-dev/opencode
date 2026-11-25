@@ -6,6 +6,7 @@ use opencode_contract::generated::{AgentInfo, ModelInfo, ModelRef, SessionInfo, 
 use opencode_storage::Database;
 
 use crate::agent::Agents;
+use crate::agent_instructions;
 use crate::instruction_state;
 use crate::instructions::{self, BuiltinsInput, List, Rendered};
 use crate::store::{MessagesInput, Order, SessionStore};
@@ -65,9 +66,21 @@ impl fmt::Display for ContextError {
 
 impl std::error::Error for ContextError {}
 
+pub fn instruction_list(
+    store: &SessionStore,
+    agents: &Agents,
+    builtins: BuiltinsInput,
+    session_id: &str,
+) -> Result<List, ContextError> {
+    let session = require_session(store, session_id)?;
+    let agent = require_agent(agents, &session)?;
+    let mut list = instructions::builtins(builtins).map_err(|error| ContextError::Instructions(error.to_string()))?;
+    list.push(agent_instructions::source(&agent));
+    Ok(list)
+}
+
 pub fn load(input: &LoadInput<'_>, session_id: &str) -> Result<Loaded, ContextError> {
-    let list = instructions::builtins(input.builtins.clone())
-        .map_err(|error| ContextError::Instructions(error.to_string()))?;
+    let list = instruction_list(input.store, input.agents, input.builtins.clone(), session_id)?;
     load_with(input, session_id, list)
 }
 

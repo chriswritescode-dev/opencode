@@ -20,14 +20,14 @@ pub fn compact_request(request: &LlmRequest, model: &Model) -> Result<CompactReq
 
 pub fn compact_request_with(
     adapter: &open_responses::ProviderAdapter,
-    lower_tools: fn(&LlmRequest) -> Result<Vec<Value>, AiError>,
+    lower_tools: fn(&LlmRequest, &Model) -> Result<Vec<Value>, AiError>,
     request: &LlmRequest,
     model: &Model,
 ) -> Result<CompactRequest, AiError> {
     let folded = fold_tool_updates(model, strip_effort_updates(request.clone()));
     let native = open_responses::lower_conversation(&folded, model, adapter, None)?;
     let generation = open_responses::lower_generation(request, model, &open_responses_options::resolve(request));
-    let tools = if folded.tools.is_empty() { None } else { Some(lower_tools(&folded)?) };
+    let tools = if folded.tools.is_empty() { None } else { Some(lower_tools(&folded, model)?) };
     let mut base = Map::new();
     for key in ["model", "input"] {
         if let Some(value) = native.get(key) {
@@ -58,8 +58,8 @@ pub fn compact_request_with(
     Ok(CompactRequest { url: url.to_string(), body })
 }
 
-fn openai_tools(request: &LlmRequest) -> Result<Vec<Value>, AiError> {
-    let custom = openai_freeform::tools(request);
+fn openai_tools(request: &LlmRequest, model: &Model) -> Result<Vec<Value>, AiError> {
+    let custom = openai_freeform::tools(request, model);
     request.tools.iter().map(|entry| openai_responses::lower_tool_entry(entry, &custom)).collect()
 }
 

@@ -108,11 +108,12 @@ impl Protocol for XaiResponses {
 }
 
 pub fn compact_request(request: &LlmRequest, model: &Model) -> Result<CompactRequest, AiError> {
-    responses_compaction::compact_request_with(&ADAPTER, lower_tools, request, model)
+    let flattened = shared::flatten_request(request);
+    responses_compaction::compact_request_with(&ADAPTER, lower_tools, &flattened, model)
 }
 
-fn lower_tools(request: &LlmRequest) -> Result<Vec<Value>, AiError> {
-    let custom = openai_freeform::tools(request);
+fn lower_tools(request: &LlmRequest, model: &Model) -> Result<Vec<Value>, AiError> {
+    let custom = openai_freeform::tools(request, model);
     open_responses::lower_tools(&flatten_tools(&request.tools), &ADAPTER, &custom)
 }
 

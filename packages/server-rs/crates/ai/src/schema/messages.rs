@@ -222,9 +222,43 @@ pub struct ToolDefinition {
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum Freeform {
-    Text,
-    Regex { pattern: String },
-    Lark { grammar: String },
+    Text {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        field: Option<String>,
+    },
+    Regex {
+        pattern: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        field: Option<String>,
+    },
+    Lark {
+        grammar: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        field: Option<String>,
+    },
+}
+
+pub fn freeform_field(schema: &serde_json::Value, freeform: Option<&Freeform>) -> Option<String> {
+    let named = match freeform {
+        Some(Freeform::Text { field }) => field.as_deref(),
+        Some(Freeform::Regex { field, .. }) => field.as_deref(),
+        Some(Freeform::Lark { field, .. }) => field.as_deref(),
+        None => None,
+    };
+    let properties = schema.get("properties").and_then(serde_json::Value::as_object);
+    if named.is_none() && properties.map_or(0, serde_json::Map::len) != 1 {
+        return None;
+    }
+    let properties = properties?;
+    let (name, property) = match named {
+        Some(named) => properties.get_key_value(named)?,
+        None => properties.iter().next()?,
+    };
+    if property.get("type").and_then(serde_json::Value::as_str) != Some("string") {
+        return None;
+    }
+    let required = schema.get("required")?.as_array()?;
+    required.iter().any(|value| value.as_str() == Some(name.as_str())).then(|| name.clone())
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]

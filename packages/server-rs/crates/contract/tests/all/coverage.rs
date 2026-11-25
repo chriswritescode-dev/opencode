@@ -71,15 +71,15 @@ fn every_operation_has_a_module_and_a_success_root() {
         let root = format!("operation:{}", route.operation_id);
         assert!(roots.contains(root.as_str()), "{} has no response corpus root {root}", route.operation_id);
     }
-    assert_eq!(typed, 118, "expected 118 typed successes, found {typed}");
+    assert_eq!(typed, 124, "expected 124 typed successes, found {typed}");
 }
 
 #[test]
 fn every_event_and_error_has_a_corpus_root() {
     let roots: BTreeSet<&str> = corpus_roots().iter().map(|(root, _)| *root).collect();
-    assert_eq!(PUBLIC_EVENT_TYPES.len(), 101, "expected 101 public event types");
+    assert_eq!(PUBLIC_EVENT_TYPES.len(), 102, "expected 102 public event types");
     assert_eq!(DURABLE_EVENTS.len(), 49, "expected 49 durable events");
-    assert_eq!(ERROR_STATUS.len(), 44, "expected 44 error tags");
+    assert_eq!(ERROR_STATUS.len(), 46, "expected 46 error tags");
     for tag in PUBLIC_EVENT_TYPES {
         assert!(roots.contains(tag), "public event {tag} has no corpus root");
     }

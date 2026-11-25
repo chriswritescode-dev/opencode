@@ -1,6 +1,6 @@
 # OR-43: a project.list query decode failure carries the contract decoder's message text
 
-TypeScript: `packages/protocol/src/groups/project.ts:8-18` decodes the `archived` query with `BooleanFromString`, a
+TypeScript: `packages/protocol/src/groups/project.ts:8-22` decodes the `archived` query with `BooleanFromString`, a
 `Schema.Literals(["true", "false"])`. A decode failure reaches `schemaErrorLayer`
 (`packages/server/src/middleware/schema-error.ts:15-49`), which answers `400` with an `InvalidRequestError` whose
 `message` is Effect's formatted reason, `Expected "true" | "false"\n  at ["archived"]`, and whose `kind` is `Query`.

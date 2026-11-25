@@ -37,7 +37,7 @@ async fn session() {
         run_fixture(fixture, &masks).await;
         count += 1;
     }
-    assert_eq!(count, 11, "the session group carries every ported fixture");
+    assert_eq!(count, 14, "the session group carries every ported fixture");
 }
 
 #[tokio::test]

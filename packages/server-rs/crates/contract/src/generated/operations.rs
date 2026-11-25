@@ -4802,10 +4802,64 @@ pub mod skill_list {
     }
 }
 
-pub mod rpc_call {
+pub mod experimental_skill_file {
     use crate::generated::*;
     use crate::route::Route;
     pub const ROUTE: &Route = &ROUTES[111];
+    pub type Response = Vec<u8>;
+    pub type Params = crate::generated::requests::ExperimentalSkillFileParams;
+    pub type Query = crate::generated::requests::LocationQuery;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub query: Query,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "skillID") {
+            path.push_key("skillID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("skillID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ExperimentalSkillFileParams as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_query(raw: &crate::request::RawRequest) -> Result<Query, crate::codec::DecodeError> {
+        let parsed = crate::request::parse_query(&raw.query);
+        let object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if crate::request::field_values(&parsed, "location").is_some() {
+            path.push_key("location");
+            return Err(path.at("expected an object"));
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::LocationQuery as crate::codec::Decode>::decode(&value, &mut path)
+    }
+
+    pub fn render_query(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_query(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, query: decode_query(raw)? })
+    }
+}
+
+pub mod rpc_call {
+    use crate::generated::*;
+    use crate::route::Route;
+    pub const ROUTE: &Route = &ROUTES[112];
     pub type Response = RpcOutput;
     pub type Params = crate::generated::requests::RpcCallParams;
     pub type Query = crate::generated::requests::LocationQuery;
@@ -4876,7 +4930,7 @@ pub mod rpc_call {
 pub mod event_subscribe {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[112];
+    pub const ROUTE: &Route = &ROUTES[113];
     pub type Response = PublicEvent;
     pub type Query = crate::generated::requests::EventSubscribeQuery;
 
@@ -4919,7 +4973,7 @@ pub mod event_subscribe {
 pub mod pty_list {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[113];
+    pub const ROUTE: &Route = &ROUTES[114];
     pub type Response = PtyListResponse;
     pub type Query = crate::generated::requests::LocationQuery;
 
@@ -4952,7 +5006,7 @@ pub mod pty_list {
 pub mod pty_create {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[114];
+    pub const ROUTE: &Route = &ROUTES[115];
     pub type Response = PtyCreateResponse;
     pub type Query = crate::generated::requests::LocationQuery;
     pub type Body = crate::generated::requests::PtyCreateBody;
@@ -4995,7 +5049,7 @@ pub mod pty_create {
 pub mod pty_get {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[115];
+    pub const ROUTE: &Route = &ROUTES[116];
     pub type Response = PtyGetResponse;
     pub type Params = crate::generated::requests::PtyGetParams;
     pub type Query = crate::generated::requests::LocationQuery;
@@ -5049,7 +5103,7 @@ pub mod pty_get {
 pub mod pty_update {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[116];
+    pub const ROUTE: &Route = &ROUTES[117];
     pub type Response = PtyUpdateResponse;
     pub type Params = crate::generated::requests::PtyUpdateParams;
     pub type Query = crate::generated::requests::LocationQuery;
@@ -5113,7 +5167,7 @@ pub mod pty_update {
 pub mod pty_remove {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[117];
+    pub const ROUTE: &Route = &ROUTES[118];
     pub type Response = ();
     pub type Params = crate::generated::requests::PtyRemoveParams;
     pub type Query = crate::generated::requests::LocationQuery;
@@ -5167,7 +5221,7 @@ pub mod pty_remove {
 pub mod pty_connect_token {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[118];
+    pub const ROUTE: &Route = &ROUTES[119];
     pub type Response = PtyConnectTokenResponse;
     pub type Params = crate::generated::requests::PtyConnectTokenParams;
     pub type Query = crate::generated::requests::LocationQuery;
@@ -5242,7 +5296,7 @@ pub mod pty_connect_token {
 pub mod pty_connect {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[119];
+    pub const ROUTE: &Route = &ROUTES[120];
     pub type Params = crate::generated::requests::PtyConnectParams;
 
     #[derive(Debug, Clone, PartialEq)]
@@ -5277,7 +5331,7 @@ pub mod pty_connect {
 pub mod experimental_persistent_pty_read {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[120];
+    pub const ROUTE: &Route = &ROUTES[121];
     pub type Response = ExperimentalPersistentPtyReadResponse;
     pub type Params = crate::generated::requests::ExperimentalPersistentPtyReadParams;
     pub type Query = crate::generated::requests::ExperimentalPersistentPtyReadQuery;
@@ -5338,7 +5392,7 @@ pub mod experimental_persistent_pty_read {
 pub mod experimental_persistent_pty_list {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[121];
+    pub const ROUTE: &Route = &ROUTES[122];
     pub type Response = ExperimentalPersistentPtyListResponse;
     pub type Params = crate::generated::requests::ExperimentalPersistentPtyListParams;
 
@@ -5376,7 +5430,7 @@ pub mod experimental_persistent_pty_list {
 pub mod experimental_persistent_pty_create {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[122];
+    pub const ROUTE: &Route = &ROUTES[123];
     pub type Response = ExperimentalPersistentPtyCreateResponse;
     pub type Params = crate::generated::requests::ExperimentalPersistentPtyCreateParams;
     pub type Body = crate::generated::requests::PersistentPtyCreateInput;
@@ -5424,7 +5478,7 @@ pub mod experimental_persistent_pty_create {
 pub mod experimental_persistent_pty_shutdown {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[123];
+    pub const ROUTE: &Route = &ROUTES[124];
     pub type Response = ();
 
     #[derive(Debug, Clone, PartialEq)]
@@ -5438,7 +5492,7 @@ pub mod experimental_persistent_pty_shutdown {
 pub mod experimental_persistent_pty_handoff {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[124];
+    pub const ROUTE: &Route = &ROUTES[125];
     pub type Response = ExperimentalPersistentPtyHandoffResponse;
 
     #[derive(Debug, Clone, PartialEq)]
@@ -5452,7 +5506,7 @@ pub mod experimental_persistent_pty_handoff {
 pub mod experimental_persistent_pty_get {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[125];
+    pub const ROUTE: &Route = &ROUTES[126];
     pub type Response = ExperimentalPersistentPtyGetResponse;
     pub type Params = crate::generated::requests::ExperimentalPersistentPtyGetParams;
 
@@ -5490,7 +5544,7 @@ pub mod experimental_persistent_pty_get {
 pub mod experimental_persistent_pty_update {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[126];
+    pub const ROUTE: &Route = &ROUTES[127];
     pub type Response = ExperimentalPersistentPtyUpdateResponse;
     pub type Params = crate::generated::requests::ExperimentalPersistentPtyUpdateParams;
     pub type Body = crate::generated::requests::PersistentPtyUpdateInput;
@@ -5538,7 +5592,7 @@ pub mod experimental_persistent_pty_update {
 pub mod experimental_persistent_pty_remove {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[127];
+    pub const ROUTE: &Route = &ROUTES[128];
     pub type Response = ();
     pub type Params = crate::generated::requests::ExperimentalPersistentPtyRemoveParams;
 
@@ -5576,7 +5630,7 @@ pub mod experimental_persistent_pty_remove {
 pub mod experimental_persistent_pty_snapshot {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[128];
+    pub const ROUTE: &Route = &ROUTES[129];
     pub type Response = ExperimentalPersistentPtySnapshotResponse;
     pub type Params = crate::generated::requests::ExperimentalPersistentPtySnapshotParams;
 
@@ -5614,7 +5668,7 @@ pub mod experimental_persistent_pty_snapshot {
 pub mod experimental_persistent_pty_connect_token {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[129];
+    pub const ROUTE: &Route = &ROUTES[130];
     pub type Response = ExperimentalPersistentPtyConnectTokenResponse;
     pub type Params = crate::generated::requests::ExperimentalPersistentPtyConnectTokenParams;
     pub type Headers = crate::generated::requests::ExperimentalPersistentPtyConnectTokenHeaders;
@@ -5675,7 +5729,7 @@ pub mod experimental_persistent_pty_connect_token {
 pub mod experimental_persistent_pty_connect {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[130];
+    pub const ROUTE: &Route = &ROUTES[131];
     pub type Params = crate::generated::requests::ExperimentalPersistentPtyConnectParams;
 
     #[derive(Debug, Clone, PartialEq)]
@@ -5712,7 +5766,7 @@ pub mod experimental_persistent_pty_connect {
 pub mod experimental_media_get {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[131];
+    pub const ROUTE: &Route = &ROUTES[132];
     pub type Response = Vec<u8>;
     pub type Params = crate::generated::requests::ExperimentalMediaGetParams;
 
@@ -5748,7 +5802,7 @@ pub mod experimental_media_get {
 pub mod experimental_blob_get {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[132];
+    pub const ROUTE: &Route = &ROUTES[133];
     pub type Response = Vec<u8>;
     pub type Params = crate::generated::requests::ExperimentalBlobGetParams;
 
@@ -5784,7 +5838,7 @@ pub mod experimental_blob_get {
 pub mod experimental_automation_create {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[133];
+    pub const ROUTE: &Route = &ROUTES[134];
     pub type Response = ExperimentalAutomationCreateResponse;
     pub type Body = crate::generated::requests::AutomationCreatePayload;
 
@@ -5809,7 +5863,7 @@ pub mod experimental_automation_create {
 pub mod experimental_automation_list {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[134];
+    pub const ROUTE: &Route = &ROUTES[135];
     pub type Response = ExperimentalAutomationListResponse;
     pub type Query = crate::generated::requests::AutomationListQuery;
 
@@ -5852,7 +5906,7 @@ pub mod experimental_automation_list {
 pub mod experimental_automation_get {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[135];
+    pub const ROUTE: &Route = &ROUTES[136];
     pub type Response = ExperimentalAutomationGetResponse;
     pub type Params = crate::generated::requests::ExperimentalAutomationGetParams;
 
@@ -5888,7 +5942,7 @@ pub mod experimental_automation_get {
 pub mod experimental_automation_delete {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[136];
+    pub const ROUTE: &Route = &ROUTES[137];
     pub type Response = ();
     pub type Params = crate::generated::requests::ExperimentalAutomationDeleteParams;
 
@@ -5926,7 +5980,7 @@ pub mod experimental_automation_delete {
 pub mod experimental_automation_pause {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[137];
+    pub const ROUTE: &Route = &ROUTES[138];
     pub type Response = ExperimentalAutomationPauseResponse;
     pub type Params = crate::generated::requests::ExperimentalAutomationPauseParams;
 
@@ -5964,7 +6018,7 @@ pub mod experimental_automation_pause {
 pub mod experimental_automation_resume {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[138];
+    pub const ROUTE: &Route = &ROUTES[139];
     pub type Response = ExperimentalAutomationResumeResponse;
     pub type Params = crate::generated::requests::ExperimentalAutomationResumeParams;
 
@@ -6002,7 +6056,7 @@ pub mod experimental_automation_resume {
 pub mod experimental_artifacts_providers {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[139];
+    pub const ROUTE: &Route = &ROUTES[140];
     pub type Response = ExperimentalArtifactsProvidersResponse;
     pub type Query = crate::generated::requests::LocationQuery;
 
@@ -6035,7 +6089,7 @@ pub mod experimental_artifacts_providers {
 pub mod experimental_artifacts_list {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[140];
+    pub const ROUTE: &Route = &ROUTES[141];
     pub type Response = ExperimentalArtifactsListResponse;
     pub type Query = crate::generated::requests::ExperimentalArtifactsListQuery;
 
@@ -6082,7 +6136,7 @@ pub mod experimental_artifacts_list {
 pub mod experimental_artifacts_create {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[141];
+    pub const ROUTE: &Route = &ROUTES[142];
     pub type Response = ExperimentalArtifactsCreateResponse;
     pub type Query = crate::generated::requests::LocationQuery;
     pub type Body = crate::generated::requests::ArtifactCreateInput;
@@ -6125,7 +6179,7 @@ pub mod experimental_artifacts_create {
 pub mod experimental_artifacts_get {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[142];
+    pub const ROUTE: &Route = &ROUTES[143];
     pub type Response = ExperimentalArtifactsGetResponse;
     pub type Params = crate::generated::requests::ExperimentalArtifactsGetParams;
     pub type Query = crate::generated::requests::LocationQuery;
@@ -6179,7 +6233,7 @@ pub mod experimental_artifacts_get {
 pub mod experimental_artifacts_update {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[143];
+    pub const ROUTE: &Route = &ROUTES[144];
     pub type Response = ExperimentalArtifactsUpdateResponse;
     pub type Params = crate::generated::requests::ExperimentalArtifactsUpdateParams;
     pub type Query = crate::generated::requests::LocationQuery;
@@ -6245,7 +6299,7 @@ pub mod experimental_artifacts_update {
 pub mod experimental_artifacts_delete {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[144];
+    pub const ROUTE: &Route = &ROUTES[145];
     pub type Response = ();
     pub type Params = crate::generated::requests::ExperimentalArtifactsDeleteParams;
     pub type Query = crate::generated::requests::LocationQuery;
@@ -6301,7 +6355,7 @@ pub mod experimental_artifacts_delete {
 pub mod experimental_artifacts_view {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[145];
+    pub const ROUTE: &Route = &ROUTES[146];
     pub type Response = Vec<u8>;
     pub type Params = crate::generated::requests::ExperimentalArtifactsViewParams;
     pub type Query = crate::generated::requests::LocationQuery;
@@ -6355,7 +6409,7 @@ pub mod experimental_artifacts_view {
 pub mod experimental_job_list {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[146];
+    pub const ROUTE: &Route = &ROUTES[147];
     pub type Response = ExperimentalJobListResponse;
     pub type Query = crate::generated::requests::JobListQuery;
 
@@ -6412,7 +6466,7 @@ pub mod experimental_job_list {
 pub mod experimental_job_cancel {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[147];
+    pub const ROUTE: &Route = &ROUTES[148];
     pub type Response = ();
     pub type Params = crate::generated::requests::ExperimentalJobCancelParams;
 
@@ -6448,7 +6502,7 @@ pub mod experimental_job_cancel {
 pub mod experimental_machine_link {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[148];
+    pub const ROUTE: &Route = &ROUTES[149];
 
     #[derive(Debug, Clone, PartialEq)]
     pub struct Request {}
@@ -6461,7 +6515,7 @@ pub mod experimental_machine_link {
 pub mod experimental_machine_list {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[149];
+    pub const ROUTE: &Route = &ROUTES[150];
     pub type Response = ExperimentalMachineListResponse;
 
     #[derive(Debug, Clone, PartialEq)]
@@ -6475,7 +6529,7 @@ pub mod experimental_machine_list {
 pub mod experimental_machine_add {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[150];
+    pub const ROUTE: &Route = &ROUTES[151];
     pub type Response = ExperimentalMachineAddResponse;
     pub type Body = crate::generated::requests::MachineAddPayload;
 
@@ -6500,7 +6554,7 @@ pub mod experimental_machine_add {
 pub mod experimental_machine_remove {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[151];
+    pub const ROUTE: &Route = &ROUTES[152];
     pub type Response = ();
     pub type Params = crate::generated::requests::ExperimentalMachineRemoveParams;
 
@@ -6533,10 +6587,369 @@ pub mod experimental_machine_remove {
     }
 }
 
+pub mod experimental_push_get {
+    use crate::generated::*;
+    use crate::route::Route;
+    pub const ROUTE: &Route = &ROUTES[153];
+    pub type Response = ExperimentalPushGetResponse;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {}
+
+    pub fn decode(_raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request {})
+    }
+}
+
+pub mod experimental_push_device_register {
+    use crate::generated::*;
+    use crate::route::Route;
+    pub const ROUTE: &Route = &ROUTES[154];
+    pub type Response = ExperimentalPushDeviceRegisterResponse;
+    pub type Params = crate::generated::requests::ExperimentalPushDeviceRegisterParams;
+    pub type Body = crate::generated::requests::PushRegister;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub body: Body,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "deviceID") {
+            path.push_key("deviceID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("deviceID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ExperimentalPushDeviceRegisterParams as crate::codec::Decode>::decode(
+            &value, &mut path,
+        )
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, body: decode_body(raw)? })
+    }
+}
+
+pub mod experimental_push_device_remove {
+    use crate::generated::*;
+    use crate::route::Route;
+    pub const ROUTE: &Route = &ROUTES[155];
+    pub type Response = ();
+    pub type Params = crate::generated::requests::ExperimentalPushDeviceRemoveParams;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "deviceID") {
+            path.push_key("deviceID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("deviceID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ExperimentalPushDeviceRemoveParams as crate::codec::Decode>::decode(
+            &value, &mut path,
+        )
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)? })
+    }
+}
+
+pub mod experimental_push_device_update {
+    use crate::generated::*;
+    use crate::route::Route;
+    pub const ROUTE: &Route = &ROUTES[156];
+    pub type Response = ExperimentalPushDeviceUpdateResponse;
+    pub type Params = crate::generated::requests::ExperimentalPushDeviceUpdateParams;
+    pub type Body = crate::generated::requests::PushDevicePatch;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub body: Body,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "deviceID") {
+            path.push_key("deviceID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("deviceID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ExperimentalPushDeviceUpdateParams as crate::codec::Decode>::decode(
+            &value, &mut path,
+        )
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, body: decode_body(raw)? })
+    }
+}
+
+pub mod experimental_push_device_session_set {
+    use crate::generated::*;
+    use crate::route::Route;
+    pub const ROUTE: &Route = &ROUTES[157];
+    pub type Response = ExperimentalPushDeviceSessionSetResponse;
+    pub type Params = crate::generated::requests::ExperimentalPushDeviceSessionSetParams;
+    pub type Body = crate::generated::requests::PushBell;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub body: Body,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "deviceID") {
+            path.push_key("deviceID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("deviceID".to_owned(), value);
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "sessionID") {
+            path.push_key("sessionID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("sessionID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ExperimentalPushDeviceSessionSetParams as crate::codec::Decode>::decode(
+            &value, &mut path,
+        )
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, body: decode_body(raw)? })
+    }
+}
+
+pub mod experimental_push_device_session_remove {
+    use crate::generated::*;
+    use crate::route::Route;
+    pub const ROUTE: &Route = &ROUTES[158];
+    pub type Response = ();
+    pub type Params = crate::generated::requests::ExperimentalPushDeviceSessionRemoveParams;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "deviceID") {
+            path.push_key("deviceID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("deviceID".to_owned(), value);
+        }
+        if let Some(values) = crate::request::field_values(&parsed, "sessionID") {
+            path.push_key("sessionID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("sessionID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ExperimentalPushDeviceSessionRemoveParams as crate::codec::Decode>::decode(
+            &value, &mut path,
+        )
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)? })
+    }
+}
+
+pub mod experimental_push_session_set {
+    use crate::generated::*;
+    use crate::route::Route;
+    pub const ROUTE: &Route = &ROUTES[159];
+    pub type Response = ExperimentalPushSessionSetResponse;
+    pub type Params = crate::generated::requests::ExperimentalPushSessionSetParams;
+    pub type Body = crate::generated::requests::PushBell;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+        pub body: Body,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "sessionID") {
+            path.push_key("sessionID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("sessionID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ExperimentalPushSessionSetParams as crate::codec::Decode>::decode(
+            &value, &mut path,
+        )
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)?, body: decode_body(raw)? })
+    }
+}
+
+pub mod experimental_push_session_remove {
+    use crate::generated::*;
+    use crate::route::Route;
+    pub const ROUTE: &Route = &ROUTES[160];
+    pub type Response = ();
+    pub type Params = crate::generated::requests::ExperimentalPushSessionRemoveParams;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub params: Params,
+    }
+
+    pub fn decode_params(raw: &crate::request::RawRequest) -> Result<Params, crate::codec::DecodeError> {
+        let parsed = crate::request::value_pairs(&raw.path_params);
+        let mut object = serde_json::Map::new();
+        let mut path = crate::codec::Path::new();
+        if let Some(values) = crate::request::field_values(&parsed, "sessionID") {
+            path.push_key("sessionID");
+            let text = crate::request::single(values, &path)?;
+            let value = serde_json::Value::String(text.to_owned());
+            path.pop();
+            object.insert("sessionID".to_owned(), value);
+        }
+        let value = serde_json::Value::Object(object);
+        <crate::generated::requests::ExperimentalPushSessionRemoveParams as crate::codec::Decode>::decode(
+            &value, &mut path,
+        )
+    }
+
+    pub fn render_params(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_params(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { params: decode_params(raw)? })
+    }
+}
+
+pub mod experimental_push_settings_set {
+    use crate::generated::*;
+    use crate::route::Route;
+    pub const ROUTE: &Route = &ROUTES[161];
+    pub type Response = ExperimentalPushSettingsSetResponse;
+    pub type Body = crate::generated::requests::PushSettings;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Request {
+        pub body: Body,
+    }
+
+    pub fn decode_body(raw: &crate::request::RawRequest) -> Result<Body, crate::codec::DecodeError> {
+        crate::request::json_body(raw)
+    }
+
+    pub fn render_body(raw: &crate::request::RawRequest) -> Result<String, crate::codec::DecodeError> {
+        decode_body(raw).map(|value| crate::codec::encode_json(&value))
+    }
+
+    pub fn decode(raw: &crate::request::RawRequest) -> Result<Request, crate::codec::DecodeError> {
+        Ok(Request { body: decode_body(raw)? })
+    }
+}
+
 pub mod shell_list {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[152];
+    pub const ROUTE: &Route = &ROUTES[162];
     pub type Response = ShellListResponse;
     pub type Query = crate::generated::requests::LocationQuery;
 
@@ -6569,7 +6982,7 @@ pub mod shell_list {
 pub mod shell_create {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[153];
+    pub const ROUTE: &Route = &ROUTES[163];
     pub type Response = ShellCreateResponse;
     pub type Query = crate::generated::requests::LocationQuery;
     pub type Body = crate::generated::requests::ShellCreateBody;
@@ -6612,7 +7025,7 @@ pub mod shell_create {
 pub mod shell_get {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[154];
+    pub const ROUTE: &Route = &ROUTES[164];
     pub type Response = ShellGetResponse;
     pub type Params = crate::generated::requests::ShellGetParams;
     pub type Query = crate::generated::requests::LocationQuery;
@@ -6666,7 +7079,7 @@ pub mod shell_get {
 pub mod shell_remove {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[155];
+    pub const ROUTE: &Route = &ROUTES[165];
     pub type Response = ();
     pub type Params = crate::generated::requests::ShellRemoveParams;
     pub type Query = crate::generated::requests::LocationQuery;
@@ -6720,7 +7133,7 @@ pub mod shell_remove {
 pub mod shell_output {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[156];
+    pub const ROUTE: &Route = &ROUTES[166];
     pub type Response = ShellOutputResponse;
     pub type Params = crate::generated::requests::ShellOutputParams;
     pub type Query = crate::generated::requests::ShellOutputQuery;
@@ -6788,7 +7201,7 @@ pub mod shell_output {
 pub mod reference_list {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[157];
+    pub const ROUTE: &Route = &ROUTES[167];
     pub type Response = ReferenceListResponse;
     pub type Query = crate::generated::requests::LocationQuery;
 
@@ -6821,7 +7234,7 @@ pub mod reference_list {
 pub mod worktree_list {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[158];
+    pub const ROUTE: &Route = &ROUTES[168];
     pub type Response = WorktreeList;
     pub type Query = crate::generated::requests::WorktreeListQuery;
 
@@ -6857,7 +7270,7 @@ pub mod worktree_list {
 pub mod worktree_create {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[159];
+    pub const ROUTE: &Route = &ROUTES[169];
     pub type Response = WorktreeInfo;
     pub type Body = crate::generated::requests::WorktreeCreateInput;
 
@@ -6882,7 +7295,7 @@ pub mod worktree_create {
 pub mod worktree_remove {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[160];
+    pub const ROUTE: &Route = &ROUTES[170];
     pub type Response = ();
     pub type Body = crate::generated::requests::WorktreeRemoveInput;
 
@@ -6907,7 +7320,7 @@ pub mod worktree_remove {
 pub mod worktree_refresh {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[161];
+    pub const ROUTE: &Route = &ROUTES[171];
     pub type Response = ();
     pub type Body = crate::generated::requests::WorktreeRefreshBody;
 
@@ -6932,7 +7345,7 @@ pub mod worktree_refresh {
 pub mod vcs_init {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[162];
+    pub const ROUTE: &Route = &ROUTES[172];
     pub type Response = ();
     pub type Query = crate::generated::requests::VcsInitQuery;
 
@@ -6972,7 +7385,7 @@ pub mod vcs_init {
 pub mod vcs_get {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[163];
+    pub const ROUTE: &Route = &ROUTES[173];
     pub type Response = VcsGetResponse;
     pub type Query = crate::generated::requests::LocationQuery;
 
@@ -7005,7 +7418,7 @@ pub mod vcs_get {
 pub mod vcs_base {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[164];
+    pub const ROUTE: &Route = &ROUTES[174];
     pub type Response = VcsBaseResponse;
     pub type Query = crate::generated::requests::LocationQuery;
 
@@ -7038,7 +7451,7 @@ pub mod vcs_base {
 pub mod vcs_status {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[165];
+    pub const ROUTE: &Route = &ROUTES[175];
     pub type Response = VcsStatusResponse;
     pub type Query = crate::generated::requests::LocationQuery;
 
@@ -7071,7 +7484,7 @@ pub mod vcs_status {
 pub mod vcs_branch_list {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[166];
+    pub const ROUTE: &Route = &ROUTES[176];
     pub type Response = VcsBranchListResponse;
     pub type Query = crate::generated::requests::VcsBranchListQuery;
 
@@ -7118,7 +7531,7 @@ pub mod vcs_branch_list {
 pub mod vcs_diff {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[167];
+    pub const ROUTE: &Route = &ROUTES[177];
     pub type Response = VcsDiffResponse;
     pub type Query = crate::generated::requests::VcsDiffQuery;
 
@@ -7179,7 +7592,7 @@ pub mod vcs_diff {
 pub mod debug_heap_dump {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[168];
+    pub const ROUTE: &Route = &ROUTES[178];
     pub type Response = DebugHeapDumpResponse;
     pub type Query = crate::generated::requests::DebugHeapDumpQuery;
 
@@ -7215,7 +7628,7 @@ pub mod debug_heap_dump {
 pub mod debug_location_list {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[169];
+    pub const ROUTE: &Route = &ROUTES[179];
     pub type Response = Vec<LocationPublicRef>;
 
     #[derive(Debug, Clone, PartialEq)]
@@ -7229,7 +7642,7 @@ pub mod debug_location_list {
 pub mod debug_location_evict {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[170];
+    pub const ROUTE: &Route = &ROUTES[180];
     pub type Response = ();
     pub type Query = crate::generated::requests::LocationQuery;
 
@@ -7262,7 +7675,7 @@ pub mod debug_location_evict {
 pub mod experimental_migration_v1_status {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[171];
+    pub const ROUTE: &Route = &ROUTES[181];
     pub type Response = ExperimentalMigrationV1StatusResponse;
 
     #[derive(Debug, Clone, PartialEq)]
@@ -7276,7 +7689,7 @@ pub mod experimental_migration_v1_status {
 pub mod websearch_providers {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[172];
+    pub const ROUTE: &Route = &ROUTES[182];
     pub type Response = WebsearchProvidersResponse;
     pub type Query = crate::generated::requests::LocationQuery;
 
@@ -7309,7 +7722,7 @@ pub mod websearch_providers {
 pub mod websearch_query {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[173];
+    pub const ROUTE: &Route = &ROUTES[183];
     pub type Response = WebsearchQueryResponse;
     pub type Query = crate::generated::requests::LocationQuery;
     pub type Body = crate::generated::requests::WebsearchQueryBody;
@@ -7352,7 +7765,7 @@ pub mod websearch_query {
 pub mod experimental_usage_limits {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[174];
+    pub const ROUTE: &Route = &ROUTES[184];
     pub type Response = ExperimentalUsageLimitsResponse;
     pub type Query = crate::generated::requests::LocationQuery;
 
@@ -7385,7 +7798,7 @@ pub mod experimental_usage_limits {
 pub mod config_get {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[175];
+    pub const ROUTE: &Route = &ROUTES[185];
     pub type Response = Vec<ConfigEntry>;
     pub type Query = crate::generated::requests::LocationQuery;
 
@@ -7418,7 +7831,7 @@ pub mod config_get {
 pub mod config_shells {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[176];
+    pub const ROUTE: &Route = &ROUTES[186];
     pub type Response = Vec<ConfigShellOption>;
 
     #[derive(Debug, Clone, PartialEq)]
@@ -7432,7 +7845,7 @@ pub mod config_shells {
 pub mod experimental_config_update {
     use crate::generated::*;
     use crate::route::Route;
-    pub const ROUTE: &Route = &ROUTES[177];
+    pub const ROUTE: &Route = &ROUTES[187];
     pub type Response = ();
     pub type Body = crate::generated::requests::ConfigPatch;
 
@@ -7454,7 +7867,7 @@ pub mod experimental_config_update {
     }
 }
 
-pub static OPERATION_ROUTES: [&Route; 178] = [
+pub static OPERATION_ROUTES: [&Route; 188] = [
     &server_info::ROUTE,
     &server_pair::ROUTE,
     &server_connect::ROUTE,
@@ -7566,6 +7979,7 @@ pub static OPERATION_ROUTES: [&Route; 178] = [
     &experimental_fs_unwatch::ROUTE,
     &command_list::ROUTE,
     &skill_list::ROUTE,
+    &experimental_skill_file::ROUTE,
     &rpc_call::ROUTE,
     &event_subscribe::ROUTE,
     &pty_list::ROUTE,
@@ -7607,6 +8021,15 @@ pub static OPERATION_ROUTES: [&Route; 178] = [
     &experimental_machine_list::ROUTE,
     &experimental_machine_add::ROUTE,
     &experimental_machine_remove::ROUTE,
+    &experimental_push_get::ROUTE,
+    &experimental_push_device_register::ROUTE,
+    &experimental_push_device_remove::ROUTE,
+    &experimental_push_device_update::ROUTE,
+    &experimental_push_device_session_set::ROUTE,
+    &experimental_push_device_session_remove::ROUTE,
+    &experimental_push_session_set::ROUTE,
+    &experimental_push_session_remove::ROUTE,
+    &experimental_push_settings_set::ROUTE,
     &shell_list::ROUTE,
     &shell_create::ROUTE,
     &shell_get::ROUTE,
@@ -7635,7 +8058,7 @@ pub static OPERATION_ROUTES: [&Route; 178] = [
     &experimental_config_update::ROUTE,
 ];
 
-pub static REQUEST_SLOTS: [crate::request::RequestSlot; 247] = [
+pub static REQUEST_SLOTS: [crate::request::RequestSlot; 261] = [
     crate::request::RequestSlot {
         operation_id: "server.connect",
         slot: "params",
@@ -8287,6 +8710,16 @@ pub static REQUEST_SLOTS: [crate::request::RequestSlot; 247] = [
     },
     crate::request::RequestSlot { operation_id: "command.list", slot: "query", decode: command_list::render_query },
     crate::request::RequestSlot { operation_id: "skill.list", slot: "query", decode: skill_list::render_query },
+    crate::request::RequestSlot {
+        operation_id: "experimental.skill.file",
+        slot: "params",
+        decode: experimental_skill_file::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.skill.file",
+        slot: "query",
+        decode: experimental_skill_file::render_query,
+    },
     crate::request::RequestSlot { operation_id: "rpc.call", slot: "params", decode: rpc_call::render_params },
     crate::request::RequestSlot { operation_id: "rpc.call", slot: "query", decode: rpc_call::render_query },
     crate::request::RequestSlot { operation_id: "rpc.call", slot: "body", decode: rpc_call::render_body },
@@ -8511,6 +8944,66 @@ pub static REQUEST_SLOTS: [crate::request::RequestSlot; 247] = [
         slot: "params",
         decode: experimental_machine_remove::render_params,
     },
+    crate::request::RequestSlot {
+        operation_id: "experimental.push.device.register",
+        slot: "params",
+        decode: experimental_push_device_register::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.push.device.register",
+        slot: "body",
+        decode: experimental_push_device_register::render_body,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.push.device.remove",
+        slot: "params",
+        decode: experimental_push_device_remove::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.push.device.update",
+        slot: "params",
+        decode: experimental_push_device_update::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.push.device.update",
+        slot: "body",
+        decode: experimental_push_device_update::render_body,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.push.device.session.set",
+        slot: "params",
+        decode: experimental_push_device_session_set::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.push.device.session.set",
+        slot: "body",
+        decode: experimental_push_device_session_set::render_body,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.push.device.session.remove",
+        slot: "params",
+        decode: experimental_push_device_session_remove::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.push.session.set",
+        slot: "params",
+        decode: experimental_push_session_set::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.push.session.set",
+        slot: "body",
+        decode: experimental_push_session_set::render_body,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.push.session.remove",
+        slot: "params",
+        decode: experimental_push_session_remove::render_params,
+    },
+    crate::request::RequestSlot {
+        operation_id: "experimental.push.settings.set",
+        slot: "body",
+        decode: experimental_push_settings_set::render_body,
+    },
     crate::request::RequestSlot { operation_id: "shell.list", slot: "query", decode: shell_list::render_query },
     crate::request::RequestSlot { operation_id: "shell.create", slot: "query", decode: shell_create::render_query },
     crate::request::RequestSlot { operation_id: "shell.create", slot: "body", decode: shell_create::render_body },
@@ -8573,7 +9066,7 @@ pub static REQUEST_SLOTS: [crate::request::RequestSlot; 247] = [
     },
 ];
 
-pub static REQUEST_MANIFEST: [(&str, &[&str]); 178] = [
+pub static REQUEST_MANIFEST: [(&str, &[&str]); 188] = [
     ("server.info", &[]),
     ("server.pair", &[]),
     ("server.connect", &["params"]),
@@ -8685,6 +9178,7 @@ pub static REQUEST_MANIFEST: [(&str, &[&str]); 178] = [
     ("experimental.fs.unwatch", &["query", "body"]),
     ("command.list", &["query"]),
     ("skill.list", &["query"]),
+    ("experimental.skill.file", &["params", "query"]),
     ("rpc.call", &["params", "query", "body"]),
     ("event.subscribe", &["query"]),
     ("pty.list", &["query"]),
@@ -8726,6 +9220,15 @@ pub static REQUEST_MANIFEST: [(&str, &[&str]); 178] = [
     ("experimental.machine.list", &[]),
     ("experimental.machine.add", &["body"]),
     ("experimental.machine.remove", &["params"]),
+    ("experimental.push.get", &[]),
+    ("experimental.push.device.register", &["params", "body"]),
+    ("experimental.push.device.remove", &["params"]),
+    ("experimental.push.device.update", &["params", "body"]),
+    ("experimental.push.device.session.set", &["params", "body"]),
+    ("experimental.push.device.session.remove", &["params"]),
+    ("experimental.push.session.set", &["params", "body"]),
+    ("experimental.push.session.remove", &["params"]),
+    ("experimental.push.settings.set", &["body"]),
     ("shell.list", &["query"]),
     ("shell.create", &["query", "body"]),
     ("shell.get", &["params", "query"]),

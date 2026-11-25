@@ -361,7 +361,13 @@ impl ProtocolState for State {
 impl State {
     fn finish_tools(&mut self) -> Result<Vec<LlmEvent>, AiError> {
         let keys = self.custom_calls.iter().copied().collect::<Vec<i64>>();
-        let mut closed = openai_freeform::close(std::mem::take(&mut self.tools), keys, None);
+        let mut closed = openai_freeform::close(
+            std::mem::take(&mut self.tools),
+            keys,
+            &self.custom,
+            &self.provider_metadata_key,
+            None,
+        );
         let finished = tool_stream::finish_all(ADAPTER, &mut closed.tools)?;
         self.tools = closed.tools;
         let mut events = closed.events;
@@ -398,7 +404,7 @@ impl Protocol for OpenAiChat {
         Box::new(State {
             provider_metadata_key,
             tools: tool_stream::empty(),
-            custom: openai_freeform::tools(&request.request),
+            custom: openai_freeform::tools(&request.request, model),
             custom_calls: BTreeSet::new(),
             pending_tools: BTreeMap::new(),
             tool_call_events: Vec::new(),
@@ -726,8 +732,8 @@ pub fn from_request_with_assistant<'a>(
     let zai_tool_stream = compatibility_bool(model, "zaiToolStream")
         .unwrap_or_else(|| detect_zai_tool_stream(provider, base_url, &model.id));
     let has_history = has_tool_history(&request.messages);
-    let flattened = shared::flatten_tool_request(request);
-    let has_active_tools = !flattened.0.is_empty();
+    let definitions = shared::flatten_tools(&request.tools);
+    let has_active_tools = !definitions.is_empty();
     let model_id = model.id.to_lowercase();
     let mistral = MISTRAL_FAMILIES.iter().any(|family| model_id.contains(*family));
     let provider_metadata_key = model.route.provider_metadata_key.clone().unwrap_or_else(|| model.provider.clone());
@@ -746,24 +752,23 @@ pub fn from_request_with_assistant<'a>(
     let mut lowering = Lowering {
         cache_control,
         assistant,
-        custom: openai_freeform::tools(request),
+        custom: openai_freeform::tools(request, model),
         provider_metadata_key,
         tool_call_id,
         require_reasoning,
         reasoning_field: reasoning_field.map(str::to_string),
         require_assistant_after_tool,
     };
-    let messages = lower_messages(&flattened.1, &mut lowering)?;
+    let messages = lower_messages(request, &mut lowering)?;
     let mut body = Map::new();
     body.insert("model".to_string(), Value::String(model.id.clone()));
     body.insert("messages".to_string(), Value::Array(messages));
-    if flattened.0.is_empty() {
+    if definitions.is_empty() {
         if has_history {
             body.insert("tools".to_string(), Value::Array(Vec::new()));
         }
     } else {
-        let tools = flattened
-            .0
+        let tools = definitions
             .iter()
             .map(|tool| {
                 let custom = lowering.custom.get(&tool.name).cloned();
@@ -872,8 +877,8 @@ fn lower_tool(
         object.insert("type".to_string(), Value::String("custom".to_string()));
         let mut definition = Map::new();
         definition.insert("name".to_string(), Value::String(tool.name.clone()));
-        definition.insert("description".to_string(), Value::String(tool.description.clone()));
-        let format = match openai_freeform::grammar(&custom.format) {
+        definition.insert("description".to_string(), Value::String(openai_freeform::description(tool, custom)));
+        let format = match openai_freeform::grammar(custom) {
             Some(grammar) => {
                 let mut format = Map::new();
                 format.insert("type".to_string(), Value::String("grammar".to_string()));
@@ -1297,7 +1302,9 @@ fn lower_tool_call(
         object.insert("type".to_string(), Value::String("custom".to_string()));
         let mut nested = Map::new();
         nested.insert("name".to_string(), Value::String(part.name.clone()));
-        nested.insert("input".to_string(), Value::String(openai_freeform::to_raw(custom, &part.input)));
+        let header = shared::provider_metadata_value(part.provider_metadata.as_ref(), provider_metadata_key)
+            .and_then(|metadata| metadata.get("header"));
+        nested.insert("input".to_string(), Value::String(openai_freeform::to_raw(custom, &part.input, header)));
         object.insert("custom".to_string(), Value::Object(nested));
         return Value::Object(object);
     }

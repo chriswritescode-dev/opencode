@@ -57,7 +57,7 @@ fn full(file: &str, gitbash: Option<&str>, path: Option<&OsStr>, bin: &Path) -> 
 }
 
 fn dirname_is_dot(file: &str) -> bool {
-    let (root, _) = Flavor::Windows.split(file);
+    let root = Flavor::Windows.root(file);
     if !root.is_empty() {
         return false;
     }

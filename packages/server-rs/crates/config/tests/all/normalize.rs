@@ -23,11 +23,11 @@ fn diagnostics_value(diagnostics: &[Diagnostic]) -> Value {
 #[test]
 fn current_cases_match_the_pinned_typescript() {
     let cases = area("normalize");
-    assert_eq!(cases.len(), 142, "expected 142 normalize cases, found {}", cases.len());
+    assert_eq!(cases.len(), 147, "expected 147 normalize cases, found {}", cases.len());
     let current = cases.iter().filter(|case| case.value["group"] == "current").count();
     let v1 = cases.iter().filter(|case| case.value["group"] == "v1").count();
-    assert_eq!(current, 96, "expected 96 current normalize cases, found {current}");
-    assert_eq!(v1, 46, "expected 46 v1 normalize cases, found {v1}");
+    assert_eq!(current, 98, "expected 98 current normalize cases, found {current}");
+    assert_eq!(v1, 49, "expected 49 v1 normalize cases, found {v1}");
     for case in &cases {
         let group = case.value["group"].as_str();
         assert!(matches!(group, Some("current" | "v1")), "{} has unknown group {group:?}", case.name);

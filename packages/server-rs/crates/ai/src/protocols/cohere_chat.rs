@@ -92,7 +92,7 @@ fn option_error(field: &str) -> AiError {
 
 fn from_request(request: &LlmRequest, model: &Model) -> Result<Value, AiError> {
     let options = decode_options(request.provider_options.as_ref())?;
-    let (tools, flattened) = shared::flatten_tool_request(request);
+    let definitions = shared::flatten_tools(&request.tools);
     let mut messages = Vec::new();
     if !request.system.is_empty() {
         let content = if request.system.len() == 1 {
@@ -102,7 +102,7 @@ fn from_request(request: &LlmRequest, model: &Model) -> Result<Value, AiError> {
         };
         messages.push(message_object("system", Some(content), None, None));
     }
-    for message in &flattened.messages {
+    for message in &request.messages {
         match message {
             Message::System(_) => {
                 let update = shared::wrapped_system_update(ROUTE, message)?;
@@ -137,7 +137,7 @@ fn from_request(request: &LlmRequest, model: &Model) -> Result<Value, AiError> {
         _ => None,
     };
     let selected_tools =
-        tools.iter().filter(|tool| selected.is_none_or(|selected| tool.name == selected)).collect::<Vec<_>>();
+        definitions.iter().filter(|tool| selected.is_none_or(|selected| tool.name == selected)).collect::<Vec<_>>();
     if selected.is_some() && selected_tools.is_empty() {
         return Err(shared::invalid_request("Cohere Chat tool choice must name an available tool"));
     }

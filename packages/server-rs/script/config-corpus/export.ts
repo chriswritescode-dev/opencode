@@ -72,6 +72,10 @@ function exportFlags() {
     "opt-in-wildcard": { entries: [], channel: "dev", overrides: "all" },
     "opt-in-env": { entries: [], channel: "latest", overrides: "todo" },
     "opt-in-config": { entries: [document({ todo: true })], channel: "latest" },
+    "opencode-api-env-release": { entries: [], channel: "latest", overrides: "opencode_api" },
+    "opencode-api-env-local": { entries: [], channel: "local", overrides: "opencode_api" },
+    "opencode-api-config-release": { entries: [document({ opencode_api: true })], channel: "latest" },
+    "opencode-api-config-local": { entries: [document({ opencode_api: true })], channel: "local" },
     "per-flag-env-name": { entries: [], channel: "latest", overrides: "full_codemode" },
     "per-flag-config-true": { entries: [document({ full_codemode: true })], channel: "latest" },
     "per-flag-config-false": { entries: [document({ full_codemode: false })], channel: "dev" },
@@ -141,6 +145,21 @@ function exportNormalize() {
     "agents-invalid-color": {
       group: "current",
       text: JSON.stringify({ agents: { reviewer: { color: "blue", system: "Keep" } } }),
+    },
+    "native-agent-permissions-renamed-media-tools": {
+      group: "current",
+      text: JSON.stringify({
+        agents: { reviewer: { permissions: [{ action: "experimental_image_generate", resource: "*", effect: "deny" }] } },
+      }),
+    },
+    "native-permissions-renamed-media-tools": {
+      group: "current",
+      text: JSON.stringify({
+        permissions: [
+          { action: "experimental_image_generate", resource: "*", effect: "allow" },
+          { action: "experimental_video_generate", resource: "video", effect: "ask" },
+        ],
+      }),
     },
     "commands-model-string": {
       group: "current",
@@ -1066,6 +1085,20 @@ function exportNormalize() {
           },
         },
       }),
+    },
+    "v1-agent-permission-renamed-media-tools": {
+      group: "v1",
+      text: JSON.stringify({ agent: { reviewer: { permission: { experimental_image_generate: "allow" } } } }),
+    },
+    "v1-permission-renamed-media-tools": {
+      group: "v1",
+      text: JSON.stringify({
+        permission: { experimental_image_generate: "allow", experimental_video_generate: { "*": "ask" } },
+      }),
+    },
+    "v1-tools-renamed-media-tools": {
+      group: "v1",
+      text: JSON.stringify({ tools: { experimental_image_generate: true, experimental_video_generate: false } }),
     },
     "v1-unsupported-legacy-settings": {
       group: "v1",

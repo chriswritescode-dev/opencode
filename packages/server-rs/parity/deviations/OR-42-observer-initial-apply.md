@@ -4,7 +4,7 @@ TypeScript: `ConfigEntryObserver.observeSources` loads the documents once before
 `loaded.documents` and does not invoke `input.reload` for that first scan; the caller registers the returned
 documents itself, and `input.reload` runs only from the 100 ms debounced trigger loop
 (`packages/core/src/config/plugin/entry-observer.ts:42-70` at the pinned commit
-`73a0eae88de47f10068a0f9dc7a743638fa3d830`).
+`e54fbacb3d3aebc85f0e5ada0a5c490cc9333a91`).
 
 Rust: `crates/config/src/observer.rs`'s `observe_sources` performs the same pre-subscription scan but hands it to
 `apply` synchronously before returning, then calls `apply` again after every debounced reload. `ObserverHandle` is

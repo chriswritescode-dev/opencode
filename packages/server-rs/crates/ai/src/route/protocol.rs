@@ -45,6 +45,9 @@ pub trait Protocol: Send + Sync {
     fn tool_updates(&self) -> Option<ToolUpdateEncoding> {
         None
     }
+    fn namespaces(&self) -> bool {
+        false
+    }
 }
 
 pub trait ProtocolState: Send {

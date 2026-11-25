@@ -1,4 +1,6 @@
-use opencode_ai::{AssistantMessage, ContentPart, Message, ProviderMetadata, ReasoningPart, TextPart, UserMessage};
+use opencode_ai::{
+    AssistantMessage, ContentPart, Message, ProviderMetadata, ReasoningPart, SystemMessage, TextPart, UserMessage,
+};
 use opencode_contract::generated::{
     ModelRef, SessionMessageAssistant, SessionMessageAssistantContentItem, SessionMessageAssistantTool1,
     SessionMessageAssistantTool1State, SessionMessageInfo, SessionMessageNative1, SessionMessageUser,
@@ -11,6 +13,9 @@ pub fn to_llm_messages(messages: &[SessionMessageInfo], model: &ModelRef, provid
         .flat_map(|message| match message {
             SessionMessageInfo::User(user) => user_messages(user),
             SessionMessageInfo::Assistant(assistant) => assistant_messages(assistant, model, provider_metadata_key),
+            SessionMessageInfo::System(system) => {
+                vec![Message::System(SystemMessage { id: None, content: vec![text_part(&system.text)], tools: None })]
+            }
             _ => Vec::new(),
         })
         .collect()

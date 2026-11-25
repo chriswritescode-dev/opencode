@@ -3,9 +3,9 @@
 TypeScript: `ConfigNormalize.canonical` re-decodes and re-encodes a migrated legacy entry with
 `Schema.decodeUnknownOption(...).pipe(Option.flatMap(...))` and unwraps the result with `Option.getOrThrow`, so a
 migrated value the current schema rejects throws out of `normalize` and the whole configuration load fails
-(`packages/core/src/config/normalize.ts:738-746` at the pinned commit
-`73a0eae88de47f10068a0f9dc7a743638fa3d830`). It is called for migrated commands (`:120-122`), agents (`:134-136`),
-mode agents (`:152-154`), one V1 MCP server (`:293-295`) and each migrated provider (`:575-581`).
+(`packages/core/src/config/normalize.ts:766-774` at the pinned commit
+`e54fbacb3d3aebc85f0e5ada0a5c490cc9333a91`). It is called for migrated commands (`:120-122`), agents (`:134-136`),
+mode agents (`:152-154`), one V1 MCP server (`:311-313`) and each migrated provider (`:603-609`).
 
 Rust: `crates/config/src/normalize.rs` `canonical` returns `None` when the re-decode or re-encode fails, and the
 callers report the dropped entry with an `invalid` diagnostic and continue: `map_values` for commands, agents and mode

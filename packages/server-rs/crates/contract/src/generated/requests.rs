@@ -988,7 +988,7 @@ pub struct InstructionEntryKey(pub String);
 impl crate::codec::Decode for InstructionEntryKey {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let value = <String as crate::codec::Decode>::decode(value, path)?;
-        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_4) {
+        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_5) {
             return Err(path.at("expected a string matching the RegExp ^[a-z0-9][a-z0-9._-]*$"));
         }
         Ok(Self(value))
@@ -2243,7 +2243,7 @@ impl crate::codec::Decode for ExperimentalMcpClientTokenQuery {
         Ok(Self {
             location: crate::codec::decode_optional_nullable(object, "location", path)?,
             name: crate::codec::decode_field_checked(object, "name", path, |value: &String, path| {
-                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_17) {
+                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_18) {
                     Ok(())
                 } else {
                     Err(path.at("expected a string matching the RegExp ^[a-zA-Z0-9_-]+$"))
@@ -2318,7 +2318,7 @@ impl crate::codec::Decode for ExperimentalMcpClientQuery {
         Ok(Self {
             location: crate::codec::decode_optional_nullable(object, "location", path)?,
             name: crate::codec::decode_field_checked(object, "name", path, |value: &String, path| {
-                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_17) {
+                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_18) {
                     Ok(())
                 } else {
                     Err(path.at("expected a string matching the RegExp ^[a-zA-Z0-9_-]+$"))
@@ -2830,6 +2830,42 @@ impl crate::codec::Encode for ExperimentalFsWriteQuery {
         let mut first = true;
         crate::codec::write_optional_nullable(out, &mut first, "location", &self.location);
         crate::codec::write_value(out, &mut first, "path", &self.path);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SkillID(pub String);
+
+impl crate::codec::Decode for SkillID {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        <String as crate::codec::Decode>::decode(value, path).map(Self)
+    }
+}
+
+impl crate::codec::Encode for SkillID {
+    fn encode(&self, out: &mut String) {
+        crate::codec::write_string(out, &self.0);
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ExperimentalSkillFileParams {
+    pub skill_id: SkillID,
+}
+
+impl crate::codec::Decode for ExperimentalSkillFileParams {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self { skill_id: crate::codec::decode_field(object, "skillID", path)? })
+    }
+}
+
+impl crate::codec::Encode for ExperimentalSkillFileParams {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "skillID", &self.skill_id);
         out.push('}');
     }
 }
@@ -5012,10 +5048,35 @@ impl crate::codec::Encode for EventSubscribeQueryTypesItemString86 {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EventSubscribeQueryTypesItemString87 {
-    ArtifactUpdated,
+    ExperimentalPushUpdated,
 }
 
 impl crate::codec::Decode for EventSubscribeQueryTypesItemString87 {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        match value.as_str() {
+            Some("experimental.push.updated") => Ok(Self::ExperimentalPushUpdated),
+            _ => Err(path.at("expected \"experimental.push.updated\"")),
+        }
+    }
+}
+
+impl crate::codec::Encode for EventSubscribeQueryTypesItemString87 {
+    fn encode(&self, out: &mut String) {
+        crate::codec::write_string(
+            out,
+            match self {
+                Self::ExperimentalPushUpdated => "experimental.push.updated",
+            },
+        );
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EventSubscribeQueryTypesItemString88 {
+    ArtifactUpdated,
+}
+
+impl crate::codec::Decode for EventSubscribeQueryTypesItemString88 {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         match value.as_str() {
             Some("artifact.updated") => Ok(Self::ArtifactUpdated),
@@ -5024,7 +5085,7 @@ impl crate::codec::Decode for EventSubscribeQueryTypesItemString87 {
     }
 }
 
-impl crate::codec::Encode for EventSubscribeQueryTypesItemString87 {
+impl crate::codec::Encode for EventSubscribeQueryTypesItemString88 {
     fn encode(&self, out: &mut String) {
         crate::codec::write_string(
             out,
@@ -5036,11 +5097,11 @@ impl crate::codec::Encode for EventSubscribeQueryTypesItemString87 {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum EventSubscribeQueryTypesItemString88 {
+pub enum EventSubscribeQueryTypesItemString89 {
     SessionStatus,
 }
 
-impl crate::codec::Decode for EventSubscribeQueryTypesItemString88 {
+impl crate::codec::Decode for EventSubscribeQueryTypesItemString89 {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         match value.as_str() {
             Some("session.status") => Ok(Self::SessionStatus),
@@ -5049,7 +5110,7 @@ impl crate::codec::Decode for EventSubscribeQueryTypesItemString88 {
     }
 }
 
-impl crate::codec::Encode for EventSubscribeQueryTypesItemString88 {
+impl crate::codec::Encode for EventSubscribeQueryTypesItemString89 {
     fn encode(&self, out: &mut String) {
         crate::codec::write_string(
             out,
@@ -5061,11 +5122,11 @@ impl crate::codec::Encode for EventSubscribeQueryTypesItemString88 {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum EventSubscribeQueryTypesItemString89 {
+pub enum EventSubscribeQueryTypesItemString90 {
     SessionIdle,
 }
 
-impl crate::codec::Decode for EventSubscribeQueryTypesItemString89 {
+impl crate::codec::Decode for EventSubscribeQueryTypesItemString90 {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         match value.as_str() {
             Some("session.idle") => Ok(Self::SessionIdle),
@@ -5074,7 +5135,7 @@ impl crate::codec::Decode for EventSubscribeQueryTypesItemString89 {
     }
 }
 
-impl crate::codec::Encode for EventSubscribeQueryTypesItemString89 {
+impl crate::codec::Encode for EventSubscribeQueryTypesItemString90 {
     fn encode(&self, out: &mut String) {
         crate::codec::write_string(
             out,
@@ -5086,11 +5147,11 @@ impl crate::codec::Encode for EventSubscribeQueryTypesItemString89 {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum EventSubscribeQueryTypesItemString90 {
+pub enum EventSubscribeQueryTypesItemString91 {
     TuiPromptAppend,
 }
 
-impl crate::codec::Decode for EventSubscribeQueryTypesItemString90 {
+impl crate::codec::Decode for EventSubscribeQueryTypesItemString91 {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         match value.as_str() {
             Some("tui.prompt.append") => Ok(Self::TuiPromptAppend),
@@ -5099,7 +5160,7 @@ impl crate::codec::Decode for EventSubscribeQueryTypesItemString90 {
     }
 }
 
-impl crate::codec::Encode for EventSubscribeQueryTypesItemString90 {
+impl crate::codec::Encode for EventSubscribeQueryTypesItemString91 {
     fn encode(&self, out: &mut String) {
         crate::codec::write_string(
             out,
@@ -5111,11 +5172,11 @@ impl crate::codec::Encode for EventSubscribeQueryTypesItemString90 {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum EventSubscribeQueryTypesItemString91 {
+pub enum EventSubscribeQueryTypesItemString92 {
     TuiCommandExecute,
 }
 
-impl crate::codec::Decode for EventSubscribeQueryTypesItemString91 {
+impl crate::codec::Decode for EventSubscribeQueryTypesItemString92 {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         match value.as_str() {
             Some("tui.command.execute") => Ok(Self::TuiCommandExecute),
@@ -5124,7 +5185,7 @@ impl crate::codec::Decode for EventSubscribeQueryTypesItemString91 {
     }
 }
 
-impl crate::codec::Encode for EventSubscribeQueryTypesItemString91 {
+impl crate::codec::Encode for EventSubscribeQueryTypesItemString92 {
     fn encode(&self, out: &mut String) {
         crate::codec::write_string(
             out,
@@ -5136,11 +5197,11 @@ impl crate::codec::Encode for EventSubscribeQueryTypesItemString91 {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum EventSubscribeQueryTypesItemString92 {
+pub enum EventSubscribeQueryTypesItemString93 {
     TuiToastShow,
 }
 
-impl crate::codec::Decode for EventSubscribeQueryTypesItemString92 {
+impl crate::codec::Decode for EventSubscribeQueryTypesItemString93 {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         match value.as_str() {
             Some("tui.toast.show") => Ok(Self::TuiToastShow),
@@ -5149,7 +5210,7 @@ impl crate::codec::Decode for EventSubscribeQueryTypesItemString92 {
     }
 }
 
-impl crate::codec::Encode for EventSubscribeQueryTypesItemString92 {
+impl crate::codec::Encode for EventSubscribeQueryTypesItemString93 {
     fn encode(&self, out: &mut String) {
         crate::codec::write_string(
             out,
@@ -5161,11 +5222,11 @@ impl crate::codec::Encode for EventSubscribeQueryTypesItemString92 {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum EventSubscribeQueryTypesItemString93 {
+pub enum EventSubscribeQueryTypesItemString94 {
     TuiSessionSelect,
 }
 
-impl crate::codec::Decode for EventSubscribeQueryTypesItemString93 {
+impl crate::codec::Decode for EventSubscribeQueryTypesItemString94 {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         match value.as_str() {
             Some("tui.session.select") => Ok(Self::TuiSessionSelect),
@@ -5174,7 +5235,7 @@ impl crate::codec::Decode for EventSubscribeQueryTypesItemString93 {
     }
 }
 
-impl crate::codec::Encode for EventSubscribeQueryTypesItemString93 {
+impl crate::codec::Encode for EventSubscribeQueryTypesItemString94 {
     fn encode(&self, out: &mut String) {
         crate::codec::write_string(
             out,
@@ -5186,11 +5247,11 @@ impl crate::codec::Encode for EventSubscribeQueryTypesItemString93 {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum EventSubscribeQueryTypesItemString94 {
+pub enum EventSubscribeQueryTypesItemString95 {
     InstallationUpdated,
 }
 
-impl crate::codec::Decode for EventSubscribeQueryTypesItemString94 {
+impl crate::codec::Decode for EventSubscribeQueryTypesItemString95 {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         match value.as_str() {
             Some("installation.updated") => Ok(Self::InstallationUpdated),
@@ -5199,7 +5260,7 @@ impl crate::codec::Decode for EventSubscribeQueryTypesItemString94 {
     }
 }
 
-impl crate::codec::Encode for EventSubscribeQueryTypesItemString94 {
+impl crate::codec::Encode for EventSubscribeQueryTypesItemString95 {
     fn encode(&self, out: &mut String) {
         crate::codec::write_string(
             out,
@@ -5211,11 +5272,11 @@ impl crate::codec::Encode for EventSubscribeQueryTypesItemString94 {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum EventSubscribeQueryTypesItemString95 {
+pub enum EventSubscribeQueryTypesItemString96 {
     InstallationUpdateAvailable,
 }
 
-impl crate::codec::Decode for EventSubscribeQueryTypesItemString95 {
+impl crate::codec::Decode for EventSubscribeQueryTypesItemString96 {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         match value.as_str() {
             Some("installation.update-available") => Ok(Self::InstallationUpdateAvailable),
@@ -5224,7 +5285,7 @@ impl crate::codec::Decode for EventSubscribeQueryTypesItemString95 {
     }
 }
 
-impl crate::codec::Encode for EventSubscribeQueryTypesItemString95 {
+impl crate::codec::Encode for EventSubscribeQueryTypesItemString96 {
     fn encode(&self, out: &mut String) {
         crate::codec::write_string(
             out,
@@ -5236,11 +5297,11 @@ impl crate::codec::Encode for EventSubscribeQueryTypesItemString95 {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum EventSubscribeQueryTypesItemString96 {
+pub enum EventSubscribeQueryTypesItemString97 {
     VcsBranchUpdated,
 }
 
-impl crate::codec::Decode for EventSubscribeQueryTypesItemString96 {
+impl crate::codec::Decode for EventSubscribeQueryTypesItemString97 {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         match value.as_str() {
             Some("vcs.branch.updated") => Ok(Self::VcsBranchUpdated),
@@ -5249,7 +5310,7 @@ impl crate::codec::Decode for EventSubscribeQueryTypesItemString96 {
     }
 }
 
-impl crate::codec::Encode for EventSubscribeQueryTypesItemString96 {
+impl crate::codec::Encode for EventSubscribeQueryTypesItemString97 {
     fn encode(&self, out: &mut String) {
         crate::codec::write_string(
             out,
@@ -5261,11 +5322,11 @@ impl crate::codec::Encode for EventSubscribeQueryTypesItemString96 {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum EventSubscribeQueryTypesItemString97 {
+pub enum EventSubscribeQueryTypesItemString98 {
     McpStatusChanged,
 }
 
-impl crate::codec::Decode for EventSubscribeQueryTypesItemString97 {
+impl crate::codec::Decode for EventSubscribeQueryTypesItemString98 {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         match value.as_str() {
             Some("mcp.status.changed") => Ok(Self::McpStatusChanged),
@@ -5274,7 +5335,7 @@ impl crate::codec::Decode for EventSubscribeQueryTypesItemString97 {
     }
 }
 
-impl crate::codec::Encode for EventSubscribeQueryTypesItemString97 {
+impl crate::codec::Encode for EventSubscribeQueryTypesItemString98 {
     fn encode(&self, out: &mut String) {
         crate::codec::write_string(
             out,
@@ -5286,11 +5347,11 @@ impl crate::codec::Encode for EventSubscribeQueryTypesItemString97 {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum EventSubscribeQueryTypesItemString98 {
+pub enum EventSubscribeQueryTypesItemString99 {
     McpResourcesChanged,
 }
 
-impl crate::codec::Decode for EventSubscribeQueryTypesItemString98 {
+impl crate::codec::Decode for EventSubscribeQueryTypesItemString99 {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         match value.as_str() {
             Some("mcp.resources.changed") => Ok(Self::McpResourcesChanged),
@@ -5299,7 +5360,7 @@ impl crate::codec::Decode for EventSubscribeQueryTypesItemString98 {
     }
 }
 
-impl crate::codec::Encode for EventSubscribeQueryTypesItemString98 {
+impl crate::codec::Encode for EventSubscribeQueryTypesItemString99 {
     fn encode(&self, out: &mut String) {
         crate::codec::write_string(
             out,
@@ -5311,11 +5372,11 @@ impl crate::codec::Encode for EventSubscribeQueryTypesItemString98 {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum EventSubscribeQueryTypesItemString99 {
+pub enum EventSubscribeQueryTypesItemString100 {
     ExperimentalMcpEvent,
 }
 
-impl crate::codec::Decode for EventSubscribeQueryTypesItemString99 {
+impl crate::codec::Decode for EventSubscribeQueryTypesItemString100 {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         match value.as_str() {
             Some("experimental.mcp.event") => Ok(Self::ExperimentalMcpEvent),
@@ -5324,7 +5385,7 @@ impl crate::codec::Decode for EventSubscribeQueryTypesItemString99 {
     }
 }
 
-impl crate::codec::Encode for EventSubscribeQueryTypesItemString99 {
+impl crate::codec::Encode for EventSubscribeQueryTypesItemString100 {
     fn encode(&self, out: &mut String) {
         crate::codec::write_string(
             out,
@@ -5336,19 +5397,19 @@ impl crate::codec::Encode for EventSubscribeQueryTypesItemString99 {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct EventSubscribeQueryTypesItemString100(pub String);
+pub struct EventSubscribeQueryTypesItemString101(pub String);
 
-impl crate::codec::Decode for EventSubscribeQueryTypesItemString100 {
+impl crate::codec::Decode for EventSubscribeQueryTypesItemString101 {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let value = <String as crate::codec::Decode>::decode(value, path)?;
-        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_7) {
+        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_8) {
             return Err(path.at("expected a string matching the template literal"));
         }
         Ok(Self(value))
     }
 }
 
-impl crate::codec::Encode for EventSubscribeQueryTypesItemString100 {
+impl crate::codec::Encode for EventSubscribeQueryTypesItemString101 {
     fn encode(&self, out: &mut String) {
         <String as crate::codec::Encode>::encode(&self.0, out);
     }
@@ -5456,6 +5517,7 @@ pub enum EventSubscribeQueryTypesItem {
     String98(EventSubscribeQueryTypesItemString98),
     String99(EventSubscribeQueryTypesItemString99),
     String100(EventSubscribeQueryTypesItemString100),
+    String101(EventSubscribeQueryTypesItemString101),
 }
 
 impl crate::codec::Decode for EventSubscribeQueryTypesItem {
@@ -6060,6 +6122,12 @@ impl crate::codec::Decode for EventSubscribeQueryTypesItem {
         if let Ok(member) = member {
             return Ok(Self::String100(member));
         }
+        let mark = path.mark();
+        let member = <EventSubscribeQueryTypesItemString101 as crate::codec::Decode>::decode(value, path);
+        path.truncate(mark);
+        if let Ok(member) = member {
+            return Ok(Self::String101(member));
+        }
         Err(path.at("no member matched"))
     }
 }
@@ -6168,6 +6236,9 @@ impl crate::codec::Encode for EventSubscribeQueryTypesItem {
             Self::String99(value) => <EventSubscribeQueryTypesItemString99 as crate::codec::Encode>::encode(value, out),
             Self::String100(value) => {
                 <EventSubscribeQueryTypesItemString100 as crate::codec::Encode>::encode(value, out)
+            }
+            Self::String101(value) => {
+                <EventSubscribeQueryTypesItemString101 as crate::codec::Encode>::encode(value, out)
             }
         }
     }
@@ -6601,7 +6672,7 @@ pub struct MediaHash(pub String);
 impl crate::codec::Decode for MediaHash {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let value = <String as crate::codec::Decode>::decode(value, path)?;
-        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_18) {
+        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_19) {
             return Err(path.at("expected a string matching the RegExp ^[0-9a-f]{64}$"));
         }
         Ok(Self(value))
@@ -7121,6 +7192,184 @@ impl crate::codec::Encode for ExperimentalMachineRemoveParams {
         out.push('{');
         let mut first = true;
         crate::codec::write_value(out, &mut first, "name", &self.name);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PushDeviceID(pub String);
+
+impl crate::codec::Decode for PushDeviceID {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let value = <String as crate::codec::Decode>::decode(value, path)?;
+        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_2) {
+            return Err(path.at(
+                "expected a string matching the RegExp ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+            ));
+        }
+        Ok(Self(value))
+    }
+}
+
+impl crate::codec::Encode for PushDeviceID {
+    fn encode(&self, out: &mut String) {
+        crate::codec::write_string(out, &self.0);
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ExperimentalPushDeviceRegisterParams {
+    pub device_id: PushDeviceID,
+}
+
+impl crate::codec::Decode for ExperimentalPushDeviceRegisterParams {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self { device_id: crate::codec::decode_field(object, "deviceID", path)? })
+    }
+}
+
+impl crate::codec::Encode for ExperimentalPushDeviceRegisterParams {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "deviceID", &self.device_id);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ExperimentalPushDeviceRemoveParams {
+    pub device_id: PushDeviceID,
+}
+
+impl crate::codec::Decode for ExperimentalPushDeviceRemoveParams {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self { device_id: crate::codec::decode_field(object, "deviceID", path)? })
+    }
+}
+
+impl crate::codec::Encode for ExperimentalPushDeviceRemoveParams {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "deviceID", &self.device_id);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ExperimentalPushDeviceUpdateParams {
+    pub device_id: PushDeviceID,
+}
+
+impl crate::codec::Decode for ExperimentalPushDeviceUpdateParams {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self { device_id: crate::codec::decode_field(object, "deviceID", path)? })
+    }
+}
+
+impl crate::codec::Encode for ExperimentalPushDeviceUpdateParams {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "deviceID", &self.device_id);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ExperimentalPushDeviceSessionSetParams {
+    pub device_id: PushDeviceID,
+    pub session_id: SessionID,
+}
+
+impl crate::codec::Decode for ExperimentalPushDeviceSessionSetParams {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self {
+            device_id: crate::codec::decode_field(object, "deviceID", path)?,
+            session_id: crate::codec::decode_field(object, "sessionID", path)?,
+        })
+    }
+}
+
+impl crate::codec::Encode for ExperimentalPushDeviceSessionSetParams {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "deviceID", &self.device_id);
+        crate::codec::write_value(out, &mut first, "sessionID", &self.session_id);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ExperimentalPushDeviceSessionRemoveParams {
+    pub device_id: PushDeviceID,
+    pub session_id: SessionID,
+}
+
+impl crate::codec::Decode for ExperimentalPushDeviceSessionRemoveParams {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self {
+            device_id: crate::codec::decode_field(object, "deviceID", path)?,
+            session_id: crate::codec::decode_field(object, "sessionID", path)?,
+        })
+    }
+}
+
+impl crate::codec::Encode for ExperimentalPushDeviceSessionRemoveParams {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "deviceID", &self.device_id);
+        crate::codec::write_value(out, &mut first, "sessionID", &self.session_id);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ExperimentalPushSessionSetParams {
+    pub session_id: SessionID,
+}
+
+impl crate::codec::Decode for ExperimentalPushSessionSetParams {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self { session_id: crate::codec::decode_field(object, "sessionID", path)? })
+    }
+}
+
+impl crate::codec::Encode for ExperimentalPushSessionSetParams {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "sessionID", &self.session_id);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ExperimentalPushSessionRemoveParams {
+    pub session_id: SessionID,
+}
+
+impl crate::codec::Decode for ExperimentalPushSessionRemoveParams {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self { session_id: crate::codec::decode_field(object, "sessionID", path)? })
+    }
+}
+
+impl crate::codec::Encode for ExperimentalPushSessionRemoveParams {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "sessionID", &self.session_id);
         out.push('}');
     }
 }
@@ -8684,21 +8933,6 @@ impl crate::codec::Encode for PromptAgentAttachment {
         crate::codec::write_value(out, &mut first, "name", &self.name);
         crate::codec::write_optional(out, &mut first, "mention", &self.mention);
         out.push('}');
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct SkillID(pub String);
-
-impl crate::codec::Decode for SkillID {
-    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
-        <String as crate::codec::Decode>::decode(value, path).map(Self)
-    }
-}
-
-impl crate::codec::Encode for SkillID {
-    fn encode(&self, out: &mut String) {
-        crate::codec::write_string(out, &self.0);
     }
 }
 
@@ -11020,7 +11254,7 @@ pub struct PromptBase64(pub String);
 impl crate::codec::Decode for PromptBase64 {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let value = <String as crate::codec::Decode>::decode(value, path)?;
-        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_5) {
+        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_6) {
             return Err(path.at("expected a string matching the RegExp ^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$"));
         }
         Ok(Self(value))
@@ -11068,10 +11302,10 @@ pub struct GenerateImageAspect(pub String);
 impl crate::codec::Decode for GenerateImageAspect {
     fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
         let value = <String as crate::codec::Decode>::decode(value, path)?;
-        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_19) {
+        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_20) {
             return Err(path.at("expected a string matching the template literal"));
         }
-        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_20) {
+        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_21) {
             return Err(path.at("expected a string matching the RegExp ^\\d+(?:\\.\\d+)?:\\d+(?:\\.\\d+)?$"));
         }
         Ok(Self(value))
@@ -11267,7 +11501,7 @@ impl crate::codec::Decode for GenerateImageFile {
         Ok(Self {
             data: crate::codec::decode_field(object, "data", path)?,
             mime: crate::codec::decode_field_checked(object, "mime", path, |value: &String, path| {
-                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_21) {
+                if crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_22) {
                     Ok(())
                 } else {
                     Err(path.at("expected a string matching the RegExp ^image\\/"))
@@ -14661,6 +14895,226 @@ impl crate::codec::Encode for MachineAddPayload {
         crate::codec::write_value(out, &mut first, "name", &self.name);
         crate::codec::write_value(out, &mut first, "reach", &self.reach);
         crate::codec::write_optional_nullable(out, &mut first, "replace", &self.replace);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PushPlatform {
+    Android,
+    Ios,
+}
+
+impl crate::codec::Decode for PushPlatform {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        match value.as_str() {
+            Some("android") => Ok(Self::Android),
+            Some("ios") => Ok(Self::Ios),
+            _ => Err(path.at("expected one of \"android\", \"ios\"")),
+        }
+    }
+}
+
+impl crate::codec::Encode for PushPlatform {
+    fn encode(&self, out: &mut String) {
+        crate::codec::write_string(
+            out,
+            match self {
+                Self::Android => "android",
+                Self::Ios => "ios",
+            },
+        );
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PushLevel {
+    All,
+    Attention,
+    None,
+}
+
+impl crate::codec::Decode for PushLevel {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        match value.as_str() {
+            Some("all") => Ok(Self::All),
+            Some("attention") => Ok(Self::Attention),
+            Some("none") => Ok(Self::None),
+            _ => Err(path.at("expected one of \"all\", \"attention\", \"none\"")),
+        }
+    }
+}
+
+impl crate::codec::Encode for PushLevel {
+    fn encode(&self, out: &mut String) {
+        crate::codec::write_string(
+            out,
+            match self {
+                Self::All => "all",
+                Self::Attention => "attention",
+                Self::None => "none",
+            },
+        );
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct PushDeviceSettings {
+    pub default: PushLevel,
+}
+
+impl crate::codec::Decode for PushDeviceSettings {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self { default: crate::codec::decode_field(object, "default", path)? })
+    }
+}
+
+impl crate::codec::Encode for PushDeviceSettings {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "default", &self.default);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct PushRegister {
+    pub callback_url: String,
+    pub expires_at: f64,
+    pub public_key: String,
+    pub platform: PushPlatform,
+    pub name: String,
+    pub settings: Option<PushDeviceSettings>,
+}
+
+impl crate::codec::Decode for PushRegister {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self {
+            callback_url: crate::codec::decode_field(object, "callbackURL", path)?,
+            expires_at: crate::codec::decode_field_checked(object, "expiresAt", path, |value: &f64, path| {
+                if !crate::checks::is_int(*value) {
+                    return Err(path.at("expected an integer"));
+                }
+                if !crate::checks::is_greater_than_or_equal_to(*value, 0.0) {
+                    return Err(path.at("expected a value greater than or equal to 0"));
+                }
+                Ok(())
+            })?,
+            public_key: crate::codec::decode_field(object, "publicKey", path)?,
+            platform: crate::codec::decode_field(object, "platform", path)?,
+            name: crate::codec::decode_field(object, "name", path)?,
+            settings: crate::codec::decode_optional(object, "settings", path)?,
+        })
+    }
+}
+
+impl crate::codec::Encode for PushRegister {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "callbackURL", &self.callback_url);
+        crate::codec::write_value(out, &mut first, "expiresAt", &self.expires_at);
+        crate::codec::write_value(out, &mut first, "publicKey", &self.public_key);
+        crate::codec::write_value(out, &mut first, "platform", &self.platform);
+        crate::codec::write_value(out, &mut first, "name", &self.name);
+        crate::codec::write_optional(out, &mut first, "settings", &self.settings);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct PushDevicePatch {
+    pub paused: Option<bool>,
+    pub settings: Option<PushDeviceSettings>,
+}
+
+impl crate::codec::Decode for PushDevicePatch {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self {
+            paused: crate::codec::decode_optional(object, "paused", path)?,
+            settings: crate::codec::decode_optional(object, "settings", path)?,
+        })
+    }
+}
+
+impl crate::codec::Encode for PushDevicePatch {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_optional(out, &mut first, "paused", &self.paused);
+        crate::codec::write_optional(out, &mut first, "settings", &self.settings);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct PushBell {
+    pub level: PushLevel,
+    pub until: Option<f64>,
+}
+
+impl crate::codec::Decode for PushBell {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self {
+            level: crate::codec::decode_field(object, "level", path)?,
+            until: crate::codec::decode_optional_checked(object, "until", path, |value: &f64, path| {
+                if !crate::checks::is_int(*value) {
+                    return Err(path.at("expected an integer"));
+                }
+                if !crate::checks::is_greater_than_or_equal_to(*value, 0.0) {
+                    return Err(path.at("expected a value greater than or equal to 0"));
+                }
+                Ok(())
+            })?,
+        })
+    }
+}
+
+impl crate::codec::Encode for PushBell {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "level", &self.level);
+        crate::codec::write_optional(out, &mut first, "until", &self.until);
+        out.push('}');
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct PushSettings {
+    pub paused: bool,
+    pub until: Option<f64>,
+}
+
+impl crate::codec::Decode for PushSettings {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let object = crate::codec::as_object(value, path)?;
+        Ok(Self {
+            paused: crate::codec::decode_field(object, "paused", path)?,
+            until: crate::codec::decode_optional_checked(object, "until", path, |value: &f64, path| {
+                if !crate::checks::is_int(*value) {
+                    return Err(path.at("expected an integer"));
+                }
+                if !crate::checks::is_greater_than_or_equal_to(*value, 0.0) {
+                    return Err(path.at("expected a value greater than or equal to 0"));
+                }
+                Ok(())
+            })?,
+        })
+    }
+}
+
+impl crate::codec::Encode for PushSettings {
+    fn encode(&self, out: &mut String) {
+        out.push('{');
+        let mut first = true;
+        crate::codec::write_value(out, &mut first, "paused", &self.paused);
+        crate::codec::write_optional(out, &mut first, "until", &self.until);
         out.push('}');
     }
 }

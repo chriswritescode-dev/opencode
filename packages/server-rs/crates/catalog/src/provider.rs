@@ -78,6 +78,7 @@ impl ProviderState {
             body,
             capabilities: decode_capabilities(&model.capabilities),
             variants: model.variants.iter().map(decode_variant).collect(),
+            experimental: None,
             time: ModelInfoTime { released: model.released },
             cost: model.cost.iter().map(decode_cost).collect(),
             status: ModelInfoStatus::Active,

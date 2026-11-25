@@ -18,7 +18,6 @@ use tokio::sync::watch;
 use crate::context::{self, LoadInput, Loaded};
 use crate::execution::{ExecutionError, Placement};
 use crate::instruction_state;
-use crate::instructions;
 use crate::model_request::{self, AppInfo};
 use crate::publish_llm_event::Publisher;
 use crate::retry::{RetryPolicy, structured};
@@ -76,13 +75,14 @@ impl Runner {
             if placed.is_closed() {
                 return Ok(());
             }
-            let list = instructions::builtins(placed.builtins().clone())
-                .map_err(|error| ExecutionError::Message(error.to_string()))?;
+            let promotable =
+                if continuation { Vec::new() } else { self.store.promotable(session_id, true).map_err(bus_error)? };
+            if !continuation && promotable.is_empty() {
+                return Ok(());
+            }
+            let list = context::instruction_list(&self.store, placed.agents(), placed.builtins().clone(), session_id)
+                .map_err(ExecutionError::Context)?;
             if !continuation {
-                let promotable = self.store.promotable(session_id, true).map_err(bus_error)?;
-                if promotable.is_empty() {
-                    return Ok(());
-                }
                 instruction_state::prepare_at(&self.database, &self.bus, &list, session_id, location.clone())
                     .map_err(bus_error)?;
                 for inbox_id in promotable {
