@@ -235,6 +235,30 @@ async fn cache_precedes_bundled_snapshot() {
 }
 
 #[tokio::test]
+async fn caches_across_calls() {
+    let (_dir, database, _bus, service) = setup(None, false, true);
+    put(&database, KEY, cache_row(FIXTURE, now_ms() as f64, Some(&body_digest(FIXTURE))));
+
+    assert_eq!(provider_ids(&service.get(false).await.expect("the first catalog loads")), ["acme"]);
+
+    put(&database, KEY, cache_row(FIXTURE2, now_ms() as f64, Some(&body_digest(FIXTURE2))));
+    assert_eq!(provider_ids(&service.get(false).await.expect("the second catalog loads")), ["acme"]);
+}
+
+#[tokio::test]
+async fn empty_url_uses_default_source() {
+    let dir = TempDir::new();
+    let (database, _) = Database::open(DatabaseLocation::Memory, dir.path()).expect("open the database");
+    let database = Arc::new(database);
+    let bus = Bus::new(database.clone(), BusOptions::default());
+    put(&database, KEY, cache_row(FIXTURE, now_ms() as f64, Some(&body_digest(FIXTURE))));
+    let options = Options { url: Some(String::new()), file: None, fetch: Some(false), snapshot: Some(false) };
+    let service = ModelsDevService::new(database.clone(), bus.clone(), options, USER_AGENT.to_owned());
+
+    assert_eq!(provider_ids(&service.get(false).await.expect("the catalog loads")), ["acme"]);
+}
+
+#[tokio::test]
 async fn bundled_snapshot_when_cache_is_empty() {
     let (_dir, _database, _bus, service) = setup(None, false, true);
 

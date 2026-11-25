@@ -245,7 +245,7 @@ fn resolve(specifier: &str, context: &Context, builtins: &BTreeSet<&str>) -> Opt
 
 pub fn rewrite(target: &mut Target, input: &Context, builtins: &BTreeSet<&str>) {
     let Some(specifier) = input.specifier.as_deref() else { return };
-    let settings = target.settings.clone().unwrap_or_default();
+    let settings = decode_legacy(&target.settings.clone().unwrap_or_default());
     let mut context = input.clone();
     context.settings = Some(settings.clone());
     let Some(replacement) = resolve(specifier, &context, builtins) else { return };
@@ -271,8 +271,11 @@ pub fn rewrite(target: &mut Target, input: &Context, builtins: &BTreeSet<&str>) 
         let mapped = variants
             .into_iter()
             .map(|variant| {
-                let overlay =
-                    options(&replacement, context.model_id.as_deref(), &variant.settings.clone().unwrap_or_default());
+                let overlay = options(
+                    &replacement,
+                    context.model_id.as_deref(),
+                    &decode_legacy(&variant.settings.clone().unwrap_or_default()),
+                );
                 let headers = merge_headers(overlay.headers.as_ref(), variant.headers.as_ref());
                 let body = merge_overlay(overlay.body.as_ref(), variant.body.as_ref());
                 Variant {
@@ -291,6 +294,85 @@ struct Overlay {
     settings: JsonMap,
     headers: Option<Headers>,
     body: Option<JsonMap>,
+}
+
+fn decode_legacy(settings: &JsonMap) -> JsonMap {
+    let mut decoded = JsonMap::new();
+    for (key, value) in settings {
+        let field = match key.as_str() {
+            "apiKey" | "baseURL" | "bearerToken" | "endpoint" | "region" | "accessKeyId" | "secretAccessKey"
+            | "sessionToken" | "serviceTier" | "appName" | "appUrl" => value.is_string().then(|| value.clone()),
+            "useCompletionUrls" => value.is_boolean().then(|| value.clone()),
+            "headers" | "api_keys" => string_record(value),
+            "extraBody" => value.is_object().then(|| value.clone()),
+            "anthropicBeta" => string_array(value),
+            "auth" => matches!(value.as_str(), Some("bearer" | "sigv4")).then(|| value.clone()),
+            "credentials" => decode_credentials(value),
+            "reasoningConfig" => decode_reasoning_config(value),
+            "additionalModelRequestFields" => decode_additional_fields(value),
+            _ => Some(value.clone()),
+        };
+        if let Some(field) = field {
+            decoded.insert(key.clone(), field);
+        }
+    }
+    decoded
+}
+
+fn string_record(value: &Value) -> Option<Value> {
+    let entries = value.as_object()?;
+    entries.values().all(Value::is_string).then(|| value.clone())
+}
+
+fn string_array(value: &Value) -> Option<Value> {
+    let items = value.as_array()?;
+    items.iter().all(Value::is_string).then(|| value.clone())
+}
+
+fn decode_credentials(value: &Value) -> Option<Value> {
+    let entries = value.as_object()?;
+    if !entries.get("accessKeyId").is_some_and(Value::is_string)
+        || !entries.get("secretAccessKey").is_some_and(Value::is_string)
+    {
+        return None;
+    }
+    let mut credentials = JsonMap::new();
+    for key in ["accessKeyId", "secretAccessKey", "sessionToken", "region"] {
+        if let Some(field) = entries.get(key).filter(|field| field.is_string()) {
+            credentials.insert(key.to_string(), field.clone());
+        }
+    }
+    Some(Value::Object(credentials))
+}
+
+fn decode_reasoning_config(value: &Value) -> Option<Value> {
+    let entries = value.as_object()?;
+    let mut config = JsonMap::new();
+    for key in ["type", "display", "maxReasoningEffort"] {
+        if let Some(field) = entries.get(key).filter(|field| field.is_string()) {
+            config.insert(key.to_string(), field.clone());
+        }
+    }
+    if let Some(budget) = entries.get("budgetTokens").filter(|field| field.is_number()) {
+        config.insert("budgetTokens".to_string(), budget.clone());
+    }
+    Some(Value::Object(config))
+}
+
+fn decode_additional_fields(value: &Value) -> Option<Value> {
+    let entries = value.as_object()?;
+    let mut fields = entries.clone();
+    if let Some(betas) = fields.get("anthropic_beta")
+        && !betas.as_array().is_some_and(|items| items.iter().all(Value::is_string))
+    {
+        fields.remove("anthropic_beta");
+    }
+    for key in ["output_config", "reasoning"] {
+        if fields.get(key).is_some_and(|field| !field.is_object()) {
+            fields.remove(key);
+        }
+    }
+    Some(Value::Object(fields))
 }
 
 const OMIT_KEYS: &[&str] =
@@ -370,7 +452,7 @@ fn bedrock_thinking(model_id: Option<&str>, settings: &JsonMap) -> Option<Value>
     if text(reasoning, "type") != Some("enabled") {
         return None;
     }
-    let budget = reasoning.get("budgetTokens").filter(|value| value.is_number())?;
+    let budget = reasoning.get("budgetTokens")?;
     let mut thinking = JsonMap::new();
     thinking.insert("type".to_string(), Value::String("enabled".to_string()));
     thinking.insert("budgetTokens".to_string(), budget.clone());
@@ -385,7 +467,7 @@ fn bedrock_request(model_id: Option<&str>, settings: &JsonMap) -> Option<JsonMap
     let harmony = model_id.is_some_and(|model_id| model_id.contains("openai.gpt-oss"));
     let effort = reasoning.and_then(|reasoning| text(reasoning, "maxReasoningEffort"));
     let kind = reasoning.and_then(|reasoning| text(reasoning, "type"));
-    let budget = reasoning.and_then(|reasoning| reasoning.get("budgetTokens")).filter(|value| value.is_number());
+    let budget = reasoning.and_then(|reasoning| reasoning.get("budgetTokens"));
     let display = reasoning.and_then(|reasoning| text(reasoning, "display"));
     let betas = settings.get("anthropicBeta").and_then(Value::as_array).cloned().unwrap_or_default();
     let mut overlay = JsonMap::new();

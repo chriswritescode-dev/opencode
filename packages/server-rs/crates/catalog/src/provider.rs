@@ -3,7 +3,7 @@ use std::sync::{Arc, LazyLock, Mutex, Weak};
 
 use indexmap::IndexMap;
 use opencode_ai::ProviderPackages;
-use opencode_bus::{Bus, PublishOptions};
+use opencode_bus::{Bus, PublishOptions, Subscription};
 use opencode_contract::codec::{self, Decode, Encode, encode_json};
 use opencode_contract::generated::{
     ConnectionInfo, IntegrationID, IntegrationInfo, LocationRef, ModelCapabilities, ModelInfo, ModelInfoLimit,
@@ -163,7 +163,8 @@ impl ProviderService {
                 initial: Box::new(ProviderRegistry::default),
                 notify: Some(notify),
             };
-            let subscription = tokio::spawn(subscription_task(bus.clone(), weak.clone()));
+            let subscription = bus.subscribe(&SUBSCRIBED, None);
+            let subscription = tokio::spawn(subscription_task(subscription, weak.clone()));
             Self {
                 state: State::new(options),
                 integrations,
@@ -273,8 +274,7 @@ impl Drop for ProviderService {
     }
 }
 
-async fn subscription_task(bus: Arc<Bus>, weak: Weak<ProviderService>) {
-    let mut subscription = bus.subscribe(&SUBSCRIBED, None);
+async fn subscription_task(mut subscription: Subscription, weak: Weak<ProviderService>) {
     while subscription.recv().await.is_some() {
         let Some(service) = weak.upgrade() else {
             break;

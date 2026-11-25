@@ -6,7 +6,7 @@ use crate::corpus;
 #[test]
 fn aisdk_native_corpus_matches_the_pinned_typescript() {
     let cases = corpus::area("aisdk-native");
-    assert_eq!(cases.len(), 152, "the corpus holds every pinned aisdk-native case");
+    assert_eq!(cases.len(), 156, "the corpus holds every pinned aisdk-native case");
 
     let builtins = ProviderPackages::builtin().specifiers();
 

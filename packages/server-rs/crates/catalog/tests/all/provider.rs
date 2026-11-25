@@ -1,6 +1,7 @@
 use std::collections::{BTreeSet, HashMap};
 use std::ffi::OsString;
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use opencode_ai::ProviderPackages;
 use opencode_bus::{Bus, BusOptions, Event, ListenerHandle};
@@ -126,6 +127,26 @@ async fn publishes_provider_updated_after_changes() {
     let published =
         events.lock().expect("lock the events").iter().filter(|event| event.r#type() == "provider.updated").count();
     assert_eq!(published, 1);
+}
+
+#[tokio::test]
+async fn subscribes_before_the_first_publish() {
+    let harness = setup();
+    let (events, _handle) = capture(&harness.bus);
+    harness
+        .credentials
+        .create(credential_input(&IntegrationID("openai-test".to_owned()), "key", "First"))
+        .expect("create the credential");
+    tokio::time::timeout(Duration::from_secs(1), async {
+        loop {
+            if events.lock().expect("lock the events").iter().any(|event| event.r#type() == "provider.updated") {
+                return;
+            }
+            tokio::task::yield_now().await;
+        }
+    })
+    .await
+    .expect("provider.updated was published");
 }
 
 #[tokio::test]

@@ -322,6 +322,28 @@ function aisdkNative() {
       },
     },
   )
+  cases["rewrite.bedrock-credentials-fallback"] = rewriteCase(
+    { specifier: "@ai-sdk/amazon-bedrock", providerID: "sample", modelID: "anthropic.claude-sonnet-4" },
+    {
+      settings: {
+        endpoint: "https://${AWS_REGION}.amazonaws.com",
+        region: "eu-west-1",
+        credentials: { accessKeyId: "PARTIAL", sessionToken: "PARTIAL-SESSION" },
+        accessKeyId: "AKIA",
+        secretAccessKey: "TOPSECRET",
+        sessionToken: "TOPSESSION",
+      },
+    },
+  )
+  cases["rewrite.bedrock-reasoning-strip"] = rewriteCase(
+    { specifier: "@ai-sdk/amazon-bedrock", providerID: "sample" },
+    {
+      settings: {
+        reasoningConfig: { type: 5, maxReasoningEffort: "high", budgetTokens: "9", extra: 1 },
+        additionalModelRequestFields: { anthropic_beta: ["ok"], other: { keep: true } },
+      },
+    },
+  )
   cases["rewrite.mantle"] = rewriteCase(
     { specifier: "aisdk:@ai-sdk/amazon-bedrock/mantle", providerID: "sample", modelID: "anthropic.claude-sonnet-4" },
     { settings: { endpoint: "https://${AWS_REGION}.example", region: "us-east-2", extraBody: { keep: true } } },
@@ -370,6 +392,38 @@ function aisdkNative() {
   cases["rewrite.builtin-passthrough"] = rewriteCase(
     { specifier: "@opencode/ai/providers/anthropic", providerID: "sample" },
     { settings: { apiKey: "x" } },
+  )
+  cases["rewrite.invalid-fields"] = rewriteCase(
+    { specifier: "@opencode/ai/providers/anthropic", providerID: "sample" },
+    {
+      settings: {
+        apiKey: 5,
+        baseURL: 5,
+        headers: { "X-Ok": "1", "X-Bad": 2 },
+        extraBody: [1],
+        useCompletionUrls: "yes",
+        auth: "basic",
+        anthropicBeta: ["a", 2],
+        serviceTier: 5,
+        appName: 5,
+        appUrl: 5,
+        api_keys: { a: "k", b: 1 },
+        reasoningConfig: { type: 5, display: "summarized", maxReasoningEffort: 7, budgetTokens: "9", extra: 1 },
+        additionalModelRequestFields: { anthropic_beta: ["ok"], output_config: 5, reasoning: "no", other: { keep: true } },
+        credentials: { accessKeyId: "AKIA", secretAccessKey: "S", sessionToken: 5, region: "r", extra: 1 },
+        unknown: { keep: true },
+      },
+    },
+  )
+  cases["rewrite.invalid-variant-fields"] = rewriteCase(
+    { specifier: "@ai-sdk/openai", providerID: "sample", modelID: "m" },
+    {
+      settings: { baseURL: 5, extraBody: { base: true } },
+      variants: [
+        { id: "a", settings: { baseURL: 5, apiKey: 7, extraBody: { keep: 1 }, headers: { "X-Bad": 2 } } },
+        { id: "b", settings: { apiKey: "ok", headers: { "X-Ok": "1" } } },
+      ],
+    },
   )
   cases["rewrite.unknown"] = rewriteCase(
     { specifier: "aisdk:unknown-package", providerID: "sample" },

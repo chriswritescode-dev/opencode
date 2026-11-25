@@ -1225,6 +1225,81 @@
       }
     }
   },
+  "rewrite.bedrock-credentials-fallback": {
+    "call": "rewrite",
+    "target": {
+      "settings": {
+        "endpoint": "https://${AWS_REGION}.amazonaws.com",
+        "region": "eu-west-1",
+        "credentials": {
+          "accessKeyId": "PARTIAL",
+          "sessionToken": "PARTIAL-SESSION"
+        },
+        "accessKeyId": "AKIA",
+        "secretAccessKey": "TOPSECRET",
+        "sessionToken": "TOPSESSION"
+      }
+    },
+    "input": {
+      "specifier": "@ai-sdk/amazon-bedrock",
+      "providerID": "sample",
+      "modelID": "anthropic.claude-sonnet-4"
+    },
+    "result": {
+      "settings": {
+        "region": "eu-west-1",
+        "baseURL": "https://eu-west-1.amazonaws.com",
+        "credentials": {
+          "region": "eu-west-1",
+          "accessKeyId": "AKIA",
+          "secretAccessKey": "TOPSECRET",
+          "sessionToken": "TOPSESSION"
+        }
+      },
+      "package": "@opencode/ai/providers/amazon-bedrock"
+    }
+  },
+  "rewrite.bedrock-reasoning-strip": {
+    "call": "rewrite",
+    "target": {
+      "settings": {
+        "reasoningConfig": {
+          "type": 5,
+          "maxReasoningEffort": "high",
+          "budgetTokens": "9",
+          "extra": 1
+        },
+        "additionalModelRequestFields": {
+          "anthropic_beta": [
+            "ok"
+          ],
+          "other": {
+            "keep": true
+          }
+        }
+      }
+    },
+    "input": {
+      "specifier": "@ai-sdk/amazon-bedrock",
+      "providerID": "sample"
+    },
+    "result": {
+      "settings": {
+        "reasoningConfig": {
+          "maxReasoningEffort": "high"
+        },
+        "additionalModelRequestFields": {
+          "anthropic_beta": [
+            "ok"
+          ],
+          "other": {
+            "keep": true
+          }
+        }
+      },
+      "package": "@opencode/ai/providers/amazon-bedrock"
+    }
+  },
   "rewrite.mantle": {
     "call": "rewrite",
     "target": {
@@ -1420,6 +1495,154 @@
     "result": {
       "settings": {
         "apiKey": "x"
+      }
+    }
+  },
+  "rewrite.invalid-fields": {
+    "call": "rewrite",
+    "target": {
+      "settings": {
+        "apiKey": 5,
+        "baseURL": 5,
+        "headers": {
+          "X-Ok": "1",
+          "X-Bad": 2
+        },
+        "extraBody": [
+          1
+        ],
+        "useCompletionUrls": "yes",
+        "auth": "basic",
+        "anthropicBeta": [
+          "a",
+          2
+        ],
+        "serviceTier": 5,
+        "appName": 5,
+        "appUrl": 5,
+        "api_keys": {
+          "a": "k",
+          "b": 1
+        },
+        "reasoningConfig": {
+          "type": 5,
+          "display": "summarized",
+          "maxReasoningEffort": 7,
+          "budgetTokens": "9",
+          "extra": 1
+        },
+        "additionalModelRequestFields": {
+          "anthropic_beta": [
+            "ok"
+          ],
+          "output_config": 5,
+          "reasoning": "no",
+          "other": {
+            "keep": true
+          }
+        },
+        "credentials": {
+          "accessKeyId": "AKIA",
+          "secretAccessKey": "S",
+          "sessionToken": 5,
+          "region": "r",
+          "extra": 1
+        },
+        "unknown": {
+          "keep": true
+        }
+      }
+    },
+    "input": {
+      "specifier": "@opencode/ai/providers/anthropic",
+      "providerID": "sample"
+    },
+    "result": {
+      "settings": {
+        "credentials": {
+          "accessKeyId": "AKIA",
+          "secretAccessKey": "S",
+          "region": "r"
+        },
+        "reasoningConfig": {
+          "display": "summarized"
+        },
+        "additionalModelRequestFields": {
+          "anthropic_beta": [
+            "ok"
+          ],
+          "other": {
+            "keep": true
+          }
+        },
+        "unknown": {
+          "keep": true
+        }
+      }
+    }
+  },
+  "rewrite.invalid-variant-fields": {
+    "call": "rewrite",
+    "target": {
+      "settings": {
+        "baseURL": 5,
+        "extraBody": {
+          "base": true
+        }
+      },
+      "variants": [
+        {
+          "id": "a",
+          "settings": {
+            "baseURL": 5,
+            "apiKey": 7,
+            "extraBody": {
+              "keep": 1
+            },
+            "headers": {
+              "X-Bad": 2
+            }
+          }
+        },
+        {
+          "id": "b",
+          "settings": {
+            "apiKey": "ok",
+            "headers": {
+              "X-Ok": "1"
+            }
+          }
+        }
+      ]
+    },
+    "input": {
+      "specifier": "@ai-sdk/openai",
+      "providerID": "sample",
+      "modelID": "m"
+    },
+    "result": {
+      "settings": {},
+      "variants": [
+        {
+          "id": "a",
+          "settings": {},
+          "body": {
+            "keep": 1
+          }
+        },
+        {
+          "id": "b",
+          "settings": {
+            "apiKey": "ok"
+          },
+          "headers": {
+            "X-Ok": "1"
+          }
+        }
+      ],
+      "package": "@opencode/ai/providers/openai",
+      "body": {
+        "base": true
       }
     }
   },

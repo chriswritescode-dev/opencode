@@ -302,7 +302,9 @@ impl OAuthService<'_> {
             Action::Code(callback) => {
                 let outcome = (callback.as_ref())(code.unwrap_or_default().to_owned()).await;
                 let error = outcome.as_ref().err().cloned();
-                settle(self.service, attempt_id, outcome).await;
+                let service = self.service.clone();
+                let attempt_id = attempt_id.clone();
+                let _ = tokio::spawn(async move { settle(&service, &attempt_id, outcome).await }).await;
                 match error {
                     Some(error) => Err(error.into()),
                     None => Ok(()),

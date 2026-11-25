@@ -96,4 +96,14 @@ A deviation that excepts a recorded cassette from the replay gate also has a `Ca
 - `OR-45-xai-responses-websocket.md`: xAI streams over HTTP only and has no chat route
 - `OR-45-extraction.md`: extraction validates requests less strictly and forwards provider options
 - `OR-45-corpus-normalisation.md`: the corpus normalises transport noise and replay skips some byte comparisons
+- `OR-46-form-datetime.md`: a date-time form field accepts only the shared RFC 3339 parse set
+- `OR-46-integration-projection.md`: integrations sort by byte order and change detection ignores connections and statuses
+- `OR-46-model-default.md`: `model.default` omits `data` when no default model is available
+- `OR-46-model-settings.md`: provider-only keys in a model's own settings survive, and a failed prepare is logged
+- `OR-46-models-dev-decoding.md`: models.dev decoding accepts fewer date forms, keeps explicit nulls and treats an empty aisdk string as present
+- `OR-46-models-dev-fetch.md`: the models.dev fetch timeout applies per attempt and body-read failures are retried
+- `OR-46-native-compaction.md`: native compaction is rejected without checking the resolved route
+- `OR-46-resolver-errors.md`: bridge absence and construction failures report different error kinds and timing
+- `OR-46-route-failures.md`: integration and credential routes answer typed errors where TypeScript dies
+- `OR-46-transform-timing.md`: config observers spawn their catalog reload instead of awaiting it
 - `OR-61-sidecar-environment.md`: plugins run in a sidecar with an allowlisted environment instead of inside the server

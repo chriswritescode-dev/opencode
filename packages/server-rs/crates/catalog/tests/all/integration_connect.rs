@@ -908,6 +908,95 @@ async fn refuses_cancel_while_persisting() {
     assert_eq!(stored[0].label, "Scripted");
 }
 
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn code_completion_settles_after_the_caller_is_dropped() {
+    let (_dir, _database, _bus, credentials, service) = setup();
+    let integration = integration_id("openai");
+    let method_id = IntegrationMethodID("chatgpt".to_owned());
+    let _registration = service
+        .transform({
+            let integration = integration.clone();
+            let method_id = method_id.clone();
+            move |editor| {
+                let method_id = method_id.clone();
+                editor.method_update(scripted(
+                    &integration,
+                    oauth_method("chatgpt", "ChatGPT"),
+                    move |_| {
+                        let method_id = method_id.clone();
+                        Box::pin(async move {
+                            Ok(OAuthAuthorization {
+                                url: "https://example.com/authorize".to_owned(),
+                                instructions: "Paste the code".to_owned(),
+                                expires_at: None,
+                                mode: OAuthMode::Code {
+                                    callback: Box::new(move |_| {
+                                        let method_id = method_id.clone();
+                                        Box::pin(async move { Ok(oauth_value(&method_id, "access")) })
+                                    }),
+                                },
+                            })
+                        })
+                    },
+                    None,
+                ));
+                Ok(())
+            }
+        })
+        .await;
+
+    let attempt = service
+        .oauth()
+        .connect(OAuthConnectInput { integration_id: integration.clone(), method_id, answer: None, label: None })
+        .await
+        .expect("connect the oauth method");
+
+    let gate = Arc::new(AtomicBool::new(false));
+    let entered = Arc::new(AtomicBool::new(false));
+    let rebuild = tokio::spawn({
+        let service = service.clone();
+        let gate = gate.clone();
+        let entered = entered.clone();
+        async move {
+            service
+                .transform(move |_| {
+                    entered.store(true, Ordering::SeqCst);
+                    while !gate.load(Ordering::SeqCst) {
+                        std::thread::sleep(Duration::from_millis(1));
+                    }
+                    Ok(())
+                })
+                .await
+        }
+    });
+    while !entered.load(Ordering::SeqCst) {
+        tokio::time::sleep(Duration::from_millis(1)).await;
+    }
+
+    let completion = tokio::spawn({
+        let service = service.clone();
+        let integration = integration.clone();
+        let attempt_id = attempt.attempt_id.clone();
+        async move { service.oauth().complete(&integration, &attempt_id, Some("1234")).await }
+    });
+    tokio::time::sleep(Duration::from_millis(20)).await;
+    completion.abort();
+    gate.store(true, Ordering::SeqCst);
+    rebuild.await.expect("join the gated transform");
+
+    let mut settled = false;
+    for _ in 0..200 {
+        if matches!(service.oauth().status(&integration, &attempt.attempt_id).await, Ok(AttemptStatus::Complete { .. }))
+        {
+            settled = true;
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    assert!(settled, "the attempt did not settle after the caller was dropped");
+    assert_eq!(credentials.list(&integration).expect("list the credentials").len(), 1);
+}
+
 #[cfg(unix)]
 #[tokio::test(flavor = "multi_thread")]
 async fn runs_command_authentication_and_stores_the_final_output() {
