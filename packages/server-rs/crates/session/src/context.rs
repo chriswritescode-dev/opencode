@@ -40,6 +40,7 @@ pub enum ContextError {
     AgentNotFound { session_id: String, agent_id: String },
     ModelNotSelected { session_id: String },
     ModelUnavailable { provider_id: String, model_id: String },
+    ModelResolution(String),
     Instructions(String),
     History(String),
     Database(String),
@@ -56,6 +57,7 @@ impl fmt::Display for ContextError {
             Self::ModelUnavailable { provider_id, model_id } => {
                 write!(formatter, "Model unavailable: {provider_id}/{model_id}")
             }
+            Self::ModelResolution(message) => write!(formatter, "{message}"),
             Self::Instructions(message) => write!(formatter, "Instructions unavailable: {message}"),
             Self::History(message) => write!(formatter, "Session history unavailable: {message}"),
             Self::Database(message) => write!(formatter, "Session store unavailable: {message}"),
@@ -136,7 +138,8 @@ fn resolve_runtime(catalog: &Catalog, env: &dyn Env, model: &ModelInfo) -> Resul
     let reference = ModelRef { id: model.id.clone(), provider_id: model.provider_id.clone(), variant: None };
     match catalog.runtime_model(&reference, env) {
         Ok(RuntimeModel::Language(runtime)) => Ok(runtime),
-        _ => Err(model_unavailable(model)),
+        Ok(_) => Err(model_unavailable(model)),
+        Err(error) => Err(ContextError::ModelResolution(error.to_string())),
     }
 }
 
