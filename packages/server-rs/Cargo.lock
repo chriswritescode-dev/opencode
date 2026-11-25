@@ -811,6 +811,7 @@ dependencies = [
  "opencode-location",
  "opencode-storage",
  "opencode-util",
+ "percent-encoding",
  "rand",
  "regex-lite",
  "reqwest",

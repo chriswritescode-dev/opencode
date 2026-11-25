@@ -22,6 +22,7 @@ pub mod openai_context_caps;
 pub mod openrouter;
 pub mod poe;
 pub mod registration;
+pub mod snowflake_cortex;
 pub mod support;
 pub mod vllm;
 pub mod xai;

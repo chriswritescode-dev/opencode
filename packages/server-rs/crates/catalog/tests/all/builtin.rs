@@ -566,7 +566,7 @@ async fn builtin_register_inserts_provider_plugins_at_the_provider_slot() {
     )
     .await;
     harness.record(builtin);
-    assert_eq!(harness.registrations.registrations.len(), 56);
+    assert_eq!(harness.registrations.registrations.len(), 59);
 }
 
 pub async fn seed(

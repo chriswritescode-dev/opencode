@@ -26,6 +26,7 @@ pub mod poe;
 pub mod prompt_cache_key;
 pub mod refresh;
 pub mod settings;
+pub mod snowflake_cortex;
 pub mod storage;
 pub mod vllm;
 pub mod xai;
@@ -284,6 +285,7 @@ pub async fn register(
             openrouter::ID => openrouter::register(services, context, builtin).await,
             poe::ID => poe::register(services, context, builtin).await,
             prompt_cache_key::ID => prompt_cache_key::register(services, context, builtin).await,
+            snowflake_cortex::ID => snowflake_cortex::register(services, context, builtin).await,
             vllm::ID => vllm::register(services, context, builtin).await,
             xai::ID => xai::register(services, context, builtin).await,
             zenmux::ID => zenmux::register(services, context, builtin).await,

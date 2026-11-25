@@ -28,6 +28,7 @@ opencode-local.workspace = true
 opencode-location.workspace = true
 opencode-storage.workspace = true
 opencode-util = { workspace = true, features = ["ring"] }
+percent-encoding.workspace = true
 rand.workspace = true
 regex-lite.workspace = true
 reqwest.workspace = true
