@@ -11,6 +11,7 @@ use url::Url;
 const SKILL_CONCURRENCY: usize = 4;
 const FILE_CONCURRENCY: usize = 8;
 const ATTEMPTS: u32 = 3;
+const REQUEST_TIMEOUT: Duration = Duration::from_secs(5);
 
 pub fn is_safe_segment(value: &str) -> bool {
     !value.is_empty()
@@ -326,7 +327,7 @@ async fn fetch(client: &reqwest::Client, url: &str, accept: Option<&str>) -> Opt
         if let Some(accept) = accept {
             request = request.header(reqwest::header::ACCEPT, accept);
         }
-        let retryable = match request.send().await {
+        let retryable = match request.timeout(REQUEST_TIMEOUT).send().await {
             Ok(response) if response.status().is_success() => match response.bytes().await {
                 Ok(body) => return Some(body.to_vec()),
                 Err(error) => {
