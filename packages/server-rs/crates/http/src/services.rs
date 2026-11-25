@@ -29,6 +29,7 @@ use opencode_location::project::{ProjectService, SWEEP_INTERVAL_MS};
 use opencode_location::state::Registration;
 use opencode_storage::Database;
 use opencode_vcs::git_provider::GitProvider;
+use opencode_vcs::hg_provider::HgProvider;
 use opencode_vcs::snapshot::Snapshot;
 use opencode_vcs::vcs::Vcs;
 use opencode_vcs::watcher::{LocationWatcher, LocationWatcherPolicy};
@@ -59,7 +60,7 @@ pub struct LocationServices {
     pub snapshot: Arc<Snapshot>,
     pub vcs: Arc<Vcs>,
     watcher: LocationWatcher,
-    _vcs_registration: Option<Registration>,
+    _vcs_registrations: Vec<Registration>,
     _watcher_observer: opencode_config::observer::ObserverHandle,
 }
 
@@ -106,17 +107,20 @@ impl GlobalServices {
                 .await;
                 snapshot.observe_config(&config).await;
                 let vcs = Vcs::new(bus.clone(), &info);
-                let vcs_registration = if matches!(info.vcs, Some(opencode_location::project::Vcs::Hg { .. })) {
-                    None
-                } else {
+                let is_hg = info.vcs.as_ref().is_some_and(|vcs| vcs.kind() == "hg");
+                let mut vcs_registrations = Vec::new();
+                if !is_hg {
                     let provider = Arc::new(GitProvider::new(
                         boot_git.clone(),
                         info.directory.clone(),
                         info.project.directory.clone(),
                     ));
-                    let registration = vcs.transform(move |editor| editor.add(provider.clone())).await;
-                    Some(registration)
-                };
+                    vcs_registrations.push(vcs.transform(move |editor| editor.add(provider.clone())).await);
+                }
+                if info.vcs.is_none() || is_hg {
+                    let provider = Arc::new(HgProvider::new(info.directory.clone(), info.project.directory.clone()));
+                    vcs_registrations.push(vcs.transform(move |editor| editor.add(provider.clone())).await);
+                }
                 let policy = LocationWatcherPolicy::new();
                 policy.set(watcher_ignore(&config.entries()));
                 let policy_slot = policy.clone();
@@ -133,7 +137,7 @@ impl GlobalServices {
                     snapshot,
                     vcs,
                     watcher,
-                    _vcs_registration: vcs_registration,
+                    _vcs_registrations: vcs_registrations,
                     _watcher_observer: watcher_observer,
                 }))
             })
