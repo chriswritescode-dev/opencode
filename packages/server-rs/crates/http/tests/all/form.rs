@@ -209,6 +209,82 @@ async fn form_routes_work_for_the_global_sentinel() {
 }
 
 #[tokio::test]
+async fn form_answers_of_every_value_kind_round_trip_through_get() {
+    let start = temp_directory("form-kinds-start");
+    let home = temp_directory("form-kinds-home");
+    let state = state();
+    let services = services(&state, &start, &home);
+    let app = app(&state, services);
+
+    let form = json!({
+        "id": "frm_kinds",
+        "title": "Every kind",
+        "metadata": { "nested": { "list": [1, null, true], "text": "value" } },
+        "fields": [
+            { "type": "string", "key": "date", "format": "date" },
+            { "type": "string", "key": "timestamp", "format": "date-time" },
+            { "type": "string", "key": "sentinel" },
+            { "type": "number", "key": "number", "minimum": 0, "maximum": 100, "default": 1.5 },
+            { "type": "integer", "key": "integer", "maximum": 10 },
+            { "type": "boolean", "key": "boolean", "default": false },
+            {
+                "type": "multiselect",
+                "key": "multi",
+                "options": [{ "value": "a", "label": "A" }, { "value": "b", "label": "B" }],
+                "minItems": 1
+            },
+            { "type": "external", "key": "external", "url": "https://example.test/form" },
+            {
+                "type": "string",
+                "key": "string_branch",
+                "when": [{ "key": "date", "op": "eq", "value": "2026-11-25" }]
+            },
+            {
+                "type": "string",
+                "key": "number_branch",
+                "when": [{ "key": "number", "op": "eq", "value": 42.5 }]
+            },
+            {
+                "type": "string",
+                "key": "boolean_branch",
+                "when": [{ "key": "boolean", "op": "eq", "value": true }]
+            }
+        ]
+    });
+    let response = app.handle(json_request("POST", "/api/session/global/form", &form)).await;
+    assert_eq!(response.status(), StatusCode::OK);
+    let created = json(response).await;
+    assert_eq!(created["data"]["metadata"], form["metadata"]);
+    assert_eq!(created["data"]["fields"], form["fields"]);
+
+    let answer = json!({
+        "date": "2026-11-25",
+        "timestamp": "2026-11-25T10:30:00Z",
+        "sentinel": "Infinity",
+        "number": 42.5,
+        "integer": 7,
+        "boolean": true,
+        "multi": ["a", "b"],
+        "external": true,
+        "string_branch": "matched",
+        "number_branch": "matched",
+        "boolean_branch": "matched"
+    });
+    let response = app
+        .handle(json_request("POST", "/api/session/global/form/frm_kinds/reply", &json!({ "answer": answer })))
+        .await;
+    assert_eq!(response.status(), StatusCode::NO_CONTENT);
+
+    let response = app.handle(authorized("GET", "/api/session/global/form/frm_kinds")).await;
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = json(response).await;
+    assert_eq!(body["data"]["metadata"], form["metadata"]);
+    assert_eq!(body["data"]["fields"], form["fields"]);
+    assert_eq!(body["data"]["state"]["status"], "answered");
+    assert_eq!(body["data"]["state"]["answer"], answer);
+}
+
+#[tokio::test]
 async fn form_routes_use_the_session_location() {
     let start = temp_directory("form-session-start");
     let home = temp_directory("form-session-home");
