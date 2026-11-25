@@ -7,8 +7,10 @@ mod debug;
 mod event;
 mod info;
 mod location;
+mod model;
 mod pairing;
 mod project;
+mod provider;
 mod request_site;
 mod router;
 mod serve;
@@ -39,18 +41,33 @@ fn services_at(start_directory: &Path) -> Arc<GlobalServices> {
     services_with(start_directory, temp_directory("services-home"))
 }
 
+fn services_at_with_env(start_directory: &Path, vars: &[(&str, String)]) -> Arc<GlobalServices> {
+    services_with_env(start_directory, temp_directory("services-home"), vars)
+}
+
 fn services_with(start_directory: &Path, home: PathBuf) -> Arc<GlobalServices> {
+    services_with_env(start_directory, home, &[])
+}
+
+fn services_with_env(start_directory: &Path, home: PathBuf, vars: &[(&str, String)]) -> Arc<GlobalServices> {
     let (database, _) = Database::open(DatabaseLocation::Memory, &std::env::temp_dir()).expect("open the database");
     let database = Arc::new(database);
     let bus = Bus::new(database.clone(), BusOptions::default());
     let paths =
         GlobalPaths::from_vars(|name| (name == "HOME").then(|| home.clone().into_os_string())).expect("global paths");
+    let vars = vars.iter().map(|(key, value)| ((*key).to_owned(), OsString::from(value))).collect::<Vec<_>>();
+    let environment = move |name: &str| {
+        if name == "OPENCODE_DISABLE_MODELS_FETCH" {
+            return Some(OsString::from("1"));
+        }
+        vars.iter().find(|(key, _)| key == name).map(|(_, value)| value.clone())
+    };
     Arc::new(GlobalServices::new(
         database,
         bus,
         paths,
         start_directory.to_string_lossy().into_owned(),
-        Arc::new(|name: &str| (name == "OPENCODE_DISABLE_MODELS_FETCH").then(|| OsString::from("1"))),
+        Arc::new(environment),
         Arc::new(Vec::new()),
     ))
 }

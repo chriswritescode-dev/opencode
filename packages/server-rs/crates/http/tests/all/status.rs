@@ -123,6 +123,10 @@ fn sample_request(operation: &str) -> Option<(&'static str, &'static str)> {
         "config.get" => Some(("GET", "/api/config")),
         "config.shells" => Some(("GET", "/api/config/shell")),
         "experimental.config.update" => Some(("PATCH", "/api/experimental/config")),
+        "model.list" => Some(("GET", "/api/model")),
+        "model.default" => Some(("GET", "/api/model/default")),
+        "provider.list" => Some(("GET", "/api/provider")),
+        "provider.get" => Some(("GET", "/api/provider/unknown")),
         _ => None,
     }
 }
@@ -164,5 +168,9 @@ fn implemented_lists_the_ported_operations() {
     assert!(opencode_http::app::IMPLEMENTED.contains(&"config.get"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"config.shells"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"experimental.config.update"));
-    assert_eq!(opencode_http::app::IMPLEMENTED.len(), 15);
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"model.list"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"model.default"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"provider.list"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"provider.get"));
+    assert_eq!(opencode_http::app::IMPLEMENTED.len(), 19);
 }

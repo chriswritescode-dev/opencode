@@ -66,6 +66,12 @@ pub struct LocationServices {
     registrations: Mutex<Option<Builtin>>,
 }
 
+impl LocationServices {
+    pub fn public_ref(&self) -> LocationPublicRef {
+        LocationPublicRef { directory: AbsolutePath(self.info.directory.clone()) }
+    }
+}
+
 impl GlobalServices {
     pub fn new(
         database: Arc<Database>,
@@ -348,6 +354,18 @@ pub fn services_unavailable() -> response::Response {
             tag: ServiceUnavailableErrorTag::ServiceUnavailableError,
             message: "Location services are unavailable".to_owned(),
             service: Some(Some("location".to_owned())),
+        }),
+    )
+}
+
+pub fn service_unavailable(service: &'static str, error: impl std::fmt::Display) -> response::Response {
+    response::bytes(
+        StatusCode::SERVICE_UNAVAILABLE,
+        "application/json",
+        encode_json(&ServiceUnavailableError {
+            tag: ServiceUnavailableErrorTag::ServiceUnavailableError,
+            message: error.to_string(),
+            service: Some(Some(service.to_owned())),
         }),
     )
 }

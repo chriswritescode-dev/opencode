@@ -1,6 +1,6 @@
 # Operation coverage
 
-Implemented: 15 of 178 operations
+Implemented: 19 of 178 operations
 
 | Operation | Method | Path | Stability | Status |
 | --- | --- | --- | --- | --- |
@@ -59,8 +59,8 @@ Implemented: 15 of 178 operations
 | `session.environment` | PUT | `/api/session/{sessionID}/environment` | stable | not implemented (501) |
 | `session.view` | POST | `/api/session/{sessionID}/view` | stable | not implemented (501) |
 | `session.message.list` | GET | `/api/session/{sessionID}/message` | stable | not implemented (501) |
-| `model.list` | GET | `/api/model` | stable | not implemented (501) |
-| `model.default` | GET | `/api/model/default` | stable | not implemented (501) |
+| `model.list` | GET | `/api/model` | stable | implemented |
+| `model.default` | GET | `/api/model/default` | stable | implemented |
 | `experimental.generate.text` | POST | `/api/experimental/generate/text` | experimental | not implemented (501) |
 | `experimental.generate.textLegacy` | POST | `/api/experimental/generate` | experimental | not implemented (501) |
 | `experimental.generate.image` | POST | `/api/experimental/generate/image` | experimental | not implemented (501) |
@@ -69,8 +69,8 @@ Implemented: 15 of 178 operations
 | `experimental.generate.decisions` | POST | `/api/experimental/generate/decisions` | experimental | not implemented (501) |
 | `experimental.voice.models` | GET | `/api/experimental/voice/models` | experimental | not implemented (501) |
 | `experimental.voice.session` | POST | `/api/experimental/voice/session` | experimental | not implemented (501) |
-| `provider.list` | GET | `/api/provider` | stable | not implemented (501) |
-| `provider.get` | GET | `/api/provider/{providerID}` | stable | not implemented (501) |
+| `provider.list` | GET | `/api/provider` | stable | implemented |
+| `provider.get` | GET | `/api/provider/{providerID}` | stable | implemented |
 | `integration.list` | GET | `/api/integration` | stable | not implemented (501) |
 | `integration.get` | GET | `/api/integration/{integrationID}` | stable | not implemented (501) |
 | `experimental.integration.wellknown.add` | POST | `/api/experimental/integration/wellknown` | experimental | not implemented (501) |

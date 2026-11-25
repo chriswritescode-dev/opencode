@@ -32,6 +32,10 @@ pub const IMPLEMENTED: &[&str] = &[
     "config.get",
     "config.shells",
     "experimental.config.update",
+    "model.list",
+    "model.default",
+    "provider.list",
+    "provider.get",
 ];
 
 pub struct Options {
@@ -175,6 +179,22 @@ impl App {
             },
             "experimental.config.update" => match self.location(&raw).await {
                 Ok(lease) => crate::handlers::config::update(&raw, &lease.config).await,
+                Err(response) => response,
+            },
+            "model.list" => match self.location(&raw).await {
+                Ok(lease) => crate::handlers::model::list(&raw, lease.services()).await,
+                Err(response) => response,
+            },
+            "model.default" => match self.location(&raw).await {
+                Ok(lease) => crate::handlers::model::default(&raw, lease.services()).await,
+                Err(response) => response,
+            },
+            "provider.list" => match self.location(&raw).await {
+                Ok(lease) => crate::handlers::provider::list(&raw, lease.services()).await,
+                Err(response) => response,
+            },
+            "provider.get" => match self.location(&raw).await {
+                Ok(lease) => crate::handlers::provider::get(&raw, lease.services()).await,
                 Err(response) => response,
             },
             _ => not_implemented(found.route.identifier),
