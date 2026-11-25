@@ -569,8 +569,28 @@ async fn rejects_callback(params: &[(&str, &str)], message: &str) {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn rejects_invalid_or_denied_callbacks_without_a_state() {
-    rejects_callback(&[("state", "")], "Invalid OAuth state").await;
+async fn ignores_a_callback_with_the_wrong_state_and_still_completes_the_login() {
+    let _guard = PORT.lock().await;
+    let routes = Routes::new();
+    let mut harness = start(Input::new(Vec::new())).await;
+    add_plugin(&mut harness, routes.clone()).await;
+    let login = login(&harness).await;
+
+    let mut stray = login.callback.clone();
+    set_param(&mut stray, "state", "another-login");
+    let response = client().get(stray.as_str()).send().await.expect("fetch the GitLab callback");
+    assert_eq!(response.status(), 400);
+    assert!(response.text().await.expect("the GitLab callback page").contains("Authorization failed"));
+
+    routes.route_json(
+        "POST",
+        GITLAB_COM_TOKEN,
+        json!({ "access_token": "access-token", "refresh_token": "refresh-token", "expires_in": 7200 }),
+    );
+    let response = client().get(login.callback.as_str()).send().await.expect("fetch the GitLab callback");
+    assert_eq!(response.status(), 200);
+    let status = wait_for_status(&harness, &login.attempt).await;
+    assert!(matches!(status, AttemptStatus::Complete { .. }), "got {status:?}");
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

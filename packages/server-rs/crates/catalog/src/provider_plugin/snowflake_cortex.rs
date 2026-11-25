@@ -462,9 +462,10 @@ fn handle(state: &str, responses: &CallbackResponses, request: Request) -> Reply
         return (404, "", String::new());
     }
     let params = parse_query(&request.query);
-    let outcome = if param(&params, "state") != Some(state) {
-        Err(INVALID_STATE.to_owned())
-    } else if let Some(detail) = param(&params, "error_description").filter(|detail| !detail.is_empty()) {
+    if param(&params, "state") != Some(state) {
+        return (400, "text/html", page::error(INVALID_STATE, Some(page_options())));
+    }
+    let outcome = if let Some(detail) = param(&params, "error_description").filter(|detail| !detail.is_empty()) {
         Err(detail.to_owned())
     } else if let Some(detail) = param(&params, "error").filter(|error| !error.is_empty()) {
         Err(detail.to_owned())

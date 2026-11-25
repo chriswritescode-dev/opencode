@@ -186,6 +186,9 @@ async fn handle(state: &str, responses: &CallbackResponses, request: Request) ->
         return Some((404, "", String::new()));
     }
     let params = parse_query(&request.query);
+    if param(&params, "state") != Some(state) {
+        return Some((400, "text/html", page::error("Invalid OAuth state", Some(page_options()))));
+    }
     if let Some(message) = callback_error(&params, state) {
         send(responses, Err(message.clone()));
         return Some((400, "text/html", page::error(&message, Some(page_options()))));
