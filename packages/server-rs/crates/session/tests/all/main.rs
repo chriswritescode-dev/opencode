@@ -1,5 +1,6 @@
 mod agent;
 mod corpus;
+mod instructions;
 mod search_index;
 mod store;
 mod usage;

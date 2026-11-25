@@ -1,4 +1,6 @@
 pub mod agent;
+pub mod instruction_state;
+pub mod instructions;
 pub mod search_build;
 pub mod search_index;
 
