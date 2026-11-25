@@ -201,6 +201,19 @@ async fn serves_review_bases_committed_diffs_and_unavailable_base_errors() {
 }
 
 #[tokio::test]
+async fn rejects_branch_limits_that_are_not_positive_integers() {
+    let start = temp_directory("vcs-branch-limit");
+    let app = ready_app_with_services(services_at(&start));
+
+    for limit in ["0", "-1", "1.5", "NaN", "Infinity"] {
+        let response = app.handle(authorized("GET", &uri_with("/api/vcs/branch", &start, &[("limit", limit)]))).await;
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST, "limit={limit}");
+        let body = body_json(response).await;
+        assert_eq!(body["_tag"], "InvalidRequestError");
+    }
+}
+
+#[tokio::test]
 async fn serves_info_status_and_branches() {
     let start = temp_directory("vcs-info-start");
     let directory = temp_directory("vcs-info-target");
