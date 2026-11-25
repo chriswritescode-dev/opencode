@@ -24,14 +24,14 @@ impl Protocol for MetaMessages {
         model: &Model,
         _context: &ExecutionContext,
     ) -> Result<Value, AiError> {
-        let (projected_tools, projected) = shared::flatten_tool_request(&request.request);
-        let mut body = anthropic_messages::from_request(&projected, model)?;
+        let mut body = anthropic_messages::from_request(&request.request, model)?;
+        let definitions = shared::flatten_tools(&request.request.tools);
         relocate_videos(&mut body);
         if let Some(object) = body.as_object_mut()
             && let Some(Value::Array(tools)) = object.get_mut("tools")
         {
             for (index, tool) in tools.iter_mut().enumerate() {
-                let Some(native) = projected_tools.get(index).and_then(|tool| tool.native.as_ref()) else {
+                let Some(native) = definitions.get(index).and_then(|tool| tool.native.as_ref()) else {
                     continue;
                 };
                 let meta = native.get("meta").and_then(Value::as_object).ok_or_else(native_error)?;

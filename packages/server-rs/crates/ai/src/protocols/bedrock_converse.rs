@@ -70,7 +70,7 @@ struct Options {
 
 pub fn from_request(request: &LlmRequest, model: &Model) -> Result<Value, AiError> {
     let tool_choice = request.tool_choice.as_ref().map(lower_tool_choice).transpose()?.flatten();
-    let (tools, flattened) = shared::flatten_tool_request(request);
+    let definitions = shared::flatten_tools(&request.tools);
     let options = decode_options(request.provider_options.as_ref());
     let max_tokens = if is_nova2(model)
         && (options.effort.as_deref() == Some("high")
@@ -98,18 +98,18 @@ pub fn from_request(request: &LlmRequest, model: &Model) -> Result<Value, AiErro
         );
     }
     let mut breakpoints = bedrock_cache::breakpoints(model);
-    let tool_config = if tools.is_empty() {
+    let tool_config = if definitions.is_empty() {
         None
     } else {
         let mut config = Map::new();
-        config.insert("tools".to_string(), Value::Array(lower_tools(&mut breakpoints, &tools)));
+        config.insert("tools".to_string(), Value::Array(lower_tools(&mut breakpoints, &definitions)));
         if let Some(choice) = tool_choice {
             config.insert("toolChoice".to_string(), choice);
         }
         Some(Value::Object(config))
     };
     let system = lower_system(&mut breakpoints, &request.system);
-    let messages = lower_messages(&flattened, model, &mut breakpoints)?;
+    let messages = lower_messages(request, model, &mut breakpoints)?;
     let inference_config = inference_config(request, max_tokens.as_ref());
     let mut body = Map::new();
     body.insert("modelId".to_string(), Value::String(model.id.clone()));

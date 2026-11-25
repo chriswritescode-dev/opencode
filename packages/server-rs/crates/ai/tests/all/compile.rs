@@ -57,6 +57,29 @@ fn model(route: Route) -> Model {
     }
 }
 
+fn model_with_capabilities(route: Route, capabilities: Value) -> Model {
+    Model { capabilities: Some(capabilities), ..model(route) }
+}
+
+fn test_endpoint() -> Endpoint {
+    Endpoint { base_url: Some("https://api.test/v1".to_string()), path: PathPart::Default, query: StringMap::new() }
+}
+
+fn namespaced_request(prompt: &str, choice: &str) -> LlmRequest {
+    serde_json::from_value(json!({
+        "system": [],
+        "messages": [{ "role": "user", "content": [{ "type": "text", "text": prompt }] }],
+        "tools": [{
+            "type": "namespace",
+            "name": "crm",
+            "description": "CRM tools",
+            "tools": [{ "type": "tool", "name": "lookup", "description": "Look up", "inputSchema": {} }]
+        }],
+        "toolChoice": { "type": "tool", "name": choice }
+    }))
+    .expect("request")
+}
+
 fn route(protocol_id: &str, id: &str, endpoint: Endpoint) -> Route {
     Route {
         id: id.to_string(),
@@ -70,6 +93,127 @@ fn route(protocol_id: &str, id: &str, endpoint: Endpoint) -> Route {
         transport: RouteTransport::Http,
         options: None,
     }
+}
+
+#[test]
+fn flat_protocols_send_a_namespaced_forced_choice_under_its_flattened_name() {
+    for protocol in [
+        "anthropic-messages",
+        "bedrock-converse",
+        "cohere-chat",
+        "gemini",
+        "google-interactions",
+        "mistral-chat",
+        "openai-chat",
+        "open-responses",
+    ] {
+        let compiled = compile(
+            &model(route(protocol, "test", test_endpoint())),
+            namespaced_request("Look up a customer", "crm.lookup"),
+            &StreamOptions::default(),
+            &context(),
+        )
+        .expect("compile");
+        let body = serde_json::to_string(&compiled.body).expect("body");
+        assert!(body.contains("crm_lookup"), "{protocol}: {body}");
+        assert!(!body.contains("crm.lookup"), "{protocol}: {body}");
+    }
+}
+
+#[test]
+fn openai_chat_lowers_a_flattened_forced_choice() {
+    let model = model(route("openai-chat", "test", test_endpoint()));
+    let choose = |name: &str| {
+        serde_json::from_value::<LlmRequest>(json!({
+            "system": [],
+            "messages": [{ "role": "user", "content": [{ "type": "text", "text": "Hi" }] }],
+            "tools": [
+                { "type": "tool", "name": "foo_bar", "description": "Top level", "inputSchema": {} },
+                {
+                    "type": "namespace",
+                    "name": "crm",
+                    "description": "CRM tools",
+                    "tools": [{ "type": "tool", "name": "customer.lookup", "description": "Look up", "inputSchema": {} }]
+                }
+            ],
+            "toolChoice": { "type": "tool", "name": name }
+        }))
+        .expect("request")
+    };
+    let tool_choice = |name: &str| {
+        compile(&model, choose(name), &StreamOptions::default(), &context()).expect("compile").body["tool_choice"]
+            .clone()
+    };
+
+    assert_eq!(
+        tool_choice("crm.customer.lookup"),
+        json!({ "type": "function", "function": { "name": "crm_customer.lookup" } })
+    );
+    assert_eq!(tool_choice("foo.bar"), json!({ "type": "function", "function": { "name": "foo.bar" } }));
+}
+
+#[test]
+fn anthropic_lowers_a_forced_choice_for_a_namespace_a_tool_update_adds() {
+    let model = model_with_capabilities(
+        route("anthropic-messages", "test", test_endpoint()),
+        json!({ "tools": { "updates": ["add", "remove", "replace"] } }),
+    );
+    let request = serde_json::from_value(json!({
+        "system": [],
+        "messages": [
+            { "role": "user", "content": [{ "type": "text", "text": "Hi" }] },
+            {
+                "role": "system",
+                "content": [],
+                "tools": {
+                    "add": [{
+                        "type": "namespace",
+                        "name": "crm",
+                        "description": "CRM tools",
+                        "tools": [{ "type": "tool", "name": "lookup", "description": "Look up", "inputSchema": {} }]
+                    }],
+                    "remove": []
+                }
+            },
+            { "role": "user", "content": [{ "type": "text", "text": "Look up a customer" }] }
+        ],
+        "tools": [],
+        "toolChoice": { "type": "tool", "name": "crm.lookup" }
+    }))
+    .expect("request");
+
+    let body = compile(&model, request, &StreamOptions::default(), &context()).expect("compile").body;
+    assert_eq!(body["tool_choice"], json!({ "type": "tool", "name": "crm_lookup" }));
+}
+
+#[test]
+fn openai_chat_flattens_namespaced_tool_calls_and_choices_in_the_compiled_body() {
+    let request = serde_json::from_value(json!({
+        "system": [],
+        "tools": [{
+            "type": "namespace",
+            "name": "crm",
+            "description": "CRM tools",
+            "tools": [{ "type": "tool", "name": "lookup", "description": "Look up", "inputSchema": {} }]
+        }],
+        "messages": [
+            { "role": "user", "content": [{ "type": "text", "text": "Look up a customer" }] },
+            {
+                "role": "assistant",
+                "content": [{ "type": "tool-call", "id": "call_1", "name": "lookup", "namespace": "crm", "input": {} }]
+            }
+        ],
+        "toolChoice": { "type": "tool", "name": "crm.lookup" }
+    }))
+    .expect("request");
+
+    let body =
+        compile(&model(route("openai-chat", "test", test_endpoint())), request, &StreamOptions::default(), &context())
+            .expect("compile")
+            .body;
+    assert_eq!(body["tools"][0]["function"]["name"], json!("crm_lookup"));
+    assert_eq!(body["messages"][1]["tool_calls"][0]["function"]["name"], json!("crm_lookup"));
+    assert!(!serde_json::to_string(&body).expect("body").contains("crm.lookup"));
 }
 
 struct NoopChannelExecutor;

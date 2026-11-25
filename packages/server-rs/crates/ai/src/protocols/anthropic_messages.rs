@@ -8,9 +8,7 @@ use serde_json::{Map, Number, Value};
 
 use crate::ExecutionContext;
 use crate::prepare::tool_updates::{PlacedGuard, ToolUpdateEncoding, ToolUpdateKind};
-use crate::prepare::{
-    adds_tools, effort_update, flatten_tools, fold_tools, resolve_effort_updates, tools_update, withdrawn_tools,
-};
+use crate::prepare::{adds_tools, effort_update, flatten_tools, resolve_effort_updates, tools_update};
 use crate::protocols::shared;
 use crate::protocols::utils::cache::CacheControl;
 use crate::protocols::utils::claude_model::{self, THINKING_BINDING_BETA};
@@ -23,7 +21,7 @@ use crate::route::protocol::{Frame, Protocol, ProtocolState};
 use crate::schema::{
     AiError, CacheHint, CompactionPart, ContentPart, FinishReason, FinishReasonDetails, LlmEvent, LlmRequest,
     MediaAsset, MediaPart, MediaSource, Message, ProviderMetadata, SystemPart, TextPart, ToolCallPart, ToolChanges,
-    ToolChoice, ToolChoiceType, ToolContent, ToolDefinition, ToolEntry, ToolResultPart, ToolResultValue, Usage,
+    ToolChoice, ToolChoiceType, ToolContent, ToolDefinition, ToolResultPart, ToolResultValue, Usage,
 };
 
 pub const ID: &str = "anthropic-messages";
@@ -183,11 +181,11 @@ pub fn from_request(request: &LlmRequest, model: &Model) -> Result<Value, AiErro
         options.effort.clone().or_else(|| options.output_config.as_ref().and_then(|config| config.effort.clone()));
     let (updated, effort) = resolve_effort_updates(request, current.as_deref());
     let mut breakpoints = CacheControl::new();
-    let flattened = shared::flatten_tool_request(&updated);
-    let tools = if flattened.0.is_empty() {
+    let definitions = shared::flatten_tools(&updated.tools);
+    let tools = if definitions.is_empty() {
         None
     } else {
-        Some(flattened.0.iter().map(|tool| lower_tool(&mut breakpoints, tool)).collect::<Vec<Value>>())
+        Some(definitions.iter().map(|tool| lower_tool(&mut breakpoints, tool)).collect::<Vec<Value>>())
     };
     let declared = tools.is_some() || adds_tools(request);
     let tool_choice = match request.tool_choice.as_ref().filter(|_| declared) {
@@ -195,7 +193,7 @@ pub fn from_request(request: &LlmRequest, model: &Model) -> Result<Value, AiErro
         None => None,
     };
     let system = lower_system(request, &mut breakpoints);
-    let messages = lower_messages(&flattened.1, model, &mut breakpoints)?;
+    let messages = lower_messages(&updated, model, &mut breakpoints)?;
     let output_config = if effort.is_none() && format.is_none() {
         None
     } else {
@@ -719,7 +717,6 @@ fn lower_messages(request: &LlmRequest, model: &Model, breakpoints: &mut CacheCo
     let provider_metadata_key = model.route.provider_metadata_key.clone().unwrap_or_else(|| model.provider.clone());
     let hold_updates = supports_native_system_updates(model);
     let mut held: Vec<&Message> = Vec::new();
-    let mut declared = request.tools.clone();
     for (index, message) in request.messages.iter().enumerate() {
         if let Message::System(_) = message {
             if let Some(update) = effort_update(message) {
@@ -861,7 +858,7 @@ fn lower_messages(request: &LlmRequest, model: &Model, breakpoints: &mut CacheCo
             if content.is_empty() {
                 continue;
             }
-            release_held(&mut messages, &mut held, &mut declared, breakpoints)?;
+            release_held(&mut messages, &mut held, breakpoints)?;
             let mut encoded = Map::new();
             encoded.insert("role".to_string(), Value::String("assistant".to_string()));
             encoded.insert("content".to_string(), Value::Array(content));
@@ -907,14 +904,13 @@ fn lower_messages(request: &LlmRequest, model: &Model, breakpoints: &mut CacheCo
         encoded.insert("content".to_string(), Value::Array(content));
         messages.push(Value::Object(encoded));
     }
-    release_held(&mut messages, &mut held, &mut declared, breakpoints)?;
+    release_held(&mut messages, &mut held, breakpoints)?;
     Ok(messages)
 }
 
 fn release_held(
     messages: &mut Vec<Value>,
     held: &mut Vec<&Message>,
-    declared: &mut Vec<ToolEntry>,
     breakpoints: &mut CacheControl,
 ) -> Result<(), AiError> {
     let native = accepts_native_system_after(messages);
@@ -925,10 +921,7 @@ fn release_held(
                     "{ROUTE} tool updates must follow a user message or tool result"
                 )));
             }
-            let next = fold_tools(declared.clone(), &changes.add, &changes.remove);
-            let withdrawn = withdrawn_tools(declared, &next);
-            let lowered = lower_tools_update(update, changes, &withdrawn, breakpoints)?;
-            *declared = next;
+            let lowered = lower_tools_update(update, changes, breakpoints)?;
             if lowered.get("content").and_then(Value::as_array).is_some_and(|content| !content.is_empty()) {
                 messages.push(lowered);
             }
@@ -1048,7 +1041,6 @@ fn text_block(part: &TextPart, breakpoints: &mut CacheControl) -> Value {
 fn lower_tools_update(
     message: &Message,
     changes: &ToolChanges,
-    withdrawn: &[String],
     breakpoints: &mut CacheControl,
 ) -> Result<Value, AiError> {
     let text = if message_content(message).is_empty() {
@@ -1066,7 +1058,7 @@ fn lower_tools_update(
         encoded.insert("tool".to_string(), Value::Object(definition));
         content.push(Value::Object(encoded));
     }
-    for name in withdrawn {
+    for name in &changes.remove {
         let mut reference = Map::new();
         reference.insert("type".to_string(), Value::String("tool_reference".to_string()));
         reference.insert("name".to_string(), Value::String(name.clone()));

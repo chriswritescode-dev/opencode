@@ -2,12 +2,13 @@ use std::collections::HashSet;
 
 use serde_json::{Map, Number, Value};
 
-use crate::prepare::tool_updates::flatten_tools;
+pub use crate::prepare::tool_updates::flatten_tools;
+use crate::prepare::tool_updates::{fold_tools, tools_update, withdrawn_tools};
 use crate::route::model::Model;
 use crate::schema::{
     AiError, AiErrorReason, AssistantMessage, CacheMode, CachePolicy, ContentPart, LlmRequest, MediaAsset, MediaPart,
-    MediaSource, Message, ProviderMetadata, TextPart, ToolCallPart, ToolContent, ToolDefinition, ToolMessage,
-    ToolResultPart, ToolResultValue,
+    MediaSource, Message, ProviderMetadata, SystemMessage, TextPart, ToolCallPart, ToolChanges, ToolChoice,
+    ToolChoiceType, ToolContent, ToolEntry, ToolMessage, ToolResultPart, ToolResultValue,
 };
 
 pub const OPENAI_PROMPT_CACHE_KEY_MAX_LENGTH: usize = 64;
@@ -142,13 +143,39 @@ pub fn tool_result_text(part: &ToolResultPart) -> String {
     }
 }
 
-pub fn flatten_tool_request(request: &LlmRequest) -> (Vec<ToolDefinition>, LlmRequest) {
-    let tools = flatten_tools(&request.tools);
-    let declared = tools.iter().map(|tool| tool.name.clone()).collect::<HashSet<String>>();
+pub fn flatten_request(request: &LlmRequest) -> LlmRequest {
+    let all = request
+        .tools
+        .iter()
+        .cloned()
+        .chain(
+            request
+                .messages
+                .iter()
+                .flat_map(|message| tools_update(message).into_iter().flat_map(|changes| changes.add.iter().cloned())),
+        )
+        .collect::<Vec<ToolEntry>>();
+    let declared = flatten_tools(&all).into_iter().map(|tool| tool.name).collect::<HashSet<String>>();
+    let mut tools = request.tools.clone();
     let messages = request
         .messages
         .iter()
         .map(|message| match message {
+            Message::System(system) => {
+                let Some(changes) = system.tools.as_ref() else {
+                    return message.clone();
+                };
+                let next = fold_tools(tools.clone(), &changes.add, &changes.remove);
+                let remove = withdrawn_tools(&tools, &next);
+                tools = next;
+                Message::System(SystemMessage {
+                    tools: Some(ToolChanges {
+                        add: flatten_tools(&changes.add).into_iter().map(ToolEntry::Tool).collect(),
+                        remove,
+                    }),
+                    ..system.clone()
+                })
+            }
             Message::Assistant(message) => {
                 let content = message.content.iter().map(|part| match part {
                     ContentPart::ToolCall(part) => ContentPart::ToolCall(flatten_tool_call(part, &declared)),
@@ -165,11 +192,56 @@ pub fn flatten_tool_request(request: &LlmRequest) -> (Vec<ToolDefinition>, LlmRe
                 });
                 Message::Tool(ToolMessage { content: content.collect(), ..message.clone() })
             }
-            message => message.clone(),
+            Message::User(message) => Message::User(message.clone()),
         })
         .collect();
-    let request = LlmRequest { messages, ..request.clone() };
-    (tools, request)
+    LlmRequest {
+        tools: flatten_tools(&request.tools).into_iter().map(ToolEntry::Tool).collect(),
+        messages,
+        tool_choice: flatten_tool_choice(request.tool_choice.clone(), &all, &declared),
+        ..request.clone()
+    }
+}
+
+fn flatten_tool_choice(
+    choice: Option<ToolChoice>,
+    tools: &[ToolEntry],
+    declared: &HashSet<String>,
+) -> Option<ToolChoice> {
+    let choice = choice?;
+    if choice.r#type != ToolChoiceType::Tool {
+        return Some(choice);
+    }
+    let Some(name) = choice.name.as_ref() else {
+        return Some(choice);
+    };
+    if declared.contains(name) {
+        return Some(choice);
+    }
+    let Some(flattened) = namespaced_paths(tools, &[]).into_iter().find(|(path, _)| path == name).map(|(_, name)| name)
+    else {
+        return Some(choice);
+    };
+    Some(ToolChoice { name: Some(flattened), ..choice })
+}
+
+fn namespaced_paths(tools: &[ToolEntry], path: &[String]) -> Vec<(String, String)> {
+    tools
+        .iter()
+        .flat_map(|tool| match tool {
+            ToolEntry::Namespace(namespace) => {
+                let mut nested = path.to_vec();
+                nested.push(namespace.name.clone());
+                namespaced_paths(&namespace.tools, &nested)
+            }
+            ToolEntry::Tool(tool) if !path.is_empty() => {
+                let mut full = path.to_vec();
+                full.push(tool.name.clone());
+                vec![(full.join("."), full.join("_"))]
+            }
+            ToolEntry::Tool(_) => Vec::new(),
+        })
+        .collect()
 }
 
 pub fn content_filter_category(sources: &[&Value]) -> Option<String> {

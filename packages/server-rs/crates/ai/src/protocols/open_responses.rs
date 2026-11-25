@@ -124,7 +124,7 @@ pub fn initial(request: &ResolvedRequest, context: &ExecutionContext, adapter: &
         tools: tool_stream::empty(),
         tool_keys: BTreeMap::new(),
         next_tool_key: 0,
-        custom: openai_freeform::tools(&request.request),
+        custom: openai_freeform::tools(&request.request, &request.model),
         has_function_call: false,
         lifecycle: lifecycle::initial(),
         output_items: BTreeMap::new(),
@@ -154,8 +154,8 @@ pub fn lower_custom_tool(tool: &ToolDefinition, custom: &Custom) -> Value {
     let mut object = Map::new();
     object.insert("type".to_string(), Value::String("custom".to_string()));
     object.insert("name".to_string(), Value::String(tool.name.clone()));
-    object.insert("description".to_string(), Value::String(tool.description.clone()));
-    let format = match openai_freeform::grammar(&custom.format) {
+    object.insert("description".to_string(), Value::String(openai_freeform::description(tool, custom)));
+    let format = match openai_freeform::grammar(custom) {
         Some(Value::Object(grammar)) => {
             let mut format = Map::new();
             format.insert("type".to_string(), Value::String("grammar".to_string()));
@@ -359,15 +359,15 @@ pub fn from_request_with_adapter(
     adapter: &ProviderAdapter,
     lower_tool_changes: Option<ToolChangesLowering<'_>>,
 ) -> Result<Value, AiError> {
-    let (tools, projected) = shared::flatten_tool_request(request);
+    let definitions = shared::flatten_tools(&request.tools);
     let options = open_responses_options::resolve(request);
-    let custom = openai_freeform::tools(request);
-    let mut body = lower_conversation(&projected, model, adapter, lower_tool_changes)?;
+    let custom = openai_freeform::tools(request, model);
+    let mut body = lower_conversation(request, model, adapter, lower_tool_changes)?;
     for (key, value) in lower_generation(request, model, &options) {
         body.insert(key, value);
     }
-    if !tools.is_empty() {
-        body.insert("tools".to_string(), Value::Array(lower_tools(&tools, adapter, &custom)?));
+    if !definitions.is_empty() {
+        body.insert("tools".to_string(), Value::Array(lower_tools(&definitions, adapter, &custom)?));
     }
     if let Some(choice) = allowed_tool_choice(&options, &custom) {
         body.insert("tool_choice".to_string(), choice);
@@ -407,7 +407,7 @@ pub fn lower_messages(
 ) -> Result<Vec<Value>, AiError> {
     let mut input: Vec<Value> = Vec::new();
     let provider_metadata_key = metadata_key(model);
-    let custom = openai_freeform::tools(request);
+    let custom = openai_freeform::tools(request, model);
     for message in &request.messages {
         let effort = effort_update(message);
         let changes = tools_update(message);
@@ -761,7 +761,9 @@ fn lower_tool_call(part: &crate::schema::ToolCallPart, provider_metadata_key: &s
         }
         object.insert("call_id".to_string(), Value::String(part.id.clone()));
         object.insert("name".to_string(), Value::String(part.name.clone()));
-        object.insert("input".to_string(), Value::String(openai_freeform::to_raw(custom, &part.input)));
+        let header = shared::provider_metadata_value(part.provider_metadata.as_ref(), provider_metadata_key)
+            .and_then(|metadata| metadata.get("header"));
+        object.insert("input".to_string(), Value::String(openai_freeform::to_raw(custom, &part.input, header)));
         return Value::Object(object);
     }
     object.insert("type".to_string(), Value::String("function_call".to_string()));
@@ -1404,29 +1406,12 @@ fn on_output_item_done(state: &mut State, item: &Value) -> Result<Vec<LlmEvent>,
         };
         let custom = kind == "custom_tool_call";
         let metadata = provider_metadata(&state.provider_metadata_key, openai_freeform::metadata(&item_id, custom));
-        let final_custom = if custom { state.custom.get(name).cloned() } else { None };
-        let raw = raw_input(item);
-        let input = if custom {
-            Some(openai_freeform::from_raw(final_custom.as_ref(), raw))
-        } else {
-            field(item, "arguments").map(str::to_string)
-        };
         let key = state.tool_key(&item_id);
         let registered = state.tools.contains_key(&key);
-        let mut closed_events = Vec::new();
-        let mut tools = std::mem::take(&mut state.tools);
-        if custom {
-            let closed = openai_freeform::close(
-                tools,
-                [key],
-                Some(openai_freeform::Final { custom: final_custom.as_ref(), raw }),
-            );
-            tools = closed.tools;
-            closed_events = closed.events;
-        }
+        let mut started = std::mem::take(&mut state.tools);
         if !registered {
             tool_stream::start(
-                &mut tools,
+                &mut started,
                 key,
                 tool_stream::PendingTool {
                     id: call_id.to_string(),
@@ -1438,7 +1423,20 @@ fn on_output_item_done(state: &mut State, item: &Value) -> Result<Vec<LlmEvent>,
                 },
             );
         }
-        let mut finished = closed_events;
+        // A custom call's final raw text sets its input, so it finishes without an override.
+        let (mut tools, mut finished) = if custom {
+            let closed = openai_freeform::close(
+                started,
+                [key],
+                &state.custom,
+                &state.provider_metadata_key,
+                Some(raw_input(item)),
+            );
+            (closed.tools, closed.events)
+        } else {
+            (started, Vec::new())
+        };
+        let input = if custom { None } else { field(item, "arguments").map(str::to_string) };
         match tool_stream::finish(&state.id, &mut tools, key, input.as_deref()) {
             Ok(result) => {
                 finished.extend(result.events);
@@ -1573,7 +1571,27 @@ fn on_response_finish(state: &mut State, event: &Event) -> Result<Vec<LlmEvent>,
             }
             events.extend(on_output_item_done(state, &resolved)?);
         }
-        let mut tools = std::mem::take(&mut state.tools);
+        let keys = state
+            .tools
+            .iter()
+            .filter(|(_, tool)| {
+                tool.provider_metadata
+                    .as_ref()
+                    .and_then(|metadata| metadata.get(&state.provider_metadata_key))
+                    .and_then(|metadata| metadata.get("custom"))
+                    == Some(&Value::Bool(true))
+            })
+            .map(|(key, _)| *key)
+            .collect::<Vec<i64>>();
+        let open = openai_freeform::close(
+            std::mem::take(&mut state.tools),
+            keys,
+            &state.custom,
+            &state.provider_metadata_key,
+            None,
+        );
+        events.extend(open.events);
+        let mut tools = open.tools;
         let pending = tool_stream::finish_all(&state.id, &mut tools)?;
         state.tools = tools;
         state.has_function_call = state.has_function_call

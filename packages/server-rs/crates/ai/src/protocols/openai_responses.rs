@@ -69,6 +69,10 @@ impl Protocol for OpenAiResponses {
         ID
     }
 
+    fn namespaces(&self) -> bool {
+        true
+    }
+
     fn build_body(
         &self,
         request: &ResolvedRequest,
@@ -177,7 +181,7 @@ pub fn from_request(request: &LlmRequest, model: &Model) -> Result<Value, AiErro
     let mut options_with_effort = options.clone();
     options_with_effort.reasoning_effort = effort;
     let generation = open_responses::lower_generation(request, model, &options_with_effort);
-    let custom = openai_freeform::tools(request);
+    let custom = openai_freeform::tools(request, model);
     let layout = lower_tool_layout(request, model, &custom)?;
     let mut declared = !layout.head.is_empty();
     let mut unavailable: Vec<String> = Vec::new();

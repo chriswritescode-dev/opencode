@@ -1,5 +1,9 @@
 use std::sync::Arc;
 
+use opencode_ai::ExecutionContext;
+use opencode_ai::MapEnv;
+use opencode_ai::clock::FixedClock;
+use opencode_ai::id::SequenceIds;
 use opencode_ai::protocols::utils::image_sizing::{Limits, Shape, Size, fit, nearest};
 use opencode_ai::protocols::utils::{
     cache, gemini_generate_content, lifecycle, mistral_tool_id, open_responses_options, partial_json, tool_stream,
@@ -7,6 +11,7 @@ use opencode_ai::protocols::utils::{
 use opencode_ai::protocols::xai_responses;
 use opencode_ai::protocols::xai_responses::XaiResponses;
 use opencode_ai::route::auth::Auth;
+use opencode_ai::route::compile::{StreamOptions, compile};
 use opencode_ai::route::endpoint::Endpoint;
 use opencode_ai::route::model::{Model, Route, RouteTransport};
 use opencode_ai::schema::{
@@ -453,6 +458,103 @@ fn xai_compact_request_uses_the_xai_adapter() {
         .expect("xAI media lowering");
     assert_eq!(part["file_url"], json!("https://cdn.test/clip.mp4"));
     assert_eq!(part["filename"], json!("clip.mp4"));
+}
+
+#[test]
+fn xai_compaction_sends_namespaced_tools_and_past_calls_under_the_names_every_step_uses() {
+    let model = Model {
+        id: "grok-4.6".to_string(),
+        provider: "xai".to_string(),
+        options: None,
+        route: Route {
+            id: "xai-responses".to_string(),
+            protocol: Arc::new(XaiResponses),
+            provider_metadata_key: Some("xai".to_string()),
+            endpoint: Endpoint::new("https://api.x.ai/v1".to_string(), "/responses"),
+            auth: Auth::None,
+            headers: None,
+            body: None,
+            channel: None,
+            transport: RouteTransport::Http,
+            options: None,
+        },
+        compatibility: None,
+        capabilities: None,
+    };
+    let request: LlmRequest = serde_json::from_value(json!({
+        "system": [],
+        "tools": [{
+            "type": "namespace",
+            "name": "crm",
+            "description": "CRM tools",
+            "tools": [{
+                "type": "tool",
+                "name": "lookup",
+                "description": "Look up",
+                "inputSchema": {}
+            }]
+        }],
+        "messages": [
+            {
+                "role": "user",
+                "content": [{ "type": "text", "text": "Look up Ada" }]
+            },
+            {
+                "role": "assistant",
+                "content": [{
+                    "type": "tool-call",
+                    "id": "call_1",
+                    "name": "lookup",
+                    "namespace": "crm",
+                    "input": {}
+                }]
+            },
+            {
+                "role": "tool",
+                "content": [{
+                    "type": "tool-result",
+                    "id": "call_1",
+                    "name": "lookup",
+                    "namespace": "crm",
+                    "result": { "type": "json", "value": { "output": "found" } }
+                }]
+            }
+        ]
+    }))
+    .expect("request");
+    let names = |body: &Value| {
+        let calls = body["input"]
+            .as_array()
+            .expect("input")
+            .iter()
+            .filter(|item| item["type"].as_str() == Some("function_call"))
+            .map(|item| item["name"].as_str().expect("call name").to_string())
+            .collect::<Vec<_>>();
+        let tools = body["tools"]
+            .as_array()
+            .expect("tools")
+            .iter()
+            .map(|tool| tool["name"].as_str().expect("tool name").to_string())
+            .collect::<Vec<_>>();
+        (calls, tools)
+    };
+    let context =
+        ExecutionContext::new(Arc::new(FixedClock::new(0)), Arc::new(SequenceIds::new()), Arc::new(MapEnv::default()));
+    let compiled = compile(&model, request.clone(), &StreamOptions::default(), &context).expect("compiled step");
+    let step = names(&compiled.body);
+    assert_eq!(step.0, vec!["crm_lookup"]);
+    assert_eq!(step.1, vec!["crm_lookup"]);
+
+    let compact = xai_responses::compact_request(&request, &model).expect("compact request");
+    assert_eq!(names(&compact.body), step);
+
+    for body in [&compiled.body, &compact.body] {
+        let named =
+            body["input"].as_array().into_iter().flatten().chain(body["tools"].as_array().into_iter().flatten());
+        for item in named {
+            assert_ne!(item["name"].as_str(), Some("crm.lookup"), "dotted tool name in {body}");
+        }
+    }
 }
 
 #[test]

@@ -434,14 +434,14 @@ fn generation_config(request: &LlmRequest, options: &Options) -> Option<Value> {
 }
 
 fn from_request(request: &LlmRequest, model: &Model) -> Result<Value, AiError> {
-    let flattened = shared::flatten_tool_request(request);
-    let has_tools = !flattened.0.is_empty();
+    let definitions = shared::flatten_tools(&request.tools);
+    let has_tools = !definitions.is_empty();
     let options = decode_options(request.provider_options.as_ref());
     let mut body = Map::new();
     if let Some(cached_content) = options.cached_content.clone() {
         body.insert("cachedContent".to_string(), Value::String(cached_content));
     }
-    body.insert("contents".to_string(), Value::Array(lower_messages(&flattened.1, model)?));
+    body.insert("contents".to_string(), Value::Array(lower_messages(request, model)?));
     if let Some(safety_settings) = options.safety_settings.clone() {
         body.insert("safetySettings".to_string(), Value::Array(safety_settings));
     }
@@ -464,7 +464,7 @@ fn from_request(request: &LlmRequest, model: &Model) -> Result<Value, AiError> {
     if has_tools {
         let mut declarations = Map::new();
         declarations
-            .insert("functionDeclarations".to_string(), Value::Array(flattened.0.iter().map(lower_tool).collect()));
+            .insert("functionDeclarations".to_string(), Value::Array(definitions.iter().map(lower_tool).collect()));
         body.insert("tools".to_string(), Value::Array(vec![Value::Object(declarations)]));
     }
     if has_tools && let Some(tool_choice) = request.tool_choice.as_ref() {

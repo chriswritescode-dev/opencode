@@ -33,6 +33,8 @@ pub fn compile(
 ) -> Result<Compiled, AiError> {
     reject_local_files(&request)?;
     let request = crate::prepare::prepare(model, request);
+    let request =
+        if model.route.protocol.namespaces() { request } else { crate::protocols::shared::flatten_request(&request) };
     let mut resolved = ResolvedRequest { request, model: model.clone() };
     let mut body = resolved.model.route.protocol.build_body(&resolved, &resolved.model, context)?;
     if let Some(transform) = resolved.model.route.body.clone() {
