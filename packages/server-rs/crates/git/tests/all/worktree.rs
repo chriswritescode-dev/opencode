@@ -55,3 +55,19 @@ async fn removing_a_dirty_worktree_requires_force() {
     git.worktree_remove(&repository, text(&linked), true).await.expect("forces the removal");
     assert_eq!(git.worktree_list(&repository).await.expect("lists the worktrees").len(), 1);
 }
+
+#[tokio::test]
+async fn remove_treats_an_option_like_directory_as_a_path() {
+    let temp = TempDir::new();
+    let root = std::fs::canonicalize(temp.path()).expect("canonicalizes the temporary directory");
+    let main = root.join("main");
+    let git = fixture::handle();
+    fixture::init_git(&git, &main).await;
+    fixture::commit_allow_empty(&git, &main, "root").await;
+    let repository = git.discover(text(&main)).await.expect("discovers the repository");
+
+    let error = git.worktree_remove(&repository, "--force", false).await.expect_err("rejects the directory");
+
+    assert_eq!(error.operation, WorktreeOperation::Remove);
+    assert!(error.message.contains("'--force' is not a working tree"), "{}", error.message);
+}

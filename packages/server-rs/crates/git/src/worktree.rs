@@ -61,7 +61,7 @@ impl Git {
         if force {
             args.push("--force");
         }
-        args.push(directory);
+        args.extend(["--", directory]);
         self.worktree_run(WorktreeOperation::Remove, &repository.common_directory, &args, directory).await
     }
 }
