@@ -10,6 +10,7 @@ mod info;
 mod location;
 mod pairing;
 mod permission;
+mod permission_oracle;
 mod project;
 mod registry;
 mod request_site;
