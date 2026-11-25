@@ -127,6 +127,7 @@ struct State {
     bus: Arc<Bus>,
     runner: Arc<Runner>,
     active: Mutex<HashMap<String, Arc<Active>>>,
+    shutting_down: AtomicBool,
 }
 
 struct Active {
@@ -145,7 +146,14 @@ enum Terminal {
 
 impl Execution {
     pub fn new(bus: Arc<Bus>, runner: Arc<Runner>) -> Arc<Self> {
-        Arc::new(Self { state: Arc::new(State { bus, runner, active: Mutex::new(HashMap::new()) }) })
+        Arc::new(Self {
+            state: Arc::new(State {
+                bus,
+                runner,
+                active: Mutex::new(HashMap::new()),
+                shutting_down: AtomicBool::new(false),
+            }),
+        })
     }
 }
 
@@ -173,6 +181,9 @@ impl SessionExecution for Execution {
 
 impl State {
     fn start(self: &Arc<Self>, session_id: &str) {
+        if self.shutting_down.load(Ordering::SeqCst) {
+            return;
+        }
         let active = {
             let mut map = self.active.lock().expect("the execution map lock is never poisoned");
             match map.entry(session_id.to_owned()) {
@@ -269,7 +280,9 @@ impl State {
         }
         let successor = {
             let mut map = self.active.lock().expect("the execution map lock is never poisoned");
-            let successor = active.pending.swap(false, Ordering::SeqCst).then(|| Arc::new(Active::new()));
+            let successor = (active.pending.swap(false, Ordering::SeqCst)
+                && !self.shutting_down.load(Ordering::SeqCst))
+            .then(|| Arc::new(Active::new()));
             if map.get(session_id).is_some_and(|current| Arc::ptr_eq(current, active)) {
                 map.remove(session_id);
             }
@@ -338,6 +351,7 @@ impl State {
     }
 
     async fn shutdown(&self) {
+        self.shutting_down.store(true, Ordering::SeqCst);
         loop {
             let ids = self.active();
             if ids.is_empty() {
