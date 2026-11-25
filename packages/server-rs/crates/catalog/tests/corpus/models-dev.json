@@ -1,0 +1,5425 @@
+{
+  "fixture.models-dev": {
+    "call": "decode",
+    "input": {
+      "acme": {
+        "id": "acme",
+        "name": "Acme",
+        "env": [
+          "ACME_API_KEY"
+        ],
+        "models": {
+          "acme-1": {
+            "id": "acme-1",
+            "type": "chat",
+            "name": "Acme One",
+            "release_date": "2026-01-01",
+            "modalities": {
+              "input": [
+                "text"
+              ],
+              "output": [
+                "text"
+              ]
+            },
+            "capabilities": {
+              "tools": {
+                "supported": true
+              },
+              "reasoning": {
+                "supported": true,
+                "effort": [
+                  "low",
+                  "high"
+                ]
+              }
+            },
+            "limit": {
+              "context": 128000,
+              "output": 8192
+            },
+            "recommended_api": "interactions",
+            "api": {
+              "generate-content": {
+                "base_url": "https://api.acme.test/v1",
+                "sdk": {
+                  "opencodeai": "@opencode/ai/providers/google"
+                }
+              },
+              "interactions": {
+                "base_url": "https://api.acme.test/v1beta",
+                "sdk": {
+                  "opencodeai": "@opencode/ai/providers/google/interactions"
+                }
+              }
+            }
+          }
+        }
+      },
+      "local": {
+        "id": "local",
+        "name": "Local",
+        "env": [],
+        "models": {}
+      },
+      "opencode": {
+        "id": "opencode",
+        "name": "OpenCode",
+        "env": [],
+        "models": {
+          "gpt-5.5": {
+            "id": "gpt-5.5",
+            "type": "chat",
+            "name": "GPT-5.5",
+            "release_date": "2026-04-23",
+            "modalities": {
+              "input": [
+                "text"
+              ],
+              "output": [
+                "text"
+              ]
+            },
+            "capabilities": {
+              "tools": {
+                "supported": true
+              },
+              "reasoning": {
+                "supported": true,
+                "effort": [
+                  "none",
+                  "low",
+                  "medium",
+                  "high",
+                  "xhigh"
+                ]
+              },
+              "temperature": false
+            },
+            "limit": {
+              "context": 400000,
+              "output": 128000
+            },
+            "api": {
+              "responses": {
+                "base_url": "https://console.opencode.ai/inference/openai/v1",
+                "sdk": {
+                  "aisdk": "@ai-sdk/openai"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "expected": {
+      "false": [
+        {
+          "info": {
+            "id": "acme",
+            "name": "Acme",
+            "activation": "auto",
+            "package": "@opencode/ai/providers/google",
+            "settings": {
+              "baseURL": "https://api.acme.test/v1"
+            }
+          },
+          "models": [
+            {
+              "id": "acme-1",
+              "modelID": "acme-1",
+              "providerID": "acme",
+              "type": "chat",
+              "name": "Acme One",
+              "capabilities": {
+                "tools": true,
+                "input": [
+                  "text"
+                ],
+                "output": [
+                  "text"
+                ]
+              },
+              "variants": [
+                {
+                  "id": "low",
+                  "settings": {
+                    "thinkingConfig": {
+                      "includeThoughts": true,
+                      "thinkingLevel": "low"
+                    }
+                  }
+                },
+                {
+                  "id": "high",
+                  "settings": {
+                    "thinkingConfig": {
+                      "includeThoughts": true,
+                      "thinkingLevel": "high"
+                    }
+                  }
+                }
+              ],
+              "time": {
+                "released": 1767225600000
+              },
+              "cost": [
+                {
+                  "input": 0,
+                  "output": 0,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  }
+                }
+              ],
+              "status": "active",
+              "enabled": true,
+              "limit": {
+                "context": 128000,
+                "output": 8192
+              }
+            }
+          ],
+          "environment": [
+            "ACME_API_KEY"
+          ]
+        },
+        {
+          "info": {
+            "id": "opencode",
+            "name": "OpenCode",
+            "activation": "auto",
+            "package": "@opencode/ai/providers/openai",
+            "settings": {
+              "baseURL": "https://console.opencode.ai/inference/openai/v1"
+            }
+          },
+          "models": [
+            {
+              "id": "gpt-5.5",
+              "modelID": "gpt-5.5",
+              "providerID": "opencode",
+              "type": "chat",
+              "name": "GPT-5.5",
+              "capabilities": {
+                "tools": true,
+                "input": [
+                  "text"
+                ],
+                "output": [
+                  "text"
+                ],
+                "temperature": false
+              },
+              "variants": [
+                {
+                  "id": "none",
+                  "settings": {
+                    "reasoningEffort": "none",
+                    "reasoningSummary": "auto",
+                    "include": [
+                      "reasoning.encrypted_content"
+                    ]
+                  }
+                },
+                {
+                  "id": "low",
+                  "settings": {
+                    "reasoningEffort": "low",
+                    "reasoningSummary": "auto",
+                    "include": [
+                      "reasoning.encrypted_content"
+                    ]
+                  }
+                },
+                {
+                  "id": "medium",
+                  "settings": {
+                    "reasoningEffort": "medium",
+                    "reasoningSummary": "auto",
+                    "include": [
+                      "reasoning.encrypted_content"
+                    ]
+                  }
+                },
+                {
+                  "id": "high",
+                  "settings": {
+                    "reasoningEffort": "high",
+                    "reasoningSummary": "auto",
+                    "include": [
+                      "reasoning.encrypted_content"
+                    ]
+                  }
+                },
+                {
+                  "id": "xhigh",
+                  "settings": {
+                    "reasoningEffort": "xhigh",
+                    "reasoningSummary": "auto",
+                    "include": [
+                      "reasoning.encrypted_content"
+                    ]
+                  }
+                }
+              ],
+              "time": {
+                "released": 1776902400000
+              },
+              "cost": [
+                {
+                  "input": 0,
+                  "output": 0,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  }
+                }
+              ],
+              "status": "active",
+              "enabled": true,
+              "limit": {
+                "context": 400000,
+                "output": 128000
+              }
+            }
+          ],
+          "environment": []
+        }
+      ],
+      "true": [
+        {
+          "info": {
+            "id": "acme",
+            "name": "Acme",
+            "activation": "auto",
+            "package": "@opencode/ai/providers/google/interactions",
+            "settings": {
+              "baseURL": "https://api.acme.test/v1beta"
+            }
+          },
+          "models": [
+            {
+              "id": "acme-1",
+              "modelID": "acme-1",
+              "providerID": "acme",
+              "type": "chat",
+              "name": "Acme One",
+              "capabilities": {
+                "tools": true,
+                "input": [
+                  "text"
+                ],
+                "output": [
+                  "text"
+                ]
+              },
+              "variants": [
+                {
+                  "id": "low",
+                  "settings": {
+                    "thinkingLevel": "low",
+                    "thinkingSummaries": "auto"
+                  }
+                },
+                {
+                  "id": "high",
+                  "settings": {
+                    "thinkingLevel": "high",
+                    "thinkingSummaries": "auto"
+                  }
+                }
+              ],
+              "time": {
+                "released": 1767225600000
+              },
+              "cost": [
+                {
+                  "input": 0,
+                  "output": 0,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  }
+                }
+              ],
+              "status": "active",
+              "enabled": true,
+              "limit": {
+                "context": 128000,
+                "output": 8192
+              }
+            }
+          ],
+          "environment": [
+            "ACME_API_KEY"
+          ]
+        },
+        {
+          "info": {
+            "id": "opencode",
+            "name": "OpenCode",
+            "activation": "auto",
+            "package": "@opencode/ai/providers/openai",
+            "settings": {
+              "baseURL": "https://console.opencode.ai/inference/openai/v1"
+            }
+          },
+          "models": [
+            {
+              "id": "gpt-5.5",
+              "modelID": "gpt-5.5",
+              "providerID": "opencode",
+              "type": "chat",
+              "name": "GPT-5.5",
+              "capabilities": {
+                "tools": true,
+                "input": [
+                  "text"
+                ],
+                "output": [
+                  "text"
+                ],
+                "temperature": false
+              },
+              "variants": [
+                {
+                  "id": "none",
+                  "settings": {
+                    "reasoningEffort": "none",
+                    "reasoningSummary": "auto",
+                    "include": [
+                      "reasoning.encrypted_content"
+                    ]
+                  }
+                },
+                {
+                  "id": "low",
+                  "settings": {
+                    "reasoningEffort": "low",
+                    "reasoningSummary": "auto",
+                    "include": [
+                      "reasoning.encrypted_content"
+                    ]
+                  }
+                },
+                {
+                  "id": "medium",
+                  "settings": {
+                    "reasoningEffort": "medium",
+                    "reasoningSummary": "auto",
+                    "include": [
+                      "reasoning.encrypted_content"
+                    ]
+                  }
+                },
+                {
+                  "id": "high",
+                  "settings": {
+                    "reasoningEffort": "high",
+                    "reasoningSummary": "auto",
+                    "include": [
+                      "reasoning.encrypted_content"
+                    ]
+                  }
+                },
+                {
+                  "id": "xhigh",
+                  "settings": {
+                    "reasoningEffort": "xhigh",
+                    "reasoningSummary": "auto",
+                    "include": [
+                      "reasoning.encrypted_content"
+                    ]
+                  }
+                }
+              ],
+              "time": {
+                "released": 1776902400000
+              },
+              "cost": [
+                {
+                  "input": 0,
+                  "output": 0,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  }
+                }
+              ],
+              "status": "active",
+              "enabled": true,
+              "limit": {
+                "context": 400000,
+                "output": 128000
+              }
+            }
+          ],
+          "environment": []
+        }
+      ]
+    }
+  },
+  "fixture.models-dev-reasoning": {
+    "call": "decode",
+    "input": {
+      "openai": {
+        "id": "openai",
+        "name": "OpenAI",
+        "env": [
+          "OPENAI_API_KEY"
+        ],
+        "models": {
+          "gpt-reasoning": {
+            "id": "gpt-reasoning",
+            "type": "chat",
+            "name": "GPT Reasoning",
+            "release_date": "2026-01-01",
+            "modalities": {
+              "input": [
+                "text"
+              ],
+              "output": [
+                "text"
+              ]
+            },
+            "capabilities": {
+              "tools": {
+                "supported": true
+              },
+              "reasoning": {
+                "supported": true,
+                "toggle": true,
+                "effort": [
+                  "low",
+                  "high"
+                ],
+                "budget": {
+                  "min": 1024,
+                  "max": 64000
+                }
+              },
+              "temperature": true
+            },
+            "limit": {
+              "context": 128000,
+              "output": 8192
+            },
+            "api": {
+              "responses": {
+                "base_url": "https://api.openai.com/v1",
+                "sdk": {
+                  "aisdk": "@ai-sdk/openai"
+                }
+              }
+            },
+            "experimental": {
+              "modes": {
+                "high": {
+                  "body": {
+                    "service_tier": "priority"
+                  },
+                  "headers": {
+                    "x-mode": "high"
+                  }
+                },
+                "pro": {
+                  "body": {
+                    "reasoning": {
+                      "mode": "pro"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "anthropic": {
+        "id": "anthropic",
+        "name": "Anthropic",
+        "env": [
+          "ANTHROPIC_API_KEY"
+        ],
+        "models": {
+          "claude-budget": {
+            "id": "claude-budget",
+            "type": "chat",
+            "name": "Claude Budget",
+            "release_date": "2026-01-01",
+            "modalities": {
+              "input": [
+                "text"
+              ],
+              "output": [
+                "text"
+              ]
+            },
+            "capabilities": {
+              "tools": {
+                "supported": true
+              },
+              "reasoning": {
+                "supported": true,
+                "budget": {
+                  "min": 1024,
+                  "max": 64000
+                }
+              },
+              "temperature": true
+            },
+            "limit": {
+              "context": 128000,
+              "output": 64000
+            },
+            "api": {
+              "messages": {
+                "base_url": "https://api.anthropic.com/v1",
+                "sdk": {
+                  "aisdk": "@ai-sdk/anthropic"
+                }
+              }
+            }
+          },
+          "claude-effort": {
+            "id": "claude-opus-4.7",
+            "type": "chat",
+            "name": "Claude Effort",
+            "release_date": "2026-01-01",
+            "modalities": {
+              "input": [
+                "text"
+              ],
+              "output": [
+                "text"
+              ]
+            },
+            "capabilities": {
+              "tools": {
+                "supported": true
+              },
+              "reasoning": {
+                "supported": true,
+                "toggle": true,
+                "effort": [
+                  "low"
+                ]
+              },
+              "temperature": true
+            },
+            "limit": {
+              "context": 128000,
+              "output": 8192
+            },
+            "api": {
+              "messages": {
+                "base_url": "https://api.anthropic.com/v1",
+                "sdk": {
+                  "aisdk": "@ai-sdk/anthropic"
+                }
+              }
+            }
+          },
+          "claude-toggle": {
+            "id": "claude-toggle",
+            "type": "chat",
+            "name": "Claude Toggle",
+            "release_date": "2026-01-01",
+            "modalities": {
+              "input": [
+                "text"
+              ],
+              "output": [
+                "text"
+              ]
+            },
+            "capabilities": {
+              "tools": {
+                "supported": true
+              },
+              "reasoning": {
+                "supported": true,
+                "toggle": true
+              },
+              "temperature": true
+            },
+            "limit": {
+              "context": 128000,
+              "output": 8192
+            },
+            "api": {
+              "messages": {
+                "base_url": "https://api.anthropic.com/v1",
+                "sdk": {
+                  "aisdk": "@ai-sdk/anthropic"
+                }
+              }
+            }
+          },
+          "claude-opus-4-5": {
+            "id": "claude-opus-4-5",
+            "type": "chat",
+            "name": "Claude Opus 4.5",
+            "release_date": "2026-01-01",
+            "modalities": {
+              "input": [
+                "text"
+              ],
+              "output": [
+                "text"
+              ]
+            },
+            "capabilities": {
+              "tools": {
+                "supported": true
+              },
+              "reasoning": {
+                "supported": true,
+                "effort": [
+                  "low",
+                  "high"
+                ],
+                "budget": {
+                  "min": 1024
+                }
+              },
+              "temperature": true
+            },
+            "limit": {
+              "context": 128000,
+              "output": 8192
+            },
+            "api": {
+              "messages": {
+                "base_url": "https://api.anthropic.com/v1",
+                "sdk": {
+                  "aisdk": "@ai-sdk/anthropic"
+                }
+              }
+            }
+          }
+        }
+      },
+      "xai": {
+        "id": "xai",
+        "name": "xAI",
+        "env": [
+          "XAI_API_KEY"
+        ],
+        "models": {
+          "grok-4.5": {
+            "id": "grok-4.5",
+            "type": "chat",
+            "name": "Grok 4.5",
+            "release_date": "2026-07-08",
+            "modalities": {
+              "input": [
+                "text"
+              ],
+              "output": [
+                "text"
+              ]
+            },
+            "capabilities": {
+              "tools": {
+                "supported": true
+              },
+              "reasoning": {
+                "supported": true,
+                "effort": [
+                  "low",
+                  "medium",
+                  "high"
+                ]
+              },
+              "temperature": true
+            },
+            "limit": {
+              "context": 500000,
+              "output": 500000
+            },
+            "api": {
+              "responses": {
+                "base_url": "",
+                "sdk": {
+                  "aisdk": "@ai-sdk/xai"
+                }
+              }
+            }
+          }
+        }
+      },
+      "opencode-go": {
+        "id": "opencode-go",
+        "name": "OpenCode Go",
+        "env": [
+          "OPENCODE_API_KEY"
+        ],
+        "models": {
+          "minimax-m3": {
+            "id": "minimax-m3",
+            "type": "chat",
+            "name": "MiniMax-M3",
+            "release_date": "2026-05-31",
+            "modalities": {
+              "input": [
+                "text"
+              ],
+              "output": [
+                "text"
+              ]
+            },
+            "capabilities": {
+              "tools": {
+                "supported": true
+              },
+              "reasoning": {
+                "supported": true,
+                "toggle": true
+              },
+              "temperature": true
+            },
+            "limit": {
+              "context": 1000000,
+              "output": 131072
+            },
+            "api": {
+              "messages": {
+                "base_url": "",
+                "sdk": {
+                  "aisdk": "@ai-sdk/anthropic"
+                }
+              }
+            }
+          }
+        }
+      },
+      "alibaba": {
+        "id": "alibaba",
+        "name": "Alibaba",
+        "env": [
+          "ALIBABA_API_KEY"
+        ],
+        "models": {
+          "toggle-only": {
+            "id": "toggle-only",
+            "type": "chat",
+            "name": "Toggle Only",
+            "release_date": "2026-01-01",
+            "modalities": {
+              "input": [
+                "text"
+              ],
+              "output": [
+                "text"
+              ]
+            },
+            "capabilities": {
+              "tools": {
+                "supported": true
+              },
+              "reasoning": {
+                "supported": true,
+                "toggle": true
+              },
+              "temperature": true
+            },
+            "limit": {
+              "context": 128000,
+              "output": 20000
+            },
+            "api": {
+              "chat-completions": {
+                "base_url": "",
+                "sdk": {
+                  "aisdk": "@ai-sdk/alibaba"
+                }
+              }
+            }
+          },
+          "toggle-budget": {
+            "id": "toggle-budget",
+            "type": "chat",
+            "name": "Toggle Budget",
+            "release_date": "2026-01-01",
+            "modalities": {
+              "input": [
+                "text"
+              ],
+              "output": [
+                "text"
+              ]
+            },
+            "capabilities": {
+              "tools": {
+                "supported": true
+              },
+              "reasoning": {
+                "supported": true,
+                "toggle": true,
+                "budget": {
+                  "max": 16000
+                }
+              },
+              "temperature": true
+            },
+            "limit": {
+              "context": 128000,
+              "output": 20000
+            },
+            "api": {
+              "chat-completions": {
+                "base_url": "",
+                "sdk": {
+                  "aisdk": "@ai-sdk/alibaba"
+                }
+              }
+            }
+          }
+        }
+      },
+      "vercel": {
+        "id": "vercel",
+        "name": "Vercel AI Gateway",
+        "env": [
+          "AI_GATEWAY_API_KEY"
+        ],
+        "models": {
+          "alibaba/qwen-toggle": {
+            "id": "alibaba/qwen-toggle",
+            "type": "chat",
+            "name": "Gateway Alibaba Toggle",
+            "release_date": "2026-01-01",
+            "modalities": {
+              "input": [
+                "text"
+              ],
+              "output": [
+                "text"
+              ]
+            },
+            "capabilities": {
+              "tools": {
+                "supported": true
+              },
+              "reasoning": {
+                "supported": true,
+                "toggle": true,
+                "budget": {
+                  "max": 16000
+                }
+              },
+              "temperature": true
+            },
+            "limit": {
+              "context": 128000,
+              "output": 20000
+            },
+            "api": {
+              "chat-completions": {
+                "base_url": "",
+                "sdk": {
+                  "aisdk": "@ai-sdk/gateway"
+                }
+              }
+            }
+          },
+          "amazon/nova-2-lite": {
+            "id": "amazon/nova-2-lite",
+            "type": "chat",
+            "name": "Gateway Nova 2 Lite",
+            "release_date": "2026-01-01",
+            "modalities": {
+              "input": [
+                "text"
+              ],
+              "output": [
+                "text"
+              ]
+            },
+            "capabilities": {
+              "tools": {
+                "supported": true
+              },
+              "reasoning": {
+                "supported": true,
+                "toggle": true,
+                "effort": [
+                  "low",
+                  "high"
+                ]
+              },
+              "temperature": true
+            },
+            "limit": {
+              "context": 128000,
+              "output": 20000
+            },
+            "api": {
+              "chat-completions": {
+                "base_url": "",
+                "sdk": {
+                  "aisdk": "@ai-sdk/gateway"
+                }
+              }
+            }
+          },
+          "deepseek/deepseek-toggle": {
+            "id": "deepseek/deepseek-toggle",
+            "type": "chat",
+            "name": "Gateway DeepSeek Toggle",
+            "release_date": "2026-01-01",
+            "modalities": {
+              "input": [
+                "text"
+              ],
+              "output": [
+                "text"
+              ]
+            },
+            "capabilities": {
+              "tools": {
+                "supported": true
+              },
+              "reasoning": {
+                "supported": true,
+                "toggle": true,
+                "effort": [
+                  "low",
+                  "high"
+                ]
+              },
+              "temperature": true
+            },
+            "limit": {
+              "context": 128000,
+              "output": 20000
+            },
+            "api": {
+              "chat-completions": {
+                "base_url": "",
+                "sdk": {
+                  "aisdk": "@ai-sdk/gateway"
+                }
+              }
+            }
+          }
+        }
+      },
+      "openrouter": {
+        "id": "openrouter",
+        "name": "OpenRouter",
+        "env": [
+          "OPENROUTER_API_KEY"
+        ],
+        "models": {
+          "openrouter-toggle": {
+            "id": "openrouter-toggle",
+            "type": "chat",
+            "name": "OpenRouter Toggle",
+            "release_date": "2026-01-01",
+            "modalities": {
+              "input": [
+                "text"
+              ],
+              "output": [
+                "text"
+              ]
+            },
+            "capabilities": {
+              "tools": {
+                "supported": true
+              },
+              "reasoning": {
+                "supported": true,
+                "toggle": true
+              },
+              "temperature": true
+            },
+            "limit": {
+              "context": 128000,
+              "output": 20000
+            },
+            "api": {
+              "chat-completions": {
+                "base_url": "",
+                "sdk": {
+                  "aisdk": "@openrouter/ai-sdk-provider"
+                }
+              }
+            }
+          }
+        }
+      },
+      "google": {
+        "id": "google",
+        "name": "Google",
+        "env": [
+          "GOOGLE_GENERATIVE_AI_API_KEY"
+        ],
+        "models": {
+          "gemini-2.5-flash": {
+            "id": "gemini-2.5-flash",
+            "type": "chat",
+            "name": "Gemini 2.5 Flash",
+            "release_date": "2026-01-01",
+            "modalities": {
+              "input": [
+                "text"
+              ],
+              "output": [
+                "text"
+              ]
+            },
+            "capabilities": {
+              "tools": {
+                "supported": true
+              },
+              "reasoning": {
+                "supported": true,
+                "toggle": true,
+                "budget": {
+                  "min": 0,
+                  "max": 16000
+                }
+              },
+              "temperature": true
+            },
+            "limit": {
+              "context": 128000,
+              "output": 20000
+            },
+            "api": {
+              "chat-completions": {
+                "base_url": "",
+                "sdk": {
+                  "aisdk": "@ai-sdk/google"
+                }
+              }
+            }
+          }
+        }
+      },
+      "google-vertex": {
+        "id": "google-vertex",
+        "name": "Google Vertex",
+        "env": [
+          "GOOGLE_VERTEX_PROJECT"
+        ],
+        "models": {
+          "gemini-2.5-flash-lite": {
+            "id": "gemini-2.5-flash-lite",
+            "type": "chat",
+            "name": "Gemini 2.5 Flash Lite",
+            "release_date": "2026-01-01",
+            "modalities": {
+              "input": [
+                "text"
+              ],
+              "output": [
+                "text"
+              ]
+            },
+            "capabilities": {
+              "tools": {
+                "supported": true
+              },
+              "reasoning": {
+                "supported": true,
+                "toggle": true,
+                "budget": {
+                  "min": 512,
+                  "max": 16000
+                }
+              },
+              "temperature": true
+            },
+            "limit": {
+              "context": 128000,
+              "output": 20000
+            },
+            "api": {
+              "chat-completions": {
+                "base_url": "",
+                "sdk": {
+                  "aisdk": "@ai-sdk/google-vertex"
+                }
+              }
+            }
+          }
+        }
+      },
+      "amazon-bedrock": {
+        "id": "amazon-bedrock",
+        "name": "Amazon Bedrock",
+        "env": [
+          "AWS_ACCESS_KEY_ID"
+        ],
+        "models": {
+          "us.amazon.nova-2-lite-v1:0": {
+            "id": "us.amazon.nova-2-lite-v1:0",
+            "type": "chat",
+            "name": "Nova 2 Lite",
+            "release_date": "2026-01-01",
+            "modalities": {
+              "input": [
+                "text"
+              ],
+              "output": [
+                "text"
+              ]
+            },
+            "capabilities": {
+              "tools": {
+                "supported": true
+              },
+              "reasoning": {
+                "supported": true,
+                "toggle": true,
+                "effort": [
+                  "low",
+                  "high"
+                ]
+              },
+              "temperature": true
+            },
+            "limit": {
+              "context": 128000,
+              "output": 20000
+            },
+            "api": {
+              "chat-completions": {
+                "base_url": "",
+                "sdk": {
+                  "aisdk": "@ai-sdk/amazon-bedrock"
+                }
+              }
+            }
+          }
+        }
+      },
+      "sap-ai-core": {
+        "id": "sap-ai-core",
+        "name": "SAP AI Core",
+        "env": [
+          "AICORE_SERVICE_KEY"
+        ],
+        "models": {
+          "gemini-2.5-flash": {
+            "id": "gemini-2.5-flash",
+            "type": "chat",
+            "name": "Gemini 2.5 Flash",
+            "release_date": "2026-01-01",
+            "modalities": {
+              "input": [
+                "text"
+              ],
+              "output": [
+                "text"
+              ]
+            },
+            "capabilities": {
+              "tools": {
+                "supported": true
+              },
+              "reasoning": {
+                "supported": true,
+                "toggle": true,
+                "budget": {
+                  "min": 0,
+                  "max": 16000
+                }
+              },
+              "temperature": true
+            },
+            "limit": {
+              "context": 128000,
+              "output": 20000
+            },
+            "api": {
+              "chat-completions": {
+                "base_url": "",
+                "sdk": {
+                  "aisdk": "@jerome-benoit/sap-ai-provider-v2"
+                }
+              }
+            }
+          },
+          "amazon--nova-lite": {
+            "id": "amazon--nova-lite",
+            "type": "chat",
+            "name": "Nova Lite",
+            "release_date": "2026-01-01",
+            "modalities": {
+              "input": [
+                "text"
+              ],
+              "output": [
+                "text"
+              ]
+            },
+            "capabilities": {
+              "tools": {
+                "supported": true
+              },
+              "reasoning": {
+                "supported": true,
+                "toggle": true,
+                "effort": [
+                  "low",
+                  "high"
+                ]
+              },
+              "temperature": true
+            },
+            "limit": {
+              "context": 128000,
+              "output": 20000
+            },
+            "api": {
+              "chat-completions": {
+                "base_url": "",
+                "sdk": {
+                  "aisdk": "@jerome-benoit/sap-ai-provider-v2"
+                }
+              }
+            }
+          },
+          "cohere--command-a-reasoning": {
+            "id": "cohere--command-a-reasoning",
+            "type": "chat",
+            "name": "Command A Reasoning",
+            "release_date": "2026-01-01",
+            "modalities": {
+              "input": [
+                "text"
+              ],
+              "output": [
+                "text"
+              ]
+            },
+            "capabilities": {
+              "tools": {
+                "supported": true
+              },
+              "reasoning": {
+                "supported": true,
+                "toggle": true,
+                "effort": [
+                  "low",
+                  "high"
+                ],
+                "budget": {
+                  "min": 1
+                }
+              },
+              "temperature": true
+            },
+            "limit": {
+              "context": 128000,
+              "output": 20000
+            },
+            "api": {
+              "chat-completions": {
+                "base_url": "",
+                "sdk": {
+                  "aisdk": "@jerome-benoit/sap-ai-provider-v2"
+                }
+              }
+            }
+          },
+          "anthropic--claude-4.7-opus": {
+            "id": "anthropic--claude-4.7-opus",
+            "type": "chat",
+            "name": "Claude 4.7 Opus",
+            "release_date": "2026-01-01",
+            "modalities": {
+              "input": [
+                "text"
+              ],
+              "output": [
+                "text"
+              ]
+            },
+            "capabilities": {
+              "tools": {
+                "supported": true
+              },
+              "reasoning": {
+                "supported": true,
+                "effort": [
+                  "low"
+                ]
+              },
+              "temperature": true
+            },
+            "limit": {
+              "context": 128000,
+              "output": 20000
+            },
+            "api": {
+              "chat-completions": {
+                "base_url": "",
+                "sdk": {
+                  "aisdk": "@jerome-benoit/sap-ai-provider-v2"
+                }
+              }
+            }
+          },
+          "anthropic--claude-4-sonnet": {
+            "id": "anthropic--claude-4-sonnet",
+            "type": "chat",
+            "name": "Claude 4 Sonnet",
+            "release_date": "2026-01-01",
+            "modalities": {
+              "input": [
+                "text"
+              ],
+              "output": [
+                "text"
+              ]
+            },
+            "capabilities": {
+              "tools": {
+                "supported": true
+              },
+              "reasoning": {
+                "supported": true,
+                "budget": {
+                  "min": 1024,
+                  "max": 16000
+                }
+              },
+              "temperature": true
+            },
+            "limit": {
+              "context": 128000,
+              "output": 20000
+            },
+            "api": {
+              "chat-completions": {
+                "base_url": "",
+                "sdk": {
+                  "aisdk": "@jerome-benoit/sap-ai-provider-v2"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "expected": {
+      "false": [
+        {
+          "info": {
+            "id": "openai",
+            "name": "OpenAI",
+            "activation": "auto",
+            "package": "@opencode/ai/providers/openai",
+            "settings": {
+              "baseURL": "https://api.openai.com/v1"
+            }
+          },
+          "models": [
+            {
+              "id": "gpt-reasoning",
+              "modelID": "gpt-reasoning",
+              "providerID": "openai",
+              "type": "chat",
+              "name": "GPT Reasoning",
+              "capabilities": {
+                "tools": true,
+                "input": [
+                  "text"
+                ],
+                "output": [
+                  "text"
+                ],
+                "temperature": true
+              },
+              "variants": [
+                {
+                  "id": "low",
+                  "settings": {
+                    "reasoningEffort": "low",
+                    "reasoningSummary": "auto",
+                    "include": [
+                      "reasoning.encrypted_content"
+                    ]
+                  }
+                },
+                {
+                  "id": "high",
+                  "settings": {
+                    "reasoningEffort": "high",
+                    "reasoningSummary": "auto",
+                    "include": [
+                      "reasoning.encrypted_content"
+                    ]
+                  }
+                }
+              ],
+              "time": {
+                "released": 1767225600000
+              },
+              "cost": [
+                {
+                  "input": 0,
+                  "output": 0,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  }
+                }
+              ],
+              "status": "active",
+              "enabled": true,
+              "limit": {
+                "context": 128000,
+                "output": 8192
+              }
+            },
+            {
+              "id": "gpt-reasoning-high",
+              "modelID": "gpt-reasoning",
+              "providerID": "openai",
+              "type": "chat",
+              "name": "GPT Reasoning High",
+              "capabilities": {
+                "tools": true,
+                "input": [
+                  "text"
+                ],
+                "output": [
+                  "text"
+                ],
+                "temperature": true
+              },
+              "variants": [
+                {
+                  "id": "low",
+                  "settings": {
+                    "reasoningEffort": "low",
+                    "reasoningSummary": "auto",
+                    "include": [
+                      "reasoning.encrypted_content"
+                    ]
+                  }
+                },
+                {
+                  "id": "high",
+                  "settings": {
+                    "reasoningEffort": "high",
+                    "reasoningSummary": "auto",
+                    "include": [
+                      "reasoning.encrypted_content"
+                    ]
+                  }
+                }
+              ],
+              "time": {
+                "released": 1767225600000
+              },
+              "cost": [
+                {
+                  "input": 0,
+                  "output": 0,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  }
+                }
+              ],
+              "status": "active",
+              "enabled": true,
+              "limit": {
+                "context": 128000,
+                "output": 8192
+              },
+              "headers": {
+                "x-mode": "high"
+              },
+              "body": {
+                "service_tier": "priority"
+              }
+            },
+            {
+              "id": "gpt-reasoning-pro",
+              "modelID": "gpt-reasoning",
+              "providerID": "openai",
+              "type": "chat",
+              "name": "GPT Reasoning Pro",
+              "capabilities": {
+                "tools": true,
+                "input": [
+                  "text"
+                ],
+                "output": [
+                  "text"
+                ],
+                "temperature": true
+              },
+              "variants": [
+                {
+                  "id": "low",
+                  "settings": {
+                    "reasoningEffort": "low",
+                    "reasoningSummary": "auto",
+                    "include": [
+                      "reasoning.encrypted_content"
+                    ]
+                  }
+                },
+                {
+                  "id": "high",
+                  "settings": {
+                    "reasoningEffort": "high",
+                    "reasoningSummary": "auto",
+                    "include": [
+                      "reasoning.encrypted_content"
+                    ]
+                  }
+                }
+              ],
+              "time": {
+                "released": 1767225600000
+              },
+              "cost": [
+                {
+                  "input": 0,
+                  "output": 0,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  }
+                }
+              ],
+              "status": "active",
+              "enabled": true,
+              "limit": {
+                "context": 128000,
+                "output": 8192
+              },
+              "body": {
+                "reasoning": {
+                  "mode": "pro"
+                }
+              }
+            }
+          ],
+          "environment": [
+            "OPENAI_API_KEY"
+          ]
+        },
+        {
+          "info": {
+            "id": "anthropic",
+            "name": "Anthropic",
+            "activation": "auto",
+            "package": "@opencode/ai/providers/anthropic",
+            "settings": {
+              "baseURL": "https://api.anthropic.com/v1"
+            }
+          },
+          "models": [
+            {
+              "id": "claude-budget",
+              "modelID": "claude-budget",
+              "providerID": "anthropic",
+              "type": "chat",
+              "name": "Claude Budget",
+              "capabilities": {
+                "tools": true,
+                "input": [
+                  "text"
+                ],
+                "output": [
+                  "text"
+                ],
+                "temperature": true
+              },
+              "variants": [
+                {
+                  "id": "high",
+                  "settings": {
+                    "thinking": {
+                      "type": "enabled",
+                      "budgetTokens": 16000
+                    }
+                  }
+                },
+                {
+                  "id": "max",
+                  "settings": {
+                    "thinking": {
+                      "type": "enabled",
+                      "budgetTokens": 31999
+                    }
+                  }
+                }
+              ],
+              "time": {
+                "released": 1767225600000
+              },
+              "cost": [
+                {
+                  "input": 0,
+                  "output": 0,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  }
+                }
+              ],
+              "status": "active",
+              "enabled": true,
+              "limit": {
+                "context": 128000,
+                "output": 64000
+              }
+            },
+            {
+              "id": "claude-opus-4.7",
+              "modelID": "claude-opus-4.7",
+              "providerID": "anthropic",
+              "type": "chat",
+              "name": "Claude Effort",
+              "capabilities": {
+                "tools": true,
+                "input": [
+                  "text"
+                ],
+                "output": [
+                  "text"
+                ],
+                "temperature": true
+              },
+              "variants": [
+                {
+                  "id": "none",
+                  "settings": {
+                    "thinking": {
+                      "type": "disabled"
+                    }
+                  }
+                },
+                {
+                  "id": "low",
+                  "settings": {
+                    "thinking": {
+                      "type": "adaptive",
+                      "display": "summarized"
+                    },
+                    "effort": "low"
+                  }
+                }
+              ],
+              "time": {
+                "released": 1767225600000
+              },
+              "cost": [
+                {
+                  "input": 0,
+                  "output": 0,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  }
+                }
+              ],
+              "status": "active",
+              "enabled": true,
+              "limit": {
+                "context": 128000,
+                "output": 8192
+              }
+            },
+            {
+              "id": "claude-toggle",
+              "modelID": "claude-toggle",
+              "providerID": "anthropic",
+              "type": "chat",
+              "name": "Claude Toggle",
+              "capabilities": {
+                "tools": true,
+                "input": [
+                  "text"
+                ],
+                "output": [
+                  "text"
+                ],
+                "temperature": true
+              },
+              "variants": [
+                {
+                  "id": "none",
+                  "settings": {
+                    "thinking": {
+                      "type": "disabled"
+                    }
+                  }
+                },
+                {
+                  "id": "thinking",
+                  "settings": {
+                    "thinking": {
+                      "type": "adaptive",
+                      "display": "summarized"
+                    }
+                  }
+                }
+              ],
+              "time": {
+                "released": 1767225600000
+              },
+              "cost": [
+                {
+                  "input": 0,
+                  "output": 0,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  }
+                }
+              ],
+              "status": "active",
+              "enabled": true,
+              "limit": {
+                "context": 128000,
+                "output": 8192
+              }
+            },
+            {
+              "id": "claude-opus-4-5",
+              "modelID": "claude-opus-4-5",
+              "providerID": "anthropic",
+              "type": "chat",
+              "name": "Claude Opus 4.5",
+              "capabilities": {
+                "tools": true,
+                "input": [
+                  "text"
+                ],
+                "output": [
+                  "text"
+                ],
+                "temperature": true
+              },
+              "variants": [
+                {
+                  "id": "low",
+                  "settings": {
+                    "thinking": {
+                      "type": "enabled",
+                      "budgetTokens": 8191
+                    },
+                    "effort": "low"
+                  }
+                },
+                {
+                  "id": "high",
+                  "settings": {
+                    "thinking": {
+                      "type": "enabled",
+                      "budgetTokens": 8191
+                    },
+                    "effort": "high"
+                  }
+                }
+              ],
+              "time": {
+                "released": 1767225600000
+              },
+              "cost": [
+                {
+                  "input": 0,
+                  "output": 0,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  }
+                }
+              ],
+              "status": "active",
+              "enabled": true,
+              "limit": {
+                "context": 128000,
+                "output": 8192
+              }
+            }
+          ],
+          "environment": [
+            "ANTHROPIC_API_KEY"
+          ]
+        },
+        {
+          "info": {
+            "id": "xai",
+            "name": "xAI",
+            "activation": "auto",
+            "package": "@opencode/ai/providers/xai"
+          },
+          "models": [
+            {
+              "id": "grok-4.5",
+              "modelID": "grok-4.5",
+              "providerID": "xai",
+              "type": "chat",
+              "name": "Grok 4.5",
+              "capabilities": {
+                "tools": true,
+                "input": [
+                  "text"
+                ],
+                "output": [
+                  "text"
+                ],
+                "temperature": true
+              },
+              "variants": [
+                {
+                  "id": "low",
+                  "settings": {
+                    "reasoningEffort": "low",
+                    "reasoningSummary": "auto",
+                    "include": [
+                      "reasoning.encrypted_content"
+                    ]
+                  }
+                },
+                {
+                  "id": "medium",
+                  "settings": {
+                    "reasoningEffort": "medium",
+                    "reasoningSummary": "auto",
+                    "include": [
+                      "reasoning.encrypted_content"
+                    ]
+                  }
+                },
+                {
+                  "id": "high",
+                  "settings": {
+                    "reasoningEffort": "high",
+                    "reasoningSummary": "auto",
+                    "include": [
+                      "reasoning.encrypted_content"
+                    ]
+                  }
+                }
+              ],
+              "time": {
+                "released": 1783468800000
+              },
+              "cost": [
+                {
+                  "input": 0,
+                  "output": 0,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  }
+                }
+              ],
+              "status": "active",
+              "enabled": true,
+              "limit": {
+                "context": 500000,
+                "output": 500000
+              }
+            }
+          ],
+          "environment": [
+            "XAI_API_KEY"
+          ]
+        },
+        {
+          "info": {
+            "id": "opencode-go",
+            "name": "OpenCode Go",
+            "activation": "auto",
+            "package": "@opencode/ai/providers/anthropic"
+          },
+          "models": [
+            {
+              "id": "minimax-m3",
+              "modelID": "minimax-m3",
+              "providerID": "opencode-go",
+              "type": "chat",
+              "name": "MiniMax-M3",
+              "capabilities": {
+                "tools": true,
+                "input": [
+                  "text"
+                ],
+                "output": [
+                  "text"
+                ],
+                "temperature": true
+              },
+              "variants": [
+                {
+                  "id": "none",
+                  "settings": {
+                    "thinking": {
+                      "type": "disabled"
+                    }
+                  }
+                },
+                {
+                  "id": "thinking",
+                  "settings": {
+                    "thinking": {
+                      "type": "adaptive",
+                      "display": "summarized"
+                    }
+                  }
+                }
+              ],
+              "time": {
+                "released": 1780185600000
+              },
+              "cost": [
+                {
+                  "input": 0,
+                  "output": 0,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  }
+                }
+              ],
+              "status": "active",
+              "enabled": true,
+              "limit": {
+                "context": 1000000,
+                "output": 131072
+              }
+            }
+          ],
+          "environment": [
+            "OPENCODE_API_KEY"
+          ]
+        },
+        {
+          "info": {
+            "id": "alibaba",
+            "name": "Alibaba",
+            "activation": "auto",
+            "package": "@opencode/ai/providers/alibaba/chat"
+          },
+          "models": [
+            {
+              "id": "toggle-only",
+              "modelID": "toggle-only",
+              "providerID": "alibaba",
+              "type": "chat",
+              "name": "Toggle Only",
+              "capabilities": {
+                "tools": true,
+                "input": [
+                  "text"
+                ],
+                "output": [
+                  "text"
+                ],
+                "temperature": true
+              },
+              "variants": [
+                {
+                  "id": "none",
+                  "settings": {
+                    "enableThinking": false
+                  }
+                },
+                {
+                  "id": "thinking",
+                  "settings": {
+                    "enableThinking": true
+                  }
+                }
+              ],
+              "time": {
+                "released": 1767225600000
+              },
+              "cost": [
+                {
+                  "input": 0,
+                  "output": 0,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  }
+                }
+              ],
+              "status": "active",
+              "enabled": true,
+              "limit": {
+                "context": 128000,
+                "output": 20000
+              }
+            },
+            {
+              "id": "toggle-budget",
+              "modelID": "toggle-budget",
+              "providerID": "alibaba",
+              "type": "chat",
+              "name": "Toggle Budget",
+              "capabilities": {
+                "tools": true,
+                "input": [
+                  "text"
+                ],
+                "output": [
+                  "text"
+                ],
+                "temperature": true
+              },
+              "variants": [
+                {
+                  "id": "none",
+                  "settings": {
+                    "enableThinking": false
+                  }
+                },
+                {
+                  "id": "high",
+                  "settings": {
+                    "enableThinking": true,
+                    "thinkingBudget": 8000
+                  }
+                },
+                {
+                  "id": "max",
+                  "settings": {
+                    "enableThinking": true,
+                    "thinkingBudget": 16000
+                  }
+                }
+              ],
+              "time": {
+                "released": 1767225600000
+              },
+              "cost": [
+                {
+                  "input": 0,
+                  "output": 0,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  }
+                }
+              ],
+              "status": "active",
+              "enabled": true,
+              "limit": {
+                "context": 128000,
+                "output": 20000
+              }
+            }
+          ],
+          "environment": [
+            "ALIBABA_API_KEY"
+          ]
+        },
+        {
+          "info": {
+            "id": "vercel",
+            "name": "Vercel AI Gateway",
+            "activation": "auto",
+            "package": "@opencode/ai/providers/vercel-ai-gateway"
+          },
+          "models": [
+            {
+              "id": "alibaba/qwen-toggle",
+              "modelID": "alibaba/qwen-toggle",
+              "providerID": "vercel",
+              "type": "chat",
+              "name": "Gateway Alibaba Toggle",
+              "capabilities": {
+                "tools": true,
+                "input": [
+                  "text"
+                ],
+                "output": [
+                  "text"
+                ],
+                "temperature": true
+              },
+              "variants": [
+                {
+                  "id": "none",
+                  "settings": {
+                    "thinking": {
+                      "type": "disabled"
+                    }
+                  }
+                },
+                {
+                  "id": "high",
+                  "settings": {
+                    "thinking": {
+                      "type": "enabled",
+                      "budgetTokens": 8000
+                    }
+                  }
+                },
+                {
+                  "id": "max",
+                  "settings": {
+                    "thinking": {
+                      "type": "enabled",
+                      "budgetTokens": 16000
+                    }
+                  }
+                }
+              ],
+              "time": {
+                "released": 1767225600000
+              },
+              "cost": [
+                {
+                  "input": 0,
+                  "output": 0,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  }
+                }
+              ],
+              "status": "active",
+              "enabled": true,
+              "limit": {
+                "context": 128000,
+                "output": 20000
+              }
+            },
+            {
+              "id": "amazon/nova-2-lite",
+              "modelID": "amazon/nova-2-lite",
+              "providerID": "vercel",
+              "type": "chat",
+              "name": "Gateway Nova 2 Lite",
+              "capabilities": {
+                "tools": true,
+                "input": [
+                  "text"
+                ],
+                "output": [
+                  "text"
+                ],
+                "temperature": true
+              },
+              "variants": [
+                {
+                  "id": "none",
+                  "settings": {
+                    "thinking": {
+                      "type": "disabled"
+                    }
+                  }
+                },
+                {
+                  "id": "low",
+                  "settings": {
+                    "reasoningEffort": "low"
+                  }
+                },
+                {
+                  "id": "high",
+                  "settings": {
+                    "reasoningEffort": "high"
+                  }
+                }
+              ],
+              "time": {
+                "released": 1767225600000
+              },
+              "cost": [
+                {
+                  "input": 0,
+                  "output": 0,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  }
+                }
+              ],
+              "status": "active",
+              "enabled": true,
+              "limit": {
+                "context": 128000,
+                "output": 20000
+              }
+            },
+            {
+              "id": "deepseek/deepseek-toggle",
+              "modelID": "deepseek/deepseek-toggle",
+              "providerID": "vercel",
+              "type": "chat",
+              "name": "Gateway DeepSeek Toggle",
+              "capabilities": {
+                "tools": true,
+                "input": [
+                  "text"
+                ],
+                "output": [
+                  "text"
+                ],
+                "temperature": true
+              },
+              "variants": [
+                {
+                  "id": "none",
+                  "settings": {
+                    "thinking": {
+                      "type": "disabled"
+                    }
+                  }
+                },
+                {
+                  "id": "low",
+                  "settings": {
+                    "reasoningEffort": "low"
+                  }
+                },
+                {
+                  "id": "high",
+                  "settings": {
+                    "reasoningEffort": "high"
+                  }
+                }
+              ],
+              "time": {
+                "released": 1767225600000
+              },
+              "cost": [
+                {
+                  "input": 0,
+                  "output": 0,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  }
+                }
+              ],
+              "status": "active",
+              "enabled": true,
+              "limit": {
+                "context": 128000,
+                "output": 20000
+              }
+            }
+          ],
+          "environment": [
+            "AI_GATEWAY_API_KEY"
+          ]
+        },
+        {
+          "info": {
+            "id": "openrouter",
+            "name": "OpenRouter",
+            "activation": "auto",
+            "package": "@opencode/ai/providers/openrouter"
+          },
+          "models": [
+            {
+              "id": "openrouter-toggle",
+              "modelID": "openrouter-toggle",
+              "providerID": "openrouter",
+              "type": "chat",
+              "name": "OpenRouter Toggle",
+              "capabilities": {
+                "tools": true,
+                "input": [
+                  "text"
+                ],
+                "output": [
+                  "text"
+                ],
+                "temperature": true
+              },
+              "variants": [
+                {
+                  "id": "none",
+                  "settings": {
+                    "reasoning": {
+                      "enabled": false
+                    }
+                  }
+                },
+                {
+                  "id": "thinking",
+                  "settings": {
+                    "reasoning": {
+                      "enabled": true
+                    }
+                  }
+                }
+              ],
+              "time": {
+                "released": 1767225600000
+              },
+              "cost": [
+                {
+                  "input": 0,
+                  "output": 0,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  }
+                }
+              ],
+              "status": "active",
+              "enabled": true,
+              "limit": {
+                "context": 128000,
+                "output": 20000
+              }
+            }
+          ],
+          "environment": [
+            "OPENROUTER_API_KEY"
+          ]
+        },
+        {
+          "info": {
+            "id": "google",
+            "name": "Google",
+            "activation": "auto",
+            "package": "@opencode/ai/providers/google"
+          },
+          "models": [
+            {
+              "id": "gemini-2.5-flash",
+              "modelID": "gemini-2.5-flash",
+              "providerID": "google",
+              "type": "chat",
+              "name": "Gemini 2.5 Flash",
+              "capabilities": {
+                "tools": true,
+                "input": [
+                  "text"
+                ],
+                "output": [
+                  "text"
+                ],
+                "temperature": true
+              },
+              "variants": [
+                {
+                  "id": "none",
+                  "settings": {
+                    "thinkingConfig": {
+                      "includeThoughts": false,
+                      "thinkingBudget": 0
+                    }
+                  }
+                },
+                {
+                  "id": "high",
+                  "settings": {
+                    "thinkingConfig": {
+                      "includeThoughts": true,
+                      "thinkingBudget": 8000
+                    }
+                  }
+                },
+                {
+                  "id": "max",
+                  "settings": {
+                    "thinkingConfig": {
+                      "includeThoughts": true,
+                      "thinkingBudget": 16000
+                    }
+                  }
+                }
+              ],
+              "time": {
+                "released": 1767225600000
+              },
+              "cost": [
+                {
+                  "input": 0,
+                  "output": 0,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  }
+                }
+              ],
+              "status": "active",
+              "enabled": true,
+              "limit": {
+                "context": 128000,
+                "output": 20000
+              }
+            }
+          ],
+          "environment": [
+            "GOOGLE_GENERATIVE_AI_API_KEY"
+          ]
+        },
+        {
+          "info": {
+            "id": "google-vertex",
+            "name": "Google Vertex",
+            "activation": "auto",
+            "package": "@opencode/ai/providers/google-vertex"
+          },
+          "models": [
+            {
+              "id": "gemini-2.5-flash-lite",
+              "modelID": "gemini-2.5-flash-lite",
+              "providerID": "google-vertex",
+              "type": "chat",
+              "name": "Gemini 2.5 Flash Lite",
+              "capabilities": {
+                "tools": true,
+                "input": [
+                  "text"
+                ],
+                "output": [
+                  "text"
+                ],
+                "temperature": true
+              },
+              "variants": [
+                {
+                  "id": "none",
+                  "settings": {
+                    "thinkingConfig": {
+                      "includeThoughts": false,
+                      "thinkingBudget": 0
+                    }
+                  }
+                },
+                {
+                  "id": "high",
+                  "settings": {
+                    "thinkingConfig": {
+                      "includeThoughts": true,
+                      "thinkingBudget": 8000
+                    }
+                  }
+                },
+                {
+                  "id": "max",
+                  "settings": {
+                    "thinkingConfig": {
+                      "includeThoughts": true,
+                      "thinkingBudget": 16000
+                    }
+                  }
+                }
+              ],
+              "time": {
+                "released": 1767225600000
+              },
+              "cost": [
+                {
+                  "input": 0,
+                  "output": 0,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  }
+                }
+              ],
+              "status": "active",
+              "enabled": true,
+              "limit": {
+                "context": 128000,
+                "output": 20000
+              }
+            }
+          ],
+          "environment": [
+            "GOOGLE_VERTEX_PROJECT"
+          ]
+        },
+        {
+          "info": {
+            "id": "amazon-bedrock",
+            "name": "Amazon Bedrock",
+            "activation": "auto",
+            "package": "@opencode/ai/providers/amazon-bedrock"
+          },
+          "models": [
+            {
+              "id": "us.amazon.nova-2-lite-v1:0",
+              "modelID": "us.amazon.nova-2-lite-v1:0",
+              "providerID": "amazon-bedrock",
+              "type": "chat",
+              "name": "Nova 2 Lite",
+              "capabilities": {
+                "tools": true,
+                "input": [
+                  "text"
+                ],
+                "output": [
+                  "text"
+                ],
+                "temperature": true
+              },
+              "variants": [
+                {
+                  "id": "none",
+                  "body": {
+                    "additionalModelRequestFields": {
+                      "reasoningConfig": {
+                        "type": "disabled"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "low",
+                  "body": {
+                    "additionalModelRequestFields": {
+                      "reasoningConfig": {
+                        "type": "enabled",
+                        "maxReasoningEffort": "low"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "high",
+                  "body": {
+                    "additionalModelRequestFields": {
+                      "reasoningConfig": {
+                        "type": "enabled",
+                        "maxReasoningEffort": "high"
+                      }
+                    }
+                  }
+                }
+              ],
+              "time": {
+                "released": 1767225600000
+              },
+              "cost": [
+                {
+                  "input": 0,
+                  "output": 0,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  }
+                }
+              ],
+              "status": "active",
+              "enabled": true,
+              "limit": {
+                "context": 128000,
+                "output": 20000
+              }
+            }
+          ],
+          "environment": [
+            "AWS_ACCESS_KEY_ID"
+          ]
+        },
+        {
+          "info": {
+            "id": "sap-ai-core",
+            "name": "SAP AI Core",
+            "activation": "auto",
+            "package": "aisdk:@jerome-benoit/sap-ai-provider-v2"
+          },
+          "models": [
+            {
+              "id": "gemini-2.5-flash",
+              "modelID": "gemini-2.5-flash",
+              "providerID": "sap-ai-core",
+              "type": "chat",
+              "name": "Gemini 2.5 Flash",
+              "capabilities": {
+                "tools": true,
+                "input": [
+                  "text"
+                ],
+                "output": [
+                  "text"
+                ],
+                "temperature": true
+              },
+              "variants": [
+                {
+                  "id": "none",
+                  "settings": {
+                    "modelParams": {
+                      "thinkingConfig": {
+                        "includeThoughts": false,
+                        "thinkingBudget": 0
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "high",
+                  "settings": {
+                    "modelParams": {
+                      "thinkingConfig": {
+                        "includeThoughts": true,
+                        "thinkingBudget": 8000
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "max",
+                  "settings": {
+                    "modelParams": {
+                      "thinkingConfig": {
+                        "includeThoughts": true,
+                        "thinkingBudget": 16000
+                      }
+                    }
+                  }
+                }
+              ],
+              "time": {
+                "released": 1767225600000
+              },
+              "cost": [
+                {
+                  "input": 0,
+                  "output": 0,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  }
+                }
+              ],
+              "status": "active",
+              "enabled": true,
+              "limit": {
+                "context": 128000,
+                "output": 20000
+              }
+            },
+            {
+              "id": "amazon--nova-lite",
+              "modelID": "amazon--nova-lite",
+              "providerID": "sap-ai-core",
+              "type": "chat",
+              "name": "Nova Lite",
+              "capabilities": {
+                "tools": true,
+                "input": [
+                  "text"
+                ],
+                "output": [
+                  "text"
+                ],
+                "temperature": true
+              },
+              "variants": [
+                {
+                  "id": "none",
+                  "settings": {
+                    "modelParams": {
+                      "additionalModelRequestFields": {
+                        "thinking": {
+                          "type": "disabled"
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "low",
+                  "settings": {
+                    "modelParams": {
+                      "additionalModelRequestFields": {
+                        "output_config": {
+                          "effort": "low"
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "high",
+                  "settings": {
+                    "modelParams": {
+                      "additionalModelRequestFields": {
+                        "output_config": {
+                          "effort": "high"
+                        }
+                      }
+                    }
+                  }
+                }
+              ],
+              "time": {
+                "released": 1767225600000
+              },
+              "cost": [
+                {
+                  "input": 0,
+                  "output": 0,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  }
+                }
+              ],
+              "status": "active",
+              "enabled": true,
+              "limit": {
+                "context": 128000,
+                "output": 20000
+              }
+            },
+            {
+              "id": "cohere--command-a-reasoning",
+              "modelID": "cohere--command-a-reasoning",
+              "providerID": "sap-ai-core",
+              "type": "chat",
+              "name": "Command A Reasoning",
+              "capabilities": {
+                "tools": true,
+                "input": [
+                  "text"
+                ],
+                "output": [
+                  "text"
+                ],
+                "temperature": true
+              },
+              "variants": [
+                {
+                  "id": "none",
+                  "settings": {
+                    "modelParams": {
+                      "thinking": {
+                        "type": "disabled"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "low",
+                  "settings": {
+                    "modelParams": {
+                      "reasoning_effort": "low"
+                    }
+                  }
+                },
+                {
+                  "id": "high",
+                  "settings": {
+                    "modelParams": {
+                      "reasoning_effort": "high"
+                    }
+                  }
+                }
+              ],
+              "time": {
+                "released": 1767225600000
+              },
+              "cost": [
+                {
+                  "input": 0,
+                  "output": 0,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  }
+                }
+              ],
+              "status": "active",
+              "enabled": true,
+              "limit": {
+                "context": 128000,
+                "output": 20000
+              }
+            },
+            {
+              "id": "anthropic--claude-4.7-opus",
+              "modelID": "anthropic--claude-4.7-opus",
+              "providerID": "sap-ai-core",
+              "type": "chat",
+              "name": "Claude 4.7 Opus",
+              "capabilities": {
+                "tools": true,
+                "input": [
+                  "text"
+                ],
+                "output": [
+                  "text"
+                ],
+                "temperature": true
+              },
+              "variants": [
+                {
+                  "id": "low",
+                  "settings": {
+                    "modelParams": {
+                      "additionalModelRequestFields": {
+                        "thinking": {
+                          "type": "adaptive",
+                          "display": "summarized"
+                        },
+                        "output_config": {
+                          "effort": "low"
+                        }
+                      }
+                    }
+                  }
+                }
+              ],
+              "time": {
+                "released": 1767225600000
+              },
+              "cost": [
+                {
+                  "input": 0,
+                  "output": 0,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  }
+                }
+              ],
+              "status": "active",
+              "enabled": true,
+              "limit": {
+                "context": 128000,
+                "output": 20000
+              }
+            },
+            {
+              "id": "anthropic--claude-4-sonnet",
+              "modelID": "anthropic--claude-4-sonnet",
+              "providerID": "sap-ai-core",
+              "type": "chat",
+              "name": "Claude 4 Sonnet",
+              "capabilities": {
+                "tools": true,
+                "input": [
+                  "text"
+                ],
+                "output": [
+                  "text"
+                ],
+                "temperature": true
+              },
+              "variants": [
+                {
+                  "id": "high",
+                  "settings": {
+                    "modelParams": {
+                      "additionalModelRequestFields": {
+                        "thinking": {
+                          "type": "enabled",
+                          "budget_tokens": 8000
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "max",
+                  "settings": {
+                    "modelParams": {
+                      "additionalModelRequestFields": {
+                        "thinking": {
+                          "type": "enabled",
+                          "budget_tokens": 16000
+                        }
+                      }
+                    }
+                  }
+                }
+              ],
+              "time": {
+                "released": 1767225600000
+              },
+              "cost": [
+                {
+                  "input": 0,
+                  "output": 0,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  }
+                }
+              ],
+              "status": "active",
+              "enabled": true,
+              "limit": {
+                "context": 128000,
+                "output": 20000
+              }
+            }
+          ],
+          "environment": [
+            "AICORE_SERVICE_KEY"
+          ]
+        }
+      ],
+      "true": [
+        {
+          "info": {
+            "id": "openai",
+            "name": "OpenAI",
+            "activation": "auto",
+            "package": "@opencode/ai/providers/openai",
+            "settings": {
+              "baseURL": "https://api.openai.com/v1"
+            }
+          },
+          "models": [
+            {
+              "id": "gpt-reasoning",
+              "modelID": "gpt-reasoning",
+              "providerID": "openai",
+              "type": "chat",
+              "name": "GPT Reasoning",
+              "capabilities": {
+                "tools": true,
+                "input": [
+                  "text"
+                ],
+                "output": [
+                  "text"
+                ],
+                "temperature": true
+              },
+              "variants": [
+                {
+                  "id": "low",
+                  "settings": {
+                    "reasoningEffort": "low",
+                    "reasoningSummary": "auto",
+                    "include": [
+                      "reasoning.encrypted_content"
+                    ]
+                  }
+                },
+                {
+                  "id": "high",
+                  "settings": {
+                    "reasoningEffort": "high",
+                    "reasoningSummary": "auto",
+                    "include": [
+                      "reasoning.encrypted_content"
+                    ]
+                  }
+                }
+              ],
+              "time": {
+                "released": 1767225600000
+              },
+              "cost": [
+                {
+                  "input": 0,
+                  "output": 0,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  }
+                }
+              ],
+              "status": "active",
+              "enabled": true,
+              "limit": {
+                "context": 128000,
+                "output": 8192
+              }
+            },
+            {
+              "id": "gpt-reasoning-high",
+              "modelID": "gpt-reasoning",
+              "providerID": "openai",
+              "type": "chat",
+              "name": "GPT Reasoning High",
+              "capabilities": {
+                "tools": true,
+                "input": [
+                  "text"
+                ],
+                "output": [
+                  "text"
+                ],
+                "temperature": true
+              },
+              "variants": [
+                {
+                  "id": "low",
+                  "settings": {
+                    "reasoningEffort": "low",
+                    "reasoningSummary": "auto",
+                    "include": [
+                      "reasoning.encrypted_content"
+                    ]
+                  }
+                },
+                {
+                  "id": "high",
+                  "settings": {
+                    "reasoningEffort": "high",
+                    "reasoningSummary": "auto",
+                    "include": [
+                      "reasoning.encrypted_content"
+                    ]
+                  }
+                }
+              ],
+              "time": {
+                "released": 1767225600000
+              },
+              "cost": [
+                {
+                  "input": 0,
+                  "output": 0,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  }
+                }
+              ],
+              "status": "active",
+              "enabled": true,
+              "limit": {
+                "context": 128000,
+                "output": 8192
+              },
+              "headers": {
+                "x-mode": "high"
+              },
+              "body": {
+                "service_tier": "priority"
+              }
+            },
+            {
+              "id": "gpt-reasoning-pro",
+              "modelID": "gpt-reasoning",
+              "providerID": "openai",
+              "type": "chat",
+              "name": "GPT Reasoning Pro",
+              "capabilities": {
+                "tools": true,
+                "input": [
+                  "text"
+                ],
+                "output": [
+                  "text"
+                ],
+                "temperature": true
+              },
+              "variants": [
+                {
+                  "id": "low",
+                  "settings": {
+                    "reasoningEffort": "low",
+                    "reasoningSummary": "auto",
+                    "include": [
+                      "reasoning.encrypted_content"
+                    ]
+                  }
+                },
+                {
+                  "id": "high",
+                  "settings": {
+                    "reasoningEffort": "high",
+                    "reasoningSummary": "auto",
+                    "include": [
+                      "reasoning.encrypted_content"
+                    ]
+                  }
+                }
+              ],
+              "time": {
+                "released": 1767225600000
+              },
+              "cost": [
+                {
+                  "input": 0,
+                  "output": 0,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  }
+                }
+              ],
+              "status": "active",
+              "enabled": true,
+              "limit": {
+                "context": 128000,
+                "output": 8192
+              },
+              "body": {
+                "reasoning": {
+                  "mode": "pro"
+                }
+              }
+            }
+          ],
+          "environment": [
+            "OPENAI_API_KEY"
+          ]
+        },
+        {
+          "info": {
+            "id": "anthropic",
+            "name": "Anthropic",
+            "activation": "auto",
+            "package": "@opencode/ai/providers/anthropic",
+            "settings": {
+              "baseURL": "https://api.anthropic.com/v1"
+            }
+          },
+          "models": [
+            {
+              "id": "claude-budget",
+              "modelID": "claude-budget",
+              "providerID": "anthropic",
+              "type": "chat",
+              "name": "Claude Budget",
+              "capabilities": {
+                "tools": true,
+                "input": [
+                  "text"
+                ],
+                "output": [
+                  "text"
+                ],
+                "temperature": true
+              },
+              "variants": [
+                {
+                  "id": "high",
+                  "settings": {
+                    "thinking": {
+                      "type": "enabled",
+                      "budgetTokens": 16000
+                    }
+                  }
+                },
+                {
+                  "id": "max",
+                  "settings": {
+                    "thinking": {
+                      "type": "enabled",
+                      "budgetTokens": 31999
+                    }
+                  }
+                }
+              ],
+              "time": {
+                "released": 1767225600000
+              },
+              "cost": [
+                {
+                  "input": 0,
+                  "output": 0,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  }
+                }
+              ],
+              "status": "active",
+              "enabled": true,
+              "limit": {
+                "context": 128000,
+                "output": 64000
+              }
+            },
+            {
+              "id": "claude-opus-4.7",
+              "modelID": "claude-opus-4.7",
+              "providerID": "anthropic",
+              "type": "chat",
+              "name": "Claude Effort",
+              "capabilities": {
+                "tools": true,
+                "input": [
+                  "text"
+                ],
+                "output": [
+                  "text"
+                ],
+                "temperature": true
+              },
+              "variants": [
+                {
+                  "id": "none",
+                  "settings": {
+                    "thinking": {
+                      "type": "disabled"
+                    }
+                  }
+                },
+                {
+                  "id": "low",
+                  "settings": {
+                    "thinking": {
+                      "type": "adaptive",
+                      "display": "summarized"
+                    },
+                    "effort": "low"
+                  }
+                }
+              ],
+              "time": {
+                "released": 1767225600000
+              },
+              "cost": [
+                {
+                  "input": 0,
+                  "output": 0,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  }
+                }
+              ],
+              "status": "active",
+              "enabled": true,
+              "limit": {
+                "context": 128000,
+                "output": 8192
+              }
+            },
+            {
+              "id": "claude-toggle",
+              "modelID": "claude-toggle",
+              "providerID": "anthropic",
+              "type": "chat",
+              "name": "Claude Toggle",
+              "capabilities": {
+                "tools": true,
+                "input": [
+                  "text"
+                ],
+                "output": [
+                  "text"
+                ],
+                "temperature": true
+              },
+              "variants": [
+                {
+                  "id": "none",
+                  "settings": {
+                    "thinking": {
+                      "type": "disabled"
+                    }
+                  }
+                },
+                {
+                  "id": "thinking",
+                  "settings": {
+                    "thinking": {
+                      "type": "adaptive",
+                      "display": "summarized"
+                    }
+                  }
+                }
+              ],
+              "time": {
+                "released": 1767225600000
+              },
+              "cost": [
+                {
+                  "input": 0,
+                  "output": 0,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  }
+                }
+              ],
+              "status": "active",
+              "enabled": true,
+              "limit": {
+                "context": 128000,
+                "output": 8192
+              }
+            },
+            {
+              "id": "claude-opus-4-5",
+              "modelID": "claude-opus-4-5",
+              "providerID": "anthropic",
+              "type": "chat",
+              "name": "Claude Opus 4.5",
+              "capabilities": {
+                "tools": true,
+                "input": [
+                  "text"
+                ],
+                "output": [
+                  "text"
+                ],
+                "temperature": true
+              },
+              "variants": [
+                {
+                  "id": "low",
+                  "settings": {
+                    "thinking": {
+                      "type": "enabled",
+                      "budgetTokens": 8191
+                    },
+                    "effort": "low"
+                  }
+                },
+                {
+                  "id": "high",
+                  "settings": {
+                    "thinking": {
+                      "type": "enabled",
+                      "budgetTokens": 8191
+                    },
+                    "effort": "high"
+                  }
+                }
+              ],
+              "time": {
+                "released": 1767225600000
+              },
+              "cost": [
+                {
+                  "input": 0,
+                  "output": 0,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  }
+                }
+              ],
+              "status": "active",
+              "enabled": true,
+              "limit": {
+                "context": 128000,
+                "output": 8192
+              }
+            }
+          ],
+          "environment": [
+            "ANTHROPIC_API_KEY"
+          ]
+        },
+        {
+          "info": {
+            "id": "xai",
+            "name": "xAI",
+            "activation": "auto",
+            "package": "@opencode/ai/providers/xai"
+          },
+          "models": [
+            {
+              "id": "grok-4.5",
+              "modelID": "grok-4.5",
+              "providerID": "xai",
+              "type": "chat",
+              "name": "Grok 4.5",
+              "capabilities": {
+                "tools": true,
+                "input": [
+                  "text"
+                ],
+                "output": [
+                  "text"
+                ],
+                "temperature": true
+              },
+              "variants": [
+                {
+                  "id": "low",
+                  "settings": {
+                    "reasoningEffort": "low",
+                    "reasoningSummary": "auto",
+                    "include": [
+                      "reasoning.encrypted_content"
+                    ]
+                  }
+                },
+                {
+                  "id": "medium",
+                  "settings": {
+                    "reasoningEffort": "medium",
+                    "reasoningSummary": "auto",
+                    "include": [
+                      "reasoning.encrypted_content"
+                    ]
+                  }
+                },
+                {
+                  "id": "high",
+                  "settings": {
+                    "reasoningEffort": "high",
+                    "reasoningSummary": "auto",
+                    "include": [
+                      "reasoning.encrypted_content"
+                    ]
+                  }
+                }
+              ],
+              "time": {
+                "released": 1783468800000
+              },
+              "cost": [
+                {
+                  "input": 0,
+                  "output": 0,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  }
+                }
+              ],
+              "status": "active",
+              "enabled": true,
+              "limit": {
+                "context": 500000,
+                "output": 500000
+              }
+            }
+          ],
+          "environment": [
+            "XAI_API_KEY"
+          ]
+        },
+        {
+          "info": {
+            "id": "opencode-go",
+            "name": "OpenCode Go",
+            "activation": "auto",
+            "package": "@opencode/ai/providers/anthropic"
+          },
+          "models": [
+            {
+              "id": "minimax-m3",
+              "modelID": "minimax-m3",
+              "providerID": "opencode-go",
+              "type": "chat",
+              "name": "MiniMax-M3",
+              "capabilities": {
+                "tools": true,
+                "input": [
+                  "text"
+                ],
+                "output": [
+                  "text"
+                ],
+                "temperature": true
+              },
+              "variants": [
+                {
+                  "id": "none",
+                  "settings": {
+                    "thinking": {
+                      "type": "disabled"
+                    }
+                  }
+                },
+                {
+                  "id": "thinking",
+                  "settings": {
+                    "thinking": {
+                      "type": "adaptive",
+                      "display": "summarized"
+                    }
+                  }
+                }
+              ],
+              "time": {
+                "released": 1780185600000
+              },
+              "cost": [
+                {
+                  "input": 0,
+                  "output": 0,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  }
+                }
+              ],
+              "status": "active",
+              "enabled": true,
+              "limit": {
+                "context": 1000000,
+                "output": 131072
+              }
+            }
+          ],
+          "environment": [
+            "OPENCODE_API_KEY"
+          ]
+        },
+        {
+          "info": {
+            "id": "alibaba",
+            "name": "Alibaba",
+            "activation": "auto",
+            "package": "@opencode/ai/providers/alibaba/chat"
+          },
+          "models": [
+            {
+              "id": "toggle-only",
+              "modelID": "toggle-only",
+              "providerID": "alibaba",
+              "type": "chat",
+              "name": "Toggle Only",
+              "capabilities": {
+                "tools": true,
+                "input": [
+                  "text"
+                ],
+                "output": [
+                  "text"
+                ],
+                "temperature": true
+              },
+              "variants": [
+                {
+                  "id": "none",
+                  "settings": {
+                    "enableThinking": false
+                  }
+                },
+                {
+                  "id": "thinking",
+                  "settings": {
+                    "enableThinking": true
+                  }
+                }
+              ],
+              "time": {
+                "released": 1767225600000
+              },
+              "cost": [
+                {
+                  "input": 0,
+                  "output": 0,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  }
+                }
+              ],
+              "status": "active",
+              "enabled": true,
+              "limit": {
+                "context": 128000,
+                "output": 20000
+              }
+            },
+            {
+              "id": "toggle-budget",
+              "modelID": "toggle-budget",
+              "providerID": "alibaba",
+              "type": "chat",
+              "name": "Toggle Budget",
+              "capabilities": {
+                "tools": true,
+                "input": [
+                  "text"
+                ],
+                "output": [
+                  "text"
+                ],
+                "temperature": true
+              },
+              "variants": [
+                {
+                  "id": "none",
+                  "settings": {
+                    "enableThinking": false
+                  }
+                },
+                {
+                  "id": "high",
+                  "settings": {
+                    "enableThinking": true,
+                    "thinkingBudget": 8000
+                  }
+                },
+                {
+                  "id": "max",
+                  "settings": {
+                    "enableThinking": true,
+                    "thinkingBudget": 16000
+                  }
+                }
+              ],
+              "time": {
+                "released": 1767225600000
+              },
+              "cost": [
+                {
+                  "input": 0,
+                  "output": 0,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  }
+                }
+              ],
+              "status": "active",
+              "enabled": true,
+              "limit": {
+                "context": 128000,
+                "output": 20000
+              }
+            }
+          ],
+          "environment": [
+            "ALIBABA_API_KEY"
+          ]
+        },
+        {
+          "info": {
+            "id": "vercel",
+            "name": "Vercel AI Gateway",
+            "activation": "auto",
+            "package": "@opencode/ai/providers/vercel-ai-gateway"
+          },
+          "models": [
+            {
+              "id": "alibaba/qwen-toggle",
+              "modelID": "alibaba/qwen-toggle",
+              "providerID": "vercel",
+              "type": "chat",
+              "name": "Gateway Alibaba Toggle",
+              "capabilities": {
+                "tools": true,
+                "input": [
+                  "text"
+                ],
+                "output": [
+                  "text"
+                ],
+                "temperature": true
+              },
+              "variants": [
+                {
+                  "id": "none",
+                  "settings": {
+                    "thinking": {
+                      "type": "disabled"
+                    }
+                  }
+                },
+                {
+                  "id": "high",
+                  "settings": {
+                    "thinking": {
+                      "type": "enabled",
+                      "budgetTokens": 8000
+                    }
+                  }
+                },
+                {
+                  "id": "max",
+                  "settings": {
+                    "thinking": {
+                      "type": "enabled",
+                      "budgetTokens": 16000
+                    }
+                  }
+                }
+              ],
+              "time": {
+                "released": 1767225600000
+              },
+              "cost": [
+                {
+                  "input": 0,
+                  "output": 0,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  }
+                }
+              ],
+              "status": "active",
+              "enabled": true,
+              "limit": {
+                "context": 128000,
+                "output": 20000
+              }
+            },
+            {
+              "id": "amazon/nova-2-lite",
+              "modelID": "amazon/nova-2-lite",
+              "providerID": "vercel",
+              "type": "chat",
+              "name": "Gateway Nova 2 Lite",
+              "capabilities": {
+                "tools": true,
+                "input": [
+                  "text"
+                ],
+                "output": [
+                  "text"
+                ],
+                "temperature": true
+              },
+              "variants": [
+                {
+                  "id": "none",
+                  "settings": {
+                    "thinking": {
+                      "type": "disabled"
+                    }
+                  }
+                },
+                {
+                  "id": "low",
+                  "settings": {
+                    "reasoningEffort": "low"
+                  }
+                },
+                {
+                  "id": "high",
+                  "settings": {
+                    "reasoningEffort": "high"
+                  }
+                }
+              ],
+              "time": {
+                "released": 1767225600000
+              },
+              "cost": [
+                {
+                  "input": 0,
+                  "output": 0,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  }
+                }
+              ],
+              "status": "active",
+              "enabled": true,
+              "limit": {
+                "context": 128000,
+                "output": 20000
+              }
+            },
+            {
+              "id": "deepseek/deepseek-toggle",
+              "modelID": "deepseek/deepseek-toggle",
+              "providerID": "vercel",
+              "type": "chat",
+              "name": "Gateway DeepSeek Toggle",
+              "capabilities": {
+                "tools": true,
+                "input": [
+                  "text"
+                ],
+                "output": [
+                  "text"
+                ],
+                "temperature": true
+              },
+              "variants": [
+                {
+                  "id": "none",
+                  "settings": {
+                    "thinking": {
+                      "type": "disabled"
+                    }
+                  }
+                },
+                {
+                  "id": "low",
+                  "settings": {
+                    "reasoningEffort": "low"
+                  }
+                },
+                {
+                  "id": "high",
+                  "settings": {
+                    "reasoningEffort": "high"
+                  }
+                }
+              ],
+              "time": {
+                "released": 1767225600000
+              },
+              "cost": [
+                {
+                  "input": 0,
+                  "output": 0,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  }
+                }
+              ],
+              "status": "active",
+              "enabled": true,
+              "limit": {
+                "context": 128000,
+                "output": 20000
+              }
+            }
+          ],
+          "environment": [
+            "AI_GATEWAY_API_KEY"
+          ]
+        },
+        {
+          "info": {
+            "id": "openrouter",
+            "name": "OpenRouter",
+            "activation": "auto",
+            "package": "@opencode/ai/providers/openrouter"
+          },
+          "models": [
+            {
+              "id": "openrouter-toggle",
+              "modelID": "openrouter-toggle",
+              "providerID": "openrouter",
+              "type": "chat",
+              "name": "OpenRouter Toggle",
+              "capabilities": {
+                "tools": true,
+                "input": [
+                  "text"
+                ],
+                "output": [
+                  "text"
+                ],
+                "temperature": true
+              },
+              "variants": [
+                {
+                  "id": "none",
+                  "settings": {
+                    "reasoning": {
+                      "enabled": false
+                    }
+                  }
+                },
+                {
+                  "id": "thinking",
+                  "settings": {
+                    "reasoning": {
+                      "enabled": true
+                    }
+                  }
+                }
+              ],
+              "time": {
+                "released": 1767225600000
+              },
+              "cost": [
+                {
+                  "input": 0,
+                  "output": 0,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  }
+                }
+              ],
+              "status": "active",
+              "enabled": true,
+              "limit": {
+                "context": 128000,
+                "output": 20000
+              }
+            }
+          ],
+          "environment": [
+            "OPENROUTER_API_KEY"
+          ]
+        },
+        {
+          "info": {
+            "id": "google",
+            "name": "Google",
+            "activation": "auto",
+            "package": "@opencode/ai/providers/google"
+          },
+          "models": [
+            {
+              "id": "gemini-2.5-flash",
+              "modelID": "gemini-2.5-flash",
+              "providerID": "google",
+              "type": "chat",
+              "name": "Gemini 2.5 Flash",
+              "capabilities": {
+                "tools": true,
+                "input": [
+                  "text"
+                ],
+                "output": [
+                  "text"
+                ],
+                "temperature": true
+              },
+              "variants": [
+                {
+                  "id": "none",
+                  "settings": {
+                    "thinkingConfig": {
+                      "includeThoughts": false,
+                      "thinkingBudget": 0
+                    }
+                  }
+                },
+                {
+                  "id": "high",
+                  "settings": {
+                    "thinkingConfig": {
+                      "includeThoughts": true,
+                      "thinkingBudget": 8000
+                    }
+                  }
+                },
+                {
+                  "id": "max",
+                  "settings": {
+                    "thinkingConfig": {
+                      "includeThoughts": true,
+                      "thinkingBudget": 16000
+                    }
+                  }
+                }
+              ],
+              "time": {
+                "released": 1767225600000
+              },
+              "cost": [
+                {
+                  "input": 0,
+                  "output": 0,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  }
+                }
+              ],
+              "status": "active",
+              "enabled": true,
+              "limit": {
+                "context": 128000,
+                "output": 20000
+              }
+            }
+          ],
+          "environment": [
+            "GOOGLE_GENERATIVE_AI_API_KEY"
+          ]
+        },
+        {
+          "info": {
+            "id": "google-vertex",
+            "name": "Google Vertex",
+            "activation": "auto",
+            "package": "@opencode/ai/providers/google-vertex"
+          },
+          "models": [
+            {
+              "id": "gemini-2.5-flash-lite",
+              "modelID": "gemini-2.5-flash-lite",
+              "providerID": "google-vertex",
+              "type": "chat",
+              "name": "Gemini 2.5 Flash Lite",
+              "capabilities": {
+                "tools": true,
+                "input": [
+                  "text"
+                ],
+                "output": [
+                  "text"
+                ],
+                "temperature": true
+              },
+              "variants": [
+                {
+                  "id": "none",
+                  "settings": {
+                    "thinkingConfig": {
+                      "includeThoughts": false,
+                      "thinkingBudget": 0
+                    }
+                  }
+                },
+                {
+                  "id": "high",
+                  "settings": {
+                    "thinkingConfig": {
+                      "includeThoughts": true,
+                      "thinkingBudget": 8000
+                    }
+                  }
+                },
+                {
+                  "id": "max",
+                  "settings": {
+                    "thinkingConfig": {
+                      "includeThoughts": true,
+                      "thinkingBudget": 16000
+                    }
+                  }
+                }
+              ],
+              "time": {
+                "released": 1767225600000
+              },
+              "cost": [
+                {
+                  "input": 0,
+                  "output": 0,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  }
+                }
+              ],
+              "status": "active",
+              "enabled": true,
+              "limit": {
+                "context": 128000,
+                "output": 20000
+              }
+            }
+          ],
+          "environment": [
+            "GOOGLE_VERTEX_PROJECT"
+          ]
+        },
+        {
+          "info": {
+            "id": "amazon-bedrock",
+            "name": "Amazon Bedrock",
+            "activation": "auto",
+            "package": "@opencode/ai/providers/amazon-bedrock"
+          },
+          "models": [
+            {
+              "id": "us.amazon.nova-2-lite-v1:0",
+              "modelID": "us.amazon.nova-2-lite-v1:0",
+              "providerID": "amazon-bedrock",
+              "type": "chat",
+              "name": "Nova 2 Lite",
+              "capabilities": {
+                "tools": true,
+                "input": [
+                  "text"
+                ],
+                "output": [
+                  "text"
+                ],
+                "temperature": true
+              },
+              "variants": [
+                {
+                  "id": "none",
+                  "body": {
+                    "additionalModelRequestFields": {
+                      "reasoningConfig": {
+                        "type": "disabled"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "low",
+                  "body": {
+                    "additionalModelRequestFields": {
+                      "reasoningConfig": {
+                        "type": "enabled",
+                        "maxReasoningEffort": "low"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "high",
+                  "body": {
+                    "additionalModelRequestFields": {
+                      "reasoningConfig": {
+                        "type": "enabled",
+                        "maxReasoningEffort": "high"
+                      }
+                    }
+                  }
+                }
+              ],
+              "time": {
+                "released": 1767225600000
+              },
+              "cost": [
+                {
+                  "input": 0,
+                  "output": 0,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  }
+                }
+              ],
+              "status": "active",
+              "enabled": true,
+              "limit": {
+                "context": 128000,
+                "output": 20000
+              }
+            }
+          ],
+          "environment": [
+            "AWS_ACCESS_KEY_ID"
+          ]
+        },
+        {
+          "info": {
+            "id": "sap-ai-core",
+            "name": "SAP AI Core",
+            "activation": "auto",
+            "package": "aisdk:@jerome-benoit/sap-ai-provider-v2"
+          },
+          "models": [
+            {
+              "id": "gemini-2.5-flash",
+              "modelID": "gemini-2.5-flash",
+              "providerID": "sap-ai-core",
+              "type": "chat",
+              "name": "Gemini 2.5 Flash",
+              "capabilities": {
+                "tools": true,
+                "input": [
+                  "text"
+                ],
+                "output": [
+                  "text"
+                ],
+                "temperature": true
+              },
+              "variants": [
+                {
+                  "id": "none",
+                  "settings": {
+                    "modelParams": {
+                      "thinkingConfig": {
+                        "includeThoughts": false,
+                        "thinkingBudget": 0
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "high",
+                  "settings": {
+                    "modelParams": {
+                      "thinkingConfig": {
+                        "includeThoughts": true,
+                        "thinkingBudget": 8000
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "max",
+                  "settings": {
+                    "modelParams": {
+                      "thinkingConfig": {
+                        "includeThoughts": true,
+                        "thinkingBudget": 16000
+                      }
+                    }
+                  }
+                }
+              ],
+              "time": {
+                "released": 1767225600000
+              },
+              "cost": [
+                {
+                  "input": 0,
+                  "output": 0,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  }
+                }
+              ],
+              "status": "active",
+              "enabled": true,
+              "limit": {
+                "context": 128000,
+                "output": 20000
+              }
+            },
+            {
+              "id": "amazon--nova-lite",
+              "modelID": "amazon--nova-lite",
+              "providerID": "sap-ai-core",
+              "type": "chat",
+              "name": "Nova Lite",
+              "capabilities": {
+                "tools": true,
+                "input": [
+                  "text"
+                ],
+                "output": [
+                  "text"
+                ],
+                "temperature": true
+              },
+              "variants": [
+                {
+                  "id": "none",
+                  "settings": {
+                    "modelParams": {
+                      "additionalModelRequestFields": {
+                        "thinking": {
+                          "type": "disabled"
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "low",
+                  "settings": {
+                    "modelParams": {
+                      "additionalModelRequestFields": {
+                        "output_config": {
+                          "effort": "low"
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "high",
+                  "settings": {
+                    "modelParams": {
+                      "additionalModelRequestFields": {
+                        "output_config": {
+                          "effort": "high"
+                        }
+                      }
+                    }
+                  }
+                }
+              ],
+              "time": {
+                "released": 1767225600000
+              },
+              "cost": [
+                {
+                  "input": 0,
+                  "output": 0,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  }
+                }
+              ],
+              "status": "active",
+              "enabled": true,
+              "limit": {
+                "context": 128000,
+                "output": 20000
+              }
+            },
+            {
+              "id": "cohere--command-a-reasoning",
+              "modelID": "cohere--command-a-reasoning",
+              "providerID": "sap-ai-core",
+              "type": "chat",
+              "name": "Command A Reasoning",
+              "capabilities": {
+                "tools": true,
+                "input": [
+                  "text"
+                ],
+                "output": [
+                  "text"
+                ],
+                "temperature": true
+              },
+              "variants": [
+                {
+                  "id": "none",
+                  "settings": {
+                    "modelParams": {
+                      "thinking": {
+                        "type": "disabled"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "low",
+                  "settings": {
+                    "modelParams": {
+                      "reasoning_effort": "low"
+                    }
+                  }
+                },
+                {
+                  "id": "high",
+                  "settings": {
+                    "modelParams": {
+                      "reasoning_effort": "high"
+                    }
+                  }
+                }
+              ],
+              "time": {
+                "released": 1767225600000
+              },
+              "cost": [
+                {
+                  "input": 0,
+                  "output": 0,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  }
+                }
+              ],
+              "status": "active",
+              "enabled": true,
+              "limit": {
+                "context": 128000,
+                "output": 20000
+              }
+            },
+            {
+              "id": "anthropic--claude-4.7-opus",
+              "modelID": "anthropic--claude-4.7-opus",
+              "providerID": "sap-ai-core",
+              "type": "chat",
+              "name": "Claude 4.7 Opus",
+              "capabilities": {
+                "tools": true,
+                "input": [
+                  "text"
+                ],
+                "output": [
+                  "text"
+                ],
+                "temperature": true
+              },
+              "variants": [
+                {
+                  "id": "low",
+                  "settings": {
+                    "modelParams": {
+                      "additionalModelRequestFields": {
+                        "thinking": {
+                          "type": "adaptive",
+                          "display": "summarized"
+                        },
+                        "output_config": {
+                          "effort": "low"
+                        }
+                      }
+                    }
+                  }
+                }
+              ],
+              "time": {
+                "released": 1767225600000
+              },
+              "cost": [
+                {
+                  "input": 0,
+                  "output": 0,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  }
+                }
+              ],
+              "status": "active",
+              "enabled": true,
+              "limit": {
+                "context": 128000,
+                "output": 20000
+              }
+            },
+            {
+              "id": "anthropic--claude-4-sonnet",
+              "modelID": "anthropic--claude-4-sonnet",
+              "providerID": "sap-ai-core",
+              "type": "chat",
+              "name": "Claude 4 Sonnet",
+              "capabilities": {
+                "tools": true,
+                "input": [
+                  "text"
+                ],
+                "output": [
+                  "text"
+                ],
+                "temperature": true
+              },
+              "variants": [
+                {
+                  "id": "high",
+                  "settings": {
+                    "modelParams": {
+                      "additionalModelRequestFields": {
+                        "thinking": {
+                          "type": "enabled",
+                          "budget_tokens": 8000
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "max",
+                  "settings": {
+                    "modelParams": {
+                      "additionalModelRequestFields": {
+                        "thinking": {
+                          "type": "enabled",
+                          "budget_tokens": 16000
+                        }
+                      }
+                    }
+                  }
+                }
+              ],
+              "time": {
+                "released": 1767225600000
+              },
+              "cost": [
+                {
+                  "input": 0,
+                  "output": 0,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  }
+                }
+              ],
+              "status": "active",
+              "enabled": true,
+              "limit": {
+                "context": 128000,
+                "output": 20000
+              }
+            }
+          ],
+          "environment": [
+            "AICORE_SERVICE_KEY"
+          ]
+        }
+      ]
+    }
+  },
+  "v1.models": {
+    "call": "decode",
+    "input": {
+      "acme": {
+        "id": "acme",
+        "name": "Acme",
+        "env": [
+          "ACME_API_KEY"
+        ],
+        "npm": "@ai-sdk/openai-compatible",
+        "api": "https://api.acme.test/v1",
+        "models": {
+          "acme-1": {
+            "id": "acme-1",
+            "name": "Acme One",
+            "release_date": "2026-01-01",
+            "attachment": false,
+            "reasoning": true,
+            "reasoning_options": [
+              {
+                "type": "effort",
+                "values": [
+                  null,
+                  "low",
+                  "high"
+                ]
+              },
+              {
+                "type": "budget_tokens",
+                "min": 1024
+              }
+            ],
+            "temperature": true,
+            "tool_call": true,
+            "interleaved": {
+              "field": "vendor_reasoning"
+            },
+            "cost": {
+              "input": 1,
+              "output": 2,
+              "tiers": [
+                {
+                  "tier": {
+                    "type": "context",
+                    "size": 200000
+                  },
+                  "input": 3,
+                  "output": 4
+                }
+              ]
+            },
+            "limit": {
+              "context": 128000,
+              "output": 8192
+            }
+          }
+        }
+      }
+    },
+    "expected": {
+      "false": [
+        {
+          "info": {
+            "id": "acme",
+            "name": "Acme",
+            "activation": "auto",
+            "package": "@opencode/ai/providers/openai-compatible",
+            "settings": {
+              "baseURL": "https://api.acme.test/v1"
+            }
+          },
+          "models": [
+            {
+              "id": "acme-1",
+              "modelID": "acme-1",
+              "providerID": "acme",
+              "type": "chat",
+              "name": "Acme One",
+              "compatibility": {
+                "reasoningField": "vendor_reasoning"
+              },
+              "settings": {
+                "provider": "acme"
+              },
+              "capabilities": {
+                "tools": true,
+                "input": [
+                  "text"
+                ],
+                "output": [
+                  "text"
+                ],
+                "temperature": true
+              },
+              "variants": [
+                {
+                  "id": "low",
+                  "settings": {
+                    "reasoningEffort": "low"
+                  }
+                },
+                {
+                  "id": "high",
+                  "settings": {
+                    "reasoningEffort": "high"
+                  }
+                }
+              ],
+              "time": {
+                "released": 1767225600000
+              },
+              "cost": [
+                {
+                  "input": 1,
+                  "output": 2,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  }
+                },
+                {
+                  "input": 3,
+                  "output": 4,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  },
+                  "tier": {
+                    "type": "context",
+                    "size": 200000
+                  }
+                }
+              ],
+              "status": "active",
+              "enabled": true,
+              "limit": {
+                "context": 128000,
+                "output": 8192
+              }
+            }
+          ],
+          "environment": [
+            "ACME_API_KEY"
+          ]
+        }
+      ],
+      "true": [
+        {
+          "info": {
+            "id": "acme",
+            "name": "Acme",
+            "activation": "auto",
+            "package": "@opencode/ai/providers/openai-compatible",
+            "settings": {
+              "baseURL": "https://api.acme.test/v1"
+            }
+          },
+          "models": [
+            {
+              "id": "acme-1",
+              "modelID": "acme-1",
+              "providerID": "acme",
+              "type": "chat",
+              "name": "Acme One",
+              "compatibility": {
+                "reasoningField": "vendor_reasoning"
+              },
+              "settings": {
+                "provider": "acme"
+              },
+              "capabilities": {
+                "tools": true,
+                "input": [
+                  "text"
+                ],
+                "output": [
+                  "text"
+                ],
+                "temperature": true
+              },
+              "variants": [
+                {
+                  "id": "low",
+                  "settings": {
+                    "reasoningEffort": "low"
+                  }
+                },
+                {
+                  "id": "high",
+                  "settings": {
+                    "reasoningEffort": "high"
+                  }
+                }
+              ],
+              "time": {
+                "released": 1767225600000
+              },
+              "cost": [
+                {
+                  "input": 1,
+                  "output": 2,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  }
+                },
+                {
+                  "input": 3,
+                  "output": 4,
+                  "cache": {
+                    "read": 0,
+                    "write": 0
+                  },
+                  "tier": {
+                    "type": "context",
+                    "size": 200000
+                  }
+                }
+              ],
+              "status": "active",
+              "enabled": true,
+              "limit": {
+                "context": 128000,
+                "output": 8192
+              }
+            }
+          ],
+          "environment": [
+            "ACME_API_KEY"
+          ]
+        }
+      ]
+    }
+  },
+  "snapshot.bytes": {
+    "call": "text",
+    "bytes": 9839875,
+    "sha256": "1151390ec73d640f89cf4ba5beac343b7da539ee5e3da0c6c44438c5d8becdbf"
+  },
+  "snapshot.providers": {
+    "call": "snapshot",
+    "count": {
+      "false": 326,
+      "true": 326
+    },
+    "providers": {
+      "false": {
+        "xxapi": "a0b839fed1ba4380205114d941518293ec8989d3597eccc95ffaeea4a33e31c9",
+        "oci": "97dae422daeafcefd84dbbe16a25b70f66cbcfa2cec6fa8801b5ef7f0b4754ef",
+        "nokeep": "85b6f2457d95db15185a7444da1b061ec365b5c57781835f286ec79a42e39166",
+        "ofox": "5596ecceeac4cbd3c399d8d7df28eeb5f3c970816536c4cf20d54bcdf31541c5",
+        "merge-gateway": "0ac08e9bb4233e7ca1f67effd95b56e48814214eddb893570f2214e5bbf5a8ec",
+        "qiniu-ai": "c1bb2b26bfc06610c0a41554b642718b3ac46ce19a236d9736cb8bd7dcfcf2fe",
+        "tenstorrent": "2ec96406fe2569c426b56ef2570352e56e3db6eb179e6c4103c5f8deb0a60189",
+        "vispark": "b4fc2b33b2c03ad3233adcc9ca8021f62ea69573a42116d98a4a1a3fe5d470fc",
+        "tokengo": "9d2fd4c9bae1ecb968b707e91e6abd99d1e38324e75f0198bcbd27076e4df056",
+        "uncensuredai": "a7dd484252cbaafc5fb13ad973b76d2f1b8a9d616bfced6d9750aaac5504a7dc",
+        "privatemode-ai": "43600920e86d11c01b71ae655a33715ffbd2ed91d49a6e1a54cacb7f95ca91cf",
+        "inferris": "8ce7681758e9139fb2b5828b85e37a63664b97fc5e8807517b51c569874c0b66",
+        "tencent-token-plan": "9ae1fce96c6cfa77b0dcd3a3b5d8ac947ae689febea1935f6c54ff3051fa93d7",
+        "obscurify": "6879bb7d9ce52f66cbb8a9943c61dfef7d672ef9ba2efcd834ce1c08e587b9c5",
+        "infersia": "c43845532eab38c41cced244246fbeea93346f55d4bc93b1f1c6c4dbe389320f",
+        "scnet-token-plan": "dc6e1fc82cc71098bc123366d7f8e676720b173ce290f59f3ef5ca4f5d6387ac",
+        "hubris": "8c97dc2a91071c4ba8609bd653cff5aed938b78b2c9204d8763a31c5ba2a328b",
+        "azure": "269136594c96b08ba4ac10e147305669602db29d384950d43e8f41164fde6f00",
+        "aihubmix": "6e26f9e9b7cd495fd102986ba9db70d7c94a9afa1d7c8fc11c6d24d0703fb81a",
+        "adaption": "5f0ed4b5cff82773b12e3f6fd4f61a70095c70be23f71f4c7c0590bd5057ffb7",
+        "impossibl": "0aea0123b2ddb9ca0257d4ae26e8f3e9987340e90f8176c9b17dde120d420967",
+        "wandb": "e6df6faa72c2069fbff8f0ce6b228a1c48b27d185326f8a46d25561a6d0bae76",
+        "databricks": "867c7a5b4082814b7f7af13a4bc556b27a44c6a81f4ce8fa165b55e042279016",
+        "evroc": "06139d29f8aaff620375f81c6810589fd07dc12d5f20bc6881c6cf9a07116bed",
+        "lyceum": "e0190d77780e9841e7b56efb42dd9ee46cb290515601b5097df6cfe6204b81ea",
+        "morph": "b868f872e6c6e21d427d9a7d286f885cf65509e19f4ce896af43430d72ce237f",
+        "nebius": "05223623f6f7c534cfc88b93975129b7a988def753b89cd2632b0c33849f365f",
+        "poe": "43c52ae896c9590d907be9a05de2bde4142d02e1c448dbda6127635fd45ed74c",
+        "tokenrouter": "a7dcf4aba81bd4e3f3736ccbec09e1e4710bd1c1804a8e52bd04cde8b3f6034e",
+        "melious": "fbb9a05f9e937ee1a439957b790b9b8408164f1f5eba4bec2fae0240321c8954",
+        "superbot-gg": "1112ad53f0caba0dc01d96e7711aa0ef830a5d16eacf03a69a3a57eda9961f15",
+        "alibaba-cn": "778d2362f2ce3086dee55d2088098ebe6832fd162091e13740fc232dc063e00f",
+        "nvidia": "f4cf245ff94fb0d451b4ad7fe85d72ec9561d70237d3e4bb8657bc84abbb6cf9",
+        "ai21": "813429769647a1a6502ef822623712fc511e4e36dc2b71d737f91196d7a6fc7b",
+        "claudinio": "befb064109a4ab0ac6391e99942882eb2a9f28a1004bfe3280d70b75e806299a",
+        "sarvam": "8efe0f0e5ab491ade3997e2d8c4c1de0c9c0a66c11081e14341571bf58814e42",
+        "daoxe": "a7217729355d6ac190cbbbb6a11e95ff67d6ea8a0e5a1591b7063b080c43a2b8",
+        "alibaba-coding-plan-cn": "604ce8efe11cbdaaac326d8da1bb8279074e06c02af520992a7203f7c388e392",
+        "outerlabs": "56149f71686a243dee4c404098923e2af157e345bfad8df6f30257937ed41c44",
+        "ainetcafe": "e4cade0424fa5c1e6824e55863581297272ba54d56e8ed0cbf657a5078dace68",
+        "xai": "8af8470dba85778efce40572d852933780e9f40c31acde9736265cadc836f7fd",
+        "liquid": "78de0986a1d77eb20a586c402c84904fbec6c0dc4cd0e1f0a59deadc82ce7f33",
+        "vivgrid": "6a5fba66bea32efe0ec6398556cf5b709b387bd28201eae2ccca11c41ddd8c48",
+        "cedarllm": "5ac0fd4fff9bb18a7f3b7833718c477e9e0dad040f2d7a4ddb9803de2cfdd629",
+        "inceptron": "d6006d353d8c9f5313266cb72251df1ce9a16704084dcb1613ae1c69081f4120",
+        "llmtr": "c5e643c0b3f3123df80d3695a9b4a36a5fb41c6513546d202c645b593b8721ca",
+        "tensorx": "183cec97e50d9d1e229bc5a511c6bf4c5d36a322113daed6377f2123a1c25e43",
+        "nan": "ab21f291bcbd630ca9374f0d3a32875044a30ee41ece37740c0efe2434f8a9c6",
+        "stackit": "14d07e146bfa14c5f171e9b00f95875151f65d60eece66e86771eb3f326ab11c",
+        "perplexity-agent": "6038774926637a5666c611a2678a0083b8503b4bf3e29a6edffaa2c454f3c72a",
+        "byteplus": "502cceac9cc11c594e792a9fbaa3245a8c906c652a77e3f7938fca71c43361e8",
+        "infer": "9ec12ad136ec65117b8dd0c7d988be5a0722b59baef0c59c382c7acefa4804fb",
+        "watt": "a228586824da158eab0537703c8395b69d193261627ac5a9e28fefe6e3401975",
+        "nodecode": "c049915ded9ee0e0beb96f4bc9cd7f16bb605c9a25fd44c328ad132683e5f04d",
+        "typesafe": "51032144125d6b2af495480809c6f36a5fc1a0217fa499247803286d8e1b692a",
+        "chutes": "0c893f9cda7f515b7142ebbbc83947b675f48080bec6823e0e8e04fc3a7104f0",
+        "salad-cloud": "363caeed18d67196b51e6469206a305d76b5018183714e2b47be76a2adc2858c",
+        "kimi-code-plan-cn": "6db1f9565d7066fec5dc2bf292dc75ffc7c3e618dad4d9cb2584d0115bf94819",
+        "bee": "5f09edf48c8bbd7cf162cac1c09acb32d8fb97f397059f6dd64693da142a8069",
+        "io-net": "679e6f514c6dd9f95e923fa2bc6fe96364461591ed45f76c4b97d001325f8c67",
+        "lynkr": "d927eb767fad2ed90dfdbd45ca8e02eec07dae2d9dc06df9503f28e9edd0d65d",
+        "unrestricted": "9dde6e24ecce5eb12699ea28074e6b376c832ced9092fbde50d4bbf8d1ed661d",
+        "huawei-maas": "438b2fd2d3c7e4f68afd5fd182f881c717ae3e40cbc20c5092c70493cb71a891",
+        "meganova": "bbe8997388742f496c56da3e943390152c311888dbb944a8081d80ccead2eea9",
+        "refuseless": "bb41c36526c19403b014d7394b2844ddd18eda03f01c285eb3f03fdd6603bf08",
+        "alibaba-coding-plan": "de901bb3fc8dfb63e73c285e7805366532cca7043467ecdcd471b698c5f42c4e",
+        "dothoosh": "436361dc644408eebb1c58d47c5c2822e7e2e3c68226538cade5942314aea83b",
+        "thinkingmachines": "d11df8cf2250cd45598e5248a28601f4854fb541a20b7f814282c3f636e6e399",
+        "crusoe": "c085c710121358fadd8fd281c92c71a7dcc15dcc0aedf73f25c5491ec91da305",
+        "vancine": "d21f90044f5b5135fd6fcc424a71e54e673ba076ea6bf661cb6128becd919f35",
+        "umans-ai": "a1ad6b4efda31fe7c88c8029ec729790329835a2e36cebe517fc1225e40c3f40",
+        "deepinfra": "8f64ecaa4c13845674d7a10fd602edd5f64c1365e3d2e280620a7cdc4bfe2aaf",
+        "302ai": "93ad4f3aea12ec7cda9aa19a13b64cd2caaded6e1f227d73d277a44f86eb3200",
+        "pareto": "2b362bfad6cbb79f32fe9e52daa539ac5cbf4c1407f325b0a8d8ef7b12cf7d7e",
+        "drun": "8c29b5c4cfc9e3ae3fbb88ad65647742ea2bd1de79f63423214d22fa0cbed831",
+        "sparrowcodes": "1a342a0a6d0df37ebcb373fdd4822fcaf0b8426afa8ffb044bfa0cf94915d3c6",
+        "jzstoken": "f2145358b258188c573849883865bec02b715052bb9f7e2e66a8af44fdefa9fc",
+        "openrouter": "0a9609d2a8deb7f4e4aadf6fe0493dd7d3de4fb10e7ef810108b15d73650fe98",
+        "routing-run": "3a7279e4e63ddda66e72cd2bcc777268feaac4e529568c2258b0a6d54ede4bd7",
+        "opper": "2065d61e52fe39eddda84f9071b7cdabb02ce61b0d82cdeb34992835a3ec3c9c",
+        "opencode-go": "a4a97bd68ad3fd26eaa63858731fadcbb181c877a9f2bb88d003570b084f396f",
+        "mixlayer": "e8ea16557c084d3a3b61f041dea00e608b7482528649cbd133ffb9c4f639ecef",
+        "togetherai": "1d3795713083e77b70a3b513a5f832effceb3842b6d01c9771cdfa547155bd7e",
+        "upstage": "534b9345f32ac2e35eb8db4715fe859bb5cc43d8f56d3787d68ec461b4a5414f",
+        "phala": "ff2c86684b3f661ff31d2ebc06ae8fcadd335c7d4c9c36c3447ddd0d04ea33a8",
+        "iteracompute": "885047e9cfc8af3cc1e0d59b6e8d39deaf7eecccdc6c5568edd6b4b04b73dcc0",
+        "watsonx": "83443342480d86fe03b1c1fd35142f7e6d35e1a6ae97151fb38d2d9c3c0a0777",
+        "meragpt": "744ada206c3bdc550b34f54fbc7decb0fa93bf0952f379b2eaa86a83ff50857b",
+        "modular": "78df8e5e20dcbe3ff8790ffe336334a9fa306695ea2c380c668cb79af7d952b7",
+        "google": "1a288b671b0daf252ab2b94081a8800c6d68c948634834c0526c41bd159fb333",
+        "reflection": "5a3088cd0c2d0716c183cf1f776a4fc88d21994ee9b8555f218f23a63ad08298",
+        "kenari": "db5d263df5b60100e7fbb2cde561e651e9e0ebc6868257aa2e7ed4b0db56ba94",
+        "empiriolabs": "bc7d250e8071f0a11a66c61659567cc5258c48b956c3a8af5c9af345744064e6",
+        "hyper": "efe523da5f6a453347c68ce0956d513e1db5b95d86fb2b5edddd1a1812729150",
+        "trustedtokens": "c0b64067f7e2b75c14a5a40827f19951e7f523744de115f75b6a2cea99c4ed5a",
+        "helicone": "72f4c36f345a4d063dbc1e685527cd72fc2b698f013e7058ea76ffbf24efb1b4",
+        "engy": "4b37e34b435d900c74c43730b8bef25f8c20e8a9af01f7567c5bd03414f168c2",
+        "digitalocean": "aaa591102ac97a0f4c7e44dd004d2d63fb91c44de2ffee575baf13bf99b1c017",
+        "stepfun-ai-step-plan": "4c365acb06bfc6abddf59cfd163c14840fe1891bbf6de78f695db065f80e8b66",
+        "lucidquery": "d4e999e372cee3877d3603f7daa95524b759b96c51e0f7093ff7ad6a3c48afa3",
+        "scx-ai": "b4e5c323bff50f52000b6d205ec5caeef904a7dec83f8beb628fef9884688d30",
+        "rayline": "5a55a798e0a2b397aea4b3900c3be67c0260dc2bf1078284d9f41c9fec4a85aa",
+        "phase": "e41f2826ddeefb4ed4fde9d7b809498d59d531cf18ed804287cd6cd4d3072a6d",
+        "xiaomi-token-plan-cn": "16bbbb958fff5905a8800b6b7d1d7c8bf3e8f31c49c6ed8a241451049c26fb9f",
+        "alibaba-token-plan": "cc093c5a433c80f9ef27e57a063b8f66def4dfaef9ce4b14c3ac9dee395ffce9",
+        "cloudcode": "bac9eaae29c540f4290424805be4b93a94ba785715d1af8cafd15420625f782a",
+        "mallard": "5911a2fe6227657943111f5330bf4f11c4f8495010158e732319dde5dac7c8e5",
+        "entrim": "96db4494e1f49cd98aa8607643c20243c60b41b530c20df8aeb566c97f1e6746",
+        "powerspring": "f93cabc162b527256e0b09c450689e9823f500ec7c0cda50c3b1b44cfa0fe514",
+        "siliconflow": "87efa832dbb4a1b6dd0a77786eda2aa8a9cbad9c750e5fd5fd65cf811f19b429",
+        "zenifra": "c8d45a41121f3df31a1adaaedad499e38635bb9dfbf094471b62b5553addf16c",
+        "xiaomi": "8838c607fbe464a4747145d566fb1785972e9e4699e6fefc75d92e7fbd9be5a2",
+        "munito-eu": "41e35c84e7c862c982cbac3bb4da72d88e113b8c2134ed6be8636096505a3af3",
+        "zai-coding-plan": "4a258bf43efcde6b49e2a66feeebb29ba92faa58f027a635b2d7f6ab9c27f8bc",
+        "moneo": "0e16460b7447e37c846ebf4269ee85767883c7c7463858c37e3a37036d9d493d",
+        "sakana": "3e8438d196a94d95c7536e66a42aa3f08bfaa45140a0112fde927498328df2b5",
+        "ai-router": "dedeca6e994a87971d00de3f32c550305241eeb0fc8041392519f31bc909959f",
+        "anonrouter": "607cb20f154615f354c4a4cc0b093244ee3f7c38bd18620ff6046df6c5c3223a",
+        "anyapi": "1d2800d209dbd8d78b1e7a2098953ee2787d21a69f9e1a1bc9e4ee0ce4fad0c6",
+        "alibaba": "e4812f985f984006550b678b03de825361786a587763264583c2188f2ca07b77",
+        "graphn": "6152bcec17c35f8e8c04cbadcbd7fe4b569f517bac87bdbd5370524f62200444",
+        "cline-pass": "4287b01983a98c6e908e1e6f65f51a5c09c4773bb4f8821088c3898d3cf20651",
+        "augure": "308a5b120f4bf929035a827dfa537c850f1df4ebd8beb7d88942dec9081df5e4",
+        "moonshotai": "44909f55aa5841296217ecd6f5bdcedf231311732950e8b48b00289cdfbf6a09",
+        "sambanova": "fa23d02b85c156e38899bb563dfee3b5c9b36b5f71c99d8326cc795ce04bc2f7",
+        "kimi-code-plan-global": "b3b51f443f38bec8c2f8029e1b8c74ac06860c7bf7df96bbcfd45cfda13617cc",
+        "jiekou": "b9e56fe09e1dc16b37a1416cdb47b54a115f02b4c35c346e158755e37880b567",
+        "zeldoc": "6aeedcb05b255476002ed032cdcf0ae99458efb80ad99d25d08f835211107dc6",
+        "tokenlab": "72ee2cb0579d0925aa2cf52456be6f0cfd76cef91776c8ee8861b08d57d0a504",
+        "oathbreaker": "19173505bc94b7c890b96d5d3baf667857ecb5c0a48124b7a792ece307bc9850",
+        "volcengine": "59795859b248b60cb2718d4fdfeb4fec5516e99f9e6019e89078fe1d84721bde",
+        "adzuki": "9ae1be22b84bfe777e0849525241197a1321d77292ebc07701d5bbc5604798f0",
+        "inferall": "5378d763a105e86638a2def200f164c01c3d0901da7eafe08602fac45aecd97c",
+        "submodel": "12035e32a1fbbf372bcf3056e4fcfebe4c408a06cc94e024c33fcff78932966b",
+        "sandbase": "34af3f63d2884bf43893483c0032195f926541d751d47a1e929a19d66d8fb0a6",
+        "cloudferro-sherlock": "c19fb277c97d58ef1734eda6c34e0802324eed15565f739787f7911928961c26",
+        "gmicloud": "19811b91e7500dcf3dd94b58dc594ed6e20cf564bc35bdefdfebf0f1ebd23e75",
+        "stepfun-ai": "265e70c18410e6d376edf2a684b51c6874bdd35adf28bac45974a1659cce3443",
+        "llmgateway": "a63f5af7daeef05311c5719e2c4b53fa7f025fd42b9f011eb4646d6e900e5305",
+        "jalapeno": "cd931371ce131e6dd8d79df323a91cf39d43f3ee745f6c0b6bc0323c356e6612",
+        "wallaby": "c41809b507f9472bb4cff1c27e1c97d77e367a837311c57a9d93340fd406ec22",
+        "blueclaw": "e91c4517780790f9e95fab7078fe8d028b2cde1a1f3fd581163391972ce94119",
+        "frequency": "2ccf61bfd332334dfb5994b00605abcaeaf08a33175749dd68f510c00f793cd9",
+        "cohere": "d24227a4164b2d38e5d073c0d9c8589bf0b89c51c7ae862b1804e25d1aaf3e89",
+        "inferenceapis": "843e234c74b82ca35922dd8573fad34dcd81be37e9e855ee0b5340422660d261",
+        "sensenova": "73adde5adf7ca1a140e8abfed88236659d66ac107f8a4dc302ec57677846bcfc",
+        "unbiased": "3761df20988fd83f34f918def13cfe7ed287a58b1ce287c4b9aaea210a23af58",
+        "perplexity": "ebfd258d4a09e67a64ba2277dae1469054cc4fb38e574dfe2e4a89227fc76225",
+        "minimax": "9a8736c806745340762926aa834cfa1128166382b5f9f9a40369cd0d0f344b4a",
+        "aixy": "b965d1cba90eff4308913533f72f92a50149b902951b3a832874e95d268d4d43",
+        "frogbot": "3f79b1d1854369ff6d34d3c79a48dd56965f71942c1dc398ec21bf6172e58c01",
+        "aki-io": "6adf5bfee3cbe5f9c6ec01af972ccd05127de7185383cd1a00a3fcd55285f760",
+        "therouter": "39b37a407428bad4f48acdb7eb426d65bacb8f3c009eab4315ad711b4c806aee",
+        "venice": "88cba4e8e1ee662488722f41fceab9ea7fd8ab6756d97de5d00b8c668659aa0e",
+        "groq": "3c3a4b200ccd3a9a64a53ef38aaf7f84af895ac3b9cc590e3ddc0cd8baa0b486",
+        "minimax-cn-coding-plan": "ccddd6ba4b347685fd10d6ec806f0ecc0697748b2ab336ad3603316dfc11d340",
+        "butler": "bfd1481ef6e41a58ba17d2e548c241d7236a66294ba4b93487c0389a279ac3f3",
+        "xpersona": "cf15a64bfd5754c81fda46b582361bf152a26f490e44b045055f31a84b333cdc",
+        "commandcode": "8856a71c6c298c89dc0c57cae69b504b7117767ae3f2b99ce498929d625b00df",
+        "qvac": "294a2b58b1df14d02c4b4fd7b2831c2f3504ab1aa39931d8a3e176fdc9500dd4",
+        "clarifai": "1a040d66180dd8b539aa0e6a7542ccce0569a191ae32743b8c8f896afa3b25e2",
+        "opencode": "d06338d40b08365eddde18083a7faa09a997e313df0c57e5804adfc5ef180768",
+        "paraloncloud": "8f8a2869dd94d30fa2f4d63d15cd531179a16188501c990dab824fd09080c73b",
+        "nano-gpt": "662a65082f127280bd3b1777b776d127d34b677a606c95a97e1e0ce69e0dfeec",
+        "moonshotai-cn": "4ace27d7277c7a4fbef2f9a01ce79afd78e87d20e5e2f03591d4c1536ab389a5",
+        "tinfoil": "4f8721ba1647b0a4e134ff5ebf5dbe3ce5de6149f64e075eb89a78eb0bf0fed8",
+        "zai": "189b2ef3237db56170b968cbdce2e1224691451e9f236270b96c2f72a1c7dd35",
+        "cloudflare-workers-ai": "b74b1ac0bd09879c98682d8db695b75f1585cbeea3e5f1496eef106114d9648e",
+        "inferx": "08187035ba48cb20fba0f8fb7ae206a10463a7fe82d4b556d515cade06c5ec1e",
+        "aimlapi": "16c676963e5083a25e6d6fb38c69d65e419592f1130fe14409284a3ca66013e5",
+        "regolo-ai": "d7827a6969c35e3e4fd704e3a3d4cd09a5aceb2bf6054d8d00c5650a09a6db02",
+        "confidential-ai": "b8caf01028ca770f471e3821c203c5c361d13bc1a455c334abe9cfc18181c84b",
+        "fortytwo": "8102bf703337b9184e1bf70fc643c491ae7f05854ed8b830b94a94107e0de0de",
+        "openai": "e80553f4d8019318fa2eebb1ce5fe8a4acbd8b991729f5f3a860f12409068125",
+        "lowrouter": "dd8095d0d81d4009e7bc71902fc69fe7bf9b32b799ce85de490805c4e030eff9",
+        "runcrate": "d4c8205eced526a9af117def47ceb499256a02d7bb6e1e1544cc0155c3fceb93",
+        "edenai": "b66021e58d46a1d1ef86801537440fbd60e9159a04cec9f34a4f2027bbe9ccc6",
+        "fastrouter": "c4abce72f70f2fb5593f2aa660484b229fd500b6c19ac89cd6ca0b65d406d6d1",
+        "doubleword": "7366445b7db2a0cf73aee41bc885fe128f7072f424ceec9e2d64c9859d7a2828",
+        "cerebras": "2d25e3812a0e8d1598a438c921a1e61f0533ae405ed911209f2af2b6e536c401",
+        "neuralwatt": "093693f068db916bb1ae8a6b7d9dfc8149bfc7760aa56873684a7d26422cc16d",
+        "trustedrouter": "a97a758dfb89e4bfba6929aeee2246c70a4aa693fca002972adbb67deb90307e",
+        "xiaomi-token-plan-sgp": "28539b7651928a7e8af5361ed63f75c8341632dde74db8014938bb9c5e51b85e",
+        "zhipuai": "52cbc2d80a083776e5fc4d8afd402dd97b65c1cdbaf7fe9d4ff0cd97607f6347",
+        "standardcompute": "ab01c72a65bb26dd18aa7eaf4fff45ecb378f5a266c092afec44a0c93309f954",
+        "prime": "90633bbf071b6af1f2a6984afd607fcabcd77b169c4c702c77f0cf7b116df990",
+        "tencent-coding-plan": "2b62af4c3d6ccdcef5bcba7e67dc6eb99261d4eef44083ef1bd0a1fef21fa6de",
+        "fireworks-ai": "21b62307e5b6a4e5287b7581c056a5a7cdd6d9ed69c46c0a75d1a4f78a400772",
+        "zenmux": "3d684134c46f0ffbcc5e8b012482b473cce555bedfe2bfb1e2f27f891da1b58e",
+        "kosmik": "fbf7a5a644f30b0ab78e8757d68fa35467a722863b027ce8f07b5a7b1af1d4de",
+        "arcee": "b46372ccfec63b1e96b0bd6fa1a332aa5cfe1ae555e4ad88d828e2013d7718c5",
+        "infomaniak": "3c908d6da0087286604a283ed4508f1ab72f89176eac93a4185615daae116ace",
+        "berget": "6cc78b16768cce47dc8fbf29f29e5ac8b3aae990007db7894ac2471db5f38c11",
+        "inco": "e0d681211010b4a85dde41f29e6288a7200785fd84ec253e5e5b4b279719dbd9",
+        "teamorouter": "792d399d65834874c386be72199d730fbea4ff63c0ecf08b360c1e8739ecd752",
+        "requesty": "b691fba280a8e7c8f1ce710a2f06cd5f3e2750d39e053fde176496f87f2495db",
+        "bailing": "16bba1d7670da44f675a3532a344a84cfdc0de8b10553272135f286b923bce16",
+        "ollama-cloud": "f42dba88019c1d6c5e22193b6fd96810841fc20e8a8e4f6d8d1466ad4c36b731",
+        "bumo": "b9199a5813678ea1dd6b892775c8f17807f20997559226d4d5d5f0cfea9ca18c",
+        "above": "72aaed5eaacb7fe0a23bbaa0070adfebd2cd6e8f6ac70312b77d387ac32c20c3",
+        "moark": "466ded5530e90197bba056ef6a9bf47f411b433863e8f38d9abcee9dca9333e7",
+        "siliconflow-cn": "449a3045f911d991f5e69ddfa702d40355097a67c9896bfc764d9a954fc921f5",
+        "hpc-ai": "44102d6334226c6650d101dcf12c906e34c8acf9feb8eac9ea8e3ee34c91f1ae",
+        "poolside": "7f463af2589d64239539e76790ae07ce01c3f7e0cb4c26301c5f8fbb1cf16ecb",
+        "stepfun-step-plan": "2512535cf4ca38fe0ccb23ead9713d4b5648da50999cd7b4cdac4d02fb731465",
+        "sagg": "933883209cb04e147499cb135c7fef826f8f7363382e2c727a33dc5ac66bf8b4",
+        "amd": "9674c6d46db94be722079208040cab25fde02e67a353ffdc99a58bf983f7c299",
+        "modal": "bd9ea7c416816bac3f55db8473667c17dc5f77df068e7eee336e4cddf6b1029a",
+        "teapot-router": "48569ba91205cedc1b450961373d12adaf4480c51643e95a1e874e3c81b3d1e4",
+        "kilo": "67274a5318eb3382bccedc68d60e8224127020d91ef10fadb0332ff689e4fe91",
+        "dinference": "dcfd5ebbbc4c6fca1f942a72559b0c17c4858dc9238d3f48b2b6bfb0955461cb",
+        "crossmodel": "c8986e121f2ab63aa721f974f309531474c63f21c20f2e042643d15f99312d91",
+        "vercel": "e175405e70103cda092b653a29f3dab174c176826ce2f749eff12d5f91f49b49",
+        "atomic-chat": "381f96c9ea340a119246b155e1daf150b662bad0955858967733bec0f51540af",
+        "abliteration-ai": "9bd55c8f7d6abce7cebf973b1a2587662a7c28bac8b86e3f5307841dac07d517",
+        "qihang-ai": "7b477670bccb11a5fef6a7eeecfc9a1b0998e7be7efb46bd6143fd552761e85f",
+        "ebcloud": "be0284503b15a2e9b1a5357c66f8838773074828db6f632dcce884019a4e4f2d",
+        "cheapllm": "a6a9ab21480c982611bcad4b4536b97d391401a5ba4e7736734605c9fa1baef2",
+        "volcengine-coding-plan": "1f3ae8ce689cfcae03999c2b0c4d2f0cdb317742e57cf0221fd5035e065db570",
+        "anthropic": "ffd14234d99376a50fbaec10022fb10612e870a05b0dbaea44d9aeeaba153ae7",
+        "klavo": "2f4d50c85fdd77d3a9bee4d9055ea30981a183c8019e67d3063b4b76d38b3987",
+        "klokintegration": "c631c6b6fb38398e5119317289db94eb7d071ed2158d05b5c144acc4739325fc",
+        "jad-ai": "afb0fea0d52d7378c0117071ccb97e2891c438982728f4ddaa7fab1fbadbc102",
+        "neosmith": "f5af0c8710694ef3d0fb787bec9eab12143e0ac372d279ba16f8c1a13a21dc72",
+        "cheapest-token": "c1f41b88d5e8fa555440d91b8539a4b788502240f293611c55a6a6994b7d9ecc",
+        "kuae-cloud-coding-plan": "8f10f4d3cbfb6888ea73e0d4a53084913265f49f49be2b3db817624f9d3348e4",
+        "friendli": "942548dd15d1c97a5fc7e728f5e47060d3829cb94cc322f03e290198a511a528",
+        "zerogpu": "c0076ce8754e1f6d7d0722868b54206c969b1538c61f0f1ab22f8f1c3a33096f",
+        "isoquant": "139ff556e34ed6e9117a7951d0c89ac9a8ccd84c65a7f1afcd35aca0b15ef7de",
+        "longcat": "123669da56ea900d04a38f1ef974d39dbe3ed7d5776aaf628879053e9f647346",
+        "lithosai": "a9962ad1bf85f9096f3fb13f731a13247bf2b4b20ad6235cd7366ecff34b9e10",
+        "neon": "60f4fdbf0b0c260833d86129305027e3c0682454a8a395fdbcf9836a9a2c6544",
+        "the-grid-ai": "c4c6afee944b91ce137fec68cac90fca5910837e39b33fa5ff95d3a8e8520c22",
+        "snowflake-cortex": "4605a2fe2a40578d1c5f8672c10924f0903b933917ba8139cf442a0ab374b49b",
+        "amazon-bedrock": "45c8f4f2d97fb5a2925668697f53aae70a3f0afeabbad85e12240a2fc2d19455",
+        "vultr": "7773a84056035ad2f8a10c888fbfe12a2de351dc47c894a3af876bf18d4a24d0",
+        "ovhcloud": "aaaee40504ccf7374bd3fac0c7d31d481367cdc8be5e63a2860fdf105d83e1dd",
+        "stepfun": "71bf3cdbc77e15188b5a23113b6451f473326bd49e7080c286a07e20f6582333",
+        "verda": "0f9cb021d30cfce9a32d3d9ca2c9b8c56431bda1d7f3844d8d9343cd430ad13e",
+        "huggingface": "38e7d45eaf786a82be093f51c99c40e844edfdbef5aa3cf6a2e446846d12435b",
+        "kitani": "20f15dbb00fb00ac18b30c0de031573031f06e95e8fdd030c2b8a146780aa9b7",
+        "gitlab": "9a14c9dc28224fa44233e5740adffd0011231f37e961c722f56e90c0f441b2da",
+        "proxystacks": "27c8370b1cee1e47e27dbfb24ea551006543925c89609168f9bdfe0af7e50000",
+        "novita-ai": "1f85bf11b948ba4f3dcd1ae4f05911543eb3fc3a58101458a98e9ce42f0ab4d5",
+        "autarcho": "4df3b3567b930dee5b8bc401073bf7e8d849f725d6a5418c798f357b0efda3b8",
+        "umans-ai-coding-plan": "9748e69d09fb11222146e58e0f0acc3897c63c2555095fdd5692fccb2cd1f906",
+        "synthorai": "d3a0340951212def705b87a1465a354f016861002ecc73790e2700f17bf2a197",
+        "inception": "ba4eb78945ac0f45a5c4da881ac0e876eaf2b50c4c9aaa3d2eeae50ed71f6309",
+        "nearai": "c3b477e8ccd49ced4137f829a942a445cfa0e27a3188dec33bf3c1be248cc650",
+        "orcarouter": "f12808592850bd182e353bd05cda550985d77b6f3191e7f908e04870e1ceb158",
+        "cloudflare-ai-gateway": "98a21bb76fea07d4083073215c3e1edb22bd6a1d417bbbcbc1db14a7aca8c7e2",
+        "runinfra": "bf3eadbdb94df24f674b3db650e0ee855754290062fcb5642391b70f3e1fcb20",
+        "meta": "0fc5f618f9cb13815edcdccaadf11fea4246f6d160ab9633ae2bd1b073211408",
+        "synthetic": "861aab381ef0a3a9dd43cdb2fa743d84ec301c13c64f0dc1413b66c23552c3c8",
+        "munito": "fdfd9f22a7f6d4ef34154111370ae5ad6bc139ff34f3afbd4600cd3c217bd12d",
+        "bothub": "2c8ec2ce559321feec5198c73c2bf00bd7fea945fdfb86e28c7dcdff3f71e441",
+        "sokkan": "f144dd322cd4c845366a662943b01317ca9f56cf1a47b6933cb72b71366552d2",
+        "aigrow": "a0d318ba1a26b1c6d177dfe3562fdd88ed33034586f2fc40a308b34d94a5e63d",
+        "auriko": "c43c2c0f491f12bcf978e1abad8b148a4a7c41e34d05735e1a46019e13d528a9",
+        "modelscope": "412b83c37352565493f2552eced506d2ffa85b7d3fc38e07d5d0a428bc86eecc",
+        "abacus": "440228c3e44aa59736f355e31fa126674edeab11c6354f3fd7213ce5fb35d922",
+        "inference-coop": "f16b31e1f44b9b69a789c1781a2a3511d2e3453b3027ec882f601c3e3e50e06f",
+        "zro": "59a732259abf979e70d3b12ae906b97620c778b377d3a3492195a7044e1f89a8",
+        "stepping-stone": "7bc10a7c284c71c2f8949d93df8714c4b8503922f25d06e38a4c936fa9ebf800",
+        "alibaba-token-plan-cn": "ba8c96356ff82861bb57e3c9a9c49c274eb19f396a8e6c2ce0a91f6380bafe75",
+        "scaleway": "88a99b92e2bbc0ef80276928aa43432782b8e80463245853f0cf408c8945e231",
+        "agentrouter": "ba59c4733e6b41d07dd25c541c8e506bfae601b75083ab00306141da3b9d7d99",
+        "minimax-coding-plan": "de563af09b0971d0333ceb052274b80aaa254a01e93d4a4e52d6698657e8775f",
+        "github-copilot": "4fa3629edc2982f7a0d255cb6f83773b0337ee9d31aa5f2aa1ffc25741f596ae",
+        "decisionmodels": "2c9d9e47cfa8e23c36c64a5c041f9af263623e4bbd6af110d625515dd7ee2b9d",
+        "google-vertex": "b451f30a634ade668fa8af31ce13969ad516fba38625c0a1917b54055c95d6e7",
+        "coralbricks": "fb4f9464370ef3cad71135f89d2856d8e5cbba3bf92129e4b837373c758cb64c",
+        "model-oracle-ai": "53c31abdc89036fb54f1c6b417e97d1967d20458847ccdcdbb462ea2bd229296",
+        "minimax-cn": "be46460cddca47846a58db7cf4a0c7ac16d9fcedb596f2c3fc1ad2a571acc45a",
+        "tencent-tokenhub": "2d857b3e2029da8b62657d256e8fc2324443d5301ad948d8a56613115d507d48",
+        "turion": "9fb3333de1d40f9f382a8e7d5585f8bf62ddd6e92dfbf3d70339e04ed739a3e6",
+        "kunavo": "5a53cac66c6d790077e485466bf71a3323b2ac6ce298d0a8ff89e00899a76f5d",
+        "greenpt": "5967d371739f67678efeaa691083738e2f343ca8219c9bd7e0a1fbd180d22f90",
+        "xiaomi-token-plan-ams": "c350a906687e6c3b540191960d869235aa4587004f094fd8f2448b32db8b9be7",
+        "modelis": "cc7c4aaa1626f19aef41968a9e65b24a97830d959e33796648f4bb27fe728264",
+        "aipg": "2839b27cce2d630d4190bc5311b83d063febe8aa7bf4420716c6c37b39988360",
+        "tokenwatt": "790e9f4faeec14d250eb31e4c9c202d0d4ac5860d11c2ec7f1f49b64a0d9eeea",
+        "agnes": "c8f92bcba2102d61a05e45d7023afef62089c769bbd9976a5a648eb30f81d91a",
+        "aistupidlevel": "cb1253f8a9bcda35e45456cee91727329ca2fbe430600e99d95c0d1dc8984fc3",
+        "hopper": "37508767d2679562ef4ac1bf7aafbe4c4e740332cbe1612df9ea2d7bbe36d851",
+        "uplinkswitch": "88d0d9ca51d04a96a682ec87a92b38162882756dd049046d3d80e352eb633995",
+        "unorouter": "7f57e857c4cba45dc695e31d6d43683c488d448a667ebe5481a847aef7f2ea47",
+        "hostinger-router": "813b91936e9fb7a124e8fc7379be97abef34d37f1f90be0c622e50f6f9c77e07",
+        "logits": "ee6b33e0c3e43b6395453a00d07b54c8e946b735f733601f8a1eb6e0da4c7e3a",
+        "apiko": "2f69789b79e8d35e030b81df69db1d310b77e23daeaa872017c947a30a5c16cc",
+        "cheapaimodel": "7ef66385c8820785f31ee1e210bff01b5463f6ce490d16e34324443991e8f1a3",
+        "cortecs": "9e7dc3d3385311cf30daf82d21eff567f9965722091690e91b7ca36c6b36d697",
+        "pioneer": "cf28303571ed86882a24cb0e762c3116cdd139f4ab944edfe3b7c7fb44c47088",
+        "toapis": "1839b2b7175ed87a5d1ce33205700c3e4f3053e15962d1bb5bd6a923572c82b9",
+        "fiftyx": "df0f86ed6a6abe1fa74b5dbfb32685ea7ed7621523d954b51106032fb1d7de67",
+        "llmtech": "031dbef909b15331ce44dbeb251eb362278619b9e290677d05e03dd9d9388eb0",
+        "keln": "5906d9cb562b20fb18d5de4fc974cc9df1a2b2fb7ff31d26c4d5790f483764a4",
+        "aiand": "7f8a86abc06780100fa10c3c11e98076a1d4ad0dca54b427967e82b38b8092c3",
+        "ruapi": "d20f7643ff9546822c0d6d219a43fc651fbacda8d9ee9fcaf39d9c3cea1ec587",
+        "hetzner": "5df9bf7f0523a2ae1d0907f0662b5665a88848a55c9a666e70e296cf2df9f8ec",
+        "baseten": "68c72fa09f36760c816852cea82e8a324cd3a7cb9c80bab362293815a25373d5",
+        "wally": "8f4745ea3c015d28153fc68bbb24813ffbcb2db5c331183206fbd8218213b85e",
+        "mistral": "4bd4e15a61142c2916567cff48e1d2fda8984a921a085eaea0e08b5a439c3363",
+        "zhipuai-coding-plan": "181e5aa1f242138255da19d62d8f62884b45ffd7e5bf079d4fc05e24a2058130",
+        "echo": "771f0b61c88003f0260a0af5297c17cfc22e00db7b6b8049e9b2e3cba64ff2dd",
+        "freemodel": "aa17930e11b98dd93eb5806eb78d760ca9df3af3021b27165727831d378ddc13",
+        "boundless": "df04b54603c87c3e7fe3de666f361ae63dfebeae98b4ff99aaacdcd38692f637",
+        "tokenify": "5f1be6353a6cfb18a3ca21f1adf7b8884f00832934ddf8dc17af5aa492898707",
+        "abliteratedllm": "c4056abc2b4e341ee6a64290054fee65c847fdb0b9d0faf13a24bd2b79ae872a",
+        "deepseek": "15643e544e369e4f6b6e681de1d191c042e27feb4697082001ea5f532177c7ec",
+        "nova": "4e0601f665028ca5f670fb9781e64ba2d40180ab87dbe803ab293fb0fe1d4152",
+        "ezkielyna": "4553f66c857f1a0e2afce711fb8ad145f4c8ac591a04c2e8fefd39d111ae1566",
+        "wafer.ai": "845404a7641b01c0f1e7396b3fb767c9fdd0ee29cd005b977f19549e3bc3e665",
+        "gisoo": "be82ff7fd6f48d475bc47a604892f386fb6e7be2bdf1a9dc23ea127287bc9d2e",
+        "openreason": "905a818c5fc9a44a8a2c9024c2b79ffdc84935844aac2f0060dbc30bdda31c30",
+        "inference": "8b0fcec1b369864d998f0eab97f18f32c505282beeffb75edc372d4982391cfd",
+        "lmstudio": "6c9d81175bd11167c6e50781781abee1493f4abb799645ba3fe0154bd6beb8b2",
+        "korouter": "3344a1a65da55f227ddf6771ebac838d2bd56ee62f8bb41d9316f7e2f1ae3636",
+        "sap-ai-core": "566bd3a27a9ddd9724ab7f404213a2b030eb7475f9a3365144e77fb2bfa07c85",
+        "subconscious": "4a41d1e6cca990bbacc4cad294d89e88344810a2e4b9527c4c1b6f87983775c4",
+        "joingonka": "21a589385c9995ea9ef618cce254da468e3ec66db2575c94d7aeb05c5ab4a94b",
+        "pendra": "76acdc983608cf5c83a55ef4afc5b449ef7fff61cceedd0f0da6a02c3fdb973f",
+        "humain": "91852775928f4fe7822293c3e41ea67040e5ea5d2aba9506c37178bcf1c697dc",
+        "llmgateway-providers": "56f41ae63e4513d9ec8c4c7a66913992b946047ff7dd3f84093407b20935153c",
+        "ambient": "7c5adfad26f517581a9adc662e8100f71e89022506187fd0f917a8889f430c31",
+        "steadyrouter": "b3be237ef97e8872c7945dc0a60ff52989c5206d080c5c8f8c1994e3d4f4e407"
+      },
+      "true": {
+        "xxapi": "a0b839fed1ba4380205114d941518293ec8989d3597eccc95ffaeea4a33e31c9",
+        "oci": "97dae422daeafcefd84dbbe16a25b70f66cbcfa2cec6fa8801b5ef7f0b4754ef",
+        "nokeep": "85b6f2457d95db15185a7444da1b061ec365b5c57781835f286ec79a42e39166",
+        "ofox": "5596ecceeac4cbd3c399d8d7df28eeb5f3c970816536c4cf20d54bcdf31541c5",
+        "merge-gateway": "0ac08e9bb4233e7ca1f67effd95b56e48814214eddb893570f2214e5bbf5a8ec",
+        "qiniu-ai": "c1bb2b26bfc06610c0a41554b642718b3ac46ce19a236d9736cb8bd7dcfcf2fe",
+        "tenstorrent": "2ec96406fe2569c426b56ef2570352e56e3db6eb179e6c4103c5f8deb0a60189",
+        "vispark": "b4fc2b33b2c03ad3233adcc9ca8021f62ea69573a42116d98a4a1a3fe5d470fc",
+        "tokengo": "9d2fd4c9bae1ecb968b707e91e6abd99d1e38324e75f0198bcbd27076e4df056",
+        "uncensuredai": "a7dd484252cbaafc5fb13ad973b76d2f1b8a9d616bfced6d9750aaac5504a7dc",
+        "privatemode-ai": "43600920e86d11c01b71ae655a33715ffbd2ed91d49a6e1a54cacb7f95ca91cf",
+        "inferris": "8ce7681758e9139fb2b5828b85e37a63664b97fc5e8807517b51c569874c0b66",
+        "tencent-token-plan": "9ae1fce96c6cfa77b0dcd3a3b5d8ac947ae689febea1935f6c54ff3051fa93d7",
+        "obscurify": "6879bb7d9ce52f66cbb8a9943c61dfef7d672ef9ba2efcd834ce1c08e587b9c5",
+        "infersia": "c43845532eab38c41cced244246fbeea93346f55d4bc93b1f1c6c4dbe389320f",
+        "scnet-token-plan": "dc6e1fc82cc71098bc123366d7f8e676720b173ce290f59f3ef5ca4f5d6387ac",
+        "hubris": "8c97dc2a91071c4ba8609bd653cff5aed938b78b2c9204d8763a31c5ba2a328b",
+        "azure": "269136594c96b08ba4ac10e147305669602db29d384950d43e8f41164fde6f00",
+        "aihubmix": "6e26f9e9b7cd495fd102986ba9db70d7c94a9afa1d7c8fc11c6d24d0703fb81a",
+        "adaption": "5f0ed4b5cff82773b12e3f6fd4f61a70095c70be23f71f4c7c0590bd5057ffb7",
+        "impossibl": "0aea0123b2ddb9ca0257d4ae26e8f3e9987340e90f8176c9b17dde120d420967",
+        "wandb": "e6df6faa72c2069fbff8f0ce6b228a1c48b27d185326f8a46d25561a6d0bae76",
+        "databricks": "867c7a5b4082814b7f7af13a4bc556b27a44c6a81f4ce8fa165b55e042279016",
+        "evroc": "06139d29f8aaff620375f81c6810589fd07dc12d5f20bc6881c6cf9a07116bed",
+        "lyceum": "e0190d77780e9841e7b56efb42dd9ee46cb290515601b5097df6cfe6204b81ea",
+        "morph": "b868f872e6c6e21d427d9a7d286f885cf65509e19f4ce896af43430d72ce237f",
+        "nebius": "05223623f6f7c534cfc88b93975129b7a988def753b89cd2632b0c33849f365f",
+        "poe": "43c52ae896c9590d907be9a05de2bde4142d02e1c448dbda6127635fd45ed74c",
+        "tokenrouter": "a7dcf4aba81bd4e3f3736ccbec09e1e4710bd1c1804a8e52bd04cde8b3f6034e",
+        "melious": "fbb9a05f9e937ee1a439957b790b9b8408164f1f5eba4bec2fae0240321c8954",
+        "superbot-gg": "1112ad53f0caba0dc01d96e7711aa0ef830a5d16eacf03a69a3a57eda9961f15",
+        "alibaba-cn": "778d2362f2ce3086dee55d2088098ebe6832fd162091e13740fc232dc063e00f",
+        "nvidia": "f4cf245ff94fb0d451b4ad7fe85d72ec9561d70237d3e4bb8657bc84abbb6cf9",
+        "ai21": "813429769647a1a6502ef822623712fc511e4e36dc2b71d737f91196d7a6fc7b",
+        "claudinio": "befb064109a4ab0ac6391e99942882eb2a9f28a1004bfe3280d70b75e806299a",
+        "sarvam": "8efe0f0e5ab491ade3997e2d8c4c1de0c9c0a66c11081e14341571bf58814e42",
+        "daoxe": "a7217729355d6ac190cbbbb6a11e95ff67d6ea8a0e5a1591b7063b080c43a2b8",
+        "alibaba-coding-plan-cn": "604ce8efe11cbdaaac326d8da1bb8279074e06c02af520992a7203f7c388e392",
+        "outerlabs": "56149f71686a243dee4c404098923e2af157e345bfad8df6f30257937ed41c44",
+        "ainetcafe": "e4cade0424fa5c1e6824e55863581297272ba54d56e8ed0cbf657a5078dace68",
+        "xai": "8af8470dba85778efce40572d852933780e9f40c31acde9736265cadc836f7fd",
+        "liquid": "78de0986a1d77eb20a586c402c84904fbec6c0dc4cd0e1f0a59deadc82ce7f33",
+        "vivgrid": "6a5fba66bea32efe0ec6398556cf5b709b387bd28201eae2ccca11c41ddd8c48",
+        "cedarllm": "5ac0fd4fff9bb18a7f3b7833718c477e9e0dad040f2d7a4ddb9803de2cfdd629",
+        "inceptron": "d6006d353d8c9f5313266cb72251df1ce9a16704084dcb1613ae1c69081f4120",
+        "llmtr": "c5e643c0b3f3123df80d3695a9b4a36a5fb41c6513546d202c645b593b8721ca",
+        "tensorx": "183cec97e50d9d1e229bc5a511c6bf4c5d36a322113daed6377f2123a1c25e43",
+        "nan": "ab21f291bcbd630ca9374f0d3a32875044a30ee41ece37740c0efe2434f8a9c6",
+        "stackit": "14d07e146bfa14c5f171e9b00f95875151f65d60eece66e86771eb3f326ab11c",
+        "perplexity-agent": "6038774926637a5666c611a2678a0083b8503b4bf3e29a6edffaa2c454f3c72a",
+        "byteplus": "502cceac9cc11c594e792a9fbaa3245a8c906c652a77e3f7938fca71c43361e8",
+        "infer": "9ec12ad136ec65117b8dd0c7d988be5a0722b59baef0c59c382c7acefa4804fb",
+        "watt": "a228586824da158eab0537703c8395b69d193261627ac5a9e28fefe6e3401975",
+        "nodecode": "c049915ded9ee0e0beb96f4bc9cd7f16bb605c9a25fd44c328ad132683e5f04d",
+        "typesafe": "51032144125d6b2af495480809c6f36a5fc1a0217fa499247803286d8e1b692a",
+        "chutes": "0c893f9cda7f515b7142ebbbc83947b675f48080bec6823e0e8e04fc3a7104f0",
+        "salad-cloud": "363caeed18d67196b51e6469206a305d76b5018183714e2b47be76a2adc2858c",
+        "kimi-code-plan-cn": "6db1f9565d7066fec5dc2bf292dc75ffc7c3e618dad4d9cb2584d0115bf94819",
+        "bee": "5f09edf48c8bbd7cf162cac1c09acb32d8fb97f397059f6dd64693da142a8069",
+        "io-net": "679e6f514c6dd9f95e923fa2bc6fe96364461591ed45f76c4b97d001325f8c67",
+        "lynkr": "d927eb767fad2ed90dfdbd45ca8e02eec07dae2d9dc06df9503f28e9edd0d65d",
+        "unrestricted": "9dde6e24ecce5eb12699ea28074e6b376c832ced9092fbde50d4bbf8d1ed661d",
+        "huawei-maas": "438b2fd2d3c7e4f68afd5fd182f881c717ae3e40cbc20c5092c70493cb71a891",
+        "meganova": "bbe8997388742f496c56da3e943390152c311888dbb944a8081d80ccead2eea9",
+        "refuseless": "bb41c36526c19403b014d7394b2844ddd18eda03f01c285eb3f03fdd6603bf08",
+        "alibaba-coding-plan": "de901bb3fc8dfb63e73c285e7805366532cca7043467ecdcd471b698c5f42c4e",
+        "dothoosh": "436361dc644408eebb1c58d47c5c2822e7e2e3c68226538cade5942314aea83b",
+        "thinkingmachines": "d11df8cf2250cd45598e5248a28601f4854fb541a20b7f814282c3f636e6e399",
+        "crusoe": "c085c710121358fadd8fd281c92c71a7dcc15dcc0aedf73f25c5491ec91da305",
+        "vancine": "d21f90044f5b5135fd6fcc424a71e54e673ba076ea6bf661cb6128becd919f35",
+        "umans-ai": "a1ad6b4efda31fe7c88c8029ec729790329835a2e36cebe517fc1225e40c3f40",
+        "deepinfra": "8f64ecaa4c13845674d7a10fd602edd5f64c1365e3d2e280620a7cdc4bfe2aaf",
+        "302ai": "93ad4f3aea12ec7cda9aa19a13b64cd2caaded6e1f227d73d277a44f86eb3200",
+        "pareto": "2b362bfad6cbb79f32fe9e52daa539ac5cbf4c1407f325b0a8d8ef7b12cf7d7e",
+        "drun": "8c29b5c4cfc9e3ae3fbb88ad65647742ea2bd1de79f63423214d22fa0cbed831",
+        "sparrowcodes": "1a342a0a6d0df37ebcb373fdd4822fcaf0b8426afa8ffb044bfa0cf94915d3c6",
+        "jzstoken": "f2145358b258188c573849883865bec02b715052bb9f7e2e66a8af44fdefa9fc",
+        "openrouter": "0a9609d2a8deb7f4e4aadf6fe0493dd7d3de4fb10e7ef810108b15d73650fe98",
+        "routing-run": "3a7279e4e63ddda66e72cd2bcc777268feaac4e529568c2258b0a6d54ede4bd7",
+        "opper": "2065d61e52fe39eddda84f9071b7cdabb02ce61b0d82cdeb34992835a3ec3c9c",
+        "opencode-go": "6d431dafef4f140492a3c693b8cd808fd81be4f8efdf5a86e868da625d5ef9da",
+        "mixlayer": "e8ea16557c084d3a3b61f041dea00e608b7482528649cbd133ffb9c4f639ecef",
+        "togetherai": "1d3795713083e77b70a3b513a5f832effceb3842b6d01c9771cdfa547155bd7e",
+        "upstage": "534b9345f32ac2e35eb8db4715fe859bb5cc43d8f56d3787d68ec461b4a5414f",
+        "phala": "ff2c86684b3f661ff31d2ebc06ae8fcadd335c7d4c9c36c3447ddd0d04ea33a8",
+        "iteracompute": "885047e9cfc8af3cc1e0d59b6e8d39deaf7eecccdc6c5568edd6b4b04b73dcc0",
+        "watsonx": "83443342480d86fe03b1c1fd35142f7e6d35e1a6ae97151fb38d2d9c3c0a0777",
+        "meragpt": "744ada206c3bdc550b34f54fbc7decb0fa93bf0952f379b2eaa86a83ff50857b",
+        "modular": "78df8e5e20dcbe3ff8790ffe336334a9fa306695ea2c380c668cb79af7d952b7",
+        "google": "6c61bb2a32c1e24c3ebc48bc01014f1da1403a2b15c01333238a5d92d81b66cb",
+        "reflection": "5a3088cd0c2d0716c183cf1f776a4fc88d21994ee9b8555f218f23a63ad08298",
+        "kenari": "db5d263df5b60100e7fbb2cde561e651e9e0ebc6868257aa2e7ed4b0db56ba94",
+        "empiriolabs": "bc7d250e8071f0a11a66c61659567cc5258c48b956c3a8af5c9af345744064e6",
+        "hyper": "efe523da5f6a453347c68ce0956d513e1db5b95d86fb2b5edddd1a1812729150",
+        "trustedtokens": "c0b64067f7e2b75c14a5a40827f19951e7f523744de115f75b6a2cea99c4ed5a",
+        "helicone": "72f4c36f345a4d063dbc1e685527cd72fc2b698f013e7058ea76ffbf24efb1b4",
+        "engy": "4b37e34b435d900c74c43730b8bef25f8c20e8a9af01f7567c5bd03414f168c2",
+        "digitalocean": "aaa591102ac97a0f4c7e44dd004d2d63fb91c44de2ffee575baf13bf99b1c017",
+        "stepfun-ai-step-plan": "4c365acb06bfc6abddf59cfd163c14840fe1891bbf6de78f695db065f80e8b66",
+        "lucidquery": "d4e999e372cee3877d3603f7daa95524b759b96c51e0f7093ff7ad6a3c48afa3",
+        "scx-ai": "b4e5c323bff50f52000b6d205ec5caeef904a7dec83f8beb628fef9884688d30",
+        "rayline": "5a55a798e0a2b397aea4b3900c3be67c0260dc2bf1078284d9f41c9fec4a85aa",
+        "phase": "e41f2826ddeefb4ed4fde9d7b809498d59d531cf18ed804287cd6cd4d3072a6d",
+        "xiaomi-token-plan-cn": "16bbbb958fff5905a8800b6b7d1d7c8bf3e8f31c49c6ed8a241451049c26fb9f",
+        "alibaba-token-plan": "cc093c5a433c80f9ef27e57a063b8f66def4dfaef9ce4b14c3ac9dee395ffce9",
+        "cloudcode": "bac9eaae29c540f4290424805be4b93a94ba785715d1af8cafd15420625f782a",
+        "mallard": "5911a2fe6227657943111f5330bf4f11c4f8495010158e732319dde5dac7c8e5",
+        "entrim": "96db4494e1f49cd98aa8607643c20243c60b41b530c20df8aeb566c97f1e6746",
+        "powerspring": "f93cabc162b527256e0b09c450689e9823f500ec7c0cda50c3b1b44cfa0fe514",
+        "siliconflow": "87efa832dbb4a1b6dd0a77786eda2aa8a9cbad9c750e5fd5fd65cf811f19b429",
+        "zenifra": "c8d45a41121f3df31a1adaaedad499e38635bb9dfbf094471b62b5553addf16c",
+        "xiaomi": "8838c607fbe464a4747145d566fb1785972e9e4699e6fefc75d92e7fbd9be5a2",
+        "munito-eu": "41e35c84e7c862c982cbac3bb4da72d88e113b8c2134ed6be8636096505a3af3",
+        "zai-coding-plan": "4a258bf43efcde6b49e2a66feeebb29ba92faa58f027a635b2d7f6ab9c27f8bc",
+        "moneo": "0e16460b7447e37c846ebf4269ee85767883c7c7463858c37e3a37036d9d493d",
+        "sakana": "3e8438d196a94d95c7536e66a42aa3f08bfaa45140a0112fde927498328df2b5",
+        "ai-router": "dedeca6e994a87971d00de3f32c550305241eeb0fc8041392519f31bc909959f",
+        "anonrouter": "607cb20f154615f354c4a4cc0b093244ee3f7c38bd18620ff6046df6c5c3223a",
+        "anyapi": "1d2800d209dbd8d78b1e7a2098953ee2787d21a69f9e1a1bc9e4ee0ce4fad0c6",
+        "alibaba": "e4812f985f984006550b678b03de825361786a587763264583c2188f2ca07b77",
+        "graphn": "6152bcec17c35f8e8c04cbadcbd7fe4b569f517bac87bdbd5370524f62200444",
+        "cline-pass": "4287b01983a98c6e908e1e6f65f51a5c09c4773bb4f8821088c3898d3cf20651",
+        "augure": "308a5b120f4bf929035a827dfa537c850f1df4ebd8beb7d88942dec9081df5e4",
+        "moonshotai": "44909f55aa5841296217ecd6f5bdcedf231311732950e8b48b00289cdfbf6a09",
+        "sambanova": "fa23d02b85c156e38899bb563dfee3b5c9b36b5f71c99d8326cc795ce04bc2f7",
+        "kimi-code-plan-global": "b3b51f443f38bec8c2f8029e1b8c74ac06860c7bf7df96bbcfd45cfda13617cc",
+        "jiekou": "b9e56fe09e1dc16b37a1416cdb47b54a115f02b4c35c346e158755e37880b567",
+        "zeldoc": "6aeedcb05b255476002ed032cdcf0ae99458efb80ad99d25d08f835211107dc6",
+        "tokenlab": "72ee2cb0579d0925aa2cf52456be6f0cfd76cef91776c8ee8861b08d57d0a504",
+        "oathbreaker": "19173505bc94b7c890b96d5d3baf667857ecb5c0a48124b7a792ece307bc9850",
+        "volcengine": "59795859b248b60cb2718d4fdfeb4fec5516e99f9e6019e89078fe1d84721bde",
+        "adzuki": "9ae1be22b84bfe777e0849525241197a1321d77292ebc07701d5bbc5604798f0",
+        "inferall": "5378d763a105e86638a2def200f164c01c3d0901da7eafe08602fac45aecd97c",
+        "submodel": "12035e32a1fbbf372bcf3056e4fcfebe4c408a06cc94e024c33fcff78932966b",
+        "sandbase": "34af3f63d2884bf43893483c0032195f926541d751d47a1e929a19d66d8fb0a6",
+        "cloudferro-sherlock": "c19fb277c97d58ef1734eda6c34e0802324eed15565f739787f7911928961c26",
+        "gmicloud": "19811b91e7500dcf3dd94b58dc594ed6e20cf564bc35bdefdfebf0f1ebd23e75",
+        "stepfun-ai": "265e70c18410e6d376edf2a684b51c6874bdd35adf28bac45974a1659cce3443",
+        "llmgateway": "a63f5af7daeef05311c5719e2c4b53fa7f025fd42b9f011eb4646d6e900e5305",
+        "jalapeno": "cd931371ce131e6dd8d79df323a91cf39d43f3ee745f6c0b6bc0323c356e6612",
+        "wallaby": "c41809b507f9472bb4cff1c27e1c97d77e367a837311c57a9d93340fd406ec22",
+        "blueclaw": "e91c4517780790f9e95fab7078fe8d028b2cde1a1f3fd581163391972ce94119",
+        "frequency": "2ccf61bfd332334dfb5994b00605abcaeaf08a33175749dd68f510c00f793cd9",
+        "cohere": "d24227a4164b2d38e5d073c0d9c8589bf0b89c51c7ae862b1804e25d1aaf3e89",
+        "inferenceapis": "843e234c74b82ca35922dd8573fad34dcd81be37e9e855ee0b5340422660d261",
+        "sensenova": "73adde5adf7ca1a140e8abfed88236659d66ac107f8a4dc302ec57677846bcfc",
+        "unbiased": "3761df20988fd83f34f918def13cfe7ed287a58b1ce287c4b9aaea210a23af58",
+        "perplexity": "ebfd258d4a09e67a64ba2277dae1469054cc4fb38e574dfe2e4a89227fc76225",
+        "minimax": "9a8736c806745340762926aa834cfa1128166382b5f9f9a40369cd0d0f344b4a",
+        "aixy": "b965d1cba90eff4308913533f72f92a50149b902951b3a832874e95d268d4d43",
+        "frogbot": "3f79b1d1854369ff6d34d3c79a48dd56965f71942c1dc398ec21bf6172e58c01",
+        "aki-io": "6adf5bfee3cbe5f9c6ec01af972ccd05127de7185383cd1a00a3fcd55285f760",
+        "therouter": "39b37a407428bad4f48acdb7eb426d65bacb8f3c009eab4315ad711b4c806aee",
+        "venice": "88cba4e8e1ee662488722f41fceab9ea7fd8ab6756d97de5d00b8c668659aa0e",
+        "groq": "3c3a4b200ccd3a9a64a53ef38aaf7f84af895ac3b9cc590e3ddc0cd8baa0b486",
+        "minimax-cn-coding-plan": "ccddd6ba4b347685fd10d6ec806f0ecc0697748b2ab336ad3603316dfc11d340",
+        "butler": "bfd1481ef6e41a58ba17d2e548c241d7236a66294ba4b93487c0389a279ac3f3",
+        "xpersona": "cf15a64bfd5754c81fda46b582361bf152a26f490e44b045055f31a84b333cdc",
+        "commandcode": "8856a71c6c298c89dc0c57cae69b504b7117767ae3f2b99ce498929d625b00df",
+        "qvac": "294a2b58b1df14d02c4b4fd7b2831c2f3504ab1aa39931d8a3e176fdc9500dd4",
+        "clarifai": "1a040d66180dd8b539aa0e6a7542ccce0569a191ae32743b8c8f896afa3b25e2",
+        "opencode": "25404166233857f50e0bfc4acc4b0f7c431e51f3d7a98a08d496499660a8969b",
+        "paraloncloud": "8f8a2869dd94d30fa2f4d63d15cd531179a16188501c990dab824fd09080c73b",
+        "nano-gpt": "662a65082f127280bd3b1777b776d127d34b677a606c95a97e1e0ce69e0dfeec",
+        "moonshotai-cn": "4ace27d7277c7a4fbef2f9a01ce79afd78e87d20e5e2f03591d4c1536ab389a5",
+        "tinfoil": "4f8721ba1647b0a4e134ff5ebf5dbe3ce5de6149f64e075eb89a78eb0bf0fed8",
+        "zai": "189b2ef3237db56170b968cbdce2e1224691451e9f236270b96c2f72a1c7dd35",
+        "cloudflare-workers-ai": "b74b1ac0bd09879c98682d8db695b75f1585cbeea3e5f1496eef106114d9648e",
+        "inferx": "08187035ba48cb20fba0f8fb7ae206a10463a7fe82d4b556d515cade06c5ec1e",
+        "aimlapi": "16c676963e5083a25e6d6fb38c69d65e419592f1130fe14409284a3ca66013e5",
+        "regolo-ai": "d7827a6969c35e3e4fd704e3a3d4cd09a5aceb2bf6054d8d00c5650a09a6db02",
+        "confidential-ai": "b8caf01028ca770f471e3821c203c5c361d13bc1a455c334abe9cfc18181c84b",
+        "fortytwo": "8102bf703337b9184e1bf70fc643c491ae7f05854ed8b830b94a94107e0de0de",
+        "openai": "e80553f4d8019318fa2eebb1ce5fe8a4acbd8b991729f5f3a860f12409068125",
+        "lowrouter": "dd8095d0d81d4009e7bc71902fc69fe7bf9b32b799ce85de490805c4e030eff9",
+        "runcrate": "d4c8205eced526a9af117def47ceb499256a02d7bb6e1e1544cc0155c3fceb93",
+        "edenai": "b66021e58d46a1d1ef86801537440fbd60e9159a04cec9f34a4f2027bbe9ccc6",
+        "fastrouter": "c4abce72f70f2fb5593f2aa660484b229fd500b6c19ac89cd6ca0b65d406d6d1",
+        "doubleword": "7366445b7db2a0cf73aee41bc885fe128f7072f424ceec9e2d64c9859d7a2828",
+        "cerebras": "2d25e3812a0e8d1598a438c921a1e61f0533ae405ed911209f2af2b6e536c401",
+        "neuralwatt": "093693f068db916bb1ae8a6b7d9dfc8149bfc7760aa56873684a7d26422cc16d",
+        "trustedrouter": "a97a758dfb89e4bfba6929aeee2246c70a4aa693fca002972adbb67deb90307e",
+        "xiaomi-token-plan-sgp": "28539b7651928a7e8af5361ed63f75c8341632dde74db8014938bb9c5e51b85e",
+        "zhipuai": "52cbc2d80a083776e5fc4d8afd402dd97b65c1cdbaf7fe9d4ff0cd97607f6347",
+        "standardcompute": "ab01c72a65bb26dd18aa7eaf4fff45ecb378f5a266c092afec44a0c93309f954",
+        "prime": "90633bbf071b6af1f2a6984afd607fcabcd77b169c4c702c77f0cf7b116df990",
+        "tencent-coding-plan": "2b62af4c3d6ccdcef5bcba7e67dc6eb99261d4eef44083ef1bd0a1fef21fa6de",
+        "fireworks-ai": "21b62307e5b6a4e5287b7581c056a5a7cdd6d9ed69c46c0a75d1a4f78a400772",
+        "zenmux": "3d684134c46f0ffbcc5e8b012482b473cce555bedfe2bfb1e2f27f891da1b58e",
+        "kosmik": "fbf7a5a644f30b0ab78e8757d68fa35467a722863b027ce8f07b5a7b1af1d4de",
+        "arcee": "b46372ccfec63b1e96b0bd6fa1a332aa5cfe1ae555e4ad88d828e2013d7718c5",
+        "infomaniak": "3c908d6da0087286604a283ed4508f1ab72f89176eac93a4185615daae116ace",
+        "berget": "6cc78b16768cce47dc8fbf29f29e5ac8b3aae990007db7894ac2471db5f38c11",
+        "inco": "e0d681211010b4a85dde41f29e6288a7200785fd84ec253e5e5b4b279719dbd9",
+        "teamorouter": "792d399d65834874c386be72199d730fbea4ff63c0ecf08b360c1e8739ecd752",
+        "requesty": "b691fba280a8e7c8f1ce710a2f06cd5f3e2750d39e053fde176496f87f2495db",
+        "bailing": "16bba1d7670da44f675a3532a344a84cfdc0de8b10553272135f286b923bce16",
+        "ollama-cloud": "f42dba88019c1d6c5e22193b6fd96810841fc20e8a8e4f6d8d1466ad4c36b731",
+        "bumo": "b9199a5813678ea1dd6b892775c8f17807f20997559226d4d5d5f0cfea9ca18c",
+        "above": "72aaed5eaacb7fe0a23bbaa0070adfebd2cd6e8f6ac70312b77d387ac32c20c3",
+        "moark": "466ded5530e90197bba056ef6a9bf47f411b433863e8f38d9abcee9dca9333e7",
+        "siliconflow-cn": "449a3045f911d991f5e69ddfa702d40355097a67c9896bfc764d9a954fc921f5",
+        "hpc-ai": "44102d6334226c6650d101dcf12c906e34c8acf9feb8eac9ea8e3ee34c91f1ae",
+        "poolside": "7f463af2589d64239539e76790ae07ce01c3f7e0cb4c26301c5f8fbb1cf16ecb",
+        "stepfun-step-plan": "2512535cf4ca38fe0ccb23ead9713d4b5648da50999cd7b4cdac4d02fb731465",
+        "sagg": "933883209cb04e147499cb135c7fef826f8f7363382e2c727a33dc5ac66bf8b4",
+        "amd": "9674c6d46db94be722079208040cab25fde02e67a353ffdc99a58bf983f7c299",
+        "modal": "bd9ea7c416816bac3f55db8473667c17dc5f77df068e7eee336e4cddf6b1029a",
+        "teapot-router": "48569ba91205cedc1b450961373d12adaf4480c51643e95a1e874e3c81b3d1e4",
+        "kilo": "67274a5318eb3382bccedc68d60e8224127020d91ef10fadb0332ff689e4fe91",
+        "dinference": "dcfd5ebbbc4c6fca1f942a72559b0c17c4858dc9238d3f48b2b6bfb0955461cb",
+        "crossmodel": "c8986e121f2ab63aa721f974f309531474c63f21c20f2e042643d15f99312d91",
+        "vercel": "e175405e70103cda092b653a29f3dab174c176826ce2f749eff12d5f91f49b49",
+        "atomic-chat": "381f96c9ea340a119246b155e1daf150b662bad0955858967733bec0f51540af",
+        "abliteration-ai": "9bd55c8f7d6abce7cebf973b1a2587662a7c28bac8b86e3f5307841dac07d517",
+        "qihang-ai": "7b477670bccb11a5fef6a7eeecfc9a1b0998e7be7efb46bd6143fd552761e85f",
+        "ebcloud": "be0284503b15a2e9b1a5357c66f8838773074828db6f632dcce884019a4e4f2d",
+        "cheapllm": "a6a9ab21480c982611bcad4b4536b97d391401a5ba4e7736734605c9fa1baef2",
+        "volcengine-coding-plan": "1f3ae8ce689cfcae03999c2b0c4d2f0cdb317742e57cf0221fd5035e065db570",
+        "anthropic": "ffd14234d99376a50fbaec10022fb10612e870a05b0dbaea44d9aeeaba153ae7",
+        "klavo": "2f4d50c85fdd77d3a9bee4d9055ea30981a183c8019e67d3063b4b76d38b3987",
+        "klokintegration": "c631c6b6fb38398e5119317289db94eb7d071ed2158d05b5c144acc4739325fc",
+        "jad-ai": "afb0fea0d52d7378c0117071ccb97e2891c438982728f4ddaa7fab1fbadbc102",
+        "neosmith": "f5af0c8710694ef3d0fb787bec9eab12143e0ac372d279ba16f8c1a13a21dc72",
+        "cheapest-token": "c1f41b88d5e8fa555440d91b8539a4b788502240f293611c55a6a6994b7d9ecc",
+        "kuae-cloud-coding-plan": "8f10f4d3cbfb6888ea73e0d4a53084913265f49f49be2b3db817624f9d3348e4",
+        "friendli": "942548dd15d1c97a5fc7e728f5e47060d3829cb94cc322f03e290198a511a528",
+        "zerogpu": "c0076ce8754e1f6d7d0722868b54206c969b1538c61f0f1ab22f8f1c3a33096f",
+        "isoquant": "139ff556e34ed6e9117a7951d0c89ac9a8ccd84c65a7f1afcd35aca0b15ef7de",
+        "longcat": "123669da56ea900d04a38f1ef974d39dbe3ed7d5776aaf628879053e9f647346",
+        "lithosai": "a9962ad1bf85f9096f3fb13f731a13247bf2b4b20ad6235cd7366ecff34b9e10",
+        "neon": "60f4fdbf0b0c260833d86129305027e3c0682454a8a395fdbcf9836a9a2c6544",
+        "the-grid-ai": "c4c6afee944b91ce137fec68cac90fca5910837e39b33fa5ff95d3a8e8520c22",
+        "snowflake-cortex": "4605a2fe2a40578d1c5f8672c10924f0903b933917ba8139cf442a0ab374b49b",
+        "amazon-bedrock": "45c8f4f2d97fb5a2925668697f53aae70a3f0afeabbad85e12240a2fc2d19455",
+        "vultr": "7773a84056035ad2f8a10c888fbfe12a2de351dc47c894a3af876bf18d4a24d0",
+        "ovhcloud": "aaaee40504ccf7374bd3fac0c7d31d481367cdc8be5e63a2860fdf105d83e1dd",
+        "stepfun": "71bf3cdbc77e15188b5a23113b6451f473326bd49e7080c286a07e20f6582333",
+        "verda": "0f9cb021d30cfce9a32d3d9ca2c9b8c56431bda1d7f3844d8d9343cd430ad13e",
+        "huggingface": "38e7d45eaf786a82be093f51c99c40e844edfdbef5aa3cf6a2e446846d12435b",
+        "kitani": "20f15dbb00fb00ac18b30c0de031573031f06e95e8fdd030c2b8a146780aa9b7",
+        "gitlab": "9a14c9dc28224fa44233e5740adffd0011231f37e961c722f56e90c0f441b2da",
+        "proxystacks": "27c8370b1cee1e47e27dbfb24ea551006543925c89609168f9bdfe0af7e50000",
+        "novita-ai": "1f85bf11b948ba4f3dcd1ae4f05911543eb3fc3a58101458a98e9ce42f0ab4d5",
+        "autarcho": "4df3b3567b930dee5b8bc401073bf7e8d849f725d6a5418c798f357b0efda3b8",
+        "umans-ai-coding-plan": "9748e69d09fb11222146e58e0f0acc3897c63c2555095fdd5692fccb2cd1f906",
+        "synthorai": "d3a0340951212def705b87a1465a354f016861002ecc73790e2700f17bf2a197",
+        "inception": "ba4eb78945ac0f45a5c4da881ac0e876eaf2b50c4c9aaa3d2eeae50ed71f6309",
+        "nearai": "c3b477e8ccd49ced4137f829a942a445cfa0e27a3188dec33bf3c1be248cc650",
+        "orcarouter": "f12808592850bd182e353bd05cda550985d77b6f3191e7f908e04870e1ceb158",
+        "cloudflare-ai-gateway": "98a21bb76fea07d4083073215c3e1edb22bd6a1d417bbbcbc1db14a7aca8c7e2",
+        "runinfra": "bf3eadbdb94df24f674b3db650e0ee855754290062fcb5642391b70f3e1fcb20",
+        "meta": "0fc5f618f9cb13815edcdccaadf11fea4246f6d160ab9633ae2bd1b073211408",
+        "synthetic": "861aab381ef0a3a9dd43cdb2fa743d84ec301c13c64f0dc1413b66c23552c3c8",
+        "munito": "fdfd9f22a7f6d4ef34154111370ae5ad6bc139ff34f3afbd4600cd3c217bd12d",
+        "bothub": "2c8ec2ce559321feec5198c73c2bf00bd7fea945fdfb86e28c7dcdff3f71e441",
+        "sokkan": "f144dd322cd4c845366a662943b01317ca9f56cf1a47b6933cb72b71366552d2",
+        "aigrow": "a0d318ba1a26b1c6d177dfe3562fdd88ed33034586f2fc40a308b34d94a5e63d",
+        "auriko": "c43c2c0f491f12bcf978e1abad8b148a4a7c41e34d05735e1a46019e13d528a9",
+        "modelscope": "412b83c37352565493f2552eced506d2ffa85b7d3fc38e07d5d0a428bc86eecc",
+        "abacus": "440228c3e44aa59736f355e31fa126674edeab11c6354f3fd7213ce5fb35d922",
+        "inference-coop": "f16b31e1f44b9b69a789c1781a2a3511d2e3453b3027ec882f601c3e3e50e06f",
+        "zro": "59a732259abf979e70d3b12ae906b97620c778b377d3a3492195a7044e1f89a8",
+        "stepping-stone": "7bc10a7c284c71c2f8949d93df8714c4b8503922f25d06e38a4c936fa9ebf800",
+        "alibaba-token-plan-cn": "ba8c96356ff82861bb57e3c9a9c49c274eb19f396a8e6c2ce0a91f6380bafe75",
+        "scaleway": "88a99b92e2bbc0ef80276928aa43432782b8e80463245853f0cf408c8945e231",
+        "agentrouter": "ba59c4733e6b41d07dd25c541c8e506bfae601b75083ab00306141da3b9d7d99",
+        "minimax-coding-plan": "de563af09b0971d0333ceb052274b80aaa254a01e93d4a4e52d6698657e8775f",
+        "github-copilot": "4fa3629edc2982f7a0d255cb6f83773b0337ee9d31aa5f2aa1ffc25741f596ae",
+        "decisionmodels": "2c9d9e47cfa8e23c36c64a5c041f9af263623e4bbd6af110d625515dd7ee2b9d",
+        "google-vertex": "b451f30a634ade668fa8af31ce13969ad516fba38625c0a1917b54055c95d6e7",
+        "coralbricks": "fb4f9464370ef3cad71135f89d2856d8e5cbba3bf92129e4b837373c758cb64c",
+        "model-oracle-ai": "53c31abdc89036fb54f1c6b417e97d1967d20458847ccdcdbb462ea2bd229296",
+        "minimax-cn": "be46460cddca47846a58db7cf4a0c7ac16d9fcedb596f2c3fc1ad2a571acc45a",
+        "tencent-tokenhub": "2d857b3e2029da8b62657d256e8fc2324443d5301ad948d8a56613115d507d48",
+        "turion": "9fb3333de1d40f9f382a8e7d5585f8bf62ddd6e92dfbf3d70339e04ed739a3e6",
+        "kunavo": "5a53cac66c6d790077e485466bf71a3323b2ac6ce298d0a8ff89e00899a76f5d",
+        "greenpt": "5967d371739f67678efeaa691083738e2f343ca8219c9bd7e0a1fbd180d22f90",
+        "xiaomi-token-plan-ams": "c350a906687e6c3b540191960d869235aa4587004f094fd8f2448b32db8b9be7",
+        "modelis": "cc7c4aaa1626f19aef41968a9e65b24a97830d959e33796648f4bb27fe728264",
+        "aipg": "2839b27cce2d630d4190bc5311b83d063febe8aa7bf4420716c6c37b39988360",
+        "tokenwatt": "790e9f4faeec14d250eb31e4c9c202d0d4ac5860d11c2ec7f1f49b64a0d9eeea",
+        "agnes": "c8f92bcba2102d61a05e45d7023afef62089c769bbd9976a5a648eb30f81d91a",
+        "aistupidlevel": "cb1253f8a9bcda35e45456cee91727329ca2fbe430600e99d95c0d1dc8984fc3",
+        "hopper": "37508767d2679562ef4ac1bf7aafbe4c4e740332cbe1612df9ea2d7bbe36d851",
+        "uplinkswitch": "88d0d9ca51d04a96a682ec87a92b38162882756dd049046d3d80e352eb633995",
+        "unorouter": "7f57e857c4cba45dc695e31d6d43683c488d448a667ebe5481a847aef7f2ea47",
+        "hostinger-router": "813b91936e9fb7a124e8fc7379be97abef34d37f1f90be0c622e50f6f9c77e07",
+        "logits": "ee6b33e0c3e43b6395453a00d07b54c8e946b735f733601f8a1eb6e0da4c7e3a",
+        "apiko": "2f69789b79e8d35e030b81df69db1d310b77e23daeaa872017c947a30a5c16cc",
+        "cheapaimodel": "7ef66385c8820785f31ee1e210bff01b5463f6ce490d16e34324443991e8f1a3",
+        "cortecs": "9e7dc3d3385311cf30daf82d21eff567f9965722091690e91b7ca36c6b36d697",
+        "pioneer": "cf28303571ed86882a24cb0e762c3116cdd139f4ab944edfe3b7c7fb44c47088",
+        "toapis": "1839b2b7175ed87a5d1ce33205700c3e4f3053e15962d1bb5bd6a923572c82b9",
+        "fiftyx": "df0f86ed6a6abe1fa74b5dbfb32685ea7ed7621523d954b51106032fb1d7de67",
+        "llmtech": "031dbef909b15331ce44dbeb251eb362278619b9e290677d05e03dd9d9388eb0",
+        "keln": "5906d9cb562b20fb18d5de4fc974cc9df1a2b2fb7ff31d26c4d5790f483764a4",
+        "aiand": "7f8a86abc06780100fa10c3c11e98076a1d4ad0dca54b427967e82b38b8092c3",
+        "ruapi": "d20f7643ff9546822c0d6d219a43fc651fbacda8d9ee9fcaf39d9c3cea1ec587",
+        "hetzner": "5df9bf7f0523a2ae1d0907f0662b5665a88848a55c9a666e70e296cf2df9f8ec",
+        "baseten": "68c72fa09f36760c816852cea82e8a324cd3a7cb9c80bab362293815a25373d5",
+        "wally": "8f4745ea3c015d28153fc68bbb24813ffbcb2db5c331183206fbd8218213b85e",
+        "mistral": "4bd4e15a61142c2916567cff48e1d2fda8984a921a085eaea0e08b5a439c3363",
+        "zhipuai-coding-plan": "181e5aa1f242138255da19d62d8f62884b45ffd7e5bf079d4fc05e24a2058130",
+        "echo": "771f0b61c88003f0260a0af5297c17cfc22e00db7b6b8049e9b2e3cba64ff2dd",
+        "freemodel": "aa17930e11b98dd93eb5806eb78d760ca9df3af3021b27165727831d378ddc13",
+        "boundless": "df04b54603c87c3e7fe3de666f361ae63dfebeae98b4ff99aaacdcd38692f637",
+        "tokenify": "5f1be6353a6cfb18a3ca21f1adf7b8884f00832934ddf8dc17af5aa492898707",
+        "abliteratedllm": "c4056abc2b4e341ee6a64290054fee65c847fdb0b9d0faf13a24bd2b79ae872a",
+        "deepseek": "15643e544e369e4f6b6e681de1d191c042e27feb4697082001ea5f532177c7ec",
+        "nova": "4e0601f665028ca5f670fb9781e64ba2d40180ab87dbe803ab293fb0fe1d4152",
+        "ezkielyna": "4553f66c857f1a0e2afce711fb8ad145f4c8ac591a04c2e8fefd39d111ae1566",
+        "wafer.ai": "845404a7641b01c0f1e7396b3fb767c9fdd0ee29cd005b977f19549e3bc3e665",
+        "gisoo": "be82ff7fd6f48d475bc47a604892f386fb6e7be2bdf1a9dc23ea127287bc9d2e",
+        "openreason": "905a818c5fc9a44a8a2c9024c2b79ffdc84935844aac2f0060dbc30bdda31c30",
+        "inference": "8b0fcec1b369864d998f0eab97f18f32c505282beeffb75edc372d4982391cfd",
+        "lmstudio": "6c9d81175bd11167c6e50781781abee1493f4abb799645ba3fe0154bd6beb8b2",
+        "korouter": "3344a1a65da55f227ddf6771ebac838d2bd56ee62f8bb41d9316f7e2f1ae3636",
+        "sap-ai-core": "566bd3a27a9ddd9724ab7f404213a2b030eb7475f9a3365144e77fb2bfa07c85",
+        "subconscious": "4a41d1e6cca990bbacc4cad294d89e88344810a2e4b9527c4c1b6f87983775c4",
+        "joingonka": "21a589385c9995ea9ef618cce254da468e3ec66db2575c94d7aeb05c5ab4a94b",
+        "pendra": "76acdc983608cf5c83a55ef4afc5b449ef7fff61cceedd0f0da6a02c3fdb973f",
+        "humain": "91852775928f4fe7822293c3e41ea67040e5ea5d2aba9506c37178bcf1c697dc",
+        "llmgateway-providers": "56f41ae63e4513d9ec8c4c7a66913992b946047ff7dd3f84093407b20935153c",
+        "ambient": "7c5adfad26f517581a9adc662e8100f71e89022506187fd0f917a8889f430c31",
+        "steadyrouter": "b3be237ef97e8872c7945dc0a60ff52989c5206d080c5c8f8c1994e3d4f4e407"
+      }
+    }
+  }
+}

@@ -1,5 +1,6 @@
 import { AISDKNative } from "@opencode/core/aisdk-native"
 import { Model } from "@opencode/core/model"
+import { decodeSnapshot } from "@opencode/core/models-dev"
 import { OauthCallbackPage } from "@opencode/core/oauth/page"
 import { OauthRedirect } from "@opencode/core/oauth/redirect"
 import { Provider } from "@opencode/core/provider"
@@ -665,7 +666,84 @@ function variants() {
   return cases
 }
 
-const builders: Record<string, () => Record<string, unknown>> = { oauth, "aisdk-native": aisdkNative, variants }
+const sha256 = (value: string | Uint8Array) => new Bun.CryptoHasher("sha256").update(value).digest("hex")
+
+function canonical(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map((item) => canonical(item)).join(",")}]`
+  if (value !== null && typeof value === "object")
+    return `{${Object.keys(value)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${canonical((value as Record<string, unknown>)[key])}`)
+      .join(",")}}`
+  return JSON.stringify(value)
+}
+
+function decoded(text: string, recommended: boolean) {
+  return JSON.parse(JSON.stringify(Effect.runSync(decodeSnapshot(text, recommended))))
+}
+
+function decodeCase(input: unknown) {
+  return {
+    call: "decode",
+    input,
+    expected: { false: decoded(JSON.stringify(input), false), true: decoded(JSON.stringify(input), true) },
+  }
+}
+
+const v1Catalog = {
+  acme: {
+    id: "acme",
+    name: "Acme",
+    env: ["ACME_API_KEY"],
+    npm: "@ai-sdk/openai-compatible",
+    api: "https://api.acme.test/v1",
+    models: {
+      "acme-1": {
+        id: "acme-1",
+        name: "Acme One",
+        release_date: "2026-01-01",
+        attachment: false,
+        reasoning: true,
+        reasoning_options: [
+          { type: "effort", values: [null, "low", "high"] },
+          { type: "budget_tokens", min: 1024 },
+        ],
+        temperature: true,
+        tool_call: true,
+        interleaved: { field: "vendor_reasoning" },
+        cost: { input: 1, output: 2, tiers: [{ tier: { type: "context", size: 200000 }, input: 3, output: 4 }] },
+        limit: { context: 128000, output: 8192 },
+      },
+    },
+  },
+}
+
+async function modelsDev() {
+  const cases: Record<string, unknown> = {}
+  for (const name of ["models-dev", "models-dev-reasoning"])
+    cases[`fixture.${name}`] = decodeCase(await Bun.file(`test/plugin/fixtures/${name}.json`).json())
+  cases["v1.models"] = decodeCase(v1Catalog)
+  const text = await Bun.file("src/models-dev/snapshot.txt").text()
+  const left = decoded(text, false)
+  const right = decoded(text, true)
+  cases["snapshot.bytes"] = { call: "text", bytes: new TextEncoder().encode(text).length, sha256: sha256(text) }
+  cases["snapshot.providers"] = {
+    call: "snapshot",
+    count: { false: left.length, true: right.length },
+    providers: {
+      false: Object.fromEntries(left.map((snapshot: { info: { id: string } }) => [snapshot.info.id, sha256(canonical(snapshot))])),
+      true: Object.fromEntries(right.map((snapshot: { info: { id: string } }) => [snapshot.info.id, sha256(canonical(snapshot))])),
+    },
+  }
+  return cases
+}
+
+const builders: Record<string, () => Record<string, unknown> | Promise<Record<string, unknown>>> = {
+  oauth,
+  "aisdk-native": aisdkNative,
+  variants,
+  "models-dev": modelsDev,
+}
 
 const build = area === undefined ? undefined : builders[area]
 
@@ -674,4 +752,4 @@ if (build === undefined) {
   process.exit(1)
 }
 
-process.stdout.write(`${JSON.stringify(build(), null, 2)}\n`)
+process.stdout.write(`${JSON.stringify(await build(), null, 2)}\n`)

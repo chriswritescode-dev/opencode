@@ -794,6 +794,7 @@ dependencies = [
 name = "opencode-catalog"
 version = "0.1.0"
 dependencies = [
+ "flate2",
  "indexmap",
  "log",
  "opencode-ai",

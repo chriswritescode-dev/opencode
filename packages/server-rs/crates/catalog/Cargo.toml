@@ -11,8 +11,10 @@ autotests = false
 workspace = true
 
 [dependencies]
+flate2.workspace = true
 indexmap = { workspace = true, features = ["serde"] }
 log.workspace = true
+opencode-ai.workspace = true
 opencode-bus.workspace = true
 opencode-config.workspace = true
 opencode-contract.workspace = true
@@ -30,7 +32,6 @@ tokio-util.workspace = true
 url.workspace = true
 
 [dev-dependencies]
-opencode-ai.workspace = true
 tokio = { workspace = true, features = ["test-util"] }
 
 [[test]]
