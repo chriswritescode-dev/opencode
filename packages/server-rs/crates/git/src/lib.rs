@@ -1,6 +1,7 @@
 mod error;
 mod executable;
 mod history;
+mod patch;
 mod repo;
 mod run;
 mod sync;
@@ -8,6 +9,10 @@ mod worktree;
 
 pub use error::{CommandError, Operation, OperationError, WorktreeError, WorktreeOperation};
 pub use executable::{Platform, darwin_developer_dirs, resolve_git_executable};
+pub use patch::{
+    MAX_PATCH_BYTES, MAX_TOTAL_PATCH_BYTES, PATCH_CONTEXT_LINES, Patch, PatchCount, add_patch, chunks_by_file,
+    count_patch, delete_patch, empty_patch, file_from_patch_chunk, split_git_patch,
+};
 pub use repo::{Repository, Worktree, WorktreeKind};
 pub use run::{RunOptions, RunOutput, SpawnError};
 

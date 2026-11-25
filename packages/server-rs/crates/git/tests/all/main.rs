@@ -1,5 +1,6 @@
 mod executable;
 mod fixture;
+mod patch;
 mod repo;
 mod sync;
 mod worktree;
