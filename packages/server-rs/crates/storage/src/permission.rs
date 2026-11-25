@@ -72,6 +72,7 @@ pub fn update(
     let resource = resource.unwrap_or(&current.resource);
     let now = now_ms();
     match db.prepare_cached(UPDATE)?.execute(params![id, action, resource, now]) {
+        Ok(0) => Ok(UpdateOutcome::NotFound),
         Ok(_) => Ok(UpdateOutcome::Updated(PermissionRow {
             action: action.to_string(),
             resource: resource.to_string(),

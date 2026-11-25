@@ -118,6 +118,24 @@ fn update_of_a_missing_id_is_not_found() {
 }
 
 #[test]
+fn update_that_changes_no_row_is_not_found() {
+    let (_dir, database) = database();
+    project(&database, "p1");
+    read(&database, |connection| permission::add(connection, "p1", "read", &["a".into()]));
+    let row = read(&database, |connection| permission::list(connection, Some("p1"))).remove(0);
+    read(&database, |connection| {
+        connection.execute_batch(
+            "CREATE TRIGGER permission_update_ignored BEFORE UPDATE ON permission BEGIN SELECT RAISE(IGNORE); END",
+        )?;
+        Ok(())
+    });
+
+    let outcome = read(&database, |connection| permission::update(connection, &row.id, Some("write"), None));
+
+    assert_eq!(outcome, UpdateOutcome::NotFound, "a write that no longer matches a row is not reported as updated");
+}
+
+#[test]
 fn remove_deletes_the_row_and_a_second_remove_is_harmless() {
     let (_dir, database) = database();
     project(&database, "p1");
