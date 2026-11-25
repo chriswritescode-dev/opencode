@@ -364,7 +364,7 @@ impl ProjectService {
             None => false,
         };
         let vcs = project.vcs.as_ref().map(Vcs::kind);
-        let (row, seeded) = self.database.transaction(TransactionBehavior::Immediate, |transaction| {
+        let row = self.database.transaction(TransactionBehavior::Immediate, |transaction| {
             project::upsert(transaction, &project.id, &project.canonical, vcs)?;
             let mut changed = false;
             if previous.as_ref().is_some_and(|row| row.time_archived.is_some()) {
@@ -375,23 +375,7 @@ impl ProjectService {
                 project::set_canonical(transaction, &project.id, &project.canonical)?;
                 changed = true;
             }
-            let mut seeded = Vec::new();
-            if project.vcs.is_some() {
-                let strategy = matches!(project.vcs, Some(Vcs::Git { .. })).then_some("git");
-                let mut directories = vec![(project.canonical.as_str(), None)];
-                if project.directory != project.canonical {
-                    directories.push((project.directory.as_str(), strategy));
-                }
-                for (directory, strategy) in directories {
-                    if storage_worktree::find(transaction, &project.id, directory)?.is_some() {
-                        continue;
-                    }
-                    storage_worktree::insert_ignore(transaction, &project.id, directory, strategy)?;
-                    seeded.push(directory.to_string());
-                }
-            }
-            let row = if changed { project::get(transaction, &project.id)? } else { None };
-            Ok::<(Option<ProjectRow>, Vec<String>), StorageError>((row, seeded))
+            if changed { project::get(transaction, &project.id) } else { Ok(None) }
         })?;
         if let Some(row) = row {
             self.publish(LocationEvent::ProjectUpdated(Project::from_row(row)?));
@@ -401,11 +385,29 @@ impl ProjectService {
             Ok(None) => {}
             Err(error) => log::warn!("project icon refresh failed for {}: {error}", project.id),
         }
-        for directory in seeded {
-            let adopted = self.adopted(environment, &project.id, &directory).await?;
+        if project.vcs.is_none() {
+            return Ok(());
+        }
+        let strategy = matches!(project.vcs, Some(Vcs::Git { .. })).then_some("git");
+        let mut directories = vec![(project.canonical.as_str(), None)];
+        if project.directory != project.canonical {
+            directories.push((project.directory.as_str(), strategy));
+        }
+        for (directory, strategy) in directories {
+            let adopted = self.adopted(environment, &project.id, directory).await?;
+            let inserted = self.database.transaction(TransactionBehavior::Immediate, |transaction| {
+                if storage_worktree::find(transaction, &project.id, directory)?.is_some() {
+                    return Ok::<bool, StorageError>(false);
+                }
+                storage_worktree::insert_ignore(transaction, &project.id, directory, strategy)?;
+                Ok::<bool, StorageError>(true)
+            })?;
+            if !inserted {
+                continue;
+            }
             self.publish(LocationEvent::WorktreeResolved {
                 project_id: project.id.clone(),
-                directory,
+                directory: directory.to_string(),
                 previous: project.previous.clone().unwrap_or_else(|| GLOBAL_ID.to_string()),
                 adopted,
             });
