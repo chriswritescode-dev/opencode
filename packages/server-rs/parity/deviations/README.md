@@ -107,4 +107,5 @@ A deviation that excepts a recorded cassette from the replay gate also has a `Ca
 - `OR-46-route-failures.md`: integration and credential routes answer typed errors where TypeScript dies
 - `OR-46-transform-timing.md`: config observers spawn their catalog reload instead of awaiting it
 - `OR-47-gitlab-discovery.md`: GitLab workflow models are not discovered until OR-64 supplies the sidecar seam
+- `OR-47-provider-hooks-unwired.md`: the provider-plugin hooks are registered but no Rust session triggers them until OR-54
 - `OR-61-sidecar-environment.md`: plugins run in a sidecar with an allowlisted environment instead of inside the server
