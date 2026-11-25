@@ -27,6 +27,7 @@ opencode-config = { path = "crates/config" }
 opencode-contract = { path = "crates/contract" }
 opencode-http = { path = "crates/http" }
 opencode-location = { path = "crates/location" }
+opencode-permission = { path = "crates/permission" }
 opencode-registry = { path = "crates/registry" }
 opencode-server = { path = "crates/server" }
 opencode-sidecar = { path = "crates/sidecar" }

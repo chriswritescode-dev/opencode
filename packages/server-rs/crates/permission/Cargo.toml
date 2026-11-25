@@ -1,0 +1,24 @@
+[package]
+name = "opencode-permission"
+description = "Permission rule evaluation ported from the TypeScript server."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+autotests = false
+
+[lints]
+workspace = true
+
+[dependencies]
+opencode-config.workspace = true
+opencode-contract.workspace = true
+opencode-storage.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
+
+[[test]]
+name = "all"
+path = "tests/all/main.rs"

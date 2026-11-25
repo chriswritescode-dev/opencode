@@ -6,7 +6,11 @@ const source = `${root}script/registry-corpus/export.ts`
 const tree = await upstreamCoreTree()
 
 const targets = [
-  { directory: "crates/registry/tests/corpus", areas: ["markdown", "scan", "agents", "commands", "instructions", "skills", "references"] },
+  {
+    directory: "crates/registry/tests/corpus",
+    areas: ["markdown", "scan", "agents", "commands", "instructions", "skills", "references"],
+  },
+  { directory: "crates/permission/tests/corpus", areas: ["evaluate"] },
 ]
 
 for (const target of targets) {

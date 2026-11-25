@@ -923,6 +923,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "opencode-permission"
+version = "0.1.0"
+dependencies = [
+ "opencode-config",
+ "opencode-contract",
+ "opencode-storage",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "opencode-registry"
 version = "0.1.0"
 dependencies = [
@@ -936,6 +947,7 @@ dependencies = [
  "opencode-config",
  "opencode-contract",
  "opencode-location",
+ "opencode-permission",
  "opencode-util",
  "rand",
  "regex-lite",

@@ -17,6 +17,7 @@ import { Instructions } from "@opencode/core/instructions/index"
 import { Job } from "@opencode/core/job"
 import { Location } from "@opencode/core/location"
 import { Mcp } from "@opencode/core/mcp/index"
+import { Permission } from "@opencode/core/permission"
 import { AgentPlugin } from "@opencode/core/plugin/agent"
 import { CommandPlugin } from "@opencode/core/plugin/command"
 import { PlanPlugin } from "@opencode/core/plugin/plan"
@@ -38,6 +39,7 @@ import { ConfigPolicy } from "@opencode/schema/config/policy"
 import { SessionInbox } from "@opencode/schema/session-inbox"
 import { SessionMessage } from "@opencode/schema/session-message"
 import { canonicalJson } from "@opencode/core/util/canonical-json"
+import { Wildcard } from "@opencode/core/util/wildcard"
 import { FSUtil } from "@opencode/util/fs-util"
 import { LayerNode } from "@opencode/util/effect/layer-node"
 import { Global } from "@opencode/util/global"
@@ -81,9 +83,294 @@ else if (area === "commands") await exportCommands()
 else if (area === "instructions") await exportInstructions()
 else if (area === "skills") await exportSkills()
 else if (area === "references") await exportReferences()
+else if (area === "evaluate") exportEvaluate()
 else {
   console.error(`corpus: unknown area ${area ?? ""}`)
   process.exit(1)
+}
+
+function exportEvaluate() {
+  const caseRules: Permission.Ruleset = [
+    { action: "*", resource: "*", effect: "allow" },
+    { action: "edit", resource: ".opencode/*", effect: "ask" },
+    { action: "read", resource: "*.env", effect: "deny" },
+    { action: "shell", resource: "git push*", effect: "ask" },
+  ]
+  const machineRules: Permission.Ruleset = [{ action: "read", resource: "**/work/*", effect: "allow" }]
+  const cases: EvaluateCase[] = [
+    {
+      name: "wildcard-action-star",
+      platform: "other",
+      action: "read",
+      resource: "src/app.ts",
+      rules: [[{ action: "*", resource: "*", effect: "allow" }]],
+    },
+    {
+      name: "wildcard-action-prefix",
+      platform: "other",
+      action: "shell",
+      resource: "git status",
+      rules: [[{ action: "shell*", resource: "git *", effect: "allow" }]],
+    },
+    {
+      name: "wildcard-action-prefix-miss",
+      platform: "other",
+      action: "edit",
+      resource: "src/app.ts",
+      rules: [[{ action: "shell*", resource: "*", effect: "allow" }]],
+    },
+    {
+      name: "wildcard-resource-question",
+      platform: "other",
+      action: "read",
+      resource: "ab",
+      rules: [[{ action: "read", resource: "a?", effect: "allow" }]],
+    },
+    {
+      name: "wildcard-resource-question-long",
+      platform: "other",
+      action: "read",
+      resource: "abc",
+      rules: [[{ action: "read", resource: "a?", effect: "allow" }]],
+    },
+    {
+      name: "last-rule-wins",
+      platform: "other",
+      action: "read",
+      resource: "src/a",
+      rules: [
+        [{ action: "*", resource: "*", effect: "allow" }],
+        [{ action: "read", resource: "src/*", effect: "deny" }],
+      ],
+    },
+    {
+      name: "last-rule-wins-rulesets",
+      platform: "other",
+      action: "shell",
+      resource: "git push",
+      rules: [
+        [{ action: "shell", resource: "git*", effect: "allow" }],
+        [{ action: "shell", resource: "git push", effect: "ask" }],
+      ],
+    },
+    {
+      name: "no-match-default",
+      platform: "other",
+      action: "edit",
+      resource: "src/a",
+      rules: [[{ action: "read", resource: "*", effect: "allow" }]],
+    },
+    {
+      name: "windows-rule-slash",
+      platform: "other",
+      action: "external_directory",
+      resource: "C:/Users/x/proj/src/*",
+      rules: [[{ action: "external_directory", resource: "C:\\Users\\x\\proj\\*", effect: "allow" }]],
+    },
+    {
+      name: "windows-rule-slash-miss",
+      platform: "other",
+      action: "external_directory",
+      resource: "C:/Users/x/other/*",
+      rules: [[{ action: "external_directory", resource: "C:\\Users\\x\\proj\\*", effect: "allow" }]],
+    },
+    {
+      name: "windows-resource-backslash",
+      platform: "other",
+      action: "read",
+      resource: "C:\\work\\a",
+      rules: [[{ action: "read", resource: "C:/work/*", effect: "allow" }]],
+    },
+    {
+      name: "windows-drive-wildcard",
+      platform: "other",
+      action: "read",
+      resource: "C:/work/a",
+      rules: [[{ action: "read", resource: "*", effect: "allow" }]],
+    },
+    {
+      name: "windows-double-star",
+      platform: "other",
+      action: "read",
+      resource: "C:/work/a",
+      rules: [[{ action: "read", resource: "**/work/*", effect: "allow" }]],
+    },
+    {
+      name: "machine-any",
+      platform: "other",
+      action: "read",
+      resource: "gpu:/work/a",
+      rules: [[{ action: "read", resource: "*", effect: "allow" }]],
+    },
+    {
+      name: "machine-double-star",
+      platform: "other",
+      action: "read",
+      resource: "gpu:/work/a",
+      rules: [machineRules],
+    },
+    {
+      name: "machine-scheme",
+      platform: "other",
+      action: "read",
+      resource: "gpu:/work/a",
+      rules: [[{ action: "read", resource: "gpu:/work/*", effect: "allow" }]],
+    },
+    {
+      name: "machine-scheme-wildcard",
+      platform: "other",
+      action: "read",
+      resource: "gpu:/work/a",
+      rules: [[{ action: "read", resource: "gpu:*", effect: "allow" }]],
+    },
+    {
+      name: "machine-scheme-miss",
+      platform: "other",
+      action: "read",
+      resource: "cpu:/work/a",
+      rules: [[{ action: "read", resource: "gpu:/work/*", effect: "allow" }]],
+    },
+    {
+      name: "machine-local-miss",
+      platform: "other",
+      action: "read",
+      resource: "/work/a",
+      rules: [[{ action: "read", resource: "gpu:/work/*", effect: "allow" }]],
+    },
+    {
+      name: "machine-name-case-macos",
+      platform: "macos",
+      action: "read",
+      resource: "gpu:/work/a",
+      rules: [[{ action: "read", resource: "GPU:/work/*", effect: "allow" }]],
+    },
+    {
+      name: "machine-name-case-other",
+      platform: "other",
+      action: "read",
+      resource: "gpu:/work/a",
+      rules: [[{ action: "read", resource: "GPU:/work/*", effect: "allow" }]],
+    },
+    {
+      name: "machine-bare-deny",
+      platform: "other",
+      action: "edit",
+      resource: "gpu:/work/a",
+      rules: [[{ action: "*", resource: "*", effect: "deny" }]],
+    },
+    {
+      name: "machine-local-any",
+      platform: "other",
+      action: "read",
+      resource: "/work/a",
+      rules: [[{ action: "read", resource: "*", effect: "allow" }]],
+    },
+    {
+      name: "machine-shell",
+      platform: "other",
+      action: "shell",
+      resource: "gpu:/bin/x",
+      rules: [[{ action: "shell", resource: "*", effect: "allow" }]],
+    },
+    {
+      name: "shell-command-suffix",
+      platform: "other",
+      action: "shell",
+      resource: "git push",
+      rules: [[{ action: "shell", resource: "git push *", effect: "ask" }]],
+    },
+    {
+      name: "shell-command-suffix-args",
+      platform: "other",
+      action: "shell",
+      resource: "git push origin",
+      rules: [[{ action: "shell", resource: "git push *", effect: "ask" }]],
+    },
+    {
+      name: "env-file-deny",
+      platform: "other",
+      action: "read",
+      resource: ".env",
+      rules: [[{ action: "read", resource: "*.env", effect: "deny" }]],
+    },
+    {
+      name: "env-machine-deny",
+      platform: "other",
+      action: "read",
+      resource: "gpu:/work/.env",
+      rules: [[{ action: "read", resource: "*.env", effect: "deny" }]],
+    },
+    {
+      name: "case-edit-macos",
+      platform: "macos",
+      action: "edit",
+      resource: ".OPENCODE/plugins/guard.ts",
+      rules: [caseRules],
+    },
+    {
+      name: "case-edit-other",
+      platform: "other",
+      action: "edit",
+      resource: ".OPENCODE/plugins/guard.ts",
+      rules: [caseRules],
+    },
+    {
+      name: "case-read-macos",
+      platform: "macos",
+      action: "read",
+      resource: "Secrets.ENV",
+      rules: [caseRules],
+    },
+    {
+      name: "case-read-other",
+      platform: "other",
+      action: "read",
+      resource: "Secrets.ENV",
+      rules: [caseRules],
+    },
+    {
+      name: "case-shell-macos",
+      platform: "macos",
+      action: "shell",
+      resource: "GIT PUSH origin dev",
+      rules: [caseRules],
+    },
+    {
+      name: "case-shell-other",
+      platform: "other",
+      action: "shell",
+      resource: "GIT PUSH origin dev",
+      rules: [caseRules],
+    },
+  ]
+  const lines = cases.map((item) =>
+    JSON.stringify({ ...item, rule: evaluateOn(item.platform, item.action, item.resource, item.rules) }),
+  )
+  process.stdout.write(`[\n${lines.join(",\n")}\n]\n`)
+}
+
+interface EvaluateCase {
+  name: string
+  platform: "macos" | "other"
+  action: string
+  resource: string
+  rules: Permission.Ruleset[]
+}
+
+function evaluateOn(
+  platform: "macos" | "other",
+  action: string,
+  resource: string,
+  rules: Permission.Ruleset[],
+): Permission.Rule {
+  const ignoreCase = platform === "macos" && ["external_directory", "read", "edit"].includes(action)
+  return (
+    rules
+      .flat()
+      .findLast(
+        (rule) => Wildcard.match(action, rule.action) && Wildcard.match(resource, rule.resource, ignoreCase),
+      ) ?? { action, resource: "*", effect: "ask" }
+  )
 }
 
 function exportMarkdown() {

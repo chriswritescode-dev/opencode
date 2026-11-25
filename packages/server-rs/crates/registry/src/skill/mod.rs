@@ -124,7 +124,13 @@ impl SkillService {
 }
 
 pub fn available(skills: &[SkillInfo], rules: &[PermissionRule]) -> Vec<SkillInfo> {
-    skills.iter().filter(|skill| evaluate("skill", &skill.id.0, rules) != PermissionEffect::Deny).cloned().collect()
+    skills
+        .iter()
+        .filter(|skill| {
+            opencode_permission::rule::evaluate("skill", &skill.id.0, &[rules]).effect != PermissionEffect::Deny
+        })
+        .cloned()
+        .collect()
 }
 
 pub fn uri(id: &str, file: Option<&str>) -> String {
@@ -202,17 +208,6 @@ fn dirname(path: &str) -> String {
         Some(parent) if !parent.as_os_str().is_empty() => parent.to_string_lossy().into_owned(),
         _ => ".".to_string(),
     }
-}
-
-fn evaluate(action: &str, resource: &str, rules: &[PermissionRule]) -> PermissionEffect {
-    last_match(action, resource, rules).map_or(PermissionEffect::Ask, |rule| rule.effect)
-}
-
-fn last_match<'a>(action: &str, resource: &str, rules: &'a [PermissionRule]) -> Option<&'a PermissionRule> {
-    rules.iter().rev().find(|rule| {
-        opencode_config::wildcard::matches(action, &rule.action, false)
-            && opencode_config::wildcard::matches(resource, &rule.resource, false)
-    })
 }
 
 fn projection(data: &SkillData) -> String {
