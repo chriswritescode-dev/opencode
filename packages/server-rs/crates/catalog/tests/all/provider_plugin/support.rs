@@ -375,6 +375,7 @@ pub fn plugin_context_with_runner(
             workspace_id: workspace_id.map(|id| WorkspaceID(id.to_owned())),
         },
         shared_cache: opencode_catalog::shared_cache::SharedCache::new(),
+        gitlab_discovery: Arc::new(opencode_catalog::provider_plugin::gitlab::NoDiscovery),
     }
 }
 

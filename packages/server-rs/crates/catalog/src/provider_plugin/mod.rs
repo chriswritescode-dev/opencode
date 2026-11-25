@@ -7,6 +7,7 @@ pub mod cloudflare_workers_ai;
 pub mod databricks;
 pub mod digitalocean;
 pub mod github_copilot;
+pub mod gitlab;
 pub mod google_vertex;
 pub mod hooks;
 pub mod http;
@@ -167,6 +168,7 @@ pub struct PluginContext {
     pub hooks: Arc<hooks::ProviderHooks>,
     pub location: LocationRef,
     pub shared_cache: Arc<crate::shared_cache::SharedCache>,
+    pub gitlab_discovery: Arc<dyn gitlab::Discovery>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -268,6 +270,7 @@ pub async fn register(
             databricks::ID => databricks::register(services, context, builtin).await,
             digitalocean::ID => digitalocean::register(services, context, builtin).await,
             github_copilot::ID => github_copilot::register(services, context, builtin).await,
+            gitlab::ID => gitlab::register(services, context, builtin).await,
             google_vertex::ID => google_vertex::register(services, context, builtin).await,
             kilo::ID => kilo::register(services, context, builtin).await,
             llmgateway::ID => llmgateway::register(services, context, builtin).await,

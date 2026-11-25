@@ -7,6 +7,8 @@ pub mod cloudflare_workers_ai;
 pub mod databricks;
 pub mod digitalocean;
 pub mod github_copilot;
+pub mod gitlab;
+pub mod gitlab_oauth;
 pub mod google_vertex;
 pub mod helpers;
 pub mod kilo;
