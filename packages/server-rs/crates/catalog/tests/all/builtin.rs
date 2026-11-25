@@ -250,6 +250,9 @@ impl Harness {
                 "lmstudio" => {
                     opencode_catalog::provider_plugin::lmstudio::register(&self.services, &context, &mut builtin).await
                 }
+                "modal" => {
+                    opencode_catalog::provider_plugin::modal::register(&self.services, &context, &mut builtin).await
+                }
                 "nvidia" => {
                     opencode_catalog::provider_plugin::nvidia::register(&self.services, &context, &mut builtin).await
                 }
@@ -549,7 +552,7 @@ async fn builtin_register_inserts_provider_plugins_at_the_provider_slot() {
     )
     .await;
     harness.record(builtin);
-    assert_eq!(harness.registrations.registrations.len(), 35);
+    assert_eq!(harness.registrations.registrations.len(), 37);
 }
 
 pub async fn seed(

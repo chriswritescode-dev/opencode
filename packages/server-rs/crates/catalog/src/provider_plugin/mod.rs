@@ -10,6 +10,7 @@ pub mod kilo;
 pub mod llmgateway;
 pub mod lmstudio;
 pub mod local;
+pub mod modal;
 pub mod neon;
 pub mod nvidia;
 pub mod ollama;
@@ -260,6 +261,7 @@ pub async fn register(
             kilo::ID => kilo::register(services, context, builtin).await,
             llmgateway::ID => llmgateway::register(services, context, builtin).await,
             lmstudio::ID => lmstudio::register(services, context, builtin).await,
+            modal::ID => modal::register(services, context, builtin).await,
             neon::ID => neon::register(services, context, builtin).await,
             nvidia::ID => nvidia::register(services, context, builtin).await,
             ollama::ID => ollama::register(services, context, builtin).await,

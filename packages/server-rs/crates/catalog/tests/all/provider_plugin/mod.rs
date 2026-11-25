@@ -8,6 +8,7 @@ pub mod helpers;
 pub mod kilo;
 pub mod llmgateway;
 pub mod lmstudio;
+pub mod modal;
 pub mod nvidia;
 pub mod ollama;
 pub mod openai_context_caps;
