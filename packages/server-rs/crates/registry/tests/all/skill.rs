@@ -1,5 +1,5 @@
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -512,7 +512,11 @@ async fn skills_corpus_matches_expected_output() {
         let _config_skills = service
             .transform({
                 let entries = entries.clone();
-                let environment = config::skill::SkillEnvironment { directory: directory.clone(), home: home.clone() };
+                let environment = config::skill::SkillEnvironment {
+                    directory: directory.clone(),
+                    home: home.clone(),
+                    cache: root.join("cache"),
+                };
                 move |editor| config::skill::apply(&entries, &environment, editor)
             })
             .await;
@@ -647,8 +651,12 @@ async fn config_skill_register_reloads_when_the_file_changes() {
     let config = ConfigService::start(options, location, paths, deps).await;
 
     let skills = SkillService::new(Arc::new(NoEvents));
-    let _handle =
-        config::skill::register(&config, &skills, config::skill::SkillEnvironment { directory: project, home }).await;
+    let _handle = config::skill::register(
+        &config,
+        &skills,
+        config::skill::SkillEnvironment { directory: project, home, cache: root.join("cache") },
+    )
+    .await;
 
     wait_for_skill_description(&skills, "deploy", "First").await;
     write(&file, "---\nname: Deploy\ndescription: Second\n---\n# Deploy");
@@ -701,10 +709,20 @@ async fn config_compatibility_and_policy_load_skill_roots() {
         Entry::Directory { path: root.join("dir") },
         Entry::Document(Document { path: None, info, origin: Origin::File }),
     ];
-    let paths = config::skill::sources(
+    let paths: Vec<PathBuf> = config::skill::sources(
         &entries,
-        &config::skill::SkillEnvironment { directory: root.join("project"), home: root.join("home") },
-    );
+        &config::skill::SkillEnvironment {
+            directory: root.join("project"),
+            home: root.join("home"),
+            cache: root.join("cache"),
+        },
+    )
+    .into_iter()
+    .filter_map(|source| match source {
+        config::skill::Source::Directory(path) => Some(path),
+        config::skill::Source::Url(_) => None,
+    })
+    .collect();
     let expected = vec![
         root.join("dir/skill"),
         root.join("dir/skills"),

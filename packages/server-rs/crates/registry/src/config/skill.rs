@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, RwLock};
 
 use indexmap::IndexMap;
@@ -18,22 +18,31 @@ use crate::watch::WatchHandle;
 pub struct SkillEnvironment {
     pub directory: PathBuf,
     pub home: PathBuf,
+    pub cache: PathBuf,
 }
 
-pub fn sources(entries: &[Entry], environment: &SkillEnvironment) -> Vec<PathBuf> {
-    let mut seen = HashSet::new();
-    let mut paths = Vec::new();
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Source {
+    Directory(PathBuf),
+    Url(String),
+}
+
+pub fn sources(entries: &[Entry], environment: &SkillEnvironment) -> Vec<Source> {
+    let mut seen_paths = HashSet::new();
+    let mut seen_urls = HashSet::new();
+    let mut sources = Vec::new();
     for entry in entries {
         let Entry::Directory { path } = entry else { continue };
         let directory = path.to_string_lossy();
-        add(&mut seen, &mut paths, Flavor::NATIVE.join(&[directory.as_ref(), "skill"]));
-        add(&mut seen, &mut paths, Flavor::NATIVE.join(&[directory.as_ref(), "skills"]));
+        add_directory(&mut seen_paths, &mut sources, Flavor::NATIVE.join(&[directory.as_ref(), "skill"]));
+        add_directory(&mut seen_paths, &mut sources, Flavor::NATIVE.join(&[directory.as_ref(), "skills"]));
     }
     for entry in entries {
         let Entry::Document(document) = entry else { continue };
         let Some(items) = document.info.skills.as_deref() else { continue };
         for item in items {
             if is_url(item) {
+                add_url(&mut seen_urls, &mut sources, item.clone());
                 continue;
             }
             let expanded = match item.strip_prefix("~/") {
@@ -45,33 +54,58 @@ pub fn sources(entries: &[Entry], environment: &SkillEnvironment) -> Vec<PathBuf
             } else {
                 Flavor::NATIVE.join(&[environment.directory.to_string_lossy().as_ref(), expanded.as_str()])
             };
-            add(&mut seen, &mut paths, path);
+            add_directory(&mut seen_paths, &mut sources, path);
         }
     }
-    paths
+    sources
 }
 
-pub fn load(entries: &[Entry], environment: &SkillEnvironment) -> Vec<SkillInfo> {
+pub async fn load(entries: &[Entry], environment: &SkillEnvironment) -> Vec<SkillInfo> {
     let mut skills = IndexMap::new();
     for source in sources(entries, environment) {
-        for file in crate::skill::scan::scan(&source) {
-            let Ok(content) = std::fs::read_to_string(&file) else { continue };
-            if content.is_empty() {
-                continue;
+        let directories = match source {
+            Source::Directory(path) => vec![path],
+            Source::Url(url) => {
+                let pulled = crate::skill::discovery::pull(&url, &environment.cache).await;
+                if pulled.is_empty() {
+                    log::debug!("skill source {url} yielded no directories");
+                }
+                pulled
             }
-            let crate::skill::file::ParseResult::Parsed(skill) = crate::skill::file::parse(&source, &file, &content)
-            else {
-                continue;
-            };
-            skills.insert(skill.id.0.clone(), skill);
+        };
+        for directory in directories {
+            insert(&mut skills, &directory);
         }
     }
     skills.into_values().collect()
 }
 
 pub fn apply(entries: &[Entry], environment: &SkillEnvironment, editor: &mut SkillEditor<'_>) {
-    for skill in load(entries, environment) {
+    for skill in load_directories(entries, environment) {
         editor.add(skill, None);
+    }
+}
+
+fn load_directories(entries: &[Entry], environment: &SkillEnvironment) -> Vec<SkillInfo> {
+    let mut skills = IndexMap::new();
+    for source in sources(entries, environment) {
+        let Source::Directory(directory) = source else { continue };
+        insert(&mut skills, &directory);
+    }
+    skills.into_values().collect()
+}
+
+fn insert(skills: &mut IndexMap<String, SkillInfo>, directory: &Path) {
+    for file in crate::skill::scan::scan(directory) {
+        let Ok(content) = std::fs::read_to_string(&file) else { continue };
+        if content.is_empty() {
+            continue;
+        }
+        let crate::skill::file::ParseResult::Parsed(skill) = crate::skill::file::parse(directory, &file, &content)
+        else {
+            continue;
+        };
+        skills.insert(skill.id.0.clone(), skill);
     }
 }
 
@@ -95,7 +129,7 @@ pub async fn register(
     skills: &SkillService,
     environment: SkillEnvironment,
 ) -> ConfigSkillHandle {
-    let loaded = Arc::new(RwLock::new(load(&config.entries(), &environment)));
+    let loaded = Arc::new(RwLock::new(load(&config.entries(), &environment).await));
     let registration = skills
         .transform({
             let loaded = loaded.clone();
@@ -147,7 +181,7 @@ impl Refresher {
     async fn refresh(self: &Arc<Self>) {
         let _guard = self.lock.lock().await;
         let entries = self.config.entries();
-        let loaded = load(&entries, &self.environment);
+        let loaded = load(&entries, &self.environment).await;
         *self.loaded.write().expect("the config skill lock is never poisoned") = loaded;
         self.skills.reload().await;
         self.install_watches();
@@ -173,16 +207,23 @@ impl Refresher {
 fn watch_candidates(entries: &[Entry], environment: &SkillEnvironment) -> Vec<PathBuf> {
     let mut paths = Vec::new();
     for source in sources(entries, environment) {
-        paths.extend(crate::skill::scan::scan(&source));
-        paths.push(source);
+        let Source::Directory(directory) = source else { continue };
+        paths.extend(crate::skill::scan::scan(&directory));
+        paths.push(directory);
     }
     paths
 }
 
-fn add(seen: &mut HashSet<PathBuf>, paths: &mut Vec<PathBuf>, path: String) {
+fn add_directory(seen: &mut HashSet<PathBuf>, sources: &mut Vec<Source>, path: String) {
     let path = PathBuf::from(path);
     if seen.insert(path.clone()) {
-        paths.push(path);
+        sources.push(Source::Directory(path));
+    }
+}
+
+fn add_url(seen: &mut HashSet<String>, sources: &mut Vec<Source>, url: String) {
+    if seen.insert(url.clone()) {
+        sources.push(Source::Url(url));
     }
 }
 

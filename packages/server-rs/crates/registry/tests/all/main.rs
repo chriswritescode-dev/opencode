@@ -6,6 +6,7 @@ mod instructions;
 mod markdown;
 mod scan;
 mod skill;
+mod skill_discovery;
 mod watch;
 
 use std::path::{Path, PathBuf};

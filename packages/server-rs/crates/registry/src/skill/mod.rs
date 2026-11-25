@@ -1,3 +1,4 @@
+pub mod discovery;
 pub mod file;
 pub mod guidance;
 pub mod scan;
