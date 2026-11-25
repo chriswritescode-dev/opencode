@@ -1399,6 +1399,43 @@ async fn uses_no_auth_for_an_enabled_provider_without_credentials() {
 }
 
 #[tokio::test]
+async fn drops_invalid_model_provider_settings_instead_of_panicking() {
+    let harness = crate::provider::setup();
+    let provider_id = ProviderID("test-provider".to_owned());
+    let model = catalog_model(
+        "test-provider",
+        "fixture-model",
+        "api-fixture",
+        json!({
+            "package": "@opencode/ai/providers/openai/chat",
+            "settings": {
+                "timeout": "soon",
+                "chunkTimeout": [],
+                "transport": 42,
+                "tls": "off",
+                "reasoningEffort": "high"
+            }
+        }),
+    );
+    let _registration = register(
+        &harness,
+        provider("test-provider", "", Some(json!({"baseURL": "https://openai.example/v1"}))),
+        std::slice::from_ref(&model),
+    )
+    .await;
+    let models = models(&harness);
+    let resolver = service_resolver(&harness, &models);
+    let reference = ModelRef { id: "fixture-model".to_owned(), provider_id, variant: None };
+    let resolved = resolver.resolve(Some(&reference)).await.expect("resolves").expect("a resolved model");
+    let options = options_json(&resolved.model);
+
+    assert!(options["timeout"].get("total").is_none());
+    assert_eq!(options["timeout"]["headers"].as_f64(), Some(300_000.0));
+    assert_eq!(options["timeout"]["chunk"].as_f64(), Some(900_000.0));
+    assert_eq!(options["providerOptions"]["reasoningEffort"], json!("high"));
+}
+
+#[tokio::test]
 async fn returns_none_for_unknown_and_empty_selections() {
     let harness = crate::provider::setup();
     let provider_id = ProviderID("test-provider".to_owned());

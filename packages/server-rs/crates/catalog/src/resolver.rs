@@ -5,7 +5,7 @@ use opencode_ai::{
     AiError, AiErrorReason, Auth, ClientTls, Env, HttpOptions, HttpTimeout, Model, RequestEncoding, RequestOptions,
     RequestTimeout, RuntimeModel, Settings, TimeoutOptions, merge_request_options,
 };
-use opencode_contract::codec::{self, Encode, encode_json};
+use opencode_contract::codec::{self, Decode, Encode, encode_json};
 use opencode_contract::generated::{
     CredentialValue, IntegrationID, ModelCapabilities, ModelCompatibility, ModelCost, ModelInfo, ModelInfoLimit,
     ModelRef, ModelSettings, ModelType, ModelTypeString2, ModelTypeString3, ModelTypeString4, ProviderCache,
@@ -21,6 +21,9 @@ use crate::model::ModelService;
 use crate::provider::{self, ProviderService};
 
 const CAPABILITY_KEYS: [&str; 3] = ["supportsPromptCacheKey", "streamUsage", "supportsEffortUpdates"];
+
+const PROVIDER_SETTING_KEYS: [&str; 8] =
+    ["timeout", "headerTimeout", "chunkTimeout", "compaction", "cache", "transport", "encoding", "tls"];
 
 const API_KEY_AUTH_PACKAGES: [&str; 33] = [
     "@ai-sdk/openai",
@@ -183,10 +186,8 @@ pub fn from_catalog_model(
             native_credential_settings(&resolved, resolved.info.package.as_deref().unwrap_or(""), credential);
         let merged = merge_overlay(base.as_ref(), Some(&credential_settings)).unwrap_or_default();
         let mapped = prepare_provider_settings(&resolved, merged, environment)?;
-        let runtime = RuntimeInfo {
-            info: resolved.info.clone(),
-            settings: Some(provider::decode_object::<ProviderSettings>(mapped.clone())),
-        };
+        let runtime =
+            RuntimeInfo { info: resolved.info.clone(), settings: Some(decode_provider_settings(mapped.clone())) };
         let model = bridge.model(&runtime, &Settings::new(mapped), environment)?;
         let RuntimeModel::Language(model) = model else {
             return Err(unsupported(&resolved.info));
@@ -767,7 +768,21 @@ fn merge_provider_settings(base: Option<&ProviderSettings>, model: Option<&Model
     let base = base.map(provider::json_object);
     let overlay = model.map(provider::json_object);
     let merged = merge_overlay(base.as_ref(), overlay.as_ref())?;
-    Some(provider::decode_object::<ProviderSettings>(merged))
+    Some(decode_provider_settings(merged))
+}
+
+fn decode_provider_settings(mut settings: JsonMap) -> ProviderSettings {
+    for key in PROVIDER_SETTING_KEYS {
+        let invalid = settings.get(key).is_some_and(|value| {
+            let single = JsonMap::from_iter([(key.to_owned(), value.clone())]);
+            ProviderSettings::decode(&Value::Object(single), &mut codec::Path::new()).is_err()
+        });
+        if invalid {
+            settings.remove(key);
+        }
+    }
+    ProviderSettings::decode(&Value::Object(settings), &mut codec::Path::new())
+        .unwrap_or_else(|_| empty_provider_settings())
 }
 
 fn provider_transport(provider: Option<&ProviderInfo>) -> Option<ProviderTransport> {
