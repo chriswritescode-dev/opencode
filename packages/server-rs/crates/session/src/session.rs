@@ -305,6 +305,7 @@ impl Sessions {
         let mut stack = vec![session_id.to_owned()];
         while let Some(current) = stack.pop() {
             self.execution.interrupt(&current).await;
+            self.execution.wait_idle(&current).await;
             let children = self
                 .store
                 .list(&ListInput { parent_id: Some(Some(current.clone())), ..Default::default() })

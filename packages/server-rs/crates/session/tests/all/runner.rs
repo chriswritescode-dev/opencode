@@ -20,7 +20,7 @@ use opencode_session::model_request::AppInfo;
 use opencode_session::runner::Runner;
 use opencode_session::{
     Execution, MessagesInput, Order, Placed, Placement, ProjectionSettings, PromptInput, SessionError,
-    SessionProjector, SessionStore, Sessions,
+    SessionExecution, SessionProjector, SessionStore, Sessions,
 };
 use opencode_storage::{Database, DatabaseLocation};
 use serde_json::{Value, json};
@@ -535,6 +535,73 @@ async fn interrupting_a_streaming_step_flushes_partial_output() {
         .find(|event| event.r#type() == "session.execution.interrupted")
         .expect("the drain is interrupted");
     assert_eq!(interrupted.data()["reason"], json!("user"));
+}
+
+#[tokio::test]
+async fn removing_a_session_waits_for_the_execution_to_go_idle() {
+    let setup = setup(0);
+    let execution = Arc::new(BlockingExecution::new());
+    let sessions = Sessions::new(
+        setup.store.clone(),
+        setup.bus.clone(),
+        Arc::new(ProjectService::new(setup.database.clone())),
+        Arc::new(LocalEnvironment::new()),
+        "1".to_owned(),
+    )
+    .with_execution(execution.clone());
+    let mut deleted = setup.bus.subscribe(&["session.deleted"], None);
+    let removing = tokio::spawn(async move { sessions.remove("ses_1").await });
+    tokio::time::timeout(Duration::from_secs(10), execution.waiting.notified())
+        .await
+        .expect("removal waits for the execution to go idle");
+    assert!(!removing.is_finished());
+    assert!(deleted.try_recv().is_none());
+    execution.released.notify_waiters();
+    removing.await.expect("the removal task completes").expect("remove the session");
+    assert_eq!(*execution.calls.lock().expect("the calls lock is never poisoned"), ["interrupt", "wait_idle"]);
+    let event = next_event(&mut deleted).await;
+    assert_eq!(event.r#type(), "session.deleted");
+}
+
+struct BlockingExecution {
+    calls: std::sync::Mutex<Vec<&'static str>>,
+    waiting: tokio::sync::Notify,
+    released: tokio::sync::Notify,
+}
+
+impl BlockingExecution {
+    fn new() -> Self {
+        Self {
+            calls: std::sync::Mutex::new(Vec::new()),
+            waiting: tokio::sync::Notify::new(),
+            released: tokio::sync::Notify::new(),
+        }
+    }
+}
+
+impl SessionExecution for BlockingExecution {
+    fn wake(&self, _session_id: &str) {}
+
+    fn interrupt<'a>(&'a self, _session_id: &'a str) -> BoxFuture<'a, ()> {
+        self.calls.lock().expect("the calls lock is never poisoned").push("interrupt");
+        Box::pin(async {})
+    }
+
+    fn wait_idle<'a>(&'a self, _session_id: &'a str) -> BoxFuture<'a, ()> {
+        Box::pin(async move {
+            self.calls.lock().expect("the calls lock is never poisoned").push("wait_idle");
+            self.waiting.notify_one();
+            self.released.notified().await;
+        })
+    }
+
+    fn active(&self) -> Vec<String> {
+        Vec::new()
+    }
+
+    fn shutdown<'a>(&'a self) -> BoxFuture<'a, ()> {
+        Box::pin(async {})
+    }
 }
 
 #[tokio::test]
