@@ -1,6 +1,6 @@
 # Operation coverage
 
-Implemented: 21 of 178 operations
+Implemented: 25 of 178 operations
 
 | Operation | Method | Path | Stability | Status |
 | --- | --- | --- | --- | --- |
@@ -162,10 +162,10 @@ Implemented: 21 of 178 operations
 | `shell.remove` | DELETE | `/api/shell/{id}` | stable | not implemented (501) |
 | `shell.output` | GET | `/api/shell/{id}/output` | stable | not implemented (501) |
 | `reference.list` | GET | `/api/reference` | stable | not implemented (501) |
-| `worktree.list` | GET | `/api/worktree` | stable | not implemented (501) |
-| `worktree.create` | POST | `/api/worktree` | stable | not implemented (501) |
-| `worktree.remove` | DELETE | `/api/worktree` | stable | not implemented (501) |
-| `worktree.refresh` | POST | `/api/worktree/refresh` | stable | not implemented (501) |
+| `worktree.list` | GET | `/api/worktree` | stable | implemented |
+| `worktree.create` | POST | `/api/worktree` | stable | implemented |
+| `worktree.remove` | DELETE | `/api/worktree` | stable | implemented |
+| `worktree.refresh` | POST | `/api/worktree/refresh` | stable | implemented |
 | `vcs.init` | POST | `/api/vcs/init` | stable | implemented |
 | `vcs.get` | GET | `/api/vcs` | stable | implemented |
 | `vcs.base` | GET | `/api/vcs/base` | stable | implemented |

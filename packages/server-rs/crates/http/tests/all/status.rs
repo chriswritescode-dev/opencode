@@ -126,6 +126,10 @@ fn sample_request(operation: &str) -> Option<(&'static str, &'static str)> {
         "vcs.status" => Some(("GET", "/api/vcs/status")),
         "vcs.branch.list" => Some(("GET", "/api/vcs/branch")),
         "vcs.diff" => Some(("GET", "/api/vcs/diff?mode=working")),
+        "worktree.list" => Some(("GET", "/api/worktree?projectID=unknown")),
+        "worktree.create" => Some(("POST", "/api/worktree")),
+        "worktree.remove" => Some(("DELETE", "/api/worktree")),
+        "worktree.refresh" => Some(("POST", "/api/worktree/refresh")),
         "config.get" => Some(("GET", "/api/config")),
         "config.shells" => Some(("GET", "/api/config/shell")),
         "experimental.config.update" => Some(("PATCH", "/api/experimental/config")),
@@ -173,8 +177,12 @@ fn implemented_lists_the_ported_operations() {
     assert!(opencode_http::app::IMPLEMENTED.contains(&"vcs.status"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"vcs.branch.list"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"vcs.diff"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"worktree.list"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"worktree.create"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"worktree.remove"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"worktree.refresh"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"config.get"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"config.shells"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"experimental.config.update"));
-    assert_eq!(opencode_http::app::IMPLEMENTED.len(), 21);
+    assert_eq!(opencode_http::app::IMPLEMENTED.len(), 25);
 }

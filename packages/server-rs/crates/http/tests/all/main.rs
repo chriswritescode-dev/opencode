@@ -16,6 +16,7 @@ mod session_log;
 mod status;
 mod ticket;
 mod vcs;
+mod worktree;
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;

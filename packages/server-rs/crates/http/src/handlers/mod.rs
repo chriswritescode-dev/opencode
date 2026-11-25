@@ -7,3 +7,4 @@ pub mod location;
 pub mod project;
 pub mod session_log;
 pub mod vcs;
+pub mod worktree;

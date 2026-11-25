@@ -35,6 +35,10 @@ pub const IMPLEMENTED: &[&str] = &[
     "vcs.status",
     "vcs.branch.list",
     "vcs.diff",
+    "worktree.list",
+    "worktree.create",
+    "worktree.remove",
+    "worktree.refresh",
     "config.get",
     "config.shells",
     "experimental.config.update",
@@ -174,6 +178,22 @@ impl App {
             "vcs.status" => crate::handlers::vcs::status(self, &raw).await,
             "vcs.branch.list" => crate::handlers::vcs::branch_list(self, &raw).await,
             "vcs.diff" => crate::handlers::vcs::diff(self, &raw).await,
+            "worktree.list" => match self.services() {
+                Some(services) => crate::handlers::worktree::list(services, &raw).await,
+                None => crate::services::services_unavailable(),
+            },
+            "worktree.create" => match self.services() {
+                Some(services) => crate::handlers::worktree::create(services, &raw).await,
+                None => crate::services::services_unavailable(),
+            },
+            "worktree.remove" => match self.services() {
+                Some(services) => crate::handlers::worktree::remove(services, &raw).await,
+                None => crate::services::services_unavailable(),
+            },
+            "worktree.refresh" => match self.services() {
+                Some(services) => crate::handlers::worktree::refresh(services, &raw).await,
+                None => crate::services::services_unavailable(),
+            },
             "config.get" => match self.location(&raw).await {
                 Ok(lease) => crate::handlers::config::get(&raw, &lease.config),
                 Err(response) => response,
