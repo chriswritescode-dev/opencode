@@ -3,6 +3,8 @@ mod executable;
 mod history;
 mod repo;
 mod run;
+mod sync;
+mod worktree;
 
 pub use error::{CommandError, Operation, OperationError, WorktreeError, WorktreeOperation};
 pub use executable::{Platform, darwin_developer_dirs, resolve_git_executable};

@@ -1,7 +1,7 @@
 use std::path::Path;
 
-use crate::TempDir;
 use crate::fixture;
+use crate::{TempDir, text};
 
 #[tokio::test]
 async fn discovers_repository_metadata_without_a_work_tree() {
@@ -58,8 +58,4 @@ async fn fingerprint_changes_with_repository_metadata_including_from_a_linked_wo
 
 fn dot_git(directory: &Path) -> String {
     text(&directory.join(".git")).to_string()
-}
-
-fn text(path: &Path) -> &str {
-    path.to_str().expect("path is UTF-8")
 }
