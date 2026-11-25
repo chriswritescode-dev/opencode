@@ -1,5 +1,7 @@
 import { Agent } from "@opencode/core/agent"
 import { Bus } from "@opencode/core/bus"
+import { Config } from "@opencode/core/config"
+import { ConfigAgentPlugin } from "@opencode/core/config/plugin/agent"
 import { ConfigMarkdown } from "@opencode/core/config/markdown"
 import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
 import { Location } from "@opencode/core/location"
@@ -7,14 +9,24 @@ import { AgentPlugin } from "@opencode/core/plugin/agent"
 import { PlanPlugin } from "@opencode/core/plugin/plan"
 import { Project } from "@opencode/core/project"
 import { AbsolutePath } from "@opencode/core/schema"
+import { Directory, Document, Info } from "@opencode/schema/config"
 import { FSUtil } from "@opencode/util/fs-util"
 import { LayerNode } from "@opencode/util/effect/layer-node"
 import { Global } from "@opencode/util/global"
-import { Effect, Layer, Logger } from "effect"
-import { mkdir, rm, symlink, writeFile } from "node:fs/promises"
+import { Effect, Layer, Logger, Schema } from "effect"
+import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { agentHost, host } from "./plugin/host"
+
+const decodeConfig = Schema.decodeUnknownSync(Info)
+
+const tool = {
+  transform: () => Effect.die("unused tool.transform"),
+  reload: () => Effect.die("unused tool.reload"),
+  list: () => Effect.die("unused tool.list"),
+  hook: () => Effect.succeed({ dispose: Effect.void }),
+}
 
 const area = process.argv[2]
 if (area === "markdown") exportMarkdown()
@@ -429,10 +441,15 @@ function scanCases(): Array<ScanCase> {
   ].sort((a, b) => (a.name < b.name ? -1 : 1))
 }
 
-async function exportAgents() {
-  const home = "{{home}}"
-  const global = Global.make({ home })
-  const globalLayer = Layer.succeed(Global.Service, Global.Service.of(global))
+type AgentCase = {
+  name: string
+  home: string
+  files?: Record<string, string>
+  documents?: Array<unknown>
+}
+
+function agentLayer(home: string) {
+  const globalLayer = Layer.succeed(Global.Service, Global.Service.of(Global.make({ home })))
   const location = new Location.Info({
     directory: AbsolutePath.make("/workspace"),
     project: {
@@ -442,16 +459,253 @@ async function exportAgents() {
     },
   })
   const locationLayer = Layer.succeed(Location.Service, Location.Service.of(location))
-  const layer = AppNodeBuilder.build(LayerNode.group([Agent.node, Bus.node, Location.node]), [
-    Global.node.replace(globalLayer),
-    Location.node.replace(locationLayer),
-  ])
-  const tool = {
-    transform: () => Effect.die("unused tool.transform"),
-    reload: () => Effect.die("unused tool.reload"),
-    list: () => Effect.die("unused tool.list"),
-    hook: () => Effect.succeed({ dispose: Effect.void }),
-  }
+  return AppNodeBuilder.build(
+    LayerNode.group([Agent.node, Bus.node, FSUtil.node, Location.node, Global.node]),
+    [Global.node.replace(globalLayer), Location.node.replace(locationLayer)],
+  )
+}
+
+async function exportAgents() {
+  const cases: AgentCase[] = [
+    {
+      name: "config-legacy-files",
+      home: "/home/test",
+      files: {
+        "agents/reviewer.md": `---
+model: openrouter/openai/gpt-5
+description: Markdown description
+temperature: 0.5
+tools:
+  write: false
+---
+Review carefully.`,
+        "agents/team/helper.md": "Help the team.",
+        "agents/team/deep/helper.md": "Deeper helper.",
+        "agents/native.md": `---
+variant: high
+request:
+  headers:
+    x-agent: native
+  body:
+    effort: high
+permissions:
+  - action: edit
+    resource: "*"
+    effect: deny
+---
+Use native v2 fields.`,
+        "agents/themed.md": `---
+description: Themed
+mode: subagent
+color: accent
+---
+Use a theme color.`,
+        "agents/disabled.md": `---
+disabled: true
+---
+Disabled`,
+        "agents/empty.md": "",
+        "agents/.opencode/node_modules/probe/README.md": "# Dependency README",
+        "modes/plan.md": "Make a plan.",
+      },
+      documents: [{ agents: { reviewer: { description: "JSON description" } } }],
+    },
+    {
+      name: "config-v2-fields",
+      home: "/home/test",
+      files: {
+        "agents/named.md": `---
+name: named
+description: Named reviewer
+permissions:
+  - action: edit
+    resource: "*"
+    effect: deny
+---
+Review only.`,
+        "agents/mixed.md": `---
+tools:
+  shell: false
+permissions:
+  - action: edit
+    resource: "*"
+    effect: deny
+---
+Mixed fields.`,
+      },
+    },
+    {
+      name: "config-markdown-model-variants",
+      home: "/home/test",
+      files: {
+        "agents/separate.md": `---
+model: example/chat
+variant: high
+---
+Body separate.`,
+        "agents/unqualified.md": `---
+model: example/chat
+---
+Body unqualified.`,
+        "agents/embedded.md": `---
+model: example/chat#high
+---
+Body embedded.`,
+        "agents/structured.md": `---
+model: { providerID: example, model: chat, variant: high }
+---
+Body structured.`,
+        "agents/structured-plain.md": `---
+model: { providerID: example, model: chat }
+---
+Body structured-plain.`,
+        "agents/standalone.md": `---
+variant: high
+---
+Body standalone.`,
+        "agents/embedded-ignored.md": `---
+model: example/chat#high
+variant: low
+---
+Body embedded-ignored.`,
+        "agents/structured-ignored.md": `---
+model: { providerID: example, model: chat, variant: high }
+variant: low
+---
+Body structured-ignored.`,
+        "agents/native.md": `---
+model: example/chat
+variant: high
+request:
+  headers:
+    x-agent: native
+  body:
+    effort: high
+permissions:
+  - action: edit
+    resource: "*"
+    effect: deny
+---
+Native variant.`,
+      },
+    },
+    {
+      name: "config-request-merge",
+      home: "/home/test",
+      documents: [
+        {
+          agents: {
+            reviewer: {
+              model: "anthropic/claude-sonnet",
+              system: "Review carefully.",
+              description: "Reviews changes",
+              mode: "subagent",
+              hidden: true,
+              color: "#ff6b6b",
+              steps: 12,
+              request: {
+                headers: { first: "one", shared: "first" },
+                body: { enabled: true, profile: "review", effort: "medium" },
+              },
+            },
+          },
+        },
+        {
+          agents: {
+            reviewer: {
+              request: {
+                headers: { shared: "last", second: "two" },
+                body: { retries: 2, effort: "high" },
+              },
+            },
+          },
+        },
+      ],
+    },
+    {
+      name: "config-global-permissions",
+      home: "/home/test",
+      documents: [
+        {
+          permissions: [
+            { action: "question", resource: "*", effect: "allow" },
+            { action: "bash", resource: "*", effect: "ask" },
+            { action: "read", resource: "*", effect: "allow" },
+            { action: "read", resource: "~/.local/share/opencode/mcp-auth.json", effect: "deny" },
+            { action: "external_directory", resource: "~/.local/share/opencode/*", effect: "deny" },
+            { action: "external_directory", resource: "~/p/**", effect: "allow" },
+            { action: "external_directory", resource: "/some/~/path", effect: "deny" },
+            { action: "external_directory", resource: "$HOMELESS/**", effect: "deny" },
+            { action: "shell", resource: "$HOME/private/**", effect: "deny" },
+            { action: "edit", resource: "$HOME/private/**", effect: "deny" },
+          ],
+          agents: {
+            reviewer: {
+              description: "Home relative",
+              permissions: [{ action: "edit", resource: "*", effect: "deny" }],
+            },
+          },
+        },
+      ],
+    },
+    {
+      name: "config-windows-permissions",
+      home: "C:\\Users\\test",
+      documents: [
+        {
+          permissions: [
+            { action: "external_directory", resource: "~/p/**", effect: "allow" },
+            { action: "external_directory", resource: "$HOME/cache/**", effect: "deny" },
+            { action: "shell", resource: "$HOME/private/**", effect: "deny" },
+          ],
+          agents: {
+            reviewer: { permissions: [{ action: "edit", resource: "*", effect: "deny" }] },
+          },
+        },
+      ],
+    },
+    {
+      name: "config-default-disabled",
+      home: "/home/test",
+      documents: [
+        {
+          default_agent: "reviewer",
+          agents: {
+            reviewer: { description: "Reviews changes", mode: "primary" },
+            general: { disabled: true },
+          },
+        },
+      ],
+    },
+    {
+      name: "config-legacy-permission-order",
+      home: "/home/test",
+      files: {
+        "agents/legacy-permissions.md": `---
+model: example/chat
+temperature: 0.1
+permission:
+  "*": allow
+  bash: ask
+  edit: deny
+---
+Legacy precedence.`,
+        "agents/legacy-color.md": `---
+temperature: 0.2
+color: accent
+description: Legacy color
+---
+Legacy color.`,
+      },
+    },
+  ]
+  const output: Array<Record<string, unknown>> = [await exportBuiltins()]
+  for (const item of cases) output.push(await exportAgentCase(item))
+  process.stdout.write(`[\n${output.map((item) => JSON.stringify(item)).join(",\n")}\n]\n`)
+}
+
+async function exportBuiltins() {
+  const home = "{{home}}"
   const program = Effect.gen(function* () {
     const agent = yield* Agent.Service
     yield* AgentPlugin.Plugin.effect(host({ agent: agentHost(agent), tool }))
@@ -461,7 +715,7 @@ async function exportAgents() {
         tool,
         session: { hook: () => Effect.succeed({ dispose: Effect.void }) },
       }),
-    ).pipe(Effect.provideService(Global.Service, Global.Service.of(global)))
+    )
     return {
       name: "builtins",
       home,
@@ -470,8 +724,50 @@ async function exportAgents() {
       resolve: yield* agent.resolve(),
     }
   })
-  const output = await Effect.runPromise(
-    program.pipe(Effect.scoped, Effect.provide(layer), Effect.provide(Logger.layer([]))),
+  return Effect.runPromise(
+    program.pipe(Effect.scoped, Effect.provide(agentLayer(home)), Effect.provide(Logger.layer([]))),
   )
-  process.stdout.write(`[\n${JSON.stringify(output)}\n]\n`)
+}
+
+async function exportAgentCase(item: AgentCase) {
+  const root = await mkdtemp(path.join(tmpdir(), "opencode-agent-case-"))
+  try {
+    for (const [file, content] of Object.entries(item.files ?? {})) {
+      const target = path.join(root, file)
+      await mkdir(path.dirname(target), { recursive: true })
+      await writeFile(target, content)
+    }
+    const entries: Array<Document | Directory> = (item.documents ?? []).map(
+      (document) => new Document({ type: "document", info: decodeConfig(document) }),
+    )
+    if (item.files !== undefined) {
+      entries.push(new Directory({ type: "directory", path: AbsolutePath.make(root) }))
+    }
+    const program = Effect.gen(function* () {
+      const agent = yield* Agent.Service
+      yield* AgentPlugin.Plugin.effect(host({ agent: agentHost(agent), tool }))
+      yield* PlanPlugin.Plugin.effect(
+        host({
+          agent: agentHost(agent),
+          tool,
+          session: { hook: () => Effect.succeed({ dispose: Effect.void }) },
+        }),
+      )
+      yield* ConfigAgentPlugin.Plugin.effect(host({ agent: agentHost(agent) })).pipe(
+        Effect.provide(Config.testLayer(entries)),
+      )
+      return {
+        name: item.name,
+        home: item.home,
+        ...(item.files === undefined ? {} : { files: item.files }),
+        ...(item.documents === undefined ? {} : { documents: item.documents }),
+        list: yield* agent.list(),
+      }
+    })
+    return await Effect.runPromise(
+      program.pipe(Effect.scoped, Effect.provide(agentLayer(item.home)), Effect.provide(Logger.layer([]))),
+    )
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
 }

@@ -1,8 +1,10 @@
 use std::fs;
+use std::path::PathBuf;
 use std::sync::Arc;
 
+use opencode_config::entry::{Document, Entry, Origin};
 use opencode_contract::codec::Decode;
-use opencode_contract::generated::AgentInfo;
+use opencode_contract::generated::{AgentInfo, ConfigEntryDocumentInfo};
 use opencode_registry::agent::{AgentService, Selection};
 use opencode_registry::builtin;
 use opencode_registry::events::RegistryEvents;
@@ -65,23 +67,68 @@ async fn agents_corpus_matches_expected_output() {
 
     for case in &cases {
         let name = case["name"].as_str().expect("case name is a string");
+        if case.get("files").is_none() && case.get("documents").is_none() {
+            let service = AgentService::new(Arc::new(NoEvents));
+            let _registration = service
+                .transform({
+                    let home = home_path.clone();
+                    move |editor| {
+                        builtin::agent::agent(editor);
+                        builtin::agent::plan(editor, &home);
+                    }
+                })
+                .await;
+
+            let list = decode_agents(&case["list"]);
+            assert_eq!(service.list().await.expect("state reads"), list, "case {name}: list");
+            let select = service.select(None).await.expect("state reads");
+            assert_selection(&select, &case["select"], name);
+            let resolve = service.resolve(None).await.expect("state reads");
+            assert_eq!(resolve, Some(decode_agent(&case["resolve"])), "case {name}: resolve");
+            continue;
+        }
+
+        let temp = crate::TempDir::new();
+        let root = temp.path().join("config");
+        fs::create_dir_all(&root).expect("create the config root");
+
+        if let Some(files) = case.get("files").and_then(|files| files.as_object()) {
+            for (relative, content) in files {
+                let target = root.join(relative);
+                fs::create_dir_all(target.parent().expect("the file has a parent"))
+                    .expect("create the fixture file directory");
+                fs::write(&target, content.as_str().expect("fixture content is a string"))
+                    .expect("write the fixture file");
+            }
+        }
+
+        let mut entries = Vec::new();
+        if let Some(documents) = case.get("documents").and_then(|documents| documents.as_array()) {
+            for value in documents {
+                let info = ConfigEntryDocumentInfo::decode(value, &mut opencode_contract::codec::Path::new())
+                    .expect("config document decodes");
+                entries.push(Entry::Document(Document { path: None, info, origin: Origin::File }));
+            }
+        }
+        if case.get("files").is_some() {
+            entries.push(Entry::Directory { path: root.clone() });
+        }
+
+        let home = PathBuf::from(case["home"].as_str().expect("case home is a string"));
         let service = AgentService::new(Arc::new(NoEvents));
-        let _registration = service
+        let _builtins = service.transform(builtin::agent::agent).await;
+        let _plan = service
             .transform({
-                let home = home_path.clone();
-                move |editor| {
-                    builtin::agent::agent(editor);
-                    builtin::agent::plan(editor, &home);
-                }
+                let home = home.clone();
+                move |editor| builtin::agent::plan(editor, &home)
             })
             .await;
+        let documents = opencode_registry::config::agent::load(&entries);
+        let _config =
+            service.transform(move |editor| opencode_registry::config::agent::apply(&documents, &home, editor)).await;
 
         let list = decode_agents(&case["list"]);
         assert_eq!(service.list().await.expect("state reads"), list, "case {name}: list");
-        let select = service.select(None).await.expect("state reads");
-        assert_selection(&select, &case["select"], name);
-        let resolve = service.resolve(None).await.expect("state reads");
-        assert_eq!(resolve, Some(decode_agent(&case["resolve"])), "case {name}: resolve");
     }
 }
 

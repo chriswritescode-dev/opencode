@@ -1,4 +1,5 @@
 mod agent;
+mod config_agent;
 mod corpus;
 mod markdown;
 mod scan;
