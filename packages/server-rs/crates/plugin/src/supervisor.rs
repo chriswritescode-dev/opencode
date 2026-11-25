@@ -1,5 +1,5 @@
 use std::collections::{HashMap, HashSet};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -24,6 +24,8 @@ use crate::watch::PluginWatcher;
 pub use crate::update::Updates;
 
 const DEBOUNCE: Duration = Duration::from_millis(100);
+const CLOSE_GRACE: Duration = Duration::from_secs(5);
+const RESTART_RETRIES: usize = 5;
 const LOAD_FAILED: &str = "Plugin failed to load";
 
 pub struct SupervisorDeps {
@@ -56,7 +58,6 @@ struct Core {
     app: AppInfo,
     updates: Updates,
     watcher: Option<Arc<dyn PluginWatcher>>,
-    watched: Mutex<HashSet<PathBuf>>,
     running: tokio::sync::Mutex<IndexMap<String, Generation>>,
     packages: Mutex<HashSet<String>>,
     attempted: Mutex<HashMap<String, u64>>,
@@ -110,7 +111,6 @@ impl Supervisor {
             location,
             app,
             watcher,
-            watched: Mutex::new(HashSet::new()),
             running: tokio::sync::Mutex::new(IndexMap::new()),
             packages: Mutex::new(HashSet::new()),
             attempted: Mutex::new(HashMap::new()),
@@ -239,9 +239,17 @@ impl Supervisor {
                     registry.forget_script_slots().await;
                     trigger();
                     let mut delay = Duration::from_millis(250);
+                    let mut attempts = 0;
                     loop {
                         registry.await_activation().await;
                         if !registry.has_forgotten_slots() {
+                            break;
+                        }
+                        attempts += 1;
+                        if attempts == RESTART_RETRIES {
+                            log::warn!(
+                                "plugins did not reactivate after the sidecar restart; waiting for the next change"
+                            );
                             break;
                         }
                         tokio::time::sleep(delay).await;
@@ -267,9 +275,13 @@ impl Supervisor {
             taken.append(&mut checks);
             taken
         };
-        self.core.registry.close().await;
+        let settled = tokio::time::timeout(CLOSE_GRACE, self.core.registry.close()).await.is_ok();
         for task in tasks {
             task.abort();
+        }
+        if !settled {
+            log::warn!("plugin activation did not finish within {CLOSE_GRACE:?}; interrupting it");
+            self.core.registry.close().await;
         }
         if close_host_location
             && self.core.script_loaded.load(Ordering::SeqCst)
@@ -361,11 +373,6 @@ fn arm_watches(core: &Core, entries: &[Entry], operations: &[Operation]) {
         let Operation::Add(add) = operation else { continue };
         let target = Path::new(&add.target);
         if !target.is_absolute() || is_directory_source(entries, target, &["plugin", "plugins"]) {
-            continue;
-        }
-        let fresh =
-            core.watched.lock().expect("the plugin supervisor lock is never poisoned").insert(target.to_path_buf());
-        if !fresh {
             continue;
         }
         if let Err(error) = watcher.watch(target) {

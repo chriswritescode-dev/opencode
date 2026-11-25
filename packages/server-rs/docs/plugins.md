@@ -75,13 +75,15 @@ also written by `script/gen/sidecar.ts`. Both files are generated and never edit
 
 ### Watching and reloading
 
-The supervisor watches each configured absolute target once, through the Rust watcher rather than the sidecar. An
-existing directory is watched recursively; a missing target watches its nearest existing ancestor without recursion so
+The supervisor arms a watch for each configured absolute target on every reload, through the Rust watcher rather than
+the sidecar; the watcher keeps one subscription per target and re-arms it when the target changes kind. An existing
+directory is watched recursively, an existing file through its parent directory filtered to that name, so an editor's
+atomic replace keeps the subscription, and a missing target through its nearest existing ancestor without recursion so
 a plugin created later still triggers and a mistyped target cannot become a recursive watch of `/` or `$HOME`. Only
-create, modify, remove and write-close events trigger a reload, so importing a plugin does not retrigger it. The
-disable switch passed to `opencode_local::watch::disabled` turns live reload off in one place. A change, a config
-update, a new SDK plugin, a new module, an interval tick, an npm change for a running package or a sidecar restart all
-increment one shared trigger counter.
+create, modify, remove and write-close events on a watched target trigger a reload, so importing a plugin does not
+retrigger it. The disable switch passed to `opencode_local::watch::disabled` turns live reload off in one place. A
+change, a config update, a new SDK plugin, a new module, an interval tick, an npm change for a running package or a
+sidecar restart all increment one shared trigger counter.
 
 The supervisor's loop activates the initial generation immediately, then waits on that counter. After the first
 change it keeps draining changes until 100 ms pass with none, so a burst of triggers becomes one activation. Each
@@ -92,8 +94,15 @@ the observed trigger count has settled, so a caller waiting on activation never 
 
 A sidecar restart is a trigger like any other. The restart counter increments once per Ready-to-Exited transition, so
 a sidecar that dies before it ever reached Ready publishes nothing. On a restart the supervisor forgets the script
-slots without closing them, because their sidecar state is already gone, and runs one reload; local and package
-plugins are activated again in the new process, while built-ins are untouched.
+slots without closing them, because their sidecar state is already gone, and reloads; it retries with a growing delay
+while slots stay forgotten, up to five attempts, because a restart is followed by the sidecar's own crash backoff. A
+plugin that still fails after that is left to the next file, config or interval change. Local and package plugins are
+activated again in the new process, while built-ins are untouched.
+
+Shutdown closes the registry before the supervisor's tasks are aborted, so a reload in flight finishes and its
+activations are closed. If an activation does not settle within five seconds, shutdown aborts the tasks and closes
+again, so a plugin stuck in the sidecar cannot hold a Location open, and activations already drained by the interrupted
+reload are still closed.
 
 ### Readiness
 

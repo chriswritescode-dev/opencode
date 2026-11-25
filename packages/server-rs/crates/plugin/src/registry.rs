@@ -48,6 +48,54 @@ struct Slot {
     forgotten: bool,
 }
 
+struct Draining {
+    slots: Vec<Slot>,
+    finished: bool,
+}
+
+impl Draining {
+    fn new(slots: Vec<Slot>) -> Draining {
+        Draining { slots, finished: false }
+    }
+
+    fn finish(&mut self) {
+        self.finished = true;
+    }
+}
+
+impl Drop for Draining {
+    fn drop(&mut self) {
+        if self.finished || self.slots.is_empty() {
+            return;
+        }
+        let Ok(runtime) = tokio::runtime::Handle::try_current() else {
+            return;
+        };
+        let slots = std::mem::take(&mut self.slots);
+        runtime.spawn(async move {
+            for slot in slots.into_iter().rev() {
+                let Some(activation) = slot.activation else {
+                    continue;
+                };
+                if slot.forgotten || activation.failure().is_some() {
+                    activation.handle.lock().await.take();
+                    continue;
+                }
+                close_activation(&activation).await;
+            }
+        });
+    }
+}
+
+async fn close_activation(activation: &ActivationCell) {
+    let handle = activation.handle.lock().await.take();
+    if let Some(handle) = handle
+        && handle.close().await.is_err()
+    {
+        log::error!("failed to clean up plugin");
+    }
+}
+
 pub struct ActivationCell {
     plugin: Generation,
     handle: tokio::sync::Mutex<Option<Box<dyn Activation>>>,
@@ -145,13 +193,12 @@ impl Registry {
             return Ok(());
         }
 
-        let previous: Vec<Slot> = {
+        let mut previous = Draining::new({
             let mut slots = self.inner.slots.lock().expect("the plugin registry lock is never poisoned");
             slots.drain(prefix..).collect()
-        };
-        let by_id: HashMap<&str, &Slot> = previous.iter().map(|slot| (slot.plugin.id.as_str(), slot)).collect();
+        });
 
-        for slot in previous.iter().rev() {
+        for slot in previous.slots.iter().rev() {
             let Some(activation) = &slot.activation else {
                 continue;
             };
@@ -162,13 +209,10 @@ impl Registry {
             if activation.failure().is_some() {
                 continue;
             }
-            let handle = activation.handle.lock().await.take();
-            if let Some(handle) = handle
-                && handle.close().await.is_err()
-            {
-                log::error!("failed to clean up plugin");
-            }
+            close_activation(activation).await;
         }
+        previous.finish();
+        let by_id: HashMap<&str, &Slot> = previous.slots.iter().map(|slot| (slot.plugin.id.as_str(), slot)).collect();
 
         for definition in &plugins[prefix..] {
             let previous_slot = by_id.get(definition.id.as_str()).copied();
@@ -318,9 +362,9 @@ impl Registry {
     }
 
     pub async fn close(&self) {
-        let _guard = self.inner.lock.lock().await;
         self.inner.closed.store(true, Ordering::SeqCst);
         self.inner.readiness.send_modify(|pending| *pending = 0);
+        let _guard = self.inner.lock.lock().await;
         let slots = {
             let mut slots = self.inner.slots.lock().expect("the plugin registry lock is never poisoned");
             std::mem::take(&mut *slots)
@@ -336,12 +380,7 @@ impl Registry {
             if activation.failure().is_some() {
                 continue;
             }
-            let handle = activation.handle.lock().await.take();
-            if let Some(handle) = handle
-                && handle.close().await.is_err()
-            {
-                log::error!("failed to clean up plugin");
-            }
+            close_activation(&activation).await;
         }
     }
 

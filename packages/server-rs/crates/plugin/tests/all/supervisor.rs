@@ -192,6 +192,25 @@ async fn shutdown_closes_the_activation_in_progress_instead_of_aborting_it() {
 }
 
 #[tokio::test(start_paused = true)]
+async fn shutdown_interrupts_an_activation_that_never_finishes() {
+    let workspace = ConfigWorkspace::new();
+    workspace.write_plugins(json!([]));
+    let sdk = SdkPlugins::default();
+    let log = log();
+    let entered = Arc::new(tokio::sync::Notify::new());
+    sdk.register("stuck", gated("stuck", "1", &log, Arc::new(tokio::sync::Notify::new()), entered.clone()));
+    let (supervisor, _registry, _config) = start(&workspace, None, sdk, Arc::new(InstancePlugins::empty())).await;
+
+    tokio::time::timeout(Duration::from_secs(1), entered.notified())
+        .await
+        .expect("the initial generation reaches the stuck activation");
+    tokio::time::timeout(Duration::from_secs(30), supervisor.shutdown())
+        .await
+        .expect("shutdown interrupts an activation that never finishes");
+    assert!(!log_entries(&log).iter().any(|entry| entry == "activate:stuck:1"));
+}
+
+#[tokio::test(start_paused = true)]
 async fn keeps_policy_enforcement_and_the_console_connection_through_removals() {
     for targets in [
         &["opencode.config.policy", "opencode.provider.opencode", "opencode.config.agent"][..],
