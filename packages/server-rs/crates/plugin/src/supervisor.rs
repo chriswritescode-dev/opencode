@@ -267,10 +267,10 @@ impl Supervisor {
             taken.append(&mut checks);
             taken
         };
+        self.core.registry.close().await;
         for task in tasks {
             task.abort();
         }
-        self.core.registry.close().await;
         if close_host_location
             && self.core.script_loaded.load(Ordering::SeqCst)
             && let Some(host) = &self.core.host

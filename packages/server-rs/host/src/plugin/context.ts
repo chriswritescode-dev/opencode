@@ -11,7 +11,8 @@ type Unavailable = {
 function unavailable(path: string): Unavailable {
   const callable = () => Effect.die(new Error(`${path} is not available in the sidecar yet (OR-63)`))
   return new Proxy(callable as unknown as Unavailable, {
-    get: (_target, property) => (typeof property === "string" ? unavailable(`${path}.${property}`) : undefined),
+    get: (_target, property) =>
+      typeof property === "string" && property !== "then" ? unavailable(`${path}.${property}`) : undefined,
   })
 }
 

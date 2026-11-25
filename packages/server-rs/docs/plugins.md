@@ -75,11 +75,13 @@ also written by `script/gen/sidecar.ts`. Both files are generated and never edit
 
 ### Watching and reloading
 
-The supervisor watches each configured absolute target once, through the Rust watcher rather than the sidecar. It
-starts from the nearest existing ancestor of a target so a plugin created later still triggers, and the disable switch
-passed to `opencode_local::watch::disabled` turns live reload off in one place. A change, a config update, a new SDK
-plugin, a new module, an interval tick, an npm change for a running package or a sidecar restart all increment one
-shared trigger counter.
+The supervisor watches each configured absolute target once, through the Rust watcher rather than the sidecar. An
+existing directory is watched recursively; a missing target watches its nearest existing ancestor without recursion so
+a plugin created later still triggers and a mistyped target cannot become a recursive watch of `/` or `$HOME`. Only
+create, modify, remove and write-close events trigger a reload, so importing a plugin does not retrigger it. The
+disable switch passed to `opencode_local::watch::disabled` turns live reload off in one place. A change, a config
+update, a new SDK plugin, a new module, an interval tick, an npm change for a running package or a sidecar restart all
+increment one shared trigger counter.
 
 The supervisor's loop activates the initial generation immediately, then waits on that counter. After the first
 change it keeps draining changes until 100 ms pass with none, so a burst of triggers becomes one activation. Each

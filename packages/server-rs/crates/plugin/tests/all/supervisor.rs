@@ -158,6 +158,40 @@ async fn reloads_for_a_trigger_published_while_the_initial_generation_is_activat
 }
 
 #[tokio::test(start_paused = true)]
+async fn shutdown_closes_the_activation_in_progress_instead_of_aborting_it() {
+    let workspace = ConfigWorkspace::new();
+    workspace.write_plugins(json!([]));
+    let sdk = SdkPlugins::default();
+    let log = log();
+    let gate = Arc::new(tokio::sync::Notify::new());
+    let entered = Arc::new(tokio::sync::Notify::new());
+    sdk.register("gated", gated("gated", "1", &log, gate.clone(), entered.clone()));
+    let (supervisor, _registry, _config) = start(&workspace, None, sdk, Arc::new(InstancePlugins::empty())).await;
+
+    tokio::time::timeout(Duration::from_secs(1), entered.notified())
+        .await
+        .expect("the initial generation reaches the gated activation");
+    let supervisor = Arc::new(supervisor);
+    let shutdown = {
+        let supervisor = supervisor.clone();
+        tokio::spawn(async move { supervisor.shutdown().await })
+    };
+    tokio::task::yield_now().await;
+    assert!(!shutdown.is_finished(), "shutdown waits for the activation in progress");
+
+    gate.notify_one();
+    tokio::time::timeout(Duration::from_secs(1), shutdown)
+        .await
+        .expect("shutdown finishes after the activation in progress")
+        .expect("the shutdown task does not panic");
+    assert!(
+        log_entries(&log).contains(&"close:gated:1".to_string()),
+        "the plugin that finished activating during shutdown is closed: {}",
+        log_entries(&log).join(", ")
+    );
+}
+
+#[tokio::test(start_paused = true)]
 async fn keeps_policy_enforcement_and_the_console_connection_through_removals() {
     for targets in [
         &["opencode.config.policy", "opencode.provider.opencode", "opencode.config.agent"][..],

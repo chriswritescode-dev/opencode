@@ -5,6 +5,7 @@ import path from "node:path"
 
 import { installRuntime } from "../src/plugin/runtime"
 import { activate, close, deactivate } from "../src/plugin/activate"
+import { makeContext } from "../src/plugin/context"
 import { load, type LoadParams } from "../src/plugin/load"
 import type { NpmPaths } from "../src/plugin/npm"
 import type { Context } from "../src/connection"
@@ -235,4 +236,11 @@ test("activates a plugin with the listed context and rejects unavailable domains
   } finally {
     await rm(directory, { recursive: true, force: true })
   }
+})
+
+test("awaiting an unavailable domain resolves to its proxy instead of hanging", async () => {
+  const context = makeContext({ app, location: { directory: "/tmp" }, options: {}, list: async () => null })
+  const session = context.session as unknown
+  expect((session as { then?: unknown }).then).toBeUndefined()
+  expect(await session).toBe(session)
 })
