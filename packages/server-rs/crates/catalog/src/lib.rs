@@ -5,7 +5,7 @@ mod provider;
 use opencode_ai::{Auth, Env, ProviderPackages, RuntimeModel, Settings};
 use opencode_config::entry::Entry;
 use opencode_contract::codec::encode_json;
-use opencode_contract::generated::{ModelInfo, ModelRef};
+use opencode_contract::generated::{ModelInfo, ModelRef, ProviderInfoActivation};
 use serde_json::{Map, Value};
 
 use provider::ProviderState;
@@ -151,7 +151,8 @@ impl Catalog {
         let mut runtime = builtins
             .model(&native, &model.model_id, &Settings::new(native_settings), env)
             .map_err(|error| CatalogError::Construction(error.to_string()))?;
-        if !has_configured_auth(&settings)
+        if provider.activation == ProviderInfoActivation::Enabled
+            && !has_configured_auth(&settings)
             && uses_api_key_auth(&specifier)
             && let RuntimeModel::Language(language) = &mut runtime
         {
@@ -261,4 +262,33 @@ fn uses_api_key_auth(specifier: &str) -> bool {
     PACKAGES.contains(&specifier)
         || specifier.starts_with("@opencode/ai/providers/openai/")
         || specifier.starts_with("@opencode/ai/providers/azure/")
+}
+
+#[cfg(test)]
+mod tests {
+    use opencode_ai::MapEnv;
+    use opencode_contract::generated::ProviderID;
+
+    use super::*;
+    use crate::model::ModelState;
+    use crate::provider::ProviderState;
+
+    #[test]
+    fn runtime_model_keeps_env_auth_for_a_provider_that_is_not_explicitly_enabled() {
+        let mut provider = ProviderState::new("anthropic-test");
+        provider.package = Some("@ai-sdk/anthropic".to_string());
+        provider.models.push(ModelState::new("test-model"));
+        let catalog = Catalog { providers: vec![provider], default: None };
+        let reference = ModelRef {
+            id: "test-model".to_string(),
+            provider_id: ProviderID("anthropic-test".to_string()),
+            variant: None,
+        };
+        let env = MapEnv::new([("ANTHROPIC_API_KEY".to_string(), "env-key".to_string())]);
+        let runtime = catalog.runtime_model(&reference, &env).expect("runtime model");
+        let RuntimeModel::Language(model) = runtime else {
+            panic!("expected a language model");
+        };
+        assert!(!matches!(model.route.auth, Auth::None));
+    }
 }

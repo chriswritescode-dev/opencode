@@ -3,7 +3,7 @@ use std::collections::BTreeSet;
 use opencode_contract::codec::{JsonMap, decode_json, encode_json};
 use opencode_contract::generated::{
     ModelCapabilities, ModelCompatibility, ModelCost, ModelInfo, ModelInfoLimit, ModelInfoStatus, ModelInfoTime,
-    ModelSettings, ModelType, ModelVariant, ProviderID,
+    ModelSettings, ModelType, ModelVariant, ProviderID, ProviderInfoActivation,
 };
 use serde_json::{Map, Value};
 
@@ -14,6 +14,7 @@ use crate::model::{self, ModelState};
 pub(crate) struct ProviderState {
     pub id: String,
     pub name: String,
+    pub activation: ProviderInfoActivation,
     pub canonical: Option<String>,
     pub package: Option<String>,
     pub settings: Option<Map<String, Value>>,
@@ -28,6 +29,7 @@ impl ProviderState {
         Self {
             id: id.to_string(),
             name: id.to_string(),
+            activation: ProviderInfoActivation::Auto,
             canonical: None,
             package: None,
             settings: None,
@@ -114,6 +116,7 @@ pub(crate) fn apply_provider(
         provider.id = id;
         provider.models = models;
     }
+    provider.activation = ProviderInfoActivation::Enabled;
     if let Some(canonical) = configured_canonical {
         provider.canonical = Some(canonical.to_string());
     }
