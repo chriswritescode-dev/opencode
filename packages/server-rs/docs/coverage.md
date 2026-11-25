@@ -1,6 +1,6 @@
 # Operation coverage
 
-Implemented: 20 of 178 operations
+Implemented: 23 of 178 operations
 
 | Operation | Method | Path | Stability | Status |
 | --- | --- | --- | --- | --- |
@@ -28,7 +28,7 @@ Implemented: 20 of 178 operations
 | `session.switchAgent` | POST | `/api/session/{sessionID}/agent` | stable | not implemented (501) |
 | `session.switchModel` | POST | `/api/session/{sessionID}/model` | stable | not implemented (501) |
 | `session.move` | POST | `/api/session/{sessionID}/move` | stable | not implemented (501) |
-| `session.prompt` | POST | `/api/session/{sessionID}/prompt` | stable | not implemented (501) |
+| `session.prompt` | POST | `/api/session/{sessionID}/prompt` | stable | implemented |
 | `session.command` | POST | `/api/session/{sessionID}/command` | stable | not implemented (501) |
 | `experimental.session.skill` | POST | `/api/experimental/session/{sessionID}/skill` | experimental | not implemented (501) |
 | `session.synthetic` | POST | `/api/session/{sessionID}/synthetic` | stable | not implemented (501) |
@@ -40,7 +40,7 @@ Implemented: 20 of 178 operations
 | `session.revert.commit` | POST | `/api/session/{sessionID}/revert/commit` | stable | not implemented (501) |
 | `session.context` | GET | `/api/session/{sessionID}/context` | stable | not implemented (501) |
 | `session.diff` | GET | `/api/session/{sessionID}/diff` | stable | not implemented (501) |
-| `session.inbox.list` | GET | `/api/session/{sessionID}/inbox` | stable | not implemented (501) |
+| `session.inbox.list` | GET | `/api/session/{sessionID}/inbox` | stable | implemented |
 | `session.inbox.cancel` | DELETE | `/api/session/{sessionID}/inbox/{inboxID}` | stable | not implemented (501) |
 | `session.inbox.update` | PATCH | `/api/session/{sessionID}/inbox/{inboxID}` | stable | not implemented (501) |
 | `experimental.session.instructions.entry.list` | GET | `/api/experimental/session/{sessionID}/instructions/entries` | experimental | not implemented (501) |
@@ -58,7 +58,7 @@ Implemented: 20 of 178 operations
 | `session.form.reply` | POST | `/api/session/{sessionID}/form/{formID}/reply` | stable | not implemented (501) |
 | `session.environment` | PUT | `/api/session/{sessionID}/environment` | stable | not implemented (501) |
 | `session.view` | POST | `/api/session/{sessionID}/view` | stable | not implemented (501) |
-| `session.message.list` | GET | `/api/session/{sessionID}/message` | stable | not implemented (501) |
+| `session.message.list` | GET | `/api/session/{sessionID}/message` | stable | implemented |
 | `model.list` | GET | `/api/model` | stable | not implemented (501) |
 | `model.default` | GET | `/api/model/default` | stable | not implemented (501) |
 | `experimental.generate.text` | POST | `/api/experimental/generate/text` | experimental | not implemented (501) |

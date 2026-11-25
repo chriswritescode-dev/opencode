@@ -138,6 +138,9 @@ fn sample_request(operation: &str) -> Option<(&'static str, &'static str)> {
         "session.get" => Some(("GET", "/api/session/ses_test")),
         "session.remove" => Some(("DELETE", "/api/session/ses_test")),
         "session.update" => Some(("PATCH", "/api/session/ses_test")),
+        "session.prompt" => Some(("POST", "/api/session/ses_test/prompt")),
+        "session.message.list" => Some(("GET", "/api/session/ses_test/message")),
+        "session.inbox.list" => Some(("GET", "/api/session/ses_test/inbox")),
         _ => None,
     }
 }
@@ -184,5 +187,8 @@ fn implemented_lists_the_ported_operations() {
     assert!(opencode_http::app::IMPLEMENTED.contains(&"session.get"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"session.update"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"session.remove"));
-    assert_eq!(opencode_http::app::IMPLEMENTED.len(), 20);
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"session.prompt"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"session.message.list"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"session.inbox.list"));
+    assert_eq!(opencode_http::app::IMPLEMENTED.len(), 23);
 }

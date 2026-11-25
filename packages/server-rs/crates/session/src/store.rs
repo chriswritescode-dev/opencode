@@ -1,8 +1,9 @@
 use std::sync::Arc;
 
 use opencode_bus::BusError;
+use opencode_contract::codec::{Decode, Path};
 use opencode_contract::generated::{
-    SessionID, SessionInfo, SessionMessageAssistant, SessionMessageInfo, SessionMessageMediaInfo,
+    SessionID, SessionInboxInfo, SessionInfo, SessionMessageAssistant, SessionMessageInfo, SessionMessageMediaInfo,
 };
 use opencode_location::location::LocationRef;
 use opencode_storage::{Database, StorageError};
@@ -14,6 +15,7 @@ use crate::info;
 use crate::sql::now_millis;
 
 const MESSAGE_COLUMNS: &str = "id, session_id, type, seq, data";
+const INBOX_COLUMNS: &str = "id, session_id, type, payload, delivery, time_created";
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Order {
@@ -223,6 +225,33 @@ impl SessionStore {
         let decoded =
             self.db.read(|connection| Ok(history::decode_message_rows(connection, std::slice::from_ref(&row))))?;
         Ok(self.overlay_info(decoded?).into_iter().next().map(|message| (session_id, message)))
+    }
+
+    pub fn inbox_item(&self, inbox_id: &str) -> Result<Option<SessionInboxInfo>, BusError> {
+        let rows = self
+            .db
+            .read(move |connection| {
+                let mut statement =
+                    connection.prepare(&format!("SELECT {INBOX_COLUMNS} FROM session_inbox WHERE id = ?1"))?;
+                Ok(statement.query_map([inbox_id], stored_inbox)?.collect::<Result<Vec<_>, _>>()?)
+            })
+            .map_err(BusError::from)?;
+        rows.into_iter().next().map(decode_inbox).transpose()
+    }
+
+    pub fn inbox(&self, session_id: &str) -> Result<Vec<SessionInboxInfo>, BusError> {
+        let session_id = session_id.to_owned();
+        let rows = self
+            .db
+            .read(move |connection| {
+                let sql = format!(
+                    "SELECT {INBOX_COLUMNS} FROM session_inbox WHERE session_id = ?1 ORDER BY enqueued_seq ASC"
+                );
+                let mut statement = connection.prepare(&sql)?;
+                Ok(statement.query_map([session_id], stored_inbox)?.collect::<Result<Vec<_>, _>>()?)
+            })
+            .map_err(BusError::from)?;
+        rows.into_iter().map(decode_inbox).collect()
     }
 
     pub fn message_with_refs(
@@ -474,6 +503,43 @@ fn stored_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<StoredMessage> {
 
 fn stored_rows(statement: &mut rusqlite::Statement<'_>, values: Vec<Value>) -> rusqlite::Result<Vec<StoredMessage>> {
     statement.query_map(params_from_iter(values), stored_row)?.collect()
+}
+
+struct StoredInbox {
+    id: String,
+    session_id: String,
+    r#type: String,
+    payload: String,
+    delivery: String,
+    created: f64,
+}
+
+fn stored_inbox(row: &rusqlite::Row<'_>) -> rusqlite::Result<StoredInbox> {
+    Ok(StoredInbox {
+        id: row.get(0)?,
+        session_id: row.get(1)?,
+        r#type: row.get(2)?,
+        payload: row.get(3)?,
+        delivery: row.get(4)?,
+        created: row.get(5)?,
+    })
+}
+
+fn decode_inbox(stored: StoredInbox) -> Result<SessionInboxInfo, BusError> {
+    let payload = serde_json::from_str::<serde_json::Value>(&stored.payload).map_err(invalid_inbox)?;
+    let value = serde_json::json!({
+        "id": stored.id,
+        "sessionID": stored.session_id,
+        "time": { "created": stored.created },
+        "type": stored.r#type,
+        "payload": payload,
+        "delivery": stored.delivery,
+    });
+    SessionInboxInfo::decode(&value, &mut Path::new()).map_err(invalid_inbox)
+}
+
+fn invalid_inbox(error: impl std::fmt::Display) -> BusError {
+    BusError::InvalidDurableEvent { r#type: "session.inbox".to_owned(), message: error.to_string() }
 }
 
 impl From<StorageError> for HistoryError {

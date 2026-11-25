@@ -37,6 +37,9 @@ pub const IMPLEMENTED: &[&str] = &[
     "session.get",
     "session.update",
     "session.remove",
+    "session.prompt",
+    "session.message.list",
+    "session.inbox.list",
 ];
 
 pub struct Options {
@@ -200,6 +203,18 @@ impl App {
             },
             "session.remove" => match self.services() {
                 Some(services) => crate::handlers::session::remove(services, &raw).await,
+                None => crate::services::services_unavailable(),
+            },
+            "session.prompt" => match self.services() {
+                Some(services) => crate::handlers::session::prompt(services, &raw),
+                None => crate::services::services_unavailable(),
+            },
+            "session.message.list" => match self.services() {
+                Some(services) => crate::handlers::message::list(services, &raw),
+                None => crate::services::services_unavailable(),
+            },
+            "session.inbox.list" => match self.services() {
+                Some(services) => crate::handlers::session::inbox(services, &raw),
                 None => crate::services::services_unavailable(),
             },
             _ => not_implemented(found.route.identifier),

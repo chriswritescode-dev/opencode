@@ -11,6 +11,7 @@ mod legacy;
 mod message_updater;
 mod parts;
 mod projector;
+mod prompt;
 mod session;
 mod settings;
 mod slug;
@@ -20,6 +21,7 @@ mod stored;
 mod usage;
 
 pub use projector::SessionProjector;
+pub use prompt::{NoopExecution, PromptInput, SessionExecution};
 pub use session::{CreateInput, SessionError, Sessions, UpdateInput};
 pub use settings::ProjectionSettings;
 pub use store::{

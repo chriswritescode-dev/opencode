@@ -7,9 +7,9 @@ use opencode_contract::codec::{Decode, Encode, Path, encode_json, write_optional
 use opencode_contract::generated::requests::{SessionsQuery, SessionsQueryOrder};
 use opencode_contract::generated::{
     AbsolutePath, AgentID, ModelRef, PermissionRuleset, ProjectID, RelativePath, SessionArchivedData,
-    SessionCreatedData, SessionDeletedData, SessionID, SessionInfo, SessionMetadata, SessionMetadataUpdatedData,
-    SessionPermissionsData, SessionRenamedData, SessionUnarchivedData, SessionsCursor, SessionsResponse,
-    SessionsResponseCursor, WorkspaceID,
+    SessionCreatedData, SessionDeletedData, SessionID, SessionInboxUser, SessionInfo, SessionMetadata,
+    SessionMetadataUpdatedData, SessionPermissionsData, SessionRenamedData, SessionUnarchivedData, SessionsCursor,
+    SessionsResponse, SessionsResponseCursor, WorkspaceID,
 };
 use opencode_location::environment::Environment;
 use opencode_location::location::LocationRef;
@@ -18,6 +18,7 @@ use opencode_storage::id;
 use opencode_util::path::Flavor;
 use serde_json::{Map, Value};
 
+use crate::prompt::{self, NoopExecution, PromptInput, SessionExecution};
 use crate::store::{Direction, ListAnchor, ListInput, Order, SessionStore};
 
 const DEFAULT_LIST_LIMIT: i64 = 50;
@@ -44,6 +45,7 @@ pub struct UpdateInput {
 pub enum SessionError {
     NotFound(String),
     InvalidCursor,
+    Conflict { message_id: String },
     Internal(String),
 }
 
@@ -52,6 +54,9 @@ impl std::fmt::Display for SessionError {
         match self {
             SessionError::NotFound(session_id) => write!(formatter, "Session not found: {session_id}"),
             SessionError::InvalidCursor => formatter.write_str("Invalid cursor"),
+            SessionError::Conflict { message_id } => {
+                write!(formatter, "Prompt message ID conflicts with an existing durable record: {message_id}")
+            }
             SessionError::Internal(message) => formatter.write_str(message),
         }
     }
@@ -62,6 +67,7 @@ pub struct Sessions {
     bus: Arc<Bus>,
     projects: Arc<ProjectService>,
     environment: Arc<dyn Environment>,
+    execution: Arc<dyn SessionExecution>,
     version: String,
 }
 
@@ -73,11 +79,47 @@ impl Sessions {
         environment: Arc<dyn Environment>,
         version: String,
     ) -> Self {
-        Self { store, bus, projects, environment, version }
+        Self { store, bus, projects, environment, execution: Arc::new(NoopExecution), version }
+    }
+
+    pub fn with_execution(mut self, execution: Arc<dyn SessionExecution>) -> Self {
+        self.execution = execution;
+        self
     }
 
     pub fn store(&self) -> &SessionStore {
         &self.store
+    }
+
+    pub fn prompt(&self, session_id: &str, input: PromptInput) -> Result<SessionInboxUser, SessionError> {
+        self.get(session_id)?;
+        let message_id = input.id.clone().unwrap_or_else(|| format!("msg_{}", id::ascending()));
+        if let Some(item) = prompt::existing(&self.store, session_id, &message_id, input.delivery)? {
+            if input.resume {
+                self.execution.wake(session_id);
+            }
+            return Ok(item);
+        }
+        let data = prompt::enqueued(&message_id, session_id, &input);
+        let event = match self.publish("session.inbox.enqueued", &data, PublishOptions::default()) {
+            Ok(event) => event,
+            Err(error) => {
+                return match prompt::existing(&self.store, session_id, &message_id, input.delivery) {
+                    Ok(Some(item)) => {
+                        if input.resume {
+                            self.execution.wake(session_id);
+                        }
+                        Ok(item)
+                    }
+                    Ok(None) => Err(error),
+                    Err(conflict) => Err(conflict),
+                };
+            }
+        };
+        if input.resume {
+            self.execution.wake(session_id);
+        }
+        Ok(prompt::admitted(&message_id, session_id, &input, event.created() as f64))
     }
 
     pub async fn create(&self, input: CreateInput) -> Result<SessionInfo, SessionError> {

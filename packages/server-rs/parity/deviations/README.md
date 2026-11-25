@@ -45,7 +45,7 @@ A deviation that excepts a recorded cassette from the replay gate also has a `Ca
 - `OR-38-lone-surrogates.md`: the strict round-trip corpus skips samples with unpaired UTF-16 surrogates
 - `OR-38-request-bodies.md`: request bodies decode into the wire representation
 - `OR-38-request-non-finite-numbers.md`: non-finite numbers in string slots are rejected
-- `OR-39-not-implemented-operations.md`: a contract operation without a handler answers 501; fifteen routes are implemented
+- `OR-39-not-implemented-operations.md`: a contract operation without a handler answers 501; implemented routes are listed in IMPLEMENTED
 - `OR-39-persistent-pty-capability.md`: server info always reports the persistent PTY capability as unavailable
 - `OR-39-port-owner.md`: a port-in-use message names no owning process
 - `OR-39-wildcard-urls.md`: a wildcard bind reports only one loopback URL in server info
@@ -96,4 +96,5 @@ A deviation that excepts a recorded cassette from the replay gate also has a `Ca
 - `OR-45-extraction.md`: extraction validates requests less strictly and forwards provider options
 - `OR-45-corpus-normalisation.md`: the corpus normalises transport noise and replay skips some byte comparisons
 - `OR-49-registry-events.md`: plugin and catalog registries publish no updated events
+- `OR-49-prompt-attachments.md`: prompt file attachments and skills are rejected instead of materialized
 - `OR-61-sidecar-environment.md`: plugins run in a sidecar with an allowlisted environment instead of inside the server

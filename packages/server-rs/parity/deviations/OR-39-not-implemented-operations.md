@@ -10,12 +10,13 @@ Rust: `crates/http/src/app.rs:19` lists the implemented operations in `IMPLEMENT
 (`server.info`, `server.pair`, `server.connect`, `event.subscribe`, `experimental.session.log`, `location.get`,
 `location.reload`, `debug.heapDump`, `debug.location.list`, `debug.location.evict`, `project.list`, `project.update`,
 `config.get`, `config.shells`, `experimental.config.update`, `session.list`, `session.create`, `session.get`,
-`session.update`, `session.remove`). That list grows as handler tasks land. `not_implemented`
-in `crates/http/src/app.rs:303` answers every other matched route with status `501 Not Implemented` and an
-`UnknownError` body whose message is `opencode-server does not implement <identifier> yet`. `docs/coverage.md` is
-generated from `IMPLEMENTED` (`OPENCODE_UPDATE_COVERAGE=1`) and marks every route `implemented` or
-`not implemented (501)`. `exempt` in `crates/http/src/app.rs:319` exempts only the pairing connect link and ticketed
-connect routes, so the machine-link upgrade requires credentials and answers 401 before the 501 body.
+`session.update`, `session.remove`, `session.prompt`, `session.message.list`, `session.inbox.list`). That list grows
+as handler tasks land. `not_implemented` in `crates/http/src/app.rs:303` answers every other matched route with
+status `501 Not Implemented` and an `UnknownError` body whose message is
+`opencode-server does not implement <identifier> yet`. `docs/coverage.md` is generated from `IMPLEMENTED`
+(`OPENCODE_UPDATE_COVERAGE=1`) and marks every route `implemented` or `not implemented (501)`. `exempt` in
+`crates/http/src/app.rs:319` exempts only the pairing connect link and ticketed connect routes, so the machine-link
+upgrade requires credentials and answers 401 before the 501 body.
 
 Reason: the remaining routes belong to the tasks named in the OR-39 plan and will land on the same router, so the
 router stays complete while handlers arrive incrementally. `crates/http/tests/all/coverage.rs` checks the coverage

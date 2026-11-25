@@ -3,6 +3,7 @@ use std::sync::Arc;
 use base64::Engine;
 use bytes::Bytes;
 use http::{Request, StatusCode};
+use opencode_bus::{Definition, PublishOptions};
 use opencode_contract::request::RawRequest;
 use opencode_http::app::App;
 use serde_json::{Value, json};
@@ -51,6 +52,42 @@ fn titles(body: &Value) -> Vec<String> {
 fn cursor_json(raw: &str) -> Value {
     let bytes = base64::engine::general_purpose::URL_SAFE_NO_PAD.decode(raw).expect("a base64url cursor");
     serde_json::from_slice(&bytes).expect("a cursor JSON body")
+}
+
+async fn prompt(app: &Arc<App>, session: &str, payload: Value) -> Value {
+    let response =
+        app.handle(json_request("POST", &format!("/api/session/{session}/prompt"), &payload.to_string())).await;
+    assert_eq!(response.status(), StatusCode::OK);
+    json_body(response).await
+}
+
+async fn inbox(app: &Arc<App>, session: &str) -> Value {
+    let response = app.handle(json_request("GET", &format!("/api/session/{session}/inbox"), "")).await;
+    assert_eq!(response.status(), StatusCode::OK);
+    json_body(response).await
+}
+
+async fn messages(app: &Arc<App>, session: &str, query: &str) -> Value {
+    let response = app.handle(json_request("GET", &format!("/api/session/{session}/message{query}"), "")).await;
+    assert_eq!(response.status(), StatusCode::OK);
+    json_body(response).await
+}
+
+fn message_ids(body: &Value) -> Vec<String> {
+    body["data"]
+        .as_array()
+        .expect("a message list")
+        .iter()
+        .map(|message| message["id"].as_str().expect("a message id").to_owned())
+        .collect()
+}
+
+fn deliver(state: &opencode_http::state::ServerState, session: &str, inbox: &str) {
+    let definition = Definition::latest_durable("session.inbox.delivered").expect("a durable definition");
+    state
+        .bus
+        .publish(&definition, json!({ "sessionID": session, "inboxID": inbox }), PublishOptions::default())
+        .expect("a session.inbox.delivered event");
 }
 
 #[tokio::test]
@@ -297,6 +334,200 @@ async fn location_resolves_from_the_session_row_without_a_location_header() {
     let Err(response) = app.location(&raw).await else {
         panic!("a not-found response");
     };
+    assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    assert_eq!(
+        json_body(response).await,
+        json!({
+            "_tag": "SessionNotFoundError",
+            "sessionID": "ses_missing",
+            "message": "Session not found: ses_missing",
+        })
+    );
+}
+
+#[tokio::test]
+async fn prompt_admits_a_user_item_and_is_idempotent() {
+    let start = temp_directory("session-prompt-start");
+    let (app, state) = session_app(&start);
+    let session = session_id(&create(&app, "{}").await);
+    let mut events = state.bus.subscribe(&["session.inbox.enqueued"], None);
+
+    let body = prompt(&app, &session, json!({ "text": "say hi" })).await;
+    let data = &body["data"];
+    let id = data["id"].as_str().expect("a message id").to_owned();
+    assert!(id.starts_with("msg_"));
+    assert_eq!(data["type"], "user");
+    assert_eq!(data["sessionID"], session.as_str());
+    assert_eq!(data["delivery"], "steer");
+    assert_eq!(data["payload"]["text"], "say hi");
+    assert!(data["time"]["created"].is_number());
+
+    let event = events.try_recv().expect("a session.inbox.enqueued event");
+    assert_eq!(event.r#type(), "session.inbox.enqueued");
+    assert_eq!(event.data()["sessionID"], session.as_str());
+    assert_eq!(event.data()["inboxID"], id.as_str());
+    assert!(events.try_recv().is_none());
+
+    let items = inbox(&app, &session).await;
+    let items = items["data"].as_array().expect("an inbox list");
+    assert_eq!(items.len(), 1);
+    assert_eq!(&items[0], data);
+
+    let repeated = prompt(&app, &session, json!({ "id": id, "text": "different" })).await;
+    assert_eq!(&repeated["data"], data);
+    assert!(events.try_recv().is_none());
+    assert_eq!(inbox(&app, &session).await["data"].as_array().expect("an inbox list").len(), 1);
+}
+
+#[tokio::test]
+async fn prompt_conflicts_when_the_message_id_is_reused() {
+    let start = temp_directory("session-prompt-conflict-start");
+    let (app, state) = session_app(&start);
+    let first = session_id(&create(&app, "{}").await);
+    let second = session_id(&create(&app, "{}").await);
+
+    let body = prompt(&app, &first, json!({ "id": "msg_conflict", "text": "one" })).await;
+    assert_eq!(body["data"]["payload"]["text"], "one");
+
+    let response = app
+        .handle(json_request(
+            "POST",
+            &format!("/api/session/{second}/prompt"),
+            &json!({ "id": "msg_conflict", "text": "two" }).to_string(),
+        ))
+        .await;
+    assert_eq!(response.status(), StatusCode::CONFLICT);
+    assert_eq!(
+        json_body(response).await,
+        json!({
+            "_tag": "ConflictError",
+            "message": "Prompt message ID conflicts with an existing durable record: msg_conflict",
+            "resource": "msg_conflict",
+        })
+    );
+
+    deliver(&state, &first, "msg_conflict");
+    let repeated = prompt(&app, &first, json!({ "id": "msg_conflict", "text": "again" })).await;
+    assert_eq!(repeated["data"]["payload"]["text"], "one");
+    assert_eq!(repeated["data"]["delivery"], "steer");
+
+    let response = app
+        .handle(json_request(
+            "POST",
+            &format!("/api/session/{second}/prompt"),
+            &json!({ "id": "msg_conflict", "text": "two" }).to_string(),
+        ))
+        .await;
+    assert_eq!(response.status(), StatusCode::CONFLICT);
+
+    let missing = json!({
+        "_tag": "SessionNotFoundError",
+        "sessionID": "ses_missing",
+        "message": "Session not found: ses_missing",
+    });
+    let response =
+        app.handle(json_request("POST", "/api/session/ses_missing/prompt", &json!({ "text": "x" }).to_string())).await;
+    assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    assert_eq!(json_body(response).await, missing);
+    let response = app.handle(json_request("GET", "/api/session/ses_missing/inbox", "")).await;
+    assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    assert_eq!(json_body(response).await, missing);
+}
+
+#[tokio::test]
+async fn prompt_with_resume_false_still_admits() {
+    let start = temp_directory("session-prompt-resume-start");
+    let (app, state) = session_app(&start);
+    let session = session_id(&create(&app, "{}").await);
+    let mut events = state.bus.subscribe(&["session.inbox.enqueued"], None);
+
+    let body = prompt(&app, &session, json!({ "text": "queued", "resume": false })).await;
+    let id = body["data"]["id"].as_str().expect("a message id");
+    assert_eq!(body["data"]["payload"]["text"], "queued");
+    let event = events.try_recv().expect("a session.inbox.enqueued event");
+    assert_eq!(event.data()["inboxID"], id);
+    assert!(events.try_recv().is_none());
+
+    let items = inbox(&app, &session).await;
+    let items = items["data"].as_array().expect("an inbox list");
+    assert_eq!(items.len(), 1);
+    assert_eq!(items[0]["id"], id);
+}
+
+#[tokio::test]
+async fn prompt_rejects_files_and_skills() {
+    let start = temp_directory("session-prompt-attachments-start");
+    let (app, _) = session_app(&start);
+    let session = session_id(&create(&app, "{}").await);
+    let unsupported = json!({
+        "_tag": "UnknownError",
+        "message": "opencode-server does not implement prompt attachments yet",
+    });
+    for payload in [
+        json!({ "text": "x", "files": [{ "uri": "file:///tmp/x" }] }),
+        json!({ "text": "x", "skills": [{ "id": "some-skill" }] }),
+    ] {
+        let response =
+            app.handle(json_request("POST", &format!("/api/session/{session}/prompt"), &payload.to_string())).await;
+        assert_eq!(response.status(), StatusCode::NOT_IMPLEMENTED);
+        assert_eq!(json_body(response).await, unsupported);
+    }
+    assert_eq!(inbox(&app, &session).await["data"], json!([]));
+}
+
+#[tokio::test]
+async fn messages_list_pages_filters_and_rejects_bad_cursors() {
+    let start = temp_directory("session-messages-start");
+    let (app, state) = session_app(&start);
+    let session = session_id(&create(&app, "{}").await);
+    for (id, text) in [("msg_a", "a"), ("msg_b", "b"), ("msg_c", "c")] {
+        prompt(&app, &session, json!({ "id": id, "text": text })).await;
+    }
+    for id in ["msg_a", "msg_b", "msg_c"] {
+        deliver(&state, &session, id);
+    }
+
+    let all = messages(&app, &session, "").await;
+    assert_eq!(message_ids(&all), vec!["msg_c", "msg_b", "msg_a"]);
+    assert!(all["cursor"]["previous"].is_string());
+    let first_next = all["cursor"]["next"].as_str().expect("a next cursor").to_owned();
+    assert_eq!(cursor_json(&first_next), json!({ "id": "msg_a", "order": "desc", "direction": "next" }));
+
+    let page = messages(&app, &session, "?limit=2").await;
+    assert_eq!(message_ids(&page), vec!["msg_c", "msg_b"]);
+    let page_next = page["cursor"]["next"].as_str().expect("a next cursor").to_owned();
+    assert_eq!(cursor_json(&page_next)["id"], "msg_b");
+
+    let encoded = url::form_urlencoded::byte_serialize(page_next.as_bytes()).collect::<String>();
+    let page = messages(&app, &session, &format!("?cursor={encoded}")).await;
+    assert_eq!(message_ids(&page), vec!["msg_a"]);
+    let previous = page["cursor"]["previous"].as_str().expect("a previous cursor").to_owned();
+    assert_eq!(cursor_json(&previous), json!({ "id": "msg_a", "order": "desc", "direction": "previous" }));
+
+    let page = messages(&app, &session, "?limit=2&order=asc").await;
+    assert_eq!(message_ids(&page), vec!["msg_a", "msg_b"]);
+
+    let page = messages(&app, &session, "?type=user").await;
+    assert_eq!(message_ids(&page), vec!["msg_c", "msg_b", "msg_a"]);
+    let page = messages(&app, &session, "?type=assistant").await;
+    assert_eq!(page, json!({ "data": [], "cursor": {} }));
+
+    let encoded = url::form_urlencoded::byte_serialize(first_next.as_bytes()).collect::<String>();
+    let response = app
+        .handle(json_request("GET", &format!("/api/session/{session}/message?cursor={encoded}&order=desc"), ""))
+        .await;
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    assert_eq!(
+        json_body(response).await,
+        json!({ "_tag": "InvalidCursorError", "message": "Cursor cannot be combined with order" })
+    );
+
+    let response =
+        app.handle(json_request("GET", &format!("/api/session/{session}/message?cursor=not-a-cursor"), "")).await;
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    assert_eq!(json_body(response).await, json!({ "_tag": "InvalidCursorError", "message": "Invalid cursor" }));
+
+    let response = app.handle(json_request("GET", "/api/session/ses_missing/message", "")).await;
     assert_eq!(response.status(), StatusCode::NOT_FOUND);
     assert_eq!(
         json_body(response).await,
