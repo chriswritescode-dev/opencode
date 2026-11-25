@@ -128,6 +128,20 @@ fn sample_request(operation: &str) -> Option<(&'static str, &'static str)> {
         "command.list" => Some(("GET", "/api/command")),
         "skill.list" => Some(("GET", "/api/skill")),
         "reference.list" => Some(("GET", "/api/reference")),
+        "form.list" => Some(("GET", "/api/form")),
+        "permission.request.list" => Some(("GET", "/api/permission/request")),
+        "permission.saved.list" => Some(("GET", "/api/permission/saved")),
+        "permission.saved.update" => Some(("PATCH", "/api/permission/saved/psv_test")),
+        "permission.saved.remove" => Some(("DELETE", "/api/permission/saved/psv_test")),
+        "session.permission.create" => Some(("POST", "/api/session/ses_test/permission")),
+        "session.permission.list" => Some(("GET", "/api/session/ses_test/permission")),
+        "session.permission.get" => Some(("GET", "/api/session/ses_test/permission/per_test")),
+        "session.permission.reply" => Some(("POST", "/api/session/ses_test/permission/per_test/reply")),
+        "session.form.list" => Some(("GET", "/api/session/ses_test/form")),
+        "session.form.create" => Some(("POST", "/api/session/ses_test/form")),
+        "session.form.get" => Some(("GET", "/api/session/ses_test/form/frm_test")),
+        "session.form.cancel" => Some(("DELETE", "/api/session/ses_test/form/frm_test")),
+        "session.form.reply" => Some(("POST", "/api/session/ses_test/form/frm_test/reply")),
         _ => None,
     }
 }
@@ -174,5 +188,23 @@ fn implemented_lists_the_ported_operations() {
     assert!(opencode_http::app::IMPLEMENTED.contains(&"command.list"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"skill.list"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"reference.list"));
-    assert_eq!(opencode_http::app::IMPLEMENTED.len(), 20);
+    for operation in [
+        "form.list",
+        "permission.request.list",
+        "permission.saved.list",
+        "permission.saved.update",
+        "permission.saved.remove",
+        "session.permission.create",
+        "session.permission.list",
+        "session.permission.get",
+        "session.permission.reply",
+        "session.form.list",
+        "session.form.create",
+        "session.form.get",
+        "session.form.cancel",
+        "session.form.reply",
+    ] {
+        assert!(opencode_http::app::IMPLEMENTED.contains(&operation), "{operation}");
+    }
+    assert_eq!(opencode_http::app::IMPLEMENTED.len(), 34);
 }

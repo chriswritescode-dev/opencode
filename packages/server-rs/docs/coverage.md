@@ -1,6 +1,6 @@
 # Operation coverage
 
-Implemented: 20 of 178 operations
+Implemented: 34 of 178 operations
 
 | Operation | Method | Path | Stability | Status |
 | --- | --- | --- | --- | --- |
@@ -51,11 +51,11 @@ Implemented: 20 of 178 operations
 | `session.interrupt` | POST | `/api/session/{sessionID}/interrupt` | stable | not implemented (501) |
 | `session.background` | POST | `/api/session/{sessionID}/background` | stable | not implemented (501) |
 | `session.message.get` | GET | `/api/session/{sessionID}/message/{messageID}` | stable | not implemented (501) |
-| `session.form.list` | GET | `/api/session/{sessionID}/form` | stable | not implemented (501) |
-| `session.form.create` | POST | `/api/session/{sessionID}/form` | stable | not implemented (501) |
-| `session.form.get` | GET | `/api/session/{sessionID}/form/{formID}` | stable | not implemented (501) |
-| `session.form.cancel` | DELETE | `/api/session/{sessionID}/form/{formID}` | stable | not implemented (501) |
-| `session.form.reply` | POST | `/api/session/{sessionID}/form/{formID}/reply` | stable | not implemented (501) |
+| `session.form.list` | GET | `/api/session/{sessionID}/form` | stable | implemented |
+| `session.form.create` | POST | `/api/session/{sessionID}/form` | stable | implemented |
+| `session.form.get` | GET | `/api/session/{sessionID}/form/{formID}` | stable | implemented |
+| `session.form.cancel` | DELETE | `/api/session/{sessionID}/form/{formID}` | stable | implemented |
+| `session.form.reply` | POST | `/api/session/{sessionID}/form/{formID}/reply` | stable | implemented |
 | `session.environment` | PUT | `/api/session/{sessionID}/environment` | stable | not implemented (501) |
 | `session.view` | POST | `/api/session/{sessionID}/view` | stable | not implemented (501) |
 | `session.message.list` | GET | `/api/session/{sessionID}/message` | stable | not implemented (501) |
@@ -98,15 +98,15 @@ Implemented: 20 of 178 operations
 | `credential.activate` | POST | `/api/credential/{credentialID}/activate` | stable | not implemented (501) |
 | `project.list` | GET | `/api/project` | stable | implemented |
 | `project.update` | PATCH | `/api/project/{projectID}` | stable | implemented |
-| `form.list` | GET | `/api/form` | stable | not implemented (501) |
-| `permission.request.list` | GET | `/api/permission/request` | stable | not implemented (501) |
-| `permission.saved.list` | GET | `/api/permission/saved` | stable | not implemented (501) |
-| `permission.saved.update` | PATCH | `/api/permission/saved/{id}` | stable | not implemented (501) |
-| `permission.saved.remove` | DELETE | `/api/permission/saved/{id}` | stable | not implemented (501) |
-| `session.permission.create` | POST | `/api/session/{sessionID}/permission` | stable | not implemented (501) |
-| `session.permission.list` | GET | `/api/session/{sessionID}/permission` | stable | not implemented (501) |
-| `session.permission.get` | GET | `/api/session/{sessionID}/permission/{requestID}` | stable | not implemented (501) |
-| `session.permission.reply` | POST | `/api/session/{sessionID}/permission/{requestID}/reply` | stable | not implemented (501) |
+| `form.list` | GET | `/api/form` | stable | implemented |
+| `permission.request.list` | GET | `/api/permission/request` | stable | implemented |
+| `permission.saved.list` | GET | `/api/permission/saved` | stable | implemented |
+| `permission.saved.update` | PATCH | `/api/permission/saved/{id}` | stable | implemented |
+| `permission.saved.remove` | DELETE | `/api/permission/saved/{id}` | stable | implemented |
+| `session.permission.create` | POST | `/api/session/{sessionID}/permission` | stable | implemented |
+| `session.permission.list` | GET | `/api/session/{sessionID}/permission` | stable | implemented |
+| `session.permission.get` | GET | `/api/session/{sessionID}/permission/{requestID}` | stable | implemented |
+| `session.permission.reply` | POST | `/api/session/{sessionID}/permission/{requestID}/reply` | stable | implemented |
 | `fs.read` | GET | `/api/fs/read/*` | stable | not implemented (501) |
 | `fs.list` | GET | `/api/fs/list` | stable | not implemented (501) |
 | `fs.find` | GET | `/api/fs/find` | stable | not implemented (501) |
