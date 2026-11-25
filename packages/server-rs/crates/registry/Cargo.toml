@@ -1,0 +1,19 @@
+[package]
+name = "opencode-registry"
+description = "Embedded command and skill texts plus config markdown frontmatter parsing."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+autotests = false
+
+[lints]
+workspace = true
+
+[dependencies]
+serde_json.workspace = true
+yaml-rust2.workspace = true
+
+[[test]]
+name = "all"
+path = "tests/all/main.rs"
