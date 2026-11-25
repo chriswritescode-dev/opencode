@@ -1,4 +1,4 @@
-use serde_json::{Value, json};
+use serde_json::Value;
 use std::collections::BTreeSet;
 
 const METHODS: [&str; 8] = ["get", "put", "post", "delete", "options", "head", "patch", "trace"];
@@ -24,10 +24,10 @@ fn the_document_is_the_pinned_upstream_one() {
             }
         }
     }
-    assert_eq!(method_entries, 178);
-    assert_eq!(paths.len(), 146);
+    assert_eq!(method_entries, 188);
+    assert_eq!(paths.len(), 152);
     assert_eq!(tags.len(), 32);
-    assert_eq!(document["components"]["schemas"].as_object().unwrap().len(), 527);
+    assert_eq!(document["components"]["schemas"].as_object().unwrap().len(), 542);
 }
 
 fn operation_ids(document: &Value) -> BTreeSet<&str> {
@@ -46,12 +46,4 @@ fn the_served_document_matches_the_pinned_operations() {
     let served: Value = serde_json::from_str(opencode_contract::SERVED_OPENAPI_JSON).unwrap();
     assert_eq!(served["info"]["title"].as_str(), Some("opencode HttpApi"));
     assert_eq!(operation_ids(&served), operation_ids(&document()));
-}
-
-#[test]
-fn the_document_keeps_what_the_newer_checkout_removed() {
-    let document = document();
-    let mcp_events = &document["components"]["schemas"]["Config.InfoEncoded"]["properties"]["experimental"]["properties"]
-        ["mcp_events"];
-    assert_eq!(mcp_events, &json!({ "type": "boolean" }));
 }

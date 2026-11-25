@@ -23,8 +23,8 @@ fn the_corpus_and_the_rust_roots_match() {
     let fixture_roots: BTreeSet<&str> = fixture.as_object().unwrap().keys().map(String::as_str).collect();
     let roots: BTreeSet<&str> = corpus_roots().iter().map(|(root, _)| *root).collect();
 
-    assert_eq!(corpus_roots().len(), 339, "expected 339 rust corpus roots, found {}", corpus_roots().len());
-    assert_eq!(fixture_roots.len(), 339, "expected 339 fixture roots, found {}", fixture_roots.len());
+    assert_eq!(corpus_roots().len(), 349, "expected 349 rust corpus roots, found {}", corpus_roots().len());
+    assert_eq!(fixture_roots.len(), 349, "expected 349 fixture roots, found {}", fixture_roots.len());
     assert_eq!(
         roots,
         fixture_roots,

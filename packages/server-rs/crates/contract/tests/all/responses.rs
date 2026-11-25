@@ -53,7 +53,7 @@ fn every_typed_success_has_a_response_root() {
         typed_routes += 1;
         assert!(fixture.contains_key(&name), "corpus is missing {name}");
     }
-    assert_eq!(typed_routes, 118, "expected 118 typed responses, found {typed_routes}");
+    assert_eq!(typed_routes, 124, "expected 124 typed responses, found {typed_routes}");
 }
 
 #[test]

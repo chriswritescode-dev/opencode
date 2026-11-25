@@ -86,6 +86,7 @@
     "form.replied",
     "form.cancelled",
     "websearch.updated",
+    "experimental.push.updated",
     "artifact.updated",
     "session.status",
     "session.idle",

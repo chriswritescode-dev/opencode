@@ -1,6 +1,6 @@
 # Operation coverage
 
-Implemented: 30 of 178 operations
+Implemented: 30 of 188 operations
 
 | Operation | Method | Path | Stability | Status |
 | --- | --- | --- | --- | --- |
@@ -115,6 +115,7 @@ Implemented: 30 of 178 operations
 | `experimental.fs.unwatch` | DELETE | `/api/experimental/fs/watch` | experimental | not implemented (501) |
 | `command.list` | GET | `/api/command` | stable | not implemented (501) |
 | `skill.list` | GET | `/api/skill` | stable | not implemented (501) |
+| `experimental.skill.file` | GET | `/api/experimental/skill/{skillID}/file/*` | experimental | not implemented (501) |
 | `rpc.call` | POST | `/api/rpc/{rpcID}/{method}` | stable | not implemented (501) |
 | `event.subscribe` | GET | `/api/event` | stable | implemented |
 | `pty.list` | GET | `/api/pty` | stable | not implemented (501) |
@@ -156,6 +157,15 @@ Implemented: 30 of 178 operations
 | `experimental.machine.list` | GET | `/api/experimental/machine` | experimental | not implemented (501) |
 | `experimental.machine.add` | POST | `/api/experimental/machine` | experimental | not implemented (501) |
 | `experimental.machine.remove` | DELETE | `/api/experimental/machine/{name}` | experimental | not implemented (501) |
+| `experimental.push.get` | GET | `/api/experimental/push` | experimental | not implemented (501) |
+| `experimental.push.device.register` | PUT | `/api/experimental/push/device/{deviceID}` | experimental | not implemented (501) |
+| `experimental.push.device.remove` | DELETE | `/api/experimental/push/device/{deviceID}` | experimental | not implemented (501) |
+| `experimental.push.device.update` | PATCH | `/api/experimental/push/device/{deviceID}` | experimental | not implemented (501) |
+| `experimental.push.device.session.set` | PUT | `/api/experimental/push/device/{deviceID}/session/{sessionID}` | experimental | not implemented (501) |
+| `experimental.push.device.session.remove` | DELETE | `/api/experimental/push/device/{deviceID}/session/{sessionID}` | experimental | not implemented (501) |
+| `experimental.push.session.set` | PUT | `/api/experimental/push/session/{sessionID}` | experimental | not implemented (501) |
+| `experimental.push.session.remove` | DELETE | `/api/experimental/push/session/{sessionID}` | experimental | not implemented (501) |
+| `experimental.push.settings.set` | PUT | `/api/experimental/push/settings` | experimental | not implemented (501) |
 | `shell.list` | GET | `/api/shell` | stable | not implemented (501) |
 | `shell.create` | POST | `/api/shell` | stable | not implemented (501) |
 | `shell.get` | GET | `/api/shell/{id}` | stable | not implemented (501) |

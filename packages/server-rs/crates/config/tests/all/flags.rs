@@ -57,7 +57,9 @@ fn every_flag_case_matches_the_pinned_typescript() {
 #[test]
 fn the_corpus_covers_the_pinned_registry() {
     let keys: BTreeSet<&str> = REGISTRY.iter().map(|(key, _)| *key).collect();
-    assert!(keys.contains("mcp_events"), "registry is missing mcp_events");
+    for key in ["model_speeds", "mcp_skills", "opencode_api"] {
+        assert!(keys.contains(key), "registry is missing {key}");
+    }
     for key in OPT_IN_ONLY {
         assert!(keys.contains(key), "opt-in key {key} is not a registry key");
     }

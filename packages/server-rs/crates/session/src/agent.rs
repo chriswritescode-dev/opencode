@@ -228,6 +228,7 @@ fn default_info(id: &str) -> AgentInfo {
         model: None,
         request: default_request(),
         system: None,
+        instructions: None,
         description: None,
         mode: AgentInfoMode::Primary,
         hidden: false,

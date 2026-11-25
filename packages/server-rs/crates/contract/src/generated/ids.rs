@@ -310,6 +310,27 @@ impl crate::codec::Encode for PtyID {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PushDeviceID(pub String);
+
+impl crate::codec::Decode for PushDeviceID {
+    fn decode(value: &Value, path: &mut crate::codec::Path) -> Result<Self, crate::codec::DecodeError> {
+        let value = <String as crate::codec::Decode>::decode(value, path)?;
+        if !crate::checks::is_pattern(value.as_str(), &crate::generated::patterns::PATTERN_2) {
+            return Err(path.at(
+                "expected a string matching the RegExp ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+            ));
+        }
+        Ok(Self(value))
+    }
+}
+
+impl crate::codec::Encode for PushDeviceID {
+    fn encode(&self, out: &mut String) {
+        crate::codec::write_string(out, &self.0);
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SessionID(pub String);
 
 impl crate::codec::Decode for SessionID {

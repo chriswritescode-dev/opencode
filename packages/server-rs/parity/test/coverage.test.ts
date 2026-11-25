@@ -7,7 +7,7 @@ const surface = await loadSurface(repository)
 const scenariosOf = (items: CoverageItem[], id: string) => items.find((item) => item.id === id)?.scenarios
 
 test("loads the pinned OpenAPI surface", () => {
-  expect(surface.operations).toHaveLength(178)
+  expect(surface.operations).toHaveLength(188)
   expect(surface.websockets).toHaveLength(4)
   expect(surface.websockets.map((operation) => operation.id).sort()).toEqual([
     "experimental.machine.link",
@@ -15,7 +15,7 @@ test("loads the pinned OpenAPI surface", () => {
     "experimental.persistentPty.connect",
     "pty.connect",
   ])
-  expect(surface.events).toHaveLength(101)
+  expect(surface.events).toHaveLength(102)
   expect(surface.events).toContain("server.connected")
   expect(surface.events).toContain("rpc.*")
 })

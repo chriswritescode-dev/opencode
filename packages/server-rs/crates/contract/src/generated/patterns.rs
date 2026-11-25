@@ -10,78 +10,83 @@ pub(super) static PATTERN_1: std::sync::LazyLock<regex_lite::Regex> = std::sync:
 });
 
 pub(super) static PATTERN_2: std::sync::LazyLock<regex_lite::Regex> = std::sync::LazyLock::new(|| {
+    regex_lite::Regex::new("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
+        .expect("invalid generated pattern")
+});
+
+pub(super) static PATTERN_3: std::sync::LazyLock<regex_lite::Regex> = std::sync::LazyLock::new(|| {
     regex_lite::Regex::new("^[a-z0-9][a-z0-9._-]*\\/[a-z0-9][a-z0-9._/-]*$").expect("invalid generated pattern")
 });
 
-pub(super) static PATTERN_3: std::sync::LazyLock<regex_lite::Regex> =
+pub(super) static PATTERN_4: std::sync::LazyLock<regex_lite::Regex> =
     std::sync::LazyLock::new(|| regex_lite::Regex::new("^[a-f0-9]{64}$").expect("invalid generated pattern"));
 
-pub(super) static PATTERN_4: std::sync::LazyLock<regex_lite::Regex> =
+pub(super) static PATTERN_5: std::sync::LazyLock<regex_lite::Regex> =
     std::sync::LazyLock::new(|| regex_lite::Regex::new("^[a-z0-9][a-z0-9._-]*$").expect("invalid generated pattern"));
 
-pub(super) static PATTERN_5: std::sync::LazyLock<regex_lite::Regex> = std::sync::LazyLock::new(|| {
+pub(super) static PATTERN_6: std::sync::LazyLock<regex_lite::Regex> = std::sync::LazyLock::new(|| {
     regex_lite::Regex::new("^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$")
         .expect("invalid generated pattern")
 });
 
-pub(super) static PATTERN_6: std::sync::LazyLock<regex_lite::Regex> =
+pub(super) static PATTERN_7: std::sync::LazyLock<regex_lite::Regex> =
     std::sync::LazyLock::new(|| regex_lite::Regex::new("^[a-z][a-z0-9._-]*$").expect("invalid generated pattern"));
 
-pub(super) static PATTERN_7: std::sync::LazyLock<regex_lite::Regex> =
+pub(super) static PATTERN_8: std::sync::LazyLock<regex_lite::Regex> =
     std::sync::LazyLock::new(|| regex_lite::Regex::new("^rpc\\.[\\s\\S]*?$").expect("invalid generated pattern"));
 
-pub(super) static PATTERN_8: std::sync::LazyLock<regex_lite::Regex> = std::sync::LazyLock::new(|| {
+pub(super) static PATTERN_9: std::sync::LazyLock<regex_lite::Regex> = std::sync::LazyLock::new(|| {
     regex_lite::Regex::new("^[+-]?(?:\\d+(?:\\.\\d+)?|\\.\\d+)(?:[Ee][+-]?\\d+)?(?:ms|s|m|h|d)$")
         .expect("invalid generated pattern")
 });
 
-pub(super) static PATTERN_9: std::sync::LazyLock<regex_lite::Regex> =
+pub(super) static PATTERN_10: std::sync::LazyLock<regex_lite::Regex> =
     std::sync::LazyLock::new(|| regex_lite::Regex::new("^\\d+(ms|s|m|h|d)$").expect("invalid generated pattern"));
 
-pub(super) static PATTERN_10: std::sync::LazyLock<regex_lite::Regex> = std::sync::LazyLock::new(|| {
+pub(super) static PATTERN_11: std::sync::LazyLock<regex_lite::Regex> = std::sync::LazyLock::new(|| {
     regex_lite::Regex::new("^[^/#]+\\/[^#]+(?:#[^#]+)?$").expect("invalid generated pattern")
 });
 
-pub(super) static PATTERN_11: std::sync::LazyLock<regex_lite::Regex> =
+pub(super) static PATTERN_12: std::sync::LazyLock<regex_lite::Regex> =
     std::sync::LazyLock::new(|| regex_lite::Regex::new("^[^/#]+$").expect("invalid generated pattern"));
 
-pub(super) static PATTERN_12: std::sync::LazyLock<regex_lite::Regex> =
+pub(super) static PATTERN_13: std::sync::LazyLock<regex_lite::Regex> =
     std::sync::LazyLock::new(|| regex_lite::Regex::new("^[^#]+$").expect("invalid generated pattern"));
 
-pub(super) static PATTERN_13: std::sync::LazyLock<regex_lite::Regex> =
+pub(super) static PATTERN_14: std::sync::LazyLock<regex_lite::Regex> =
     std::sync::LazyLock::new(|| regex_lite::Regex::new("^#[0-9a-fA-F]{6}$").expect("invalid generated pattern"));
 
-pub(super) static PATTERN_14: std::sync::LazyLock<regex_lite::Regex> =
+pub(super) static PATTERN_15: std::sync::LazyLock<regex_lite::Regex> =
     std::sync::LazyLock::new(|| regex_lite::Regex::new("^([1-9]\\d?(\\.\\d+)?)%$").expect("invalid generated pattern"));
 
-pub(super) static PATTERN_15: std::sync::LazyLock<regex_lite::Regex> = std::sync::LazyLock::new(|| {
+pub(super) static PATTERN_16: std::sync::LazyLock<regex_lite::Regex> = std::sync::LazyLock::new(|| {
     regex_lite::Regex::new("^\\d{4}-\\d{2}(-\\d{2})?$").expect("invalid generated pattern")
 });
 
-pub(super) static PATTERN_16: std::sync::LazyLock<regex_lite::Regex> =
+pub(super) static PATTERN_17: std::sync::LazyLock<regex_lite::Regex> =
     std::sync::LazyLock::new(|| regex_lite::Regex::new("^media:[0-9a-f]{64}$").expect("invalid generated pattern"));
 
-pub(super) static PATTERN_17: std::sync::LazyLock<regex_lite::Regex> =
+pub(super) static PATTERN_18: std::sync::LazyLock<regex_lite::Regex> =
     std::sync::LazyLock::new(|| regex_lite::Regex::new("^[a-zA-Z0-9_-]+$").expect("invalid generated pattern"));
 
-pub(super) static PATTERN_18: std::sync::LazyLock<regex_lite::Regex> =
+pub(super) static PATTERN_19: std::sync::LazyLock<regex_lite::Regex> =
     std::sync::LazyLock::new(|| regex_lite::Regex::new("^[0-9a-f]{64}$").expect("invalid generated pattern"));
 
-pub(super) static PATTERN_19: std::sync::LazyLock<regex_lite::Regex> = std::sync::LazyLock::new(|| {
+pub(super) static PATTERN_20: std::sync::LazyLock<regex_lite::Regex> = std::sync::LazyLock::new(|| {
     regex_lite::Regex::new(
         "^[+-]?(?:\\d+(?:\\.\\d+)?|\\.\\d+)(?:[Ee][+-]?\\d+)?:[+-]?(?:\\d+(?:\\.\\d+)?|\\.\\d+)(?:[Ee][+-]?\\d+)?$",
     )
     .expect("invalid generated pattern")
 });
 
-pub(super) static PATTERN_20: std::sync::LazyLock<regex_lite::Regex> = std::sync::LazyLock::new(|| {
+pub(super) static PATTERN_21: std::sync::LazyLock<regex_lite::Regex> = std::sync::LazyLock::new(|| {
     regex_lite::Regex::new("^\\d+(?:\\.\\d+)?:\\d+(?:\\.\\d+)?$").expect("invalid generated pattern")
 });
 
-pub(super) static PATTERN_21: std::sync::LazyLock<regex_lite::Regex> =
+pub(super) static PATTERN_22: std::sync::LazyLock<regex_lite::Regex> =
     std::sync::LazyLock::new(|| regex_lite::Regex::new("(?i)^image\\/").expect("invalid generated pattern"));
 
-pub static ALL_PATTERNS: [&std::sync::LazyLock<regex_lite::Regex>; 22] = [
+pub static ALL_PATTERNS: [&std::sync::LazyLock<regex_lite::Regex>; 23] = [
     &PATTERN_0,
     &PATTERN_1,
     &PATTERN_2,
@@ -104,6 +109,7 @@ pub static ALL_PATTERNS: [&std::sync::LazyLock<regex_lite::Regex>; 22] = [
     &PATTERN_19,
     &PATTERN_20,
     &PATTERN_21,
+    &PATTERN_22,
 ];
 
 #[doc(hidden)]
