@@ -193,3 +193,35 @@ fn join_legacy_variant_leaves_a_variant_without_a_model() {
     let data = markdown::join_legacy_variant(map(json!({ "variant": "high" })));
     assert_eq!(Value::Object(data), json!({ "variant": "high" }));
 }
+
+#[test]
+fn pins_the_yaml_scalars_that_differ_from_js_yaml() {
+    let parsed = markdown::parse("---\nc: NULL\nd: Null\nn: 012\nf: 0o17\nm: 1_000\ns: 1:30\n---\nbody")
+        .expect("frontmatter parses");
+    assert_eq!(parsed.data.get("c"), Some(&json!("NULL")));
+    assert_eq!(parsed.data.get("d"), Some(&json!("Null")));
+    assert_eq!(parsed.data.get("n"), Some(&json!(12)));
+    assert_eq!(parsed.data.get("f"), Some(&json!(15)));
+    assert_eq!(parsed.data.get("m"), Some(&json!("1_000")));
+    assert_eq!(parsed.data.get("s"), Some(&json!("1:30")));
+}
+
+#[test]
+fn pins_a_merge_key_as_a_literal_key() {
+    let parsed =
+        markdown::parse("---\nbase: &b\n  x: 1\nchild:\n  <<: *b\n  y: 2\n---\nbody").expect("frontmatter parses");
+    assert_eq!(parsed.data.get("base"), Some(&json!({ "x": 1 })));
+    assert_eq!(parsed.data.get("child"), Some(&json!({ "<<": { "x": 1 }, "y": 2 })));
+}
+
+#[test]
+fn rejects_non_mapping_and_complex_flow_frontmatter() {
+    assert!(markdown::parse("---\n- a\n- b\n---\nbody").is_none());
+    assert!(markdown::parse("---\njust text\n---\nbody").is_none());
+    assert!(markdown::parse("---\n? [a, b]\n: c\n---\nbody").is_none());
+}
+
+#[test]
+fn rejects_a_json_language_header() {
+    assert!(markdown::parse("---json\n{\"a\":1}\n---\nbody").is_none());
+}

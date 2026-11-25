@@ -1,7 +1,14 @@
 import { ConfigMarkdown } from "@opencode/core/config/markdown"
+import { FSUtil } from "@opencode/util/fs-util"
+import { LayerNode } from "@opencode/util/effect/layer-node"
+import { Effect, Logger } from "effect"
+import { mkdir, rm, symlink, writeFile } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import path from "node:path"
 
 const area = process.argv[2]
 if (area === "markdown") exportMarkdown()
+else if (area === "scan") await exportScan()
 else {
   console.error(`corpus: unknown area ${area ?? ""}`)
   process.exit(1)
@@ -122,4 +129,254 @@ body`,
       }
     })
   process.stdout.write(`[\n${lines.join(",\n")}\n]\n`)
+}
+
+type ScanFile = string | { type: "symlink"; target: string }
+
+type ScanOperation =
+  | {
+      kind: "scan"
+      root: string
+      pattern: string
+      options: { dot: boolean; symlink: boolean; include_files_only: boolean; ignore: ReadonlyArray<string> }
+    }
+  | { kind: "up"; names: ReadonlyArray<string>; start: string; stop: string | null }
+  | { kind: "globUp"; pattern: string; start: string; stop: string | null }
+
+type ScanCase = {
+  name: string
+  platform?: "unix"
+  files: Record<string, ScanFile>
+  operation: ScanOperation
+}
+
+async function exportScan() {
+  const layer = LayerNode.compile(FSUtil.node)
+  const base = path.join(tmpdir(), `opencode-registry-scan-${process.pid}-${Date.now()}`)
+  const lines: Array<string> = []
+  try {
+    for (const item of scanCases()) {
+      const root = path.join(base, item.name)
+      await rm(root, { recursive: true, force: true })
+      await mkdir(root, { recursive: true })
+      for (const [file, value] of Object.entries(item.files)) {
+        const target = path.join(root, file)
+        await mkdir(path.dirname(target), { recursive: true })
+        if (typeof value === "string") await writeFile(target, value)
+        else await symlink(value.target, target)
+      }
+      const output = await runScan(layer, root, item.operation)
+      lines.push(
+        JSON.stringify({
+          name: item.name,
+          ...(item.platform === undefined ? {} : { platform: item.platform }),
+          files: item.files,
+          operation: item.operation,
+          output,
+        }),
+      )
+    }
+  } finally {
+    await rm(base, { recursive: true, force: true })
+  }
+  process.stdout.write(`[\n${lines.join(",\n")}\n]\n`)
+}
+
+async function runScan(layer: ReturnType<typeof LayerNode.compile>, root: string, operation: ScanOperation) {
+  const program = Effect.gen(function* () {
+    const fs = yield* FSUtil.Service
+    const relative = (file: string) => path.relative(root, file).split(path.sep).join("/")
+    if (operation.kind === "scan") {
+      const files = yield* fs.scan(operation.pattern, {
+        cwd: path.join(root, operation.root),
+        absolute: true,
+        include: operation.options.include_files_only ? "file" : "all",
+        dot: operation.options.dot,
+        symlink: operation.options.symlink,
+        ignore: [...operation.options.ignore],
+      })
+      return files.map(relative).sort()
+    }
+    if (operation.kind === "up") {
+      const files = yield* fs.up({
+        targets: [...operation.names],
+        start: path.join(root, operation.start),
+        ...(operation.stop === null ? {} : { stop: path.join(root, operation.stop) }),
+      })
+      return files.map(relative)
+    }
+    const files = yield* fs.globUp(
+      operation.pattern,
+      path.join(root, operation.start),
+      operation.stop === null ? undefined : path.join(root, operation.stop),
+    )
+    return files.map(relative)
+  })
+  return Effect.runPromise(program.pipe(Effect.provide(layer), Effect.provide(Logger.layer([]))))
+}
+
+function scanCases(): Array<ScanCase> {
+  const tree: Record<string, string> = {
+    ".git/HEAD": "head",
+    ".hidden.md": "hidden",
+    "a.md": "a",
+    "ab.md": "ab",
+    "agent/x.md": "x",
+    "agents/y.md": "y",
+    "b.md": "b",
+    "command/a.md": "a",
+    "commands/nested/b.md": "b",
+    "deep/a/b/c.md": "c",
+    "dir/one.txt": "one",
+    "dir/two.md": "two",
+    "mode/nested/three.md": "three",
+    "mode/one.md": "one",
+    "modes/two.md": "two",
+    "node_modules/pkg/p.md": "p",
+    "root.md": "root",
+  }
+  const nested: Record<string, string> = {
+    "AGENTS.md": "agents",
+    "CLAUDE.md": "claude",
+    "nested/AGENTS.md": "nested agents",
+    "nested/CLAUDE.md": "nested claude",
+    "nested/deep/keep.txt": "keep",
+  }
+  const markdown: Record<string, string> = {
+    "nested/deep/one.md": "one",
+    "nested/two.md": "two",
+    "root.md": "root",
+  }
+  const globstarUp: Record<string, string> = {
+    "nested/deep/keep.txt": "keep",
+    "root.md": "root",
+  }
+  return [
+    {
+      name: "braces-agent-globstar",
+      files: tree,
+      operation: {
+        kind: "scan",
+        root: "",
+        pattern: "{agent,agents}/**/*.md",
+        options: { dot: true, symlink: false, include_files_only: true, ignore: [] },
+      },
+    },
+    {
+      name: "braces-command-globstar",
+      files: tree,
+      operation: {
+        kind: "scan",
+        root: "",
+        pattern: "{command,commands}/**/*.md",
+        options: { dot: true, symlink: false, include_files_only: true, ignore: [] },
+      },
+    },
+    {
+      name: "braces-mode-direct",
+      files: tree,
+      operation: {
+        kind: "scan",
+        root: "",
+        pattern: "{mode,modes}/*.md",
+        options: { dot: true, symlink: false, include_files_only: true, ignore: [] },
+      },
+    },
+    {
+      name: "char-class",
+      files: tree,
+      operation: {
+        kind: "scan",
+        root: "",
+        pattern: "[ab]*.md",
+        options: { dot: false, symlink: false, include_files_only: true, ignore: [] },
+      },
+    },
+    {
+      name: "dot-false-top-level",
+      files: tree,
+      operation: {
+        kind: "scan",
+        root: "",
+        pattern: "*.md",
+        options: { dot: false, symlink: false, include_files_only: true, ignore: [] },
+      },
+    },
+    {
+      name: "globUp-globstar",
+      files: globstarUp,
+      operation: { kind: "globUp", pattern: "**/*.md", start: "nested", stop: "." },
+    },
+    {
+      name: "globUp-star",
+      files: markdown,
+      operation: { kind: "globUp", pattern: "*.md", start: "nested/deep", stop: "." },
+    },
+    {
+      name: "globstar-all-ignore",
+      files: tree,
+      operation: {
+        kind: "scan",
+        root: "",
+        pattern: "**/*",
+        options: { dot: true, symlink: false, include_files_only: true, ignore: FSUtil.ignoreGlobs },
+      },
+    },
+    {
+      name: "globstar-files-and-directories",
+      files: tree,
+      operation: {
+        kind: "scan",
+        root: "",
+        pattern: "**/*",
+        options: { dot: true, symlink: false, include_files_only: false, ignore: FSUtil.ignoreGlobs },
+      },
+    },
+    {
+      name: "globstar-markdown-node-modules-ignore",
+      files: tree,
+      operation: {
+        kind: "scan",
+        root: "",
+        pattern: "**/*.md",
+        options: {
+          dot: true,
+          symlink: false,
+          include_files_only: true,
+          ignore: ["node_modules", "**/node_modules/**"],
+        },
+      },
+    },
+    {
+      name: "question",
+      files: tree,
+      operation: {
+        kind: "scan",
+        root: "",
+        pattern: "?.md",
+        options: { dot: false, symlink: false, include_files_only: true, ignore: [] },
+      },
+    },
+    {
+      name: "scan-symlink-follow",
+      platform: "unix",
+      files: { "real/secret.md": "secret", link: { type: "symlink", target: "real" } },
+      operation: {
+        kind: "scan",
+        root: "",
+        pattern: "link/**/*.md",
+        options: { dot: true, symlink: true, include_files_only: true, ignore: [] },
+      },
+    },
+    {
+      name: "up-names",
+      files: nested,
+      operation: { kind: "up", names: ["AGENTS.md", "CLAUDE.md"], start: "nested/deep", stop: "." },
+    },
+    {
+      name: "up-stop",
+      files: nested,
+      operation: { kind: "up", names: ["AGENTS.md", "CLAUDE.md"], start: "nested/deep", stop: "nested" },
+    },
+  ].sort((a, b) => (a.name < b.name ? -1 : 1))
 }

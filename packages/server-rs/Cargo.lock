@@ -926,6 +926,10 @@ dependencies = [
 name = "opencode-registry"
 version = "0.1.0"
 dependencies = [
+ "log",
+ "notify",
+ "opencode-config",
+ "regex-lite",
  "serde_json",
  "yaml-rust2",
 ]
