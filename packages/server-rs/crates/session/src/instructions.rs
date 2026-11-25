@@ -220,6 +220,7 @@ pub fn text_source(
     }
 }
 
+#[derive(Clone)]
 pub struct BuiltinsInput {
     pub directory: String,
     pub workspace_root: String,

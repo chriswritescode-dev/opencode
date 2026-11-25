@@ -12,7 +12,9 @@ workspace = true
 
 [dependencies]
 base64.workspace = true
+opencode-ai.workspace = true
 opencode-bus.workspace = true
+opencode-catalog.workspace = true
 opencode-config.workspace = true
 opencode-contract.workspace = true
 opencode-location.workspace = true

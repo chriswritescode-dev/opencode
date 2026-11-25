@@ -1,6 +1,8 @@
 pub mod agent;
+pub mod context;
 pub mod instruction_state;
 pub mod instructions;
+pub mod model_request;
 pub mod search_build;
 pub mod search_index;
 
@@ -21,6 +23,7 @@ mod slug;
 mod sql;
 mod store;
 mod stored;
+mod to_llm_message;
 mod usage;
 
 pub use projector::SessionProjector;
