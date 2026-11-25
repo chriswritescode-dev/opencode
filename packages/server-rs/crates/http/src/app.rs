@@ -41,6 +41,18 @@ pub const IMPLEMENTED: &[&str] = &[
     "credential.update",
     "credential.remove",
     "credential.activate",
+    "integration.list",
+    "integration.get",
+    "experimental.integration.wellknown.add",
+    "integration.connect.key",
+    "integration.connect.external",
+    "integration.oauth.connect",
+    "integration.oauth.status",
+    "integration.oauth.complete",
+    "integration.oauth.cancel",
+    "integration.command.connect",
+    "integration.command.status",
+    "integration.command.cancel",
 ];
 
 pub struct Options {
@@ -221,6 +233,59 @@ impl App {
             "credential.activate" => match self.services() {
                 Some(services) => crate::handlers::credential::activate(&raw, services).await,
                 None => crate::services::services_unavailable(),
+            },
+            "integration.list" => match self.location(&raw).await {
+                Ok(lease) => crate::handlers::integration::list(&raw, lease.services()).await,
+                Err(response) => response,
+            },
+            "integration.get" => match self.location(&raw).await {
+                Ok(lease) => crate::handlers::integration::get(&raw, lease.services()).await,
+                Err(response) => response,
+            },
+            "experimental.integration.wellknown.add" => match self.location(&raw).await {
+                Ok(lease) => match self.services() {
+                    Some(services) => {
+                        crate::handlers::integration::wellknown_add(&raw, lease.services(), services).await
+                    }
+                    None => crate::services::services_unavailable(),
+                },
+                Err(response) => response,
+            },
+            "integration.connect.key" => match self.location(&raw).await {
+                Ok(lease) => crate::handlers::integration::connect_key(&raw, lease.services()).await,
+                Err(response) => response,
+            },
+            "integration.connect.external" => match self.location(&raw).await {
+                Ok(lease) => crate::handlers::integration::connect_external(&raw, lease.services()).await,
+                Err(response) => response,
+            },
+            "integration.oauth.connect" => match self.location(&raw).await {
+                Ok(lease) => crate::handlers::integration::oauth_connect(&raw, lease.services()).await,
+                Err(response) => response,
+            },
+            "integration.oauth.status" => match self.location(&raw).await {
+                Ok(lease) => crate::handlers::integration::oauth_status(&raw, lease.services()).await,
+                Err(response) => response,
+            },
+            "integration.oauth.complete" => match self.location(&raw).await {
+                Ok(lease) => crate::handlers::integration::oauth_complete(&raw, lease.services()).await,
+                Err(response) => response,
+            },
+            "integration.oauth.cancel" => match self.location(&raw).await {
+                Ok(lease) => crate::handlers::integration::oauth_cancel(&raw, lease.services()).await,
+                Err(response) => response,
+            },
+            "integration.command.connect" => match self.location(&raw).await {
+                Ok(lease) => crate::handlers::integration::command_connect(&raw, lease.services()).await,
+                Err(response) => response,
+            },
+            "integration.command.status" => match self.location(&raw).await {
+                Ok(lease) => crate::handlers::integration::command_status(&raw, lease.services()).await,
+                Err(response) => response,
+            },
+            "integration.command.cancel" => match self.location(&raw).await {
+                Ok(lease) => crate::handlers::integration::command_cancel(&raw, lease.services()).await,
+                Err(response) => response,
             },
             _ => not_implemented(found.route.identifier),
         }

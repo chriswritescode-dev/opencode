@@ -7,6 +7,7 @@ mod credential;
 mod debug;
 mod event;
 mod info;
+mod integration;
 mod location;
 mod model;
 mod pairing;

@@ -1,6 +1,6 @@
 # Operation coverage
 
-Implemented: 24 of 178 operations
+Implemented: 36 of 178 operations
 
 | Operation | Method | Path | Stability | Status |
 | --- | --- | --- | --- | --- |
@@ -71,18 +71,18 @@ Implemented: 24 of 178 operations
 | `experimental.voice.session` | POST | `/api/experimental/voice/session` | experimental | not implemented (501) |
 | `provider.list` | GET | `/api/provider` | stable | implemented |
 | `provider.get` | GET | `/api/provider/{providerID}` | stable | implemented |
-| `integration.list` | GET | `/api/integration` | stable | not implemented (501) |
-| `integration.get` | GET | `/api/integration/{integrationID}` | stable | not implemented (501) |
-| `experimental.integration.wellknown.add` | POST | `/api/experimental/integration/wellknown` | experimental | not implemented (501) |
-| `integration.connect.key` | POST | `/api/integration/{integrationID}/connect/key` | stable | not implemented (501) |
-| `integration.connect.external` | POST | `/api/integration/{integrationID}/connect/external` | stable | not implemented (501) |
-| `integration.oauth.connect` | POST | `/api/integration/{integrationID}/connect/oauth` | stable | not implemented (501) |
-| `integration.oauth.status` | GET | `/api/integration/{integrationID}/connect/oauth/{attemptID}` | stable | not implemented (501) |
-| `integration.oauth.cancel` | DELETE | `/api/integration/{integrationID}/connect/oauth/{attemptID}` | stable | not implemented (501) |
-| `integration.oauth.complete` | POST | `/api/integration/{integrationID}/connect/oauth/{attemptID}/complete` | stable | not implemented (501) |
-| `integration.command.connect` | POST | `/api/integration/{integrationID}/connect/command` | stable | not implemented (501) |
-| `integration.command.status` | GET | `/api/integration/{integrationID}/connect/command/{attemptID}` | stable | not implemented (501) |
-| `integration.command.cancel` | DELETE | `/api/integration/{integrationID}/connect/command/{attemptID}` | stable | not implemented (501) |
+| `integration.list` | GET | `/api/integration` | stable | implemented |
+| `integration.get` | GET | `/api/integration/{integrationID}` | stable | implemented |
+| `experimental.integration.wellknown.add` | POST | `/api/experimental/integration/wellknown` | experimental | implemented |
+| `integration.connect.key` | POST | `/api/integration/{integrationID}/connect/key` | stable | implemented |
+| `integration.connect.external` | POST | `/api/integration/{integrationID}/connect/external` | stable | implemented |
+| `integration.oauth.connect` | POST | `/api/integration/{integrationID}/connect/oauth` | stable | implemented |
+| `integration.oauth.status` | GET | `/api/integration/{integrationID}/connect/oauth/{attemptID}` | stable | implemented |
+| `integration.oauth.cancel` | DELETE | `/api/integration/{integrationID}/connect/oauth/{attemptID}` | stable | implemented |
+| `integration.oauth.complete` | POST | `/api/integration/{integrationID}/connect/oauth/{attemptID}/complete` | stable | implemented |
+| `integration.command.connect` | POST | `/api/integration/{integrationID}/connect/command` | stable | implemented |
+| `integration.command.status` | GET | `/api/integration/{integrationID}/connect/command/{attemptID}` | stable | implemented |
+| `integration.command.cancel` | DELETE | `/api/integration/{integrationID}/connect/command/{attemptID}` | stable | implemented |
 | `mcp.list` | GET | `/api/mcp` | stable | not implemented (501) |
 | `experimental.mcp.add` | PUT | `/api/experimental/mcp/{server}` | experimental | not implemented (501) |
 | `experimental.mcp.remove` | DELETE | `/api/experimental/mcp/{server}` | experimental | not implemented (501) |

@@ -1,10 +1,10 @@
-use http::StatusCode;
 use opencode_catalog::integration::IntegrationService;
 use opencode_config::policy::{self, Effect};
 use opencode_config::service::ConfigService;
-use opencode_contract::codec::{JsonMap, encode_json};
-use opencode_contract::generated::{IntegrationID, InvalidRequestError, InvalidRequestErrorTag};
+use opencode_contract::codec::JsonMap;
+use opencode_contract::generated::IntegrationID;
 
+use crate::handlers::invalid;
 use crate::response;
 use crate::services::service_unavailable;
 
@@ -27,19 +27,13 @@ pub async fn require_connectable(
     let Some(denied) = denied else {
         return Ok(());
     };
-    Err(response::bytes(
-        StatusCode::BAD_REQUEST,
-        "application/json",
-        encode_json(&InvalidRequestError {
-            tag: InvalidRequestErrorTag::InvalidRequestError,
-            message: format!("{}: connecting {} is not allowed", denied.message, integration_id.0),
-            kind: Some(Some("integration_policy".to_owned())),
-            field: None,
-        }),
+    Err(invalid::kind(
+        format!("{}: connecting {} is not allowed", denied.message, integration_id.0),
+        "integration_policy",
     ))
 }
 
-fn is_mcp(metadata: Option<&JsonMap<serde_json::Value>>) -> bool {
+pub(crate) fn is_mcp(metadata: Option<&JsonMap<serde_json::Value>>) -> bool {
     metadata
         .is_some_and(|metadata| metadata.0.iter().any(|(key, value)| key == "source" && value.as_str() == Some("mcp")))
 }

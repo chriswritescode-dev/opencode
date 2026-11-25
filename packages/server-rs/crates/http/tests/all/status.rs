@@ -132,6 +132,18 @@ fn sample_request(operation: &str) -> Option<(&'static str, &'static str)> {
         "credential.update" => Some(("PATCH", "/api/credential/x")),
         "credential.remove" => Some(("DELETE", "/api/credential/x")),
         "credential.activate" => Some(("POST", "/api/credential/x/activate")),
+        "integration.list" => Some(("GET", "/api/integration")),
+        "integration.get" => Some(("GET", "/api/integration/unknown")),
+        "experimental.integration.wellknown.add" => Some(("POST", "/api/experimental/integration/wellknown")),
+        "integration.connect.key" => Some(("POST", "/api/integration/unknown/connect/key")),
+        "integration.connect.external" => Some(("POST", "/api/integration/unknown/connect/external")),
+        "integration.oauth.connect" => Some(("POST", "/api/integration/unknown/connect/oauth")),
+        "integration.oauth.status" => Some(("GET", "/api/integration/unknown/connect/oauth/con_missing")),
+        "integration.oauth.complete" => Some(("POST", "/api/integration/unknown/connect/oauth/con_missing/complete")),
+        "integration.oauth.cancel" => Some(("DELETE", "/api/integration/unknown/connect/oauth/con_missing")),
+        "integration.command.connect" => Some(("POST", "/api/integration/unknown/connect/command")),
+        "integration.command.status" => Some(("GET", "/api/integration/unknown/connect/command/con_missing")),
+        "integration.command.cancel" => Some(("DELETE", "/api/integration/unknown/connect/command/con_missing")),
         _ => None,
     }
 }
@@ -182,5 +194,17 @@ fn implemented_lists_the_ported_operations() {
     assert!(opencode_http::app::IMPLEMENTED.contains(&"credential.update"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"credential.remove"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"credential.activate"));
-    assert_eq!(opencode_http::app::IMPLEMENTED.len(), 24);
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"integration.list"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"integration.get"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"experimental.integration.wellknown.add"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"integration.connect.key"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"integration.connect.external"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"integration.oauth.connect"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"integration.oauth.status"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"integration.oauth.complete"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"integration.oauth.cancel"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"integration.command.connect"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"integration.command.status"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"integration.command.cancel"));
+    assert_eq!(opencode_http::app::IMPLEMENTED.len(), 36);
 }
