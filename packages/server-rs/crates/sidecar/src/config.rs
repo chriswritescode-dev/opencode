@@ -48,6 +48,7 @@ pub(crate) const NAMES: &[&str] = &[
     "TMPDIR",
     "TEMP",
     "TMP",
+    "NODE_EXTRA_CA_CERTS",
     "HTTP_PROXY",
     "HTTPS_PROXY",
     "NO_PROXY",
@@ -66,7 +67,10 @@ pub(crate) const NAMES: &[&str] = &[
 /// Whether `name` may reach the sidecar.
 pub fn inherited(name: &OsStr) -> bool {
     let name = name.to_string_lossy().to_ascii_uppercase();
-    NAMES.contains(&name.as_str()) || name.starts_with("LC_") || name.starts_with("XDG_")
+    NAMES.contains(&name.as_str())
+        || name.starts_with("LC_")
+        || name.starts_with("XDG_")
+        || name.starts_with("NPM_CONFIG_")
 }
 
 pub struct Config {
