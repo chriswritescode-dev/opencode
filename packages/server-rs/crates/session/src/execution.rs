@@ -181,11 +181,11 @@ impl SessionExecution for Execution {
 
 impl State {
     fn start(self: &Arc<Self>, session_id: &str) {
-        if self.shutting_down.load(Ordering::SeqCst) {
-            return;
-        }
         let active = {
             let mut map = self.active.lock().expect("the execution map lock is never poisoned");
+            if self.shutting_down.load(Ordering::SeqCst) {
+                return;
+            }
             match map.entry(session_id.to_owned()) {
                 std::collections::hash_map::Entry::Occupied(entry) => {
                     entry.get().pending.store(true, Ordering::SeqCst);
