@@ -6,3 +6,4 @@ pub mod invalid;
 pub mod location;
 pub mod project;
 pub mod session_log;
+pub mod vcs;

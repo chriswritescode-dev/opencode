@@ -15,6 +15,7 @@ mod serve;
 mod session_log;
 mod status;
 mod ticket;
+mod vcs;
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;

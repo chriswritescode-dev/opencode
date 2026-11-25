@@ -1,6 +1,6 @@
 # Operation coverage
 
-Implemented: 15 of 178 operations
+Implemented: 21 of 178 operations
 
 | Operation | Method | Path | Stability | Status |
 | --- | --- | --- | --- | --- |
@@ -166,12 +166,12 @@ Implemented: 15 of 178 operations
 | `worktree.create` | POST | `/api/worktree` | stable | not implemented (501) |
 | `worktree.remove` | DELETE | `/api/worktree` | stable | not implemented (501) |
 | `worktree.refresh` | POST | `/api/worktree/refresh` | stable | not implemented (501) |
-| `vcs.init` | POST | `/api/vcs/init` | stable | not implemented (501) |
-| `vcs.get` | GET | `/api/vcs` | stable | not implemented (501) |
-| `vcs.base` | GET | `/api/vcs/base` | stable | not implemented (501) |
-| `vcs.status` | GET | `/api/vcs/status` | stable | not implemented (501) |
-| `vcs.branch.list` | GET | `/api/vcs/branch` | stable | not implemented (501) |
-| `vcs.diff` | GET | `/api/vcs/diff` | stable | not implemented (501) |
+| `vcs.init` | POST | `/api/vcs/init` | stable | implemented |
+| `vcs.get` | GET | `/api/vcs` | stable | implemented |
+| `vcs.base` | GET | `/api/vcs/base` | stable | implemented |
+| `vcs.status` | GET | `/api/vcs/status` | stable | implemented |
+| `vcs.branch.list` | GET | `/api/vcs/branch` | stable | implemented |
+| `vcs.diff` | GET | `/api/vcs/diff` | stable | implemented |
 | `debug.heapDump` | POST | `/api/debug/heap-dump` | stable | implemented |
 | `debug.location.list` | GET | `/api/debug/location` | stable | implemented |
 | `debug.location.evict` | DELETE | `/api/debug/location` | stable | implemented |

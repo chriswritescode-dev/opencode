@@ -42,6 +42,7 @@ pub type ConfigEnv = Arc<dyn Fn(&str) -> Option<OsString> + Send + Sync>;
 
 pub struct GlobalServices {
     pub database: Arc<Database>,
+    pub bus: Arc<Bus>,
     pub paths: GlobalPaths,
     pub projects: Arc<ProjectService>,
     pub locations: LocationMap<LocationServices>,
@@ -168,6 +169,7 @@ impl GlobalServices {
         });
         GlobalServices {
             database,
+            bus,
             paths,
             projects,
             locations,
