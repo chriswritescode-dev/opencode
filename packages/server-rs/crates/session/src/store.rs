@@ -1,7 +1,11 @@
 use std::sync::Arc;
 
 use opencode_bus::BusError;
-use opencode_contract::generated::{SessionInfo, SessionMessageAssistant, SessionMessageInfo, SessionMessageMediaInfo};
+use opencode_contract::codec::{Decode, Path};
+use opencode_contract::generated::{
+    SessionID, SessionInboxInfo, SessionInfo, SessionMessageAssistant, SessionMessageInfo, SessionMessageMediaInfo,
+};
+use opencode_location::location::LocationRef;
 use opencode_storage::{Database, StorageError};
 use rusqlite::types::Value;
 use rusqlite::{OptionalExtension, params, params_from_iter};
@@ -11,6 +15,7 @@ use crate::info;
 use crate::sql::now_millis;
 
 const MESSAGE_COLUMNS: &str = "id, session_id, type, seq, data";
+const INBOX_COLUMNS: &str = "id, session_id, type, payload, delivery, time_created";
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Order {
@@ -46,6 +51,7 @@ pub struct ListAnchor {
     pub direction: Direction,
 }
 
+#[derive(Default)]
 pub struct ListInput {
     pub directory: Option<String>,
     pub workspace_id: Option<String>,
@@ -84,6 +90,7 @@ pub enum SessionMessage {
 
 pub type Overlay = Arc<dyn Fn(&mut Vec<SessionMessage>) + Send + Sync>;
 
+#[derive(Clone)]
 pub struct SessionStore {
     db: Arc<Database>,
     overlay: Overlay,
@@ -107,18 +114,18 @@ impl SessionStore {
         row.as_ref().map(info::from_row).transpose()
     }
 
-    pub fn workspace_id(&self, session_id: &str) -> Result<Option<String>, BusError> {
+    pub fn session_location(&self, session_id: &str) -> Result<Option<LocationRef>, BusError> {
         let row = self
             .db
             .read(move |connection| {
                 Ok(connection
-                    .query_row("SELECT workspace_id FROM session_v2 WHERE id = ?1", [session_id], |row| {
-                        row.get::<_, Option<String>>(0)
+                    .query_row("SELECT directory, workspace_id FROM session_v2 WHERE id = ?1", [session_id], |row| {
+                        Ok((row.get::<_, String>(0)?, row.get::<_, Option<String>>(1)?))
                     })
                     .optional()?)
             })
             .map_err(BusError::from)?;
-        Ok(row.flatten())
+        Ok(row.map(|(directory, workspace_id)| LocationRef::new(directory, workspace_id)))
     }
 
     pub fn list(&self, input: &ListInput) -> Result<Vec<SessionInfo>, BusError> {
@@ -220,6 +227,60 @@ impl SessionStore {
         Ok(self.overlay_info(decoded?).into_iter().next().map(|message| (session_id, message)))
     }
 
+    pub fn inbox_item(&self, inbox_id: &str) -> Result<Option<SessionInboxInfo>, BusError> {
+        let rows = self
+            .db
+            .read(move |connection| {
+                let mut statement =
+                    connection.prepare(&format!("SELECT {INBOX_COLUMNS} FROM session_inbox WHERE id = ?1"))?;
+                Ok(statement.query_map([inbox_id], stored_inbox)?.collect::<Result<Vec<_>, _>>()?)
+            })
+            .map_err(BusError::from)?;
+        rows.into_iter().next().map(decode_inbox).transpose()
+    }
+
+    pub fn inbox(&self, session_id: &str) -> Result<Vec<SessionInboxInfo>, BusError> {
+        let session_id = session_id.to_owned();
+        let rows = self
+            .db
+            .read(move |connection| {
+                let sql = format!(
+                    "SELECT {INBOX_COLUMNS} FROM session_inbox WHERE session_id = ?1 ORDER BY enqueued_seq ASC"
+                );
+                let mut statement = connection.prepare(&sql)?;
+                Ok(statement.query_map([session_id], stored_inbox)?.collect::<Result<Vec<_>, _>>()?)
+            })
+            .map_err(BusError::from)?;
+        rows.into_iter().map(decode_inbox).collect()
+    }
+
+    pub fn promotable(&self, session_id: &str, include_queued: bool) -> Result<Vec<String>, BusError> {
+        let session_id = session_id.to_owned();
+        self.db
+            .read(move |connection| {
+                let mut statement = connection.prepare(
+                    "SELECT id FROM session_inbox WHERE session_id = ?1 AND delivery = 'steer' \
+                     ORDER BY enqueued_seq ASC",
+                )?;
+                let steers = statement
+                    .query_map([session_id.as_str()], |row| row.get::<_, String>(0))?
+                    .collect::<Result<Vec<_>, _>>()?;
+                if !steers.is_empty() || !include_queued {
+                    return Ok(steers);
+                }
+                let queued = connection
+                    .query_row(
+                        "SELECT id FROM session_inbox WHERE session_id = ?1 AND delivery = 'queue' \
+                         ORDER BY enqueued_seq ASC LIMIT 1",
+                        [session_id.as_str()],
+                        |row| row.get::<_, String>(0),
+                    )
+                    .optional()?;
+                Ok(queued.into_iter().collect())
+            })
+            .map_err(BusError::from)
+    }
+
     pub fn message_with_refs(
         &self,
         message_id: &str,
@@ -294,11 +355,7 @@ impl SessionStore {
     pub fn claim(&self, session_id: &str) -> Result<(), BusError> {
         self.db
             .read(|connection| {
-                connection.execute(
-                    "UPDATE session_v2 SET time_suspended = ?1, time_updated = time_updated \
-                     WHERE id = ?2 AND time_suspended IS NULL",
-                    params![now_millis(), session_id],
-                )?;
+                claim_in(connection, session_id)?;
                 Ok(())
             })
             .map_err(BusError::from)
@@ -307,11 +364,7 @@ impl SessionStore {
     pub fn release(&self, session_id: &str) -> Result<(), BusError> {
         self.db
             .read(|connection| {
-                connection.execute(
-                    "UPDATE session_v2 SET time_suspended = NULL, resume_attempts = 0, \
-                     time_updated = time_updated WHERE id = ?1",
-                    [session_id],
-                )?;
+                release_in(connection, session_id)?;
                 Ok(())
             })
             .map_err(BusError::from)
@@ -471,9 +524,70 @@ fn stored_rows(statement: &mut rusqlite::Statement<'_>, values: Vec<Value>) -> r
     statement.query_map(params_from_iter(values), stored_row)?.collect()
 }
 
+struct StoredInbox {
+    id: String,
+    session_id: String,
+    r#type: String,
+    payload: String,
+    delivery: String,
+    created: f64,
+}
+
+fn stored_inbox(row: &rusqlite::Row<'_>) -> rusqlite::Result<StoredInbox> {
+    Ok(StoredInbox {
+        id: row.get(0)?,
+        session_id: row.get(1)?,
+        r#type: row.get(2)?,
+        payload: row.get(3)?,
+        delivery: row.get(4)?,
+        created: row.get(5)?,
+    })
+}
+
+fn decode_inbox(stored: StoredInbox) -> Result<SessionInboxInfo, BusError> {
+    let payload = serde_json::from_str::<serde_json::Value>(&stored.payload).map_err(invalid_inbox)?;
+    let value = serde_json::json!({
+        "id": stored.id,
+        "sessionID": stored.session_id,
+        "time": { "created": stored.created },
+        "type": stored.r#type,
+        "payload": payload,
+        "delivery": stored.delivery,
+    });
+    SessionInboxInfo::decode(&value, &mut Path::new()).map_err(invalid_inbox)
+}
+
+fn invalid_inbox(error: impl std::fmt::Display) -> BusError {
+    BusError::InvalidDurableEvent { r#type: "session.inbox".to_owned(), message: error.to_string() }
+}
+
 impl From<StorageError> for HistoryError {
     fn from(error: StorageError) -> Self {
         Self::Database(error.into())
+    }
+}
+
+pub(crate) fn claim_in(connection: &rusqlite::Connection, session_id: &str) -> rusqlite::Result<()> {
+    connection.execute(
+        "UPDATE session_v2 SET time_suspended = ?1, time_updated = time_updated \
+         WHERE id = ?2 AND time_suspended IS NULL",
+        params![now_millis(), session_id],
+    )?;
+    Ok(())
+}
+
+pub(crate) fn release_in(connection: &rusqlite::Connection, session_id: &str) -> rusqlite::Result<()> {
+    connection.execute(
+        "UPDATE session_v2 SET time_suspended = NULL, resume_attempts = 0, \
+         time_updated = time_updated WHERE id = ?1",
+        [session_id],
+    )?;
+    Ok(())
+}
+
+impl opencode_location::resolve::SessionLookup for SessionStore {
+    fn location(&self, id: &SessionID) -> Result<Option<LocationRef>, String> {
+        self.session_location(&id.0).map_err(|error| error.to_string())
     }
 }
 

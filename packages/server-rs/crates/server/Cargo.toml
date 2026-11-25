@@ -21,6 +21,7 @@ opencode-config.workspace = true
 opencode-contract.workspace = true
 opencode-http.workspace = true
 opencode-local.workspace = true
+opencode-plugin.workspace = true
 opencode-sidecar.workspace = true
 opencode-storage.workspace = true
 rand.workspace = true

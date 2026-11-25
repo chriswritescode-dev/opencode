@@ -11,13 +11,16 @@ autotests = false
 workspace = true
 
 [dependencies]
+opencode-ai.workspace = true
 opencode-api-types.workspace = true
 opencode-bus.workspace = true
+opencode-catalog.workspace = true
 opencode-config.workspace = true
 opencode-contract.workspace = true
 opencode-local.workspace = true
 opencode-location.workspace = true
 opencode-permission.workspace = true
+opencode-plugin.workspace = true
 opencode-registry.workspace = true
 opencode-session.workspace = true
 opencode-storage.workspace = true

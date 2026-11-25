@@ -823,6 +823,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "opencode-catalog"
+version = "0.1.0"
+dependencies = [
+ "opencode-ai",
+ "opencode-config",
+ "opencode-contract",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "opencode-config"
 version = "0.1.0"
 dependencies = [
@@ -868,13 +879,16 @@ dependencies = [
  "hyper",
  "hyper-util",
  "log",
+ "opencode-ai",
  "opencode-api-types",
  "opencode-bus",
+ "opencode-catalog",
  "opencode-config",
  "opencode-contract",
  "opencode-local",
  "opencode-location",
  "opencode-permission",
+ "opencode-plugin",
  "opencode-registry",
  "opencode-session",
  "opencode-storage",
@@ -941,6 +955,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "opencode-plugin"
+version = "0.1.0"
+dependencies = [
+ "futures-util",
+ "indexmap",
+ "log",
+ "notify",
+ "opencode-bus",
+ "opencode-config",
+ "opencode-contract",
+ "opencode-local",
+ "opencode-location",
+ "opencode-sidecar",
+ "rand",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tokio-util",
+ "url",
+]
+
+[[package]]
 name = "opencode-registry"
 version = "0.1.0"
 dependencies = [
@@ -982,6 +1019,7 @@ dependencies = [
  "opencode-contract",
  "opencode-http",
  "opencode-local",
+ "opencode-plugin",
  "opencode-service",
  "opencode-sidecar",
  "opencode-storage",
@@ -1014,14 +1052,21 @@ dependencies = [
 name = "opencode-session"
 version = "0.1.0"
 dependencies = [
+ "base64",
  "futures-util",
+ "log",
+ "opencode-ai",
  "opencode-bus",
+ "opencode-catalog",
+ "opencode-config",
  "opencode-contract",
+ "opencode-location",
  "opencode-storage",
  "opencode-util",
  "rand",
  "regex-lite",
  "rusqlite",
+ "serde",
  "serde_json",
  "tokio",
 ]

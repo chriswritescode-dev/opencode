@@ -76,6 +76,7 @@ async fn shells_uses_the_server_path() {
         start.to_string_lossy().into_owned(),
         Arc::new(env),
         bus,
+        crate::global_plugins(),
         "test-version".to_owned(),
         "test".to_owned(),
     ));

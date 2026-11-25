@@ -58,7 +58,7 @@ pub async fn update(services: &GlobalServices, raw: &RawRequest) -> response::Re
     }
 }
 
-fn contract_project(project: opencode_location::project::Project) -> Project {
+pub(crate) fn contract_project(project: opencode_location::project::Project) -> Project {
     Project {
         id: ProjectID(project.id),
         canonical: AbsolutePath(project.canonical),

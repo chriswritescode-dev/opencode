@@ -2,7 +2,9 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use http::StatusCode;
+use opencode_config::paths::GlobalPaths;
 use opencode_http::app::{App, Options};
+use opencode_http::services::GlobalServices;
 use opencode_http::state::ServerState;
 use opencode_http::status::{State, Status};
 use opencode_storage::DatabaseLocation;
@@ -11,6 +13,22 @@ use crate::{app, authorized, ready_app, text};
 
 fn ready_app_with_state() -> Arc<App> {
     let (state, _) = ServerState::open(DatabaseLocation::Memory, Path::new("/tmp")).expect("open the state");
+    let state = Arc::new(state);
+    let paths = GlobalPaths::from_vars(|name| {
+        (name == "HOME").then(|| std::env::temp_dir().join("opencode-http-test-home").into_os_string())
+    })
+    .expect("global paths");
+    let mut services = GlobalServices::new(
+        state.db.clone(),
+        paths,
+        "/tmp/opencode-http-test".to_owned(),
+        Arc::new(|_: &str| None),
+        state.bus.clone(),
+        crate::global_plugins(),
+        "test-version".to_owned(),
+        "test".to_owned(),
+    );
+    services.attach_sessions(state.bus.clone(), state.store.clone(), "test-version".to_owned());
     let app = App::new(Options {
         password: "pw".to_owned(),
         version: "test-version".to_owned(),
@@ -18,8 +36,8 @@ fn ready_app_with_state() -> Arc<App> {
         tmp: PathBuf::from("/tmp/opencode-http-test"),
         hostname: None,
         urls: Arc::new(|| vec!["http://127.0.0.1:4096".to_owned()]),
-        state: Some(Arc::new(state)),
-        services: Some(crate::services()),
+        state: Some(state),
+        services: Some(Arc::new(services)),
     });
     app.status().ready();
     app
@@ -142,6 +160,24 @@ fn sample_request(operation: &str) -> Option<(&'static str, &'static str)> {
         "session.form.get" => Some(("GET", "/api/session/ses_test/form/frm_test")),
         "session.form.cancel" => Some(("DELETE", "/api/session/ses_test/form/frm_test")),
         "session.form.reply" => Some(("POST", "/api/session/ses_test/form/frm_test/reply")),
+        "session.list" => Some(("GET", "/api/session")),
+        "session.create" => Some(("POST", "/api/session")),
+        "session.get" => Some(("GET", "/api/session/ses_test")),
+        "session.remove" => Some(("DELETE", "/api/session/ses_test")),
+        "session.update" => Some(("PATCH", "/api/session/ses_test")),
+        "session.prompt" => Some(("POST", "/api/session/ses_test/prompt")),
+        "session.message.list" => Some(("GET", "/api/session/ses_test/message")),
+        "session.inbox.list" => Some(("GET", "/api/session/ses_test/inbox")),
+        "model.list" => Some(("GET", "/api/model")),
+        "session.switchAgent" => Some(("POST", "/api/session/ses_test/agent")),
+        "session.switchModel" => Some(("POST", "/api/session/ses_test/model")),
+        "session.active" => Some(("GET", "/api/session/active")),
+        "experimental.session.wait" => Some(("POST", "/api/experimental/session/ses_test/wait")),
+        "experimental.job.list" => Some(("GET", "/api/experimental/job")),
+        "plugin.list" => Some(("GET", "/api/plugin")),
+        "plugin.gui" => Some(("GET", "/api/plugin/gui?id=missing")),
+        "plugin.check" => Some(("POST", "/api/plugin/check")),
+        "plugin.update" => Some(("POST", "/api/plugin/update")),
         _ => None,
     }
 }
@@ -157,12 +193,12 @@ async fn unknown_paths_are_an_empty_404() {
 #[tokio::test]
 async fn unimplemented_routes_are_501() {
     let app = ready_app();
-    let response = app.handle(authorized("GET", "/api/session")).await;
+    let response = app.handle(authorized("GET", "/api/experimental/session/stats")).await;
     assert_eq!(response.status(), StatusCode::NOT_IMPLEMENTED);
     assert_eq!(content_type(&response), Some("application/json"));
     assert_eq!(
         text(response).await,
-        r#"{"_tag":"UnknownError","message":"opencode-server does not implement session.list yet"}"#
+        r#"{"_tag":"UnknownError","message":"opencode-server does not implement session.stats yet"}"#
     );
 }
 
@@ -206,5 +242,23 @@ fn implemented_lists_the_ported_operations() {
     ] {
         assert!(opencode_http::app::IMPLEMENTED.contains(&operation), "{operation}");
     }
-    assert_eq!(opencode_http::app::IMPLEMENTED.len(), 34);
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"session.list"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"session.create"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"session.get"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"session.update"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"session.remove"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"session.prompt"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"session.message.list"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"session.inbox.list"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"model.list"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"session.switchAgent"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"session.switchModel"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"session.active"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"experimental.session.wait"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"experimental.job.list"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"plugin.list"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"plugin.gui"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"plugin.check"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"plugin.update"));
+    assert_eq!(opencode_http::app::IMPLEMENTED.len(), 52);
 }

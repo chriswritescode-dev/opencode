@@ -1,6 +1,6 @@
 # Operation coverage
 
-Implemented: 34 of 178 operations
+Implemented: 52 of 178 operations
 
 | Operation | Method | Path | Stability | Status |
 | --- | --- | --- | --- | --- |
@@ -11,36 +11,36 @@ Implemented: 34 of 178 operations
 | `location.reload` | POST | `/api/location/reload` | stable | implemented |
 | `agent.list` | GET | `/api/agent` | stable | implemented |
 | `agent.get` | GET | `/api/agent/{agentID}` | stable | implemented |
-| `plugin.list` | GET | `/api/plugin` | stable | not implemented (501) |
-| `plugin.gui` | GET | `/api/plugin/gui` | stable | not implemented (501) |
-| `plugin.check` | POST | `/api/plugin/check` | stable | not implemented (501) |
-| `plugin.update` | POST | `/api/plugin/update` | stable | not implemented (501) |
-| `session.list` | GET | `/api/session` | stable | not implemented (501) |
-| `session.create` | POST | `/api/session` | stable | not implemented (501) |
+| `plugin.list` | GET | `/api/plugin` | stable | implemented |
+| `plugin.gui` | GET | `/api/plugin/gui` | stable | implemented |
+| `plugin.check` | POST | `/api/plugin/check` | stable | implemented |
+| `plugin.update` | POST | `/api/plugin/update` | stable | implemented |
+| `session.list` | GET | `/api/session` | stable | implemented |
+| `session.create` | POST | `/api/session` | stable | implemented |
 | `experimental.session.stats` | GET | `/api/experimental/session/stats` | experimental | not implemented (501) |
 | `experimental.session.import` | POST | `/api/experimental/session/import` | experimental | not implemented (501) |
 | `experimental.session.export` | GET | `/api/experimental/session/{sessionID}/export` | experimental | not implemented (501) |
-| `session.active` | GET | `/api/session/active` | stable | not implemented (501) |
-| `session.get` | GET | `/api/session/{sessionID}` | stable | not implemented (501) |
-| `session.remove` | DELETE | `/api/session/{sessionID}` | stable | not implemented (501) |
-| `session.update` | PATCH | `/api/session/{sessionID}` | stable | not implemented (501) |
+| `session.active` | GET | `/api/session/active` | stable | implemented |
+| `session.get` | GET | `/api/session/{sessionID}` | stable | implemented |
+| `session.remove` | DELETE | `/api/session/{sessionID}` | stable | implemented |
+| `session.update` | PATCH | `/api/session/{sessionID}` | stable | implemented |
 | `session.fork` | POST | `/api/session/{sessionID}/fork` | stable | not implemented (501) |
-| `session.switchAgent` | POST | `/api/session/{sessionID}/agent` | stable | not implemented (501) |
-| `session.switchModel` | POST | `/api/session/{sessionID}/model` | stable | not implemented (501) |
+| `session.switchAgent` | POST | `/api/session/{sessionID}/agent` | stable | implemented |
+| `session.switchModel` | POST | `/api/session/{sessionID}/model` | stable | implemented |
 | `session.move` | POST | `/api/session/{sessionID}/move` | stable | not implemented (501) |
-| `session.prompt` | POST | `/api/session/{sessionID}/prompt` | stable | not implemented (501) |
+| `session.prompt` | POST | `/api/session/{sessionID}/prompt` | stable | implemented |
 | `session.command` | POST | `/api/session/{sessionID}/command` | stable | not implemented (501) |
 | `experimental.session.skill` | POST | `/api/experimental/session/{sessionID}/skill` | experimental | not implemented (501) |
 | `session.synthetic` | POST | `/api/session/{sessionID}/synthetic` | stable | not implemented (501) |
 | `session.shell` | POST | `/api/session/{sessionID}/shell` | stable | not implemented (501) |
 | `session.compact` | POST | `/api/session/{sessionID}/compact` | stable | not implemented (501) |
-| `experimental.session.wait` | POST | `/api/experimental/session/{sessionID}/wait` | experimental | not implemented (501) |
+| `experimental.session.wait` | POST | `/api/experimental/session/{sessionID}/wait` | experimental | implemented |
 | `session.revert.stage` | POST | `/api/session/{sessionID}/revert/stage` | stable | not implemented (501) |
 | `session.revert.clear` | DELETE | `/api/session/{sessionID}/revert` | stable | not implemented (501) |
 | `session.revert.commit` | POST | `/api/session/{sessionID}/revert/commit` | stable | not implemented (501) |
 | `session.context` | GET | `/api/session/{sessionID}/context` | stable | not implemented (501) |
 | `session.diff` | GET | `/api/session/{sessionID}/diff` | stable | not implemented (501) |
-| `session.inbox.list` | GET | `/api/session/{sessionID}/inbox` | stable | not implemented (501) |
+| `session.inbox.list` | GET | `/api/session/{sessionID}/inbox` | stable | implemented |
 | `session.inbox.cancel` | DELETE | `/api/session/{sessionID}/inbox/{inboxID}` | stable | not implemented (501) |
 | `session.inbox.update` | PATCH | `/api/session/{sessionID}/inbox/{inboxID}` | stable | not implemented (501) |
 | `experimental.session.instructions.entry.list` | GET | `/api/experimental/session/{sessionID}/instructions/entries` | experimental | not implemented (501) |
@@ -58,8 +58,8 @@ Implemented: 34 of 178 operations
 | `session.form.reply` | POST | `/api/session/{sessionID}/form/{formID}/reply` | stable | implemented |
 | `session.environment` | PUT | `/api/session/{sessionID}/environment` | stable | not implemented (501) |
 | `session.view` | POST | `/api/session/{sessionID}/view` | stable | not implemented (501) |
-| `session.message.list` | GET | `/api/session/{sessionID}/message` | stable | not implemented (501) |
-| `model.list` | GET | `/api/model` | stable | not implemented (501) |
+| `session.message.list` | GET | `/api/session/{sessionID}/message` | stable | implemented |
+| `model.list` | GET | `/api/model` | stable | implemented |
 | `model.default` | GET | `/api/model/default` | stable | not implemented (501) |
 | `experimental.generate.text` | POST | `/api/experimental/generate/text` | experimental | not implemented (501) |
 | `experimental.generate.textLegacy` | POST | `/api/experimental/generate` | experimental | not implemented (501) |
@@ -150,7 +150,7 @@ Implemented: 34 of 178 operations
 | `experimental.artifacts.update` | PATCH | `/api/experimental/artifacts/{artifactID}` | experimental | not implemented (501) |
 | `experimental.artifacts.delete` | DELETE | `/api/experimental/artifacts/{artifactID}` | experimental | not implemented (501) |
 | `experimental.artifacts.view` | GET | `/api/experimental/artifacts/{artifactID}/view/*` | experimental | not implemented (501) |
-| `experimental.job.list` | GET | `/api/experimental/job` | experimental | not implemented (501) |
+| `experimental.job.list` | GET | `/api/experimental/job` | experimental | implemented |
 | `experimental.job.cancel` | POST | `/api/experimental/job/{id}/cancel` | experimental | not implemented (501) |
 | `experimental.machine.link` | GET | `/api/experimental/machine/link` | experimental | not implemented (501) |
 | `experimental.machine.list` | GET | `/api/experimental/machine` | experimental | not implemented (501) |

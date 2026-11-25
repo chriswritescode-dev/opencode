@@ -9,10 +9,15 @@ pub mod defect;
 pub mod event;
 pub mod form;
 pub mod invalid;
+pub mod job;
 pub mod location;
+pub mod message;
+pub mod model;
 pub mod permission;
+pub mod plugin;
 pub mod project;
 pub mod registry;
+pub mod session;
 pub mod session_log;
 
 pub(crate) fn location_ref(services: &LocationServices) -> LocationPublicRef {
