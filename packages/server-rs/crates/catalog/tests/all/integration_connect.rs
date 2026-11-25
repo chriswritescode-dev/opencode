@@ -997,6 +997,89 @@ async fn code_completion_settles_after_the_caller_is_dropped() {
     assert_eq!(credentials.list(&integration).expect("list the credentials").len(), 1);
 }
 
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn code_completion_settles_when_the_caller_is_dropped_before_the_callback_returns() {
+    let (_dir, _database, _bus, credentials, service) = setup();
+    let integration = integration_id("openai");
+    let method_id = IntegrationMethodID("chatgpt".to_owned());
+    let release = Arc::new(Semaphore::new(0));
+    let entered = Arc::new(AtomicBool::new(false));
+    let _registration = service
+        .transform({
+            let integration = integration.clone();
+            let method_id = method_id.clone();
+            let release = release.clone();
+            let entered = entered.clone();
+            move |editor| {
+                let method_id = method_id.clone();
+                let release = release.clone();
+                let entered = entered.clone();
+                editor.method_update(scripted(
+                    &integration,
+                    oauth_method("chatgpt", "ChatGPT"),
+                    move |_| {
+                        let method_id = method_id.clone();
+                        let release = release.clone();
+                        let entered = entered.clone();
+                        Box::pin(async move {
+                            Ok(OAuthAuthorization {
+                                url: "https://example.com/authorize".to_owned(),
+                                instructions: "Paste the code".to_owned(),
+                                expires_at: None,
+                                mode: OAuthMode::Code {
+                                    callback: Box::new(move |_| {
+                                        let method_id = method_id.clone();
+                                        let release = release.clone();
+                                        let entered = entered.clone();
+                                        Box::pin(async move {
+                                            entered.store(true, Ordering::SeqCst);
+                                            release.acquire().await.expect("release the code callback").forget();
+                                            Ok(oauth_value(&method_id, "access"))
+                                        })
+                                    }),
+                                },
+                            })
+                        })
+                    },
+                    None,
+                ));
+                Ok(())
+            }
+        })
+        .await;
+
+    let attempt = service
+        .oauth()
+        .connect(OAuthConnectInput { integration_id: integration.clone(), method_id, answer: None, label: None })
+        .await
+        .expect("connect the oauth method");
+
+    let completion = tokio::spawn({
+        let service = service.clone();
+        let integration = integration.clone();
+        let attempt_id = attempt.attempt_id.clone();
+        async move { service.oauth().complete(&integration, &attempt_id, Some("1234")).await }
+    });
+    while !entered.load(Ordering::SeqCst) {
+        tokio::time::sleep(Duration::from_millis(1)).await;
+    }
+    completion.abort();
+    release.add_permits(1);
+
+    let status = eventually(|| {
+        let service = service.clone();
+        let integration = integration.clone();
+        let attempt_id = attempt.attempt_id.clone();
+        async move {
+            let status = service.oauth().status(&integration, &attempt_id).await.ok()?;
+            matches!(&status, AttemptStatus::Complete { .. }).then_some(status)
+        }
+    })
+    .await;
+    assert_eq!(status, AttemptStatus::Complete { time: attempt.time });
+    assert_eq!(credentials.list(&integration).expect("list the credentials").len(), 1);
+}
+
 #[cfg(unix)]
 #[tokio::test(flavor = "multi_thread")]
 async fn runs_command_authentication_and_stores_the_final_output() {
