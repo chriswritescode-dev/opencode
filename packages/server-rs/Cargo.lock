@@ -856,6 +856,7 @@ dependencies = [
  "opencode-location",
  "opencode-session",
  "opencode-storage",
+ "opencode-vcs",
  "rand",
  "ring",
  "rustix",
@@ -996,6 +997,27 @@ dependencies = [
  "libc",
  "ring",
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "opencode-vcs"
+version = "0.1.0"
+dependencies = [
+ "futures-util",
+ "log",
+ "notify",
+ "opencode-bus",
+ "opencode-config",
+ "opencode-contract",
+ "opencode-git",
+ "opencode-location",
+ "opencode-storage",
+ "opencode-util",
+ "ring",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
 ]
 
 [[package]]

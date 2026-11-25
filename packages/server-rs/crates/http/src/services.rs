@@ -26,6 +26,7 @@ use opencode_location::location::{BootError, LocationInfo, boot_location};
 use opencode_location::map::LocationMap;
 use opencode_location::project::{ProjectService, SWEEP_INTERVAL_MS};
 use opencode_storage::Database;
+use opencode_vcs::snapshot::Snapshot;
 use serde_json::Value;
 use tokio::task::JoinHandle;
 
@@ -50,11 +51,13 @@ pub struct LocationServices {
     pub lifecycle: Lifecycle,
     pub environment: Arc<dyn Environment>,
     pub config: ConfigService,
+    pub snapshot: Arc<Snapshot>,
 }
 
 impl GlobalServices {
     pub fn new(database: Arc<Database>, paths: GlobalPaths, start_directory: String, config_env: ConfigEnv) -> Self {
         let git = Arc::new(opencode_git::Git::new(config_env.clone()));
+        let boot_git = git.clone();
         let projects = Arc::new(ProjectService::new(database.clone(), git));
         let wellknown = Arc::new(WellKnown::new(Arc::new(StorageKv { database: database.clone() })));
         let environment: Arc<dyn Environment> = Arc::new(LocalEnvironment::new());
@@ -73,8 +76,10 @@ impl GlobalServices {
             let wellknown = boot_wellknown.clone();
             let channel = channel.clone();
             let flag_overrides = flag_overrides.clone();
+            let boot_git = boot_git.clone();
             Box::pin(async move {
                 let info = boot_location(&reference, &projects, environment.as_ref()).await?;
+                let snapshot = Arc::new(Snapshot::new(boot_git, &info, paths.data.clone()));
                 let config = ConfigService::start(
                     ConfigOptions::from_vars(|name| config_env(name)),
                     ConfigLocation { directory: PathBuf::from(&info.directory), project_id: info.project.id.clone() },
@@ -82,8 +87,9 @@ impl GlobalServices {
                     ServiceDeps { credentials: Arc::new(()), wellknown, channel, flag_overrides },
                 )
                 .await;
+                snapshot.observe_config(&config).await;
                 let lifecycle = Lifecycle::start(projects, &info).await?;
-                Ok(Arc::new(LocationServices { info, lifecycle, environment, config }))
+                Ok(Arc::new(LocationServices { info, lifecycle, environment, config, snapshot }))
             })
         });
         let activity = Activity::spawn(

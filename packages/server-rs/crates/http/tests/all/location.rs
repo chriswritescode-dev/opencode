@@ -122,6 +122,18 @@ async fn location_list_reports_loaded_locations_in_order() {
 }
 
 #[tokio::test]
+async fn every_location_exposes_one_snapshot_service() {
+    let start = temp_directory("location-snapshot");
+    let services = services_at(&start);
+    let reference = LocationRef::new(start.to_string_lossy().into_owned(), None);
+    let lease = services.locations.get(&reference).await.expect("boot the location");
+    let snapshot = lease.services().snapshot.clone();
+    let loaded = services.locations.services(&reference).await.expect("the loaded location");
+    assert!(Arc::ptr_eq(&snapshot, &loaded.snapshot));
+    drop(lease);
+}
+
+#[tokio::test]
 async fn evicting_an_unloaded_location_is_a_no_op() {
     let start = temp_directory("location-evict-start");
     let unloaded = temp_directory("location-evict-unloaded");

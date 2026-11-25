@@ -1,0 +1,32 @@
+[package]
+name = "opencode-vcs"
+description = "Location-scoped snapshot capture, diff and restore over the shared git handle."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+autotests = false
+
+[lints]
+workspace = true
+
+[dependencies]
+futures-util.workspace = true
+log.workspace = true
+notify.workspace = true
+opencode-bus.workspace = true
+opencode-config.workspace = true
+opencode-contract.workspace = true
+opencode-git.workspace = true
+opencode-location.workspace = true
+opencode-storage.workspace = true
+opencode-util.workspace = true
+ring.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+
+[[test]]
+name = "all"
+path = "tests/all/main.rs"
