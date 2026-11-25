@@ -13,6 +13,7 @@ use opencode_contract::generated::{
 };
 use opencode_storage::Database;
 use serde_json::Value;
+use tokio::sync::watch;
 
 use crate::context::{self, LoadInput, Loaded};
 use crate::execution::{ExecutionError, Placement};
@@ -59,13 +60,19 @@ impl Runner {
         Self { store, bus, database, placement, client, app }
     }
 
-    pub async fn drain(&self, session_id: &str) -> Result<(), ExecutionError> {
-        let placed = self.placement.place(session_id.to_owned()).await.map_err(ExecutionError::Placement)?;
+    pub async fn drain(&self, session_id: &str, mut cancel: watch::Receiver<bool>) -> Result<(), ExecutionError> {
+        let placed = tokio::select! {
+            _ = cancel.changed() => return Err(ExecutionError::Interrupted),
+            placed = self.placement.place(session_id.to_owned()) => placed.map_err(ExecutionError::Placement)?,
+        };
         let location = placed.location().cloned();
         let mut step = 1u64;
         let mut continuation = false;
         let mut consecutive_lengths = 0u32;
         loop {
+            if *cancel.borrow() {
+                return Err(ExecutionError::Interrupted);
+            }
             if placed.is_closed() {
                 return Ok(());
             }
@@ -105,7 +112,7 @@ impl Runner {
             .map_err(ExecutionError::Context)?;
             let assistant_id = format!("msg_{}", opencode_storage::id::ascending());
             log::debug!("running session step {step} for {session_id}");
-            let outcome = self.step(session_id, &loaded, &assistant_id, location.clone()).await?;
+            let outcome = self.step(session_id, &loaded, &assistant_id, location.clone(), &mut cancel).await?;
             match outcome {
                 StepOutcome::Done => {
                     consecutive_lengths = 0;
@@ -142,6 +149,7 @@ impl Runner {
         loaded: &Loaded,
         assistant_id: &str,
         location: Option<LocationRef>,
+        cancel: &mut watch::Receiver<bool>,
     ) -> Result<StepOutcome, ExecutionError> {
         let request = model_request::prepare(loaded, &self.app);
         let started = opencode_storage::id::now_ms();
@@ -159,7 +167,11 @@ impl Runner {
         );
         let mut policy = RetryPolicy::new();
         let mut delta_deadline: Option<tokio::time::Instant> = None;
-        loop {
+        let mut cancelled = *cancel.borrow();
+        'stream: loop {
+            if cancelled {
+                break;
+            }
             let mut stream = self.client.stream(&loaded.runtime, request.clone(), StreamOptions::default());
             let mut failure = None;
             loop {
@@ -167,6 +179,10 @@ impl Runner {
                     let deadline = *delta_deadline
                         .get_or_insert_with(|| tokio::time::Instant::now() + Duration::from_millis(DELTA_FLUSH_MS));
                     tokio::select! {
+                        _ = cancel.changed() => {
+                            cancelled = true;
+                            None
+                        }
                         event = stream.next() => event,
                         _ = tokio::time::sleep_until(deadline) => {
                             publisher.flush_pending_deltas().map_err(bus_error)?;
@@ -176,8 +192,17 @@ impl Runner {
                     }
                 } else {
                     delta_deadline = None;
-                    stream.next().await
+                    tokio::select! {
+                        _ = cancel.changed() => {
+                            cancelled = true;
+                            None
+                        }
+                        event = stream.next() => event,
+                    }
                 };
+                if cancelled {
+                    break 'stream;
+                }
                 match next {
                     Some(Ok(event)) => publisher.publish(&event).map_err(bus_error)?,
                     Some(Err(error)) => {
@@ -206,7 +231,13 @@ impl Runner {
                     },
                     location.clone(),
                 )?;
-                tokio::time::sleep(decision.delay).await;
+                tokio::select! {
+                    _ = cancel.changed() => {
+                        cancelled = true;
+                        break 'stream;
+                    }
+                    _ = tokio::time::sleep(decision.delay) => {}
+                }
                 continue;
             }
             publisher.start().map_err(bus_error)?;
@@ -227,6 +258,10 @@ impl Runner {
                 location.clone(),
             )?;
             return Err(ExecutionError::Ai(error));
+        }
+        if cancelled {
+            publisher.flush().map_err(bus_error)?;
+            return self.interrupted(session_id, assistant_id, &mut publisher, location);
         }
         publisher.streamed().map_err(bus_error)?;
         let record = publisher.record();
@@ -293,6 +328,42 @@ impl Runner {
             Some(SessionStepEndedDataFinish::Length) => Ok(StepOutcome::Length),
             _ => Ok(StepOutcome::Done),
         }
+    }
+
+    fn interrupted(
+        &self,
+        session_id: &str,
+        assistant_id: &str,
+        publisher: &mut Publisher,
+        location: Option<LocationRef>,
+    ) -> Result<StepOutcome, ExecutionError> {
+        if !publisher.has_started() {
+            return Err(ExecutionError::Interrupted);
+        }
+        publisher.streamed().map_err(bus_error)?;
+        self.publish_durable(
+            "session.step.failed",
+            &SessionStepFailedData {
+                session_id: SessionID(session_id.to_owned()),
+                assistant_message_id: SessionMessageID(assistant_id.to_owned()),
+                error: SessionStructuredError {
+                    r#type: "aborted".to_owned(),
+                    message: "Step interrupted".to_owned(),
+                    status: None,
+                    response: None,
+                    retry_after_ms: None,
+                },
+                finish: None,
+                raw_finish: None,
+                native: None,
+                cost: None,
+                tokens: None,
+                snapshot: None,
+                files: None,
+            },
+            location,
+        )?;
+        Err(ExecutionError::Interrupted)
     }
 
     fn publish_durable<T: Encode>(

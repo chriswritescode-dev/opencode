@@ -194,6 +194,10 @@ impl Publisher {
         pending(&self.text) || pending(&self.reasoning)
     }
 
+    pub fn has_started(&self) -> bool {
+        self.step_started
+    }
+
     pub fn record(&self) -> Record {
         Record {
             output_started: self.output_started,

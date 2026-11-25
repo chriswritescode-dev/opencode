@@ -97,4 +97,6 @@ A deviation that excepts a recorded cassette from the replay gate also has a `Ca
 - `OR-45-corpus-normalisation.md`: the corpus normalises transport noise and replay skips some byte comparisons
 - `OR-49-registry-events.md`: plugin and catalog registries publish no updated events
 - `OR-49-prompt-attachments.md`: prompt file attachments and skills are rejected instead of materialized
+- `OR-49-title-generation.md`: an empty title does not regenerate the session title
+- `OR-49-tool-definitions.md`: requests omit the `skill` tool definition TypeScript sends when every tool is denied
 - `OR-61-sidecar-environment.md`: plugins run in a sidecar with an allowlisted environment instead of inside the server

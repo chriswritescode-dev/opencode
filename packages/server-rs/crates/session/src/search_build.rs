@@ -35,6 +35,7 @@ impl SessionSearchBuild {
         if let Err(error) = self.build().await {
             log::error!("session search build stopped: {error}");
         }
+        *self.started.lock().expect("the session search build latch is never poisoned") = false;
     }
 
     async fn build(&self) -> Result<(), StorageError> {
@@ -74,7 +75,11 @@ impl SessionSearchBuild {
                     }
                     failures += 1;
                     if failures >= MAX_FAILURES {
-                        retry_on_busy(|| search_index::fail(database, &error.to_string())).await?;
+                        if let Err(fail_error) =
+                            retry_on_busy(|| search_index::fail(database, &error.to_string())).await
+                        {
+                            log::error!("session search build could not record its failure: {fail_error}");
+                        }
                         log::error!("session search build failed: {error}");
                         return Ok(());
                     }

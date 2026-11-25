@@ -186,6 +186,7 @@ struct Response {
     extra: &'static str,
     body: String,
     delay: Option<Duration>,
+    after_first_delta: bool,
 }
 
 impl Response {
@@ -197,6 +198,7 @@ impl Response {
             extra: "",
             body: cassette_body(),
             delay: None,
+            after_first_delta: false,
         }
     }
 
@@ -208,11 +210,18 @@ impl Response {
             extra: "x-should-retry: false\r\n",
             body: r#"{"error":{"type":"api_error","message":"boom"}}"#.to_owned(),
             delay: None,
+            after_first_delta: false,
         }
     }
 
     fn delayed(mut self) -> Self {
         self.delay = Some(Duration::from_secs(5));
+        self
+    }
+
+    fn delayed_after_first_delta(mut self) -> Self {
+        self.delay = Some(Duration::from_secs(30));
+        self.after_first_delta = true;
         self
     }
 }
@@ -237,7 +246,11 @@ async fn start_server(response: Response) -> u16 {
                 let _ = socket.write_all(head.as_bytes()).await;
                 match response.delay {
                     Some(delay) => {
-                        let split = response.body.find("content_block_delta").unwrap_or(response.body.len());
+                        let split = if response.after_first_delta {
+                            end_of_first_delta(&response.body)
+                        } else {
+                            response.body.find("content_block_delta").unwrap_or(response.body.len())
+                        };
                         let _ = socket.write_all(&response.body.as_bytes()[..split]).await;
                         tokio::time::sleep(delay).await;
                         let _ = socket.write_all(&response.body.as_bytes()[split..]).await;
@@ -282,6 +295,11 @@ async fn read_request(socket: &mut TcpStream) {
 
 fn headers_end(buffer: &[u8]) -> Option<usize> {
     buffer.windows(4).position(|window| window == b"\r\n\r\n")
+}
+
+fn end_of_first_delta(body: &str) -> usize {
+    let start = body.find("event: content_block_delta").unwrap_or(body.len());
+    body[start..].find("\n\n").map_or(body.len(), |end| start + end + 2)
 }
 
 async fn next_event(subscription: &mut Subscription) -> Arc<Event> {
@@ -448,4 +466,64 @@ async fn removing_a_running_session_interrupts_the_drain_first() {
         .expect("the drain is interrupted");
     assert_eq!(interrupted.data()["reason"], json!("user"));
     assert!(matches!(setup.sessions.get("ses_1"), Err(SessionError::NotFound(_))));
+}
+
+#[tokio::test]
+async fn interrupting_a_streaming_step_flushes_partial_output() {
+    let port = start_server(Response::cassette().delayed_after_first_delta()).await;
+    let setup = setup(port);
+    let mut subscription = setup.bus.subscribe_all(None);
+    prompt(&setup.sessions);
+    let mut events = collect_until(&mut subscription, "session.text.delta").await;
+    tokio::time::timeout(Duration::from_secs(10), setup.sessions.execution().interrupt("ses_1"))
+        .await
+        .expect("the interrupt returns before the timeout");
+    events.extend(collect_until(&mut subscription, "session.execution.interrupted").await);
+    let position = |r#type: &str| {
+        events.iter().position(|event| event.r#type() == r#type).unwrap_or_else(|| panic!("missing {}", r#type))
+    };
+    let ended = events
+        .iter()
+        .find(|event| event.r#type() == "session.text.ended")
+        .expect("the interrupted step ends the open text block");
+    assert_eq!(ended.data()["text"], json!("Hello"));
+    let failed = events
+        .iter()
+        .find(|event| event.r#type() == "session.step.failed")
+        .expect("the interrupted step is recorded as failed");
+    assert_eq!(failed.data()["error"]["type"], json!("aborted"));
+    assert_eq!(failed.data()["error"]["message"], json!("Step interrupted"));
+    assert!(position("session.text.ended") < position("session.step.failed"));
+    assert!(position("session.step.failed") < position("session.execution.interrupted"));
+    let interrupted = events
+        .iter()
+        .find(|event| event.r#type() == "session.execution.interrupted")
+        .expect("the drain is interrupted");
+    assert_eq!(interrupted.data()["reason"], json!("user"));
+}
+
+#[tokio::test]
+async fn every_wake_drains_its_prompt() {
+    let port = start_server(Response::cassette()).await;
+    let setup = setup(port);
+    let rounds = 20;
+    for _ in 0..rounds {
+        prompt(&setup.sessions);
+        setup.sessions.wait_idle("ses_1").await;
+        assert!(setup.sessions.active().is_empty());
+    }
+    let assistants = setup
+        .store
+        .messages(&MessagesInput {
+            session_id: "ses_1".to_owned(),
+            limit: None,
+            order: Some(Order::Asc),
+            r#type: None,
+            cursor: None,
+        })
+        .expect("read the session messages")
+        .iter()
+        .filter(|message| matches!(message, SessionMessageInfo::Assistant(_)))
+        .count();
+    assert_eq!(assistants, rounds);
 }

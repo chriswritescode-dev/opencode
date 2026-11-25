@@ -1,3 +1,7 @@
+use std::sync::Arc;
+use std::time::Duration;
+
+use opencode_session::search_build::SessionSearchBuild;
 use opencode_session::search_index::{self, Ensured, Layout, Phase, Status, VERSION};
 use opencode_storage::{Database, DatabaseLocation, kv};
 
@@ -124,6 +128,55 @@ fn insert_text_part(database: &Database, message_id: &str, text: &str) {
             Ok(())
         })
         .expect("insert the session part");
+}
+
+fn write_state(database: &Database, status: Status) {
+    let state = search_index::State {
+        version: VERSION,
+        layout: Layout::Compact,
+        status,
+        phase: Phase::Titles,
+        after: None,
+        processed: 0,
+        total: 0,
+        skipped: 0,
+        error: None,
+    };
+    let value = serde_json::to_value(state).expect("serialize the search state");
+    database
+        .read(|connection| {
+            kv::set(connection, "session.search", &value)?;
+            Ok(())
+        })
+        .expect("write the search state");
+}
+
+async fn wait_for_status(database: &Database, status: Status) {
+    for _ in 0..1_000 {
+        if search_index::state(database).expect("read the search state").is_some_and(|state| state.status == status) {
+            return;
+        }
+        tokio::time::sleep(Duration::from_millis(5)).await;
+    }
+    panic!("the search state never became {status:?}");
+}
+
+#[tokio::test]
+async fn start_runs_a_later_build_after_a_finished_one() {
+    let (_dir, database) = open_database();
+    let database = Arc::new(database);
+    let build = Arc::new(SessionSearchBuild::new(database.clone()));
+
+    build.start();
+    wait_for_status(&database, Status::Done).await;
+
+    write_state(&database, Status::Building);
+    build.start();
+    wait_for_status(&database, Status::Done).await;
+
+    write_state(&database, Status::Failed);
+    build.start();
+    wait_for_status(&database, Status::Done).await;
 }
 
 #[test]

@@ -112,6 +112,7 @@ pub fn structured(error: &ExecutionError) -> SessionStructuredError {
     match error {
         ExecutionError::Ai(error) => structured_ai(error),
         ExecutionError::OutputLimit => plain("output-limit", error.to_string()),
+        ExecutionError::Interrupted => plain("aborted", error.to_string()),
         ExecutionError::Context(ContextError::ModelNotSelected { .. } | ContextError::ModelUnavailable { .. }) => {
             plain("provider.no-route", error.to_string())
         }

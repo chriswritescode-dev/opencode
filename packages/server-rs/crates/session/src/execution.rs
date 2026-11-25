@@ -1,8 +1,10 @@
 use std::collections::HashMap;
 use std::fmt;
+use std::panic::AssertUnwindSafe;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
+use futures_util::FutureExt;
 use futures_util::future::BoxFuture;
 use opencode_ai::{AiError, Env};
 use opencode_bus::{Bus, BusError, Definition, PublishOptions};
@@ -86,6 +88,7 @@ pub enum ExecutionError {
     Context(ContextError),
     Ai(AiError),
     OutputLimit,
+    Interrupted,
     Placement(String),
     Message(String),
     Bus(String),
@@ -99,6 +102,7 @@ impl fmt::Display for ExecutionError {
             ExecutionError::OutputLimit => {
                 formatter.write_str("Response still truncated after two output token limit continuations")
             }
+            ExecutionError::Interrupted => formatter.write_str("Step interrupted"),
             ExecutionError::Placement(message) | ExecutionError::Message(message) | ExecutionError::Bus(message) => {
                 formatter.write_str(message)
             }
@@ -185,11 +189,7 @@ impl State {
     }
 
     fn wake(self: &Arc<Self>, session_id: &str) {
-        let active = self.active.lock().expect("the execution map lock is never poisoned").get(session_id).cloned();
-        match active {
-            Some(active) => active.pending.store(true, Ordering::SeqCst),
-            None => self.start(session_id),
-        }
+        self.start(session_id);
     }
 
     async fn run(self: Arc<Self>, session_id: String, active: Arc<Active>) {
@@ -201,28 +201,28 @@ impl State {
     }
 
     async fn busy(&self, session_id: &str, active: &Active) -> Terminal {
-        let mut cancel = active.cancel.subscribe();
         loop {
-            let cancelled = cancel.wait_for(|value| *value);
-            tokio::pin!(cancelled);
-            let drain = self.runner.drain(session_id);
-            tokio::pin!(drain);
-            let drained = tokio::select! {
-                _ = &mut cancelled => None,
-                result = &mut drain => Some(result),
-            };
+            let cancel = active.cancel.subscribe();
+            if *cancel.borrow() {
+                return Terminal::Interrupted(interrupt_reason(active));
+            }
+            let drained = AssertUnwindSafe(self.runner.drain(session_id, cancel)).catch_unwind().await;
             match drained {
-                None => {
-                    let reason = *active.reason.lock().expect("the interrupt reason lock is never poisoned");
-                    return Terminal::Interrupted(reason.unwrap_or(InterruptReason::Shutdown));
-                }
-                Some(Ok(())) => {
+                Ok(Ok(())) => {
+                    if *active.cancel.borrow() {
+                        return Terminal::Interrupted(interrupt_reason(active));
+                    }
                     if active.pending.swap(false, Ordering::SeqCst) {
                         continue;
                     }
                     return Terminal::Succeeded;
                 }
-                Some(Err(error)) => return Terminal::Failed(Box::new(error)),
+                Ok(Err(ExecutionError::Interrupted)) => return Terminal::Interrupted(interrupt_reason(active)),
+                Ok(Err(error)) => return Terminal::Failed(Box::new(error)),
+                Err(_) => {
+                    log::error!("session drain panicked for {session_id}");
+                    return Terminal::Failed(Box::new(ExecutionError::Message("session drain panicked".to_owned())));
+                }
             }
         }
     }
@@ -267,17 +267,17 @@ impl State {
         if let Err(error) = self.bus.publish(&definition, value, options) {
             log::error!("failed to publish {} for {session_id}: {error}", definition.r#type);
         }
-        let pending = active.pending.swap(false, Ordering::SeqCst);
-        let successor = pending.then(|| Arc::new(Active::new()));
-        {
+        let successor = {
             let mut map = self.active.lock().expect("the execution map lock is never poisoned");
+            let successor = active.pending.swap(false, Ordering::SeqCst).then(|| Arc::new(Active::new()));
             if map.get(session_id).is_some_and(|current| Arc::ptr_eq(current, active)) {
                 map.remove(session_id);
             }
             if let Some(successor) = &successor {
                 map.insert(session_id.to_owned(), successor.clone());
             }
-        }
+            successor
+        };
         if let Some(successor) = successor {
             self.spawn(session_id.to_owned(), successor);
         }
@@ -360,6 +360,10 @@ impl Active {
             reason: Mutex::new(None),
         }
     }
+}
+
+fn interrupt_reason(active: &Active) -> InterruptReason {
+    active.reason.lock().expect("the interrupt reason lock is never poisoned").unwrap_or(InterruptReason::Shutdown)
 }
 
 fn json_value<T: Encode + ?Sized>(value: &T) -> Value {

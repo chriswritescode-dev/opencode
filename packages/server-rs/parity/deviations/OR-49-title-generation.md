@@ -5,7 +5,7 @@ request to generate one. A non-empty title renames the session through `session.
 `SessionTitle.Service.generate` with the session's instances, so the server derives a title from the conversation and
 publishes a rename.
 
-Rust: `crates/session/src/session.rs:167` only publishes `session.renamed` for a non-empty title, so
+Rust: `crates/session/src/session.rs:231` only publishes `session.renamed` for a non-empty title, so
 `crates/http/src/handlers/session.rs` answers `204 No Content` for `session.update` with `title: ""` and leaves the
 title unchanged.
 

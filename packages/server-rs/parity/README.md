@@ -234,6 +234,6 @@ messages.
 - `2`: a scenario, start, configuration or ledger error, such as a server that did not start, an invalid flag value, an
   unreadable cassette or a missing cassette interaction, unused model replies, an event stream that fails or ends while
   a `waitEvent` waits, a search index that does not settle within 30 s, or an accepted deviation file with no `parity`
-  block (or a pending one when `--allow-pending` is set). Any unexpected harness error prints `parity: <message>` and
+  block. Any unexpected harness error prints `parity: <message>` and
   exits `2`.
 - `128 + <signal>`: the harness received `SIGINT`, `SIGTERM` or `SIGHUP`.
