@@ -575,7 +575,10 @@ function register(connection, options) {
   connection.register("host.echo", echo);
   connection.register("host.memory", memory);
   let plugin;
-  const pluginHandlers = () => plugin ??= import(new URL(import.meta.url.endsWith(".js") ? "./plugins.js" : "./plugin/index.ts", import.meta.url).href).then((module) => module.handlers);
+  const pluginHandlers = () => plugin ??= import(new URL(import.meta.url.endsWith(".js") ? "./plugins.js" : "./plugin/index.ts", import.meta.url).href).then((module) => module.handlers).catch((error) => {
+    plugin = undefined;
+    throw error;
+  });
   for (const name of PLUGIN_METHODS) {
     connection.register(name, async (ctx, params, bytes) => {
       const handlers = await pluginHandlers();

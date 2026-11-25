@@ -83,6 +83,7 @@ async fn print_output_does_not_break_the_protocol() {
     }
 }
 
+#[cfg(target_os = "linux")]
 #[tokio::test]
 async fn the_plugin_bundle_is_present_but_not_loaded_until_used() {
     let config = support::config();
@@ -107,6 +108,7 @@ async fn the_plugin_bundle_is_present_but_not_loaded_until_used() {
     assert!(after.saturating_sub(before) < 5 * 1024 * 1024, "host.location loaded plugins.js");
 }
 
+#[cfg(target_os = "linux")]
 fn rss(pid: u32) -> u64 {
     let status = std::fs::read_to_string(format!("/proc/{pid}/status")).expect("the process status");
     let line = status.lines().find(|line| line.starts_with("VmRSS:")).expect("VmRSS");

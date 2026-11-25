@@ -446,6 +446,9 @@ async fn check_updates(core: Arc<Core>, resolved: Resolved, targets: Vec<String>
         }
     }))
     .await;
+    if core.generation.load(Ordering::SeqCst) != current {
+        return Ok(());
+    }
     let next = available.into_iter().collect::<HashSet<_>>();
     let changed = {
         let mut outdated = core.outdated.lock().expect("the plugin supervisor lock is never poisoned");
