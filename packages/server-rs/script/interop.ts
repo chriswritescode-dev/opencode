@@ -2,6 +2,7 @@ import { Database as BunDatabase } from "bun:sqlite"
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+import { runLockInterop } from "./interop/lock"
 import { dump, openTypescript } from "./storage/typescript"
 
 type Dump = {
@@ -19,29 +20,11 @@ const root = new URL("..", import.meta.url).pathname
 class InteropDifference extends Error {}
 
 const binary = `${root}target/debug/examples/storage`
+const lockBinary = `${root}target/debug/examples/lock`
 const corpus = (await Bun.file(`${root}crates/storage/tests/corpus/migrations.json`).json()) as Corpus
 
-const build = Bun.spawnSync(
-  [
-    "bun",
-    "run",
-    "cargo",
-    "build",
-    "--locked",
-    "-q",
-    "--target-dir",
-    `${root}target`,
-    "-p",
-    "opencode-storage",
-    "--example",
-    "storage",
-  ],
-  { cwd: root },
-)
-if (build.exitCode !== 0) {
-  process.stderr.write(build.stderr)
-  process.exit(1)
-}
+buildExample("opencode-storage", "storage")
+buildExample("opencode-catalog", "lock")
 
 const directory = await mkdtemp(join(tmpdir(), "opencode-interop-"))
 try {
@@ -88,11 +71,36 @@ try {
     databaseDump(rustFixture, corpus.masks),
     databaseDump(typescriptFixture, corpus.masks),
   )
+  await runLockInterop({ binary: lockBinary, directory: join(directory, "locks"), fail })
 } catch (caught) {
   console.error(caught instanceof InteropDifference ? caught.message : caught)
   process.exitCode = 1
 } finally {
   await rm(directory, { recursive: true, force: true })
+}
+
+function buildExample(packageName: string, example: string) {
+  const build = Bun.spawnSync(
+    [
+      "bun",
+      "run",
+      "cargo",
+      "build",
+      "--locked",
+      "-q",
+      "--target-dir",
+      `${root}target`,
+      "-p",
+      packageName,
+      "--example",
+      example,
+    ],
+    { cwd: root },
+  )
+  if (build.exitCode !== 0) {
+    process.stderr.write(build.stderr)
+    process.exit(1)
+  }
 }
 
 function run(command: string, file: string, data?: string) {
