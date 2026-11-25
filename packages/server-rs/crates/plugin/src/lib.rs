@@ -7,6 +7,7 @@ pub mod registry;
 pub mod script;
 pub mod sdk;
 pub mod supervisor;
+pub mod update;
 
 pub use generation::{ActivateContext, Activation, Activator, Features, Generation, Gui, Info, PluginState, Source};
 pub use host::{
@@ -19,3 +20,4 @@ pub use registry::{ActivateError, ActivationCell, Hold, Registry};
 pub use script::ScriptActivator;
 pub use sdk::{InstancePlugins, SdkPlugins};
 pub use supervisor::{Supervisor, SupervisorDeps, Updates};
+pub use update::{Change, INTERVAL, NpmPackage};

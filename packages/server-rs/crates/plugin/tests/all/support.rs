@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -224,8 +224,15 @@ pub struct FakeHost {
     installed: Arc<Mutex<BTreeMap<String, LoadOutcome>>>,
     loads: Arc<Mutex<Vec<(String, bool)>>>,
     npm: Arc<Mutex<BTreeMap<String, serde_json::Value>>>,
+    npm_errors: Arc<Mutex<BTreeMap<String, HostError>>>,
+    npm_delay: Arc<Mutex<Duration>>,
     calls: Arc<Mutex<Vec<String>>>,
-    gate: Option<Arc<tokio::sync::Notify>>,
+    load_gate: Arc<Mutex<Option<Arc<tokio::sync::Notify>>>>,
+    npm_gate: Arc<Mutex<Option<Arc<tokio::sync::Notify>>>>,
+    load_inflight: Arc<AtomicUsize>,
+    load_peak: Arc<AtomicUsize>,
+    npm_inflight: Arc<AtomicUsize>,
+    npm_peak: Arc<AtomicUsize>,
 }
 
 impl FakeHost {
@@ -236,8 +243,15 @@ impl FakeHost {
             installed: Arc::new(Mutex::new(BTreeMap::new())),
             loads: Arc::new(Mutex::new(Vec::new())),
             npm: Arc::new(Mutex::new(BTreeMap::new())),
+            npm_errors: Arc::new(Mutex::new(BTreeMap::new())),
+            npm_delay: Arc::new(Mutex::new(Duration::ZERO)),
             calls: Arc::new(Mutex::new(Vec::new())),
-            gate: None,
+            load_gate: Arc::new(Mutex::new(None)),
+            npm_gate: Arc::new(Mutex::new(None)),
+            load_inflight: Arc::new(AtomicUsize::new(0)),
+            load_peak: Arc::new(AtomicUsize::new(0)),
+            npm_inflight: Arc::new(AtomicUsize::new(0)),
+            npm_peak: Arc::new(AtomicUsize::new(0)),
         }
     }
 
@@ -270,12 +284,61 @@ impl FakeHost {
         self.installed.lock().expect("the test scripts are never poisoned").insert(target.into(), outcome);
     }
 
+    pub fn set_npm(&self, key: &str, value: serde_json::Value) {
+        self.npm.lock().expect("the test scripts are never poisoned").insert(key.to_string(), value);
+    }
+
+    pub fn set_npm_error(&self, key: &str, error: HostError) {
+        self.npm_errors.lock().expect("the test scripts are never poisoned").insert(key.to_string(), error);
+    }
+
+    pub fn clear_npm_error(&self, key: &str) {
+        self.npm_errors.lock().expect("the test scripts are never poisoned").remove(key);
+    }
+
+    pub fn set_npm_delay(&self, delay: Duration) {
+        *self.npm_delay.lock().expect("the test scripts are never poisoned") = delay;
+    }
+
+    pub fn set_load_gate(&self, gate: Option<Arc<tokio::sync::Notify>>) {
+        *self.load_gate.lock().expect("the test scripts are never poisoned") = gate;
+    }
+
+    pub fn set_npm_gate(&self, gate: Option<Arc<tokio::sync::Notify>>) {
+        *self.npm_gate.lock().expect("the test scripts are never poisoned") = gate;
+    }
+
     pub fn loads(&self) -> Vec<(String, bool)> {
         self.loads.lock().expect("the test log is never poisoned").clone()
     }
 
     pub fn calls(&self) -> Vec<String> {
         self.calls.lock().expect("the test log is never poisoned").clone()
+    }
+
+    pub fn npm_calls(&self, operation: &str) -> usize {
+        self.calls
+            .lock()
+            .expect("the test log is never poisoned")
+            .iter()
+            .filter(|call| call.starts_with(&format!("npm:{operation}:")))
+            .count()
+    }
+
+    pub fn load_inflight(&self) -> usize {
+        self.load_inflight.load(Ordering::SeqCst)
+    }
+
+    pub fn load_peak(&self) -> usize {
+        self.load_peak.load(Ordering::SeqCst)
+    }
+
+    pub fn npm_inflight(&self) -> usize {
+        self.npm_inflight.load(Ordering::SeqCst)
+    }
+
+    pub fn npm_peak(&self) -> usize {
+        self.npm_peak.load(Ordering::SeqCst)
     }
 }
 
@@ -289,7 +352,7 @@ impl ScriptHost for FakeHost {
     fn resolve_local(&self, directory: PathBuf) -> BoxFuture<'static, Result<Entrypoints, HostError>> {
         let resolve = self.resolve.clone();
         let calls = self.calls.clone();
-        let gate = self.gate.clone();
+        let gate = self.load_gate.lock().expect("the test scripts are never poisoned").clone();
         Box::pin(async move {
             if let Some(gate) = gate {
                 gate.notified().await;
@@ -314,20 +377,26 @@ impl ScriptHost for FakeHost {
         let installed = self.installed.clone();
         let loads = self.loads.clone();
         let calls = self.calls.clone();
-        let gate = self.gate.clone();
+        let gate = self.load_gate.lock().expect("the test scripts are never poisoned").clone();
+        let inflight = self.load_inflight.clone();
+        let peak = self.load_peak.clone();
         Box::pin(async move {
+            let current = inflight.fetch_add(1, Ordering::SeqCst) + 1;
+            peak.fetch_max(current, Ordering::SeqCst);
             if let Some(gate) = gate {
                 gate.notified().await;
             }
             calls.lock().expect("the test log is never poisoned").push(format!("load:{target}"));
             loads.lock().expect("the test log is never poisoned").push((target.clone(), install));
             let outcomes = if install { installed } else { load };
-            Ok(outcomes
+            let outcome = outcomes
                 .lock()
                 .expect("the test scripts are never poisoned")
                 .get(&target)
                 .cloned()
-                .unwrap_or(LoadOutcome::Pending))
+                .unwrap_or(LoadOutcome::Pending);
+            inflight.fetch_sub(1, Ordering::SeqCst);
+            Ok(outcome)
         })
     }
 
@@ -338,7 +407,7 @@ impl ScriptHost for FakeHost {
     ) -> BoxFuture<'static, Result<String, HostError>> {
         let handle = request.handle;
         let calls = self.calls.clone();
-        let gate = self.gate.clone();
+        let gate = self.load_gate.lock().expect("the test scripts are never poisoned").clone();
         Box::pin(async move {
             if let Some(gate) = gate {
                 gate.notified().await;
@@ -350,7 +419,7 @@ impl ScriptHost for FakeHost {
 
     fn deactivate(&self, _location: LocationRef, activation: String) -> BoxFuture<'static, Result<(), HostError>> {
         let calls = self.calls.clone();
-        let gate = self.gate.clone();
+        let gate = self.load_gate.lock().expect("the test scripts are never poisoned").clone();
         Box::pin(async move {
             if let Some(gate) = gate {
                 gate.notified().await;
@@ -362,7 +431,7 @@ impl ScriptHost for FakeHost {
 
     fn close_location(&self, _location: LocationRef) -> BoxFuture<'static, Result<(), HostError>> {
         let calls = self.calls.clone();
-        let gate = self.gate.clone();
+        let gate = self.load_gate.lock().expect("the test scripts are never poisoned").clone();
         Box::pin(async move {
             if let Some(gate) = gate {
                 gate.notified().await;
@@ -373,28 +442,38 @@ impl ScriptHost for FakeHost {
     }
 
     fn npm(&self, request: NpmRequest) -> BoxFuture<'static, Result<serde_json::Value, HostError>> {
-        let key = match request {
-            NpmRequest::Add { pkg, .. }
-            | NpmRequest::Resolve { pkg, .. }
-            | NpmRequest::Check { pkg, .. }
-            | NpmRequest::Update { pkg, .. }
-            | NpmRequest::Follows { pkg, .. } => pkg,
-            NpmRequest::Reject { pkg, version, .. } => format!("{pkg}@{version}"),
+        let key = match &request {
+            NpmRequest::Add { pkg, .. } => format!("add:{pkg}"),
+            NpmRequest::Resolve { pkg, .. } => format!("resolve:{pkg}"),
+            NpmRequest::Check { pkg, .. } => format!("check:{pkg}"),
+            NpmRequest::Update { pkg, .. } => format!("update:{pkg}"),
+            NpmRequest::Follows { pkg, .. } => format!("follows:{pkg}"),
+            NpmRequest::Reject { pkg, version, .. } => format!("reject:{pkg}@{version}"),
         };
         let npm = self.npm.clone();
+        let errors = self.npm_errors.clone();
+        let delay = *self.npm_delay.lock().expect("the test scripts are never poisoned");
         let calls = self.calls.clone();
-        let gate = self.gate.clone();
+        let gate = self.npm_gate.lock().expect("the test scripts are never poisoned").clone();
+        let inflight = self.npm_inflight.clone();
+        let peak = self.npm_peak.clone();
         Box::pin(async move {
+            let current = inflight.fetch_add(1, Ordering::SeqCst) + 1;
+            peak.fetch_max(current, Ordering::SeqCst);
             if let Some(gate) = gate {
                 gate.notified().await;
             }
             calls.lock().expect("the test log is never poisoned").push(format!("npm:{key}"));
-            Ok(npm
-                .lock()
-                .expect("the test scripts are never poisoned")
-                .get(&key)
-                .cloned()
-                .unwrap_or(serde_json::Value::Null))
+            if !delay.is_zero() {
+                tokio::time::sleep(delay).await;
+            }
+            let error = errors.lock().expect("the test scripts are never poisoned").get(&key).cloned();
+            let value = npm.lock().expect("the test scripts are never poisoned").get(&key).cloned();
+            inflight.fetch_sub(1, Ordering::SeqCst);
+            match error {
+                Some(error) => Err(error),
+                None => Ok(value.unwrap_or(serde_json::Value::Null)),
+            }
         })
     }
 }
@@ -478,11 +557,11 @@ pub fn supervisor(
     Supervisor::start(SupervisorDeps {
         registry,
         config,
-        host,
+        host: host.clone(),
         paths: npm_paths(),
         sdk,
         instance,
-        updates: Updates,
+        updates: Updates::new(host, npm_paths()),
         location,
         app: app(),
         modules: receiver,

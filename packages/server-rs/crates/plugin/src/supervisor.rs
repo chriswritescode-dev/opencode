@@ -1,6 +1,6 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -20,11 +20,10 @@ use crate::registry::{Hold, Registry, error_ref};
 use crate::script;
 use crate::sdk::{InstancePlugins, SdkPlugins};
 
+pub use crate::update::Updates;
+
 const DEBOUNCE: Duration = Duration::from_millis(100);
 const LOAD_FAILED: &str = "Plugin failed to load";
-
-#[derive(Clone, Copy, Default)]
-pub struct Updates;
 
 pub struct SupervisorDeps {
     pub registry: Registry,
@@ -53,9 +52,14 @@ struct Core {
     instance: Arc<InstancePlugins>,
     location: LocationInfo,
     app: AppInfo,
+    updates: Updates,
     running: tokio::sync::Mutex<IndexMap<String, Generation>>,
+    packages: Mutex<HashSet<String>>,
+    attempted: Mutex<HashMap<String, u64>>,
     outdated: Mutex<HashSet<String>>,
     updating: Mutex<HashSet<String>>,
+    generation: AtomicU64,
+    checks: Mutex<Vec<JoinHandle<()>>>,
     script_loaded: AtomicBool,
 }
 
@@ -76,6 +80,7 @@ struct ResolveInput<'a> {
     script_loaded: &'a AtomicBool,
 }
 
+#[derive(Clone)]
 struct Resolved {
     plugins: Vec<Generation>,
     packages: IndexMap<String, Generation>,
@@ -85,7 +90,9 @@ struct Resolved {
 
 impl Supervisor {
     pub fn start(deps: SupervisorDeps) -> Supervisor {
-        let SupervisorDeps { registry, config, host, paths, sdk, instance, location, app, modules, .. } = deps;
+        let SupervisorDeps { registry, config, host, paths, sdk, instance, updates, location, app, modules } = deps;
+        let intervals = updates.intervals();
+        let updates_changes = updates.changes();
         let core = Arc::new(Core {
             registry: registry.clone(),
             config: config.clone(),
@@ -93,11 +100,16 @@ impl Supervisor {
             paths,
             sdk: sdk.clone(),
             instance,
+            updates,
             location,
             app,
             running: tokio::sync::Mutex::new(IndexMap::new()),
+            packages: Mutex::new(HashSet::new()),
+            attempted: Mutex::new(HashMap::new()),
             outdated: Mutex::new(HashSet::new()),
             updating: Mutex::new(HashSet::new()),
+            generation: AtomicU64::new(0),
+            checks: Mutex::new(Vec::new()),
             script_loaded: AtomicBool::new(false),
         });
         let hold: HoldSlot = Arc::new(Mutex::new(Some(registry.hold())));
@@ -139,12 +151,55 @@ impl Supervisor {
         });
         tasks.push(spawn_trigger(updated, trigger.clone()));
         tasks.push(spawn_trigger(sdk_updates, trigger.clone()));
-        tasks.push(spawn_trigger(modules, trigger));
+        tasks.push(spawn_trigger(modules, trigger.clone()));
+        tasks.push(spawn_trigger(intervals, trigger.clone()));
+        tasks.push({
+            let core = core.clone();
+            let trigger = trigger.clone();
+            tokio::spawn(async move {
+                let mut changes = updates_changes;
+                loop {
+                    let change = match changes.recv().await {
+                        Ok(change) => change,
+                        Err(broadcast::error::RecvError::Lagged(_)) => {
+                            trigger();
+                            continue;
+                        }
+                        Err(broadcast::error::RecvError::Closed) => return,
+                    };
+                    if !core
+                        .packages
+                        .lock()
+                        .expect("the plugin supervisor lock is never poisoned")
+                        .contains(&change.target)
+                    {
+                        continue;
+                    }
+                    {
+                        let mut outdated = core.outdated.lock().expect("the plugin supervisor lock is never poisoned");
+                        if change.outdated {
+                            outdated.insert(change.target.clone());
+                        } else {
+                            outdated.remove(&change.target);
+                        }
+                    }
+                    {
+                        let mut updating = core.updating.lock().expect("the plugin supervisor lock is never poisoned");
+                        if change.updating {
+                            updating.insert(change.target.clone());
+                        } else {
+                            updating.remove(&change.target);
+                        }
+                    }
+                    trigger();
+                }
+            })
+        });
         tasks.push({
             let core = core.clone();
             tokio::spawn(async move {
                 let mut observed_rx = observed_rx;
-                if let Err(error) = activate(&core).await {
+                if let Err(error) = activate(core.clone()).await {
                     log::error!("failed to reload plugins: {error}");
                 }
                 settle(&hold, &observed_rx, 0);
@@ -160,7 +215,7 @@ impl Supervisor {
                         }
                     }
                     let target = *observed_rx.borrow_and_update();
-                    if let Err(error) = activate(&core).await {
+                    if let Err(error) = activate(core.clone()).await {
                         log::error!("failed to reload plugins: {error}");
                     }
                     settle(&hold, &observed_rx, target);
@@ -174,7 +229,10 @@ impl Supervisor {
     pub async fn shutdown(&self) {
         let tasks = {
             let mut tasks = self.tasks.lock().expect("the plugin supervisor task lock is never poisoned");
-            std::mem::take(&mut *tasks)
+            let mut taken = std::mem::take(&mut *tasks);
+            let mut checks = self.core.checks.lock().expect("the plugin supervisor check lock is never poisoned");
+            taken.append(&mut checks);
+            taken
         };
         for task in tasks {
             task.abort();
@@ -191,6 +249,10 @@ impl Supervisor {
     pub fn registry(&self) -> &Registry {
         &self.core.registry
     }
+
+    pub fn updates(&self) -> &Updates {
+        &self.core.updates
+    }
 }
 
 fn settle(hold: &HoldSlot, observed: &watch::Receiver<u64>, target: u64) {
@@ -203,18 +265,22 @@ fn settle(hold: &HoldSlot, observed: &watch::Receiver<u64>, target: u64) {
     }
 }
 
-fn spawn_trigger(mut receiver: broadcast::Receiver<()>, trigger: Arc<dyn Fn() + Send + Sync>) -> JoinHandle<()> {
+fn spawn_trigger<T: Clone + Send + 'static>(
+    mut receiver: broadcast::Receiver<T>,
+    trigger: Arc<dyn Fn() + Send + Sync>,
+) -> JoinHandle<()> {
     tokio::spawn(async move {
         loop {
             match receiver.recv().await {
-                Ok(()) | Err(broadcast::error::RecvError::Lagged(_)) => trigger(),
+                Ok(_) | Err(broadcast::error::RecvError::Lagged(_)) => trigger(),
                 Err(broadcast::error::RecvError::Closed) => return,
             }
         }
     })
 }
 
-async fn activate(core: &Core) -> Result<(), String> {
+async fn activate(core: Arc<Core>) -> Result<(), String> {
+    let current = core.generation.fetch_add(1, Ordering::SeqCst) + 1;
     let (builtin_pre, builtin_post) = native::builtins();
     let pre = builtin_pre.into_iter().chain(core.sdk.all()).chain(core.instance.all()).collect::<Vec<_>>();
     let post = builtin_post;
@@ -237,14 +303,136 @@ async fn activate(core: &Core) -> Result<(), String> {
     let immediate = resolve(input).await;
     let (outdated, updating) = core.decorations();
     apply(&core.registry, &immediate, &outdated, &updating).await?;
-    if immediate.pending.is_empty() {
-        *core.running.lock().await = immediate.packages;
+    let resolved = if immediate.pending.is_empty() {
+        immediate
+    } else {
+        let resolved = resolve(ResolveInput { install: true, ..input }).await;
+        apply(&core.registry, &resolved, &outdated, &updating).await?;
+        resolved
+    };
+    *core.running.lock().await = resolved.packages.clone();
+    reject_failures(&core, &resolved).await;
+    let targets = package_targets(&resolved);
+    *core.packages.lock().expect("the plugin supervisor lock is never poisoned") = targets.iter().cloned().collect();
+    if !targets.is_empty() {
+        spawn_checks(core, resolved, targets, current);
+    }
+    Ok(())
+}
+
+fn package_targets(resolved: &Resolved) -> Vec<String> {
+    let mut targets: Vec<String> = Vec::new();
+    let sources = resolved
+        .plugins
+        .iter()
+        .filter_map(|plugin| plugin.source.as_ref())
+        .chain(resolved.failures.iter().map(|failure| &failure.source));
+    for source in sources {
+        let Source::Package { target, .. } = source else { continue };
+        if !targets.contains(target) {
+            targets.push(target.clone());
+        }
+    }
+    targets
+}
+
+fn spawn_checks(core: Arc<Core>, resolved: Resolved, targets: Vec<String>, current: u64) {
+    let task = core.clone();
+    let handle = tokio::spawn(async move {
+        if let Err(error) = check_updates(task, resolved, targets, current).await {
+            log::error!("failed to check plugin updates: {error}");
+        }
+    });
+    let mut checks = core.checks.lock().expect("the plugin supervisor check lock is never poisoned");
+    checks.retain(|handle| !handle.is_finished());
+    checks.push(handle);
+}
+
+async fn check_updates(core: Arc<Core>, resolved: Resolved, targets: Vec<String>, current: u64) -> Result<(), String> {
+    let checked = futures_util::future::join_all(targets.into_iter().map(|target| {
+        let core = core.clone();
+        async move {
+            let available = core.updates.check(&target, false).await;
+            (target, available)
+        }
+    }))
+    .await;
+    if core.generation.load(Ordering::SeqCst) != current {
         return Ok(());
     }
-    let resolved = resolve(ResolveInput { install: true, ..input }).await;
-    apply(&core.registry, &resolved, &outdated, &updating).await?;
-    *core.running.lock().await = resolved.packages;
+    let cycle = core.updates.cycle();
+    let available =
+        checked.iter().filter(|(_, available)| *available).map(|(target, _)| target.clone()).collect::<Vec<_>>();
+    let due = {
+        let mut attempted = core.attempted.lock().expect("the plugin supervisor lock is never poisoned");
+        available
+            .iter()
+            .filter(|target| {
+                if attempted.get(*target).is_some_and(|attempted| *attempted == cycle) {
+                    return false;
+                }
+                attempted.insert((*target).clone(), cycle);
+                true
+            })
+            .cloned()
+            .collect::<Vec<_>>()
+    };
+    futures_util::future::join_all(due.into_iter().map(|target| {
+        let core = core.clone();
+        async move {
+            match core.updates.follows(&target).await {
+                Ok(true) => {
+                    if let Err(error) = core.updates.update(&target).await {
+                        log::warn!("failed to update plugin: target={target} error={error}");
+                    }
+                }
+                Ok(false) => {}
+                Err(error) => log::warn!("failed to update plugin: target={target} error={error}"),
+            }
+        }
+    }))
+    .await;
+    let next = available.into_iter().collect::<HashSet<_>>();
+    let changed = {
+        let mut outdated = core.outdated.lock().expect("the plugin supervisor lock is never poisoned");
+        if *outdated == next {
+            false
+        } else {
+            *outdated = next;
+            true
+        }
+    };
+    if changed {
+        let (outdated, updating) = core.decorations();
+        apply(&core.registry, &resolved, &outdated, &updating).await?;
+    }
     Ok(())
+}
+
+async fn reject_failures(core: &Core, resolved: &Resolved) {
+    for failure in &resolved.failures {
+        let Source::Package { target, .. } = &failure.source else { continue };
+        let kept = resolved.packages.get(target).and_then(|plugin| plugin.source.as_ref());
+        let Some(Source::Package { version: Some(kept_version), .. }) = kept else { continue };
+        let result = async {
+            let installed = core.updates.resolve(target).await?.version;
+            let Some(installed) = installed else { return Ok::<(), crate::host::HostError>(()) };
+            if installed == *kept_version {
+                return Ok(());
+            }
+            if !core.updates.reject(target, &installed).await? {
+                return Ok(());
+            }
+            log::warn!(
+                "kept the running plugin version after the new one failed to load: target={target} version={kept_version}"
+            );
+            Ok(())
+        }
+        .await;
+        if let Err(error) = result {
+            log::warn!("failed to reject plugin version: target={target} error={error}");
+        }
+    }
 }
 
 impl Core {

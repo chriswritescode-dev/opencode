@@ -8,6 +8,7 @@ use opencode_plugin::host::{Entrypoints, LoadOutcome, ScriptHost};
 use opencode_plugin::registry::Registry;
 use opencode_plugin::sdk::{InstancePlugins, SdkPlugins};
 use opencode_plugin::supervisor::Supervisor;
+use opencode_plugin::update::INTERVAL;
 use serde_json::json;
 
 use crate::support::{
@@ -471,6 +472,210 @@ async fn installs_only_after_activating_what_is_available_locally() {
     assert!(registry.active_ids().iter().any(|id| id == "local"));
     assert!(registry.active_ids().iter().any(|id| id == "installed"));
     assert!(host.calls().iter().any(|call| call == "activate:h1"));
+
+    supervisor.shutdown().await;
+}
+
+fn package_decorations(registry: &Registry, target: &str) -> Option<(bool, bool)> {
+    registry.list().iter().find_map(|info| match &info.source {
+        Source::Package { target: listed, outdated, updating, .. } if listed == target => Some((*outdated, *updating)),
+        _ => None,
+    })
+}
+
+fn update_calls(host: &FakeHost, target: &str) -> usize {
+    let key = format!("npm:update:{target}");
+    host.calls().iter().filter(|call| **call == key).count()
+}
+
+fn check_calls(host: &FakeHost) -> usize {
+    host.npm_calls("check")
+}
+
+#[tokio::test(start_paused = true)]
+async fn refreshes_every_24_hours_without_an_immediate_reload() {
+    let workspace = ConfigWorkspace::new();
+    let target = "pkg@1.0.0";
+    workspace.write_plugins(json!([target]));
+    let host = Arc::new(FakeHost::new().loading(target, loaded("pkg", "1", package_source(target, "1.0.0"), "h1")));
+    let (supervisor, registry, _config) =
+        start(&workspace, Some(host.clone()), SdkPlugins::default(), Arc::new(InstancePlugins::empty())).await;
+
+    registry.await_activation().await;
+    assert_eq!(host.loads().len(), 1);
+
+    tokio::time::advance(Duration::from_secs(23 * 60 * 60)).await;
+    tokio::task::yield_now().await;
+    assert_eq!(host.loads().len(), 1);
+
+    tokio::time::advance(Duration::from_secs(60 * 60)).await;
+    wait_for(|| host.loads().len() >= 2).await;
+    registry.await_activation().await;
+
+    tokio::time::advance(INTERVAL).await;
+    wait_for(|| host.loads().len() >= 3).await;
+    registry.await_activation().await;
+    assert_eq!(host.loads().len(), 3);
+
+    supervisor.shutdown().await;
+}
+
+#[tokio::test(start_paused = true)]
+async fn updates_only_packages_that_follow_updates_once_per_check_interval() {
+    let workspace = ConfigWorkspace::new();
+    let follows = ["latest-plugin@latest", "ranged-plugin@^1.0.0", "github:acme/branch-plugin#dev"];
+    let stays = ["plain-plugin", "next-plugin@next", "github:acme/default-plugin"];
+    let targets = follows.iter().chain(stays.iter()).copied().collect::<Vec<_>>();
+    workspace.write_plugins(json!(targets));
+
+    let mut host = FakeHost::new();
+    for (index, target) in targets.iter().enumerate() {
+        host = host.loading(
+            *target,
+            loaded(&format!("plugin-{index}"), "1", package_source(target, "1.0.0"), &format!("h{index}")),
+        );
+        host.set_npm(&format!("check:{target}"), json!(true));
+        host.set_npm(&format!("update:{target}"), json!({ "directory": "", "name": target }));
+        host.set_npm(&format!("follows:{target}"), json!(follows.contains(target)));
+    }
+    let host = Arc::new(host);
+    let (supervisor, registry, _config) =
+        start(&workspace, Some(host.clone()), SdkPlugins::default(), Arc::new(InstancePlugins::empty())).await;
+
+    registry.await_activation().await;
+    wait_for(|| follows.iter().all(|target| update_calls(&host, target) >= 1)).await;
+    tokio::time::sleep(Duration::from_millis(20)).await;
+    assert!(stays.iter().all(|target| update_calls(&host, target) == 0));
+    assert!(follows.iter().all(|target| update_calls(&host, target) == 1));
+
+    tokio::time::advance(INTERVAL).await;
+    wait_for(|| follows.iter().all(|target| update_calls(&host, target) >= 2)).await;
+    tokio::time::sleep(Duration::from_millis(20)).await;
+    assert!(stays.iter().all(|target| update_calls(&host, target) == 0));
+    assert!(follows.iter().all(|target| update_calls(&host, target) == 2));
+
+    supervisor.shutdown().await;
+}
+
+#[tokio::test(start_paused = true)]
+async fn checks_and_updates_once_per_interval_24_hours_after_a_slow_startup() {
+    let workspace = ConfigWorkspace::new();
+    let target = "latest-plugin@latest";
+    workspace.write_plugins(json!([target]));
+    let host = Arc::new(FakeHost::new().loading(target, loaded("latest", "1", package_source(target, "1.0.0"), "h1")));
+    host.set_npm(&format!("check:{target}"), json!(true));
+    host.set_npm(&format!("follows:{target}"), json!(true));
+    host.set_npm(&format!("update:{target}"), json!({ "directory": "", "name": target }));
+    host.set_npm_delay(Duration::from_secs(10));
+    let sdk = SdkPlugins::default();
+    let log = log();
+    let started = tokio::time::Instant::now();
+    let (supervisor, registry, _config) =
+        start(&workspace, Some(host.clone()), sdk.clone(), Arc::new(InstancePlugins::empty())).await;
+
+    tokio::time::sleep(Duration::from_secs(25)).await;
+    wait_for(|| update_calls(&host, target) >= 1).await;
+    tokio::time::sleep(Duration::from_millis(20)).await;
+    registry.await_activation().await;
+    assert_eq!(update_calls(&host, target), 1);
+
+    let checks = check_calls(&host);
+    let loads = host.loads().len();
+    sdk.register("interval-greet", recorder("interval-greet", "1", &log, false));
+    wait_for(|| host.loads().len() > loads).await;
+    tokio::time::sleep(Duration::from_millis(20)).await;
+    registry.await_activation().await;
+    assert_eq!(check_calls(&host), checks);
+    assert_eq!(update_calls(&host, target), 1);
+
+    host.set_npm_delay(Duration::ZERO);
+    tokio::time::advance(started + INTERVAL - tokio::time::Instant::now()).await;
+    wait_for(|| update_calls(&host, target) >= 2).await;
+    assert!(check_calls(&host) > checks);
+
+    supervisor.shutdown().await;
+}
+
+#[tokio::test(start_paused = true)]
+async fn serializes_the_periodic_refresh_behind_an_in_flight_reload() {
+    let workspace = ConfigWorkspace::new();
+    let target = "pkg@1.0.0";
+    workspace.write_plugins(json!([target]));
+    let host = Arc::new(FakeHost::new().loading(target, loaded("pkg", "1", package_source(target, "1.0.0"), "h1")));
+    let sdk = SdkPlugins::default();
+    let log = log();
+    let (supervisor, registry, _config) =
+        start(&workspace, Some(host.clone()), sdk.clone(), Arc::new(InstancePlugins::empty())).await;
+
+    registry.await_activation().await;
+    let loads = host.loads().len();
+    let gate = Arc::new(tokio::sync::Notify::new());
+    host.set_load_gate(Some(gate.clone()));
+    sdk.register("reload", recorder("reload", "1", &log, false));
+    wait_for(|| host.load_inflight() == 1).await;
+    assert_eq!(host.load_peak(), 1);
+
+    tokio::time::advance(INTERVAL).await;
+    tokio::time::sleep(Duration::from_millis(20)).await;
+    assert_eq!(host.load_peak(), 1);
+
+    host.set_load_gate(None);
+    gate.notify_one();
+    wait_for(|| host.loads().len() > loads).await;
+    registry.await_activation().await;
+
+    assert_eq!(host.load_peak(), 1);
+
+    supervisor.shutdown().await;
+}
+
+#[tokio::test(start_paused = true)]
+async fn rejects_a_newer_version_that_fails_to_load() {
+    let workspace = ConfigWorkspace::new();
+    let target = "pkg@1.0.0";
+    workspace.write_plugins(json!([target]));
+    let host = Arc::new(FakeHost::new().loading(target, loaded("pkg", "1", package_source(target, "1.0.0"), "h1")));
+    host.set_npm(&format!("resolve:{target}"), json!({ "directory": "", "name": "pkg", "version": "2.0.0" }));
+    host.set_npm(&format!("reject:{target}@2.0.0"), json!(true));
+    let sdk = SdkPlugins::default();
+    let log = log();
+    let (supervisor, registry, _config) =
+        start(&workspace, Some(host.clone()), sdk.clone(), Arc::new(InstancePlugins::empty())).await;
+
+    registry.await_activation().await;
+    host.set_load(target, LoadOutcome::Failed { message: "boom".to_owned() });
+    sdk.register("trigger", recorder("trigger", "1", &log, false));
+    wait_for(|| host.npm_calls("reject") >= 1).await;
+
+    assert_eq!(host.npm_calls("reject"), 1);
+    assert!(registry.list().iter().any(|info| info.id.as_deref() == Some("pkg") && info.state == PluginState::Active));
+
+    supervisor.shutdown().await;
+}
+
+#[tokio::test(start_paused = true)]
+async fn marks_outdated_and_updating_sources_in_the_inventory() {
+    let workspace = ConfigWorkspace::new();
+    let target = "pkg@1.0.0";
+    workspace.write_plugins(json!([target]));
+    let host = Arc::new(FakeHost::new().loading(target, loaded("pkg", "1", package_source(target, "1.0.0"), "h1")));
+    host.set_npm(&format!("check:{target}"), json!(true));
+    let (supervisor, registry, _config) =
+        start(&workspace, Some(host.clone()), SdkPlugins::default(), Arc::new(InstancePlugins::empty())).await;
+
+    registry.await_activation().await;
+    wait_for(|| package_decorations(&registry, target) == Some((true, false))).await;
+
+    let gate = Arc::new(tokio::sync::Notify::new());
+    host.set_npm_gate(Some(gate.clone()));
+    let updates = supervisor.updates().clone();
+    let update = tokio::spawn(async move { updates.update(target).await });
+    wait_for(|| package_decorations(&registry, target) == Some((true, true))).await;
+
+    host.set_npm_gate(None);
+    gate.notify_one();
+    update.await.expect("the update task ends").expect("the update succeeds");
+    wait_for(|| package_decorations(&registry, target).is_some_and(|(_, updating)| !updating)).await;
 
     supervisor.shutdown().await;
 }
