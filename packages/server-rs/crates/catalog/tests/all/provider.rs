@@ -10,10 +10,11 @@ use opencode_catalog::credential::{CreateInput, CredentialService};
 use opencode_catalog::integration::{ConfigEnv, Implementation, IntegrationService};
 use opencode_catalog::models_dev::snapshot_text;
 use opencode_catalog::provider::{ProviderService, model_settings, native_settings};
-use opencode_contract::codec::{Encode, decode_json, encode_json};
+use opencode_contract::codec::{Encode, JsonMap, decode_json, encode_json};
 use opencode_contract::generated::{
     AbsolutePath, CredentialKey, CredentialKeyType, CredentialValue, IntegrationEnvMethod, IntegrationEnvMethodType,
-    IntegrationID, IntegrationMethod, LocationRef, ProviderID, ProviderInfo, ProviderInfoActivation, ProviderSettings,
+    IntegrationID, IntegrationMethod, LocationRef, ModelSettings, ProviderID, ProviderInfo, ProviderInfoActivation,
+    ProviderSettings,
 };
 use opencode_storage::{Database, DatabaseLocation};
 use serde_json::{Value, json};
@@ -147,6 +148,53 @@ async fn subscribes_before_the_first_publish() {
     })
     .await
     .expect("provider.updated was published");
+}
+
+#[tokio::test]
+async fn drops_invalid_settings_when_rewriting_providers_and_models() {
+    let harness = setup();
+    let provider_id = ProviderID("custom".to_owned());
+    let _registration = harness
+        .providers
+        .transform({
+            let provider_id = provider_id.clone();
+            move |editor| {
+                editor.update(&provider_id, |provider| {
+                    provider.settings = Some(ProviderSettings {
+                        timeout: None,
+                        header_timeout: None,
+                        chunk_timeout: None,
+                        compaction: None,
+                        cache: None,
+                        transport: None,
+                        encoding: None,
+                        tls: None,
+                        rest: JsonMap(vec![("timeout".to_owned(), json!("invalid"))]),
+                    });
+                });
+                editor.models_update(&provider_id, "model", |model| {
+                    model.settings = Some(ModelSettings {
+                        compaction: None,
+                        cache: None,
+                        encoding: None,
+                        rest: JsonMap(vec![("cache".to_owned(), json!("invalid"))]),
+                    });
+                });
+                Ok(())
+            }
+        })
+        .await;
+
+    let provider = harness.providers.get(&provider_id).await.expect("get the provider").expect("the provider");
+    let settings = provider.settings.expect("the provider settings");
+    assert!(settings.timeout.is_none());
+    assert!(settings.rest.0.iter().all(|(key, _)| key != "timeout"));
+
+    let snapshot = harness.providers.snapshot().await.expect("the provider snapshot");
+    let model = &snapshot.records.get(&provider_id.0).expect("the provider definition").models["model"];
+    let settings = model.settings.as_ref().expect("the model settings");
+    assert!(settings.cache.is_none());
+    assert!(settings.rest.0.iter().all(|(key, _)| key != "cache"));
 }
 
 #[tokio::test]

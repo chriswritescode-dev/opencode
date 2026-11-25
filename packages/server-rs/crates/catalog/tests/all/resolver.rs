@@ -18,8 +18,8 @@ use opencode_catalog::variant::Support;
 use opencode_contract::codec::{JsonMap, decode_json, encode_json};
 use opencode_contract::generated::{
     CredentialExternal, CredentialExternalType, CredentialKey, CredentialKeyType, CredentialOAuth, CredentialOAuthType,
-    CredentialValue, IntegrationID, IntegrationMethodID, ModelInfo, ModelRef, ModelVariant, ProviderID, ProviderInfo,
-    ProviderInfoActivation, ProviderSettings, ProviderTransport,
+    CredentialValue, IntegrationID, IntegrationMethodID, ModelInfo, ModelRef, ModelSettings, ModelVariant,
+    ModelVariantSettings, ProviderID, ProviderInfo, ProviderInfoActivation, ProviderSettings, ProviderTransport,
 };
 use opencode_location::state::Registration;
 
@@ -1336,6 +1336,36 @@ fn applies_provider_timeouts_to_image_video_and_decision_models() {
     assert_eq!(image.transport.as_ref().and_then(|transport| transport.timeout.clone()), expected);
     assert_eq!(video.transport.as_ref().and_then(|transport| transport.timeout.clone()), expected);
     assert_eq!(decision.transport.as_ref().and_then(|transport| transport.timeout.clone()), expected);
+}
+
+#[test]
+fn with_variant_drops_settings_that_do_not_decode() {
+    let mut info = catalog_model("test-provider", "fixture-model", "api-fixture", json!({}));
+    info.settings = Some(ModelSettings {
+        compaction: None,
+        cache: None,
+        encoding: None,
+        rest: JsonMap(vec![("cache".to_owned(), json!("invalid")), ("custom".to_owned(), json!(true))]),
+    });
+    info.variants.push(ModelVariant {
+        id: "high".to_owned(),
+        settings: Some(ModelVariantSettings {
+            compaction: None,
+            encoding: None,
+            rest: JsonMap(vec![("reasoningEffort".to_owned(), json!("high"))]),
+        }),
+        headers: None,
+        body: None,
+    });
+
+    let variant = with_variant(&info, Some("high")).expect("the variant resolves");
+    let settings = variant.settings.expect("the variant settings");
+    assert!(settings.cache.is_none());
+    assert_eq!(settings.rest.0.iter().find(|(key, _)| key == "custom").map(|(_, value)| value), Some(&json!(true)));
+    assert_eq!(
+        settings.rest.0.iter().find(|(key, _)| key == "reasoningEffort").map(|(_, value)| value),
+        Some(&json!("high"))
+    );
 }
 
 #[tokio::test]

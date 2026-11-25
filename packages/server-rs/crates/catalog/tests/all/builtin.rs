@@ -15,7 +15,10 @@ use opencode_config::paths::GlobalPaths;
 use opencode_config::seams::{BoxFuture, KvStore};
 use opencode_config::service::{ConfigService, ServiceDeps};
 use opencode_config::wellknown::WellKnown;
-use opencode_contract::generated::{AbsolutePath, CredentialValue, LocationRef, ProviderID};
+use opencode_contract::codec::JsonMap;
+use opencode_contract::generated::{
+    AbsolutePath, CredentialValue, LocationRef, ProviderID, ProviderInfo, ProviderInfoActivation, ProviderSettings,
+};
 use opencode_storage::{Database, DatabaseLocation};
 use serde_json::{Map, Value};
 
@@ -585,6 +588,64 @@ async fn config_provider_inherits_the_provider_compaction_setting() {
     };
     assert_eq!(json_value(&encode_json(&settings("native").unwrap())), serde_json::json!({ "type": "native" }));
     assert_eq!(json_value(&encode_json(&settings("local").unwrap())), serde_json::json!({ "type": "summary" }));
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn config_provider_drops_settings_that_do_not_decode() {
+    let mut harness = start(Input::new(vec![serde_json::json!({
+        "providers": {
+            "custom": {
+                "package": "aisdk:@ai-sdk/openai-compatible",
+                "settings": { "compaction": { "type": "native" } }
+            }
+        }
+    })]))
+    .await;
+    let provider_id = ProviderID("custom".to_owned());
+    let _seed = harness
+        .services
+        .provider
+        .transform({
+            let provider_id = provider_id.clone();
+            move |editor| {
+                editor.add(
+                    ProviderInfo {
+                        id: provider_id.clone(),
+                        canonical: None,
+                        integration_id: None,
+                        name: "Custom".to_owned(),
+                        activation: ProviderInfoActivation::Enabled,
+                        package: "aisdk:@ai-sdk/openai-compatible".to_owned(),
+                        compatibility: None,
+                        settings: Some(ProviderSettings {
+                            timeout: None,
+                            header_timeout: None,
+                            chunk_timeout: None,
+                            compaction: None,
+                            cache: None,
+                            transport: None,
+                            encoding: None,
+                            tls: None,
+                            rest: JsonMap(vec![("timeout".to_owned(), serde_json::json!("invalid"))]),
+                        }),
+                        headers: None,
+                        body: None,
+                    },
+                    &[],
+                    None,
+                );
+                Ok(())
+            }
+        })
+        .await;
+    harness.register(&["config_provider"]).await;
+
+    let provider = harness.services.provider.get(&provider_id).await.unwrap().expect("the configured provider");
+    let settings = provider.settings.expect("the provider settings");
+    assert!(settings.timeout.is_none());
+    assert!(settings.rest.0.iter().all(|(key, _)| key != "timeout"));
+    let compaction = settings.compaction.expect("the configured compaction");
+    assert_eq!(json_value(&opencode_contract::codec::encode_json(&compaction)), serde_json::json!({"type": "native"}));
 }
 
 pub fn json_value(encoded: &str) -> Value {
