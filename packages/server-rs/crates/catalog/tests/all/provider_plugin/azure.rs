@@ -4,6 +4,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+use bytes::Bytes;
+use indexmap::IndexMap;
 use opencode_ai::route::executor::PreparedHttp;
 use opencode_bus::{Definition, PublishOptions};
 use opencode_catalog::builtin::Builtin;
@@ -11,12 +13,14 @@ use opencode_catalog::credential::{CreateInput, Update};
 use opencode_catalog::integration::ExternalInput;
 use opencode_catalog::provider_plugin::azure::discovery::Endpoints;
 use opencode_catalog::provider_plugin::azure::{self, Options};
+use opencode_catalog::provider_plugin::hooks::{HttpRequest, ProviderHooks, RequestKind, WsHandshake};
 use opencode_catalog::provider_plugin::{BoxFuture, CommandOutput, CommandRunner};
 use opencode_contract::codec::{JsonMap, decode_json};
 use opencode_contract::generated::{
-    CredentialExternal, CredentialExternalType, CredentialID, CredentialKey, CredentialKeyType, CredentialValue,
-    FormField1, FormStringField1Type, FormValue, IntegrationID, IntegrationMethod, IntegrationMethodID, ModelInfo,
-    ModelInfoLimit, ModelSettings, ProviderID, ProviderInfo, ProviderInfoActivation, ProviderSettings,
+    AgentID, CredentialExternal, CredentialExternalType, CredentialID, CredentialKey, CredentialKeyType,
+    CredentialValue, FormField1, FormStringField1Type, FormValue, IntegrationID, IntegrationMethod,
+    IntegrationMethodID, ModelInfo, ModelInfoLimit, ModelRef, ModelSettings, ProviderID, ProviderInfo,
+    ProviderInfoActivation, ProviderSettings, SessionID,
 };
 use opencode_location::state::Registration;
 use serde_json::{Value, json};
@@ -38,6 +42,8 @@ const RESOURCE_ID: &str =
 const MANAGEMENT_BEARER: &str = "Bearer https://management.azure.com/.default-token";
 
 const COGNITIVE_BEARER: &str = "Bearer https://cognitiveservices.azure.com/.default-token";
+
+const FOUNDRY_BEARER: &str = "Bearer https://ai.azure.com/.default-token";
 
 const HOUR_MS: i64 = 60 * 60 * 1000;
 
@@ -257,6 +263,44 @@ async fn register(harness: &mut Harness, azure: &FakeAzure, runner: Arc<Scripted
     let mut builtin = Builtin::default();
     azure::register_with(&harness.services, &context, &mut builtin, options).await;
     harness.record(builtin);
+}
+
+async fn register_hooks(harness: &mut Harness, azure: &FakeAzure, runner: Arc<ScriptedRunner>) -> Arc<ProviderHooks> {
+    let context = plugin_context_with_runner(harness, azure.routes.clone(), runner, None);
+    let mut builtin = Builtin::default();
+    azure::register_with(&harness.services, &context, &mut builtin, azure.options()).await;
+    harness.record(builtin);
+    context.hooks.clone()
+}
+
+fn header_map(entries: &[(&str, &str)]) -> IndexMap<String, String> {
+    entries.iter().map(|(name, value)| ((*name).to_owned(), (*value).to_owned())).collect()
+}
+
+fn http_request(url: &str, headers: &[(&str, &str)]) -> HttpRequest {
+    HttpRequest {
+        session_id: SessionID("ses_azure".to_owned()),
+        agent: AgentID("build".to_owned()),
+        model: ModelRef { id: "gpt-5-mini".to_owned(), provider_id: ProviderID(AZURE.to_owned()), variant: None },
+        kind: RequestKind::Primary,
+        request: PreparedHttp::new(
+            "POST",
+            url,
+            headers.iter().map(|(name, value)| ((*name).to_owned(), (*value).to_owned())).collect(),
+            Bytes::new(),
+        ),
+    }
+}
+
+fn ws_handshake(url: &str, headers: &[(&str, &str)]) -> WsHandshake {
+    WsHandshake {
+        session_id: SessionID("ses_azure_ws".to_owned()),
+        agent: AgentID("build".to_owned()),
+        model: ModelRef { id: "gpt-5-mini".to_owned(), provider_id: ProviderID(AZURE.to_owned()), variant: None },
+        kind: RequestKind::Primary,
+        url: url.to_owned(),
+        headers: header_map(headers),
+    }
 }
 
 async fn provider(harness: &Harness, id: &str) -> ProviderInfo {
@@ -958,4 +1002,76 @@ async fn prefers_websockets_on_the_provider_for_the_azure_responses_api_only() {
         let model = models.iter().find(|model| model.provider_id == provider_id && model.id == id);
         assert!(model.and_then(|model| model_setting(model, "transport")).is_none(), "{id}");
     }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn authorizes_azure_foundry_and_websocket_requests_with_a_token_for_their_audience() {
+    let mut harness = start(Input::new(Vec::new())).await;
+    install_az(&mut harness);
+    let azure = fake_azure();
+    let runner = cli_runner();
+    connect(&harness, cli_credential("test-resource")).await;
+    let hooks = register_hooks(&mut harness, &azure, runner).await;
+
+    let request = hooks
+        .trigger_http_request(http_request(
+            "https://test-resource.openai.azure.com/openai/v1/responses",
+            &[("api-key", "stored-token"), ("x-keep", "yes")],
+        ))
+        .await;
+    assert_eq!(header(&request.request, "authorization"), Some(COGNITIVE_BEARER));
+    assert_eq!(header(&request.request, "api-key"), None);
+    assert_eq!(header(&request.request, "x-keep"), Some("yes"));
+
+    let foundry = hooks
+        .trigger_http_request(http_request(
+            "https://test-resource.services.ai.azure.com/anthropic/v1/messages",
+            &[("x-api-key", "stored-token")],
+        ))
+        .await;
+    assert_eq!(header(&foundry.request, "authorization"), Some(FOUNDRY_BEARER));
+    assert_eq!(header(&foundry.request, "x-api-key"), None);
+
+    let handshake = hooks
+        .trigger_ws_handshake(ws_handshake(
+            "wss://test-resource.openai.azure.com/openai/v1/responses",
+            &[("api-key", "stored-token"), ("x-keep", "yes")],
+        ))
+        .await;
+    assert_eq!(handshake.headers.get("authorization").map(String::as_str), Some(COGNITIVE_BEARER));
+    assert_eq!(handshake.headers.get("x-keep").map(String::as_str), Some("yes"));
+    assert!(!handshake.headers.contains_key("api-key"));
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn uses_the_cognitive_scope_for_models_endpoints_and_leaves_api_key_requests_untouched() {
+    let mut harness = start(Input::new(Vec::new())).await;
+    install_az(&mut harness);
+    let azure = fake_azure();
+    let runner = cli_runner();
+    connect(&harness, cli_credential("test-resource")).await;
+    let hooks = register_hooks(&mut harness, &azure, runner).await;
+
+    let models = hooks
+        .trigger_http_request(http_request(
+            "https://test-resource.services.ai.azure.com/models",
+            &[("api-key", "stored-token")],
+        ))
+        .await;
+    assert_eq!(header(&models.request, "authorization"), Some(COGNITIVE_BEARER));
+    assert_eq!(header(&models.request, "api-key"), None);
+
+    let mut keyed = start(Input::new(Vec::new())).await;
+    let azure = fake_azure();
+    connect(&keyed, key_credential("secret", "test-resource")).await;
+    let hooks = register_hooks(&mut keyed, &azure, cli_runner()).await;
+
+    let request = hooks
+        .trigger_http_request(http_request(
+            "https://test-resource.openai.azure.com/openai/v1/responses",
+            &[("api-key", "stored-token")],
+        ))
+        .await;
+    assert_eq!(header(&request.request, "api-key"), Some("stored-token"));
+    assert_eq!(header(&request.request, "authorization"), None);
 }

@@ -12,7 +12,9 @@ use crate::provider_plugin::http::{self, HttpError};
 
 pub const MANAGEMENT_SCOPE: &str = "https://management.azure.com/.default";
 
-const COGNITIVE_SCOPE: &str = "https://cognitiveservices.azure.com/.default";
+pub(crate) const COGNITIVE_SCOPE: &str = "https://cognitiveservices.azure.com/.default";
+
+pub(crate) const FOUNDRY_SCOPE: &str = "https://ai.azure.com/.default";
 
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
 
@@ -64,8 +66,8 @@ impl crate::shared_cache::Transient for LoadError {
 }
 
 #[derive(Clone, Debug)]
-struct Token {
-    access: String,
+pub(crate) struct Token {
+    pub(crate) access: String,
     expires: f64,
 }
 
@@ -113,7 +115,7 @@ impl Discovery {
         self.resource_deployments(url, credential).await
     }
 
-    async fn token(&self, scope: &str) -> Result<Token, LoadError> {
+    pub(crate) async fn token(&self, scope: &str) -> Result<Token, LoadError> {
         let now = opencode_util::time::now_ms() as f64;
         if let Some(cached) = self.tokens.lock().expect("lock the Azure tokens").get(scope).cloned()
             && cached.expires - now > TOKEN_MARGIN_MS

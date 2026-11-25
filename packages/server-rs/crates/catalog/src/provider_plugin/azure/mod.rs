@@ -1,5 +1,7 @@
 pub mod discovery;
 
+mod hooks;
+
 use std::collections::HashMap;
 use std::future::Future;
 use std::sync::{Arc, Mutex};
@@ -130,6 +132,8 @@ pub async fn register_with(services: &Services, context: &PluginContext, builtin
         state: Mutex::new(initial),
         gate: tokio::sync::Mutex::new(()),
     });
+
+    hooks::register(services, context, builtin, &provider_id, &azure.discovery);
 
     let provider_registration = services
         .provider
