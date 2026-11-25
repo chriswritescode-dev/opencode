@@ -1,13 +1,14 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::time::Duration;
 
 use opencode_git::{Git, RunOptions};
 use opencode_location::location::{LocationInfo, LocationProject};
 use opencode_location::project::Vcs;
 use opencode_util::path::realpath;
 use opencode_util::temp::TempDir;
-use opencode_vcs::snapshot::{DiffInput, RepositoryFuture, RestoreInput, Snapshot};
+use opencode_vcs::snapshot::{DiffInput, RepositoryFuture, RestoreInput, Snapshot, SnapshotOperation};
 use tokio::io::AsyncWriteExt;
 use tokio::sync::watch;
 
@@ -65,6 +66,23 @@ async fn keeps_lazy_repository_discovery_after_the_first_caller_is_interrupted()
     release.send_replace(true);
     assert!(second.await.expect("the capture task joins").is_some());
     assert_eq!(discoveries.load(Ordering::SeqCst), 1);
+}
+
+#[tokio::test]
+async fn a_panicking_repository_provider_resolves_waiters_with_an_error() {
+    let tmp = TempDir::new().expect("creates a temporary directory");
+    let project = tmp.path().join("project");
+    let git = handle();
+    let snapshot =
+        Snapshot::new_with_repository(git, &location(&project, &project, "project", true), tmp.path(), |_| {
+            Arc::new(|| -> RepositoryFuture { Box::pin(async { panic!("repository discovery panicked") }) })
+        });
+
+    let result = tokio::time::timeout(Duration::from_secs(5), snapshot.files("one", "two"))
+        .await
+        .expect("waiters resolve instead of hanging");
+    let error = result.expect_err("the panicking provider fails the caller");
+    assert_eq!(error.operation, SnapshotOperation::Files);
 }
 
 #[tokio::test]

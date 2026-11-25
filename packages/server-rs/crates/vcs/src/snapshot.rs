@@ -88,6 +88,22 @@ struct RepositorySlot {
     provider: RepositoryProvider,
 }
 
+struct RepositoryDiscoveryGuard {
+    result: tokio::sync::watch::Sender<Option<Result<ResolvedRepository, SnapshotError>>>,
+}
+
+impl Drop for RepositoryDiscoveryGuard {
+    fn drop(&mut self) {
+        let _ = self.result.send_if_modified(|current| {
+            if current.is_some() {
+                return false;
+            }
+            *current = Some(Err(capture_failure("Snapshot repository discovery ended without a result")));
+            true
+        });
+    }
+}
+
 pub struct Snapshot {
     git: Arc<Git>,
     directory: String,
@@ -332,8 +348,9 @@ impl Snapshot {
             let provider = self.slot.provider.clone();
             let result = self.slot.result.clone();
             task_set::spawn(&self.tasks, async move {
+                let guard = RepositoryDiscoveryGuard { result };
                 let value = provider().await;
-                result.send_replace(Some(value));
+                guard.result.send_replace(Some(value));
             });
         }
         loop {
