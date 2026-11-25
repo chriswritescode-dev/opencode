@@ -394,6 +394,10 @@ impl ProjectService {
             directories.push((project.directory.as_str(), strategy));
         }
         for (directory, strategy) in directories {
+            let stored = self.database.read(|connection| storage_worktree::find(connection, &project.id, directory))?;
+            if stored.is_some() {
+                continue;
+            }
             let adopted = self.adopted(environment, &project.id, directory).await?;
             let inserted = self.database.transaction(TransactionBehavior::Immediate, |transaction| {
                 if storage_worktree::find(transaction, &project.id, directory)?.is_some() {
