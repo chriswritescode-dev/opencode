@@ -1,0 +1,1498 @@
+{
+  "native.package.@ai-sdk/amazon-bedrock.responses": {
+    "call": "native",
+    "npm": "@ai-sdk/amazon-bedrock",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "shape": "responses",
+    "result": "@opencode/ai/providers/amazon-bedrock"
+  },
+  "native.package.@ai-sdk/amazon-bedrock.completions": {
+    "call": "native",
+    "npm": "@ai-sdk/amazon-bedrock",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "shape": "completions",
+    "result": "@opencode/ai/providers/amazon-bedrock"
+  },
+  "native.package.@ai-sdk/amazon-bedrock.default": {
+    "call": "native",
+    "npm": "@ai-sdk/amazon-bedrock",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "result": "@opencode/ai/providers/amazon-bedrock"
+  },
+  "native.package.@ai-sdk/alibaba.responses": {
+    "call": "native",
+    "npm": "@ai-sdk/alibaba",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "shape": "responses",
+    "result": "@opencode/ai/providers/alibaba/chat"
+  },
+  "native.package.@ai-sdk/alibaba.completions": {
+    "call": "native",
+    "npm": "@ai-sdk/alibaba",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "shape": "completions",
+    "result": "@opencode/ai/providers/alibaba/chat"
+  },
+  "native.package.@ai-sdk/alibaba.default": {
+    "call": "native",
+    "npm": "@ai-sdk/alibaba",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "result": "@opencode/ai/providers/alibaba/chat"
+  },
+  "native.package.@ai-sdk/anthropic.responses": {
+    "call": "native",
+    "npm": "@ai-sdk/anthropic",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "shape": "responses",
+    "result": "@opencode/ai/providers/anthropic"
+  },
+  "native.package.@ai-sdk/anthropic.completions": {
+    "call": "native",
+    "npm": "@ai-sdk/anthropic",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "shape": "completions",
+    "result": "@opencode/ai/providers/anthropic"
+  },
+  "native.package.@ai-sdk/anthropic.default": {
+    "call": "native",
+    "npm": "@ai-sdk/anthropic",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "result": "@opencode/ai/providers/anthropic"
+  },
+  "native.package.@ai-sdk/azure.responses": {
+    "call": "native",
+    "npm": "@ai-sdk/azure",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "shape": "responses",
+    "result": "@opencode/ai/providers/azure/responses"
+  },
+  "native.package.@ai-sdk/azure.completions": {
+    "call": "native",
+    "npm": "@ai-sdk/azure",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "shape": "completions",
+    "result": "@opencode/ai/providers/azure/chat"
+  },
+  "native.package.@ai-sdk/azure.default": {
+    "call": "native",
+    "npm": "@ai-sdk/azure",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "result": "@opencode/ai/providers/azure/responses"
+  },
+  "native.package.@ai-sdk/cerebras.responses": {
+    "call": "native",
+    "npm": "@ai-sdk/cerebras",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "shape": "responses",
+    "result": "@opencode/ai/providers/cerebras"
+  },
+  "native.package.@ai-sdk/cerebras.completions": {
+    "call": "native",
+    "npm": "@ai-sdk/cerebras",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "shape": "completions",
+    "result": "@opencode/ai/providers/cerebras"
+  },
+  "native.package.@ai-sdk/cerebras.default": {
+    "call": "native",
+    "npm": "@ai-sdk/cerebras",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "result": "@opencode/ai/providers/cerebras"
+  },
+  "native.package.@ai-sdk/cohere.responses": {
+    "call": "native",
+    "npm": "@ai-sdk/cohere",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "shape": "responses",
+    "result": "@opencode/ai/providers/cohere"
+  },
+  "native.package.@ai-sdk/cohere.completions": {
+    "call": "native",
+    "npm": "@ai-sdk/cohere",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "shape": "completions",
+    "result": "@opencode/ai/providers/cohere"
+  },
+  "native.package.@ai-sdk/cohere.default": {
+    "call": "native",
+    "npm": "@ai-sdk/cohere",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "result": "@opencode/ai/providers/cohere"
+  },
+  "native.package.@ai-sdk/deepinfra.responses": {
+    "call": "native",
+    "npm": "@ai-sdk/deepinfra",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "shape": "responses",
+    "result": "@opencode/ai/providers/deepinfra"
+  },
+  "native.package.@ai-sdk/deepinfra.completions": {
+    "call": "native",
+    "npm": "@ai-sdk/deepinfra",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "shape": "completions",
+    "result": "@opencode/ai/providers/deepinfra"
+  },
+  "native.package.@ai-sdk/deepinfra.default": {
+    "call": "native",
+    "npm": "@ai-sdk/deepinfra",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "result": "@opencode/ai/providers/deepinfra"
+  },
+  "native.package.@ai-sdk/google.responses": {
+    "call": "native",
+    "npm": "@ai-sdk/google",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "shape": "responses",
+    "result": "@opencode/ai/providers/google"
+  },
+  "native.package.@ai-sdk/google.completions": {
+    "call": "native",
+    "npm": "@ai-sdk/google",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "shape": "completions",
+    "result": "@opencode/ai/providers/google"
+  },
+  "native.package.@ai-sdk/google.default": {
+    "call": "native",
+    "npm": "@ai-sdk/google",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "result": "@opencode/ai/providers/google"
+  },
+  "native.package.@ai-sdk/google-vertex.responses": {
+    "call": "native",
+    "npm": "@ai-sdk/google-vertex",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "shape": "responses",
+    "result": "@opencode/ai/providers/google-vertex"
+  },
+  "native.package.@ai-sdk/google-vertex.completions": {
+    "call": "native",
+    "npm": "@ai-sdk/google-vertex",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "shape": "completions",
+    "result": "@opencode/ai/providers/google-vertex"
+  },
+  "native.package.@ai-sdk/google-vertex.default": {
+    "call": "native",
+    "npm": "@ai-sdk/google-vertex",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "result": "@opencode/ai/providers/google-vertex"
+  },
+  "native.package.@ai-sdk/google-vertex/anthropic.responses": {
+    "call": "native",
+    "npm": "@ai-sdk/google-vertex/anthropic",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "shape": "responses",
+    "result": "@opencode/ai/providers/google-vertex/messages"
+  },
+  "native.package.@ai-sdk/google-vertex/anthropic.completions": {
+    "call": "native",
+    "npm": "@ai-sdk/google-vertex/anthropic",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "shape": "completions",
+    "result": "@opencode/ai/providers/google-vertex/messages"
+  },
+  "native.package.@ai-sdk/google-vertex/anthropic.default": {
+    "call": "native",
+    "npm": "@ai-sdk/google-vertex/anthropic",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "result": "@opencode/ai/providers/google-vertex/messages"
+  },
+  "native.package.@ai-sdk/groq.responses": {
+    "call": "native",
+    "npm": "@ai-sdk/groq",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "shape": "responses",
+    "result": "@opencode/ai/providers/groq"
+  },
+  "native.package.@ai-sdk/groq.completions": {
+    "call": "native",
+    "npm": "@ai-sdk/groq",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "shape": "completions",
+    "result": "@opencode/ai/providers/groq"
+  },
+  "native.package.@ai-sdk/groq.default": {
+    "call": "native",
+    "npm": "@ai-sdk/groq",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "result": "@opencode/ai/providers/groq"
+  },
+  "native.package.@ai-sdk/mistral.responses": {
+    "call": "native",
+    "npm": "@ai-sdk/mistral",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "shape": "responses",
+    "result": "@opencode/ai/providers/mistral"
+  },
+  "native.package.@ai-sdk/mistral.completions": {
+    "call": "native",
+    "npm": "@ai-sdk/mistral",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "shape": "completions",
+    "result": "@opencode/ai/providers/mistral"
+  },
+  "native.package.@ai-sdk/mistral.default": {
+    "call": "native",
+    "npm": "@ai-sdk/mistral",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "result": "@opencode/ai/providers/mistral"
+  },
+  "native.package.@ai-sdk/openai.responses": {
+    "call": "native",
+    "npm": "@ai-sdk/openai",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "shape": "responses",
+    "result": "@opencode/ai/providers/openai"
+  },
+  "native.package.@ai-sdk/openai.completions": {
+    "call": "native",
+    "npm": "@ai-sdk/openai",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "shape": "completions",
+    "result": "@opencode/ai/providers/openai"
+  },
+  "native.package.@ai-sdk/openai.default": {
+    "call": "native",
+    "npm": "@ai-sdk/openai",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "result": "@opencode/ai/providers/openai"
+  },
+  "native.package.@ai-sdk/openai-compatible.responses": {
+    "call": "native",
+    "npm": "@ai-sdk/openai-compatible",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "shape": "responses",
+    "result": "@opencode/ai/providers/openai-compatible"
+  },
+  "native.package.@ai-sdk/openai-compatible.completions": {
+    "call": "native",
+    "npm": "@ai-sdk/openai-compatible",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "shape": "completions",
+    "result": "@opencode/ai/providers/openai-compatible"
+  },
+  "native.package.@ai-sdk/openai-compatible.default": {
+    "call": "native",
+    "npm": "@ai-sdk/openai-compatible",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "result": "@opencode/ai/providers/openai-compatible"
+  },
+  "native.package.@ai-sdk/togetherai.responses": {
+    "call": "native",
+    "npm": "@ai-sdk/togetherai",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "shape": "responses",
+    "result": "@opencode/ai/providers/togetherai"
+  },
+  "native.package.@ai-sdk/togetherai.completions": {
+    "call": "native",
+    "npm": "@ai-sdk/togetherai",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "shape": "completions",
+    "result": "@opencode/ai/providers/togetherai"
+  },
+  "native.package.@ai-sdk/togetherai.default": {
+    "call": "native",
+    "npm": "@ai-sdk/togetherai",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "result": "@opencode/ai/providers/togetherai"
+  },
+  "native.package.@ai-sdk/xai.responses": {
+    "call": "native",
+    "npm": "@ai-sdk/xai",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "shape": "responses",
+    "result": "@opencode/ai/providers/xai"
+  },
+  "native.package.@ai-sdk/xai.completions": {
+    "call": "native",
+    "npm": "@ai-sdk/xai",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "shape": "completions",
+    "result": "@opencode/ai/providers/xai"
+  },
+  "native.package.@ai-sdk/xai.default": {
+    "call": "native",
+    "npm": "@ai-sdk/xai",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "result": "@opencode/ai/providers/xai"
+  },
+  "native.package.@ai-sdk/gateway.responses": {
+    "call": "native",
+    "npm": "@ai-sdk/gateway",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "shape": "responses",
+    "result": "@opencode/ai/providers/vercel-ai-gateway"
+  },
+  "native.package.@ai-sdk/gateway.completions": {
+    "call": "native",
+    "npm": "@ai-sdk/gateway",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "shape": "completions",
+    "result": "@opencode/ai/providers/vercel-ai-gateway"
+  },
+  "native.package.@ai-sdk/gateway.default": {
+    "call": "native",
+    "npm": "@ai-sdk/gateway",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "result": "@opencode/ai/providers/vercel-ai-gateway"
+  },
+  "native.package.@openrouter/ai-sdk-provider.responses": {
+    "call": "native",
+    "npm": "@openrouter/ai-sdk-provider",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "shape": "responses",
+    "result": "@opencode/ai/providers/openrouter"
+  },
+  "native.package.@openrouter/ai-sdk-provider.completions": {
+    "call": "native",
+    "npm": "@openrouter/ai-sdk-provider",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "shape": "completions",
+    "result": "@opencode/ai/providers/openrouter"
+  },
+  "native.package.@openrouter/ai-sdk-provider.default": {
+    "call": "native",
+    "npm": "@openrouter/ai-sdk-provider",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "result": "@opencode/ai/providers/openrouter"
+  },
+  "native.package.ai-gateway-provider.responses": {
+    "call": "native",
+    "npm": "ai-gateway-provider",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "shape": "responses",
+    "result": "@opencode/ai/providers/cloudflare-ai-gateway"
+  },
+  "native.package.ai-gateway-provider.completions": {
+    "call": "native",
+    "npm": "ai-gateway-provider",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "shape": "completions",
+    "result": "@opencode/ai/providers/cloudflare-ai-gateway"
+  },
+  "native.package.ai-gateway-provider.default": {
+    "call": "native",
+    "npm": "ai-gateway-provider",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "result": "@opencode/ai/providers/cloudflare-ai-gateway"
+  },
+  "native.package.venice-ai-sdk-provider.responses": {
+    "call": "native",
+    "npm": "venice-ai-sdk-provider",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "shape": "responses",
+    "result": "@opencode/ai/providers/venice"
+  },
+  "native.package.venice-ai-sdk-provider.completions": {
+    "call": "native",
+    "npm": "venice-ai-sdk-provider",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "shape": "completions",
+    "result": "@opencode/ai/providers/venice"
+  },
+  "native.package.venice-ai-sdk-provider.default": {
+    "call": "native",
+    "npm": "venice-ai-sdk-provider",
+    "providerID": "sample",
+    "modelID": "sample-model",
+    "result": "@opencode/ai/providers/venice"
+  },
+  "native.host.alibaba.@ai-sdk/openai-compatible": {
+    "call": "native",
+    "npm": "@ai-sdk/openai-compatible",
+    "providerID": "alibaba",
+    "result": "@opencode/ai/providers/alibaba/chat"
+  },
+  "native.host.alibaba.@ai-sdk/anthropic": {
+    "call": "native",
+    "npm": "@ai-sdk/anthropic",
+    "providerID": "alibaba",
+    "result": "@opencode/ai/providers/alibaba/messages"
+  },
+  "native.host.alibaba.@ai-sdk/openai": {
+    "call": "native",
+    "npm": "@ai-sdk/openai",
+    "providerID": "alibaba",
+    "result": "@opencode/ai/providers/alibaba/responses"
+  },
+  "native.host.alibaba-cn.@ai-sdk/openai-compatible": {
+    "call": "native",
+    "npm": "@ai-sdk/openai-compatible",
+    "providerID": "alibaba-cn",
+    "result": "@opencode/ai/providers/alibaba/chat"
+  },
+  "native.host.alibaba-cn.@ai-sdk/anthropic": {
+    "call": "native",
+    "npm": "@ai-sdk/anthropic",
+    "providerID": "alibaba-cn",
+    "result": "@opencode/ai/providers/alibaba/messages"
+  },
+  "native.host.alibaba-cn.@ai-sdk/openai": {
+    "call": "native",
+    "npm": "@ai-sdk/openai",
+    "providerID": "alibaba-cn",
+    "result": "@opencode/ai/providers/alibaba/responses"
+  },
+  "native.host.alibaba-coding-plan.@ai-sdk/openai-compatible": {
+    "call": "native",
+    "npm": "@ai-sdk/openai-compatible",
+    "providerID": "alibaba-coding-plan",
+    "result": "@opencode/ai/providers/alibaba/chat"
+  },
+  "native.host.alibaba-coding-plan.@ai-sdk/anthropic": {
+    "call": "native",
+    "npm": "@ai-sdk/anthropic",
+    "providerID": "alibaba-coding-plan",
+    "result": "@opencode/ai/providers/alibaba/messages"
+  },
+  "native.host.alibaba-coding-plan.@ai-sdk/openai": {
+    "call": "native",
+    "npm": "@ai-sdk/openai",
+    "providerID": "alibaba-coding-plan",
+    "result": "@opencode/ai/providers/alibaba/responses"
+  },
+  "native.host.alibaba-coding-plan-cn.@ai-sdk/openai-compatible": {
+    "call": "native",
+    "npm": "@ai-sdk/openai-compatible",
+    "providerID": "alibaba-coding-plan-cn",
+    "result": "@opencode/ai/providers/alibaba/chat"
+  },
+  "native.host.alibaba-coding-plan-cn.@ai-sdk/anthropic": {
+    "call": "native",
+    "npm": "@ai-sdk/anthropic",
+    "providerID": "alibaba-coding-plan-cn",
+    "result": "@opencode/ai/providers/alibaba/messages"
+  },
+  "native.host.alibaba-coding-plan-cn.@ai-sdk/openai": {
+    "call": "native",
+    "npm": "@ai-sdk/openai",
+    "providerID": "alibaba-coding-plan-cn",
+    "result": "@opencode/ai/providers/alibaba/responses"
+  },
+  "native.host.alibaba-token-plan.@ai-sdk/openai-compatible": {
+    "call": "native",
+    "npm": "@ai-sdk/openai-compatible",
+    "providerID": "alibaba-token-plan",
+    "result": "@opencode/ai/providers/alibaba/chat"
+  },
+  "native.host.alibaba-token-plan.@ai-sdk/anthropic": {
+    "call": "native",
+    "npm": "@ai-sdk/anthropic",
+    "providerID": "alibaba-token-plan",
+    "result": "@opencode/ai/providers/alibaba/messages"
+  },
+  "native.host.alibaba-token-plan.@ai-sdk/openai": {
+    "call": "native",
+    "npm": "@ai-sdk/openai",
+    "providerID": "alibaba-token-plan",
+    "result": "@opencode/ai/providers/alibaba/responses"
+  },
+  "native.host.alibaba-token-plan-cn.@ai-sdk/openai-compatible": {
+    "call": "native",
+    "npm": "@ai-sdk/openai-compatible",
+    "providerID": "alibaba-token-plan-cn",
+    "result": "@opencode/ai/providers/alibaba/chat"
+  },
+  "native.host.alibaba-token-plan-cn.@ai-sdk/anthropic": {
+    "call": "native",
+    "npm": "@ai-sdk/anthropic",
+    "providerID": "alibaba-token-plan-cn",
+    "result": "@opencode/ai/providers/alibaba/messages"
+  },
+  "native.host.alibaba-token-plan-cn.@ai-sdk/openai": {
+    "call": "native",
+    "npm": "@ai-sdk/openai",
+    "providerID": "alibaba-token-plan-cn",
+    "result": "@opencode/ai/providers/alibaba/responses"
+  },
+  "native.host.baseten.@ai-sdk/openai-compatible": {
+    "call": "native",
+    "npm": "@ai-sdk/openai-compatible",
+    "providerID": "baseten",
+    "result": "@opencode/ai/providers/baseten"
+  },
+  "native.host.cloudflare-ai-gateway.@ai-sdk/anthropic": {
+    "call": "native",
+    "npm": "@ai-sdk/anthropic",
+    "providerID": "cloudflare-ai-gateway",
+    "result": "@opencode/ai/providers/cloudflare-ai-gateway"
+  },
+  "native.host.cloudflare-ai-gateway.@ai-sdk/openai": {
+    "call": "native",
+    "npm": "@ai-sdk/openai",
+    "providerID": "cloudflare-ai-gateway",
+    "result": "@opencode/ai/providers/cloudflare-ai-gateway"
+  },
+  "native.host.cloudflare-ai-gateway.@ai-sdk/openai-compatible": {
+    "call": "native",
+    "npm": "@ai-sdk/openai-compatible",
+    "providerID": "cloudflare-ai-gateway",
+    "result": "@opencode/ai/providers/cloudflare-ai-gateway"
+  },
+  "native.host.cloudflare-ai-gateway.ai-gateway-provider": {
+    "call": "native",
+    "npm": "ai-gateway-provider",
+    "providerID": "cloudflare-ai-gateway",
+    "result": "@opencode/ai/providers/cloudflare-ai-gateway"
+  },
+  "native.host.cohere.@ai-sdk/openai-compatible": {
+    "call": "native",
+    "npm": "@ai-sdk/openai-compatible",
+    "providerID": "cohere",
+    "result": "@opencode/ai/providers/cohere/chat"
+  },
+  "native.host.cloudflare-workers-ai.@ai-sdk/openai-compatible": {
+    "call": "native",
+    "npm": "@ai-sdk/openai-compatible",
+    "providerID": "cloudflare-workers-ai",
+    "result": "@opencode/ai/providers/cloudflare-workers-ai"
+  },
+  "native.host.deepseek.@ai-sdk/openai-compatible": {
+    "call": "native",
+    "npm": "@ai-sdk/openai-compatible",
+    "providerID": "deepseek",
+    "result": "@opencode/ai/providers/deepseek"
+  },
+  "native.host.digitalocean.@ai-sdk/openai-compatible": {
+    "call": "native",
+    "npm": "@ai-sdk/openai-compatible",
+    "providerID": "digitalocean",
+    "result": "@opencode/ai/providers/digitalocean"
+  },
+  "native.host.fireworks-ai.@ai-sdk/openai-compatible": {
+    "call": "native",
+    "npm": "@ai-sdk/openai-compatible",
+    "providerID": "fireworks-ai",
+    "result": "@opencode/ai/providers/fireworks"
+  },
+  "native.host.google-vertex.@ai-sdk/openai-compatible": {
+    "call": "native",
+    "npm": "@ai-sdk/openai-compatible",
+    "providerID": "google-vertex",
+    "result": "@opencode/ai/providers/google-vertex/chat"
+  },
+  "native.host.google-vertex.@ai-sdk/mistral": {
+    "call": "native",
+    "npm": "@ai-sdk/mistral",
+    "providerID": "google-vertex",
+    "result": "@opencode/ai/providers/google-vertex/mistral"
+  },
+  "native.host.kimi-for-coding.@ai-sdk/openai-compatible": {
+    "call": "native",
+    "npm": "@ai-sdk/openai-compatible",
+    "providerID": "kimi-for-coding",
+    "result": "@opencode/ai/providers/moonshot/chat"
+  },
+  "native.host.kimi-for-coding.@ai-sdk/anthropic": {
+    "call": "native",
+    "npm": "@ai-sdk/anthropic",
+    "providerID": "kimi-for-coding",
+    "result": "@opencode/ai/providers/moonshot/messages"
+  },
+  "native.host.kimi-for-coding.@ai-sdk/openai": {
+    "call": "native",
+    "npm": "@ai-sdk/openai",
+    "providerID": "kimi-for-coding",
+    "result": "@opencode/ai/providers/moonshot/responses"
+  },
+  "native.host.meta.@ai-sdk/openai-compatible": {
+    "call": "native",
+    "npm": "@ai-sdk/openai-compatible",
+    "providerID": "meta",
+    "result": "@opencode/ai/providers/meta/chat"
+  },
+  "native.host.meta.@ai-sdk/anthropic": {
+    "call": "native",
+    "npm": "@ai-sdk/anthropic",
+    "providerID": "meta",
+    "result": "@opencode/ai/providers/meta/messages"
+  },
+  "native.host.meta.@ai-sdk/openai": {
+    "call": "native",
+    "npm": "@ai-sdk/openai",
+    "providerID": "meta",
+    "result": "@opencode/ai/providers/meta/responses"
+  },
+  "native.host.minimax.@ai-sdk/openai-compatible": {
+    "call": "native",
+    "npm": "@ai-sdk/openai-compatible",
+    "providerID": "minimax",
+    "result": "@opencode/ai/providers/minimax/chat"
+  },
+  "native.host.minimax.@ai-sdk/anthropic": {
+    "call": "native",
+    "npm": "@ai-sdk/anthropic",
+    "providerID": "minimax",
+    "result": "@opencode/ai/providers/minimax/messages"
+  },
+  "native.host.minimax.@ai-sdk/openai": {
+    "call": "native",
+    "npm": "@ai-sdk/openai",
+    "providerID": "minimax",
+    "result": "@opencode/ai/providers/minimax/responses"
+  },
+  "native.host.minimax-cn.@ai-sdk/openai-compatible": {
+    "call": "native",
+    "npm": "@ai-sdk/openai-compatible",
+    "providerID": "minimax-cn",
+    "result": "@opencode/ai/providers/minimax/chat"
+  },
+  "native.host.minimax-cn.@ai-sdk/anthropic": {
+    "call": "native",
+    "npm": "@ai-sdk/anthropic",
+    "providerID": "minimax-cn",
+    "result": "@opencode/ai/providers/minimax/messages"
+  },
+  "native.host.minimax-cn.@ai-sdk/openai": {
+    "call": "native",
+    "npm": "@ai-sdk/openai",
+    "providerID": "minimax-cn",
+    "result": "@opencode/ai/providers/minimax/responses"
+  },
+  "native.host.minimax-coding-plan.@ai-sdk/openai-compatible": {
+    "call": "native",
+    "npm": "@ai-sdk/openai-compatible",
+    "providerID": "minimax-coding-plan",
+    "result": "@opencode/ai/providers/minimax/chat"
+  },
+  "native.host.minimax-coding-plan.@ai-sdk/anthropic": {
+    "call": "native",
+    "npm": "@ai-sdk/anthropic",
+    "providerID": "minimax-coding-plan",
+    "result": "@opencode/ai/providers/minimax/messages"
+  },
+  "native.host.minimax-coding-plan.@ai-sdk/openai": {
+    "call": "native",
+    "npm": "@ai-sdk/openai",
+    "providerID": "minimax-coding-plan",
+    "result": "@opencode/ai/providers/minimax/responses"
+  },
+  "native.host.minimax-cn-coding-plan.@ai-sdk/openai-compatible": {
+    "call": "native",
+    "npm": "@ai-sdk/openai-compatible",
+    "providerID": "minimax-cn-coding-plan",
+    "result": "@opencode/ai/providers/minimax/chat"
+  },
+  "native.host.minimax-cn-coding-plan.@ai-sdk/anthropic": {
+    "call": "native",
+    "npm": "@ai-sdk/anthropic",
+    "providerID": "minimax-cn-coding-plan",
+    "result": "@opencode/ai/providers/minimax/messages"
+  },
+  "native.host.minimax-cn-coding-plan.@ai-sdk/openai": {
+    "call": "native",
+    "npm": "@ai-sdk/openai",
+    "providerID": "minimax-cn-coding-plan",
+    "result": "@opencode/ai/providers/minimax/responses"
+  },
+  "native.host.moonshotai.@ai-sdk/openai-compatible": {
+    "call": "native",
+    "npm": "@ai-sdk/openai-compatible",
+    "providerID": "moonshotai",
+    "result": "@opencode/ai/providers/moonshot/chat"
+  },
+  "native.host.moonshotai.@ai-sdk/anthropic": {
+    "call": "native",
+    "npm": "@ai-sdk/anthropic",
+    "providerID": "moonshotai",
+    "result": "@opencode/ai/providers/moonshot/messages"
+  },
+  "native.host.moonshotai.@ai-sdk/openai": {
+    "call": "native",
+    "npm": "@ai-sdk/openai",
+    "providerID": "moonshotai",
+    "result": "@opencode/ai/providers/moonshot/responses"
+  },
+  "native.host.moonshotai-cn.@ai-sdk/openai-compatible": {
+    "call": "native",
+    "npm": "@ai-sdk/openai-compatible",
+    "providerID": "moonshotai-cn",
+    "result": "@opencode/ai/providers/moonshot/chat"
+  },
+  "native.host.moonshotai-cn.@ai-sdk/anthropic": {
+    "call": "native",
+    "npm": "@ai-sdk/anthropic",
+    "providerID": "moonshotai-cn",
+    "result": "@opencode/ai/providers/moonshot/messages"
+  },
+  "native.host.moonshotai-cn.@ai-sdk/openai": {
+    "call": "native",
+    "npm": "@ai-sdk/openai",
+    "providerID": "moonshotai-cn",
+    "result": "@opencode/ai/providers/moonshot/responses"
+  },
+  "native.host.zai.@ai-sdk/openai-compatible": {
+    "call": "native",
+    "npm": "@ai-sdk/openai-compatible",
+    "providerID": "zai",
+    "result": "@opencode/ai/providers/zai/chat"
+  },
+  "native.host.zai-coding-plan.@ai-sdk/openai-compatible": {
+    "call": "native",
+    "npm": "@ai-sdk/openai-compatible",
+    "providerID": "zai-coding-plan",
+    "result": "@opencode/ai/providers/zai-coding-plan/chat"
+  },
+  "native.host.zai-coding-plan.@ai-sdk/anthropic": {
+    "call": "native",
+    "npm": "@ai-sdk/anthropic",
+    "providerID": "zai-coding-plan",
+    "result": "@opencode/ai/providers/zai-coding-plan/messages"
+  },
+  "native.host.zai-coding-plan.@ai-sdk/openai": {
+    "call": "native",
+    "npm": "@ai-sdk/openai",
+    "providerID": "zai-coding-plan",
+    "result": "@opencode/ai/providers/zai-coding-plan/responses"
+  },
+  "native.host.zhipuai.@ai-sdk/openai-compatible": {
+    "call": "native",
+    "npm": "@ai-sdk/openai-compatible",
+    "providerID": "zhipuai",
+    "result": "@opencode/ai/providers/zai/chat"
+  },
+  "native.host.zhipuai-coding-plan.@ai-sdk/openai-compatible": {
+    "call": "native",
+    "npm": "@ai-sdk/openai-compatible",
+    "providerID": "zhipuai-coding-plan",
+    "result": "@opencode/ai/providers/zai-coding-plan/chat"
+  },
+  "native.host.zhipuai-coding-plan.@ai-sdk/anthropic": {
+    "call": "native",
+    "npm": "@ai-sdk/anthropic",
+    "providerID": "zhipuai-coding-plan",
+    "result": "@opencode/ai/providers/zai-coding-plan/messages"
+  },
+  "native.host.zhipuai-coding-plan.@ai-sdk/openai": {
+    "call": "native",
+    "npm": "@ai-sdk/openai",
+    "providerID": "zhipuai-coding-plan",
+    "result": "@opencode/ai/providers/zai-coding-plan/responses"
+  },
+  "native.mantle.default": {
+    "call": "native",
+    "npm": "@ai-sdk/amazon-bedrock/mantle",
+    "providerID": "sample",
+    "result": "@opencode/ai/providers/amazon-bedrock/mantle"
+  },
+  "native.mantle.anthropic": {
+    "call": "native",
+    "npm": "@ai-sdk/amazon-bedrock/mantle",
+    "providerID": "sample",
+    "modelID": "anthropic.claude-sonnet-4",
+    "result": "@opencode/ai/providers/amazon-bedrock/mantle/messages"
+  },
+  "native.mantle.gpt-oss": {
+    "call": "native",
+    "npm": "@ai-sdk/amazon-bedrock/mantle",
+    "providerID": "sample",
+    "modelID": "openai.gpt-oss-120b",
+    "result": "@opencode/ai/providers/amazon-bedrock/mantle/chat"
+  },
+  "native.mantle.gpt-5": {
+    "call": "native",
+    "npm": "@ai-sdk/amazon-bedrock/mantle",
+    "providerID": "sample",
+    "modelID": "openai.gpt-5",
+    "result": "@opencode/ai/providers/amazon-bedrock/mantle/responses"
+  },
+  "native.azure.completions": {
+    "call": "native",
+    "npm": "@ai-sdk/azure",
+    "providerID": "sample",
+    "shape": "completions",
+    "result": "@opencode/ai/providers/azure/chat"
+  },
+  "native.azure.use-completion-urls": {
+    "call": "native",
+    "npm": "@ai-sdk/azure",
+    "providerID": "sample",
+    "settings": {
+      "useCompletionUrls": true
+    },
+    "result": "@opencode/ai/providers/azure/chat"
+  },
+  "native.unknown": {
+    "call": "native",
+    "npm": "aisdk:unknown-package",
+    "providerID": "sample",
+    "result": null
+  },
+  "rewrite.openai": {
+    "call": "rewrite",
+    "target": {},
+    "input": {
+      "specifier": "@ai-sdk/openai",
+      "providerID": "sample",
+      "modelID": "gpt-5"
+    },
+    "result": {
+      "package": "@opencode/ai/providers/openai"
+    }
+  },
+  "rewrite.prefixed": {
+    "call": "rewrite",
+    "target": {},
+    "input": {
+      "specifier": "aisdk:@ai-sdk/anthropic",
+      "providerID": "sample"
+    },
+    "result": {
+      "package": "@opencode/ai/providers/anthropic"
+    }
+  },
+  "rewrite.overlays": {
+    "call": "rewrite",
+    "target": {
+      "settings": {
+        "headers": {
+          "Authorization": "base",
+          "X-Extra": "1"
+        },
+        "extraBody": {
+          "nested": {
+            "a": 1,
+            "b": 2
+          },
+          "list": [
+            1
+          ]
+        }
+      },
+      "headers": {
+        "AUTHORIZATION": "target-header"
+      },
+      "body": {
+        "nested": {
+          "b": 30
+        },
+        "extra": true
+      }
+    },
+    "input": {
+      "specifier": "@ai-sdk/openai",
+      "providerID": "sample"
+    },
+    "result": {
+      "settings": {},
+      "headers": {
+        "AUTHORIZATION": "target-header",
+        "X-Extra": "1"
+      },
+      "body": {
+        "nested": {
+          "a": 1,
+          "b": 30
+        },
+        "list": [
+          1
+        ],
+        "extra": true
+      },
+      "package": "@opencode/ai/providers/openai"
+    }
+  },
+  "rewrite.openai-compatible": {
+    "call": "rewrite",
+    "target": {
+      "settings": {}
+    },
+    "input": {
+      "specifier": "@ai-sdk/openai-compatible",
+      "providerID": "sample"
+    },
+    "result": {
+      "settings": {
+        "provider": "sample"
+      },
+      "package": "@opencode/ai/providers/openai-compatible"
+    }
+  },
+  "rewrite.openai-compatible-canonical": {
+    "call": "rewrite",
+    "target": {
+      "settings": {}
+    },
+    "input": {
+      "specifier": "@ai-sdk/openai-compatible",
+      "providerID": "sample",
+      "canonical": "canonical-id"
+    },
+    "result": {
+      "settings": {
+        "provider": "canonical-id"
+      },
+      "package": "@opencode/ai/providers/openai-compatible"
+    }
+  },
+  "rewrite.openai-compatible-builtin": {
+    "call": "rewrite",
+    "target": {
+      "settings": {}
+    },
+    "input": {
+      "specifier": "@opencode/ai/providers/openai-compatible",
+      "providerID": "sample"
+    },
+    "result": {
+      "settings": {}
+    }
+  },
+  "rewrite.bedrock-converse": {
+    "call": "rewrite",
+    "target": {
+      "settings": {
+        "bearerToken": "tok",
+        "endpoint": "https://${AWS_REGION}.amazonaws.com",
+        "credentials": {
+          "accessKeyId": "AKIA",
+          "secretAccessKey": "SECRET",
+          "sessionToken": "SESSION",
+          "region": "eu-west-1"
+        },
+        "region": "us-east-1",
+        "reasoningConfig": {
+          "type": "enabled",
+          "budgetTokens": 2048,
+          "maxReasoningEffort": "high",
+          "display": "summarized"
+        },
+        "anthropicBeta": [
+          "beta-1"
+        ],
+        "additionalModelRequestFields": {
+          "anthropic_beta": [
+            "beta-0"
+          ],
+          "nested": {
+            "keep": true
+          }
+        },
+        "serviceTier": "priority",
+        "useCompletionUrls": true,
+        "headers": {
+          "X-Base": "1"
+        },
+        "extraBody": {
+          "to-be": "replaced"
+        }
+      }
+    },
+    "input": {
+      "specifier": "@ai-sdk/amazon-bedrock",
+      "providerID": "sample",
+      "modelID": "anthropic.claude-sonnet-4"
+    },
+    "result": {
+      "settings": {
+        "region": "us-east-1",
+        "baseURL": "https://us-east-1.amazonaws.com",
+        "apiKey": "tok",
+        "credentials": {
+          "region": "us-east-1",
+          "accessKeyId": "AKIA",
+          "secretAccessKey": "SECRET",
+          "sessionToken": "SESSION"
+        },
+        "thinking": {
+          "type": "enabled",
+          "budgetTokens": 2048
+        }
+      },
+      "package": "@opencode/ai/providers/amazon-bedrock",
+      "headers": {
+        "X-Base": "1"
+      },
+      "body": {
+        "additionalModelRequestFields": {
+          "anthropic_beta": [
+            "beta-0",
+            "beta-1"
+          ],
+          "nested": {
+            "keep": true
+          },
+          "output_config": {
+            "effort": "high"
+          }
+        },
+        "serviceTier": {
+          "type": "priority"
+        }
+      }
+    }
+  },
+  "rewrite.bedrock-gpt-oss": {
+    "call": "rewrite",
+    "target": {
+      "settings": {
+        "reasoningConfig": {
+          "type": "adaptive",
+          "maxReasoningEffort": "medium",
+          "budgetTokens": 5
+        }
+      }
+    },
+    "input": {
+      "specifier": "@ai-sdk/amazon-bedrock",
+      "providerID": "sample",
+      "modelID": "openai.gpt-oss-120b"
+    },
+    "result": {
+      "settings": {},
+      "package": "@opencode/ai/providers/amazon-bedrock",
+      "body": {
+        "additionalModelRequestFields": {
+          "reasoning_effort": "medium"
+        }
+      }
+    }
+  },
+  "rewrite.bedrock-gpt-5": {
+    "call": "rewrite",
+    "target": {
+      "settings": {
+        "reasoningConfig": {
+          "maxReasoningEffort": "low"
+        }
+      }
+    },
+    "input": {
+      "specifier": "@ai-sdk/amazon-bedrock",
+      "providerID": "sample",
+      "modelID": "openai.gpt-5"
+    },
+    "result": {
+      "settings": {},
+      "package": "@opencode/ai/providers/amazon-bedrock",
+      "body": {
+        "additionalModelRequestFields": {
+          "reasoning": {
+            "effort": "low"
+          }
+        }
+      }
+    }
+  },
+  "rewrite.bedrock-other": {
+    "call": "rewrite",
+    "target": {
+      "settings": {
+        "reasoningConfig": {
+          "type": "enabled",
+          "budgetTokens": 99,
+          "maxReasoningEffort": "high"
+        }
+      }
+    },
+    "input": {
+      "specifier": "@ai-sdk/amazon-bedrock",
+      "providerID": "sample",
+      "modelID": "meta.llama"
+    },
+    "result": {
+      "settings": {},
+      "package": "@opencode/ai/providers/amazon-bedrock",
+      "body": {
+        "additionalModelRequestFields": {
+          "reasoningConfig": {
+            "type": "enabled",
+            "budgetTokens": 99,
+            "maxReasoningEffort": "high"
+          }
+        }
+      }
+    }
+  },
+  "rewrite.bedrock-adaptive": {
+    "call": "rewrite",
+    "target": {
+      "settings": {
+        "apiKey": "explicit",
+        "bearerToken": "ignored",
+        "accessKeyId": "AKIA",
+        "secretAccessKey": "SECRET",
+        "sessionToken": "SESSION",
+        "region": "us-west-2",
+        "reasoningConfig": {
+          "type": "adaptive",
+          "maxReasoningEffort": "high",
+          "display": "summarized"
+        },
+        "additionalModelRequestFields": {
+          "output_config": {
+            "existing": "x"
+          },
+          "reasoning": {
+            "keep": 1
+          }
+        }
+      }
+    },
+    "input": {
+      "specifier": "@ai-sdk/amazon-bedrock",
+      "providerID": "sample",
+      "modelID": "anthropic.claude-sonnet-4"
+    },
+    "result": {
+      "settings": {
+        "apiKey": "explicit",
+        "region": "us-west-2",
+        "credentials": {
+          "region": "us-west-2",
+          "accessKeyId": "AKIA",
+          "secretAccessKey": "SECRET",
+          "sessionToken": "SESSION"
+        }
+      },
+      "package": "@opencode/ai/providers/amazon-bedrock",
+      "body": {
+        "additionalModelRequestFields": {
+          "output_config": {
+            "existing": "x",
+            "effort": "high"
+          },
+          "reasoning": {
+            "keep": 1
+          },
+          "thinking": {
+            "type": "adaptive",
+            "display": "summarized"
+          }
+        }
+      }
+    }
+  },
+  "rewrite.mantle": {
+    "call": "rewrite",
+    "target": {
+      "settings": {
+        "endpoint": "https://${AWS_REGION}.example",
+        "region": "us-east-2",
+        "extraBody": {
+          "keep": true
+        }
+      }
+    },
+    "input": {
+      "specifier": "aisdk:@ai-sdk/amazon-bedrock/mantle",
+      "providerID": "sample",
+      "modelID": "anthropic.claude-sonnet-4"
+    },
+    "result": {
+      "settings": {
+        "region": "us-east-2",
+        "baseURL": "https://us-east-2.example"
+      },
+      "package": "@opencode/ai/providers/amazon-bedrock/mantle/messages",
+      "body": {
+        "keep": true
+      }
+    }
+  },
+  "rewrite.mantle-legacy": {
+    "call": "rewrite",
+    "target": {},
+    "input": {
+      "specifier": "@opencode/ai/providers/amazon-bedrock-mantle",
+      "providerID": "sample",
+      "modelID": "openai.gpt-oss-20b"
+    },
+    "result": {
+      "package": "@opencode/ai/providers/amazon-bedrock/mantle/chat"
+    }
+  },
+  "rewrite.openrouter": {
+    "call": "rewrite",
+    "target": {
+      "settings": {
+        "appName": "app",
+        "appUrl": "https://example.test",
+        "api_keys": {
+          "one": "k1",
+          "two": "k2"
+        },
+        "compatibility": "strict",
+        "headers": {
+          "X-Existing": "1"
+        }
+      }
+    },
+    "input": {
+      "specifier": "@openrouter/ai-sdk-provider",
+      "providerID": "sample"
+    },
+    "result": {
+      "settings": {},
+      "package": "@opencode/ai/providers/openrouter",
+      "headers": {
+        "X-OpenRouter-Title": "app",
+        "HTTP-Referer": "https://example.test",
+        "X-Provider-API-Keys": "{\"one\":\"k1\",\"two\":\"k2\"}",
+        "X-Existing": "1"
+      }
+    }
+  },
+  "rewrite.variants": {
+    "call": "rewrite",
+    "target": {
+      "settings": {
+        "extraBody": {
+          "base": true
+        }
+      },
+      "variants": [
+        {
+          "id": "a",
+          "settings": {
+            "headers": {
+              "X-V": "1"
+            },
+            "extraBody": {
+              "base": false,
+              "v": 1
+            }
+          },
+          "headers": {
+            "X-Override": "2"
+          },
+          "body": {
+            "v": 2
+          }
+        },
+        {
+          "id": "b",
+          "headers": {
+            "X": "1"
+          }
+        },
+        {
+          "id": "c",
+          "body": {
+            "k": 1
+          }
+        },
+        {
+          "id": "d"
+        }
+      ]
+    },
+    "input": {
+      "specifier": "@ai-sdk/openai",
+      "providerID": "sample",
+      "modelID": "m"
+    },
+    "result": {
+      "settings": {},
+      "variants": [
+        {
+          "id": "a",
+          "settings": {},
+          "headers": {
+            "X-V": "1",
+            "X-Override": "2"
+          },
+          "body": {
+            "base": false,
+            "v": 2
+          }
+        },
+        {
+          "id": "b",
+          "headers": {
+            "X": "1"
+          }
+        },
+        {
+          "id": "c",
+          "body": {
+            "k": 1
+          }
+        },
+        {
+          "id": "d"
+        }
+      ],
+      "package": "@opencode/ai/providers/openai",
+      "body": {
+        "base": true
+      }
+    }
+  },
+  "rewrite.legacy-vertex": {
+    "call": "rewrite",
+    "target": {},
+    "input": {
+      "specifier": "@opencode/ai/providers/google-vertex-chat",
+      "providerID": "sample"
+    },
+    "result": {
+      "package": "@opencode/ai/providers/google-vertex/chat"
+    }
+  },
+  "rewrite.migrated-package": {
+    "call": "rewrite",
+    "target": {
+      "settings": {}
+    },
+    "input": {
+      "specifier": "@opencode-ai/ai/providers/anthropic",
+      "providerID": "sample"
+    },
+    "result": {
+      "settings": {},
+      "package": "@opencode/ai/providers/anthropic"
+    }
+  },
+  "rewrite.builtin-passthrough": {
+    "call": "rewrite",
+    "target": {
+      "settings": {
+        "apiKey": "x"
+      }
+    },
+    "input": {
+      "specifier": "@opencode/ai/providers/anthropic",
+      "providerID": "sample"
+    },
+    "result": {
+      "settings": {
+        "apiKey": "x"
+      }
+    }
+  },
+  "rewrite.unknown": {
+    "call": "rewrite",
+    "target": {
+      "settings": {
+        "keep": true
+      },
+      "package": "keep"
+    },
+    "input": {
+      "specifier": "aisdk:unknown-package",
+      "providerID": "sample"
+    },
+    "result": {
+      "settings": {
+        "keep": true
+      },
+      "package": "keep"
+    }
+  },
+  "rewrite.azure-chat": {
+    "call": "rewrite",
+    "target": {},
+    "input": {
+      "specifier": "@ai-sdk/azure",
+      "providerID": "sample",
+      "shape": "completions"
+    },
+    "result": {
+      "package": "@opencode/ai/providers/azure/chat"
+    }
+  },
+  "rewrite.azure-native": {
+    "call": "rewrite",
+    "target": {},
+    "input": {
+      "specifier": "@opencode/ai/providers/azure/responses",
+      "providerID": "sample",
+      "shape": "completions"
+    },
+    "result": {
+      "package": "@opencode/ai/providers/azure/chat"
+    }
+  },
+  "rewrite.host": {
+    "call": "rewrite",
+    "target": {},
+    "input": {
+      "specifier": "@ai-sdk/openai",
+      "providerID": "moonshotai",
+      "modelID": "m"
+    },
+    "result": {
+      "package": "@opencode/ai/providers/moonshot/responses"
+    }
+  },
+  "rewrite.no-specifier": {
+    "call": "rewrite",
+    "target": {
+      "settings": {
+        "keep": true
+      }
+    },
+    "input": {
+      "providerID": "sample",
+      "specifier": null
+    },
+    "result": {
+      "settings": {
+        "keep": true
+      }
+    }
+  }
+}

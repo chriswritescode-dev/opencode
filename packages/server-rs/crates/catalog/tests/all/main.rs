@@ -1,3 +1,4 @@
+mod aisdk_native;
 mod corpus;
 mod credential;
 mod credential_refresh;

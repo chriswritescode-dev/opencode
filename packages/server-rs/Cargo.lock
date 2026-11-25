@@ -796,6 +796,7 @@ version = "0.1.0"
 dependencies = [
  "indexmap",
  "log",
+ "opencode-ai",
  "opencode-bus",
  "opencode-config",
  "opencode-contract",
@@ -805,6 +806,7 @@ dependencies = [
  "opencode-util",
  "regex-lite",
  "rusqlite",
+ "serde",
  "serde_json",
  "thiserror",
  "tokio",
