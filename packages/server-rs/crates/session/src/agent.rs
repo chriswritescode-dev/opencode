@@ -1,9 +1,10 @@
 use opencode_config::entry::Entry;
 use opencode_contract::codec::{JsonMap, decode_json};
 use opencode_contract::generated::{
-    AgentColor, AgentID, AgentInfo, AgentInfoMode, ConfigEntryDocumentInfoAgentsValue,
-    ConfigEntryDocumentInfoAgentsValueMode, ConfigEntryDocumentInfoAgentsValueModel, ModelRef, PermissionEffect,
-    PermissionRule, PermissionRuleset, ProviderID, ProviderRequest,
+    AgentColor, AgentID, AgentInfo, AgentInfoInstructions, AgentInfoInstructionsObject, AgentInfoMode,
+    ConfigEntryDocumentInfoAgentsValue, ConfigEntryDocumentInfoAgentsValueMode,
+    ConfigEntryDocumentInfoAgentsValueModel, ModelRef, PermissionEffect, PermissionRule, PermissionRuleset, ProviderID,
+    ProviderRequest,
 };
 
 const BUILD: &str = "build";
@@ -14,6 +15,7 @@ const BUILD_DESCRIPTION: &str = "The default agent. Executes tools based on conf
 const GENERAL_DESCRIPTION: &str = "General-purpose agent for researching complex questions and executing multi-step tasks. Use this agent to execute multiple units of work in parallel.";
 const EXPLORE_DESCRIPTION: &str = r#"Fast agent specialized for exploring codebases. Use this when you need to quickly find files by patterns (eg. "src/components/**/*.tsx"), search code for keywords (eg. "API endpoints"), or answer questions about the codebase (eg. "how do API endpoints work?"). When calling this agent, specify the desired thoroughness level: "quick" for basic searches, "medium" for moderate exploration, or "very thorough" for comprehensive analysis across multiple locations and naming conventions."#;
 const PLAN_DESCRIPTION: &str = "Read-only agent for exploring the codebase and planning work before implementation.";
+const PLAN_UNSELECTED: &str = "You are no longer the Plan agent, so you are NO LONGER in Plan mode. The previous Plan restrictions no longer apply. Any Plan mode instructions from earlier in this conversation are no longer active.";
 
 const PROMPT_EXPLORE: &str = r#"You are a file search specialist. You excel at thoroughly navigating and exploring codebases.
 
@@ -215,10 +217,20 @@ fn builtin(id: &str, home: &str) -> AgentInfo {
             info.permissions.push(rule("edit", "*", PermissionEffect::Deny));
             let directory = append_path(&append_path(home, ".opencode"), "plan");
             info.permissions.push(rule("edit", &append_path(&directory, "*"), PermissionEffect::Allow));
+            info.instructions = Some(AgentInfoInstructions::Object(AgentInfoInstructionsObject {
+                selected: plan_selected(&directory),
+                unselected: PLAN_UNSELECTED.to_owned(),
+            }));
         }
         _ => {}
     }
     info
+}
+
+fn plan_selected(directory: &str) -> String {
+    format!(
+        "You are in Plan mode. Discuss the plan with the user directly in the conversation. Do not create or update plan files unless the user explicitly asks you to; when they do, write them only in:\n{directory}\n\nDo not modify any other files or ask a subagent to do so.\n\nYou remain in Plan mode until the user switches agents. If the user asks you to implement changes, do not do so. Tell them they need to switch agents."
+    )
 }
 
 fn default_info(id: &str) -> AgentInfo {

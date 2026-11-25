@@ -78,11 +78,13 @@ impl Catalog {
                 .providers
                 .iter()
                 .flat_map(|provider| {
-                    provider
-                        .models
-                        .iter()
-                        .filter(|model| model.enabled && model.r#type.as_deref().unwrap_or("chat") == r#type)
-                        .map(|model| provider.info(model))
+                    let mut infos: Vec<ModelInfo> = provider.models.iter().map(|model| provider.info(model)).collect();
+                    disable_unavailable_speeds(&mut infos);
+                    infos
+                        .into_iter()
+                        .zip(provider.models.iter())
+                        .filter(|(info, model)| info.enabled && model.r#type.as_deref().unwrap_or("chat") == r#type)
+                        .map(|(info, _)| info)
                 })
                 .collect();
             group.sort_by(|left, right| right.time.released.total_cmp(&left.time.released));
@@ -261,4 +263,66 @@ fn uses_api_key_auth(specifier: &str) -> bool {
     PACKAGES.contains(&specifier)
         || specifier.starts_with("@opencode/ai/providers/openai/")
         || specifier.starts_with("@opencode/ai/providers/azure/")
+}
+
+fn disable_unavailable_speeds(models: &mut [ModelInfo]) {
+    for index in 0..models.len() {
+        if !models[index].enabled {
+            continue;
+        }
+        let Some(base) = models[index]
+            .experimental
+            .as_ref()
+            .and_then(|experimental| experimental.speed.as_ref())
+            .map(|speed| speed.base.clone())
+        else {
+            continue;
+        };
+        if !models.iter().any(|model| model.id == base && model.enabled) {
+            models[index].enabled = false;
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::disable_unavailable_speeds;
+    use opencode_contract::codec::decode_json;
+    use opencode_contract::generated::ModelInfo;
+    use serde_json::json;
+
+    fn model(id: &str, enabled: bool, base: Option<&str>) -> ModelInfo {
+        let mut value = json!({
+            "id": id,
+            "modelID": id,
+            "providerID": "test",
+            "name": id,
+            "capabilities": { "tools": true, "input": ["text"], "output": ["text"] },
+            "variants": [],
+            "time": { "released": 0 },
+            "cost": [],
+            "status": "active",
+            "enabled": enabled,
+            "limit": { "context": 100000, "output": 10000 }
+        });
+        if let Some(base) = base {
+            value["experimental"] = json!({ "speed": { "base": base, "id": "fast", "faster": true } });
+        }
+        decode_json::<ModelInfo>(&value.to_string()).expect("model info decodes")
+    }
+
+    #[test]
+    fn speed_models_follow_their_base() {
+        let mut models = vec![
+            model("standard", false, None),
+            model("standard-fast", true, Some("standard")),
+            model("missing-fast", true, Some("missing")),
+            model("other", true, None),
+            model("other-fast", true, Some("other")),
+        ];
+        disable_unavailable_speeds(&mut models);
+        assert!(!models[1].enabled, "a speed whose base is disabled is disabled");
+        assert!(!models[2].enabled, "a speed whose base is missing is disabled");
+        assert!(models[4].enabled, "a speed whose base is enabled stays enabled");
+    }
 }

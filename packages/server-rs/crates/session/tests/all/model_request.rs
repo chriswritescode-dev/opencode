@@ -1,7 +1,7 @@
 use std::path::Path;
 use std::sync::Arc;
 
-use opencode_ai::{ExecutionContext, MapEnv, StreamOptions, SystemPart};
+use opencode_ai::{ContentPart, ExecutionContext, MapEnv, Message, StreamOptions, SystemPart};
 use opencode_bus::{Bus, BusOptions, Definition, PublishOptions};
 use opencode_catalog::Catalog;
 use opencode_config::entry::{Document, Entry, Origin};
@@ -32,6 +32,7 @@ struct Setup {
     agents: Agents,
     list: List,
     work: String,
+    sessions: Sessions,
 }
 
 impl Setup {
@@ -42,6 +43,29 @@ impl Setup {
 
 fn app() -> AppInfo {
     AppInfo { name: "opencode".to_owned(), channel: "local".to_owned(), version: "0.0.0-test".to_owned() }
+}
+
+fn system_text(parts: &[SystemPart]) -> String {
+    parts
+        .iter()
+        .map(|part| match part {
+            SystemPart::Text { text, .. } => text.as_str(),
+        })
+        .collect::<Vec<_>>()
+        .join("\n\n")
+}
+
+fn system_message_texts(messages: &[Message]) -> Vec<&str> {
+    messages
+        .iter()
+        .filter_map(|message| {
+            let Message::System(system) = message else { return None };
+            system.content.iter().find_map(|part| match part {
+                ContentPart::Text(text) => Some(text.text.as_str()),
+                _ => None,
+            })
+        })
+        .collect()
 }
 
 fn builtins_input(work: &str, root: &Path) -> BuiltinsInput {
@@ -144,7 +168,7 @@ fn setup(build_system: Option<&str>) -> Setup {
     bus.publish(&definition, json!({ "sessionID": "ses_1", "inboxID": inbox.id.0 }), PublishOptions::default())
         .expect("deliver the prompt");
 
-    Setup { dir, database, bus, store, catalog, agents, list, work }
+    Setup { dir, database, bus, store, catalog, agents, list, work, sessions }
 }
 
 fn substitute(value: &mut Value, root: &str, date: &str, platform: &str) {
@@ -228,4 +252,61 @@ fn configured_agent_system_replaces_the_default_prompt() {
     let request = model_request::prepare(&loaded, &app());
     let SystemPart::Text { text, .. } = request.system.first().expect("the request carries a system prompt");
     assert_eq!(text.as_str(), "You are a test agent.");
+}
+
+const PLAN_SELECTED: &str = "You are in Plan mode. Discuss the plan with the user directly in the conversation.";
+const PLAN_UNSELECTED: &str = "You are no longer the Plan agent, so you are NO LONGER in Plan mode.";
+
+#[test]
+fn plan_agent_instructions_reach_the_request_and_leave_once() {
+    let setup = setup(None);
+    setup
+        .database
+        .read(|connection| Ok(connection.execute("UPDATE session_v2 SET agent = 'plan' WHERE id = 'ses_1'", [])?))
+        .expect("select the plan agent");
+    let env = MapEnv::default();
+    let input = LoadInput {
+        database: &setup.database,
+        store: &setup.store,
+        catalog: &setup.catalog,
+        agents: &setup.agents,
+        env: &env,
+        builtins: setup.builtins(),
+    };
+
+    let plan_list = context::instruction_list(&setup.store, &setup.agents, setup.builtins(), "ses_1")
+        .expect("build the plan instruction list");
+    instruction_state::prepare(&setup.database, &setup.bus, &plan_list, "ses_1")
+        .expect("prepare the plan instructions");
+    let plan = context::load_with(&input, "ses_1", plan_list).expect("load the plan context");
+    let plan_system = system_text(&model_request::prepare(&plan, &app()).system);
+    assert!(plan_system.contains(PLAN_SELECTED), "the plan instructions reach the system prompt");
+    assert!(plan_system.contains("/home/test/.opencode/plan"), "the plan directory reaches the system prompt");
+
+    setup.sessions.switch_agent("ses_1", "build").expect("switch to the build agent");
+    let build_list = context::instruction_list(&setup.store, &setup.agents, setup.builtins(), "ses_1")
+        .expect("build the build instruction list");
+    instruction_state::prepare(&setup.database, &setup.bus, &build_list, "ses_1")
+        .expect("prepare the build instructions");
+    let build = context::load_with(&input, "ses_1", build_list).expect("load the build context");
+    let build_request = model_request::prepare(&build, &app());
+    assert_eq!(
+        system_message_texts(&build_request.messages).into_iter().filter(|text| text.contains(PLAN_UNSELECTED)).count(),
+        1,
+        "the plan leave text is sent exactly once"
+    );
+
+    let repeated = context::instruction_list(&setup.store, &setup.agents, setup.builtins(), "ses_1")
+        .expect("rebuild the build instruction list");
+    instruction_state::prepare(&setup.database, &setup.bus, &repeated, "ses_1")
+        .expect("prepare the unchanged build instructions");
+    let build = context::load_with(&input, "ses_1", repeated).expect("reload the build context");
+    assert_eq!(
+        system_message_texts(&model_request::prepare(&build, &app()).messages)
+            .into_iter()
+            .filter(|text| text.contains(PLAN_UNSELECTED))
+            .count(),
+        1,
+        "the plan leave text is not repeated on the next step"
+    );
 }

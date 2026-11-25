@@ -105,7 +105,7 @@ Before merging, the whole package must pass:
   `--tables <names>` to restrict what is compared without changing what a scenario runs; the parts, the table filter
   and the `events` and `logs` dependencies are documented in `parity/README.md`. After
   `bun run cargo build -q -p opencode-server`, the strict binary run is
-  `bun run parity --candidate target/debug/opencode-server parity/scenarios/session-create-list.scenario.ts parity/scenarios/debug-routes.scenario.ts`,
+  `bun run parity --candidate target/debug/opencode-server parity/scenarios/agent-model-list.scenario.ts parity/scenarios/session-create-list.scenario.ts parity/scenarios/debug-routes.scenario.ts`,
   and `bun run parity --candidate target/debug/opencode-server --allow-pending parity/scenarios/prompt-text-only.scenario.ts parity/scenarios/project-routes.scenario.ts parity/scenarios/location-routes.scenario.ts parity/scenarios/config-routes.scenario.ts`
   passes with `project-routes` explained only by `OR-43-project-query-decode-messages`, `prompt-text-only` only by
   `OR-49-tool-definitions`, and `location-routes` and `config-routes` only by `OR-49-registry-events` until OR-46,
