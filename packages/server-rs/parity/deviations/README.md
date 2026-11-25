@@ -96,4 +96,11 @@ A deviation that excepts a recorded cassette from the replay gate also has a `Ca
 - `OR-45-xai-responses-websocket.md`: xAI streams over HTTP only and has no chat route
 - `OR-45-extraction.md`: extraction validates requests less strictly and forwards provider options
 - `OR-45-corpus-normalisation.md`: the corpus normalises transport noise and replay skips some byte comparisons
+- `OR-50-frontmatter-yaml.md`: a YAML timestamp frontmatter value stays its source string instead of a `Date`
+- `OR-50-frontmatter-schema.md`: js-yaml 3 scalar coercion, merge keys and the `---json` engine differ from yaml-rust2
+- `OR-50-instruction-updates.md`: instruction update rendering is deferred to OR-55
+- `OR-50-permission-service.md`: permission service seams and failure shapes differ from the Effect service
+- `OR-50-references.md`: reference parsing, refresh scheduling and ordering differ from the TypeScript registry
+- `OR-50-skill-sources.md`: skill URL caches and files created after a scan are read and watched differently
+- `OR-50-form-pattern.md`: form patterns and date-time parsing use Rust regexes and an ISO date subset
 - `OR-61-sidecar-environment.md`: plugins run in a sidecar with an allowlisted environment instead of inside the server

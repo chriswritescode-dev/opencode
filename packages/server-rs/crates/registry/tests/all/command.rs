@@ -103,6 +103,7 @@ struct FakeRuntime {
     outputs: Mutex<Vec<String>>,
     agents: Mutex<HashMap<String, AgentInfo>>,
     fail: Mutex<Option<String>>,
+    shell_fail: Mutex<Option<String>>,
 }
 
 impl FakeRuntime {
@@ -116,6 +117,11 @@ impl FakeRuntime {
 
     fn failing(self, message: &str) -> Self {
         *self.fail.lock().expect("the failure lock is not poisoned") = Some(message.to_string());
+        self
+    }
+
+    fn failing_shell(self, message: &str) -> Self {
+        *self.shell_fail.lock().expect("the shell failure lock is not poisoned") = Some(message.to_string());
         self
     }
 }
@@ -152,6 +158,9 @@ impl CommandRuntime for FakeRuntime {
 
     fn run_shell<'a>(&'a self, command: String, cwd: PathBuf) -> BoxFuture<'a, Result<String, String>> {
         Box::pin(async move {
+            if let Some(message) = self.shell_fail.lock().expect("the shell failure lock is not poisoned").clone() {
+                return Err(message);
+            }
             self.shells.lock().expect("the shell lock is not poisoned").push((command, cwd));
             let mut outputs = self.outputs.lock().expect("the output lock is not poisoned");
             if outputs.is_empty() {
@@ -495,6 +504,33 @@ async fn interpolates_shell_spans_through_the_runtime() {
     let prompts = runtime.prompts.lock().expect("the prompt lock is not poisoned");
     assert_eq!(prompts.len(), 1);
     assert_eq!(prompts[0].prompt.text, "Run HI now. BYE");
+}
+
+#[tokio::test]
+async fn reports_shell_failures_with_the_interpolation_prefix() {
+    let temp = TempDir::new();
+    let documents = command::load(&[Entry::Document(Document {
+        path: None,
+        info: document(r#"{"commands":{"shell":{"template":"Run !`ls` now."}}}"#),
+        origin: Origin::File,
+    })]);
+    let service = CommandService::new(Arc::new(Recorder::default()));
+    let _config = service
+        .transform({
+            let root = temp.path().to_path_buf();
+            move |editor| command::apply(&documents, &root, editor)
+        })
+        .await;
+    let runtime = FakeRuntime::default().failing_shell("boom");
+
+    let error = service.execute("shell", invocation(""), &runtime).await.expect_err("the shell fails");
+    assert_eq!(
+        error,
+        CommandError::Execution {
+            command: "shell".to_string(),
+            message: r#"Shell interpolation failed for "ls": boom"#.to_string(),
+        }
+    );
 }
 
 #[test]

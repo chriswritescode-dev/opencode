@@ -164,7 +164,7 @@ pub fn cache_path(root: &Path, reference: &Reference, branch: Option<&str>) -> P
     parts.extend(host.split(':'));
     parts.extend(segments.iter().map(String::as_str));
     let base = Flavor::NATIVE.join(&parts);
-    match branch {
+    match branch.filter(|branch| !branch.is_empty()) {
         Some(branch) => PathBuf::from(format!("{base}@{}", encode_uri_component(branch))),
         None => PathBuf::from(base),
     }
@@ -282,21 +282,34 @@ fn split_github_shorthand(input: &str) -> Option<(&str, &str)> {
 }
 
 fn split_scp(input: &str) -> Option<(&str, &str)> {
-    let (left, right) = input.split_once(':')?;
-    if right.is_empty() || right.chars().any(is_line_terminator) {
+    if let Some(split) = split_user_scp(input) {
+        return Some(split);
+    }
+    let (host, rest) = input.split_once(':')?;
+    if !safe_scp_host(host) || !safe_scp_path(rest) {
         return None;
     }
-    if left.is_empty() || left.contains('/') || left.chars().any(is_js_whitespace) {
+    Some((host, rest))
+}
+
+fn split_user_scp(input: &str) -> Option<(&str, &str)> {
+    let (user, after) = input.split_once('@')?;
+    if user.is_empty() || user.contains('/') || user.chars().any(is_js_whitespace) {
         return None;
     }
-    let host = match left.split_once('@') {
-        Some((user, host)) if !user.is_empty() && !user.contains('@') => host,
-        _ => left,
-    };
-    if host.is_empty() || host.contains(':') || host.contains('/') || host.chars().any(is_js_whitespace) {
+    let (host, rest) = after.split_once(':')?;
+    if !safe_scp_host(host) || !safe_scp_path(rest) {
         return None;
     }
-    Some((host, right))
+    Some((host, rest))
+}
+
+fn safe_scp_host(host: &str) -> bool {
+    !host.is_empty() && !host.contains(':') && !host.contains('/') && !host.chars().any(is_js_whitespace)
+}
+
+fn safe_scp_path(rest: &str) -> bool {
+    !rest.is_empty() && !rest.chars().any(is_line_terminator)
 }
 
 fn url_host(url: &Url) -> Option<String> {

@@ -1,4 +1,5 @@
 use crate::config;
+use crate::watch::VarReader;
 
 pub mod agent;
 pub mod command;
@@ -17,8 +18,7 @@ pub struct Deps {
     pub config_directory: std::path::PathBuf,
     pub cache: std::path::PathBuf,
     pub app: skill::AppInfo,
-    #[allow(clippy::type_complexity)]
-    pub env: std::sync::Arc<dyn Fn(&str) -> Option<String> + Send + Sync>,
+    pub env: VarReader,
 }
 
 pub struct Activation {
@@ -55,6 +55,7 @@ pub async fn activate(deps: Deps) -> Activation {
             home: deps.home.clone(),
             config_directory: deps.config_directory,
         },
+        deps.env.clone(),
     )
     .await;
 
@@ -67,12 +68,13 @@ pub async fn activate(deps: Deps) -> Activation {
 
     let agent = config::agent::register(&deps.config, &deps.agents, &deps.home).await;
     let command = config::command::register(&deps.config, &deps.commands, &deps.directory).await;
-    let compatibility = config::compatibility::register(&deps.config, &deps.skills).await;
+    let compatibility = config::compatibility::register(&deps.config, &deps.skills, deps.env.clone()).await;
 
     let skill = config::skill::register(
         &deps.config,
         &deps.skills,
         config::skill::SkillEnvironment { directory: deps.directory, home: deps.home, cache: deps.cache },
+        deps.env.clone(),
     )
     .await;
 

@@ -120,6 +120,12 @@ fn parses_host_paths_and_scp_remotes() {
     assert_eq!(scp.path, "owner/repo");
     assert_eq!(scp.remote, "git@github.com:owner/repo.git");
     assert_eq!(scp.label, "owner/repo");
+
+    let credentialed = remote("user:pass@example.com:owner/repo");
+    assert_eq!(credentialed.host, "example.com");
+    assert_eq!(credentialed.segments, ["owner", "repo"]);
+    assert_eq!(credentialed.remote, "user:pass@example.com:owner/repo");
+    assert_eq!(credentialed.label, "example.com/owner/repo");
 }
 
 #[test]
@@ -234,6 +240,30 @@ async fn lists_local_and_git_sources_and_skips_invalid_ones() {
         ReferenceSource::Local(ReferenceLocalSource {
             r#type: ReferenceLocalSourceType::Local,
             path: AbsolutePath("/docs".to_string()),
+        })
+    );
+}
+
+#[tokio::test]
+async fn lists_an_empty_branch_as_branchless() {
+    let temp = TempDir::new();
+    let root = temp.path().canonicalize().expect("the temp root canonicalizes");
+    let service = service(&root, Arc::new(NoEvents), Arc::new(NoRefresh));
+    let _registration = service
+        .transform(|editor| {
+            editor.add("sdk".to_string(), git("owner/repo", Some("")));
+        })
+        .await;
+
+    let list = service.list().await.expect("the reference state reads");
+    assert_eq!(list.iter().map(|info| info.name.as_str()).collect::<Vec<_>>(), ["sdk"]);
+    assert_eq!(list[0].path, AbsolutePath(root.join("repos/github.com/owner/repo").to_string_lossy().into_owned()));
+    assert_eq!(
+        list[0].source,
+        ReferenceSource::Git(ReferenceGitSource {
+            r#type: ReferenceGitSourceType::Git,
+            repository: "owner/repo".to_string(),
+            branch: Some(String::new()),
         })
     );
 }

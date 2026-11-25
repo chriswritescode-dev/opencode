@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicI64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -153,6 +154,22 @@ fn assert_environment(case: &Value, name: &str) {
     );
 }
 
+#[tokio::test]
+async fn builtins_date_source_reads_the_clock_on_every_read() {
+    let clock = Arc::new(AtomicI64::new(0));
+    let source = builtins::date_source(Arc::new({
+        let clock = clock.clone();
+        move || clock.fetch_add(86_400_000, Ordering::Relaxed)
+    }));
+    assert_eq!(source.key().as_str(), "core/date");
+    let first = source.read().await;
+    let second = source.read().await;
+    match (first, second) {
+        (Observed::Value(first), Observed::Value(second)) => assert_ne!(first, second),
+        other => panic!("the date source observes values: {other:?}"),
+    }
+}
+
 fn assert_canonical(case: &Value, name: &str) {
     let values = case["values"].as_array().expect("case values are an array");
     let canonical = case["canonical"].as_array().expect("case canonical values are an array");
@@ -256,6 +273,7 @@ async fn config_instructions_reload_when_a_project_file_changes() {
         &config,
         &discovery,
         InstructionEnvironment { directory: project.clone(), project_directory: project, home, config_directory },
+        Arc::new(|_| None),
     )
     .await;
 

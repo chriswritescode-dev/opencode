@@ -12,7 +12,7 @@ use tokio::sync::{Mutex as AsyncMutex, broadcast};
 use tokio::task::JoinHandle;
 
 use crate::skill::{SkillEditor, SkillService};
-use crate::watch::WatchHandle;
+use crate::watch::{VarReader, WatchHandle};
 
 #[derive(Clone, Debug)]
 pub struct SkillEnvironment {
@@ -128,6 +128,7 @@ pub async fn register(
     config: &ConfigService,
     skills: &SkillService,
     environment: SkillEnvironment,
+    var: VarReader,
 ) -> ConfigSkillHandle {
     let loaded = Arc::new(RwLock::new(load(&config.entries(), &environment).await));
     let registration = skills
@@ -150,6 +151,7 @@ pub async fn register(
         lock: AsyncMutex::new(()),
         watch: watch.clone(),
         handle: tokio::runtime::Handle::current(),
+        var,
     });
     refresher.install_watches();
     let mut updates = config.subscribe_updated();
@@ -175,6 +177,7 @@ struct Refresher {
     lock: AsyncMutex<()>,
     watch: Arc<Mutex<Option<WatchHandle>>>,
     handle: tokio::runtime::Handle,
+    var: VarReader,
 }
 
 impl Refresher {
@@ -194,7 +197,7 @@ impl Refresher {
         let refresher = Arc::downgrade(self);
         let watch = crate::watch::watch_files(
             paths,
-            |name| std::env::var(name).ok(),
+            |name| (self.var)(name),
             move || {
                 let Some(refresher) = refresher.upgrade() else { return };
                 handle.spawn(async move { refresher.refresh().await });

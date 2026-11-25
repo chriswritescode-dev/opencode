@@ -1,8 +1,9 @@
+use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use opencode_util::time::Zone;
 
-use crate::instructions::{Key, List, combine, fixed};
+use crate::instructions::{BoxFuture, Key, List, Observed, Source, combine, fixed};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Environment {
@@ -59,24 +60,50 @@ pub fn environment_text(environment: &Environment) -> String {
     )
 }
 
+struct DateSource {
+    key: Key,
+    now: Arc<dyn Fn() -> i64 + Send + Sync>,
+}
+
+impl Source for DateSource {
+    fn key(&self) -> &Key {
+        &self.key
+    }
+
+    fn read<'a>(&'a self) -> BoxFuture<'a, Observed> {
+        let date = date_string((self.now)());
+        Box::pin(async move { Observed::Value(serde_json::Value::String(date)) })
+    }
+
+    fn initial(&self, value: &serde_json::Value) -> Option<String> {
+        value.as_str().map(|date| format!("Today's date: {date}"))
+    }
+}
+
+pub fn date_source(now: Arc<dyn Fn() -> i64 + Send + Sync>) -> Arc<dyn Source> {
+    Arc::new(DateSource { key: Key::new("core/date").expect("the built-in instruction key is valid"), now })
+}
+
+fn environment_source(environment: &Environment) -> Arc<dyn Source> {
+    fixed(
+        Key::new("core/environment").expect("the built-in instruction key is valid"),
+        serde_json::Value::String(self::environment(environment)),
+        |value| {
+            value.as_str().map(|environment| {
+                format!("Here is some useful information about the environment you are running in:\n{environment}")
+            })
+        },
+    )
+}
+
 pub fn load(environment: &Environment, now_ms: i64) -> List {
-    combine([
-        vec![fixed(
-            Key::new("core/date").expect("the built-in instruction key is valid"),
-            serde_json::Value::String(date_string(now_ms)),
-            |value| value.as_str().map(|date| format!("Today's date: {date}")),
-        )],
-        vec![fixed(
-            Key::new("core/environment").expect("the built-in instruction key is valid"),
-            serde_json::Value::String(self::environment(environment)),
-            |value| {
-                value.as_str().map(|environment| {
-                    format!("Here is some useful information about the environment you are running in:\n{environment}")
-                })
-            },
-        )],
-    ])
-    .expect("the built-in instruction keys are distinct")
+    combine([vec![date_source(Arc::new(move || now_ms))], vec![environment_source(environment)]])
+        .expect("the built-in instruction keys are distinct")
+}
+
+pub fn live(environment: &Environment) -> List {
+    combine([vec![date_source(Arc::new(now_millis))], vec![environment_source(environment)]])
+        .expect("the built-in instruction keys are distinct")
 }
 
 #[cfg(test)]

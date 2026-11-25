@@ -600,6 +600,24 @@ fn report_skill_prints_its_diagnostic_lines() {
     assert!(report.contains("## Runtime Diagnostics Snapshot"), "the report prints its snapshot heading");
 }
 
+#[test]
+fn report_skill_treats_empty_terminal_variables_as_unset() {
+    let info = ConfigEntryDocumentInfo::decode(&serde_json::json!({ "plugins": [] }), &mut codec::Path::new())
+        .expect("the plugins document decodes");
+    let entries = [Entry::Document(Document { path: None, info, origin: Origin::File })];
+    let env = |name: &str| -> Option<String> {
+        match name {
+            "TERM" => Some(String::new()),
+            _ => None,
+        }
+    };
+    let app = builtin::skill::AppInfo { version: "9.9.9".to_string(), channel: "test".to_string() };
+    let report = builtin::skill::report(&app, &env, &entries);
+    let terminal =
+        report.lines().rfind(|line| line.starts_with("- Terminal: ")).expect("the report prints a Terminal line");
+    assert_eq!(terminal, "- Terminal: Unavailable: terminal environment variables are not set");
+}
+
 async fn wait_for_skill_description(skills: &SkillService, id: &str, description: &str) {
     tokio::time::timeout(Duration::from_secs(10), async {
         loop {
@@ -655,6 +673,7 @@ async fn config_skill_register_reloads_when_the_file_changes() {
         &config,
         &skills,
         config::skill::SkillEnvironment { directory: project, home, cache: root.join("cache") },
+        Arc::new(|_| None),
     )
     .await;
 

@@ -8,12 +8,12 @@ use opencode_config::entry::Entry;
 use opencode_config::service::ConfigService;
 use opencode_location::state::Registration;
 use opencode_util::path::realpath;
-use tokio::sync::{Semaphore, broadcast};
+use tokio::sync::{Mutex as AsyncMutex, Semaphore, broadcast};
 use tokio::task::JoinSet;
 
 use crate::instructions::discovery::{File, InstructionDiscovery, InstructionOptions, filenames, prefer_agents};
 use crate::scan::{self, ScanOptions};
-use crate::watch::WatchHandle;
+use crate::watch::{VarReader, WatchHandle};
 
 #[derive(Clone, Debug)]
 pub struct InstructionEnvironment {
@@ -130,6 +130,7 @@ pub async fn register(
     config: &ConfigService,
     discovery: &InstructionDiscovery,
     environment: InstructionEnvironment,
+    var: VarReader,
 ) -> ConfigInstructionHandle {
     let mut updates = config.subscribe_updated();
     let options = discovery.options().clone();
@@ -146,6 +147,8 @@ pub async fn register(
         watch: watch.clone(),
         handle: tokio::runtime::Handle::current(),
         registration: Mutex::new(None),
+        gate: AsyncMutex::new(()),
+        var,
     });
     refresher.activate().await;
     let task = tokio::spawn({
@@ -173,6 +176,8 @@ struct Refresher {
     watch: Arc<Mutex<Option<WatchHandle>>>,
     handle: tokio::runtime::Handle,
     registration: Mutex<Option<Registration>>,
+    gate: AsyncMutex<()>,
+    var: VarReader,
 }
 
 impl Refresher {
@@ -198,15 +203,21 @@ impl Refresher {
     }
 
     async fn reconfigure(self: &Arc<Self>, config: &ConfigService) {
+        let _guard = self.gate.lock().await;
         let sources = configured_sources(&config.entries());
         let previous = self.remote.read().expect("the instruction remote lock is never poisoned").clone();
         let remote = fetch_remote(&previous, &sources).await;
         *self.sources.write().expect("the instruction source lock is never poisoned") = sources;
         *self.remote.write().expect("the instruction remote lock is never poisoned") = remote;
-        self.refresh().await;
+        self.refresh_locked().await;
     }
 
     async fn refresh(self: &Arc<Self>) {
+        let _guard = self.gate.lock().await;
+        self.refresh_locked().await;
+    }
+
+    async fn refresh_locked(self: &Arc<Self>) {
         self.reload_loaded();
         self.discovery.reload().await;
         self.install_watches();
@@ -228,7 +239,7 @@ impl Refresher {
         let refresher = Arc::downgrade(self);
         let watch = crate::watch::watch_files(
             paths,
-            |name| std::env::var(name).ok(),
+            |name| (self.var)(name),
             move || {
                 let Some(refresher) = refresher.upgrade() else { return };
                 handle.spawn(async move { refresher.refresh().await });
@@ -332,7 +343,7 @@ fn configured_source(
             continue;
         }
         let mut matches = match_source(environment, options, source, start, root, project);
-        matches.sort();
+        matches.sort_by(|a, b| a.to_string_lossy().cmp(&b.to_string_lossy()));
         for item in matches {
             let resolved = resolve(&item);
             if !watched.insert(resolved.clone()) {
@@ -376,7 +387,7 @@ fn match_source(
     } else {
         scan::scan(&environment.config_directory, source, scan_options)
     };
-    results.sort();
+    results.sort_by(|a, b| a.to_string_lossy().cmp(&b.to_string_lossy()));
     results.dedup();
     results
 }

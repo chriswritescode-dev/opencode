@@ -155,7 +155,7 @@ fn release() -> String {
 fn terminal(env: &dyn Fn(&str) -> Option<String>) -> String {
     let values: Vec<String> = ["TERM_PROGRAM", "TERM", "COLORTERM"]
         .into_iter()
-        .filter_map(|key| env(key).map(|value| format!("{key}={value}")))
+        .filter_map(|key| env(key).filter(|value| !value.is_empty()).map(|value| format!("{key}={value}")))
         .collect();
     if values.is_empty() {
         return "Unavailable: terminal environment variables are not set".to_string();

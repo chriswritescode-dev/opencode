@@ -8,6 +8,8 @@ use notify::{RecursiveMode, Watcher as NotifyWatcher};
 
 pub const DEBOUNCE: Duration = Duration::from_millis(100);
 
+pub type VarReader = std::sync::Arc<dyn Fn(&str) -> Option<String> + Send + Sync>;
+
 pub struct WatchHandle {
     _watcher: Option<notify::RecommendedWatcher>,
     _debounce: Option<thread::JoinHandle<()>>,

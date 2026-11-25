@@ -117,7 +117,7 @@ pub fn list(data: &ReferenceData, repos: &Path) -> Vec<ReferenceInfo> {
                     if !repository::is_remote(&reference) {
                         return None;
                     }
-                    if let Some(branch) = &git.branch {
+                    if let Some(branch) = git.branch.as_deref().filter(|branch| !branch.is_empty()) {
                         repository::validate_branch(branch).ok()?;
                     }
                     let path =
@@ -154,7 +154,7 @@ pub fn refresh_sources(data: &ReferenceData) -> Vec<GitSource> {
             if !repository::is_remote(&reference) {
                 return None;
             }
-            if let Some(branch) = &git.branch {
+            if let Some(branch) = git.branch.as_deref().filter(|branch| !branch.is_empty()) {
                 repository::validate_branch(branch).ok()?;
             }
             Some(git.clone())

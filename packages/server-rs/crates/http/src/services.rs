@@ -172,14 +172,13 @@ impl GlobalServices {
                 })
                 .await;
                 let sources = opencode_registry::instructions::combine([
-                    opencode_registry::instructions::builtins::load(
+                    opencode_registry::instructions::builtins::live(
                         &opencode_registry::instructions::builtins::Environment {
                             directory: info.directory.clone(),
                             project_directory: info.project.directory.clone(),
                             vcs: info.vcs.as_ref().map(|vcs| vcs.kind().to_string()),
                             tmp: tmp.to_string_lossy().into_owned(),
                         },
-                        opencode_registry::instructions::builtins::now_millis(),
                     ),
                     vec![opencode_registry::reference::instructions::source(references.clone())],
                 ])

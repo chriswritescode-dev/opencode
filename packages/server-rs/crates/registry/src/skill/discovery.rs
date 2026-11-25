@@ -10,7 +10,6 @@ use url::Url;
 
 const SKILL_CONCURRENCY: usize = 4;
 const FILE_CONCURRENCY: usize = 8;
-const REQUEST_TIMEOUT: Duration = Duration::from_secs(5);
 const ATTEMPTS: u32 = 3;
 
 pub fn is_safe_segment(value: &str) -> bool {
@@ -323,7 +322,7 @@ async fn download(client: &reqwest::Client, url: &str, destination: &Path) -> bo
 
 async fn fetch(client: &reqwest::Client, url: &str, accept: Option<&str>) -> Option<Vec<u8>> {
     for attempt in 0..ATTEMPTS {
-        let mut request = client.get(url).timeout(REQUEST_TIMEOUT);
+        let mut request = client.get(url);
         if let Some(accept) = accept {
             request = request.header(reqwest::header::ACCEPT, accept);
         }

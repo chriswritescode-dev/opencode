@@ -189,7 +189,12 @@ impl CommandExecute for ConfigExecute {
             } else {
                 let mut outputs = Vec::new();
                 for source in &parts.shells {
-                    outputs.push(runtime.run_shell(source.clone(), self.directory.clone()).await?);
+                    outputs.push(runtime.run_shell(source.clone(), self.directory.clone()).await.map_err(|error| {
+                        format!(
+                            "Shell interpolation failed for {}: {error}",
+                            serde_json::to_string(source).unwrap_or_default()
+                        )
+                    })?);
                 }
                 fill_shells(&parts.text, &outputs)
             };

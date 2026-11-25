@@ -11,6 +11,7 @@ use opencode_contract::generated::{
     ConfigEntryDocumentInfoAgentsValueMode, ConfigEntryDocumentInfoAgentsValueModel, ModelRef, PermissionRule,
     ProviderID,
 };
+use opencode_location::location::{normalize_posix, normalize_windows};
 use opencode_location::state::Registration;
 use serde_json::Value;
 
@@ -282,9 +283,15 @@ fn expand_home(resource: &str, home: &str) -> String {
         return resource.to_string();
     };
     if home.starts_with('/') {
-        return format!("{home}/{relative}");
+        if relative.is_empty() {
+            return normalize_posix(home);
+        }
+        return normalize_posix(&format!("{home}/{relative}"));
     }
-    format!("{home}\\{}", relative.replace('/', "\\"))
+    if relative.is_empty() {
+        return normalize_windows(home);
+    }
+    normalize_windows(&format!("{home}\\{relative}"))
 }
 
 fn agent_mode(mode: ConfigEntryDocumentInfoAgentsValueMode) -> AgentInfoMode {
