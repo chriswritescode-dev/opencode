@@ -1,4 +1,5 @@
 pub mod column;
+pub mod credential;
 pub mod database;
 pub mod dump;
 pub mod error;

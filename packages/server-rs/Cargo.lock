@@ -791,6 +791,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "opencode-catalog"
+version = "0.1.0"
+dependencies = [
+ "opencode-bus",
+ "opencode-config",
+ "opencode-contract",
+ "opencode-storage",
+ "rusqlite",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "opencode-config"
 version = "0.1.0"
 dependencies = [
