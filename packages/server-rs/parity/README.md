@@ -191,9 +191,9 @@ current ledger of `Accepted: pending owner` files explains nothing and only prod
 
 Without `--allow-pending`, a pending file explains nothing and only warns. With `--allow-pending`, pending files are
 loaded and matched like accepted ones, so they can check a candidate against deviations that wait for owner
-acceptance. A pending file with no `parity` block then fails the run with exit 2, and a scenario whose differences a
-pending deviation explains prints `PASS <scenario> (<n> explained by pending <ids>)`. CI never passes the flag, so a
-pending deviation still counts as a difference there.
+acceptance. A pending file with no `parity` block explains nothing, even with `--allow-pending`, and a scenario whose
+differences a pending deviation explains prints `PASS <scenario> (<n> explained by pending <ids>)`. CI never passes
+the flag, so a pending deviation still counts as a difference there.
 
 A scenario passes when every difference matches an accepted deviation. It prints
 `PASS <scenario> (<n> explained by <ids>)`; a difference that matches no accepted deviation still fails the scenario

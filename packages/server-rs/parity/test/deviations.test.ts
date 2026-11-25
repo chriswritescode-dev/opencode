@@ -205,22 +205,26 @@ test(
 )
 
 test(
-  "rejects a pending deviation without a parity block when pending deviations are allowed",
+  "ignores a pending deviation without a parity block when pending deviations are allowed",
   async () => {
     await withTempLedger(async (directory) => {
       await Bun.write(path.join(directory, "OR-99-version.md"), ledgerText("pending owner", false))
-      const result = await runParity([
-        "--reference",
-        fakeServer,
-        "--candidate",
-        fakeServer,
-        "--deviations",
-        directory,
-        "--allow-pending",
-        infoScenario,
-      ])
-      expect(result.exitCode).toBe(2)
-      expect(result.output).toContain("deviation OR-99-version has no parity block")
+      const result = await runParity(
+        [
+          "--reference",
+          fakeServer,
+          "--candidate",
+          fakeServer,
+          "--deviations",
+          directory,
+          "--allow-pending",
+          infoScenario,
+        ],
+        { PARITY_CANDIDATE_ENV: JSON.stringify({ FAKE_VERSION: "other" }) },
+      )
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain("steps/0/body/version")
+      expect(result.output).not.toContain("has no parity block")
     })
   },
   60_000,

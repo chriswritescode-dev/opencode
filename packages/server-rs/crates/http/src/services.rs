@@ -5,6 +5,7 @@ use std::time::Duration;
 
 use futures_util::future::BoxFuture;
 use http::StatusCode;
+use opencode_bus::{Bus, Definition, PublishOptions};
 use opencode_config::entry::Entry;
 use opencode_config::flag;
 use opencode_config::observer::{ObserverHandle, observe};
@@ -17,7 +18,7 @@ use opencode_contract::codec::encode_json;
 use opencode_contract::generated::{
     AbsolutePath, ConfigEntryDocumentInfoExperimentalLocationIdleTimeout,
     ConfigEntryDocumentInfoExperimentalLocationIdleTimeoutBool, LocationNotFoundError, LocationNotFoundErrorTag,
-    LocationPublicRef, ServiceUnavailableError, ServiceUnavailableErrorTag,
+    LocationPublicRef, LocationRef, ServiceUnavailableError, ServiceUnavailableErrorTag, WorkspaceID,
 };
 use opencode_location::activity::{Activity, ActivityOptions, IdleTimeout};
 use opencode_location::environment::{Environment, local::LocalEnvironment};
@@ -29,6 +30,7 @@ use opencode_location::project::{ProjectService, SWEEP_INTERVAL_MS};
 use opencode_session::search_build::SessionSearchBuild;
 use opencode_storage::Database;
 use serde_json::Value;
+use tokio::sync::broadcast::error::RecvError;
 use tokio::task::JoinHandle;
 
 use crate::response;
@@ -53,7 +55,7 @@ pub struct LocationServices {
     pub lifecycle: Lifecycle,
     pub environment: Arc<dyn Environment>,
     pub config: ConfigService,
-    _search_observer: ObserverHandle,
+    _config_observer: ObserverHandle,
 }
 
 impl GlobalServices {
@@ -88,18 +90,25 @@ impl GlobalServices {
                     ServiceDeps { credentials: Arc::new(()), wellknown, channel, flag_overrides },
                 )
                 .await;
+                let observer_projects = projects.clone();
+                let observer_directory = info.directory.clone();
+                let observer_workspace_id = info.workspace_id.clone();
                 let flags = config.clone();
                 let build = search.clone();
-                let _search_observer = observe(&config, move |_| {
+                let _config_observer = observe(&config, move |_| {
                     if sqlite_fts_enabled(&flags) {
                         build.start();
                     }
+                    observer_projects.publish(LocationEvent::ConfigUpdated {
+                        directory: observer_directory.clone(),
+                        workspace_id: observer_workspace_id.clone(),
+                    });
                 });
                 if sqlite_fts_enabled(&config) {
                     search.start();
                 }
                 let lifecycle = Lifecycle::start(projects, &info).await?;
-                Ok(Arc::new(LocationServices { info, lifecycle, environment, config, _search_observer }))
+                Ok(Arc::new(LocationServices { info, lifecycle, environment, config, _config_observer }))
             })
         });
         let activity = Activity::spawn(
@@ -146,6 +155,66 @@ impl GlobalServices {
 
     pub fn var(&self, name: &str) -> Option<OsString> {
         (self.environment)(name)
+    }
+}
+
+pub fn bridge_location_events(services: &GlobalServices, bus: Arc<Bus>) {
+    let mut events = services.subscribe_events();
+    tokio::spawn(async move {
+        loop {
+            match events.recv().await {
+                Ok(event) => publish_location_event(&bus, event),
+                Err(RecvError::Lagged(_)) => log::warn!("location event subscriber lagged"),
+                Err(RecvError::Closed) => return,
+            }
+        }
+    });
+}
+
+fn publish_location_event(bus: &Bus, event: LocationEvent) {
+    match event {
+        LocationEvent::ProjectUpdated(project) => {
+            let encoded = encode_json(&crate::handlers::project::contract_project(project));
+            let data = serde_json::from_str(&encoded).expect("a contract event encodes as JSON");
+            publish_event(bus, Definition::ephemeral("project.updated"), data, PublishOptions::default());
+        }
+        LocationEvent::WorktreeResolved { project_id, directory, previous, adopted } => {
+            let mut data = serde_json::Map::new();
+            data.insert("projectID".to_owned(), Value::String(project_id));
+            data.insert("directory".to_owned(), Value::String(directory));
+            data.insert("previous".to_owned(), Value::String(previous));
+            if !adopted.is_empty() {
+                data.insert("adopted".to_owned(), serde_json::json!(adopted));
+            }
+            let definition = Definition::latest_durable("worktree.resolved").expect("worktree.resolved is durable");
+            publish_event(bus, definition, Value::Object(data), PublishOptions::default());
+        }
+        LocationEvent::LocationShutdown { directory, workspace_id } => {
+            let location =
+                Some(LocationRef { directory: AbsolutePath(directory), workspace_id: workspace_id.map(WorkspaceID) });
+            publish_event(
+                bus,
+                Definition::ephemeral("location.shutdown"),
+                serde_json::json!({}),
+                PublishOptions { location, ..Default::default() },
+            );
+        }
+        LocationEvent::ConfigUpdated { directory, workspace_id } => {
+            let location =
+                Some(LocationRef { directory: AbsolutePath(directory), workspace_id: workspace_id.map(WorkspaceID) });
+            publish_event(
+                bus,
+                Definition::ephemeral("config.updated"),
+                serde_json::json!({}),
+                PublishOptions { location, ..Default::default() },
+            );
+        }
+    }
+}
+
+fn publish_event(bus: &Bus, definition: Definition, data: Value, options: PublishOptions) {
+    if let Err(error) = bus.publish(&definition, data, options) {
+        log::warn!("failed to publish {}: {error}", definition.r#type);
     }
 }
 

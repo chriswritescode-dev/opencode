@@ -151,6 +151,11 @@ pub(crate) async fn start(
         }
         None => None,
     };
+    if let Some(state) = &state
+        && let Some(services) = &services
+    {
+        opencode_http::services::bridge_location_events(services, state.bus.clone());
+    }
     let app = opencode_http::app::App::new(opencode_http::app::Options {
         password,
         version: crate::VERSION.to_owned(),

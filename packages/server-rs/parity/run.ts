@@ -59,7 +59,7 @@ async function main() {
   stopServersOnSignal()
   const options = parseArguments(Bun.argv.slice(2))
   const deviations = await readDeviations(options.deviations)
-  requireParityBlocks(deviations, options.allowPending)
+  requireParityBlocks(deviations)
   const candidateEnv = readCandidateEnv()
   await warnAboutPin()
   const files = await scenarioFiles(options.files)
@@ -140,10 +140,8 @@ function explanationIDs(explained: Explained[]) {
   return [...new Set(explained.map((item) => item.id))].sort().join(", ")
 }
 
-function requireParityBlocks(deviations: Deviation[], allowPending: boolean) {
-  const missing = deviations.find(
-    (deviation) => (deviation.accepted || (allowPending && deviation.pending)) && deviation.rules === undefined,
-  )
+function requireParityBlocks(deviations: Deviation[]) {
+  const missing = deviations.find((deviation) => deviation.accepted && deviation.rules === undefined)
   if (missing === undefined) return
   console.error(`parity: deviation ${missing.id} has no parity block`)
   process.exit(2)
