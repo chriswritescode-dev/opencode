@@ -281,12 +281,13 @@ fn policy_blocks_versioned_package_by_name() {
     let documents = entries(
         &[(
             config.to_str().expect("the temp path is UTF-8"),
-            r#"{"policies":[{"action":"plugin.use","resource":"pkg","effect":"deny"}]}"#,
+            r#"{"policies":[{"action":"plugin.use","resource":"pkg","effect":"deny"},{"action":"plugin.use","resource":"@scope/policy-fixture","effect":"deny"}]}"#,
         )],
         &[],
     );
 
     assert!(policy_blocks(&documents, "pkg@1.2.3"));
+    assert!(policy_blocks(&documents, "@scope/policy-fixture@1.2.3"));
     assert!(!policy_blocks(&documents, "other@1.2.3"));
 }
 

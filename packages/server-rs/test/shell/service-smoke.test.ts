@@ -141,7 +141,7 @@ function pluginSource() {
   return 'export default { id: "smoke", setup: async () => {} }\n'
 }
 
-async function pluginIDs(url: string, headers: HeadersInit, directory: string) {
+async function pluginIDs(url: string, headers: Record<string, string>, directory: string) {
   const endpoint = new URL("/api/plugin", url)
   endpoint.searchParams.set("location[directory]", directory)
   const response = await fetch(endpoint, { headers, signal: AbortSignal.timeout(5_000) })
@@ -155,7 +155,7 @@ async function pluginIDs(url: string, headers: HeadersInit, directory: string) {
   )
 }
 
-async function waitForPlugin(url: string, headers: HeadersInit, directory: string, plugin: string) {
+async function waitForPlugin(url: string, headers: Record<string, string>, directory: string, plugin: string) {
   const deadline = Date.now() + 10_000
   let attempt = 0
   while (Date.now() < deadline) {

@@ -158,9 +158,15 @@ async fn reloads_for_a_trigger_published_while_the_initial_generation_is_activat
 
 #[tokio::test(start_paused = true)]
 async fn keeps_policy_enforcement_and_the_console_connection_through_removals() {
-    for target in ["*", "opencode.*", "opencode.config.policy", "opencode.provider.opencode"] {
+    for targets in [
+        &["opencode.config.policy", "opencode.provider.opencode", "opencode.config.agent"][..],
+        &["*"][..],
+        &["opencode.*"][..],
+        &["opencode.config.policy"][..],
+        &["opencode.provider.opencode"][..],
+    ] {
         let workspace = ConfigWorkspace::new();
-        workspace.write_plugins(json!([format!("-{target}")]));
+        workspace.write_plugins(json!(targets.iter().map(|target| format!("-{target}")).collect::<Vec<_>>()));
         let sdk = SdkPlugins::default();
         let log = log();
         sdk.register("custom", recorder("custom", "1", &log, false));
@@ -172,21 +178,21 @@ async fn keeps_policy_enforcement_and_the_console_connection_through_removals() 
         let inventory = registry.list();
         let status =
             |id: &str| inventory.iter().find(|info| info.id.as_deref() == Some(id)).map(|info| info.state.clone());
-        assert_eq!(status("opencode.config.policy"), Some(PluginState::Active), "{target}");
-        assert_eq!(status("opencode.provider.opencode"), Some(PluginState::Active), "{target}");
-        match target {
-            "*" => {
+        assert_eq!(status("opencode.config.policy"), Some(PluginState::Active), "{targets:?}");
+        assert_eq!(status("opencode.provider.opencode"), Some(PluginState::Active), "{targets:?}");
+        match targets {
+            ["*"] => {
                 assert_eq!(status("custom"), None);
                 assert_eq!(status("opencode.browser"), None);
                 let mut ids = inventory.iter().filter_map(|info| info.id.clone()).collect::<Vec<_>>();
                 ids.sort();
                 assert_eq!(ids, vec!["opencode.config.policy".to_string(), "opencode.provider.opencode".to_string()]);
             }
-            "opencode.*" => {
+            ["opencode.*"] => {
                 assert_eq!(status("custom"), Some(PluginState::Active));
                 assert_eq!(status("opencode.browser"), None);
             }
-            _ => {
+            [_] => {
                 assert_eq!(
                     inventory.len(),
                     opencode_plugin::generated::builtins::PRE.len()
@@ -194,6 +200,14 @@ async fn keeps_policy_enforcement_and_the_console_connection_through_removals() 
                         + 1
                 );
                 assert_eq!(status("custom"), Some(PluginState::Active));
+            }
+            _ => {
+                assert_eq!(status("opencode.config.agent"), None);
+                assert_eq!(status("custom"), Some(PluginState::Active));
+                assert_eq!(
+                    inventory.len(),
+                    opencode_plugin::generated::builtins::PRE.len() + opencode_plugin::generated::builtins::POST.len()
+                );
             }
         }
 
