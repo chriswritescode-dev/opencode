@@ -12,6 +12,7 @@ pub mod lmstudio;
 pub mod modal;
 pub mod nvidia;
 pub mod ollama;
+pub mod openai;
 pub mod openai_context_caps;
 pub mod openrouter;
 pub mod poe;

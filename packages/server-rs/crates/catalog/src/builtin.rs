@@ -39,6 +39,7 @@ pub struct Deps {
 pub struct Builtin {
     pub registrations: Vec<Registration>,
     pub observers: Vec<ObserverHandle>,
+    pub hooks: Vec<crate::provider_plugin::hooks::HookRegistration>,
     pub tasks: Vec<JoinHandle<()>>,
 }
 
@@ -61,6 +62,7 @@ impl Builtin {
     pub fn record(&mut self, mut other: Builtin) {
         self.registrations.append(&mut other.registrations);
         self.observers.append(&mut other.observers);
+        self.hooks.append(&mut other.hooks);
         self.tasks.append(&mut other.tasks);
     }
 }

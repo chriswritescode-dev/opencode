@@ -15,6 +15,7 @@ pub mod modal;
 pub mod neon;
 pub mod nvidia;
 pub mod ollama;
+pub mod openai;
 pub mod openai_context_caps;
 pub mod openrouter;
 pub mod poe;
@@ -269,6 +270,7 @@ pub async fn register(
             neon::ID => neon::register(services, context, builtin).await,
             nvidia::ID => nvidia::register(services, context, builtin).await,
             ollama::ID => ollama::register(services, context, builtin).await,
+            openai::ID => openai::register(services, context, builtin).await,
             openai_context_caps::ID => openai_context_caps::register(services, context, builtin).await,
             openrouter::ID => openrouter::register(services, context, builtin).await,
             poe::ID => poe::register(services, context, builtin).await,
