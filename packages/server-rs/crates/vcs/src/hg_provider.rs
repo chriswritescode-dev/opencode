@@ -257,12 +257,12 @@ async fn command(worktree: &str, args: &[&str], max_output_bytes: Option<usize>)
     let Ok(mut child) = command.spawn() else {
         return Run { status: 1, text: String::new(), truncated: false };
     };
-    let ((stdout, stdout_truncated), (_, stderr_truncated)) = tokio::join!(
+    let ((stdout, truncated), _) = tokio::join!(
         collect_output(child.stdout.take(), max_output_bytes),
         collect_output(child.stderr.take(), max_output_bytes),
     );
     let status = child.wait().await.ok().and_then(|status| status.code()).unwrap_or(1);
-    Run { status, text: String::from_utf8_lossy(&stdout).into_owned(), truncated: stdout_truncated || stderr_truncated }
+    Run { status, text: String::from_utf8_lossy(&stdout).into_owned(), truncated }
 }
 
 async fn collect_output(stream: Option<impl AsyncRead + Unpin>, max_output_bytes: Option<usize>) -> (Vec<u8>, bool) {
