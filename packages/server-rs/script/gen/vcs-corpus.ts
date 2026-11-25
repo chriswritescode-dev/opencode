@@ -61,13 +61,15 @@ function validate(value: unknown): Corpus {
     for (const item of cases) {
       if (typeof item !== "object" || item === null || Array.isArray(item)) fail(`${group} contains a non-object case`)
       const entry = item as Record<string, unknown>
-      if (typeof entry.name !== "string" || entry.name.length === 0) fail(`${group} contains a case without a name`)
-      if (names.has(entry.name)) fail(`duplicate case name ${entry.name}`)
-      names.add(entry.name)
+      const name = entry.name
+      if (typeof name !== "string" || name.length === 0) fail(`${group} contains a case without a name`)
+      if (names.has(name)) fail(`duplicate case name ${name}`)
+      names.add(name)
       for (const field of fields[group])
-        if (!(field in entry)) fail(`${group} case ${entry.name} is missing ${field}`)
-      requireStrings(group, entry)
-      requireCase(group, entry)
+        if (!(field in entry)) fail(`${group} case ${name} is missing ${field}`)
+      const validated = { ...entry, name }
+      requireStrings(group, validated)
+      requireCase(group, validated)
     }
   }
   return record as unknown as Corpus

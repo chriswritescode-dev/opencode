@@ -1,4 +1,3 @@
-use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, RwLock};
@@ -52,7 +51,7 @@ pub struct DiffInput<'a> {
 
 #[derive(Clone, Copy, Debug)]
 pub struct RestoreInput<'a> {
-    pub files: &'a BTreeMap<String, String>,
+    pub files: &'a [(String, String)],
 }
 
 #[derive(Clone, Debug)]
@@ -187,7 +186,7 @@ impl Snapshot {
             });
         }
         let resolved = self.repository().await.map_err(|error| remap(error, SnapshotOperation::Restore))?;
-        let mut planned = BTreeMap::new();
+        let mut planned = Vec::with_capacity(input.files.len());
         for (file, tree) in input.files {
             let absolute = Flavor::NATIVE.resolve(&[&resolved.worktree, file]);
             if !contains(&resolved.worktree, &absolute) {
@@ -196,7 +195,7 @@ impl Snapshot {
                     message: format!("Path escapes the project: {file}"),
                 });
             }
-            planned.insert(file.clone(), tree.clone());
+            planned.push((file.clone(), tree.clone()));
         }
         Box::pin(self.git.tree_restore(&resolved.repository, &planned))
             .await

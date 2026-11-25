@@ -212,3 +212,11 @@ messages.
   a `waitEvent` waits, a search index that does not settle within 30 s, or an accepted deviation file with no `parity`
   block. Any unexpected harness error prints `parity: <message>` and exits `2`.
 - `128 + <signal>`: the harness received `SIGINT`, `SIGTERM` or `SIGHUP`.
+
+## Snapshot parity
+
+`bun run parity:snapshot [--keep] [variant...]` runs the snapshot corpus from the pinned `packages/core/script/snapshot-parity.ts` twice: once against the TypeScript snapshot engine and once against the Rust `opencode-vcs` engine through its `snapshot_driver` example. It builds the driver with cargo, writes an adapted copy of the corpus that swaps `snapshotLayer` for a driver-backed proxy to `packages/core/script/snapshot-parity-engine.ts` in the materialised `target/upstream-core/<pin>` tree, and runs both engines with the same Git config variant.
+
+The seven variants are `user`, `empty`, `split-index`, `skip-hash`, `autocrlf-and-no-untracked-cache`, `fsmonitor` and `template-hook`; with no arguments all of them run. Each variant keeps its two engines in separate `SNAPSHOT_BENCH_ROOT`s below `target/snapshot-parity/work/<variant>/<ts|rust>` and writes `target/snapshot-parity/<variant>-ts.json` and `<variant>-rust.json`. `--keep` keeps the temporary cases.
+
+Output compares every scenario step by step and prints `same      <name>` or `DIFFERENT <name>` with each diverging step and both values. Exit code `0` means every scenario of every selected variant matched, `1` means at least one diverged, and `2` is a build, engine or corpus error.

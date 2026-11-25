@@ -1,4 +1,3 @@
-use std::collections::BTreeMap;
 use std::path::Path;
 
 use opencode_git::{CaptureInput, FileDiffStatus, Git, MAX_TOTAL_PATCH_BYTES, Repository, empty_patch};
@@ -199,10 +198,35 @@ async fn captures_compares_previews_and_restores_scoped_trees() {
         [("scope/added.txt", FileDiffStatus::Added), ("scope/tracked.txt", FileDiffStatus::Modified)]
     );
 
-    git.tree_restore(&store, &BTreeMap::from([("scope/tracked.txt".to_string(), before.clone())]))
+    git.tree_restore(&store, &[("scope/tracked.txt".to_string(), before.clone())])
         .await
         .expect("restores the tracked file");
     assert_eq!(fixture::read(&temp.path().join("scope/tracked.txt")).await, "one\n");
     assert_eq!(fixture::read(&temp.path().join("scope/added.txt")).await, "added\n");
     assert_eq!(fixture::read(&temp.path().join("outside.txt")).await, "changed outside\n");
+}
+
+#[tokio::test]
+async fn restores_paths_in_the_given_order() {
+    let temp = TempDir::new();
+    let git = fixture::handle();
+    fixture::init_repo(&git, temp.path()).await;
+    write(temp.path().join("a"), "file a\n").await;
+
+    let repository = git.discover(text(temp.path())).await.expect("discovers the repository");
+    let file_tree = capture(&git, &repository).await;
+    std::fs::remove_file(temp.path().join("a")).expect("removes the file");
+    write(temp.path().join("a/b"), "nested b\n").await;
+    let nested_tree = capture(&git, &repository).await;
+
+    git.tree_restore(&repository, &[("a/b".to_string(), file_tree.clone()), ("a".to_string(), file_tree.clone())])
+        .await
+        .expect("restores the nested path before the file");
+    assert_eq!(fixture::read(&temp.path().join("a")).await, "file a\n");
+
+    git.tree_restore(&repository, &[("a/b".to_string(), nested_tree)]).await.expect("restores the nested path");
+    git.tree_restore(&repository, &[("a".to_string(), file_tree.clone()), ("a/b".to_string(), file_tree.clone())])
+        .await
+        .expect_err("fails to remove the nested path after checking out the file");
+    assert_eq!(fixture::read(&temp.path().join("a")).await, "file a\n");
 }

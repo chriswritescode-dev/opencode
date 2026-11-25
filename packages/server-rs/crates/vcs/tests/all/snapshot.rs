@@ -1,4 +1,3 @@
-use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -91,7 +90,7 @@ async fn captures_and_restores_location_scoped_changes() {
         ["scope/added.txt", "scope/tracked.txt"]
     );
 
-    let files = BTreeMap::from([("scope/tracked.txt".to_owned(), before)]);
+    let files = vec![("scope/tracked.txt".to_owned(), before)];
     snapshot.restore(RestoreInput { files: &files }).await.expect("restores the selection");
     assert_eq!(read(&scope.join("tracked.txt")).await, "one\n");
     assert_eq!(read(&scope.join("added.txt")).await, "added\n");
@@ -169,7 +168,7 @@ async fn captures_and_restores_a_location_opened_through_a_symlinked_path() {
 
     assert_eq!(snapshot.files(&before, &after).await.expect("lists the changed files"), ["scope/tracked.txt"]);
 
-    let files = BTreeMap::from([("scope/tracked.txt".to_owned(), before)]);
+    let files = vec![("scope/tracked.txt".to_owned(), before)];
     snapshot.restore(RestoreInput { files: &files }).await.expect("restores the selection");
     assert_eq!(read(&project.join("scope/tracked.txt")).await, "one\n");
 }
@@ -210,12 +209,12 @@ async fn restores_many_files_from_several_trees_and_removes_paths_absent_from_th
     write(&project.join("c.txt"), "c3\n").await;
     write(&project.join("d.txt"), "d3\n").await;
 
-    let files = BTreeMap::from([
+    let files = vec![
         ("a.txt".to_owned(), second.clone()),
         ("b[1].txt".to_owned(), first.clone()),
         ("c.txt".to_owned(), first),
         ("d.txt".to_owned(), second),
-    ]);
+    ];
     snapshot.restore(RestoreInput { files: &files }).await.expect("restores the selection");
     assert_eq!(read(&project.join("a.txt")).await, "a2\n");
     assert_eq!(read(&project.join("b[1].txt")).await, "b1\n");
@@ -252,7 +251,7 @@ async fn restores_and_diffs_a_selection_too_long_for_one_command_line() {
     assert_eq!(changed, expected);
     assert!(diffs.iter().all(|diff| diff.additions == 1 && diff.deletions == 1 && diff.patch.contains("+two")));
 
-    let files = names.iter().map(|name| (name.clone(), first.clone())).collect::<BTreeMap<_, _>>();
+    let files = names.iter().map(|name| (name.clone(), first.clone())).collect::<Vec<_>>();
     snapshot.restore(RestoreInput { files: &files }).await.expect("restores the selection");
     for name in &names {
         assert_eq!(read(&project.join(name)).await, "one\n");
@@ -272,7 +271,7 @@ async fn restores_the_other_files_when_removing_one_path_fails() {
     write(&project.join("c.txt"), "changed\n").await;
     write(&project.join("a"), "file\n").await;
 
-    let files = BTreeMap::from([("a/b".to_owned(), first.clone()), ("c.txt".to_owned(), first)]);
+    let files = vec![("a/b".to_owned(), first.clone()), ("c.txt".to_owned(), first)];
     assert!(snapshot.restore(RestoreInput { files: &files }).await.is_err());
     assert_eq!(read(&project.join("c.txt")).await, "old\n");
 }

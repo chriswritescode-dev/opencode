@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashSet};
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
@@ -157,7 +157,7 @@ async fn seeds_and_rebuilds_the_store_from_a_source_with_a_split_index() {
     let files = git.tree_files(&setup.store, &before, &after).await.expect("lists the changed files");
     assert_eq!(files, ["a.txt"]);
 
-    Box::pin(git.tree_restore(&setup.store, &BTreeMap::from([("a.txt".to_string(), before.clone())])))
+    Box::pin(git.tree_restore(&setup.store, &[("a.txt".to_string(), before.clone())]))
         .await
         .expect("restores the tracked file");
     assert_eq!(fixture::read(&setup.project.join("a.txt")).await, "one\n");

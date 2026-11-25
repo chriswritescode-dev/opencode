@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, UNIX_EPOCH};
 
@@ -264,13 +264,13 @@ impl Git {
     pub async fn tree_restore(
         &self,
         repository: &Repository,
-        files: &BTreeMap<String, String>,
+        files: &[(String, String)],
     ) -> Result<(), OperationError> {
         if files.is_empty() {
             return Ok(());
         }
         self.with_lock(&repository.git_directory, async {
-            let paths = files.keys().map(String::as_str).collect::<Vec<_>>();
+            let paths = files.iter().map(|(file, _)| file.as_str()).collect::<Vec<_>>();
             if !can_batch_restore(&paths) {
                 for (file, tree) in files {
                     if !self.tree_has_entry(repository, tree, file).await? {
