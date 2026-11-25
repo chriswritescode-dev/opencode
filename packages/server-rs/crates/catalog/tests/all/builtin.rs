@@ -277,6 +277,10 @@ impl Harness {
                     opencode_catalog::provider_plugin::digitalocean::register(&self.services, &context, &mut builtin)
                         .await
                 }
+                "github_copilot" => {
+                    opencode_catalog::provider_plugin::github_copilot::register(&self.services, &context, &mut builtin)
+                        .await
+                }
                 "google_vertex" => {
                     opencode_catalog::provider_plugin::google_vertex::register(&self.services, &context, &mut builtin)
                         .await
@@ -556,7 +560,7 @@ async fn builtin_register_inserts_provider_plugins_at_the_provider_slot() {
     )
     .await;
     harness.record(builtin);
-    assert_eq!(harness.registrations.registrations.len(), 48);
+    assert_eq!(harness.registrations.registrations.len(), 51);
 }
 
 pub async fn seed(

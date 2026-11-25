@@ -5,6 +5,7 @@ pub mod cloudflare_ai_gateway;
 pub mod cloudflare_workers_ai;
 pub mod databricks;
 pub mod digitalocean;
+pub mod github_copilot;
 pub mod google_vertex;
 pub mod hooks;
 pub mod http;
@@ -264,6 +265,7 @@ pub async fn register(
             cloudflare_workers_ai::ID => cloudflare_workers_ai::register(services, context, builtin).await,
             databricks::ID => databricks::register(services, context, builtin).await,
             digitalocean::ID => digitalocean::register(services, context, builtin).await,
+            github_copilot::ID => github_copilot::register(services, context, builtin).await,
             google_vertex::ID => google_vertex::register(services, context, builtin).await,
             kilo::ID => kilo::register(services, context, builtin).await,
             llmgateway::ID => llmgateway::register(services, context, builtin).await,
