@@ -75,13 +75,14 @@ impl Runner {
             if placed.is_closed() {
                 return Ok(());
             }
+            let promotable =
+                if continuation { Vec::new() } else { self.store.promotable(session_id, true).map_err(bus_error)? };
+            if !continuation && promotable.is_empty() {
+                return Ok(());
+            }
             let list = context::instruction_list(&self.store, placed.agents(), placed.builtins().clone(), session_id)
                 .map_err(ExecutionError::Context)?;
             if !continuation {
-                let promotable = self.store.promotable(session_id, true).map_err(bus_error)?;
-                if promotable.is_empty() {
-                    return Ok(());
-                }
                 instruction_state::prepare_at(&self.database, &self.bus, &list, session_id, location.clone())
                     .map_err(bus_error)?;
                 for inbox_id in promotable {

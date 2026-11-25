@@ -210,7 +210,8 @@ Each change below is ported into `packages/server-rs` at the new pin, with the p
   agent changes (upstream `30ef864fe1`). Persisted system messages now reach the LLM request, so an instruction
   update in history is sent.
 - The catalog disables an enabled speed model whose base model is missing or disabled within the provider, matching
-  upstream `model.ts` (upstream `7edab789f7`).
+  upstream `model.ts` (upstream `7edab789f7`). The rule runs in `Catalog::models` only and has no effect until OR-46
+  fills `experimental.speed` from models.dev; OR-46 also owns applying it to model lookup and default selection.
 
 ### Phase 4: the stashed session cwd stays out of public metadata
 
@@ -233,7 +234,10 @@ Upstream changes in areas this server does not implement yet. Each names the tas
 - Session cwd behaviour and its instructions, the runner and step Code Mode changes, and moving subagents with their
   parent → OR-54. The metadata-hiding half of session cwd is absorbed in phase 4.
 - The permission `Policy` algebra, MCP-hosted skills, `experimental.skill.file` and `SkillLoadError` → OR-50.
-- The freeform tool `field` and the model resolver's freeform copy → OR-51.
+- The definition-time validation error for an invalid freeform tool `field` (the `field` itself is honoured by the AI
+  layer) and the model resolver's copy of `capabilities.tools.freeform` onto the AI model → OR-51.
+- History's instruction-epoch and native-checkpoint filters on persisted system messages (upstream
+  `session/history.ts`), which matter only once compaction runs → OR-54.
 - The git `%(symref)` branch filter → OR-53.
 - models.dev service-tier speeds and introductory re-pricing → OR-46.
 - Environments, workspaces and the `cd` tool → OR-60.

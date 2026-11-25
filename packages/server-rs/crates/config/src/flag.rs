@@ -76,11 +76,7 @@ fn parse_overrides(overrides: &str) -> HashMap<&str, bool> {
 }
 
 fn configured_value(value: &serde_json::Value) -> Option<bool> {
-    match value {
-        serde_json::Value::Bool(value) => Some(*value),
-        serde_json::Value::Object(_) => Some(true),
-        _ => None,
-    }
+    value.as_bool()
 }
 
 fn on_by_default(channel: &str) -> bool {

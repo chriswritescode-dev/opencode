@@ -44,6 +44,7 @@ fn selected(agent: &AgentInfo) -> Option<Value> {
             inactive: value.unselected.clone(),
             changed: value.selected.clone(),
         },
+        AgentInfoInstructions::String(text) if text.is_empty() => return None,
         AgentInfoInstructions::String(text) => Selected {
             id: agent.id.0.clone(),
             active: format!(
