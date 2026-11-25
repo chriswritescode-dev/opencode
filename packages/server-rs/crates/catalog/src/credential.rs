@@ -88,6 +88,8 @@ pub enum CredentialError {
     Json(#[from] serde_json::Error),
     #[error(transparent)]
     Decode(#[from] codec::DecodeError),
+    #[error("Credential already exists: {}", .0.0)]
+    Conflict(CredentialID),
 }
 
 pub struct CredentialService {
@@ -147,7 +149,10 @@ impl CredentialService {
             value: input.value,
         };
         let encoded = codec::encode_json(&info.value);
-        let activate = self.database.transaction(TransactionBehavior::Immediate, |tx| {
+        let created = self.database.transaction(TransactionBehavior::Immediate, |tx| {
+            if credential::get(tx, &info.id.0)?.is_some() {
+                return Ok(None);
+            }
             let current = credential::list(tx, &info.integration_id.0)?.pop();
             let activate = requested_activate != Some(false) || current.is_none();
             if !activate
@@ -169,8 +174,11 @@ impl CredentialService {
             if activate {
                 credential::set_active(tx, &info.integration_id.0, &info.id.0)?;
             }
-            Ok::<bool, StorageError>(activate)
+            Ok::<Option<bool>, StorageError>(Some(activate))
         })?;
+        let Some(activate) = created else {
+            return Err(CredentialError::Conflict(info.id));
+        };
         self.publish_updated(&info.integration_id, Some(&info.id.0))?;
         if activate {
             self.publish_switched(&info.integration_id, Some(&info.id.0))?;
