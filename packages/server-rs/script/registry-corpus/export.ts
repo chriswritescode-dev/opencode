@@ -4,8 +4,13 @@ import { Command } from "@opencode/core/command"
 import { Config } from "@opencode/core/config"
 import { ConfigAgentPlugin } from "@opencode/core/config/plugin/agent"
 import { ConfigCommandPlugin } from "@opencode/core/config/plugin/command"
+import { ConfigInstructionPlugin } from "@opencode/core/config/plugin/instruction"
 import { ConfigMarkdown } from "@opencode/core/config/markdown"
 import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
+import { Watcher } from "@opencode/core/filesystem/watcher"
+import { InstructionDiscovery } from "@opencode/core/instruction-discovery"
+import { InstructionBuiltIns } from "@opencode/core/instructions/builtins"
+import { Instructions } from "@opencode/core/instructions/index"
 import { Job } from "@opencode/core/job"
 import { Location } from "@opencode/core/location"
 import { Mcp } from "@opencode/core/mcp/index"
@@ -21,17 +26,21 @@ import { ShellSelect } from "@opencode/core/shell/select"
 import { Directory, Document, Info } from "@opencode/schema/config"
 import { SessionInbox } from "@opencode/schema/session-inbox"
 import { SessionMessage } from "@opencode/schema/session-message"
+import { canonicalJson } from "@opencode/core/util/canonical-json"
 import { FSUtil } from "@opencode/util/fs-util"
 import { LayerNode } from "@opencode/util/effect/layer-node"
 import { Global } from "@opencode/util/global"
 import { AppProcess } from "@opencode/util/process"
 import { DateTime, Effect, Layer, Logger, Schema } from "effect"
-import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises"
+import { HttpClient, HttpClientResponse } from "effect/http"
+import { mkdir, mkdtemp, realpath, rm, symlink, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { tempGlobalLayer } from "./fixture/global"
+import { location } from "./fixture/location"
 import { emptyConfigLayer, emptyMcpLayer, testLocationLayer } from "./fixture/mcp"
 import { offlineModels } from "./fixture/models"
+import { readInitial } from "./lib/instructions"
 import { agentHost, host } from "./plugin/host"
 
 const decodeConfig = Schema.decodeUnknownSync(Info)
@@ -57,6 +66,7 @@ if (area === "markdown") exportMarkdown()
 else if (area === "scan") await exportScan()
 else if (area === "agents") await exportAgents()
 else if (area === "commands") await exportCommands()
+else if (area === "instructions") await exportInstructions()
 else {
   console.error(`corpus: unknown area ${area ?? ""}`)
   process.exit(1)
@@ -147,18 +157,19 @@ list:
     value: 2
 ---
 body`,
-    "quoted-colon": "---\ndescription: \"a: b\"\n---\nbody",
+    "quoted-colon": '---\ndescription: "a: b"\n---\nbody',
     "single-quoted-colon": "---\ndescription: 'a: b'\n---\nbody",
     "url-colon": "---\nurl: http://example.com/a\n---\nbody",
     "flow-with-comment": "---\ntools: [read, edit] # comment: with colon\n---\nbody",
     "key-with-hyphen": "---\nmy-key: a: b\n---\nbody",
     "indented-colon": "---\nnested:\n  value: a: b\n---\nbody",
-    "comment-inside": "---\ndescription: Review changes. Keywords: review, audit\n# comment: kept\nmodel: { providerID: example }\n---\nbody",
+    "comment-inside":
+      "---\ndescription: Review changes. Keywords: review, audit\n# comment: kept\nmodel: { providerID: example }\n---\nbody",
     "empty-value": "---\ndescription:\nmodel: { providerID: example }\n---\nbody",
     "braced-tag": "---\nsummary: {Team} Review changes\n---\nbody",
     "trailing-open-brace": "---\nsummary: {Team Review changes\n---\nbody",
     "four-dashes": "----\ntitle: Hi\n---\nbody",
-    "bom": "\uFEFF---\ntitle: Hi\n---\nbody",
+    bom: "\uFEFF---\ntitle: Hi\n---\nbody",
     "crlf-plain": "---\r\ntitle: Hi\r\n---\r\nbody",
     "no-final-newline": "---\ntitle: Hi\n---",
     "tab-indent": "---\ntitle: Hi\n\tkey: a: b\n---\nbody",
@@ -484,10 +495,10 @@ function agentLayer(home: string) {
     },
   })
   const locationLayer = Layer.succeed(Location.Service, Location.Service.of(location))
-  return AppNodeBuilder.build(
-    LayerNode.group([Agent.node, Bus.node, FSUtil.node, Location.node, Global.node]),
-    [Global.node.replace(globalLayer), Location.node.replace(locationLayer)],
-  )
+  return AppNodeBuilder.build(LayerNode.group([Agent.node, Bus.node, FSUtil.node, Location.node, Global.node]), [
+    Global.node.replace(globalLayer),
+    Location.node.replace(locationLayer),
+  ])
 }
 
 async function exportAgents() {
@@ -868,8 +879,7 @@ async function exportCommands() {
       files: {
         "commands/separate.md": "---\nmodel: example/chat\nvariant: high\n---\nSeparate",
         "commands/embedded.md": "---\nmodel: example/chat#low\nvariant: high\n---\nEmbedded",
-        "commands/structured.md":
-          "---\nmodel: { providerID: example, model: chat, variant: high }\n---\nStructured",
+        "commands/structured.md": "---\nmodel: { providerID: example, model: chat, variant: high }\n---\nStructured",
       },
     }),
   ]
@@ -948,9 +958,7 @@ async function exportCommandTemplates() {
   const document = new Document({
     type: "document",
     info: decodeConfig({
-      commands: Object.fromEntries(
-        cases.map((item, index) => [`case${index}`, { template: item.template }]),
-      ),
+      commands: Object.fromEntries(cases.map((item, index) => [`case${index}`, { template: item.template }])),
     }),
   })
   const prompts: string[] = []
@@ -995,4 +1003,322 @@ async function exportCommandTemplates() {
   return await Effect.runPromise(
     program.pipe(Effect.scoped, Effect.provide(commandLayer()), Effect.provide(Logger.layer([]))),
   )
+}
+
+type InstructionOptions = {
+  project?: boolean
+  global?: boolean
+  claude?: boolean
+}
+
+type InstructionCase = {
+  name: string
+  home: string
+  config: string
+  project: string
+  directory: string
+  options?: InstructionOptions
+  files: Record<string, string>
+  instructions?: string[]
+}
+
+function instructionDocument(instructions: string[]) {
+  return new Document({ type: "document", info: new Info({ instructions }) })
+}
+
+function instructionRespond(handler: (url: string) => Response) {
+  return HttpClient.make((request) => Effect.succeed(HttpClientResponse.fromWeb(request, handler(request.url))))
+}
+
+function instructionLayer(input: {
+  config: string
+  home: string
+  locationServiceLayer: Layer.Layer<Location.Service>
+  instructions?: string[]
+  project?: boolean
+  global?: boolean
+  claude?: boolean
+}) {
+  const watcher = Watcher.testLayer
+  const config = Config.testLayer(input.instructions ? [instructionDocument(input.instructions)] : [])
+  return Layer.mergeAll(
+    AppNodeBuilder.build(
+      LayerNode.group([
+        InstructionDiscovery.node,
+        Bus.node,
+        Config.node,
+        FSUtil.node,
+        Global.node,
+        Location.node,
+        Watcher.node,
+      ]),
+      [
+        Config.node.replace(config),
+        InstructionDiscovery.node.replace(
+          InstructionDiscovery.configured({
+            project: input.project,
+            global: input.global,
+            claude: input.claude,
+          }),
+        ),
+        Global.node.replace(Global.layerWith({ config: input.config, home: input.home })),
+        Location.node.replace(input.locationServiceLayer),
+        Watcher.node.replace(watcher),
+      ],
+    ),
+    watcher,
+    config,
+    Layer.succeed(
+      HttpClient.HttpClient,
+      instructionRespond(() => new Response(null, { status: 404 })),
+    ),
+  )
+}
+
+function environmentLayer(locationServiceLayer: Layer.Layer<Location.Service>) {
+  return AppNodeBuilder.build(LayerNode.group([InstructionBuiltIns.node, Global.node, Location.node]), [
+    Global.node.replace(Global.layerWith({ tmp: "/tmp/opencode" })),
+    Location.node.replace(locationServiceLayer),
+  ])
+}
+
+async function exportInstructions() {
+  const cases: InstructionCase[] = [
+    {
+      name: "global-and-upward",
+      config: "global",
+      home: "home",
+      project: "home/code/repo",
+      directory: "home/code/repo/packages/core",
+      files: {
+        "AGENTS.md": "outside",
+        "global/AGENTS.md": "global",
+        "home/code/AGENTS.md": "shared",
+        "home/code/repo/AGENTS.md": "project",
+        "home/code/repo/packages/core/AGENTS.md": "package",
+      },
+    },
+    {
+      name: "claude-fallback",
+      config: "global",
+      home: "home",
+      project: "home/repo",
+      directory: "home/repo/packages/core",
+      options: { claude: true },
+      files: {
+        "home/.claude/CLAUDE.md": "claude global",
+        "home/repo/AGENTS.md": "project agents",
+        "home/repo/CLAUDE.md": "project claude",
+        "home/repo/packages/core/CLAUDE.md": "package claude",
+      },
+    },
+    {
+      name: "claude-disabled",
+      config: "global",
+      home: "home",
+      project: "home/repo",
+      directory: "home/repo/packages/core",
+      options: { claude: false },
+      files: {
+        "home/.claude/CLAUDE.md": "claude global",
+        "home/repo/AGENTS.md": "project agents",
+        "home/repo/CLAUDE.md": "project claude",
+        "home/repo/packages/core/CLAUDE.md": "package claude",
+      },
+    },
+    {
+      name: "project-outside-home",
+      config: "global",
+      home: "home",
+      project: "scratch/repo",
+      directory: "scratch/repo/packages/core",
+      files: {
+        "AGENTS.md": "outside",
+        "scratch/repo/AGENTS.md": "project",
+      },
+    },
+    {
+      name: "configured-sources",
+      config: "global",
+      home: "home",
+      project: "repo",
+      directory: "repo/packages/core",
+      instructions: ["rules/*.md", "{{root}}/absolute.md", "~/home.md", "~/notes/**/*.md", "missing.md"],
+      files: {
+        "repo/AGENTS.md": "agents",
+        "repo/rules/a.md": "first",
+        "repo/rules/b.md": "second",
+        "absolute.md": "absolute",
+        "home/home.md": "home",
+        "home/notes/guide.md": "note top",
+        "home/notes/projects/memory.md": "note nested",
+      },
+    },
+    {
+      name: "empty-agents",
+      config: "global",
+      home: "home",
+      project: "repo",
+      directory: "repo",
+      files: { "repo/AGENTS.md": "" },
+    },
+    {
+      name: "nested-project",
+      config: "global",
+      home: "home",
+      project: "home/code/repo",
+      directory: "home/code/repo/a/b",
+      files: {
+        "home/code/AGENTS.md": "shared",
+        "home/code/repo/AGENTS.md": "project",
+        "home/code/repo/a/b/AGENTS.md": "nested",
+      },
+    },
+  ]
+  const output: string[] = []
+  for (const item of cases) output.push(await exportInstructionCase(item))
+  output.push(await exportEnvironmentCase({ name: "environment-git", vcs: "git" }))
+  output.push(await exportEnvironmentCase({ name: "environment-none", vcs: null }))
+  output.push(JSON.stringify(exportCanonical()))
+  process.stdout.write(`[\n${output.join(",\n")}\n]\n`)
+}
+
+async function exportInstructionCase(item: InstructionCase) {
+  const root = await mkdtemp(path.join(tmpdir(), "opencode-instruction-case-"))
+  try {
+    const canonical = await realpath(root)
+    const absolute = (relative: string) => path.join(canonical, relative)
+    await mkdir(absolute(item.directory), { recursive: true })
+    await mkdir(absolute(item.home), { recursive: true })
+    for (const [file, content] of Object.entries(item.files)) {
+      const target = absolute(file)
+      await mkdir(path.dirname(target), { recursive: true })
+      await writeFile(target, content)
+    }
+    const instructions = item.instructions?.map((source) => source.replace("{{root}}", canonical))
+    const locationServiceLayer = Layer.succeed(
+      Location.Service,
+      Location.Service.of(
+        location(
+          { directory: AbsolutePath.make(absolute(item.directory)) },
+          { projectDirectory: AbsolutePath.make(absolute(item.project)) },
+        ),
+      ),
+    )
+    const program = Effect.gen(function* () {
+      yield* ConfigInstructionPlugin.Plugin.effect(host())
+      const discovery = yield* InstructionDiscovery.Service
+      const listed = yield* discovery.list()
+      const initial = Array.isArray(listed) ? yield* readInitial(yield* discovery.load()) : { text: "" }
+      return {
+        kind: "discovery",
+        name: item.name,
+        home: absolute(item.home),
+        config: absolute(item.config),
+        project: absolute(item.project),
+        directory: absolute(item.directory),
+        vcs: null,
+        options: {
+          project: item.options?.project ?? true,
+          global: item.options?.global ?? true,
+          claude: item.options?.claude ?? true,
+        },
+        files: item.files,
+        instructions: instructions ?? [],
+        list: Array.isArray(listed) ? listed : "unavailable",
+        text: initial.text,
+      }
+    })
+    const result = await Effect.runPromise(
+      program.pipe(
+        Effect.scoped,
+        Effect.provide(
+          instructionLayer({
+            config: absolute(item.config),
+            home: absolute(item.home),
+            instructions,
+            project: item.options?.project,
+            global: item.options?.global,
+            claude: item.options?.claude,
+            locationServiceLayer,
+          }),
+        ),
+        Effect.provide(Logger.layer([])),
+      ),
+    )
+    return JSON.stringify(result).replaceAll(JSON.stringify(canonical).slice(1, -1), "{{root}}")
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+}
+
+async function exportEnvironmentCase(item: { name: string; vcs: "git" | null }) {
+  const directory = "/repo/packages/core"
+  const projectDirectory = "/repo"
+  const locationServiceLayer = Layer.succeed(
+    Location.Service,
+    Location.Service.of(
+      location(
+        { directory: AbsolutePath.make(directory) },
+        {
+          projectDirectory: AbsolutePath.make(projectDirectory),
+          ...(item.vcs === "git" ? { vcs: { type: "git", store: AbsolutePath.make("/repo/.git") } } : {}),
+        },
+      ),
+    ),
+  )
+  const program = Effect.gen(function* () {
+    const builtins = yield* InstructionBuiltIns.Service
+    const list = yield* builtins.load()
+    const observed = yield* Instructions.read(list)
+    const values: Record<string, Schema.Json> = {}
+    let raw = ""
+    for (const entry of observed) {
+      if (typeof entry.value !== "string") continue
+      values[entry.key] = entry.value
+      if (entry.key === "core/environment") raw = entry.value
+    }
+    const text = Instructions.renderInitial(list, values)
+      .filter((part) => part.key === "core/environment")
+      .map((part) => part.text)
+      .join("\n\n")
+    return {
+      kind: "environment",
+      name: item.name,
+      environment: { directory, projectDirectory, vcs: item.vcs, tmp: "/tmp/opencode" },
+      raw,
+      text,
+    }
+  })
+  const result = await Effect.runPromise(
+    program.pipe(
+      Effect.scoped,
+      Effect.provide(environmentLayer(locationServiceLayer)),
+      Effect.provide(Logger.layer([])),
+    ),
+  )
+  return JSON.stringify(result)
+}
+
+function exportCanonical() {
+  const values: Array<Schema.Json> = [
+    null,
+    true,
+    "text",
+    0,
+    -0,
+    1.5,
+    1e21,
+    [],
+    {},
+    { b: 2, a: 1, c: { z: 1, y: [3, 2, 1] } },
+    { a: 'line\nquote"tab\t', u: "é" },
+  ]
+  return {
+    kind: "canonical",
+    name: "values",
+    values,
+    canonical: values.map((value) => canonicalJson(value)),
+    hashes: values.map((value) => Instructions.hash(value)),
+  }
 }

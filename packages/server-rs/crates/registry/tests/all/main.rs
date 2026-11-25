@@ -2,6 +2,7 @@ mod agent;
 mod command;
 mod config_agent;
 mod corpus;
+mod instructions;
 mod markdown;
 mod scan;
 mod watch;

@@ -5,7 +5,9 @@ const root = new URL("../..", import.meta.url).pathname
 const source = `${root}script/registry-corpus/export.ts`
 const tree = await upstreamCoreTree()
 
-const targets = [{ directory: "crates/registry/tests/corpus", areas: ["markdown", "scan", "agents", "commands"] }]
+const targets = [
+  { directory: "crates/registry/tests/corpus", areas: ["markdown", "scan", "agents", "commands", "instructions"] },
+]
 
 for (const target of targets) {
   for (const area of target.areas) {

@@ -49,7 +49,7 @@ pub fn up(names: &[&str], start: &Path, stop: Option<&Path>) -> Vec<PathBuf> {
     loop {
         for name in names {
             let candidate = current.join(name);
-            if std::fs::symlink_metadata(&candidate).is_ok() {
+            if std::fs::metadata(&candidate).is_ok_and(|metadata| metadata.is_file()) {
                 results.push(candidate);
             }
         }

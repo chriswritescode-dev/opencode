@@ -926,15 +926,23 @@ dependencies = [
 name = "opencode-registry"
 version = "0.1.0"
 dependencies = [
+ "http-body-util",
+ "hyper",
+ "hyper-util",
  "indexmap",
  "log",
  "notify",
+ "opencode-api-types",
  "opencode-config",
  "opencode-contract",
  "opencode-location",
+ "opencode-util",
  "regex-lite",
+ "ring",
  "serde_json",
+ "thiserror",
  "tokio",
+ "url",
  "yaml-rust2",
 ]
 

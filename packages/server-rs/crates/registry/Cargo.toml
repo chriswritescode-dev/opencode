@@ -14,13 +14,23 @@ workspace = true
 indexmap.workspace = true
 log.workspace = true
 notify.workspace = true
+opencode-api-types.workspace = true
 opencode-config.workspace = true
 opencode-contract.workspace = true
 opencode-location.workspace = true
+opencode-util.workspace = true
 regex-lite.workspace = true
+ring.workspace = true
 serde_json.workspace = true
+thiserror.workspace = true
 tokio.workspace = true
+url.workspace = true
 yaml-rust2.workspace = true
+
+[dev-dependencies]
+http-body-util.workspace = true
+hyper.workspace = true
+hyper-util.workspace = true
 
 [[test]]
 name = "all"

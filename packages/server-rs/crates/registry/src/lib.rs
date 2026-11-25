@@ -4,6 +4,7 @@ pub mod command;
 pub mod config;
 pub mod events;
 pub mod generated;
+pub mod instructions;
 pub mod markdown;
 pub mod scan;
 pub mod watch;
