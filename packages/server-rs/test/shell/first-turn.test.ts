@@ -199,7 +199,8 @@ test("the TypeScript run command completes a turn", async () => {
     loadReply(value.endpoint, value.box)
     server = await startPort(value.env, value.box.work)
     const cli = await run(tsCommand(), ["run", "--server", server.url, "say hi"], value.env, value.box.work)
-    if (cli.exitCode !== 0 || cli.stderr !== "")
+    const stderr = stderrWithoutStepHeader(cli.stderr)
+    if (cli.exitCode !== 0 || stderr !== "")
       throw new Error(`run failed with ${cli.exitCode}: ${cli.stderr}\nserver: ${server.output()}`)
     expect(cli.stdout).toContain("Hello!")
     expect(value.endpoint.unused()).toBe(0)
@@ -221,7 +222,8 @@ test("the native run command completes a turn", async () => {
     loadReply(value.endpoint, value.box)
     const env = { ...value.env, OPENCODE_TS_BIN: rustBinary() }
     const cli = await run([nativeBinary], ["run", "--standalone", "say hi"], env, value.box.work)
-    if (cli.exitCode !== 0 || cli.stderr !== "") throw new Error(`run failed with ${cli.exitCode}: ${cli.stderr}`)
+    const stderr = stderrWithoutStepHeader(cli.stderr)
+    if (cli.exitCode !== 0 || stderr !== "") throw new Error(`run failed with ${cli.exitCode}: ${cli.stderr}`)
     expect(cli.stdout).toContain("Hello!")
     expect(value.endpoint.unused()).toBe(0)
     expect(value.endpoint.failures()).toEqual([])
@@ -308,6 +310,14 @@ async function run(command: readonly string[], args: readonly string[], env: Rec
     child.exited,
   ])
   return { stdout, stderr, exitCode }
+}
+
+function stderrWithoutStepHeader(stderr: string) {
+  return stderr
+    .split("\n")
+    .map((line) => line.replace(/\x1b\[[0-9;]*m/g, "").trim())
+    .filter((line) => line !== "" && !/^> .+ · .+$/.test(line))
+    .join("\n")
 }
 
 function removeSandbox(root: string) {
