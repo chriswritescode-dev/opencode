@@ -36,10 +36,11 @@ export async function sandboxEnv(
   extra: Record<string, string> = {},
   config: Record<string, unknown> = {},
   modelURL: string,
+  models: unknown = {},
 ): Promise<Record<string, string>> {
   const home = path.join(root, "home")
   const bunCache = path.join(path.dirname(root), "bun-cache")
-  await Bun.write(path.join(root, "models.json"), "{}")
+  await Bun.write(path.join(root, "models.json"), JSON.stringify(models))
   await fs.mkdir(bunCache, { recursive: true })
   return {
     PATH: process.env.PATH ?? "/usr/bin:/bin",

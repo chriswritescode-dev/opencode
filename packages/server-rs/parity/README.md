@@ -18,11 +18,12 @@ Runs a scenario against the TypeScript reference server and a candidate server, 
 
 ## Steps
 
-Each scenario runs its `steps` in order. `http` and `ws` steps add an entry to `steps`; `waitEvent` and `files` steps do not.
+Each scenario runs its `steps` in order. `http` and `ws` steps add an entry to `steps`; `waitEvent`, `files` and `settle` steps do not.
 
 - `http`: `method` and `path` are required. `query` values are strings or arrays, and array values repeat the key. `headers` are sent as written and `body` is JSON. `auth` is `basic` (default), `query` or `none`. `location` defaults to `true` and sends `x-opencode-directory: <work>`. `as` saves the parsed response body for later placeholders.
 - `waitEvent`: waits for an event of `type`. `match` is an optional deep-partial match against the event's `data` after templating: every object key must match and arrays compare as a prefix. `timeout` is in milliseconds and defaults to `30000`. The next wait starts after the previously matched event.
 - `files`: writes a `{ path: contents }` map below `work` mid-scenario, unlike the scenario-level `files` written before the server starts.
+- `settle`: waits until the event stream has been quiet for one second, so events published asynchronously by earlier steps are captured before the next step. It adds no capture entry. When `events` is not compared there is no stream and it returns immediately.
 - `ws`: `path` is required, and the URL is the server base with the HTTP scheme replaced by `ws` (`wss` for `https`);
   `query` behaves as it does for `http`, with string or array values and arrays repeating the key. `auth` is `basic`
   (default), `query` or `none`, as for `http`. After the socket opens, each string in `send` is sent in order. Text
@@ -33,7 +34,7 @@ Each scenario runs its `steps` in order. `http` and `ws` steps add an entry to `
 
 ## Adding a scenario
 
-A scenario is a `.scenario.ts` file under `parity/scenarios` that default-exports `defineScenario({ ... })`. Because the output directory and the deviation rules key off the file path, name it `<name>.scenario.ts`; the scenario name is that path below `parity/scenarios` without the suffix. `files`, `config`, `env` and `model` are optional and `steps` is required. Top-level `files` are written under `work` before the server starts, `config` deep-merges over the sandbox base config, and `env` adds string variables to both sides.
+A scenario is a `.scenario.ts` file under `parity/scenarios` that default-exports `defineScenario({ ... })`. Because the output directory and the deviation rules key off the file path, name it `<name>.scenario.ts`; the scenario name is that path below `parity/scenarios` without the suffix. `files`, `config`, `env`, `models` and `model` are optional and `steps` is required. Top-level `files` are written under `work` before the server starts, `config` deep-merges over the sandbox base config, and `env` adds string variables to both sides. `models` is any JSON value written verbatim to `root/models.json`, which the harness exposes as `OPENCODE_MODELS_PATH`; it defaults to `{}`.
 
 ```ts
 import { defineScenario } from "../lib/scenario"
@@ -100,7 +101,7 @@ Every variable is set for both sides:
 - `OPENCODE_PASSWORD`: `parity`, a fixed credential both sides accept through Basic auth and `auth_token`.
 - `OPENCODE_DISABLE_AUTOUPDATE`: `1` prevents an upgrade check from contacting the network.
 - `OPENCODE_DISABLE_MODELS_FETCH`: `1` prevents the model catalog from being downloaded.
-- `OPENCODE_MODELS_PATH`: `root/models.json`, an empty catalog file used instead of a fetch.
+- `OPENCODE_MODELS_PATH`: `root/models.json`, an empty catalog file used instead of a fetch; a scenario's `models` overrides its contents.
 - `OPENCODE_DISABLE_FILEWATCHER`: `1` avoids filesystem watchers in a throwaway directory.
 - `OPENCODE_DISABLE_CHANNEL_DB`: `1` avoids a channel-specific database path.
 - `OPENCODE_FLAGS`: `-full_codemode` keeps optional codemode behavior out of the comparison.
@@ -175,7 +176,7 @@ Coverage is measured per reference-side scenario. An `http` step covers the oper
 
 By default every part of the capture is compared: `steps`, `events`, `database`, `files`, `logs` and `model`.
 
-`--only <parts>` restricts what is compared to a comma list of those parts; omitting it selects all six, and repeated names are collapsed. It never changes what a scenario runs: every step, including `http`, `ws`, `files` and templating, still executes exactly as before. When `events` is not selected, neither side opens `/api/event` (not even the throwaway warm-up stream), the per-session log fetch is skipped so `logs` stays `{}`, and a scenario that contains a `waitEvent` step is refused before any sandbox is created with `FAIL <scenario>: scenario needs events` and exit 2. `logs` requires `events` because the log keys come from sessions discovered on the event stream, and selecting `logs` without `events` fails with exit 2.
+`--only <parts>` restricts what is compared to a comma list of those parts; omitting it selects all six, and repeated names are collapsed. It never changes what a scenario runs, apart from `settle` steps, which have no stream to wait on: every other step, including `http`, `ws`, `files` and templating, still executes exactly as before. When `events` is not selected, neither side opens `/api/event` (not even the throwaway warm-up stream), the per-session log fetch is skipped so `logs` stays `{}`, and a scenario that contains a `waitEvent` step is refused before any sandbox is created with `FAIL <scenario>: scenario needs events` and exit 2; `settle` steps are allowed and become no-ops. `logs` requires `events` because the log keys come from sessions discovered on the event stream, and selecting `logs` without `events` fails with exit 2.
 
 `--tables <names>` restricts the `database` comparison to those tables in every captured database file. It also filters the compared schema rows to those tables, including index rows, so an index whose `tbl_name` is not selected is dropped. A name that matches no captured table fails the scenario with exit 2 and `--tables <names> matched no table`, which catches a typo that would otherwise compare nothing.
 

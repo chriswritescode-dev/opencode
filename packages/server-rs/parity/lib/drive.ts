@@ -51,7 +51,10 @@ export async function runSide(
   endpoint: ModelEndpoint,
   options?: { events?: boolean; env?: Record<string, string> },
 ): Promise<{ capture: Capture; requests: RequestRecord[] }> {
-  const env = { ...(await sandboxEnv(sandbox.root, scenario.env, scenario.config, endpoint.url)), ...options?.env }
+  const env = {
+    ...(await sandboxEnv(sandbox.root, scenario.env, scenario.config, endpoint.url, scenario.models ?? {})),
+    ...options?.env,
+  }
   const captureEvents = options?.events ?? true
   await writeFiles(sandbox, scenario.files ?? {})
   const server = await startServer(resolveSide(side), env, sandbox.work, side)
@@ -89,6 +92,7 @@ export async function runSide(
         cursor,
         requests,
         stream?.state ?? absentStream,
+        captureEvents,
       )
       if (captured !== undefined) steps.push(captured)
     }
@@ -222,9 +226,14 @@ async function runStep(
   cursor: Cursor,
   requests: RequestRecord[],
   state: StreamState,
+  captureEvents: boolean,
 ): Promise<StepCapture | WsCapture | undefined> {
   if ("files" in step) {
     await writeFiles(sandbox, step.files)
+    return undefined
+  }
+  if ("settle" in step) {
+    if (captureEvents) await settleEvents(events)
     return undefined
   }
   if ("ws" in step) return runWsStep(step.ws, base, sandbox, saved, requests)

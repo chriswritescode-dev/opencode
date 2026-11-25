@@ -26,6 +26,7 @@ export type Step =
   | { ws: WsStep }
   | { waitEvent: WaitEventStep; timeout?: number }
   | { files: Record<string, string> }
+  | { settle: true }
 
 export type Reply =
   | { text: string }
@@ -36,6 +37,7 @@ export type Scenario = {
   files?: Record<string, string>
   config?: Record<string, unknown>
   env?: Record<string, string>
+  models?: unknown
   model?: Reply[]
   steps: Step[]
 }
