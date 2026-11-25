@@ -803,10 +803,12 @@ dependencies = [
  "opencode-location",
  "opencode-storage",
  "opencode-util",
+ "regex-lite",
  "rusqlite",
  "serde_json",
  "thiserror",
  "tokio",
+ "tokio-util",
  "url",
 ]
 

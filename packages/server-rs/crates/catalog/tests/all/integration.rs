@@ -41,17 +41,20 @@ fn empty_environment() -> ConfigEnv {
     Arc::new(|_| None)
 }
 
-fn setup_with_env(values: HashMap<String, String>) -> Harness {
+pub(crate) fn setup_with_env(values: HashMap<String, String>) -> Harness {
     let dir = TempDir::new();
     let (database, _) = Database::open(DatabaseLocation::Memory, dir.path()).expect("open the database");
     let database = Arc::new(database);
     let bus = Bus::new(database.clone(), BusOptions::default());
     let credentials = CredentialService::new(database.clone(), bus.clone(), dir.path().join("locks"));
-    let service = IntegrationService::new(credentials.clone(), bus.clone(), location("main"), environment(values));
+    let command_env =
+        Arc::new(values.iter().map(|(name, value)| (OsString::from(name), OsString::from(value))).collect());
+    let service =
+        IntegrationService::new(credentials.clone(), bus.clone(), location("main"), environment(values), command_env);
     (dir, database, bus, credentials, service)
 }
 
-fn setup() -> Harness {
+pub(crate) fn setup() -> Harness {
     setup_with_env(HashMap::new())
 }
 
@@ -61,8 +64,10 @@ fn setup_locations() -> Locations {
     let database = Arc::new(database);
     let bus = Bus::new(database.clone(), BusOptions::default());
     let credentials = CredentialService::new(database.clone(), bus.clone(), dir.path().join("locks"));
-    let a = IntegrationService::new(credentials.clone(), bus.clone(), location("a"), empty_environment());
-    let b = IntegrationService::new(credentials.clone(), bus.clone(), location("b"), empty_environment());
+    let empty = Arc::new(Vec::new());
+    let a =
+        IntegrationService::new(credentials.clone(), bus.clone(), location("a"), empty_environment(), empty.clone());
+    let b = IntegrationService::new(credentials.clone(), bus.clone(), location("b"), empty_environment(), empty);
     ((dir, database, bus, credentials, a), b)
 }
 
@@ -85,7 +90,7 @@ fn captured(events: &Arc<Mutex<Vec<Event>>>) -> Vec<(String, Value)> {
         .collect()
 }
 
-fn integration_id(name: &str) -> IntegrationID {
+pub(crate) fn integration_id(name: &str) -> IntegrationID {
     IntegrationID(name.to_owned())
 }
 

@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::ffi::OsString;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, Weak};
+use std::time::Duration;
 
 use indexmap::IndexMap;
 use opencode_bus::{Bus, BusError, Definition, PublishOptions};
@@ -13,15 +14,25 @@ use opencode_location::state::{self, BoxFuture, Options, Registration, State, Tr
 
 use crate::credential::{self, CredentialError, CredentialService};
 
+mod attempt;
+mod command;
+mod connect;
 mod connection;
 mod editor;
 
+pub use attempt::{Attempt, AttemptError, AttemptMode, AttemptStatus, AttemptTime, OAuthConnectInput, OAuthService};
+pub use command::{CommandAttempt, CommandAttemptStatus, CommandConnectInput, CommandError, CommandService};
+pub use connect::{ExternalInput, KeyInput};
 pub use connection::{ConnectionService, StatusInput};
 pub use editor::{Editor, Implementation};
 
 pub const UPDATED: &str = "integration.updated";
 
+const SCRUB_INTERVAL: Duration = Duration::from_secs(30);
+
 pub type ConfigEnv = Arc<dyn Fn(&str) -> Option<OsString> + Send + Sync>;
+
+pub type CommandEnv = Arc<Vec<(OsString, OsString)>>;
 
 pub type OAuthFuture<T> = BoxFuture<'static, Result<T, AuthorizationError>>;
 
@@ -131,7 +142,11 @@ pub struct IntegrationService {
     pub(crate) bus: Arc<Bus>,
     pub(crate) location: LocationRef,
     pub(crate) environment: ConfigEnv,
+    pub(crate) command_env: CommandEnv,
     pub(crate) statuses: Mutex<HashMap<String, ConnectionStatus>>,
+    pub(crate) attempts: Mutex<HashMap<String, attempt::OAuthEntry>>,
+    pub(crate) command_attempts: Mutex<HashMap<String, command::CommandEntry>>,
+    cleanup: Mutex<Option<tokio::task::JoinHandle<()>>>,
 }
 
 impl IntegrationService {
@@ -140,6 +155,7 @@ impl IntegrationService {
         bus: Arc<Bus>,
         location: LocationRef,
         environment: ConfigEnv,
+        command_env: CommandEnv,
     ) -> Arc<Self> {
         let notify_bus = bus.clone();
         let notify_location = location.clone();
@@ -159,13 +175,20 @@ impl IntegrationService {
             initial: Box::new(IntegrationRegistry::default),
             notify: Some(state::changes(project_registry, notify)),
         };
-        Arc::new(Self {
-            state: State::new(options),
-            credentials,
-            bus,
-            location,
-            environment,
-            statuses: Mutex::new(HashMap::new()),
+        Arc::new_cyclic(|weak| {
+            let cleanup = tokio::spawn(cleanup_task(weak.clone()));
+            Self {
+                state: State::new(options),
+                credentials,
+                bus,
+                location,
+                environment,
+                command_env,
+                statuses: Mutex::new(HashMap::new()),
+                attempts: Mutex::new(HashMap::new()),
+                command_attempts: Mutex::new(HashMap::new()),
+                cleanup: Mutex::new(Some(cleanup)),
+            }
         })
     }
 
@@ -216,6 +239,14 @@ impl IntegrationService {
         ConnectionService { service: self }
     }
 
+    pub fn oauth(self: &Arc<Self>) -> OAuthService<'_> {
+        OAuthService { service: self }
+    }
+
+    pub fn command(self: &Arc<Self>) -> CommandService<'_> {
+        CommandService { service: self }
+    }
+
     pub(crate) fn publish_updated(&self) -> Result<(), IntegrationError> {
         let definition = Definition::ephemeral(UPDATED);
         let options = PublishOptions { location: Some(self.location.clone()), ..Default::default() };
@@ -239,6 +270,29 @@ impl IntegrationService {
 
 pub(crate) fn status_key(integration_id: &IntegrationID, connection: &ConnectionInfo) -> String {
     format!("{}:{}", integration_id.0, connection::key(connection))
+}
+
+impl Drop for IntegrationService {
+    fn drop(&mut self) {
+        attempt::shutdown(self);
+        command::shutdown(self);
+        if let Ok(mut cleanup) = self.cleanup.lock()
+            && let Some(task) = cleanup.take()
+        {
+            task.abort();
+        }
+    }
+}
+
+async fn cleanup_task(weak: Weak<IntegrationService>) {
+    loop {
+        tokio::time::sleep(SCRUB_INTERVAL).await;
+        let Some(service) = weak.upgrade() else {
+            return;
+        };
+        attempt::scrub(&service);
+        command::scrub(&service);
+    }
 }
 
 fn project_registry(registry: &IntegrationRegistry) -> String {
