@@ -3,6 +3,7 @@ pub mod cerebras;
 pub mod cloudflare_ai_gateway;
 pub mod cloudflare_workers_ai;
 pub mod databricks;
+pub mod google_vertex;
 pub mod hooks;
 pub mod http;
 pub mod kilo;
@@ -251,6 +252,7 @@ pub async fn register(
             cloudflare_ai_gateway::ID => cloudflare_ai_gateway::register(services, context, builtin).await,
             cloudflare_workers_ai::ID => cloudflare_workers_ai::register(services, context, builtin).await,
             databricks::ID => databricks::register(services, context, builtin).await,
+            google_vertex::ID => google_vertex::register(services, context, builtin).await,
             kilo::ID => kilo::register(services, context, builtin).await,
             llmgateway::ID => llmgateway::register(services, context, builtin).await,
             neon::ID => neon::register(services, context, builtin).await,

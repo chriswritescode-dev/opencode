@@ -3,6 +3,7 @@ pub mod cerebras;
 pub mod cloudflare_ai_gateway;
 pub mod cloudflare_workers_ai;
 pub mod databricks;
+pub mod google_vertex;
 pub mod helpers;
 pub mod kilo;
 pub mod llmgateway;
