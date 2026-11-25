@@ -11,13 +11,14 @@ autotests = false
 workspace = true
 
 [dependencies]
+futures-util.workspace = true
+indexmap.workspace = true
 opencode-config.workspace = true
 opencode-contract.workspace = true
 opencode-storage.workspace = true
-thiserror.workspace = true
-
-[dev-dependencies]
 serde_json.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
 
 [[test]]
 name = "all"

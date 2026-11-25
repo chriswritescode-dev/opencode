@@ -926,11 +926,14 @@ dependencies = [
 name = "opencode-permission"
 version = "0.1.0"
 dependencies = [
+ "futures-util",
+ "indexmap",
  "opencode-config",
  "opencode-contract",
  "opencode-storage",
  "serde_json",
  "thiserror",
+ "tokio",
 ]
 
 [[package]]
