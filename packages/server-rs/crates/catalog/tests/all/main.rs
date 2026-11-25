@@ -1,4 +1,9 @@
 mod aisdk_native;
+mod builtin;
+mod builtin_compat;
+mod builtin_models_dev;
+mod builtin_variants;
+mod catalog;
 mod corpus;
 mod credential;
 mod credential_refresh;

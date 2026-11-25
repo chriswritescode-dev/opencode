@@ -1,11 +1,26 @@
 import { AISDKNative } from "@opencode/core/aisdk-native"
 import { Model } from "@opencode/core/model"
 import { decodeSnapshot } from "@opencode/core/models-dev"
+import { Config } from "@opencode/core/config"
+import { ConfigPolicyPlugin } from "@opencode/core/config/plugin/policy"
+import { ConfigProviderPlugin } from "@opencode/core/config/plugin/provider"
+import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
+import { Integration } from "@opencode/core/integration"
+import { ModelsDev } from "@opencode/core/models-dev"
+import { Plugin } from "@opencode/core/plugin"
+import { PluginHost } from "@opencode/core/plugin/host"
+import { ModelsDevPlugin } from "@opencode/core/plugin/models-dev"
+import { WellKnownPlugin } from "@opencode/core/wellknown/plugin"
+import { Document, Info } from "@opencode/schema/config"
+import { mkdtemp, writeFile } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
+import { PluginTestLayer } from "./plugin/fixture"
 import { OauthCallbackPage } from "@opencode/core/oauth/page"
 import { OauthRedirect } from "@opencode/core/oauth/redirect"
 import { Provider } from "@opencode/core/provider"
 import { Variant } from "@opencode/core/variant"
-import { Effect } from "effect"
+import { Context, Effect, Layer, Schema } from "effect"
 
 const area = process.argv[2]
 
@@ -738,11 +753,350 @@ async function modelsDev() {
   return cases
 }
 
+async function catalog() {
+  const output = console.log
+  console.log = console.info = console.debug = console.warn = console.error = () => {}
+  const temp = await mkdtemp(join(tmpdir(), "opencode-catalog-corpus-"))
+  const decode = Schema.decodeUnknownSync(Info)
+  const documents = (values: readonly unknown[]) =>
+    values.map((value) => new Document({ type: "document", info: decode(value) }))
+  const modelsLayer = (file: string) =>
+    AppNodeBuilder.build(ModelsDev.node, [
+      ModelsDev.node.replace(ModelsDev.configured({ file, fetch: false, snapshot: false })),
+    ])
+  const effects = {
+    wellknown: WellKnownPlugin.Plugin,
+    models_dev: ModelsDevPlugin,
+    config_provider: ConfigProviderPlugin.Plugin,
+    config_policy: ConfigPolicyPlugin.Plugin,
+  }
+  const plain = (value: unknown) => JSON.parse(JSON.stringify(value))
+  const run = async (name: string, input: any) => {
+    const entries = documents(input.entries ?? [])
+    let models: string | undefined
+    if (input.models !== undefined) {
+      models = join(temp, `${name}.json`)
+      await writeFile(models, JSON.stringify(input.models))
+    }
+    const environment = input.environment ?? {}
+    const restore = Object.entries(environment).map(([key, value]) => {
+      const previous = process.env[key]
+      process.env[key] = value as string
+      return () => {
+        if (previous === undefined) delete process.env[key]
+        else process.env[key] = previous
+      }
+    })
+    try {
+      const result = await Effect.runPromise(
+        Effect.gen(function* () {
+          const context = yield* Effect.context<any>()
+          const host = yield* PluginHost.make(Context.get(context, Plugin.Service), "test")
+          for (const name of input.plugins as (keyof typeof effects)[]) {
+            const effect = effects[name]
+              .effect(host)
+              .pipe(
+                Effect.provide(Config.testLayer(entries)),
+                models === undefined ? (value: any) => value : Effect.provide(modelsLayer(models)),
+              )
+            yield* effect
+          }
+          const providers = Context.get(context, Provider.Service)
+          const model = Context.get(context, Model.Service)
+          const integrations = Context.get(context, Integration.Service)
+          if (input.activate)
+            yield* providers.transform((editor) => {
+              for (const record of editor.list())
+                editor.update(record.provider.id, (provider) => {
+                  provider.activation = "enabled"
+                })
+            })
+          const all = yield* providers.all()
+          const small: Record<string, unknown> = {}
+          for (const provider of all) small[provider.id] = (yield* model.small(provider.id)) ?? null
+          return {
+            providers: { all, available: yield* providers.available() },
+            models: {
+              all: yield* model.all(),
+              available: yield* model.available(),
+              typed: {
+                chat: yield* model.available(["chat"]),
+                decision: yield* model.available(["decision"]),
+                image: yield* model.available(["image"]),
+                video: yield* model.available(["video"]),
+              },
+              default: (yield* model.default()) ?? null,
+              small,
+            },
+            integrations: yield* integrations.list(),
+          }
+        }).pipe(Effect.provide(PluginTestLayer), Effect.scoped),
+      )
+      return plain(result)
+    } finally {
+      for (const undo of restore) undo()
+    }
+  }
+
+  const api = (sdk: string, base = "https://api.acme.test/v1") => ({
+    "generate-content": { base_url: base, sdk: { opencodeai: sdk } },
+  })
+  const chat = (id: string, overview: Record<string, unknown> = {}) => ({
+    id,
+    type: "chat",
+    name: id,
+    release_date: "2026-01-01",
+    modalities: { input: ["text"], output: ["text"] },
+    capabilities: { tools: { supported: true }, reasoning: { supported: false } },
+    limit: { context: 128_000, output: 32_000 },
+    api: api("@opencode/ai/providers/openai-compatible"),
+    ...overview,
+  })
+  const cases: Array<[string, any]> = [
+    [
+      "provider.key-auth",
+      {
+        plugins: ["config_provider"],
+        entries: [{ providers: { litellm: { package: "aisdk:@ai-sdk/openai-compatible", models: { chat: {} } } } }],
+      },
+    ],
+    [
+      "provider.custom-defaults",
+      {
+        plugins: ["config_provider"],
+        entries: [{ providers: { custom: { package: "aisdk:@ai-sdk/openai-compatible", models: { chat: {} } } } }],
+      },
+    ],
+    [
+      "provider.types",
+      {
+        plugins: ["config_provider"],
+        entries: [
+          {
+            providers: {
+              custom: {
+                package: "aisdk:@ai-sdk/openai-compatible",
+                models: { chat: {}, painter: { type: "image" } },
+              },
+            },
+          },
+        ],
+      },
+    ],
+    [
+      "provider.layered",
+      {
+        plugins: ["config_provider"],
+        entries: [
+          {
+            model: "custom/first",
+            providers: {
+              custom: {
+                name: "Configured",
+                canonical: "anthropic",
+                env: ["CUSTOM_API_KEY"],
+                package: "native",
+                headers: { first: "first", shared: "first" },
+                models: {
+                  chat: {
+                    name: "First",
+                    package: "aisdk:@ai-sdk/openai-compatible",
+                    capabilities: { tools: true, input: ["text"], output: ["text"] },
+                    limit: { context: 100, output: 50 },
+                    cost: { input: 1, output: 2 },
+                    settings: { retained: true },
+                    headers: { first: "first", shared: "first" },
+                    variants: [{ id: "fast", headers: { first: "first", shared: "first" } }],
+                  },
+                },
+              },
+            },
+          },
+          {
+            model: "custom/default",
+            providers: {
+              custom: {
+                package: "aisdk:@ai-sdk/openai-compatible",
+                settings: { baseURL: "https://example.test" },
+                headers: { last: "last", shared: "last" },
+                models: {
+                  default: { name: "Default" },
+                  chat: {
+                    modelID: "api-chat",
+                    name: "Last",
+                    limit: { output: 75 },
+                    headers: { last: "last", shared: "last" },
+                    variants: [
+                      { id: "fast", headers: { last: "last", shared: "last" } },
+                      { id: "slow", headers: { slow: "slow" } },
+                    ],
+                  },
+                },
+              },
+            },
+          },
+          { providers: { custom: { name: "Renamed" } } },
+        ],
+      },
+    ],
+    [
+      "provider.base-url",
+      {
+        plugins: ["config_provider"],
+        entries: [
+          {
+            providers: {
+              custom: {
+                package: "aisdk:@ai-sdk/openai-compatible",
+                settings: { baseURL: "https://provider.test" },
+                models: {
+                  kept: { settings: { baseURL: "https://model.test", retained: true } },
+                  plain: {},
+                },
+              },
+            },
+          },
+        ],
+      },
+    ],
+    [
+      "modelsdev.first",
+      {
+        plugins: ["models_dev"],
+        activate: true,
+        entries: [{ experimental: { recommended_api: false } }],
+        models: await Bun.file("test/plugin/fixtures/models-dev.json").json(),
+      },
+    ],
+    [
+      "modelsdev.recommended",
+      {
+        plugins: ["models_dev"],
+        activate: true,
+        entries: [{ experimental: { recommended_api: true } }],
+        models: await Bun.file("test/plugin/fixtures/models-dev.json").json(),
+      },
+    ],
+    [
+      "modelsdev.reasoning",
+      {
+        plugins: ["models_dev"],
+        activate: true,
+        entries: [{ experimental: { recommended_api: false } }],
+        models: await Bun.file("test/plugin/fixtures/models-dev-reasoning.json").json(),
+      },
+    ],
+    [
+      "modelsdev.filtering",
+      {
+        plugins: ["models_dev"],
+        activate: true,
+        entries: [{ experimental: { recommended_api: false } }],
+        models: {
+          "azure-cognitive-services": {
+            id: "azure-cognitive-services",
+            name: "Azure Cognitive Services",
+            env: [],
+            models: { legacy: chat("legacy") },
+          },
+          "google-vertex-anthropic": {
+            id: "google-vertex-anthropic",
+            name: "Google Vertex Anthropic",
+            env: [],
+            models: { legacy: chat("legacy") },
+          },
+          acme: {
+            id: "acme",
+            name: "Acme",
+            env: ["ACME_API_KEY"],
+            models: {
+              current: chat("current"),
+              legacy: chat("legacy", { status: "deprecated" }),
+              "video-gen": chat("video-gen", {
+                type: "video",
+                modalities: { input: ["text"], output: ["video"] },
+                api: api("@opencode/ai/providers/google/videos"),
+              }),
+              image: chat("image", {
+                type: "image",
+                modalities: { input: ["text"], output: ["image"] },
+                api: api("@opencode/ai/providers/google/images"),
+              }),
+              decision: chat("decision", {
+                type: "decision",
+                api: api("@opencode/ai/providers/openai-compatible/decisions"),
+              }),
+              transcribe: chat("transcribe", { modalities: { input: ["audio"], output: ["text"] } }),
+            },
+          },
+          local: { id: "local", name: "Local", env: [], models: {} },
+        },
+      },
+    ],
+    [
+      "modelsdev.bedrock",
+      {
+        plugins: ["models_dev"],
+        activate: true,
+        entries: [{ experimental: { recommended_api: false } }],
+        models: {
+          "amazon-bedrock": {
+            id: "amazon-bedrock",
+            name: "Amazon Bedrock",
+            env: ["AWS_ACCESS_KEY_ID"],
+            models: {
+              "anthropic.claude-opus-5": chat("anthropic.claude-opus-5", {
+                api: { "generate-content": { sdk: { aisdk: "@ai-sdk/amazon-bedrock" } } },
+              }),
+              "in-region": chat("in-region", {
+                api: { "generate-content": { sdk: { aisdk: "@ai-sdk/amazon-bedrock" } } },
+              }),
+            },
+          },
+        },
+      },
+    ],
+    [
+      "policy.denied-provider",
+      {
+        plugins: ["config_provider", "config_policy"],
+        entries: [
+          {
+            policies: [{ action: "provider.use", resource: "custom", effect: "deny" }],
+            providers: { custom: { package: "aisdk:@ai-sdk/openai-compatible", models: { chat: {} } } },
+          },
+        ],
+      },
+    ],
+    [
+      "policy.denied-integration",
+      {
+        plugins: ["config_provider", "config_policy"],
+        entries: [
+          {
+            policies: [{ action: "integration.use", resource: "custom", effect: "deny" }],
+            providers: {
+              custom: { package: "aisdk:@ai-sdk/openai-compatible", models: { chat: {} } },
+              kept: { package: "aisdk:@ai-sdk/openai-compatible", models: { chat: {} } },
+            },
+          },
+        ],
+      },
+    ],
+  ]
+
+  const casesOutput: Record<string, unknown> = {}
+  for (const [name, input] of cases) casesOutput[name] = { input, expected: await run(name, input) }
+  console.log = output
+  return casesOutput
+}
+
 const builders: Record<string, () => Record<string, unknown> | Promise<Record<string, unknown>>> = {
   oauth,
   "aisdk-native": aisdkNative,
   variants,
   "models-dev": modelsDev,
+  catalog,
 }
 
 const build = area === undefined ? undefined : builders[area]

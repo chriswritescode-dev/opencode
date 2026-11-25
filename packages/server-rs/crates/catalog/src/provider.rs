@@ -183,6 +183,13 @@ impl ProviderService {
         self.state.transform(move |registry| f(&mut Editor { registry })).await
     }
 
+    pub async fn block(
+        &self,
+        block: Arc<dyn opencode_location::state::ExternalBlock<ProviderRegistry>>,
+    ) -> Registration {
+        self.state.block(block).await
+    }
+
     pub async fn reload(&self) {
         self.state.reload().await;
     }
