@@ -3,6 +3,7 @@ mod compression;
 mod config;
 mod cors;
 mod coverage;
+mod credential;
 mod debug;
 mod event;
 mod info;

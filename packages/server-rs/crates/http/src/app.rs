@@ -36,6 +36,11 @@ pub const IMPLEMENTED: &[&str] = &[
     "model.default",
     "provider.list",
     "provider.get",
+    "credential.list",
+    "credential.create",
+    "credential.update",
+    "credential.remove",
+    "credential.activate",
 ];
 
 pub struct Options {
@@ -196,6 +201,26 @@ impl App {
             "provider.get" => match self.location(&raw).await {
                 Ok(lease) => crate::handlers::provider::get(&raw, lease.services()).await,
                 Err(response) => response,
+            },
+            "credential.list" => match self.services() {
+                Some(services) => crate::handlers::credential::list(services).await,
+                None => crate::services::services_unavailable(),
+            },
+            "credential.create" => match self.services() {
+                Some(services) => crate::handlers::credential::create(&raw, services).await,
+                None => crate::services::services_unavailable(),
+            },
+            "credential.update" => match self.services() {
+                Some(services) => crate::handlers::credential::update(&raw, services).await,
+                None => crate::services::services_unavailable(),
+            },
+            "credential.remove" => match self.services() {
+                Some(services) => crate::handlers::credential::remove(&raw, services).await,
+                None => crate::services::services_unavailable(),
+            },
+            "credential.activate" => match self.services() {
+                Some(services) => crate::handlers::credential::activate(&raw, services).await,
+                None => crate::services::services_unavailable(),
             },
             _ => not_implemented(found.route.identifier),
         }

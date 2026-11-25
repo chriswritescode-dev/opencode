@@ -1,6 +1,6 @@
 # Operation coverage
 
-Implemented: 19 of 178 operations
+Implemented: 24 of 178 operations
 
 | Operation | Method | Path | Stability | Status |
 | --- | --- | --- | --- | --- |
@@ -91,11 +91,11 @@ Implemented: 19 of 178 operations
 | `mcp.resource.catalog` | GET | `/api/mcp/resource` | stable | not implemented (501) |
 | `experimental.mcp.client.token` | POST | `/api/experimental/client-mcp/token` | experimental | not implemented (501) |
 | `experimental.mcp.client` | GET | `/api/experimental/client-mcp` | experimental | not implemented (501) |
-| `credential.list` | GET | `/api/credential` | stable | not implemented (501) |
-| `credential.create` | POST | `/api/credential` | stable | not implemented (501) |
-| `credential.update` | PATCH | `/api/credential/{credentialID}` | stable | not implemented (501) |
-| `credential.remove` | DELETE | `/api/credential/{credentialID}` | stable | not implemented (501) |
-| `credential.activate` | POST | `/api/credential/{credentialID}/activate` | stable | not implemented (501) |
+| `credential.list` | GET | `/api/credential` | stable | implemented |
+| `credential.create` | POST | `/api/credential` | stable | implemented |
+| `credential.update` | PATCH | `/api/credential/{credentialID}` | stable | implemented |
+| `credential.remove` | DELETE | `/api/credential/{credentialID}` | stable | implemented |
+| `credential.activate` | POST | `/api/credential/{credentialID}/activate` | stable | implemented |
 | `project.list` | GET | `/api/project` | stable | implemented |
 | `project.update` | PATCH | `/api/project/{projectID}` | stable | implemented |
 | `form.list` | GET | `/api/form` | stable | not implemented (501) |

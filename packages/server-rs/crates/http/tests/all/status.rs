@@ -127,6 +127,11 @@ fn sample_request(operation: &str) -> Option<(&'static str, &'static str)> {
         "model.default" => Some(("GET", "/api/model/default")),
         "provider.list" => Some(("GET", "/api/provider")),
         "provider.get" => Some(("GET", "/api/provider/unknown")),
+        "credential.list" => Some(("GET", "/api/credential")),
+        "credential.create" => Some(("POST", "/api/credential")),
+        "credential.update" => Some(("PATCH", "/api/credential/x")),
+        "credential.remove" => Some(("DELETE", "/api/credential/x")),
+        "credential.activate" => Some(("POST", "/api/credential/x/activate")),
         _ => None,
     }
 }
@@ -172,5 +177,10 @@ fn implemented_lists_the_ported_operations() {
     assert!(opencode_http::app::IMPLEMENTED.contains(&"model.default"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"provider.list"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"provider.get"));
-    assert_eq!(opencode_http::app::IMPLEMENTED.len(), 19);
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"credential.list"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"credential.create"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"credential.update"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"credential.remove"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"credential.activate"));
+    assert_eq!(opencode_http::app::IMPLEMENTED.len(), 24);
 }

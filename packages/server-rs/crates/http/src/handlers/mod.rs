@@ -1,7 +1,9 @@
 pub mod config;
+pub mod credential;
 pub mod debug;
 pub mod defect;
 pub mod event;
+pub mod integration_policy;
 pub mod invalid;
 pub mod location;
 pub mod model;
