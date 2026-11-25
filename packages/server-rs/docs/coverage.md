@@ -1,6 +1,6 @@
 # Operation coverage
 
-Implemented: 25 of 178 operations
+Implemented: 26 of 178 operations
 
 | Operation | Method | Path | Stability | Status |
 | --- | --- | --- | --- | --- |
@@ -161,7 +161,7 @@ Implemented: 25 of 178 operations
 | `shell.get` | GET | `/api/shell/{id}` | stable | not implemented (501) |
 | `shell.remove` | DELETE | `/api/shell/{id}` | stable | not implemented (501) |
 | `shell.output` | GET | `/api/shell/{id}/output` | stable | not implemented (501) |
-| `reference.list` | GET | `/api/reference` | stable | not implemented (501) |
+| `reference.list` | GET | `/api/reference` | stable | implemented |
 | `worktree.list` | GET | `/api/worktree` | stable | implemented |
 | `worktree.create` | POST | `/api/worktree` | stable | implemented |
 | `worktree.remove` | DELETE | `/api/worktree` | stable | implemented |

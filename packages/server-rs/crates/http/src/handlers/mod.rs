@@ -5,6 +5,7 @@ pub mod event;
 pub mod invalid;
 pub mod location;
 pub mod project;
+pub mod reference;
 pub mod session_log;
 pub mod vcs;
 pub mod worktree;

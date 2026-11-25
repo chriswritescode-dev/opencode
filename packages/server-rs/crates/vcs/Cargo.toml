@@ -14,10 +14,12 @@ workspace = true
 futures-util.workspace = true
 log.workspace = true
 notify.workspace = true
+opencode-api-types.workspace = true
 opencode-bus.workspace = true
 opencode-config.workspace = true
 opencode-contract.workspace = true
 opencode-git.workspace = true
+opencode-local.workspace = true
 opencode-location.workspace = true
 opencode-storage.workspace = true
 opencode-util.workspace = true
@@ -28,6 +30,7 @@ serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
+url.workspace = true
 
 [[test]]
 name = "all"

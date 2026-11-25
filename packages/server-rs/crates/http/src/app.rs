@@ -35,6 +35,7 @@ pub const IMPLEMENTED: &[&str] = &[
     "vcs.status",
     "vcs.branch.list",
     "vcs.diff",
+    "reference.list",
     "worktree.list",
     "worktree.create",
     "worktree.remove",
@@ -178,6 +179,7 @@ impl App {
             "vcs.status" => crate::handlers::vcs::status(self, &raw).await,
             "vcs.branch.list" => crate::handlers::vcs::branch_list(self, &raw).await,
             "vcs.diff" => crate::handlers::vcs::diff(self, &raw).await,
+            "reference.list" => crate::handlers::reference::list(self, &raw).await,
             "worktree.list" => match self.services() {
                 Some(services) => crate::handlers::worktree::list(services, &raw).await,
                 None => crate::services::services_unavailable(),

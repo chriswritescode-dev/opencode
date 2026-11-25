@@ -17,7 +17,7 @@ use opencode_contract::codec::encode_json;
 use opencode_contract::generated::{
     AbsolutePath, ConfigEntryDocumentInfoExperimentalLocationIdleTimeout,
     ConfigEntryDocumentInfoExperimentalLocationIdleTimeoutBool, LocationNotFoundError, LocationNotFoundErrorTag,
-    LocationPublicRef, ServiceUnavailableError, ServiceUnavailableErrorTag,
+    LocationPublicRef, LocationRef, ServiceUnavailableError, ServiceUnavailableErrorTag, WorkspaceID,
 };
 use opencode_location::activity::{Activity, ActivityOptions, IdleTimeout};
 use opencode_location::environment::{Environment, local::LocalEnvironment};
@@ -30,6 +30,8 @@ use opencode_location::state::Registration;
 use opencode_storage::Database;
 use opencode_vcs::git_provider::GitProvider;
 use opencode_vcs::hg_provider::HgProvider;
+use opencode_vcs::reference::Reference;
+use opencode_vcs::repository_cache::RepositoryCache;
 use opencode_vcs::snapshot::Snapshot;
 use opencode_vcs::vcs::Vcs;
 use opencode_vcs::watcher::{LocationWatcher, LocationWatcherPolicy};
@@ -63,6 +65,7 @@ pub struct LocationServices {
     pub config: ConfigService,
     pub snapshot: Arc<Snapshot>,
     pub vcs: Arc<Vcs>,
+    pub reference: Arc<Reference>,
     pub worktree_strategies: Arc<WorktreeStrategies>,
     watcher: LocationWatcher,
     _vcs_registrations: Vec<Registration>,
@@ -78,6 +81,14 @@ impl GlobalServices {
         bus: Arc<Bus>,
     ) -> Self {
         let git = Arc::new(opencode_git::Git::new(config_env.clone()));
+        let repository_cache = Arc::new(RepositoryCache::new(
+            git.clone(),
+            database.clone(),
+            paths.repos.clone(),
+            paths.locks(),
+            config_env.clone(),
+        ));
+        let boot_repository_cache = repository_cache.clone();
         let boot_git = git.clone();
         let projects = Arc::new(ProjectService::new(database.clone(), git));
         let wellknown = Arc::new(WellKnown::new(Arc::new(StorageKv { database: database.clone() })));
@@ -99,6 +110,7 @@ impl GlobalServices {
             let channel = channel.clone();
             let flag_overrides = flag_overrides.clone();
             let boot_git = boot_git.clone();
+            let boot_repository_cache = boot_repository_cache.clone();
             let bus = boot_bus.clone();
             Box::pin(async move {
                 let info = boot_location(&reference, &projects, environment.as_ref()).await?;
@@ -110,6 +122,7 @@ impl GlobalServices {
                     paths.data.clone(),
                 ));
                 let home = paths.home.clone();
+                let repos = paths.repos.clone();
                 let config = ConfigService::start(
                     ConfigOptions::from_vars(|name| config_env(name)),
                     ConfigLocation { directory: PathBuf::from(&info.directory), project_id: info.project.id.clone() },
@@ -118,7 +131,14 @@ impl GlobalServices {
                 )
                 .await;
                 snapshot.observe_config(&config).await;
-                worktree_strategies.observe_config(&config, home).await;
+                worktree_strategies.observe_config(&config, &home).await;
+                let location_ref = LocationRef {
+                    directory: AbsolutePath(info.directory.clone()),
+                    workspace_id: info.workspace_id.clone().map(WorkspaceID),
+                };
+                let reference =
+                    Reference::new(bus.clone(), location_ref, boot_repository_cache.clone(), repos, config_env.clone());
+                reference.observe_config(&config, &info.directory, &home.to_string_lossy()).await;
                 let vcs = Vcs::new(bus.clone(), &info);
                 let is_hg = info.vcs.as_ref().is_some_and(|vcs| vcs.kind() == "hg");
                 let mut vcs_registrations = Vec::new();
@@ -149,6 +169,7 @@ impl GlobalServices {
                     config,
                     snapshot,
                     vcs,
+                    reference,
                     worktree_strategies,
                     watcher,
                     _vcs_registrations: vcs_registrations,
@@ -232,6 +253,7 @@ impl opencode_location::map::LocationServices for LocationServices {
         Box::pin(async move {
             self.watcher.shutdown();
             self.vcs.close();
+            self.reference.close();
             self.lifecycle.shutdown().await;
         })
     }

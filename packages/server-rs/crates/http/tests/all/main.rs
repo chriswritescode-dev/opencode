@@ -9,6 +9,7 @@ mod info;
 mod location;
 mod pairing;
 mod project;
+mod reference;
 mod request_site;
 mod router;
 mod serve;

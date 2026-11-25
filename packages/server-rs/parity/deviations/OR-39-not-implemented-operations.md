@@ -9,8 +9,8 @@ so any advertised operation has a working endpoint. The machine-link WebSocket u
 Rust: `crates/http/src/app.rs:19` lists the implemented operations in `IMPLEMENTED`
 (`server.info`, `server.pair`, `server.connect`, `event.subscribe`, `experimental.session.log`, `location.get`,
 `location.reload`, `debug.heapDump`, `debug.location.list`, `debug.location.evict`, `project.list`, `project.update`,
-`vcs.init`, `vcs.get`, `vcs.base`, `vcs.status`, `vcs.branch.list`, `vcs.diff`, `worktree.list`, `worktree.create`,
-`worktree.remove`, `worktree.refresh`, `config.get`, `config.shells`,
+`vcs.init`, `vcs.get`, `vcs.base`, `vcs.status`, `vcs.branch.list`, `vcs.diff`, `reference.list`, `worktree.list`,
+`worktree.create`, `worktree.remove`, `worktree.refresh`, `config.get`, `config.shells`,
 `experimental.config.update`). That list grows as handler tasks land. `not_implemented`
 in `crates/http/src/app.rs:301` answers every other matched route with status `501 Not Implemented` and an
 `UnknownError` body whose message is `opencode-server does not implement <identifier> yet`. `docs/coverage.md` is
