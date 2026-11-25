@@ -1,5 +1,6 @@
 pub mod agent;
 pub mod builtin;
+pub mod command;
 pub mod config;
 pub mod events;
 pub mod generated;

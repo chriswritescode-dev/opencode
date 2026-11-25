@@ -1,22 +1,37 @@
 import { Agent } from "@opencode/core/agent"
 import { Bus } from "@opencode/core/bus"
+import { Command } from "@opencode/core/command"
 import { Config } from "@opencode/core/config"
 import { ConfigAgentPlugin } from "@opencode/core/config/plugin/agent"
+import { ConfigCommandPlugin } from "@opencode/core/config/plugin/command"
 import { ConfigMarkdown } from "@opencode/core/config/markdown"
 import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
+import { Job } from "@opencode/core/job"
 import { Location } from "@opencode/core/location"
+import { Mcp } from "@opencode/core/mcp/index"
 import { AgentPlugin } from "@opencode/core/plugin/agent"
+import { CommandPlugin } from "@opencode/core/plugin/command"
 import { PlanPlugin } from "@opencode/core/plugin/plan"
 import { Project } from "@opencode/core/project"
 import { AbsolutePath } from "@opencode/core/schema"
+import { Session } from "@opencode/core/session"
+import { SessionExecution } from "@opencode/core/session/execution"
+import { SubagentJob } from "@opencode/core/session/subagent-job"
+import { ShellSelect } from "@opencode/core/shell/select"
 import { Directory, Document, Info } from "@opencode/schema/config"
+import { SessionInbox } from "@opencode/schema/session-inbox"
+import { SessionMessage } from "@opencode/schema/session-message"
 import { FSUtil } from "@opencode/util/fs-util"
 import { LayerNode } from "@opencode/util/effect/layer-node"
 import { Global } from "@opencode/util/global"
-import { Effect, Layer, Logger, Schema } from "effect"
+import { AppProcess } from "@opencode/util/process"
+import { DateTime, Effect, Layer, Logger, Schema } from "effect"
 import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
+import { tempGlobalLayer } from "./fixture/global"
+import { emptyConfigLayer, emptyMcpLayer, testLocationLayer } from "./fixture/mcp"
+import { offlineModels } from "./fixture/models"
 import { agentHost, host } from "./plugin/host"
 
 const decodeConfig = Schema.decodeUnknownSync(Info)
@@ -28,10 +43,20 @@ const tool = {
   hook: () => Effect.succeed({ dispose: Effect.void }),
 }
 
+const shellLayer = Layer.succeed(
+  ShellSelect.Service,
+  ShellSelect.Service.of({
+    resolve: () => Effect.succeed("sh"),
+    transform: () => Effect.die("unused shell.transform"),
+    reload: () => Effect.die("unused shell.reload"),
+  }),
+)
+
 const area = process.argv[2]
 if (area === "markdown") exportMarkdown()
 else if (area === "scan") await exportScan()
 else if (area === "agents") await exportAgents()
+else if (area === "commands") await exportCommands()
 else {
   console.error(`corpus: unknown area ${area ?? ""}`)
   process.exit(1)
@@ -770,4 +795,204 @@ async function exportAgentCase(item: AgentCase) {
   } finally {
     await rm(root, { recursive: true, force: true })
   }
+}
+
+type CommandCase = {
+  name: string
+  files?: Record<string, string>
+  documents?: Array<unknown>
+}
+
+function commandLayer() {
+  return AppNodeBuilder.build(
+    LayerNode.group([
+      Command.node,
+      Bus.node,
+      FSUtil.node,
+      AppProcess.node,
+      Location.node,
+      ShellSelect.node,
+      Session.node,
+      Job.node,
+      SubagentJob.node,
+      Agent.node,
+      Mcp.node,
+    ]),
+    [
+      Mcp.node.replace(emptyMcpLayer),
+      Config.node.replace(emptyConfigLayer),
+      Location.node.replace(testLocationLayer),
+      ShellSelect.node.replace(shellLayer),
+      Global.node.replace(tempGlobalLayer),
+      SessionExecution.node.replace(SessionExecution.noopLayer),
+      offlineModels,
+    ],
+  )
+}
+
+function commandHost(command: Command.Interface) {
+  return { list: () => command.list(), transform: command.transform, reload: command.reload }
+}
+
+async function exportCommands() {
+  const output = [
+    { name: "templates", templates: await exportCommandTemplates() },
+    await exportCommandCase({ name: "builtins" }),
+    await exportCommandCase({
+      name: "config-files",
+      files: {
+        "command/legacy.md": "Legacy body",
+        "commands/review.md":
+          "---\ndescription: File review\nagent: reviewer\nmodel: example/chat#high\nsubtask: true\n---\nReview files",
+        "commands/nested/docs.md": "Write docs",
+        "commands/empty.md": "",
+        "commands/.hidden.md": "Hidden body",
+        "commands/broken.md": "---\ndescription: 5\n---\nBroken",
+        "commands/ignore.txt": "ignored",
+      },
+    }),
+    await exportCommandCase({
+      name: "config-inline",
+      documents: [
+        { commands: { explain: { template: "Explain $ARGUMENTS.", description: "Explain" } } },
+        {
+          commands: {
+            init: { template: "Custom init", description: "Custom init" },
+            nested: { template: "Nested", description: "Nested desc" },
+          },
+        },
+      ],
+    }),
+    await exportCommandCase({
+      name: "config-variants",
+      files: {
+        "commands/separate.md": "---\nmodel: example/chat\nvariant: high\n---\nSeparate",
+        "commands/embedded.md": "---\nmodel: example/chat#low\nvariant: high\n---\nEmbedded",
+        "commands/structured.md":
+          "---\nmodel: { providerID: example, model: chat, variant: high }\n---\nStructured",
+      },
+    }),
+  ]
+  process.stdout.write(`[\n${output.map((item) => JSON.stringify(item)).join(",\n")}\n]\n`)
+}
+
+async function exportCommandCase(item: CommandCase) {
+  const root = await mkdtemp(path.join(tmpdir(), "opencode-command-case-"))
+  try {
+    for (const [file, content] of Object.entries(item.files ?? {})) {
+      const target = path.join(root, file)
+      await mkdir(path.dirname(target), { recursive: true })
+      await writeFile(target, content)
+    }
+    const entries: Array<Document | Directory> = (item.documents ?? []).map(
+      (document) => new Document({ type: "document", info: decodeConfig(document) }),
+    )
+    if (item.files !== undefined) {
+      entries.push(new Directory({ type: "directory", path: AbsolutePath.make(root) }))
+    }
+    const program = Effect.gen(function* () {
+      const command = yield* Command.Service
+      yield* CommandPlugin.Plugin.effect(host({ command: commandHost(command) }))
+      yield* ConfigCommandPlugin.Plugin.effect(host({ command: commandHost(command) })).pipe(
+        Effect.provide(Config.testLayer(entries)),
+      )
+      return {
+        name: item.name,
+        ...(item.files === undefined ? {} : { files: item.files }),
+        ...(item.documents === undefined ? {} : { documents: item.documents }),
+        list: yield* command.list(),
+      }
+    })
+    return await Effect.runPromise(
+      program.pipe(Effect.scoped, Effect.provide(commandLayer()), Effect.provide(Logger.layer([]))),
+    )
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+}
+
+async function exportCommandTemplates() {
+  const cases = [
+    ...["$&", "$$", "$`", "$'"].flatMap((input) => [
+      { template: "Explain $ARGUMENTS.", input, expected: `Explain ${input}.` },
+      { template: "Explain $1.", input: `"${input}"`, expected: `Explain ${input}.` },
+      { template: "Explain.", input, expected: `Explain.\n\n${input}` },
+    ]),
+    ...["abc", "", "alpha beta", '"alpha beta"', "$1", "$<name>"].map((input) => ({
+      template: "Explain $ARGUMENTS.",
+      input,
+      expected: `Explain ${input}.`,
+    })),
+    {
+      template: "First $1. Rest $2.",
+      input: '"alpha beta" gamma delta',
+      expected: "First alpha beta. Rest gamma delta.",
+    },
+    {
+      template: "Run awk '{print $0}' on $1.",
+      input: "app.log",
+      expected: "Run awk '{print $0}' on app.log.",
+    },
+    {
+      template: "Run awk '{print $0}'.",
+      input: "app.log",
+      expected: "Run awk '{print $0}'.\n\napp.log",
+    },
+    {
+      template: "First $1. Rest $2.",
+      input: '"$ARGUMENTS" tail',
+      expected: "First $ARGUMENTS. Rest tail.",
+    },
+    { template: "$ARGUMENTS / $ARGUMENTS", input: "$& $$", expected: "$& $$ / $& $$" },
+  ].map((item, index) => ({ name: `case-${index}`, ...item }))
+  const document = new Document({
+    type: "document",
+    info: decodeConfig({
+      commands: Object.fromEntries(
+        cases.map((item, index) => [`case${index}`, { template: item.template }]),
+      ),
+    }),
+  })
+  const prompts: string[] = []
+  const program = Effect.gen(function* () {
+    const command = yield* Command.Service
+    yield* ConfigCommandPlugin.Plugin.effect(
+      host({
+        command: commandHost(command),
+        session: {
+          prompt: (input) =>
+            Effect.sync(() => {
+              prompts.push(input.text)
+              return SessionInbox.User.make({
+                id: SessionMessage.ID.make("msg_test"),
+                sessionID: input.sessionID,
+                time: { created: DateTime.makeUnsafe(0) },
+                type: "user",
+                payload: { text: input.text },
+                delivery: input.delivery ?? "steer",
+              })
+            }),
+        },
+      }),
+    ).pipe(Effect.provide(Config.testLayer([document])))
+    for (const [index, item] of cases.entries()) {
+      yield* command.execute({
+        name: `case${index}`,
+        invocation: {
+          sessionID: Session.ID.make("ses_test"),
+          prompt: { text: item.input },
+          delivery: "steer",
+        },
+      })
+    }
+    return cases.map((item, index) => ({
+      name: item.name,
+      template: item.template,
+      input: item.input,
+      expected: prompts[index],
+    }))
+  })
+  return await Effect.runPromise(
+    program.pipe(Effect.scoped, Effect.provide(commandLayer()), Effect.provide(Logger.layer([]))),
+  )
 }
