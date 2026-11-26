@@ -7,6 +7,7 @@ mod coverage;
 mod debug;
 mod event;
 mod form;
+mod fs;
 mod info;
 mod location;
 mod model;

@@ -5,6 +5,7 @@ pub mod file_watch;
 pub mod filesystem;
 pub mod formatter;
 pub mod generated;
+pub mod location;
 pub mod mime;
 pub mod mutation;
 pub mod mutex;
@@ -15,6 +16,8 @@ pub mod ripgrep;
 pub mod search;
 pub mod watcher;
 pub mod write;
+
+pub use location::LocationFiles;
 
 #[derive(Clone, Debug, thiserror::Error)]
 pub enum FsError {

@@ -61,6 +61,10 @@ impl LocationFileSystem {
         &self.directory
     }
 
+    pub fn absolute(&self, input: &str) -> String {
+        Flavor::NATIVE.resolve(&[&self.directory, input])
+    }
+
     pub async fn read(&self, input: &str) -> Result<FileInfo, FsError> {
         let (_absolute, real) = self.resolve(input).await?;
         let metadata = tokio::fs::metadata(&real).await.map_err(|error| io_error(&real, &error))?;

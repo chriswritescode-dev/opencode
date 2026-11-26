@@ -74,6 +74,7 @@ impl Authorizer for PermissionService {
     }
 }
 
+#[derive(Clone)]
 pub struct Access {
     working_directory: String,
     project_directory: String,

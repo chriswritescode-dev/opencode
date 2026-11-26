@@ -7,6 +7,7 @@ pub mod cors;
 mod expiry;
 mod handlers;
 pub mod pairing;
+pub mod range;
 pub mod request_site;
 pub mod response;
 pub mod router;

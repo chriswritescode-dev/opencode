@@ -33,6 +33,7 @@ pub struct DecodedText {
     pub bom: bool,
 }
 
+#[derive(Clone)]
 pub struct Mutation {
     locks: KeyedMutex<String>,
 }
