@@ -234,6 +234,95 @@ test("skips non-http cassette interactions when indexing", async () => {
   }
 })
 
+test("answers scripted console routes and records their requests separately", async () => {
+  await withModel(async (model) => {
+    model.load([], template, {
+      "GET /console/api/policies/current-budgets": { status: 200, body: [{ ruleID: "rule_astra" }] },
+      "GET /zen/go/v1/usage": { status: 201, body: { usage: { rolling: null } } },
+      "GET /zen/empty": { status: 204 },
+    })
+    const budgets = await fetch(new URL("/console/api/policies/current-budgets", model.url), {
+      headers: { authorization: "Bearer console-access", "x-org-id": "wrk_anomaly" },
+    })
+    expect(budgets.status).toBe(200)
+    expect(await budgets.json()).toEqual([{ ruleID: "rule_astra" }])
+    const go = await fetch(new URL("/zen/go/v1/usage", model.url), {
+      headers: { authorization: "Bearer console-access", "x-opencode-org-id": "wrk_anomaly" },
+    })
+    expect(go.status).toBe(201)
+    expect(await go.json()).toEqual({ usage: { rolling: null } })
+    const empty = await fetch(new URL("/zen/empty", model.url))
+    expect(empty.status).toBe(204)
+    expect(model.requests()).toEqual([])
+    expect(model.console()).toEqual([
+      {
+        method: "GET",
+        path: "/console/api/policies/current-budgets",
+        authorization: "Bearer console-access",
+        xOrgID: "wrk_anomaly",
+        xOpencodeOrgID: null,
+      },
+      {
+        method: "GET",
+        path: "/zen/empty",
+        authorization: null,
+        xOrgID: null,
+        xOpencodeOrgID: null,
+      },
+      {
+        method: "GET",
+        path: "/zen/go/v1/usage",
+        authorization: "Bearer console-access",
+        xOrgID: null,
+        xOpencodeOrgID: "wrk_anomaly",
+      },
+    ])
+    expect(model.unused()).toBe(0)
+  })
+})
+
+test("holds barrier console responses until every barrier route is requested", async () => {
+  await withModel(async (model) => {
+    model.load([], template, {
+      "GET /console/one": { status: 200, body: "one", barrier: true },
+      "GET /console/two": { status: 200, body: "two", barrier: true },
+      "GET /console/sequential": { status: 200, body: "sequential" },
+    })
+    const sequential = await fetch(new URL("/console/sequential", model.url))
+    expect(await sequential.text()).toBe("sequential")
+
+    const first = fetch(new URL("/console/one", model.url))
+    await until(() => model.console().length === 1)
+    expect(await Promise.race([first.then(() => "settled"), Bun.sleep(25).then(() => "waiting")])).toBe("waiting")
+
+    const second = fetch(new URL("/console/two", model.url))
+    expect(await (await first).text()).toBe("one")
+    expect(await (await second).text()).toBe("two")
+  })
+})
+
+async function until(check: () => boolean) {
+  for (let attempt = 0; attempt < 1_000; attempt += 1) {
+    if (check()) return
+    await Bun.sleep(1)
+  }
+  throw new Error("condition not met")
+}
+
+test("ignores undeclared console requests and clears scripted routes on load", async () => {
+  await withModel(async (model) => {
+    model.load([], template, { "GET /console/api/policies/current-budgets": { status: 200, body: [] } })
+    expect((await fetch(new URL("/console/api/v2/config", model.url))).status).toBe(404)
+    expect((await fetch(new URL("/zen/go/v1/other", model.url))).status).toBe(404)
+    expect(model.console()).toEqual([])
+    model.load([], template)
+    expect((await fetch(new URL("/console/api/policies/current-budgets", model.url))).status).toBe(404)
+    expect(model.console()).toEqual([])
+    expect(model.requests()).toEqual([])
+    expect(model.failures()).toEqual([])
+  })
+})
+
 test("templates {{work}} and {{root}} through nested tool input", async () => {
   await withModel(async (model) => {
     model.load(

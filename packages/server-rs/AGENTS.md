@@ -73,12 +73,23 @@ The Rust replacement for the TypeScript OpenCode server process, the `opencode-s
   `crates/catalog/src/builtin.rs` fixes the production transform order
   (wellknown, models_dev, the OR-47 provider-plugins slot, the OR-62 external block, config_provider, config_policy)
   through `Deps.provider_plugins` and `Deps.external`, and `builtin::config_provider::integrate()` is exported for
-  OR-48. `crates/catalog/src/provider_plugin` ports `packages/core/src/plugin/provider`: one module per native plugin,
-  dispatched by `provider_plugin::register` in the order of `ORDER`, whose 27 native slots all live in Rust and whose
-  three `Elsewhere` slots belong to OR-48 (`opencode.provider.opencode`) and OR-64 (`opencode.provider.sap.ai.core` and
-  `opencode.provider.claude-agent`). A plugin reaches the outside world only through `PluginContext` (`http`, `app`,
-  `env`, `kv`, `commands`, `sessions`, `hooks`, `location`, `shared_cache`, `gitlab_discovery`): `SessionAccess`
-  supplies session affinity and the last user message, `provider_plugin::gitlab::Discovery` is the OR-64 seam on
+  the OR-48 Console plugin. `crates/catalog/src/provider_plugin` ports `packages/core/src/plugin/provider`: one module
+  per native plugin, dispatched by `provider_plugin::register` in the order of `ORDER`, whose 28 native slots all live in
+  Rust and whose two `Elsewhere` slots belong to OR-64 (`opencode.provider.sap.ai.core` and
+  `opencode.provider.claude-agent`).
+  `crates/catalog/src/console_access.rs` owns the Console server URL, its retired-host rewrite, the connection headers
+  and server normalisation. `provider_plugin::opencode` is the single owner of Console requests: device sign-in
+  (`sign_in.rs`), the config integration (`remote.rs`), the bounded redirect follower (`follow.rs`), the event-watch
+  transport (`watches/`), web search (`websearch.rs`), instructions and skills (`content.rs`), and the artifact
+  provider (`artifacts.rs`). `crates/catalog/src/usage_limits.rs` reads the member's Console budgets and Go allowance
+  for the usage-limits route. `provider_plugin::opencode::ConsoleHandle`, built once per Location by
+  `crates/http/src/services.rs`, is the seam that OR-50 (Console instructions and skills), OR-51 and OR-54 (the
+  `console_watch` tools, `SessionAccess::synthetic`, and the `prompt` and `tool_execute_after` hooks), OR-57 (MCP
+  reload on `changes()`), OR-58 (`web_search()`) and OR-59 (`artifacts()`) consume; until those tasks land it is read
+  only by the plugin and its tests (`OR-48-console-seams-unwired`). A plugin reaches the outside world only through
+  `PluginContext` (`http`, `http_manual_redirects`, `app`, `env`, `kv`, `commands`, `sessions`, `hooks`, `location`,
+  `shared_cache`, `gitlab_discovery`, `clock`, `console`): `SessionAccess` supplies session affinity and the last user message,
+  `provider_plugin::gitlab::Discovery` is the OR-64 seam on
   `gitlab_discovery` that ships as `NoDiscovery` today, `which` locates the Azure CLI through `PluginContext.env`, and
   `CommandRunner` runs it. `ProviderHooks` holds the typed plugin events and each plugin registers its handlers, but
   OR-54 is the task that triggers them from a session, so today they run only in tests (`OR-47-provider-hooks-unwired`).
@@ -104,8 +115,7 @@ The Rust replacement for the TypeScript OpenCode server process, the `opencode-s
   every native provider entrypoint that exports model()", because there is no npm manifest or package import path and
   the builtin set is checked against the models.dev snapshot instead; `config/provider.test.ts` "configured provider
   transport overrides ${builtin.id} defaults", because no Rust test combines a config provider document with a ported
-  plugin's transport default, so the plugin default and `config_provider` are tested apart; the
-  `plugin/provider-opencode*.test.ts` files, because they cover the OR-48 OpenCode Console provider, and
+  plugin's transport default, so the plugin default and `config_provider` are tested apart;
   `provider-dynamic.test.ts` with `provider-sap-ai-core.test.ts`, because they cover the OR-64 sidecar and AISDK seams
   (`dynamic.ts`, `sdk-factory.ts` and `sap-ai-core.ts`) rather than a native plugin module, together with the eight
   GitLab `aisdk` cases of `provider-gitlab.test.ts` and their trailing `runLanguage` assertion, for the same OR-64
@@ -119,6 +129,10 @@ The Rust replacement for the TypeScript OpenCode server process, the `opencode-s
   logs nothing at startup when the access token has expired" and the warning assertion of the vLLM replaced-endpoint
   case, because there is no injectable log sink; and `models.test.ts` "get()
   still populates the catalog when the KV cache write fails", because there is no injectable KV write-failure seam.
+  The three `plugin/provider-opencode*.test.ts` files and `usage-limits.test.ts` are ported in full: every case has a
+  Rust counterpart in `crates/catalog/tests/all/provider_plugin/opencode*.rs` and
+  `crates/catalog/tests/all/usage_limits.rs`, and the difference in assertions or production behaviour that remains is
+  recorded by the `OR-48-*` deviations.
 - `opencode-git` (`crates/git`) is the package's single owner of git execution: repository discovery and metadata
   fingerprinting, remotes and history, the shared `patch` model, clone/fetch/checkout/reset, linked worktrees, the
   snapshot store with its index and tree capture, tree diff and restore, and loose-object packing. Every git process
@@ -206,7 +220,12 @@ Before merging, the whole package must pass:
   passes with `project-routes` explained only by `OR-43-project-query-decode-messages`, `prompt-text-only` only by
   `OR-49-tool-definitions`, and `location-routes` and `config-routes` only by `OR-49-registry-events` until OR-46,
   OR-50 and OR-62 land the remaining plugin and catalog registry events. The three tool scenarios use
-  `parity/lib/restricted.ts`, so both servers advertise only the tools this package implements.
+  `parity/lib/restricted.ts`, so both servers advertise only the tools this package implements. A scenario's
+  `console` option scripts fake OpenCode Console responses, and `{{endpoint}}` is the scripted endpoint's URL, so a
+  credential can name `{{endpoint}}/console` as its Console server; the record of Console requests is compared under
+  `model.console`. The full-database comparison of `provider-plugin-integrations` currently differs only on
+  `session_search` schema rows from a TypeScript reference newer than the pin, so compare it with
+  `--only steps,events,files,logs,model` until the pin is re-synced or OR-49 ports that schema.
 - `bun run parity:snapshot`, which compares the pinned snapshot engine with the Rust one under seven git-config
   variants; it needs `bun install` because it materialises the pinned core tree.
 - `bun run test:shell`, which needs `bun install` and a debug build of `opencode-server`

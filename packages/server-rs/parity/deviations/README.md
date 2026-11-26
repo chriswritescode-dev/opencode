@@ -25,7 +25,7 @@ fenced `parity` block with one rule per line, or the run exits 2.
 
 Each rule is `<scenario glob> <difference-path glob>`, matched with `Bun.Glob` semantics. The scenario name is its
 path under `parity/scenarios` without `.scenario.ts`. The difference path uses the capture paths
-(`steps/<i>/body/...`, `events/<i>/...`, `logs/<name>/...`, `model/<i>/...`,
+(`steps/<i>/body/...`, `events/<i>/...`, `logs/<name>/...`, `model/requests/<i>/...`, `model/console/<i>/...`,
 `database/<file>/tables/<table>/...`, `files/<path>`), and a `ws` step's paths start with `steps/<i>/opened`,
 `steps/<i>/frames` or `steps/<i>/close`.
 
@@ -106,11 +106,24 @@ A deviation that excepts a recorded cassette from the replay gate also has a `Ca
 - `OR-46-route-failures.md`: integration and credential routes answer typed errors where TypeScript dies
 - `OR-46-transform-timing.md`: config observers spawn their catalog reload instead of awaiting it
 - `OR-47-azure-pagination-guard.md`: Azure deployment discovery stops when a page link repeats
-- `OR-47-deferred-provider-plugins.md`: the OpenCode Console, SAP AI Core and Claude Agent provider plugins are left to OR-48 and OR-64
+- `OR-47-deferred-provider-plugins.md`: the SAP AI Core and Claude Agent provider plugins are left to OR-64
 - `OR-47-gitlab-discovery.md`: GitLab workflow models are not discovered until OR-64 supplies the sidecar seam
 - `OR-47-oauth-callback-state-first.md`: loopback OAuth callbacks reject a bad state without ending the pending sign-in
 - `OR-47-provider-hooks-unwired.md`: the provider-plugin hooks are registered but no Rust session triggers them until OR-54
 - `OR-47-provider-request-timeouts.md`: provider sign-in, token and JWKS requests are bounded in time
+- `OR-48-console-artifacts.md`: the Console artifact client normalises the server and uploads in fixed batches
+- `OR-48-console-config-decode.md`: a malformed Console config value is dropped instead of rejecting the whole config
+- `OR-48-console-http-errors.md`: Console request failures carry Rust HTTP and parser text instead of Effect errors
+- `OR-48-console-locale-compare.md`: the default Console organization is ordered without locale collation
+- `OR-48-console-redirects.md`: a redirected Console request keeps its content type when rewritten to a GET
+- `OR-48-console-retries.md`: Console status retries, poll timing and watch recovery differ
+- `OR-48-console-seams-unwired.md`: Console content, watches, search and artifacts are not registered with the Rust services yet
+- `OR-48-console-skill-parse.md`: Console skills keep their `SKILL.md` unparsed
+- `OR-48-console-skills.md`: a Console skill list is cleared synchronously instead of by the download fiber
+- `OR-48-console-user-agent.md`: some Console requests omit the OpenCode user agent
+- `OR-48-console-utf16-cuts.md`: artifact titles and event descriptions count Unicode scalars instead of UTF-16 units
+- `OR-48-console-watches.md`: session lookup, hooks and tool results use the Rust seams instead of the plugin context
+- `OR-48-watch-socket-proxy.md`: the Console watch socket ignores proxy settings
 - `OR-49-registry-events.md`: plugin and catalog registries publish no updated events
 - `OR-49-prompt-attachments.md`: prompt file attachments and skills are rejected instead of materialized
 - `OR-49-title-generation.md`: an empty title does not regenerate the session title

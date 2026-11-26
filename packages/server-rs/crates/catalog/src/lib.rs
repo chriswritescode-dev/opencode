@@ -1,5 +1,6 @@
 pub mod aisdk_native;
 pub mod builtin;
+pub mod console_access;
 pub mod credential;
 pub mod integration;
 pub mod lock;
@@ -11,4 +12,5 @@ pub mod provider_plugin;
 pub mod resolver;
 pub mod retry;
 pub mod shared_cache;
+pub mod usage_limits;
 pub mod variant;

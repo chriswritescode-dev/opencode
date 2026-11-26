@@ -114,16 +114,20 @@ async fn model_list_returns_the_parity_catalog() {
 
     assert_eq!(body["location"]["directory"], start.to_string_lossy().as_ref());
     let data = body["data"].as_array().expect("a model list");
-    assert_eq!(data.len(), 2);
-    assert_eq!(data[0]["providerID"], "openai-test");
-    assert_eq!(data[1]["providerID"], "anthropic-test");
-    assert_eq!(data[0]["package"], "@opencode/ai/providers/openai-compatible");
-    assert_eq!(data[1]["package"], "@opencode/ai/providers/anthropic");
-    assert_eq!(data[0]["settings"]["baseURL"], "http://127.0.0.1:9/v1");
-    assert_eq!(data[0]["settings"]["provider"], "openai-test");
-    assert_eq!(data[1]["settings"]["baseURL"], "http://127.0.0.1:9/v1");
-    assert_eq!(variant_ids(&data[0]), vec!["low", "medium", "high"]);
-    assert_eq!(variant_ids(&data[1]), vec!["low", "medium", "high", "xhigh", "max"]);
+    let configured = data
+        .iter()
+        .filter(|model| model["providerID"] == "openai-test" || model["providerID"] == "anthropic-test")
+        .collect::<Vec<_>>();
+    assert_eq!(configured.len(), 2);
+    assert_eq!(configured[0]["providerID"], "openai-test");
+    assert_eq!(configured[1]["providerID"], "anthropic-test");
+    assert_eq!(configured[0]["package"], "@opencode/ai/providers/openai-compatible");
+    assert_eq!(configured[1]["package"], "@opencode/ai/providers/anthropic");
+    assert_eq!(configured[0]["settings"]["baseURL"], "http://127.0.0.1:9/v1");
+    assert_eq!(configured[0]["settings"]["provider"], "openai-test");
+    assert_eq!(configured[1]["settings"]["baseURL"], "http://127.0.0.1:9/v1");
+    assert_eq!(variant_ids(configured[0]), vec!["low", "medium", "high"]);
+    assert_eq!(variant_ids(configured[1]), vec!["low", "medium", "high", "xhigh", "max"]);
 }
 
 #[tokio::test]
@@ -133,5 +137,6 @@ async fn model_list_filters_by_type() {
     let response = app.handle(authorized("GET", "/api/model?types=image")).await;
     assert_eq!(response.status(), StatusCode::OK);
     let body: Value = serde_json::from_str(&text(response).await).expect("a JSON body");
-    assert_eq!(body["data"], serde_json::json!([]));
+    let data = body["data"].as_array().expect("a model list");
+    assert!(!data.iter().any(|model| model["providerID"] == "openai-test" || model["providerID"] == "anthropic-test"));
 }

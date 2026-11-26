@@ -852,15 +852,12 @@ async fn routes_chatgpt_over_http_with_only_the_listed_catalog_fallback_models()
     harness.registrations.registrations.push(seeded);
     harness.credential(INTEGRATION_ID, oauth(METHOD_ID, "chatgpt-token", "refresh", None)).await;
 
-    let mut fake = FakeSessions::default();
-    fake.sessions.insert(
-        "ses_child".to_owned(),
-        SessionRef {
-            id: SessionID("ses_child".to_owned()),
-            parent_id: Some(SessionID("ses_parent".to_owned())),
-            fork_session_id: None,
-        },
-    );
+    let fake = FakeSessions::default();
+    fake.insert(SessionRef {
+        id: SessionID("ses_child".to_owned()),
+        parent_id: Some(SessionID("ses_parent".to_owned())),
+        fork_session_id: None,
+    });
     let mut context = plugin_context_with(&harness, Routes::new());
     context.sessions = Arc::new(fake);
     add_chatgpt(&mut harness, &context).await;

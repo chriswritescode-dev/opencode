@@ -29,6 +29,7 @@ mod session;
 mod session_log;
 mod status;
 mod ticket;
+mod usage;
 mod vcs;
 mod worktree;
 
