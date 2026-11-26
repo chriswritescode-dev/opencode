@@ -230,11 +230,7 @@ async fn stream(state: &Mutex<HubState>) -> Outcome {
     }
     let socket = match tokio::time::timeout(HANDSHAKE_TIMEOUT, tokio_tungstenite::connect_async(request)).await {
         Ok(Ok((socket, _))) => socket,
-        Ok(Err(tokio_tungstenite::tungstenite::Error::Http(_)))
-        | Ok(Err(tokio_tungstenite::tungstenite::Error::Protocol(
-            tokio_tungstenite::tungstenite::error::ProtocolError::HandshakeIncomplete,
-        ))) => return Outcome::Refused,
-        Ok(Err(_)) | Err(_) => return Outcome::Failed,
+        Ok(Err(_)) | Err(_) => return Outcome::Refused,
     };
     let mut socket = socket;
     loop {

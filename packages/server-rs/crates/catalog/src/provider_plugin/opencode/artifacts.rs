@@ -189,6 +189,12 @@ impl ConsoleArtifacts {
         if let Some(file) = listing.files.iter().find(|file| !super::content::is_safe_relative_path(&file.path)) {
             return Err(format!("Unsafe OpenCode Console artifact path: {}", file.path));
         }
+        if let Some(file) = listing.files.iter().find(|file| {
+            file.text.is_none()
+                && (file.sha256.len() != 64 || !file.sha256.bytes().all(|byte| byte.is_ascii_hexdigit()))
+        }) {
+            return Err(format!("Invalid OpenCode Console artifact digest for {}", file.path));
+        }
         let revision = encode_json(&listing.revision);
         let mut output = BTreeMap::new();
         for chunk in listing.files.chunks(CONCURRENCY) {
