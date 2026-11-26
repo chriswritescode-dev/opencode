@@ -15,8 +15,7 @@ use opencode_vcs::git_provider::GitProvider;
 use opencode_vcs::provider::{ProviderDiffInput, ProviderFuture, VcsProvider, VcsScope};
 use opencode_vcs::vcs::Vcs;
 
-const REPOSITORY_CONFIG: &str =
-    "\n[core]\n\tfsmonitor = false\n[commit]\n\tgpgsign = false\n[user]\n\temail = test@opencode.test\n\tname = Test\n";
+const REPOSITORY_CONFIG: &str = "\n[core]\n\tfsmonitor = false\n[commit]\n\tgpgsign = false\n[gc]\n\tauto = 0\n[maintenance]\n\tauto = false\n[user]\n\temail = test@opencode.test\n\tname = Test\n";
 
 pub fn identity_env() -> Vec<(String, String)> {
     [
