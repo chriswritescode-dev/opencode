@@ -57,7 +57,7 @@ enum Cached {
 
 pub async fn register(services: &Services, context: &PluginContext, builtin: &mut Builtin) {
     context.console.set_web_search_dependencies(services.integration.clone(), context.http_manual_redirects.clone());
-    context.console.set_artifact_dependencies(services.integration.clone(), context.http.clone(), context.kv.clone());
+    context.console.set_artifact_dependencies(services.integration.clone(), context.http.clone(), storage(context));
     let registration = services
         .integration
         .transform({
@@ -227,7 +227,7 @@ pub async fn register(services: &Services, context: &PluginContext, builtin: &mu
     builtin.tasks.push(poll);
 
     let prompt = context.hooks.on_prompt({
-        let kv = context.kv.clone();
+        let kv = storage(context);
         move |event| {
             let kv = kv.clone();
             async move {
@@ -337,9 +337,16 @@ async fn explain(services: &Services, context: &PluginContext, mut event: HttpRe
 async fn load(services: &Services, context: &PluginContext, max_age: Duration) -> Snapshot {
     let integration_id = IntegrationID(INTEGRATION_ID.to_owned());
     let connections = services.integration.connection();
-    let Some(connection) = connections.active(&integration_id).await.ok().flatten() else {
-        context.console.set_reported(None);
-        return Snapshot::default();
+    let connection = match connections.active(&integration_id).await {
+        Ok(Some(connection)) => connection,
+        Ok(None) => {
+            context.console.set_reported(None);
+            return Snapshot::default();
+        }
+        Err(error) => {
+            log::warn!("failed to read the OpenCode Console connection: {error}");
+            return context.console.snapshot();
+        }
     };
     let credential = match connections.resolve(&connection).await {
         Ok(Some(credential)) => credential,
@@ -568,9 +575,13 @@ async fn watch_target(
         headers,
         http: context.http.clone(),
         sessions: context.sessions.clone(),
-        kv: context.kv.clone(),
+        kv: storage(context),
         clock: context.clock.clone(),
     })
+}
+
+fn storage(context: &PluginContext) -> Arc<dyn opencode_config::seams::KvStore> {
+    Arc::new(crate::provider_plugin::storage::Storage::new(context.kv.clone(), ID))
 }
 
 fn sync_instructions_and_skills(services: &Services, context: &PluginContext, next: &Snapshot, allowed: bool) {

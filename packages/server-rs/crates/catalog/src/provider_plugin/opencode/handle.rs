@@ -13,7 +13,7 @@ use tokio::task::JoinHandle;
 use super::Snapshot;
 use super::artifacts::ConsoleArtifacts;
 use super::content::{ConsoleInstruction, ConsoleSkill};
-use super::watches::{WatchEvent, WatchTarget, WatchTools, Watches};
+use super::watches::{WatchTarget, WatchTools, Watches};
 use super::websearch::ConsoleWebSearch;
 use crate::integration::IntegrationService;
 use crate::provider_plugin::hooks::HookRegistration;
@@ -258,7 +258,7 @@ impl ConsoleHandle {
         self.watches.forget(session_id).await;
     }
 
-    pub fn watched_events(&self) -> Vec<WatchEvent> {
+    pub fn watched_event_count(&self) -> usize {
         self.watches.delivered()
     }
 }

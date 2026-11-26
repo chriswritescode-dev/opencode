@@ -13,7 +13,9 @@ Rust: `crates/catalog/src/provider_plugin/opencode/handle.rs` exposes the same d
 `sync_instructions_and_skills` plus `sync_artifacts` keep them current (`opencode/mod.rs:576-616`, `handle.rs:149-166`).
 No Rust caller reads them outside the plugin and its tests: there is no instruction or skill registry to fill (OR-50), no
 web-search registry (OR-58), no tool registration or reload (OR-54) and no artifact registry (OR-59). The watch sync also
-has no `ctx.tool.reload()` equivalent (`watches/mod.rs:34`).
+has no `ctx.tool.reload()` equivalent (`watches/mod.rs:34`). The 401/403 explainer that `guard` registers through
+`ProviderHooks::on_http_response` runs only when a caller triggers `trigger_http_response`, which no Rust session does
+yet (`OR-47-provider-hooks-unwired`).
 
 Reason: those registries belong to OR-50, OR-54, OR-57, OR-58 and OR-59. This task ports the Console client and proves it
 against `ConsoleHandle` directly, so the server serves none of the Console instructions, skills, watch tools, hosted search

@@ -9,7 +9,7 @@ use opencode_catalog::provider_plugin::opencode;
 use opencode_catalog::provider_plugin::opencode::watches::{
     ACK_LIMIT, HEADER, LEASE_CLOSE_CODE, OVERSIZED_CLOSE_CODE, ShellOutput, shell_target,
 };
-use opencode_config::seams::KvStore;
+use opencode_catalog::provider_plugin::storage::Storage;
 use opencode_contract::codec::JsonMap;
 use opencode_contract::generated::{CredentialKey, CredentialKeyType, CredentialValue};
 use serde_json::{Value, json};
@@ -194,7 +194,7 @@ async fn shares_one_socket_between_locations_of_the_same_workspace() {
 
     assert_eq!(console.opens(), 1);
     assert_eq!(console.acks(), vec![vec!["evt_shared".to_owned()]]);
-    assert_eq!(first.context.console.watched_events().len() + second.context.console.watched_events().len(), 1);
+    assert_eq!(first.context.console.watched_event_count() + second.context.console.watched_event_count(), 1);
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -208,7 +208,7 @@ async fn reconnects_at_once_when_console_ends_the_sockets_lease_and_replays_what
 
     assert_eq!(console.opens(), 2);
     assert_eq!(console.acks().iter().map(Vec::len).collect::<Vec<_>>(), vec![PAGE, 1]);
-    assert_eq!(state.context.console.watched_events().len(), PAGE + 1);
+    assert_eq!(state.context.console.watched_event_count(), PAGE + 1);
 }
 
 async fn reconnects_after_a_backoff(code: u16) {
@@ -264,7 +264,7 @@ async fn long_polls_with_consoles_cursor_when_the_websocket_upgrade_fails() {
         vec![1],
         "only the local session's event is acknowledged over HTTP rather than the absent socket"
     );
-    assert_eq!(state.context.console.watched_events().len(), 2);
+    assert_eq!(state.context.console.watched_event_count(), 2);
     assert_eq!(state.sessions.wakes().len(), 1);
 }
 
@@ -603,7 +603,7 @@ async fn keeps_resuming_wakes_minutes_apart_until_20_since_the_persons_last_prom
 async fn keeps_resuming_an_unattended_watch_past_20_since_the_prompt() {
     let (_harness, state, _routes, console) = start_console(true, true).await;
     let session = state.sessions.add("ses_unattended");
-    state.kv.set("watch-unattended:ew_new", json!(true)).await;
+    console_storage(&state).set("watch-unattended:ew_new", json!(true)).await;
     wait_until(|| console.opens() == 1).await;
 
     for index in 0..25 {
@@ -619,7 +619,7 @@ async fn keeps_resuming_an_unattended_watch_past_20_since_the_prompt() {
 async fn holds_an_unattended_watchs_sixth_update_in_10_minutes_ci_included() {
     let (_harness, state, _routes, console) = start_console(true, true).await;
     let session = state.sessions.add("ses_unattended_ci");
-    state.kv.set("watch-unattended:ew_new", json!(true)).await;
+    console_storage(&state).set("watch-unattended:ew_new", json!(true)).await;
     wait_until(|| console.opens() == 1).await;
 
     for index in [1, 2, 3, 4, 5, 6] {
@@ -786,7 +786,7 @@ async fn resumes_a_held_session_with_the_members_own_slack_reply_but_not_with_a_
 async fn reads_a_wake_count_stored_before_the_10_minute_window_as_no_recent_wakes() {
     let (_harness, state, _routes, console) = start_console(true, true).await;
     let session = state.sessions.add("ses_legacy");
-    state.kv.set(&format!("watch-streak:{}", session.0), json!(9)).await;
+    console_storage(&state).set(&format!("watch-streak:{}", session.0), json!(9)).await;
     wait_until(|| console.opens() == 1).await;
 
     deliver(&console, watch_event(&session.0, "evt_1")).await;
@@ -1157,4 +1157,8 @@ fn shell_target_skips_failed_ambiguous_and_non_github_commands() {
     );
     assert_eq!(shell_target("git push", &shell(0, "Everything up-to-date\n")), None);
     assert_eq!(shell_target("echo git status", &shell(0, push)), None);
+}
+
+fn console_storage(state: &PluginState) -> Storage {
+    Storage::new(state.kv.clone(), opencode::ID)
 }

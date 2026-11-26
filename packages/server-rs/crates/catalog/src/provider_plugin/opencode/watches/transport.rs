@@ -201,9 +201,9 @@ async fn run(state: Arc<Mutex<HubState>>) {
                 Polled::Failed => {}
             }
         }
-        failures += 1;
-        let backoff =
-            Duration::from_millis(1000u64.saturating_mul(2u64.pow(failures.saturating_sub(1)))).min(MAX_BACKOFF);
+        failures = failures.saturating_add(1);
+        let backoff = Duration::from_millis(1000u64.saturating_mul(2u64.saturating_pow(failures.saturating_sub(1))))
+            .min(MAX_BACKOFF);
         tokio::time::sleep(backoff).await;
     }
 }

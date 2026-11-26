@@ -2,6 +2,7 @@ pub mod tools;
 pub mod transport;
 pub mod wake;
 
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
 use futures_util::FutureExt;
@@ -19,7 +20,7 @@ pub const HEADER: &str = "x-opencode-event-watches";
 #[derive(Default)]
 pub(crate) struct Watches {
     current: Mutex<Option<Current>>,
-    delivered: Mutex<Vec<WatchEvent>>,
+    delivered: AtomicUsize,
 }
 
 struct Current {
@@ -71,7 +72,7 @@ impl Watches {
                 let Some(handle) = weak.upgrade() else {
                     return Vec::new();
                 };
-                handle.watches.record(events.clone());
+                handle.watches.delivered.fetch_add(events.len(), Ordering::Relaxed);
                 let connection = connection.lock().expect("lock the Console watch connection").clone();
                 wake::deliver(&dependencies, &connection, events).await
             }
@@ -111,14 +112,8 @@ impl Watches {
         wake::forget(&dependencies, &connection, session_id).await;
     }
 
-    fn record(&self, events: Vec<WatchEvent>) {
-        if !events.is_empty() {
-            self.delivered.lock().expect("lock the Console watched events").extend(events);
-        }
-    }
-
-    pub(crate) fn delivered(&self) -> Vec<WatchEvent> {
-        self.delivered.lock().expect("lock the Console watched events").clone()
+    pub(crate) fn delivered(&self) -> usize {
+        self.delivered.load(Ordering::Relaxed)
     }
 }
 

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use opencode_config::seams::KvStore;
+use opencode_config::seams::{BoxFuture, KvStore};
 use serde_json::Value;
 
 pub struct Storage {
@@ -45,5 +45,23 @@ impl Storage {
 
     fn scoped(&self, key: &str) -> String {
         format!("{}{key}", self.namespace)
+    }
+}
+
+impl KvStore for Storage {
+    fn get<'a>(&'a self, key: &'a str) -> BoxFuture<'a, Option<Value>> {
+        Box::pin(Storage::get(self, key))
+    }
+
+    fn set<'a>(&'a self, key: &'a str, value: Value) -> BoxFuture<'a, ()> {
+        Box::pin(Storage::set(self, key, value))
+    }
+
+    fn remove<'a>(&'a self, key: &'a str) -> BoxFuture<'a, ()> {
+        Box::pin(Storage::remove(self, key))
+    }
+
+    fn scan<'a>(&'a self, prefix: &'a str, limit: usize) -> BoxFuture<'a, Vec<(String, Value)>> {
+        Box::pin(Storage::scan(self, prefix, limit))
     }
 }

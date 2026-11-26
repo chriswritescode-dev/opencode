@@ -121,6 +121,6 @@ A deviation that excepts a recorded cassette from the replay gate also has a `Ca
 - `OR-48-console-skills.md`: a Console skill list is cleared synchronously instead of by the download fiber
 - `OR-48-console-user-agent.md`: some Console requests omit the OpenCode user agent
 - `OR-48-console-utf16-cuts.md`: artifact titles and event descriptions count Unicode scalars instead of UTF-16 units
-- `OR-48-console-watches.md`: watch state, session lookup, hooks and tool results use the Rust seams instead of the plugin context
+- `OR-48-console-watches.md`: session lookup, hooks and tool results use the Rust seams instead of the plugin context
 - `OR-48-watch-socket-proxy.md`: the Console watch socket ignores proxy settings
 - `OR-61-sidecar-environment.md`: plugins run in a sidecar with an allowlisted environment instead of inside the server

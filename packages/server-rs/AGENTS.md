@@ -84,8 +84,8 @@ The Rust replacement for the TypeScript OpenCode server process, the `opencode-s
   `console_watch` tools, `SessionAccess::synthetic`, and the `prompt` and `tool_execute_after` hooks), OR-57 (MCP
   reload on `changes()`), OR-58 (`web_search()`) and OR-59 (`artifacts()`) consume; until those tasks land it is read
   only by the plugin and its tests (`OR-48-console-seams-unwired`). A plugin reaches the outside world only through
-  `PluginContext` (`http`, `app`, `env`, `kv`, `commands`, `sessions`, `hooks`, `location`, `shared_cache`,
-  `gitlab_discovery`): `SessionAccess` supplies session affinity and the last user message,
+  `PluginContext` (`http`, `http_manual_redirects`, `app`, `env`, `kv`, `commands`, `sessions`, `hooks`, `location`,
+  `shared_cache`, `gitlab_discovery`, `clock`, `console`): `SessionAccess` supplies session affinity and the last user message,
   `provider_plugin::gitlab::Discovery` is the OR-64 seam on
   `gitlab_discovery` that ships as `NoDiscovery` today, `which` locates the Azure CLI through `PluginContext.env`, and
   `CommandRunner` runs it. `ProviderHooks` holds the typed plugin events and each plugin registers its handlers, but

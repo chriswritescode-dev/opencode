@@ -263,7 +263,7 @@ function waitForBarrier(state: State, key: string): Promise<void> {
     .filter(([, route]) => route.barrier === true)
     .map(([barrierKey]) => barrierKey)
   state.barrierSeen.add(key)
-  if (barrierKeys.every((barrierKey) => state.barrierSeen.has(barrierKey))) {
+  if (state.barrierReleased || barrierKeys.every((barrierKey) => state.barrierSeen.has(barrierKey))) {
     releaseBarrier(state)
     return Promise.resolve()
   }
