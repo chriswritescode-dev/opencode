@@ -12,6 +12,7 @@ pub mod gitlab;
 pub mod gitlab_oauth;
 pub mod google_vertex;
 pub mod helpers;
+pub mod hooks;
 pub mod kilo;
 pub mod llmgateway;
 pub mod lmstudio;

@@ -345,15 +345,12 @@ async fn filters_the_openai_catalog_to_codex_eligible_models_under_a_chatgpt_con
     harness.registrations.registrations.push(seeded);
     harness.credential(INTEGRATION_ID, oauth(BROWSER, "chatgpt-token", "refresh", Some("acct_123"))).await;
 
-    let mut fake = FakeSessions::default();
-    fake.sessions.insert(
-        "ses_child".to_owned(),
-        SessionRef {
-            id: SessionID("ses_child".to_owned()),
-            parent_id: Some(SessionID("ses_parent".to_owned())),
-            fork_session_id: None,
-        },
-    );
+    let fake = FakeSessions::default();
+    fake.insert(SessionRef {
+        id: SessionID("ses_child".to_owned()),
+        parent_id: Some(SessionID("ses_parent".to_owned())),
+        fork_session_id: None,
+    });
     let mut context = plugin_context_with(&harness, routes);
     context.sessions = Arc::new(fake);
     register(&mut harness, &context).await;

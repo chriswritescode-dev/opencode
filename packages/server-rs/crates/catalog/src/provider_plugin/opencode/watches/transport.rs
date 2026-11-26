@@ -77,6 +77,9 @@ pub(crate) struct WatchTarget {
     pub server: String,
     pub headers: Headers,
     pub http: Arc<dyn opencode_ai::HttpSender>,
+    pub sessions: Arc<dyn crate::provider_plugin::SessionAccess>,
+    pub kv: Arc<dyn opencode_config::seams::KvStore>,
+    pub clock: Arc<dyn opencode_ai::clock::Clock>,
 }
 
 #[derive(Clone)]
@@ -151,6 +154,15 @@ pub(crate) fn leave(key: &str, id: u64) {
 
 fn leader(state: &Mutex<HubState>) -> Option<Member> {
     state.lock().expect("lock the Console watch hub members").members.first().cloned()
+}
+
+pub(crate) fn is_leader(key: &str, id: u64) -> bool {
+    let hubs = hubs().lock().expect("lock the Console watch hubs");
+    let Some(hub) = hubs.get(key) else {
+        return false;
+    };
+    let state = hub.state.lock().expect("lock the Console watch hub members");
+    state.members.first().is_some_and(|member| member.id == id)
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]

@@ -184,8 +184,12 @@ impl ConsoleHandle {
         self.watches.sync(self, target);
     }
 
-    pub(crate) fn deliver_watched(&self, events: Vec<WatchEvent>) -> Vec<String> {
-        self.watches.record(events)
+    pub(crate) fn watch_leader(&self) -> bool {
+        self.watches.is_leader()
+    }
+
+    pub(crate) async fn forget_watched(&self, session_id: &str) {
+        self.watches.forget(session_id).await;
     }
 
     pub fn watched_events(&self) -> Vec<WatchEvent> {

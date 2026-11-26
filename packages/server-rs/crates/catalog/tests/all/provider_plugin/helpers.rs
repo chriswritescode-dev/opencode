@@ -1,5 +1,5 @@
 use std::convert::Infallible;
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -60,6 +60,26 @@ impl KvStore for MemoryKv {
             entries.truncate(limit);
             entries
         })
+    }
+}
+
+pub(crate) struct TestClock {
+    now_ms: AtomicU64,
+}
+
+impl TestClock {
+    pub fn new() -> Self {
+        Self { now_ms: AtomicU64::new(1_700_000_000_000) }
+    }
+
+    pub fn advance(&self, duration: Duration) {
+        self.now_ms.fetch_add(duration.as_millis() as u64, Ordering::SeqCst);
+    }
+}
+
+impl opencode_ai::clock::Clock for TestClock {
+    fn now_ms(&self) -> u64 {
+        self.now_ms.load(Ordering::SeqCst)
     }
 }
 

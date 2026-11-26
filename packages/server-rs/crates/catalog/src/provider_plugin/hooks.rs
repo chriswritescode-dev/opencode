@@ -122,6 +122,11 @@ pub struct Context {
     pub options: IndexMap<String, serde_json::Value>,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct PromptEvent {
+    pub session_id: SessionID,
+}
+
 type Handler<E> = Arc<dyn Fn(E) -> BoxFuture<E> + Send + Sync>;
 
 struct Entry<E> {
@@ -192,6 +197,7 @@ pub struct ProviderHooks {
     context: Registry<Context>,
     compaction: Registry<Compaction>,
     title: Registry<Title>,
+    prompt: Registry<PromptEvent>,
 }
 
 impl ProviderHooks {
@@ -206,6 +212,7 @@ impl ProviderHooks {
             context: Registry::new(),
             compaction: Registry::new(),
             title: Registry::new(),
+            prompt: Registry::new(),
         }
     }
 
@@ -324,6 +331,17 @@ impl ProviderHooks {
     pub async fn trigger_title(&self, event: Title) -> Title {
         let provider = event.model.provider_id.clone();
         self.title.trigger(&provider, event).await
+    }
+
+    pub fn on_prompt(
+        &self,
+        handler: impl Fn(PromptEvent) -> BoxFuture<PromptEvent> + Send + Sync + 'static,
+    ) -> HookRegistration {
+        self.prompt.on(None, Arc::new(handler))
+    }
+
+    pub async fn trigger_prompt(&self, event: PromptEvent) -> PromptEvent {
+        self.prompt.trigger(&ProviderID(String::new()), event).await
     }
 }
 

@@ -138,10 +138,31 @@ pub struct UserMessage {
     pub has_image: bool,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct SyntheticInput {
+    pub session_id: SessionID,
+    pub id: String,
+    pub text: String,
+    pub description: String,
+    pub metadata: serde_json::Value,
+    pub delivery: &'static str,
+    pub resume: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SyntheticError {
+    Conflict,
+    Unavailable(String),
+}
+
 pub trait SessionAccess: Send + Sync {
     fn session(&self, id: SessionID) -> BoxFuture<Option<SessionRef>>;
     fn last_user_message(&self, session: SessionID) -> BoxFuture<Option<UserMessage>>;
     fn agent_model(&self, agent: AgentID) -> BoxFuture<Option<ModelRef>>;
+
+    fn synthetic(&self, _input: SyntheticInput) -> BoxFuture<Result<(), SyntheticError>> {
+        Box::pin(async { Err(SyntheticError::Unavailable("Sessions are not available".to_owned())) })
+    }
 }
 
 pub struct NoSessions;
@@ -164,6 +185,7 @@ impl SessionAccess for NoSessions {
 pub struct PluginContext {
     pub http: Arc<dyn opencode_ai::HttpSender>,
     pub http_manual_redirects: Arc<dyn opencode_ai::HttpSender>,
+    pub clock: Arc<dyn opencode_ai::clock::Clock>,
     pub app: AppInfo,
     pub env: crate::integration::ConfigEnv,
     pub kv: Arc<dyn opencode_config::seams::KvStore>,

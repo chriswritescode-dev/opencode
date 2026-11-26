@@ -196,6 +196,7 @@ impl GlobalServices {
                         provider_plugins: Some(PluginContext {
                             http,
                             http_manual_redirects,
+                            clock: Arc::new(opencode_ai::clock::SystemClock),
                             app,
                             env: config_env.clone(),
                             kv: Arc::new(StorageKv { database }),

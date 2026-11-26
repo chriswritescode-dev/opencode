@@ -222,6 +222,36 @@ pub async fn register(services: &Services, context: &PluginContext, builtin: &mu
         })
     };
     builtin.tasks.push(poll);
+
+    let prompt = context.hooks.on_prompt({
+        let kv = context.kv.clone();
+        move |event| {
+            let kv = kv.clone();
+            async move {
+                kv.remove(&watches::wake::streak_key(&event.session_id.0)).await;
+                event
+            }
+            .boxed()
+        }
+    });
+    builtin.hooks.push(prompt);
+
+    let deletion = {
+        let console = context.console.clone();
+        let mut subscription = services.bus.subscribe(&["session.deleted"], None);
+        tokio::spawn(async move {
+            while let Some(event) = subscription.recv().await {
+                let Some(session_id) = event.data().get("sessionID").and_then(serde_json::Value::as_str) else {
+                    continue;
+                };
+                if !console.watch_leader() {
+                    continue;
+                }
+                console.forget_watched(session_id).await;
+            }
+        })
+    };
+    builtin.tasks.push(deletion);
 }
 
 pub async fn refresh(services: &Services, context: &PluginContext, max_age: Duration) {
@@ -524,7 +554,15 @@ async fn watch_target(
         }
         .boxed()
     });
-    Some(watches::transport::WatchTarget { key, server, headers, http: context.http.clone() })
+    Some(watches::transport::WatchTarget {
+        key,
+        server,
+        headers,
+        http: context.http.clone(),
+        sessions: context.sessions.clone(),
+        kv: context.kv.clone(),
+        clock: context.clock.clone(),
+    })
 }
 
 fn sync_instructions_and_skills(services: &Services, context: &PluginContext, next: &Snapshot, allowed: bool) {

@@ -1,4 +1,5 @@
 pub mod transport;
+pub mod wake;
 
 use std::sync::{Arc, Mutex};
 
@@ -22,6 +23,8 @@ pub(crate) struct Watches {
 struct Current {
     key: String,
     member: u64,
+    console: Arc<Mutex<wake::Console>>,
+    dependencies: wake::Dependencies,
 }
 
 impl Watches {
@@ -31,6 +34,7 @@ impl Watches {
         let previous = match (&*current, &next) {
             (None, None) => return,
             (Some(existing), Some(target)) if existing.key == target.key => {
+                *existing.console.lock().expect("lock the Console watch connection") = console(target);
                 let key = existing.key.clone();
                 let member = existing.member;
                 let target = next.expect("the Console watch target being synced");
@@ -48,32 +52,66 @@ impl Watches {
             return;
         };
         let key = target.key.clone();
+        let connection = Arc::new(Mutex::new(console(&target)));
+        let dependencies = wake::Dependencies {
+            sessions: target.sessions.clone(),
+            kv: target.kv.clone(),
+            clock: target.clock.clone(),
+        };
         let weak = Arc::downgrade(handle);
+        let deliver_connection = connection.clone();
+        let deliver_dependencies = dependencies.clone();
         let deliver: transport::Deliver = Arc::new(move |events| {
             let weak = weak.clone();
+            let connection = deliver_connection.clone();
+            let dependencies = deliver_dependencies.clone();
             async move {
-                match weak.upgrade() {
-                    Some(handle) => handle.deliver_watched(events),
-                    None => Vec::new(),
-                }
+                let Some(handle) = weak.upgrade() else {
+                    return Vec::new();
+                };
+                handle.watches.record(events.clone());
+                let connection = connection.lock().expect("lock the Console watch connection").clone();
+                wake::deliver(&dependencies, &connection, events).await
             }
             .boxed()
         });
         let member = transport::join(target, deliver);
-        *self.current.lock().expect("lock the Console watch lease") = Some(Current { key, member });
+        *self.current.lock().expect("lock the Console watch lease") =
+            Some(Current { key, member, console: connection, dependencies });
     }
 
-    pub(crate) fn record(&self, events: Vec<WatchEvent>) -> Vec<String> {
-        let ids = events.iter().map(|event| event.id.clone()).collect();
+    pub(crate) fn is_leader(&self) -> bool {
+        let current = self.current.lock().expect("lock the Console watch lease");
+        current.as_ref().is_some_and(|current| transport::is_leader(&current.key, current.member))
+    }
+
+    pub(crate) async fn forget(&self, session_id: &str) {
+        let (connection, dependencies) = {
+            let current = self.current.lock().expect("lock the Console watch lease");
+            match current.as_ref() {
+                Some(current) => (
+                    current.console.lock().expect("lock the Console watch connection").clone(),
+                    current.dependencies.clone(),
+                ),
+                None => return,
+            }
+        };
+        wake::forget(&dependencies, &connection, session_id).await;
+    }
+
+    fn record(&self, events: Vec<WatchEvent>) {
         if !events.is_empty() {
             self.delivered.lock().expect("lock the Console watched events").extend(events);
         }
-        ids
     }
 
     pub(crate) fn delivered(&self) -> Vec<WatchEvent> {
         self.delivered.lock().expect("lock the Console watched events").clone()
     }
+}
+
+fn console(target: &WatchTarget) -> wake::Console {
+    wake::Console { server: target.server.clone(), headers: target.headers.clone(), http: target.http.clone() }
 }
 
 impl Drop for Watches {

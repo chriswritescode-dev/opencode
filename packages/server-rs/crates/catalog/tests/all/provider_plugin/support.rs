@@ -5,13 +5,15 @@ use std::ffi::OsString;
 use std::io;
 use std::sync::{Arc, Mutex};
 
+use opencode_ai::clock::{Clock, SystemClock};
 use opencode_ai::route::executor::{BoxFuture, HttpResponse, HttpSender, PreparedHttp};
 use opencode_ai::schema::{AiError, AiErrorReason, TransportKind, TransportOperation};
 use opencode_catalog::provider_plugin::hooks::ProviderHooks;
 use opencode_catalog::provider_plugin::{
-    AppInfo, CommandOutput, CommandRunner, PluginContext, SessionAccess, SessionRef, UserMessage,
+    AppInfo, CommandOutput, CommandRunner, PluginContext, SessionAccess, SessionRef, SyntheticError, SyntheticInput,
+    UserMessage,
 };
-use opencode_config::seams::NoKv;
+use opencode_config::seams::{KvStore, NoKv};
 use opencode_contract::codec::{JsonMap, decode_json};
 use opencode_contract::generated::{
     AbsolutePath, AgentID, LocationRef, ModelRef, ProviderID, ProviderInfo, ProviderSettings, SessionID, WorkspaceID,
@@ -19,6 +21,7 @@ use opencode_contract::generated::{
 use serde_json::Value;
 
 use crate::builtin::Harness;
+use crate::provider_plugin::helpers::{MemoryKv, TestClock};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Exchange {
@@ -356,25 +359,66 @@ impl Drop for HangingBody {
 
 #[derive(Default)]
 pub struct FakeSessions {
-    pub sessions: HashMap<String, SessionRef>,
-    pub messages: HashMap<String, UserMessage>,
-    pub agents: HashMap<String, ModelRef>,
+    sessions: Mutex<HashMap<String, SessionRef>>,
+    messages: Mutex<HashMap<String, UserMessage>>,
+    agents: Mutex<HashMap<String, ModelRef>>,
+    wakes: Mutex<Vec<SyntheticInput>>,
+    replays: Mutex<Vec<SyntheticInput>>,
+}
+
+impl FakeSessions {
+    pub fn add(&self, id: &str) -> SessionID {
+        let session = SessionID(id.to_owned());
+        self.insert(SessionRef { id: session.clone(), parent_id: None, fork_session_id: None });
+        session
+    }
+
+    pub fn insert(&self, session: SessionRef) {
+        self.sessions.lock().expect("the fake sessions lock is never poisoned").insert(session.id.0.clone(), session);
+    }
+
+    pub fn remove(&self, id: &str) {
+        self.sessions.lock().expect("the fake sessions lock is never poisoned").remove(id);
+    }
+
+    pub fn wakes(&self) -> Vec<SyntheticInput> {
+        self.wakes.lock().expect("the fake wakes lock is never poisoned").clone()
+    }
+
+    pub fn replays(&self) -> Vec<SyntheticInput> {
+        self.replays.lock().expect("the fake replays lock is never poisoned").clone()
+    }
 }
 
 impl SessionAccess for FakeSessions {
     fn session(&self, id: SessionID) -> BoxFuture<Option<SessionRef>> {
-        let value = self.sessions.get(&id.0).cloned();
+        let value = self.sessions.lock().expect("the fake sessions lock is never poisoned").get(&id.0).cloned();
         Box::pin(async move { value })
     }
 
     fn last_user_message(&self, session: SessionID) -> BoxFuture<Option<UserMessage>> {
-        let value = self.messages.get(&session.0).cloned();
+        let value = self.messages.lock().expect("the fake messages lock is never poisoned").get(&session.0).cloned();
         Box::pin(async move { value })
     }
 
     fn agent_model(&self, agent: AgentID) -> BoxFuture<Option<ModelRef>> {
-        let value = self.agents.get(&agent.0).cloned();
+        let value = self.agents.lock().expect("the fake agents lock is never poisoned").get(&agent.0).cloned();
         Box::pin(async move { value })
+    }
+
+    fn synthetic(&self, input: SyntheticInput) -> BoxFuture<Result<(), SyntheticError>> {
+        let result = {
+            let mut wakes = self.wakes.lock().expect("the fake wakes lock is never poisoned");
+            if wakes.iter().any(|wake| wake.id == input.id) {
+                drop(wakes);
+                self.replays.lock().expect("the fake replays lock is never poisoned").push(input);
+                Err(SyntheticError::Conflict)
+            } else {
+                wakes.push(input);
+                Ok(())
+            }
+        };
+        Box::pin(async move { result })
     }
 }
 
@@ -421,6 +465,13 @@ impl CommandRunner for FakeRunner {
     }
 }
 
+pub struct PluginState {
+    pub context: PluginContext,
+    pub sessions: Arc<FakeSessions>,
+    pub kv: Arc<MemoryKv>,
+    pub clock: Arc<TestClock>,
+}
+
 pub fn plugin_context_at(harness: &Harness, http: Arc<dyn HttpSender>, workspace_id: Option<&str>) -> PluginContext {
     plugin_context_with_runner(harness, http, Arc::new(FakeRunner::default()), workspace_id)
 }
@@ -431,15 +482,52 @@ pub fn plugin_context_with_runner(
     runner: Arc<dyn CommandRunner>,
     workspace_id: Option<&str>,
 ) -> PluginContext {
+    build_context(
+        harness,
+        http,
+        runner,
+        workspace_id,
+        Arc::new(FakeSessions::default()),
+        Arc::new(NoKv),
+        Arc::new(SystemClock),
+    )
+}
+
+pub fn plugin_context_state(harness: &Harness, http: Arc<dyn HttpSender>) -> PluginState {
+    let sessions = Arc::new(FakeSessions::default());
+    let kv = Arc::new(MemoryKv::default());
+    let clock = Arc::new(TestClock::new());
+    let context = build_context(
+        harness,
+        http,
+        Arc::new(FakeRunner::default()),
+        None,
+        sessions.clone(),
+        kv.clone(),
+        clock.clone(),
+    );
+    PluginState { context, sessions, kv, clock }
+}
+
+fn build_context(
+    harness: &Harness,
+    http: Arc<dyn HttpSender>,
+    runner: Arc<dyn CommandRunner>,
+    workspace_id: Option<&str>,
+    sessions: Arc<FakeSessions>,
+    kv: Arc<dyn KvStore>,
+    clock: Arc<dyn Clock>,
+) -> PluginContext {
     let environment = harness.environment.clone();
     PluginContext {
         http: http.clone(),
         http_manual_redirects: http,
+        clock,
         app: AppInfo { name: "opencode".to_owned(), version: "test".to_owned(), channel: "test".to_owned() },
         env: Arc::new(move |name| environment.get(name).map(OsString::from)),
-        kv: Arc::new(NoKv),
+        kv,
         commands: runner,
-        sessions: Arc::new(FakeSessions::default()),
+        sessions,
         hooks: Arc::new(ProviderHooks::default()),
         location: LocationRef {
             directory: AbsolutePath(harness.root().to_string_lossy().into_owned()),
