@@ -476,12 +476,12 @@ impl Publisher {
         if tool.settled {
             return Err(invalid_event("session.tool.success", &format!("Duplicate tool execution: {id}")));
         }
-        tool.settled = true;
-        let executed = tool.provider_executed;
         let content = result.content.iter().map(contract_content).collect::<Vec<_>>();
         if content.is_empty() {
             return Err(invalid_event("session.tool.success", &format!("Tool execution has no content: {id}")));
         }
+        tool.settled = true;
+        let executed = tool.provider_executed;
         let metadata = result.metadata.and_then(|metadata| match metadata {
             Value::Object(map) => Some(JsonMap(map.into_iter().collect())),
             _ => None,

@@ -53,7 +53,7 @@ impl PatchFiles for HostFiles {
                 Ok(()) => Ok(()),
                 Err(error) if error.kind() == ErrorKind::NotFound => Ok(()),
                 Err(error) if error.kind() == ErrorKind::IsADirectory => {
-                    tokio::fs::remove_dir_all(absolute).await.map_err(|error| io_error(absolute, &error))
+                    Err(FsError::Failed { path: absolute.to_owned(), cause: "path is a directory".to_owned() })
                 }
                 Err(error) => Err(io_error(absolute, &error)),
             }

@@ -304,6 +304,21 @@ async fn stops_after_an_earlier_delete_when_a_later_delete_fails() {
     std::fs::remove_dir_all(&root).expect("the test directory is removed");
 }
 
+#[tokio::test]
+async fn host_files_refuses_to_remove_a_directory() {
+    let root = unique_directory("patch-remove-directory");
+    let directory = root.join("dir");
+    std::fs::create_dir_all(directory.join("nested")).expect("the directory fixture is created");
+    std::fs::write(directory.join("nested/file.txt"), "kept").expect("the nested fixture is written");
+    let files = HostFiles::new(Mutation::new());
+
+    let error = files.remove(&directory.to_string_lossy()).await.expect_err("the directory is not removed");
+
+    assert!(matches!(&error, FsError::Failed { cause, .. } if cause == "path is a directory"), "{error}");
+    assert_eq!(std::fs::read_to_string(directory.join("nested/file.txt")).expect("the directory is intact"), "kept");
+    std::fs::remove_dir_all(&root).expect("the test directory is removed");
+}
+
 async fn activate(deps: PatchDeps) -> (ToolRegistry, opencode_location::state::Registration, Snapshot) {
     let registry = ToolRegistry::new();
     let registration = builtin::activate(&registry, &BuiltinDeps { patch: Some(deps), ..BuiltinDeps::default() }).await;

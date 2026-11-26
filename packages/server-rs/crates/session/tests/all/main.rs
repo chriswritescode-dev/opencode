@@ -1,6 +1,7 @@
 mod corpus;
 mod instructions;
 mod model_request;
+mod publish_llm_event;
 mod retry;
 mod runner;
 mod search_index;

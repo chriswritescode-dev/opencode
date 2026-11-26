@@ -106,7 +106,7 @@ pub struct Binary {
     bin: PathBuf,
     vars: Vars,
     releases: Vec<Release>,
-    filepath: OnceCell<Result<PathBuf, String>>,
+    filepath: OnceCell<PathBuf>,
 }
 
 impl Binary {
@@ -119,11 +119,7 @@ impl Binary {
     }
 
     pub async fn filepath(&self) -> Result<PathBuf, BinaryError> {
-        self.filepath
-            .get_or_init(|| async { self.resolve().await.map_err(|error| error.message) })
-            .await
-            .clone()
-            .map_err(failed)
+        self.filepath.get_or_try_init(|| self.resolve()).await.cloned()
     }
 
     async fn resolve(&self) -> Result<PathBuf, BinaryError> {

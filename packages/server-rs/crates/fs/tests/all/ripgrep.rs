@@ -1,6 +1,7 @@
 use std::convert::Infallible;
 use std::fs;
 use std::path::Path;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
 use bytes::Bytes;
@@ -358,6 +359,31 @@ async fn binary_rejects_a_download_with_the_wrong_hash_without_installing_it() {
     assert!(!paths.bin.join("rg").exists());
 }
 
+#[tokio::test]
+async fn binary_resolves_again_after_a_transient_download_failure() {
+    let tmp = TempDir::new("rg-download-retry");
+    let triple = opencode_fs::ripgrep::binary::host_platform().expect("a supported host platform");
+    let archive = tar_gz(&format!("ripgrep-15.1.0-{triple}/rg"), b"fake ripgrep binary");
+    let stub = Stub::start_after_http_failures(archive.clone(), 1).await;
+    let paths = test_paths(tmp.path());
+    let binary = Binary::new(
+        paths.clone(),
+        |_| None,
+        vec![Release {
+            platform: triple.to_string(),
+            extension: Extension::TarGz,
+            sha256: opencode_util::hash::sha256_hex(&archive),
+            url: stub.url("/ripgrep.tar.gz"),
+        }],
+    );
+
+    let error = binary.filepath().await.expect_err("the first download fails");
+    assert!(error.to_string().contains("HTTP 500"), "{error}");
+    let filepath = binary.filepath().await.expect("the second download succeeds");
+    assert_eq!(filepath, paths.bin.join("rg"));
+    assert_eq!(fs::read(&filepath).expect("reads the installed binary"), b"fake ripgrep binary");
+}
+
 fn init_repository(directory: &Path) {
     let output = std::process::Command::new("git").args(["init", "-q"]).arg(directory).output().expect("runs git init");
     assert!(output.status.success(), "git init failed: {}", String::from_utf8_lossy(&output.stderr));
@@ -380,19 +406,39 @@ struct Stub {
 
 impl Stub {
     async fn start(body: Vec<u8>) -> Self {
+        Self::start_after_http_failures(body, 0).await
+    }
+
+    async fn start_after_http_failures(body: Vec<u8>, failures: usize) -> Self {
         let listener = TcpListener::bind("127.0.0.1:0").await.expect("binds the stub listener");
         let address = listener.local_addr().expect("the stub listener has an address");
         let body = Bytes::from(body);
+        let remaining = Arc::new(AtomicUsize::new(failures));
         let task = tokio::spawn(async move {
             loop {
                 let Ok((socket, _)) = listener.accept().await else {
                     return;
                 };
                 let body = body.clone();
+                let remaining = remaining.clone();
                 tokio::spawn(async move {
                     let service = service_fn(move |_request| {
                         let body = body.clone();
-                        async move { Ok::<_, Infallible>(Response::new(Full::new(body))) }
+                        let remaining = remaining.clone();
+                        async move {
+                            if remaining
+                                .try_update(Ordering::SeqCst, Ordering::SeqCst, |value| value.checked_sub(1))
+                                .is_ok()
+                            {
+                                return Ok::<_, Infallible>(
+                                    Response::builder()
+                                        .status(500)
+                                        .body(Full::new(Bytes::new()))
+                                        .expect("builds the failing response"),
+                                );
+                            }
+                            Ok::<_, Infallible>(Response::new(Full::new(body)))
+                        }
                     });
                     let _ = hyper::server::conn::http1::Builder::new()
                         .serve_connection(TokioIo::new(socket), service)
