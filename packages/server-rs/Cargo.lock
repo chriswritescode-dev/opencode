@@ -882,6 +882,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "opencode-git"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
 name = "opencode-http"
 version = "0.1.0"
 dependencies = [
@@ -902,6 +913,7 @@ dependencies = [
  "opencode-catalog",
  "opencode-config",
  "opencode-contract",
+ "opencode-git",
  "opencode-local",
  "opencode-location",
  "opencode-permission",
@@ -909,6 +921,7 @@ dependencies = [
  "opencode-registry",
  "opencode-session",
  "opencode-storage",
+ "opencode-vcs",
  "rand",
  "ring",
  "rustix",
@@ -945,6 +958,7 @@ dependencies = [
  "indexmap",
  "log",
  "opencode-contract",
+ "opencode-git",
  "opencode-storage",
  "ring",
  "rusqlite",
@@ -998,6 +1012,7 @@ dependencies = [
 name = "opencode-registry"
 version = "0.1.0"
 dependencies = [
+ "futures-util",
  "http-body-util",
  "hyper",
  "hyper-util",
@@ -1010,6 +1025,7 @@ dependencies = [
  "opencode-location",
  "opencode-permission",
  "opencode-util",
+ "opencode-vcs",
  "rand",
  "regex-lite",
  "reqwest",
@@ -1077,6 +1093,7 @@ dependencies = [
  "opencode-catalog",
  "opencode-config",
  "opencode-contract",
+ "opencode-git",
  "opencode-location",
  "opencode-registry",
  "opencode-storage",
@@ -1123,6 +1140,32 @@ dependencies = [
  "libc",
  "ring",
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "opencode-vcs"
+version = "0.1.0"
+dependencies = [
+ "futures-util",
+ "log",
+ "notify",
+ "opencode-api-types",
+ "opencode-bus",
+ "opencode-config",
+ "opencode-contract",
+ "opencode-git",
+ "opencode-local",
+ "opencode-location",
+ "opencode-storage",
+ "opencode-util",
+ "rand",
+ "ring",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "url",
 ]
 
 [[package]]

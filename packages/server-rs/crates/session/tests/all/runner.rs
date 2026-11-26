@@ -190,7 +190,10 @@ async fn setup_placements(port: u16, closed_first: bool) -> Setup {
     let sessions = Sessions::new(
         store.clone(),
         bus.clone(),
-        Arc::new(ProjectService::new(database.clone())),
+        Arc::new(ProjectService::new(
+            database.clone(),
+            Arc::new(opencode_git::Git::new(Arc::new(|name: &str| std::env::var_os(name)))),
+        )),
         Arc::new(LocalEnvironment::new()),
         "1".to_owned(),
     )
@@ -543,7 +546,10 @@ async fn removing_a_session_waits_for_the_execution_to_go_idle() {
     let sessions = Sessions::new(
         setup.store.clone(),
         setup.bus.clone(),
-        Arc::new(ProjectService::new(setup.database.clone())),
+        Arc::new(ProjectService::new(
+            setup.database.clone(),
+            Arc::new(opencode_git::Git::new(Arc::new(|name: &str| std::env::var_os(name)))),
+        )),
         Arc::new(LocalEnvironment::new()),
         "1".to_owned(),
     )

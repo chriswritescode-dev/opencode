@@ -139,6 +139,17 @@ fn sample_request(operation: &str) -> Option<(&'static str, &'static str)> {
         "debug.location.evict" => Some(("DELETE", "/api/debug/location")),
         "project.list" => Some(("GET", "/api/project")),
         "project.update" => Some(("PATCH", "/api/project/unknown")),
+        "vcs.init" => Some(("POST", "/api/vcs/init?provider=unknown")),
+        "vcs.get" => Some(("GET", "/api/vcs")),
+        "vcs.base" => Some(("GET", "/api/vcs/base")),
+        "vcs.status" => Some(("GET", "/api/vcs/status")),
+        "vcs.branch.list" => Some(("GET", "/api/vcs/branch")),
+        "vcs.diff" => Some(("GET", "/api/vcs/diff?mode=working")),
+        "reference.list" => Some(("GET", "/api/reference")),
+        "worktree.list" => Some(("GET", "/api/worktree?projectID=unknown")),
+        "worktree.create" => Some(("POST", "/api/worktree")),
+        "worktree.remove" => Some(("DELETE", "/api/worktree")),
+        "worktree.refresh" => Some(("POST", "/api/worktree/refresh")),
         "config.get" => Some(("GET", "/api/config")),
         "config.shells" => Some(("GET", "/api/config/shell")),
         "experimental.config.update" => Some(("PATCH", "/api/experimental/config")),
@@ -167,7 +178,6 @@ fn sample_request(operation: &str) -> Option<(&'static str, &'static str)> {
         "agent.get" => Some(("GET", "/api/agent/build")),
         "command.list" => Some(("GET", "/api/command")),
         "skill.list" => Some(("GET", "/api/skill")),
-        "reference.list" => Some(("GET", "/api/reference")),
         "form.list" => Some(("GET", "/api/form")),
         "permission.request.list" => Some(("GET", "/api/permission/request")),
         "permission.saved.list" => Some(("GET", "/api/permission/saved")),
@@ -237,6 +247,17 @@ fn implemented_lists_the_ported_operations() {
     assert!(opencode_http::app::IMPLEMENTED.contains(&"debug.location.evict"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"project.list"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"project.update"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"vcs.init"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"vcs.get"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"vcs.base"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"vcs.status"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"vcs.branch.list"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"vcs.diff"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"reference.list"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"worktree.list"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"worktree.create"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"worktree.remove"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"worktree.refresh"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"config.get"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"config.shells"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"experimental.config.update"));
@@ -265,7 +286,6 @@ fn implemented_lists_the_ported_operations() {
     assert!(opencode_http::app::IMPLEMENTED.contains(&"agent.get"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"command.list"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"skill.list"));
-    assert!(opencode_http::app::IMPLEMENTED.contains(&"reference.list"));
     for operation in [
         "form.list",
         "permission.request.list",
@@ -301,5 +321,5 @@ fn implemented_lists_the_ported_operations() {
     assert!(opencode_http::app::IMPLEMENTED.contains(&"plugin.gui"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"plugin.check"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"plugin.update"));
-    assert_eq!(opencode_http::app::IMPLEMENTED.len(), 72);
+    assert_eq!(opencode_http::app::IMPLEMENTED.len(), 82);
 }

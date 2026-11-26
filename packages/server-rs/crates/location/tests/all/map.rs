@@ -201,7 +201,7 @@ fn warnings_for(directory: &str) -> Vec<String> {
 
 #[tokio::test]
 async fn canonicalizes_equivalent_refs_to_one_cached_graph() {
-    let projects = Arc::new(ProjectService::new(database()));
+    let projects = Arc::new(crate::project_service(database()));
     let closes = Arc::new(AtomicUsize::new(0));
     let boots = Arc::new(AtomicUsize::new(0));
     let map = LocationMap::new(counting_boot(projects, closes, boots.clone()));
@@ -246,7 +246,7 @@ async fn retries_a_missing_directory_after_it_is_recreated() {
     std::fs::create_dir_all(&root).expect("creates the temporary root");
     let directory = root.join("recreated");
     let directory_text = directory.to_string_lossy().into_owned();
-    let projects = Arc::new(ProjectService::new(database()));
+    let projects = Arc::new(crate::project_service(database()));
     let closes = Arc::new(AtomicUsize::new(0));
     let environment: Arc<dyn Environment> = Arc::new(LocalEnvironment::new());
     let map = LocationMap::new(filesystem_boot(projects.clone(), environment, closes));
@@ -269,7 +269,7 @@ async fn retries_a_missing_directory_after_it_is_recreated() {
 
 #[tokio::test]
 async fn keeps_the_repaired_graph_after_concurrent_failures() {
-    let projects = Arc::new(ProjectService::new(database()));
+    let projects = Arc::new(crate::project_service(database()));
     let closes = Arc::new(AtomicUsize::new(0));
     let attempts = Arc::new(AtomicUsize::new(0));
     let gate = Arc::new(Notify::new());
@@ -303,7 +303,7 @@ async fn keeps_the_repaired_graph_after_concurrent_failures() {
 
 #[tokio::test]
 async fn invalidated_boot_failure_does_not_evict_its_replacement() {
-    let projects = Arc::new(ProjectService::new(database()));
+    let projects = Arc::new(crate::project_service(database()));
     let closes = Arc::new(AtomicUsize::new(0));
     let attempts = Arc::new(AtomicUsize::new(0));
     let gate = Arc::new(Notify::new());
@@ -329,7 +329,7 @@ async fn invalidated_boot_failure_does_not_evict_its_replacement() {
 
 #[tokio::test]
 async fn an_invalidated_boot_that_succeeds_shuts_down_without_installing() {
-    let projects = Arc::new(ProjectService::new(database()));
+    let projects = Arc::new(crate::project_service(database()));
     let closes = Arc::new(AtomicUsize::new(0));
     let attempts = Arc::new(AtomicUsize::new(0));
     let gate = Arc::new(Notify::new());
@@ -386,7 +386,7 @@ async fn an_invalidated_boot_that_succeeds_shuts_down_without_installing() {
 
 #[tokio::test]
 async fn invalidating_an_in_flight_boot_shuts_it_down_and_boots_fresh_services() {
-    let projects = Arc::new(ProjectService::new(database()));
+    let projects = Arc::new(crate::project_service(database()));
     let closes = Arc::new(AtomicUsize::new(0));
     let attempts = Arc::new(AtomicUsize::new(0));
     let gate = Arc::new(Notify::new());
@@ -431,7 +431,7 @@ async fn invalidating_an_in_flight_boot_shuts_it_down_and_boots_fresh_services()
 
 #[tokio::test]
 async fn recovers_from_a_panicking_boot() {
-    let projects = Arc::new(ProjectService::new(database()));
+    let projects = Arc::new(crate::project_service(database()));
     let closes = Arc::new(AtomicUsize::new(0));
     let attempts = Arc::new(AtomicUsize::new(0));
     let map = Arc::new(LocationMap::new({
@@ -470,7 +470,7 @@ async fn recovers_from_a_panicking_boot() {
 
 #[tokio::test]
 async fn failed_boot_finishes_after_a_cancelled_acquisition() {
-    let projects = Arc::new(ProjectService::new(database()));
+    let projects = Arc::new(crate::project_service(database()));
     let closes = Arc::new(AtomicUsize::new(0));
     let attempts = Arc::new(AtomicUsize::new(0));
     let gate = Arc::new(Notify::new());
@@ -503,7 +503,7 @@ async fn failed_boot_finishes_after_a_cancelled_acquisition() {
 
 #[tokio::test]
 async fn an_in_flight_lease_keeps_old_services_after_invalidate() {
-    let projects = Arc::new(ProjectService::new(database()));
+    let projects = Arc::new(crate::project_service(database()));
     let closes = Arc::new(AtomicUsize::new(0));
     let map = LocationMap::new(simple_boot(projects, closes.clone(), None));
     let reference = LocationRef::new("/fake/in-flight", None);
@@ -533,7 +533,7 @@ async fn an_in_flight_lease_keeps_old_services_after_invalidate() {
 
 #[tokio::test]
 async fn evicts_one_location_without_touching_another() {
-    let projects = Arc::new(ProjectService::new(database()));
+    let projects = Arc::new(crate::project_service(database()));
     let closes = Arc::new(AtomicUsize::new(0));
     let map = LocationMap::new(simple_boot(projects, closes.clone(), None));
     let a_reference = LocationRef::new("/fake/a", None);
@@ -559,7 +559,7 @@ async fn evicts_one_location_without_touching_another() {
 
 #[tokio::test]
 async fn reload_reboots_every_location_and_reports_the_first_failure() {
-    let projects = Arc::new(ProjectService::new(database()));
+    let projects = Arc::new(crate::project_service(database()));
     let closes = Arc::new(AtomicUsize::new(0));
     let fail_a = Arc::new(AtomicBool::new(false));
     let fail_b = Arc::new(AtomicBool::new(false));
@@ -617,7 +617,7 @@ async fn reload_reboots_every_location_and_reports_the_first_failure() {
 
 #[tokio::test]
 async fn shutdown_all_closes_borrowed_entries_concurrently() {
-    let projects = Arc::new(ProjectService::new(database()));
+    let projects = Arc::new(crate::project_service(database()));
     let closes = Arc::new(AtomicUsize::new(0));
     let barrier = Arc::new(Barrier::new(3));
     let map = LocationMap::new(simple_boot(projects, closes.clone(), Some(barrier)));
@@ -645,7 +645,7 @@ async fn warns_when_a_borrower_keeps_an_invalidated_location() {
     install_logger();
     let temp = crate::TempDir::new();
     let directory = temp.path();
-    let projects = Arc::new(ProjectService::new(database()));
+    let projects = Arc::new(crate::project_service(database()));
     let closes = Arc::new(AtomicUsize::new(0));
     let map = LocationMap::new(simple_boot(projects, closes, None));
     let reference = LocationRef::new(directory.clone(), None);
@@ -668,7 +668,7 @@ async fn does_not_warn_when_the_borrower_releases_on_shutdown() {
     install_logger();
     let temp = crate::TempDir::new();
     let directory = temp.path();
-    let projects = Arc::new(ProjectService::new(database()));
+    let projects = Arc::new(crate::project_service(database()));
     let closes = Arc::new(AtomicUsize::new(0));
     let map = LocationMap::new(simple_boot(projects, closes, None));
     let reference = LocationRef::new(directory.clone(), None);
@@ -693,7 +693,7 @@ async fn warns_when_a_held_location_was_released_before() {
     install_logger();
     let temp = crate::TempDir::new();
     let directory = temp.path();
-    let projects = Arc::new(ProjectService::new(database()));
+    let projects = Arc::new(crate::project_service(database()));
     let closes = Arc::new(AtomicUsize::new(0));
     let map = LocationMap::new(simple_boot(projects, closes, None));
     let reference = LocationRef::new(directory.clone(), None);
@@ -719,7 +719,7 @@ async fn admits_a_workspace_location_without_a_local_directory() {
     let root = PathBuf::from(temp.path());
     std::fs::create_dir_all(&root).expect("creates the temporary root");
     let directory = root.join("workspace-only").to_string_lossy().into_owned();
-    let projects = Arc::new(ProjectService::new(database()));
+    let projects = Arc::new(crate::project_service(database()));
     let closes = Arc::new(AtomicUsize::new(0));
     let environment: Arc<dyn Environment> = Arc::new(LocalEnvironment::new());
     let map = LocationMap::new(filesystem_boot(projects.clone(), environment, closes));

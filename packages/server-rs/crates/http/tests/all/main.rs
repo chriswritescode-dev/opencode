@@ -18,6 +18,7 @@ mod permission_oracle;
 mod plugin;
 mod project;
 mod provider;
+mod reference;
 mod registry;
 mod request_site;
 mod router;
@@ -27,6 +28,8 @@ mod session;
 mod session_log;
 mod status;
 mod ticket;
+mod vcs;
+mod worktree;
 
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};

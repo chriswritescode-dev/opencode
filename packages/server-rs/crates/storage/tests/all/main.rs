@@ -8,6 +8,7 @@ mod permission;
 mod project;
 mod transaction;
 mod workspace;
+mod worktree;
 
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, MutexGuard};

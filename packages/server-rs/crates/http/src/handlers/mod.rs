@@ -23,6 +23,8 @@ pub mod provider;
 pub mod registry;
 pub mod session;
 pub mod session_log;
+pub mod vcs;
+pub mod worktree;
 
 pub(crate) fn location_ref(services: &LocationServices) -> LocationPublicRef {
     LocationPublicRef { directory: AbsolutePath(services.info.directory.clone()) }

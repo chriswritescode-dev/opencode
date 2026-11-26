@@ -38,6 +38,7 @@ use opencode_location::map::Lease;
 use opencode_location::map::LocationMap;
 use opencode_location::project::{ProjectService, SWEEP_INTERVAL_MS};
 use opencode_location::resolve::SessionLocationError;
+use opencode_location::state::Registration;
 use opencode_permission::form::{FormEvents, FormService, SystemClock};
 use opencode_permission::saved::PermissionSaved;
 use opencode_permission::service::{
@@ -49,13 +50,21 @@ use opencode_registry::builtin::{self, Activation};
 use opencode_registry::command::CommandService;
 use opencode_registry::instructions::Source;
 use opencode_registry::instructions::discovery::{InstructionDiscovery, InstructionOptions};
-use opencode_registry::reference::{NoRefresh, ReferenceService};
+use opencode_registry::reference::{CacheRefresh, ReferenceService};
 use opencode_registry::skill::SkillService;
 use opencode_session::SessionStore;
 use opencode_session::execution::{Placed, Placement};
 use opencode_session::instructions::BuiltinsInput;
 use opencode_session::search_build::SessionSearchBuild;
 use opencode_storage::Database;
+use opencode_vcs::git_provider::GitProvider;
+use opencode_vcs::hg_provider::HgProvider;
+use opencode_vcs::repository_cache::RepositoryCache;
+use opencode_vcs::snapshot::Snapshot;
+use opencode_vcs::vcs::Vcs;
+use opencode_vcs::watcher::{LocationWatcher, LocationWatcherPolicy};
+use opencode_vcs::worktree::{StrategiesLoader, Worktree, WorktreeError};
+use opencode_vcs::worktree_strategies::WorktreeStrategies;
 use serde_json::Value;
 use tokio::sync::broadcast::error::RecvError;
 use tokio::task::JoinHandle;
@@ -142,8 +151,10 @@ impl Placed for PlacedLocation {
 
 pub struct GlobalServices {
     pub database: Arc<Database>,
+    pub bus: Arc<Bus>,
     pub paths: GlobalPaths,
     pub projects: Arc<ProjectService>,
+    pub worktree: Arc<Worktree>,
     pub locations: LocationMap<LocationServices>,
     pub activity: Activity<LocationServices>,
     pub wellknown: Arc<WellKnown>,
@@ -155,7 +166,6 @@ pub struct GlobalServices {
     pub local_environment: Arc<dyn Environment>,
     pub sessions: Option<opencode_session::Sessions>,
     pub store: SessionStore,
-    pub bus: Arc<Bus>,
     pub plugins: Arc<GlobalPlugins>,
     pub saved: Arc<PermissionSaved>,
     sweep: JoinHandle<()>,
@@ -167,6 +177,12 @@ pub struct LocationServices {
     pub lifecycle: Lifecycle,
     pub environment: Arc<dyn Environment>,
     pub config: ConfigService,
+    pub snapshot: Arc<Snapshot>,
+    pub vcs: Arc<Vcs>,
+    pub worktree_strategies: Arc<WorktreeStrategies>,
+    watcher: LocationWatcher,
+    _vcs_registrations: Vec<Registration>,
+    _watcher_observer: ObserverHandle,
     pub agents: AgentService,
     pub commands: CommandService,
     pub skills: SkillService,
@@ -208,7 +224,7 @@ impl GlobalServices {
         channel: String,
         command_env: CommandEnv,
     ) -> Self {
-        let credentials = CredentialService::new(database.clone(), bus.clone(), paths.state.join("locks"));
+        let credentials = CredentialService::new(database.clone(), bus.clone(), paths.locks());
         let models_dev = ModelsDevService::new(
             database.clone(),
             bus.clone(),
@@ -219,7 +235,17 @@ impl GlobalServices {
                 option_env!("OPENCODE_VERSION").unwrap_or("local")
             ),
         );
-        let projects = Arc::new(ProjectService::new(database.clone()));
+        let git = Arc::new(opencode_git::Git::new(config_env.clone()));
+        let repository_cache = Arc::new(RepositoryCache::new(
+            git.clone(),
+            database.clone(),
+            paths.repos.clone(),
+            paths.locks(),
+            config_env.clone(),
+        ));
+        let boot_repository_cache = repository_cache.clone();
+        let boot_git = git.clone();
+        let projects = Arc::new(ProjectService::new(database.clone(), git));
         let wellknown = Arc::new(WellKnown::new(Arc::new(StorageKv { database: database.clone() })));
         let environment: Arc<dyn Environment> = Arc::new(LocalEnvironment::new());
         let saved = Arc::new(PermissionSaved::new(database.clone()));
@@ -258,6 +284,8 @@ impl GlobalServices {
             let channel_name = boot_channel.clone();
             let build_channel = build_channel.clone();
             let flag_overrides = flag_overrides.clone();
+            let boot_git = boot_git.clone();
+            let boot_repository_cache = boot_repository_cache.clone();
             let bus = boot_bus.clone();
             let plugins = boot_plugins.clone();
             Box::pin(async move {
@@ -266,6 +294,13 @@ impl GlobalServices {
                     directory: AbsolutePath(info.directory.clone()),
                     workspace_id: info.workspace_id.clone().map(WorkspaceID),
                 };
+                let snapshot = Arc::new(Snapshot::new(boot_git.clone(), &info, paths.data.clone()));
+                let worktree_strategies = Arc::new(WorktreeStrategies::new(
+                    boot_git.clone(),
+                    &info.project.id,
+                    &info.project.canonical,
+                    paths.data.clone(),
+                ));
                 let home = paths.home.clone();
                 let cache = paths.cache.clone();
                 let repos = paths.repos.clone();
@@ -283,11 +318,38 @@ impl GlobalServices {
                     },
                 )
                 .await;
+                snapshot.observe_config(&config).await;
+                worktree_strategies.observe_config(&config, &home).await;
+                let vcs = Vcs::new(bus.clone(), &info);
+                let is_hg = info.vcs.as_ref().is_some_and(|vcs| vcs.kind() == "hg");
+                let mut vcs_registrations = Vec::new();
+                if !is_hg {
+                    let provider = Arc::new(GitProvider::new(
+                        boot_git.clone(),
+                        info.directory.clone(),
+                        info.project.directory.clone(),
+                    ));
+                    vcs_registrations.push(vcs.transform(move |editor| editor.add(provider.clone())).await);
+                }
+                if info.vcs.is_none() || is_hg {
+                    let provider = Arc::new(HgProvider::new(info.directory.clone(), info.project.directory.clone()));
+                    vcs_registrations.push(vcs.transform(move |editor| editor.add(provider.clone())).await);
+                }
+                let policy = LocationWatcherPolicy::new();
+                policy.set(watcher_ignore(&config.entries()));
+                let policy_slot = policy.clone();
+                let watcher_observer = observe(&config, move |entries| policy_slot.set(watcher_ignore(entries)));
+                let watcher = LocationWatcher::start(boot_git, bus.clone(), &info, policy);
                 let events = Arc::new(BusEvents { bus: bus.clone(), location: location.clone() });
                 let agents = AgentService::new(events.clone());
                 let commands = CommandService::new(events.clone());
                 let skills = SkillService::new(events.clone());
-                let references = ReferenceService::new(events.clone(), repos, Arc::new(NoRefresh));
+                let references = ReferenceService::new(
+                    events.clone(),
+                    repos,
+                    config_env.clone(),
+                    Arc::new(CacheRefresh::new(boot_repository_cache, config_env.clone())),
+                );
                 let string_env: StringEnv = {
                     let config_env = config_env.clone();
                     Arc::new(move |name: &str| config_env(name).map(|value| value.to_string_lossy().into_owned()))
@@ -393,6 +455,12 @@ impl GlobalServices {
                     lifecycle,
                     environment,
                     config,
+                    snapshot,
+                    vcs,
+                    worktree_strategies,
+                    watcher,
+                    _vcs_registrations: vcs_registrations,
+                    _watcher_observer: watcher_observer,
                     agents,
                     commands,
                     skills,
@@ -411,6 +479,19 @@ impl GlobalServices {
                 }))
             })
         });
+        let worktree_locations = locations.clone();
+        let load: StrategiesLoader = Arc::new(move |directory: String| {
+            let locations = worktree_locations.clone();
+            Box::pin(async move {
+                let reference = opencode_location::location::LocationRef::new(directory, None);
+                let lease = locations
+                    .get(&reference)
+                    .await
+                    .map_err(|error| WorktreeError::Message(format!("failed to load worktree services: {error}")))?;
+                Ok(lease.services().worktree_strategies.clone())
+            })
+        });
+        let worktree = Arc::new(Worktree::new(database.clone(), bus.clone(), load));
         let activity = Activity::spawn(
             locations.clone(),
             ActivityOptions {
@@ -451,8 +532,10 @@ impl GlobalServices {
         });
         GlobalServices {
             database,
+            bus,
             paths,
             projects,
+            worktree,
             locations,
             activity,
             wellknown,
@@ -464,7 +547,6 @@ impl GlobalServices {
             local_environment: environment,
             sessions: None,
             store,
-            bus,
             plugins,
             saved,
             sweep,
@@ -594,9 +676,25 @@ impl opencode_location::map::LocationServices for LocationServices {
             drop(self.registrations.lock().expect("lock the builtin registrations").take());
             self.integrations.shutdown();
             self.plugins.shutdown().await;
-            self.lifecycle.shutdown().await
+            self.watcher.shutdown();
+            self.vcs.close();
+            self.snapshot.close();
+            self.references.close();
+            self.lifecycle.shutdown().await;
         })
     }
+}
+
+fn watcher_ignore(entries: &[Entry]) -> Vec<String> {
+    entries
+        .iter()
+        .flat_map(|entry| match entry {
+            Entry::Document(document) => {
+                document.info.watcher.as_ref().and_then(|watcher| watcher.ignore.clone()).unwrap_or_default()
+            }
+            Entry::Directory { .. } => Vec::new(),
+        })
+        .collect()
 }
 
 struct StoreSessionRules {

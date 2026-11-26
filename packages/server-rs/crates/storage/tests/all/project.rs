@@ -258,6 +258,81 @@ fn set_canonical_moves_the_worktree_and_rejects_a_relative_path() {
 }
 
 #[test]
+fn sweep_canonical_moves_only_an_idle_project() {
+    let (_dir, database) = database();
+    for id in ["idle", "recent", "archived"] {
+        read(&database, |connection| project::upsert(connection, id, "/work/project", Some("git")));
+    }
+    read(&database, |connection| {
+        connection.execute("UPDATE project SET time_updated = 10, time_active = 10 WHERE id = 'idle'", [])?;
+        connection.execute("UPDATE project SET time_updated = 20, time_active = 10 WHERE id = 'recent'", [])?;
+        connection.execute(
+            "UPDATE project SET time_updated = 10, time_active = 10, time_archived = 5 WHERE id = 'archived'",
+            [],
+        )?;
+        Ok(())
+    });
+
+    let moved = read(&database, |connection| project::sweep_canonical(connection, "idle", "/work/moved", 15))
+        .expect("the idle project is moved");
+    assert_eq!(moved.worktree, "/work/moved", "an idle project takes the new canonical");
+    assert_eq!(moved.time_updated, 10, "moving the canonical leaves time_updated untouched");
+
+    assert_eq!(
+        read(&database, |connection| project::sweep_canonical(connection, "recent", "/work/moved", 15)),
+        None,
+        "a project touched since the cutoff is skipped"
+    );
+    assert_eq!(
+        read(&database, |connection| project::sweep_canonical(connection, "archived", "/work/moved", 15)),
+        None,
+        "an archived project is skipped"
+    );
+
+    let recent = read(&database, |connection| project::get(connection, "recent")).expect("the project is present");
+    assert_eq!(recent.worktree, "/work/project", "the skipped project keeps its canonical");
+    let archived = read(&database, |connection| project::get(connection, "archived")).expect("the project is present");
+    assert_eq!(archived.worktree, "/work/project", "the archived project keeps its canonical");
+}
+
+#[test]
+fn sweep_archive_archives_only_an_idle_project() {
+    let (_dir, database) = database();
+    for id in ["idle", "recent", "activated", "archived"] {
+        read(&database, |connection| project::upsert(connection, id, "/work/project", Some("git")));
+    }
+    read(&database, |connection| {
+        connection.execute("UPDATE project SET time_updated = 10, time_active = 10 WHERE id = 'idle'", [])?;
+        connection.execute("UPDATE project SET time_updated = 20, time_active = 10 WHERE id = 'recent'", [])?;
+        connection.execute("UPDATE project SET time_updated = 10, time_active = 20 WHERE id = 'activated'", [])?;
+        connection.execute(
+            "UPDATE project SET time_updated = 10, time_active = 10, time_archived = 5 WHERE id = 'archived'",
+            [],
+        )?;
+        Ok(())
+    });
+
+    let archived = read(&database, |connection| project::sweep_archive(connection, "idle", 99, 15))
+        .expect("the idle project is archived");
+    assert_eq!(archived.time_archived, Some(99), "the archive time is stored");
+    assert_eq!(archived.time_updated, 10, "archiving leaves time_updated untouched");
+
+    for id in ["recent", "activated", "archived"] {
+        assert_eq!(
+            read(&database, |connection| project::sweep_archive(connection, id, 99, 15)),
+            None,
+            "{id} is not idle and is skipped"
+        );
+    }
+
+    let activated =
+        read(&database, |connection| project::get(connection, "activated")).expect("the project is present");
+    assert_eq!(activated.time_archived, None, "a recently activated project is not archived");
+    let archived = read(&database, |connection| project::get(connection, "archived")).expect("the project is present");
+    assert_eq!(archived.time_archived, Some(5), "an archived project keeps its archive time");
+}
+
+#[test]
 fn touch_active_writes_time_active_without_touching_time_updated() {
     let (_dir, database) = database();
     read(&database, |connection| project::upsert(connection, "p1", "/work/project", Some("git")));

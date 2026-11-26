@@ -11,6 +11,7 @@ pub mod path;
 pub mod permission;
 pub mod project;
 pub mod workspace;
+pub mod worktree;
 
 pub use database::Database;
 pub use error::StorageError;

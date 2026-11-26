@@ -37,7 +37,7 @@ fn active(database: &Database) -> i64 {
 
 #[tokio::test]
 async fn shutdown_announces_once_and_await_shutdown_after_it() {
-    let projects = Arc::new(ProjectService::new(database()));
+    let projects = Arc::new(crate::project_service(database()));
     let info = info(&LocationRef::new("/fake/lifecycle", Some("wrk".to_string())));
     let mut receiver = projects.subscribe();
     let lifecycle = Lifecycle::start(projects.clone(), &info).await.expect("starts the lifecycle");
@@ -62,7 +62,7 @@ async fn shutdown_announces_once_and_await_shutdown_after_it() {
 
 #[tokio::test]
 async fn retain_guard_tracks_retention() {
-    let projects = Arc::new(ProjectService::new(database()));
+    let projects = Arc::new(crate::project_service(database()));
     let info = info(&LocationRef::new("/fake/retain", None));
     let lifecycle = Lifecycle::start(projects, &info).await.expect("starts the lifecycle");
 
@@ -86,6 +86,7 @@ async fn session_event_reactivates_the_project() {
     let clock = Arc::new(AtomicI64::new(100_000));
     let projects = Arc::new(ProjectService::with_now(
         database.clone(),
+        crate::test_git(),
         Arc::new({
             let clock = clock.clone();
             move || clock.load(Ordering::Relaxed)

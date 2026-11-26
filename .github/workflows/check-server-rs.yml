@@ -35,6 +35,17 @@ on:
       - packages/core/src/session/info.ts
       - packages/core/src/instructions/index.ts
       - packages/core/src/util/slug.ts
+      - packages/core/src/git.ts
+      - packages/core/src/util/git-executable.ts
+      - packages/core/src/snapshot.ts
+      - packages/core/src/vcs.ts
+      - packages/core/src/vcs/**
+      - packages/core/src/plugin/vcs/**
+      - packages/core/src/worktree.ts
+      - packages/core/src/worktree/**
+      - packages/core/src/repository*.ts
+      - packages/core/src/reference.ts
+      - packages/core/script/snapshot-parity*
       - packages/schema/src/session-legacy.ts
       - packages/schema/src/session-event.ts
       - packages/server/src/event-feed.ts
@@ -76,6 +87,17 @@ on:
       - packages/core/src/session/info.ts
       - packages/core/src/instructions/index.ts
       - packages/core/src/util/slug.ts
+      - packages/core/src/git.ts
+      - packages/core/src/util/git-executable.ts
+      - packages/core/src/snapshot.ts
+      - packages/core/src/vcs.ts
+      - packages/core/src/vcs/**
+      - packages/core/src/plugin/vcs/**
+      - packages/core/src/worktree.ts
+      - packages/core/src/worktree/**
+      - packages/core/src/repository*.ts
+      - packages/core/src/reference.ts
+      - packages/core/script/snapshot-parity*
       - packages/schema/src/session-legacy.ts
       - packages/schema/src/session-event.ts
       - packages/server/src/event-feed.ts

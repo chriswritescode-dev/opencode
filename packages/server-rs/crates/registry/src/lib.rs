@@ -7,7 +7,6 @@ pub mod generated;
 pub mod instructions;
 pub mod markdown;
 pub mod reference;
-pub mod repository;
 pub mod scan;
 pub mod skill;
 pub mod watch;

@@ -14,6 +14,16 @@ macro_rules! select_project {
     };
 }
 
+macro_rules! idle_update {
+    ($set:literal) => {
+        concat!(
+            "UPDATE project SET ",
+            $set,
+            " WHERE id = ?2 AND time_archived IS NULL AND time_updated < ?3 AND time_active < ?3"
+        )
+    };
+}
+
 const GET: &str = select_project!(" WHERE id = ?1");
 const LIST_ACTIVE: &str = select_project!(" WHERE time_archived IS NULL ORDER BY time_active DESC, id ASC");
 const LIST_ALL: &str = select_project!(" ORDER BY time_active DESC, id ASC");
@@ -126,6 +136,22 @@ pub fn set_canonical(db: &Connection, id: &str, canonical: &str) -> Result<Optio
     let worktree = column::to_driver_absolute(canonical)?;
     let changed =
         db.prepare_cached("UPDATE project SET worktree = ?1 WHERE id = ?2")?.execute(params![worktree, id])?;
+    updated(db, id, changed)
+}
+
+pub fn sweep_canonical(
+    db: &Connection,
+    id: &str,
+    canonical: &str,
+    cutoff: i64,
+) -> Result<Option<ProjectRow>, StorageError> {
+    let worktree = column::to_driver_absolute(canonical)?;
+    let changed = db.prepare_cached(idle_update!("worktree = ?1"))?.execute(params![worktree, id, cutoff])?;
+    updated(db, id, changed)
+}
+
+pub fn sweep_archive(db: &Connection, id: &str, at: i64, cutoff: i64) -> Result<Option<ProjectRow>, StorageError> {
+    let changed = db.prepare_cached(idle_update!("time_archived = ?1"))?.execute(params![at, id, cutoff])?;
     updated(db, id, changed)
 }
 

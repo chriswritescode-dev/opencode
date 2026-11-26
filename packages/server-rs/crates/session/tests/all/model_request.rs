@@ -129,7 +129,10 @@ async fn setup_with(value: Value) -> Setup {
     let sessions = Sessions::new(
         store.clone(),
         bus.clone(),
-        Arc::new(ProjectService::new(database.clone())),
+        Arc::new(ProjectService::new(
+            database.clone(),
+            Arc::new(opencode_git::Git::new(Arc::new(|name: &str| std::env::var_os(name)))),
+        )),
         Arc::new(LocalEnvironment::new()),
         "1".to_owned(),
     );
