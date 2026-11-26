@@ -76,7 +76,9 @@ pub async fn register_with(services: &Services, context: &PluginContext, builtin
         resolve_resource_name(configured.as_ref().map(|settings| settings.rest.0.as_slice()), None, &context.env)
             .is_some()
             || setting(configured.as_ref(), "baseURL").is_some();
-    let available = which("az", &context.env).is_some();
+    let cli = which("az", &context.env);
+    let available = cli.is_some();
+    let program = cli.map(|path| path.to_string_lossy().into_owned()).unwrap_or_else(|| "az".to_owned());
 
     let integration_registration = services
         .integration
@@ -123,6 +125,7 @@ pub async fn register_with(services: &Services, context: &PluginContext, builtin
             context.commands.clone(),
             context.app.useragent(),
             options.endpoints.management.clone(),
+            program,
         )),
         endpoints: options.endpoints.clone(),
         env: context.env.clone(),
@@ -351,6 +354,7 @@ impl Azure {
             }
         };
         if changed {
+            self.discovery.clear_tokens();
             self.provider.reload().await;
         }
     }
@@ -505,11 +509,10 @@ impl Default for Jobs {
 
 impl Jobs {
     fn start(&self, future: impl Future<Output = ()> + Send + 'static) {
-        let previous = self.current.lock().expect("lock the Azure discovery job").take();
-        if let Some(previous) = previous {
+        let mut current = self.current.lock().expect("lock the Azure discovery job");
+        if let Some(previous) = current.replace(tokio::spawn(future)) {
             previous.abort();
         }
-        *self.current.lock().expect("lock the Azure discovery job") = Some(tokio::spawn(future));
     }
 
     fn busy(&self) -> bool {

@@ -77,6 +77,7 @@ pub struct Discovery {
     commands: Arc<dyn CommandRunner>,
     user_agent: String,
     management: String,
+    program: String,
     tokens: Mutex<HashMap<String, Token>>,
     resource_ids: Mutex<HashMap<String, String>>,
 }
@@ -87,15 +88,21 @@ impl Discovery {
         commands: Arc<dyn CommandRunner>,
         user_agent: String,
         management: String,
+        program: String,
     ) -> Self {
         Self {
             http,
             commands,
             user_agent,
             management,
+            program,
             tokens: Mutex::new(HashMap::new()),
             resource_ids: Mutex::new(HashMap::new()),
         }
+    }
+
+    pub fn clear_tokens(&self) {
+        self.tokens.lock().expect("lock the Azure tokens").clear();
     }
 
     pub async fn deployments(
@@ -142,10 +149,11 @@ impl Discovery {
     }
 
     async fn command(&self, args: &[String]) -> Result<TokenResponse, LoadError> {
-        let output = tokio::time::timeout(TOKEN_TIMEOUT, self.commands.run("az".to_owned(), args.to_vec(), Vec::new()))
-            .await
-            .map_err(|_| LoadError::Command("az did not answer within 10 seconds".to_owned()))?
-            .map_err(|error| LoadError::Command(error.to_string()))?;
+        let output =
+            tokio::time::timeout(TOKEN_TIMEOUT, self.commands.run(self.program.clone(), args.to_vec(), Vec::new()))
+                .await
+                .map_err(|_| LoadError::Command("az did not answer within 10 seconds".to_owned()))?
+                .map_err(|error| LoadError::Command(error.to_string()))?;
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr).trim().to_owned();
             return Err(LoadError::Command(if stderr.is_empty() { "az failed".to_owned() } else { stderr }));
