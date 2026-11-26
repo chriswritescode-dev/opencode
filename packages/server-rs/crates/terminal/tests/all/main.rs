@@ -1,3 +1,7 @@
+#[cfg(unix)]
+mod daemon;
+#[cfg(unix)]
+mod fake_daemon;
 mod protocol;
 #[cfg(unix)]
 mod pty_session;

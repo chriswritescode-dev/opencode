@@ -1323,15 +1323,19 @@ dependencies = [
 name = "opencode-terminal"
 version = "0.1.0"
 dependencies = [
+ "base64",
  "log",
  "opencode-bus",
  "opencode-config",
  "opencode-contract",
+ "opencode-local",
  "opencode-storage",
  "opencode-util",
  "portable-pty",
+ "serde",
  "serde_json",
  "thiserror 2.0.21",
+ "tokio",
 ]
 
 [[package]]
