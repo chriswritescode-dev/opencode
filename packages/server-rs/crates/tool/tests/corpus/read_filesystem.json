@@ -676,7 +676,7 @@
       {
         "path": "{{root}}/pixel.txt",
         "kind": "binary",
-        "base64": "R0lGODdhAQABAIAAAAAAAP///ywAAAAAAQABAAACAkQBADs="
+        "base64": "R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAkQBADs="
       }
     ],
     "path": "{{root}}/pixel.txt",
@@ -688,7 +688,7 @@
         "uri": "file://{{root}}/pixel.txt",
         "mime": "image/gif",
         "name": "pixel.txt",
-        "bytesBase64": "R0lGODdhAQABAIAAAAAAAP///ywAAAAAAQABAAACAkQBADs="
+        "bytesBase64": "R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAkQBADs="
       },
       "model": [
         {
@@ -697,7 +697,7 @@
         },
         {
           "type": "file",
-          "uri": "data:image/gif;base64,R0lGODdhAQABAIAAAAAAAP///ywAAAAAAQABAAACAkQBADs=",
+          "uri": "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAkQBADs=",
           "mime": "image/gif",
           "name": "pixel.txt"
         }

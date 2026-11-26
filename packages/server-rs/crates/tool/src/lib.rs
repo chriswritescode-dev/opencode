@@ -14,7 +14,9 @@ pub mod runtime;
 pub mod snapshot;
 pub mod tools;
 
-pub use context::{Content, ToolContext, ToolError, ToolErrorKind, ToolOutput, ToolRuntime, invocation};
+pub use context::{
+    Content, DenyAll, ToolContext, ToolError, ToolErrorKind, ToolOutput, ToolRuntime, Unrestricted, invocation,
+};
 pub use definition::{Freeform, ToolDefinition, ToolOptions, ToolSpec};
 pub use location::{LocationFilesParts, LocationToolDeps, LocationTools};
 pub use registry::{RegisteredTool, RegistrationFailure, ToolEditor, ToolNamespace, ToolRegistration, ToolRegistry};

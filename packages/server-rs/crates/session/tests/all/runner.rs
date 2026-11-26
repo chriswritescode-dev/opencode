@@ -28,6 +28,7 @@ use opencode_tool::{ToolContext, ToolError, ToolOptions, ToolOutput, ToolRegistr
 use serde_json::{Value, json};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
+use tokio::sync::watch;
 
 use crate::{TempDir, TestAgents, TestCatalog, test_agents, test_catalog};
 
@@ -42,6 +43,7 @@ struct Setup {
     bus: Arc<Bus>,
     store: SessionStore,
     sessions: Sessions,
+    runner: Arc<Runner>,
     work: String,
 }
 
@@ -222,7 +224,7 @@ async fn setup_placements_with(port: u16, closed_first: bool, factory: Option<To
         vec![Arc::new(test_placed(&config, &entry, &work, dir.path(), false, tools).await)]
     };
     let placement = TestPlacement { placements, calls: AtomicUsize::new(0) };
-    let runner = Runner::new(store.clone(), bus.clone(), database.clone(), Arc::new(placement), app());
+    let runner = Arc::new(Runner::new(store.clone(), bus.clone(), database.clone(), Arc::new(placement), app()));
     let sessions = Sessions::new(
         store.clone(),
         bus.clone(),
@@ -233,8 +235,8 @@ async fn setup_placements_with(port: u16, closed_first: bool, factory: Option<To
         Arc::new(LocalEnvironment::new()),
         "1".to_owned(),
     )
-    .with_execution(Execution::new(bus.clone(), Arc::new(runner)));
-    Setup { _dir: dir, database, bus, store, sessions, work }
+    .with_execution(Execution::new(bus.clone(), runner.clone()));
+    Setup { _dir: dir, database, bus, store, sessions, runner, work }
 }
 
 #[derive(Clone)]
@@ -1007,6 +1009,91 @@ async fn a_steer_admitted_during_a_tool_call_is_delivered_at_the_next_step() {
     let requests = captured.lock().expect("the captured lock is never poisoned");
     assert_eq!(requests.len(), 2, "the tool result triggers a second request");
     assert!(requests[1].to_string().contains("steer while the tool runs"), "the steer joins the next step");
+}
+
+#[tokio::test]
+async fn dropping_the_cancel_sender_does_not_interrupt_a_running_tool() {
+    let port = start_sequence(
+        vec![
+            Response {
+                status: 200,
+                reason: "OK",
+                content_type: "text/event-stream; charset=utf-8",
+                extra: "",
+                body: tool_body("gate", "{}", "tool_use"),
+                delay: None,
+                after_first_delta: false,
+            },
+            Response::cassette(),
+        ],
+        None,
+    )
+    .await;
+    let started = Arc::new(tokio::sync::Notify::new());
+    let release = Arc::new(tokio::sync::Notify::new());
+    let factory: ToolFactory = {
+        let started = started.clone();
+        let release = release.clone();
+        Arc::new(move |work, root| {
+            let started = started.clone();
+            let release = release.clone();
+            Box::pin(async move {
+                let tools = crate::test_tools(&work, &root, Arc::new(crate::AllowAll), false).await;
+                let registration = tools
+                    .registry()
+                    .transform(move |editor| {
+                        editor.add(ToolRegistration {
+                            spec: ToolSpec {
+                                name: "gate".to_owned(),
+                                description: Some("A tool that waits until the test releases it".to_owned()),
+                                input_schema: Some(json!({ "type": "object" })),
+                                ..ToolSpec::default()
+                            },
+                            options: ToolOptions::default(),
+                            runtime: Arc::new(GateTool { started: started.clone(), release: release.clone() }),
+                        });
+                    })
+                    .await;
+                std::mem::forget(registration);
+                tools
+            })
+        })
+    };
+    let setup = setup_placements_with(port, false, Some(factory)).await;
+    let mut subscription = setup.bus.subscribe_all(None);
+    setup
+        .sessions
+        .prompt(
+            "ses_1",
+            PromptInput {
+                id: None,
+                text: "run the gate".to_owned(),
+                agents: None,
+                metadata: None,
+                delivery: SessionInboxDelivery::Steer,
+                resume: false,
+            },
+        )
+        .expect("admit the prompt");
+    let (cancel, receiver) = watch::channel(false);
+    let runner = setup.runner.clone();
+    let drain = tokio::spawn(async move { runner.drain("ses_1", receiver).await });
+    tokio::time::timeout(Duration::from_secs(10), started.notified())
+        .await
+        .expect("the tool starts before the timeout");
+    drop(cancel);
+    release.notify_one();
+    let drained = tokio::time::timeout(Duration::from_secs(10), drain)
+        .await
+        .expect("the drain finishes before the timeout")
+        .expect("the drain task joins");
+    drained.expect("dropping the cancel sender does not interrupt the drain");
+    let events = collect_until(&mut subscription, "session.step.ended").await;
+    assert!(events.iter().any(|event| event.r#type() == "session.tool.success"), "the tool settles as a success");
+    assert!(
+        !events.iter().any(|event| event.r#type() == "session.tool.failed"),
+        "the dropped cancel sender does not fail the tool"
+    );
 }
 
 #[tokio::test]

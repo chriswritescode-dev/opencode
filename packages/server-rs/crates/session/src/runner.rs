@@ -76,7 +76,7 @@ impl Runner {
 
     pub async fn drain(&self, session_id: &str, mut cancel: watch::Receiver<bool>) -> Result<(), ExecutionError> {
         let mut placed = tokio::select! {
-            _ = cancel.changed() => return Err(ExecutionError::Interrupted),
+            _ = wait_cancel(&mut cancel) => return Err(ExecutionError::Interrupted),
             placed = self.placement.place(session_id.to_owned()) => placed.map_err(ExecutionError::Placement)?,
         };
         let mut step = 1u64;
@@ -88,7 +88,7 @@ impl Runner {
             }
             if placed.is_closed() {
                 placed = tokio::select! {
-                    _ = cancel.changed() => return Err(ExecutionError::Interrupted),
+                    _ = wait_cancel(&mut cancel) => return Err(ExecutionError::Interrupted),
                     placed = self.placement.place(session_id.to_owned()) => {
                         placed.map_err(ExecutionError::Placement)?
                     }
@@ -208,7 +208,7 @@ impl Runner {
                     let deadline = *delta_deadline
                         .get_or_insert_with(|| tokio::time::Instant::now() + Duration::from_millis(DELTA_FLUSH_MS));
                     tokio::select! {
-                        _ = cancel.changed() => {
+                        _ = wait_cancel(cancel) => {
                             cancelled = true;
                             None
                         }
@@ -222,7 +222,7 @@ impl Runner {
                 } else {
                     delta_deadline = None;
                     tokio::select! {
-                        _ = cancel.changed() => {
+                        _ = wait_cancel(cancel) => {
                             cancelled = true;
                             None
                         }
@@ -278,7 +278,7 @@ impl Runner {
                     location.clone(),
                 )?;
                 tokio::select! {
-                    _ = cancel.changed() => {
+                    _ = wait_cancel(cancel) => {
                         cancelled = true;
                         break 'stream;
                     }
@@ -457,7 +457,7 @@ impl Runner {
             }
             let abort = run.handle.abort_handle();
             let joined = tokio::select! {
-                _ = cancel.changed() => {
+                _ = wait_cancel(cancel) => {
                     abort.abort();
                     for rest in runs.drain(..) {
                         rest.handle.abort();
@@ -607,4 +607,15 @@ fn structured_error(r#type: &str, message: &str) -> SessionStructuredError {
 
 fn bus_error(error: BusError) -> ExecutionError {
     ExecutionError::Bus(error.to_string())
+}
+
+async fn wait_cancel(cancel: &mut watch::Receiver<bool>) {
+    loop {
+        if *cancel.borrow() {
+            return;
+        }
+        if cancel.changed().await.is_err() {
+            std::future::pending::<()>().await;
+        }
+    }
 }

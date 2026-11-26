@@ -1,3 +1,4 @@
+mod context;
 mod corpus;
 mod edit;
 mod image;

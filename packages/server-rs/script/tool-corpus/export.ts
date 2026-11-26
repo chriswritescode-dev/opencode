@@ -806,7 +806,10 @@ const gif87 = Buffer.concat([
   Buffer.from("GIF87a"),
   Buffer.from("01000100800000000000ffffff2c00000000010001000002024401003b", "hex"),
 ]).toString("base64")
-const gif89 = Buffer.from(gif87, "base64").toString("base64")
+const gif89 = Buffer.concat([
+  Buffer.from("GIF89a"),
+  Buffer.from("01000100800000000000ffffff2c00000000010001000002024401003b", "hex"),
+]).toString("base64")
 
 function readFilesystemSpecs(): ReadFilesystemSpec[] {
   return [

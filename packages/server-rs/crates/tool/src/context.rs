@@ -4,7 +4,7 @@ use futures_util::future::BoxFuture;
 use opencode_contract::codec::JsonMap;
 use opencode_contract::generated::{AgentID, PermissionSource, PermissionSource2, PermissionSourceType, SessionID};
 use opencode_fs::access::{Authorizer, Invocation};
-use opencode_permission::service::AssertInput;
+use opencode_permission::service::{AssertInput, PermissionError};
 use serde_json::Value;
 use tokio::sync::watch;
 
@@ -30,7 +30,7 @@ impl Default for ToolContext {
             call_id: String::new(),
             progress: Arc::new(|_| {}),
             cancel: None,
-            authorizer: Arc::new(Unrestricted),
+            authorizer: Arc::new(DenyAll),
         }
     }
 }
@@ -160,20 +160,33 @@ pub trait ToolRuntime: Send + Sync {
     fn execute<'a>(&'a self, input: Value, context: &'a ToolContext) -> BoxFuture<'a, Result<ToolOutput, ToolError>>;
 }
 
-struct Unrestricted;
+pub struct Unrestricted;
 
 impl Authorizer for Unrestricted {
-    fn assert<'a>(
-        &'a self,
-        _input: opencode_permission::service::AssertInput,
-    ) -> BoxFuture<'a, Result<(), opencode_permission::service::PermissionError>> {
+    fn assert<'a>(&'a self, _input: AssertInput) -> BoxFuture<'a, Result<(), PermissionError>> {
         Box::pin(async { Ok(()) })
     }
 
-    fn allows<'a>(
-        &'a self,
-        _input: opencode_permission::service::AssertInput,
-    ) -> BoxFuture<'a, Result<bool, opencode_permission::service::PermissionError>> {
+    fn allows<'a>(&'a self, _input: AssertInput) -> BoxFuture<'a, Result<bool, PermissionError>> {
         Box::pin(async { Ok(true) })
+    }
+}
+
+pub struct DenyAll;
+
+impl Authorizer for DenyAll {
+    fn assert<'a>(&'a self, _input: AssertInput) -> BoxFuture<'a, Result<(), PermissionError>> {
+        Box::pin(async {
+            Err(PermissionError::Blocked {
+                rules: Vec::new(),
+                permission: "tool".to_owned(),
+                resources: Vec::new(),
+                reason: Some("No authorizer is configured for this tool call".to_owned()),
+            })
+        })
+    }
+
+    fn allows<'a>(&'a self, _input: AssertInput) -> BoxFuture<'a, Result<bool, PermissionError>> {
+        Box::pin(async { Ok(false) })
     }
 }

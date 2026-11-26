@@ -7,16 +7,16 @@ const tree = await upstreamCoreTree()
 
 await Bun.write(`${tree}/packages/core/test/opencode-rs-tool-definitions.ts`, Bun.file(source))
 
-const tools = (await exportMode("-full_codemode")).length
+const off = await exportMode("-full_codemode")
 
 const output = {
-  off: await exportMode("-full_codemode"),
+  off,
   on: await exportMode("full_codemode"),
 }
 
 await mkdir(`${root}crates/tool/src/generated`, { recursive: true })
 await Bun.write(`${root}crates/tool/src/generated/definitions.json`, `${JSON.stringify(output, null, 2)}\n`)
-console.log(`tool-definitions: ${tools} tools`)
+console.log(`tool-definitions: ${off.length} tools`)
 
 async function exportMode(override: string) {
   const result = Bun.spawnSync(["bun", "run", "test/opencode-rs-tool-definitions.ts", override], {
