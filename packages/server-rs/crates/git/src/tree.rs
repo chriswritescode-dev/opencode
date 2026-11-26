@@ -12,6 +12,8 @@ use crate::run::RunOutput;
 use crate::store::join;
 use crate::{Git, RunOptions};
 
+const CHANGED_WHILE_INDEXING_ATTEMPTS: usize = 3;
+
 #[derive(Clone, Debug)]
 pub struct CaptureInput {
     pub repository: Repository,
@@ -461,7 +463,7 @@ impl Git {
                 self.sweep_temporary_indexes(&input.repository).await;
                 self.ensure_snapshot_config(&input.repository).await;
             }
-            match self.attempt_capture(input).await {
+            match self.attempt_capture_settled(input).await {
                 Ok(tree) => Ok(tree),
                 Err(error) => {
                     if !self.is_index_unreadable(&input.repository).await {
@@ -473,11 +475,23 @@ impl Git {
                         input.repository.git_directory
                     );
                     self.rebuild_index(&input.repository, input.ignores.as_ref()).await;
-                    self.attempt_capture(input).await
+                    self.attempt_capture_settled(input).await
                 }
             }
         })
         .await
+    }
+
+    async fn attempt_capture_settled(&self, input: &CaptureInput) -> Result<String, OperationError> {
+        let mut attempt = 1;
+        loop {
+            match Box::pin(self.attempt_capture(input)).await {
+                Err(error) if attempt < CHANGED_WHILE_INDEXING_ATTEMPTS && changed_while_indexing(&error) => {
+                    attempt += 1;
+                }
+                result => return result,
+            }
+        }
     }
 
     async fn attempt_capture(&self, input: &CaptureInput) -> Result<String, OperationError> {
@@ -659,6 +673,12 @@ impl Git {
         }
         let _ = tokio::fs::remove_file(&temporary).await;
     }
+}
+
+fn changed_while_indexing(error: &OperationError) -> bool {
+    error.operation == Operation::Refresh
+        && error.cause.is_none()
+        && error.message.contains("short read while indexing")
 }
 
 fn argument_budget() -> usize {
