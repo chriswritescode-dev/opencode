@@ -1,4 +1,4 @@
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, LazyLock, Mutex};
 use std::time::Duration;
 
 use bytes::Bytes;
@@ -265,40 +265,52 @@ fn encode_component(value: &str) -> String {
     percent_encoding::utf8_percent_encode(value, COMPONENT).to_string()
 }
 
-/// What a finished shell command started that's worth watching: the pull request `gh pr create` printed, or the
-/// branch `git push` updated on GitHub. Anything less clear-cut is skipped.
+static GH_PR_CREATE: LazyLock<regex_lite::Regex> = LazyLock::new(|| {
+    regex_lite::Regex::new(r"(?:^|[\s;&|(])gh\s+pr\s+create\b").expect("the gh pr create pattern compiles")
+});
+
+static GITHUB_PR_URL: LazyLock<regex_lite::Regex> = LazyLock::new(|| {
+    regex_lite::Regex::new(r"https://github\.com/[\w.-]+/[\w.-]+/pull/\d+")
+        .expect("the pull request URL pattern compiles")
+});
+
+static GIT_PUSH: LazyLock<regex_lite::Regex> = LazyLock::new(|| {
+    regex_lite::Regex::new(r"(?:^|[\s;&|(])git\s+(?:-C\s+\S+\s+)?push\b").expect("the git push pattern compiles")
+});
+
+static GITHUB_REMOTE: LazyLock<regex_lite::Regex> = LazyLock::new(|| {
+    regex_lite::Regex::new(
+        r"(?m)^To (?:https://github\.com/|(?:ssh://)?(?:git@)?github\.com[:/])([\w.-]+/[\w.-]+?)(?:\.git)?/?$",
+    )
+    .expect("the GitHub remote pattern compiles")
+});
+
+static PUSHED_BRANCH: LazyLock<regex_lite::Regex> = LazyLock::new(|| {
+    regex_lite::Regex::new(r"(?m)^\s*[+*]?\s*(?:[0-9a-f]+\.\.\.?[0-9a-f]+|\[new branch\])\s+\S+\s+->\s+(\S+)")
+        .expect("the pushed branch pattern compiles")
+});
+
 pub fn shell_target(command: &str, shell: &ShellOutput) -> Option<Value> {
     if shell.exit_code != Some(0) {
         return None;
     }
-    let created =
-        regex_lite::Regex::new(r"(?:^|[\s;&|(])gh\s+pr\s+create\b").expect("the gh pr create pattern compiles");
-    if created.is_match(command) {
-        let url = regex_lite::Regex::new(r"https://github\.com/[\w.-]+/[\w.-]+/pull/\d+")
-            .expect("the pull request URL pattern compiles");
+    if GH_PR_CREATE.is_match(command) {
         let mut urls: Vec<&str> = Vec::new();
-        for found in url.find_iter(&shell.output) {
+        for found in GITHUB_PR_URL.find_iter(&shell.output) {
             if !urls.contains(&found.as_str()) {
                 urls.push(found.as_str());
             }
         }
         return (urls.len() == 1).then(|| json!(urls[0]));
     }
-    let pushed =
-        regex_lite::Regex::new(r"(?:^|[\s;&|(])git\s+(?:-C\s+\S+\s+)?push\b").expect("the git push pattern compiles");
-    if !pushed.is_match(command) {
+    if !GIT_PUSH.is_match(command) {
         return None;
     }
-    let remotes = regex_lite::Regex::new(
-        r"(?m)^To (?:https://github\.com/|(?:ssh://)?(?:git@)?github\.com[:/])([\w.-]+/[\w.-]+?)(?:\.git)?/?$",
-    )
-    .expect("the GitHub remote pattern compiles");
-    let branches =
-        regex_lite::Regex::new(r"(?m)^\s*[+*]?\s*(?:[0-9a-f]+\.\.\.?[0-9a-f]+|\[new branch\])\s+\S+\s+->\s+(\S+)")
-            .expect("the pushed branch pattern compiles");
-    let remotes: Vec<&str> =
-        remotes.captures_iter(&shell.output).filter_map(|captures| captures.get(1).map(|repo| repo.as_str())).collect();
-    let branches: Vec<&str> = branches
+    let remotes: Vec<&str> = GITHUB_REMOTE
+        .captures_iter(&shell.output)
+        .filter_map(|captures| captures.get(1).map(|repo| repo.as_str()))
+        .collect();
+    let branches: Vec<&str> = PUSHED_BRANCH
         .captures_iter(&shell.output)
         .filter_map(|captures| captures.get(1).map(|branch| branch.as_str()))
         .collect();
