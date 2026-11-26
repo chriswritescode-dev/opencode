@@ -515,18 +515,21 @@ async fn publish(services: &Services, context: &PluginContext, next: &Snapshot) 
     sync_instructions_and_skills(services, context, next, allowed);
     let watching = allowed
         && remote.is_some_and(|remote| remote.watches)
+        && context.sessions.supports_watches()
         && services.config.flags().into_iter().any(|(key, state)| key == "console_watches" && state.enabled);
-    sync_watches(services, context, next, watching).await;
+    let watching = sync_watches(services, context, next, watching).await;
     let artifacts = next.connection.clone().filter(|_| allowed && remote.is_some_and(|remote| remote.artifacts));
     context.console.sync_artifacts(artifacts, watching);
 }
 
-async fn sync_watches(services: &Services, context: &PluginContext, next: &Snapshot, watching: bool) {
+async fn sync_watches(services: &Services, context: &PluginContext, next: &Snapshot, watching: bool) -> bool {
     let target = match next.connection.clone().filter(|_| watching) {
         Some(connection) => watch_target(services, context, &connection).await,
         None => None,
     };
+    let active = target.is_some();
     context.console.sync_watches(target);
+    active
 }
 
 async fn watch_target(
