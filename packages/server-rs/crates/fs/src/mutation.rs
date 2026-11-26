@@ -115,7 +115,9 @@ impl Mutation {
         let _guard = self.lock_target(target).await;
         let bytes = tokio::fs::read(&target.absolute).await.map_err(|error| io_error(&target.absolute, &error))?;
         let synced = bom::sync_bytes(&bytes, bom);
-        if let Some(bytes) = synced.bytes {
+        if std::str::from_utf8(&bytes).is_ok()
+            && let Some(bytes) = synced.bytes
+        {
             write_with_dirs(&target.absolute, &bytes).await?;
         }
         Ok(synced.text)

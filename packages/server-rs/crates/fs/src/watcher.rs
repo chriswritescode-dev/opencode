@@ -68,10 +68,10 @@ impl Watcher {
         let (key, matcher) = prepare(input);
         let mut registry = lock(&self.registry);
         if let Some(entry) = registry.entries.get_mut(&key) {
-            entry.users += 1;
             let Some(route) = lock(&self.routes).get(&key).map(|route| route.sender.subscribe()) else {
                 return Subscription::closed();
             };
+            entry.users += 1;
             return Subscription { receiver: route, release: Some(self.release(key)) };
         }
         let (target, mode) = matcher.target();
