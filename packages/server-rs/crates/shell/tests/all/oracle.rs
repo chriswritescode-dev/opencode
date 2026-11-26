@@ -231,7 +231,10 @@ fn reports_the_directory_a_real_shell_changes_to() {
             .collect();
         assert!(!changed.is_empty(), "Fixture never changed directory in any real shell: {source}");
         for (shell, _) in changed {
-            if let Ok(parsed) = parse::scan(&source, &shell.to_string_lossy(), &oracle.root.path().to_string_lossy()) {
+            let options = parse::Options::from_env(std::env::vars());
+            if let Ok(parsed) =
+                parse::scan_with(&source, &shell.to_string_lossy(), &oracle.root.path().to_string_lossy(), &options)
+            {
                 assert!(parsed.directories.contains(&target), "{} in: {source}", shell.display());
             }
         }

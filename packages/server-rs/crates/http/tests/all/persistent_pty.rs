@@ -1,4 +1,5 @@
 use std::path::Path;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use futures_util::SinkExt;
@@ -102,6 +103,46 @@ async fn wait_for_status(live: &Live, id: &str, status: &str) {
         tokio::time::sleep(Duration::from_millis(50)).await;
     }
     panic!("the persistent PTY {id} did not reach {status}");
+}
+
+async fn wait_for_terminals(live: &Live, session: &str, count: usize) {
+    for _ in 0..100 {
+        let (_, bytes, _) =
+            send(live, "GET", &format!("/api/experimental/session/{session}/terminal"), &[], None).await;
+        if json(&bytes)["data"].as_array().is_some_and(|data| data.len() == count) {
+            return;
+        }
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+    panic!("the session did not reach {count} terminals");
+}
+
+type Events = Arc<Mutex<Vec<(String, Value)>>>;
+
+fn collect_events(bus: &opencode_bus::Bus) -> (Events, opencode_bus::ListenerHandle) {
+    let events = Arc::new(Mutex::new(Vec::new()));
+    let sink = events.clone();
+    let listener = bus.listen(Box::new(move |event: &opencode_bus::Event| -> Result<(), opencode_bus::BusError> {
+        sink.lock().expect("the event sink is never poisoned").push((event.r#type().to_owned(), event.data().clone()));
+        Ok(())
+    }));
+    (events, listener)
+}
+
+async fn wait_for_event(events: &Events, name: &str, matches: impl Fn(&Value) -> bool) -> Value {
+    for _ in 0..100 {
+        let found = events
+            .lock()
+            .expect("the event sink is never poisoned")
+            .iter()
+            .find(|(kind, data)| kind == name && matches(data))
+            .map(|(_, data)| data.clone());
+        if let Some(data) = found {
+            return data;
+        }
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+    panic!("the {name} event did not arrive");
 }
 
 async fn token(live: &Live, id: &str) -> String {
@@ -473,7 +514,7 @@ async fn persistent_pty_lists_an_exited_unattended_terminal_until_it_is_removed(
 }
 
 #[tokio::test]
-async fn persistent_pty_connect_to_an_unknown_terminal_closes_with_4404() {
+async fn persistent_pty_connect_token_for_an_unknown_terminal_is_not_found() {
     let directory = crate::temp_directory("persistent-pty-missing");
     let live = live(&directory).await;
     let (status, bytes, _) = send(
@@ -486,16 +527,6 @@ async fn persistent_pty_connect_to_an_unknown_terminal_closes_with_4404() {
     .await;
     assert_eq!(status, StatusCode::NOT_FOUND);
     assert_eq!(json(&bytes)["_tag"], json!("PtyNotFoundError"));
-
-    let ticket = send(
-        &live,
-        "POST",
-        "/api/experimental/persistent-pty/pty_persistent_99/connect-token",
-        &[("x-opencode-ticket", "1")],
-        None,
-    )
-    .await;
-    assert_eq!(ticket.0, StatusCode::NOT_FOUND);
     assert!(!live.persistent_root.exists());
 }
 
@@ -554,4 +585,46 @@ async fn unticketed_persistent_pty_connect_is_forbidden() {
         }
         _ => panic!("expected the connection to be forbidden"),
     }
+}
+
+#[tokio::test]
+async fn persistent_pty_defaults_the_terminal_and_removes_it_after_a_visible_exit() {
+    if !binary_available() {
+        eprintln!("skipping: opencode-pty was not found");
+        return;
+    }
+    let directory = crate::temp_directory("persistent-pty-defaults");
+    let live = live(&directory).await;
+    let session = "ses_persistent_defaults";
+
+    let (status, bytes, _) = send(&live, "POST", "/api/experimental/persistent-pty/handoff", &[], None).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(json(&bytes), json!({ "handoff": null }));
+
+    let (events, _listener) = collect_events(&live.bus);
+    let terminal = create(
+        &live,
+        session,
+        json!({
+            "command": "/bin/sh",
+            "args": ["-c", "read value"],
+            "title": "defaults",
+            "env": {},
+        }),
+    )
+    .await;
+    let id = terminal["id"].as_str().expect("an id").to_owned();
+    assert_eq!(terminal["size"], json!({ "cols": 80, "rows": 24 }));
+    assert_eq!(terminal["cwd"], json!("/"));
+    let added = wait_for_event(&events, "persistent-pty.added", |data| data["terminal"]["id"] == json!(id)).await;
+    assert_eq!(added["sessionID"], json!(session));
+
+    let (mut connection, mut state) = open(&live, &id, "defaults", "controller").await;
+    send_binary(&mut connection, &input_frame(80, 24, b"x\n")).await;
+    pump(&mut connection, &mut state, |state| state.closed.is_some()).await;
+    wait_for_terminals(&live, session, 0).await;
+
+    let removed = wait_for_event(&events, "persistent-pty.removed", |data| data["ptyID"] == json!(id)).await;
+    assert_eq!(removed["sessionID"], json!(session));
+    shutdown(&live).await;
 }

@@ -34,6 +34,7 @@ pub struct Input<'a> {
     pub program: &'a str,
     pub target: &'a Target,
     pub once: bool,
+    pub options: &'a parse::Options,
 }
 
 pub trait DirectoryResolver {
@@ -59,7 +60,7 @@ pub async fn requests<R: DirectoryResolver>(
     input: &Input<'_>,
     rules: &[PermissionRule],
 ) -> Result<Vec<Request>, Error> {
-    let parsed = match parse::scan(input.command, input.program, &input.target.absolute) {
+    let parsed = match parse::scan_with(input.command, input.program, &input.target.absolute, input.options) {
         Ok(parsed) => parsed,
         Err(error) => {
             if rules.iter().any(|rule| {

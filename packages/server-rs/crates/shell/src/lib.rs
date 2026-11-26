@@ -1,3 +1,4 @@
+pub mod daemon_pipe;
 pub mod output;
 pub mod parse;
 pub mod permissions;

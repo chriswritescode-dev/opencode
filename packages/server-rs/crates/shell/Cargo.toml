@@ -16,6 +16,7 @@ opencode-config.workspace = true
 opencode-contract.workspace = true
 opencode-fs.workspace = true
 opencode-storage.workspace = true
+opencode-terminal.workspace = true
 opencode-util.workspace = true
 log.workspace = true
 regress = { workspace = true, features = ["utf16"] }

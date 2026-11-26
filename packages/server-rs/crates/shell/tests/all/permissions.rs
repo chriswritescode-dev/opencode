@@ -82,6 +82,7 @@ async fn replays_the_permissions_corpus() {
     let corpus = std::fs::read_to_string(format!("{}/tests/corpus/permissions.json", env!("CARGO_MANIFEST_DIR")))
         .expect("permissions corpus");
     let cases: Vec<Case> = serde_json::from_str(&corpus).expect("permissions corpus json");
+    let options = opencode_shell::parse::Options::from_env(std::env::vars());
     let mut mismatches = Vec::new();
     for case in cases {
         let target = case.target.into_target();
@@ -104,7 +105,13 @@ async fn replays_the_permissions_corpus() {
             .collect();
         let actual = requests(
             &resolver,
-            &Input { command: &case.command, program: &case.program, target: &target, once: case.once },
+            &Input {
+                command: &case.command,
+                program: &case.program,
+                target: &target,
+                once: case.once,
+                options: &options,
+            },
             &rules,
         )
         .await;
@@ -132,9 +139,16 @@ async fn replays_the_permissions_corpus() {
 async fn resolves_directory_targets_through_the_filesystem_access() {
     let access = Access::new("/workspace", "/workspace", "/corpus/home");
     let target = Target { absolute: "/workspace".to_owned(), resource: ".".to_owned(), external_directory: None };
+    let options = opencode_shell::parse::Options::from_env(std::env::vars());
     let actual = requests(
         &access,
-        &Input { command: "cd /outside && git status", program: "/bin/bash", target: &target, once: false },
+        &Input {
+            command: "cd /outside && git status",
+            program: "/bin/bash",
+            target: &target,
+            once: false,
+            options: &options,
+        },
         &[],
     )
     .await

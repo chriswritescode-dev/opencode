@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -10,13 +11,16 @@ use opencode_contract::generated::requests::ShellCreateBody;
 use opencode_contract::generated::{
     LocationRef, ShellID, ShellInfo, ShellInfoStatus, ShellInfoTime, ShellOutputResponseData,
 };
+use opencode_terminal::persistent::CreatePipeInput;
 use opencode_util::lock;
 use opencode_util::path::Flavor;
+use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use tokio::sync::watch;
 use tokio::task::JoinHandle;
 
-use crate::output::{self, Limits};
+use crate::daemon_pipe::{DaemonCommands, Place, Stored, StoredLocation};
+use crate::output::{Limits, LineStarts, Newlines, Tail};
 use crate::result::Capture;
 use crate::retention;
 use crate::spawn;
@@ -30,16 +34,22 @@ pub struct Options {
     pub env: Vec<(String, String)>,
     pub shell: Arc<ShellSelect>,
     pub limits: Arc<dyn Fn() -> Limits + Send + Sync>,
+    pub daemon: Option<Arc<DaemonCommands>>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ToolCall {
+    #[serde(rename = "sessionID")]
     pub session_id: String,
+    #[serde(rename = "assistantMessageID")]
     pub assistant_message_id: String,
+    #[serde(rename = "callID")]
     pub call_id: String,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum StopReason {
     Timeout,
     Killed,
@@ -99,6 +109,7 @@ struct Command {
     tracker: Arc<Mutex<spawn::Tracker>>,
     pid: u32,
     done: watch::Sender<Done>,
+    exited: Arc<AtomicBool>,
     stop_reason: Option<StopReason>,
     timeout: Option<JoinHandle<()>>,
     tool_call: Option<ToolCall>,
@@ -124,26 +135,37 @@ pub struct Shell {
 struct Inner {
     bus: Arc<Bus>,
     location: LocationRef,
+    project_id: String,
     directory: PathBuf,
     output_dir: PathBuf,
     env: Vec<(String, String)>,
     shell: Arc<ShellSelect>,
     limits: Arc<dyn Fn() -> Limits + Send + Sync>,
+    daemon: Option<Arc<DaemonCommands>>,
+    place: Option<Arc<Place>>,
     state: Mutex<State>,
 }
 
 impl Shell {
-    pub fn new(bus: Arc<Bus>, options: Options) -> Arc<Self> {
+    pub async fn new(bus: Arc<Bus>, options: Options) -> Arc<Self> {
         let output_dir = retention::output_directory(&options.data, &options.project_id);
+        let daemon = options.daemon.filter(|daemon| daemon.enabled());
+        let place = match &daemon {
+            Some(daemon) => Some(daemon.at(&options.location, output_dir.clone()).await),
+            None => None,
+        };
         Arc::new(Self {
             inner: Arc::new(Inner {
                 bus,
                 location: options.location.clone(),
+                project_id: options.project_id,
                 directory: PathBuf::from(&options.location.directory.0),
                 output_dir,
                 env: options.env,
                 shell: options.shell,
                 limits: options.limits,
+                daemon,
+                place,
                 state: Mutex::new(State {
                     commands: BTreeMap::new(),
                     exit_order: Vec::new(),
@@ -185,6 +207,49 @@ impl Shell {
             metadata: input.metadata.unwrap_or_default(),
             time: ShellInfoTime { started: now_ms(), completed: None },
         };
+        let timeout_deadline = if !input.waited && invocation.timeout > 0 {
+            Some(info.time.started + invocation.timeout as f64)
+        } else {
+            None
+        };
+        if let Some(place) = self.inner.place.clone() {
+            let stored = Stored {
+                id: id.clone(),
+                command: info.command.clone(),
+                shell: info.shell.clone(),
+                location: self.inner.stored_location(),
+                metadata: Stored::output_metadata(&info.metadata),
+                tool_call: input.tool_call.clone(),
+                timeout_deadline,
+                stop_reason: None,
+            };
+            let created = place
+                .create(
+                    info.clone(),
+                    CreatePipeInput {
+                        program: info.shell.clone(),
+                        args: args.clone(),
+                        cwd: PathBuf::from(&info.cwd),
+                        env: invocation.env.iter().cloned().collect(),
+                        group_id: self.inner.project_id.clone(),
+                        output_path: file.clone(),
+                        metadata: stored.metadata(),
+                    },
+                    invocation.timeout,
+                    timeout_deadline,
+                    input.tool_call.clone(),
+                )
+                .await;
+            match created {
+                Ok(info) => return Ok(info),
+                Err(opencode_terminal::persistent::PersistentPtyError::Unavailable { message }) => {
+                    log::warn!("process daemon unavailable; spawning shell command instead: {message}");
+                }
+                Err(error) => {
+                    return Err(ShellError::Spawn { command: info.command.clone(), message: error.to_string() });
+                }
+            }
+        }
         let running = spawn::start(spawn::Spawn {
             program: &info.shell,
             args: &args,
@@ -193,8 +258,10 @@ impl Shell {
             file: &file,
         })
         .map_err(|error| ShellError::Spawn { command: info.command.clone(), message: error.to_string() })?;
+        let created = info.clone();
         let mut info = info;
         info.pid = Some(f64::from(running.pid));
+        let exited = Arc::new(AtomicBool::new(false));
         let (done, _receiver) = watch::channel(Done::Running);
         {
             let mut state = lock(&self.inner.state);
@@ -205,6 +272,7 @@ impl Shell {
                     tracker: running.tracker.clone(),
                     pid: running.pid,
                     done,
+                    exited: exited.clone(),
                     stop_reason: None,
                     timeout: None,
                     tool_call: input.tool_call,
@@ -212,50 +280,49 @@ impl Shell {
             );
             self.inner.publish(
                 "shell.created",
-                json!({ "info": serde_json::from_str::<Value>(&encode_json(&info)).expect("the shell info encodes as JSON") }),
+                json!({ "info": serde_json::from_str::<Value>(&encode_json(&created)).expect("the shell info encodes as JSON") }),
             );
         }
-        if invocation.timeout != 0 {
-            let _ = self.timeout(&id, invocation.timeout);
-        }
+        self.inner.arm_timeout(&id, invocation.timeout);
         let weak = Arc::downgrade(&self.inner);
-        running.supervise(move |exit| {
+        running.supervise(exited, move |exit| {
             if let Some(inner) = weak.upgrade() {
-                inner.finish(&id, exit);
+                tokio::spawn(async move { inner.finish(&id, exit).await });
             }
         });
         Ok(info)
     }
 
     pub fn list(&self) -> Vec<ShellInfo> {
-        lock(&self.inner.state)
+        let mut commands = lock(&self.inner.state)
             .commands
             .values()
             .filter(|command| command.info.status == ShellInfoStatus::Running)
             .map(|command| command.info.clone())
-            .collect()
+            .collect::<Vec<_>>();
+        if let Some(place) = &self.inner.place {
+            commands.extend(place.list());
+        }
+        commands
     }
 
     pub fn get(&self, id: &str) -> Result<ShellInfo, ShellError> {
-        lock(&self.inner.state).commands.get(id).map(|command| command.info.clone()).ok_or_else(|| not_found(id))
+        if let Some(info) = lock(&self.inner.state).commands.get(id).map(|command| command.info.clone()) {
+            return Ok(info);
+        }
+        match &self.inner.place {
+            Some(place) => place.get(id),
+            None => Err(not_found(id)),
+        }
     }
 
     pub async fn wait(&self, id: &str) -> Result<ShellInfo, ShellError> {
-        let mut receiver = {
-            let state = lock(&self.inner.state);
-            state.commands.get(id).ok_or_else(|| not_found(id))?.done.subscribe()
-        };
-        loop {
-            if !matches!(*receiver.borrow_and_update(), Done::Running) {
-                break;
-            }
-            if receiver.changed().await.is_err() {
-                return Err(not_found(id));
-            }
+        if lock(&self.inner.state).commands.contains_key(id) {
+            return self.inner.wait(id).await;
         }
-        match receiver.borrow().clone() {
-            Done::Ended(info) => Ok(*info),
-            Done::Running | Done::Removed => Err(not_found(id)),
+        match &self.inner.place {
+            Some(place) => place.wait(id).await,
+            None => Err(not_found(id)),
         }
     }
 
@@ -273,38 +340,33 @@ impl Shell {
         CommandResult { info, capture }
     }
 
-    pub fn timeout(&self, id: &str, duration: u64) -> Result<ShellInfo, ShellError> {
-        let mut state = lock(&self.inner.state);
-        let command = state.commands.get_mut(id).ok_or_else(|| not_found(id))?;
-        if command.stop_reason.is_some() || command.info.status != ShellInfoStatus::Running {
-            return Ok(command.info.clone());
+    pub async fn timeout(&self, id: &str, duration: u64) -> Result<ShellInfo, ShellError> {
+        if lock(&self.inner.state).commands.contains_key(id) {
+            return self.inner.timeout(id, duration).await;
         }
-        if let Some(handle) = command.timeout.take() {
-            handle.abort();
+        match &self.inner.place {
+            Some(place) => place.timeout(id, duration).await,
+            None => Err(not_found(id)),
         }
-        if duration != 0 {
-            let weak = Arc::downgrade(&self.inner);
-            let timer_id = id.to_owned();
-            command.timeout = Some(tokio::spawn(async move {
-                tokio::time::sleep(Duration::from_millis(duration)).await;
-                if let Some(inner) = weak.upgrade() {
-                    let _ = inner.stop(&timer_id, StopReason::Timeout);
-                }
-            }));
-        }
-        Ok(command.info.clone())
     }
 
-    pub fn stop(&self, id: &str, reason: StopReason) -> Result<ShellInfo, ShellError> {
-        self.inner.stop(id, reason)
+    pub async fn stop(&self, id: &str, reason: StopReason) -> Result<ShellInfo, ShellError> {
+        if lock(&self.inner.state).commands.contains_key(id) {
+            return self.inner.stop(id, reason).await;
+        }
+        match &self.inner.place {
+            Some(place) => place.stop(id, reason).await,
+            None => Err(not_found(id)),
+        }
     }
 
     pub fn by_tool_call(&self, call: &ToolCall) -> Option<ShellInfo> {
-        lock(&self.inner.state)
+        let local = lock(&self.inner.state)
             .commands
             .values()
             .find(|command| command.tool_call.as_ref().is_some_and(|candidate| candidate == call))
-            .map(|command| command.info.clone())
+            .map(|command| command.info.clone());
+        local.or_else(|| self.inner.place.as_ref().and_then(|place| place.by_tool_call(call)))
     }
 
     pub fn output(
@@ -313,31 +375,32 @@ impl Shell {
         cursor: Option<u64>,
         limit: Option<u64>,
     ) -> Result<ShellOutputResponseData, ShellError> {
-        let (running, file, snapshot) = {
+        if let Some((running, file, size)) = {
             let state = lock(&self.inner.state);
-            let command = state.commands.get(id).ok_or_else(|| not_found(id))?;
-            (
-                command.info.status == ShellInfoStatus::Running,
-                PathBuf::from(&command.info.file),
-                *lock(&command.tracker),
-            )
-        };
-        Ok(output::page(&file, snapshot.size, cursor, limit, running))
+            state.commands.get(id).map(|command| {
+                (
+                    command.info.status == ShellInfoStatus::Running,
+                    PathBuf::from(&command.info.file),
+                    lock(&command.tracker).size,
+                )
+            })
+        } {
+            return Ok(crate::output::page(&file, size, cursor, limit, running));
+        }
+        match &self.inner.place {
+            Some(place) => place.output(id, cursor, limit),
+            None => Err(not_found(id)),
+        }
     }
 
-    pub fn remove(&self, id: &str) -> Result<(), ShellError> {
-        let pid = {
-            let mut state = lock(&self.inner.state);
-            if !state.commands.contains_key(id) {
-                return Err(not_found(id));
-            }
-            self.inner.remove_locked(&mut state, id)
-        };
-        if let Some(pid) = pid {
-            spawn::ProcessGroup::new(pid).terminate();
-            self.inner.escalate(id.to_owned());
+    pub async fn remove(&self, id: &str) -> Result<(), ShellError> {
+        if lock(&self.inner.state).commands.contains_key(id) {
+            return self.inner.remove(id).await;
         }
-        Ok(())
+        match &self.inner.place {
+            Some(place) => place.remove(id).await,
+            None => Err(not_found(id)),
+        }
     }
 
     pub fn watch<F>(&self, future: F)
@@ -347,8 +410,17 @@ impl Shell {
         tokio::spawn(future);
     }
 
-    pub fn handoff_prepared(&self) -> bool {
-        false
+    pub async fn handoff_prepared(&self) -> bool {
+        match &self.inner.daemon {
+            Some(daemon) => daemon.handoff_prepared().await,
+            None => false,
+        }
+    }
+
+    pub async fn recover(&self) {
+        if let Some(place) = &self.inner.place {
+            place.recovered().await;
+        }
     }
 
     pub fn shutdown(&self) {
@@ -359,8 +431,8 @@ impl Shell {
                 if let Some(handle) = command.timeout.as_ref() {
                     handle.abort();
                 }
-                if command.info.status == ShellInfoStatus::Running {
-                    running.push(command.pid);
+                if command.info.status == ShellInfoStatus::Running && !command.exited.load(Ordering::SeqCst) {
+                    running.push((command.pid, command.exited.clone()));
                 }
             }
             let pending = state.pending_kills.values().copied().collect::<Vec<_>>();
@@ -369,8 +441,9 @@ impl Shell {
             state.pending_kills.clear();
             (running, pending)
         };
-        for pid in running {
+        for (pid, exited) in running {
             spawn::ProcessGroup::new(pid).terminate();
+            force_after_grace(pid, exited);
         }
         for pid in pending {
             spawn::ProcessGroup::new(pid).force();
@@ -378,21 +451,36 @@ impl Shell {
     }
 
     fn capture(&self, info: &ShellInfo) -> Option<Capture> {
-        let snapshot = {
+        let source = {
             let state = lock(&self.inner.state);
-            let command = state.commands.get(&info.id.0)?;
-            *lock(&command.tracker)
+            state.commands.get(&info.id.0).map(|command| *lock(&command.tracker))
         };
-        Some(output::tail(
-            Path::new(&info.file),
-            output::Snapshot { size: snapshot.size, newlines: snapshot.newlines, line_starts: snapshot.line_starts },
-            (self.inner.limits)(),
-            None,
-        ))
+        if let Some(tracker) = source {
+            let limits = (self.inner.limits)();
+            return Some(crate::output::tail(
+                Path::new(&info.file),
+                Tail {
+                    size: tracker.size,
+                    newlines: Newlines::Known(tracker.newlines),
+                    line_starts: LineStarts::Known(tracker.line_starts),
+                    stopped_early: None,
+                },
+                limits,
+                None,
+            ));
+        }
+        self.inner.place.as_ref().and_then(|place| place.capture(info, (self.inner.limits)()))
     }
 }
 
 impl Inner {
+    fn stored_location(&self) -> StoredLocation {
+        StoredLocation {
+            directory: self.location.directory.0.clone(),
+            workspace_id: self.location.workspace_id.as_ref().map(|workspace| workspace.0.clone()),
+        }
+    }
+
     fn environment(&self) -> Vec<(String, String)> {
         let mut env = self.env.clone();
         set(&mut env, "TERM", "xterm-256color");
@@ -400,11 +488,89 @@ impl Inner {
         env
     }
 
-    fn stop(self: &Arc<Self>, id: &str, reason: StopReason) -> Result<ShellInfo, ShellError> {
+    async fn wait(&self, id: &str) -> Result<ShellInfo, ShellError> {
+        let mut receiver = {
+            let state = lock(&self.state);
+            state.commands.get(id).ok_or_else(|| not_found(id))?.done.subscribe()
+        };
+        loop {
+            if !matches!(*receiver.borrow_and_update(), Done::Running) {
+                break;
+            }
+            if receiver.changed().await.is_err() {
+                return Err(not_found(id));
+            }
+        }
+        match receiver.borrow().clone() {
+            Done::Ended(info) => Ok(*info),
+            Done::Running | Done::Removed => Err(not_found(id)),
+        }
+    }
+
+    fn arm_timeout(self: &Arc<Self>, id: &str, duration: u64) {
+        if duration == 0 {
+            return;
+        }
+        let mut state = lock(&self.state);
+        let Some(command) = state.commands.get_mut(id) else { return };
+        if command.stop_reason.is_some()
+            || command.exited.load(Ordering::SeqCst)
+            || command.info.status != ShellInfoStatus::Running
+        {
+            return;
+        }
+        if let Some(handle) = command.timeout.take() {
+            handle.abort();
+        }
+        let weak = Arc::downgrade(self);
+        let timer_id = id.to_owned();
+        command.timeout = Some(tokio::spawn(async move {
+            tokio::time::sleep(Duration::from_millis(duration)).await;
+            if let Some(inner) = weak.upgrade() {
+                let _ = inner.stop(&timer_id, StopReason::Timeout).await;
+            }
+        }));
+    }
+
+    async fn timeout(self: &Arc<Self>, id: &str, duration: u64) -> Result<ShellInfo, ShellError> {
+        let mut state = lock(&self.state);
+        let command = state.commands.get_mut(id).ok_or_else(|| not_found(id))?;
+        if command.stop_reason.is_some()
+            || command.exited.load(Ordering::SeqCst)
+            || command.info.status != ShellInfoStatus::Running
+        {
+            if let Some(handle) = command.timeout.take() {
+                handle.abort();
+            }
+            return Ok(command.info.clone());
+        }
+        if let Some(handle) = command.timeout.take() {
+            handle.abort();
+        }
+        if duration != 0 {
+            let weak = Arc::downgrade(self);
+            let timer_id = id.to_owned();
+            command.timeout = Some(tokio::spawn(async move {
+                tokio::time::sleep(Duration::from_millis(duration)).await;
+                if let Some(inner) = weak.upgrade() {
+                    let _ = inner.stop(&timer_id, StopReason::Timeout).await;
+                }
+            }));
+        }
+        Ok(command.info.clone())
+    }
+
+    async fn stop(self: &Arc<Self>, id: &str, reason: StopReason) -> Result<ShellInfo, ShellError> {
         let (info, pid) = {
             let mut state = lock(&self.state);
             let command = state.commands.get_mut(id).ok_or_else(|| not_found(id))?;
-            if command.stop_reason.is_some() || command.info.status != ShellInfoStatus::Running {
+            if command.stop_reason.is_some()
+                || command.exited.load(Ordering::SeqCst)
+                || command.info.status != ShellInfoStatus::Running
+            {
+                if let Some(handle) = command.timeout.take() {
+                    handle.abort();
+                }
                 return Ok(command.info.clone());
             }
             command.stop_reason = Some(reason);
@@ -418,60 +584,77 @@ impl Inner {
         Ok(info)
     }
 
-    fn finish(&self, id: &str, exit: spawn::Exit) {
-        let mut state = lock(&self.state);
-        state.pending_kills.remove(id);
-        let Some(command) = state.commands.get_mut(id) else {
-            return;
-        };
-        if let Some(handle) = command.timeout.take() {
-            handle.abort();
-        }
-        let status = match command.stop_reason {
-            Some(StopReason::Timeout) => ShellInfoStatus::Timeout,
-            Some(StopReason::Killed) => ShellInfoStatus::Killed,
-            None => ShellInfoStatus::Exited,
-        };
-        command.info.status = status;
-        command.info.exit = exit.code.map(f64::from);
-        command.info.signal = exit.signal.map(spawn::signal_name);
-        command.info.time.completed = Some(now_ms());
-        let info = command.info.clone();
-        command.done.send_replace(Done::Ended(Box::new(info)));
-        let mut data = serde_json::Map::new();
-        data.insert("id".to_owned(), json!(id));
-        if let Some(exit) = exit.code {
-            data.insert("exit".to_owned(), json!(exit));
-        }
-        data.insert("status".to_owned(), json!(status_name(status)));
-        self.publish("shell.exited", Value::Object(data));
-        state.exit_order.push(id.to_owned());
-        while state.exit_order.len() > retention::EXITED_LIMIT {
-            let Some(oldest) = state.exit_order.first().cloned() else {
-                break;
+    async fn finish(self: &Arc<Self>, id: &str, exit: spawn::Exit) {
+        {
+            let mut state = lock(&self.state);
+            state.pending_kills.remove(id);
+            let Some(command) = state.commands.get_mut(id) else {
+                return;
             };
-            self.remove_locked(&mut state, &oldest);
+            if let Some(handle) = command.timeout.take() {
+                handle.abort();
+            }
+            let status = match command.stop_reason {
+                Some(StopReason::Timeout) => ShellInfoStatus::Timeout,
+                Some(StopReason::Killed) => ShellInfoStatus::Killed,
+                None => ShellInfoStatus::Exited,
+            };
+            command.info.status = status;
+            command.info.exit = exit.code.map(f64::from);
+            command.info.signal = exit.signal.map(spawn::signal_name);
+            command.info.time.completed = Some(now_ms());
+            let info = command.info.clone();
+            command.done.send_replace(Done::Ended(Box::new(info)));
+            let mut data = serde_json::Map::new();
+            data.insert("id".to_owned(), json!(id));
+            if let Some(exit) = exit.code {
+                data.insert("exit".to_owned(), json!(exit));
+            }
+            data.insert("status".to_owned(), json!(status_name(status)));
+            self.publish("shell.exited", Value::Object(data));
+            state.exit_order.push(id.to_owned());
         }
+        self.evict().await;
     }
 
-    fn remove_locked(&self, state: &mut State, id: &str) -> Option<u32> {
-        state.exit_order.retain(|candidate| candidate != id);
-        let mut command = state.commands.remove(id)?;
-        if let Some(handle) = command.timeout.take() {
-            handle.abort();
+    async fn remove(self: &Arc<Self>, id: &str) -> Result<(), ShellError> {
+        let (file, pid) = {
+            let mut state = lock(&self.state);
+            state.exit_order.retain(|candidate| candidate != id);
+            let Some(mut command) = state.commands.remove(id) else {
+                return Err(not_found(id));
+            };
+            if let Some(handle) = command.timeout.take() {
+                handle.abort();
+            }
+            let running = command.info.status == ShellInfoStatus::Running;
+            let mut pid = None;
+            if running {
+                command.done.send_replace(Done::Removed);
+                pid = Some(command.pid);
+                state.pending_kills.insert(id.to_owned(), command.pid);
+                self.publish("shell.exited", json!({ "id": id, "status": "killed" }));
+            }
+            (command.info.file, pid)
+        };
+        if let Some(pid) = pid {
+            spawn::ProcessGroup::new(pid).terminate();
+            self.escalate(id.to_owned());
         }
-        let running = command.info.status == ShellInfoStatus::Running;
-        let mut pid = None;
-        if running {
-            command.done.send_replace(Done::Removed);
-            pid = Some(command.pid);
-            state.pending_kills.insert(id.to_owned(), command.pid);
-            let data = json!({ "id": id, "status": "killed" });
-            self.publish("shell.exited", data);
-        }
-        let _ = std::fs::remove_file(&command.info.file);
+        let _ = std::fs::remove_file(&file);
         self.publish("shell.deleted", json!({ "id": id }));
-        pid
+        Ok(())
+    }
+
+    async fn evict(self: &Arc<Self>) {
+        loop {
+            let oldest = {
+                let state = lock(&self.state);
+                if state.exit_order.len() > retention::EXITED_LIMIT { state.exit_order.first().cloned() } else { None }
+            };
+            let Some(id) = oldest else { break };
+            let _ = self.remove(&id).await;
+        }
     }
 
     fn escalate(self: &Arc<Self>, id: String) {
@@ -505,15 +688,43 @@ impl Inner {
 
 impl Drop for Inner {
     fn drop(&mut self) {
-        let state = self.state.get_mut().unwrap_or_else(|error| error.into_inner());
-        for command in state.commands.values() {
-            if command.info.status == ShellInfoStatus::Running {
-                spawn::ProcessGroup::new(command.pid).terminate();
-            }
+        let (running, pending) = {
+            let state = self.state.get_mut().unwrap_or_else(|error| error.into_inner());
+            let running = state
+                .commands
+                .values()
+                .filter(|command| {
+                    command.info.status == ShellInfoStatus::Running && !command.exited.load(Ordering::SeqCst)
+                })
+                .map(|command| (command.pid, command.exited.clone()))
+                .collect::<Vec<_>>();
+            let pending = state.pending_kills.values().copied().collect::<Vec<_>>();
+            (running, pending)
+        };
+        for (pid, exited) in running {
+            spawn::ProcessGroup::new(pid).terminate();
+            force_after_grace(pid, exited);
         }
-        for pid in state.pending_kills.values() {
-            spawn::ProcessGroup::new(*pid).force();
+        for pid in pending {
+            spawn::ProcessGroup::new(pid).force();
         }
+    }
+}
+
+fn force_after_grace(pid: u32, exited: Arc<AtomicBool>) {
+    let force = move || {
+        if !exited.load(Ordering::SeqCst) {
+            spawn::ProcessGroup::new(pid).force();
+        }
+    };
+    match tokio::runtime::Handle::try_current() {
+        Ok(handle) => {
+            handle.spawn(async move {
+                tokio::time::sleep(STOP_GRACE).await;
+                force();
+            });
+        }
+        Err(_) => force(),
     }
 }
 

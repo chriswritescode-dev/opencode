@@ -1287,6 +1287,7 @@ dependencies = [
  "opencode-contract",
  "opencode-fs",
  "opencode-storage",
+ "opencode-terminal",
  "opencode-util",
  "regress",
  "rustix",

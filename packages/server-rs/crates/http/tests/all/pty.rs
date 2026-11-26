@@ -25,6 +25,7 @@ pub(crate) type Client = WebSocketStream<MaybeTlsStream<TcpStream>>;
 pub(crate) struct Live {
     pub(crate) port: u16,
     pub(crate) persistent_root: std::path::PathBuf,
+    pub(crate) bus: Arc<opencode_bus::Bus>,
     shutdown: Option<oneshot::Sender<()>>,
     task: JoinHandle<()>,
 }
@@ -59,7 +60,7 @@ pub(crate) async fn live_with(directory: &Path, home: &Path, environment: Vec<(S
         directory.to_string_lossy().into_owned(),
         Arc::new(|_: &str| None),
         environment,
-        bus,
+        bus.clone(),
         crate::global_plugins(),
         "test-version".to_owned(),
         "test".to_owned(),
@@ -81,7 +82,7 @@ pub(crate) async fn live_with(directory: &Path, home: &Path, environment: Vec<(S
     let task = tokio::spawn(opencode_http::serve::serve(listener, app, async move {
         let _ = receiver.await;
     }));
-    Live { port, persistent_root, shutdown: Some(shutdown), task }
+    Live { port, persistent_root, bus, shutdown: Some(shutdown), task }
 }
 
 pub(crate) fn environment() -> Vec<(String, String)> {

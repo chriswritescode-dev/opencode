@@ -8,6 +8,8 @@ use crate::result::Capture;
 
 pub const DEFAULT_MAX_LINES: usize = 2_000;
 pub const DEFAULT_MAX_BYTES: usize = 50 * 1024;
+pub const COUNT_NEWLINES_LIMIT: u64 = 16 * 1024 * 1024;
+pub const LINE_START_SCAN_LIMIT: u64 = 1024 * 1024;
 const DEFAULT_PAGE_LIMIT: u64 = 65_536;
 
 #[derive(Clone, Copy, Debug)]
@@ -68,14 +70,27 @@ pub fn page(file: &Path, size: u64, cursor: Option<u64>, limit: Option<u64>, run
 }
 
 #[derive(Clone, Copy, Debug)]
-pub struct Snapshot {
-    pub size: u64,
-    pub newlines: u64,
-    pub line_starts: [u64; 2],
+pub enum Newlines {
+    Known(u64),
+    Scan,
 }
 
-pub fn tail(file: &Path, snapshot: Snapshot, limits: Limits, killed: Option<String>) -> Capture {
-    let size = snapshot.size;
+#[derive(Clone, Copy, Debug)]
+pub enum LineStarts {
+    Known([u64; 2]),
+    Scan,
+}
+
+#[derive(Clone, Debug)]
+pub struct Tail {
+    pub size: u64,
+    pub newlines: Newlines,
+    pub line_starts: LineStarts,
+    pub stopped_early: Option<String>,
+}
+
+pub fn tail(file: &Path, tail: Tail, limits: Limits, killed: Option<String>) -> Capture {
+    let size = tail.size;
     let max_bytes = limits.max_bytes as u64;
     let start = size.saturating_sub(max_bytes);
     let before = start.saturating_sub(1);
@@ -87,14 +102,29 @@ pub fn tail(file: &Path, snapshot: Snapshot, limits: Limits, killed: Option<Stri
     if ends_with_newline {
         lines.pop();
     }
-    let total = snapshot.newlines + u64::from(!ends_with_newline);
-    let suffix = format!("full output saved to {}]", file.display());
+    let newlines = match tail.newlines {
+        Newlines::Known(newlines) => Some(newlines),
+        Newlines::Scan => count_newlines(file, size),
+    };
+    let total = newlines.map(|newlines| newlines + u64::from(!ends_with_newline));
+    let stopped =
+        tail.stopped_early.map(|message| format!("\n\n[output file {} stopped early: {message}]", file.display()));
+    let suffix = match &stopped {
+        Some(stopped) => format!("full output saved to {}]{stopped}", file.display()),
+        None => format!("full output saved to {}]", file.display()),
+    };
     if partial && lines.len() == 1 {
-        let line_start = if ends_with_newline { snapshot.line_starts[0] } else { snapshot.line_starts[1] };
+        let line_start = match tail.line_starts {
+            LineStarts::Known(starts) => Some(if ends_with_newline { starts[0] } else { starts[1] }),
+            LineStarts::Scan => scan_line_starts(file, size)[usize::from(!ends_with_newline)],
+        };
         let end = size.saturating_sub(u64::from(ends_with_newline));
-        let line_size = format_size(end.saturating_sub(line_start));
+        let line_size = match line_start {
+            Some(line_start) => format_size(end.saturating_sub(line_start)),
+            None => format!("over {}", format_size(end.min(LINE_START_SCAN_LIMIT))),
+        };
         let shown_size = format_size(lines[0].len() as u64);
-        let line = format!("line {total}");
+        let line = total.map_or_else(|| "the last line".to_owned(), |total| format!("line {total}"));
         return Capture {
             output: format!("{}\n\n[showing the last {shown_size} of {line} ({line_size}); {suffix}", lines[0]),
             truncated: true,
@@ -104,17 +134,63 @@ pub fn tail(file: &Path, snapshot: Snapshot, limits: Limits, killed: Option<Stri
     if start > 0 || lines.len() > limits.max_lines {
         let available = lines.len().saturating_sub(usize::from(partial));
         let kept = &lines[lines.len().saturating_sub(limits.max_lines.min(available))..];
-        return Capture {
-            output: format!(
-                "{}\n\n[showing lines {}-{total} of {total}; {suffix}",
-                kept.join("\n"),
-                total - kept.len() as u64 + 1
-            ),
-            truncated: true,
-            killed,
+        let notice = match total {
+            Some(total) => format!("showing lines {}-{total} of {total}", total - kept.len() as u64 + 1),
+            None => format!("showing the last {} lines", kept.len()),
         };
+        return Capture { output: format!("{}\n\n[{notice}; {suffix}", kept.join("\n")), truncated: true, killed };
     }
-    Capture { output: if page.is_empty() { "(no output)".to_owned() } else { page }, truncated: false, killed }
+    let shown = match &stopped {
+        Some(_) => page.strip_suffix('\n').unwrap_or(&page),
+        None => &page,
+    };
+    let cleaned = if shown.is_empty() { "(no output)" } else { shown };
+    Capture { output: format!("{cleaned}{}", stopped.as_deref().unwrap_or_default()), truncated: false, killed }
+}
+
+fn count_newlines(file: &Path, size: u64) -> Option<u64> {
+    if size == 0 {
+        return Some(0);
+    }
+    if size > COUNT_NEWLINES_LIMIT {
+        return None;
+    }
+    let Ok(handle) = File::open(file) else {
+        return Some(0);
+    };
+    let mut handle = handle.take(size);
+    let mut count = 0;
+    let mut buffer = [0u8; 65536];
+    loop {
+        match handle.read(&mut buffer) {
+            Ok(0) => return Some(count),
+            Ok(read) => count += buffer[..read].iter().filter(|byte| **byte == b'\n').count() as u64,
+            Err(error) if error.kind() == std::io::ErrorKind::Interrupted => continue,
+            Err(_) => return Some(count),
+        }
+    }
+}
+
+fn scan_line_starts(file: &Path, size: u64) -> [Option<u64>; 2] {
+    let mut starts = Vec::new();
+    let floor = size.saturating_sub(LINE_START_SCAN_LIMIT);
+    let mut end = size;
+    while end > floor && starts.len() < 2 {
+        let from = floor.max(end.saturating_sub(65536));
+        let chunk = read_range(file, from, end - from);
+        for index in (0..chunk.len()).rev() {
+            if chunk[index] != b'\n' {
+                continue;
+            }
+            starts.push(from + index as u64 + 1);
+            if starts.len() >= 2 {
+                break;
+            }
+        }
+        end = from;
+    }
+    let unknown = (floor == 0).then_some(0);
+    [starts.get(1).copied().or(unknown), starts.first().copied().or(unknown)]
 }
 
 fn read_range(file: &Path, start: u64, length: u64) -> Vec<u8> {
@@ -219,7 +295,7 @@ mod tests {
     fn tail_reports_no_output_for_an_empty_or_missing_file() {
         let capture = tail(
             Path::new("/opencode-missing-output"),
-            Snapshot { size: 0, newlines: 0, line_starts: [0, 0] },
+            Tail { size: 0, newlines: Newlines::Known(0), line_starts: LineStarts::Known([0, 0]), stopped_early: None },
             Limits::default(),
             None,
         );
@@ -234,7 +310,7 @@ mod tests {
         std::fs::write(&file, "a\nb\nc\n").expect("an output file");
         let capture = tail(
             &file,
-            Snapshot { size: 6, newlines: 3, line_starts: [4, 6] },
+            Tail { size: 6, newlines: Newlines::Known(3), line_starts: LineStarts::Known([4, 6]), stopped_early: None },
             Limits { max_lines: 2, max_bytes: 1024 },
             None,
         );
@@ -250,5 +326,16 @@ mod tests {
         assert_eq!(format_size(0), "0 KB");
         assert_eq!(format_size(1536), "2 KB");
         assert_eq!(format_size(2 * 1024 * 1024), "2.0 MB");
+    }
+
+    #[test]
+    fn count_newlines_reads_only_the_given_size() {
+        let dir = TempDir::new().expect("a temporary directory");
+        let file = dir.path().join("out");
+        std::fs::write(&file, "a\nb\nc\n").expect("an output file");
+        assert_eq!(count_newlines(&file, 0), Some(0));
+        assert_eq!(count_newlines(&file, 2), Some(1));
+        assert_eq!(count_newlines(&file, 4), Some(2));
+        assert_eq!(count_newlines(&file, 6), Some(3));
     }
 }

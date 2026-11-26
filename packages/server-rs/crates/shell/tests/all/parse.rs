@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::io::Read;
 
 use flate2::read::GzDecoder;
-use opencode_shell::parse::{Options, Parsed, scan, scan_with};
+use opencode_shell::parse::{Options, Parsed, scan_with};
 use serde::Deserialize;
 
 #[derive(Deserialize)]
@@ -140,8 +140,9 @@ fn replays_the_parse_parity_corpus() {
 }
 
 #[test]
-fn scans_with_the_system_options_by_default() {
-    let parsed = scan("git status && cd /tmp && pwd", "/bin/bash", "/workspace").expect("parses");
+fn scans_with_options_built_from_the_environment() {
+    let options = Options::from_env(std::env::vars());
+    let parsed = scan_with("git status && cd /tmp && pwd", "/bin/bash", "/workspace", &options).expect("parses");
     assert_eq!(
         parsed.commands,
         vec![

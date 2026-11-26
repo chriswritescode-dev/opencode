@@ -23,7 +23,7 @@ pub struct Harness {
 }
 
 impl Harness {
-    pub fn new() -> Self {
+    pub async fn new() -> Self {
         let dir = TempDir::new().expect("a temporary directory");
         let (database, _) = Database::open(DatabaseLocation::Memory, dir.path()).expect("open the database");
         let bus = Bus::new(Arc::new(database), BusOptions::default());
@@ -50,8 +50,10 @@ impl Harness {
                 env: environment(),
                 shell: shell_select,
                 limits: Arc::new(Limits::default),
+                daemon: None,
             },
-        );
+        )
+        .await;
         Self { _dir: dir, _listener: listener, shell, data, project, events: Mutex::new(receiver) }
     }
 
@@ -99,7 +101,7 @@ fn environment() -> Vec<(String, String)> {
 
 #[tokio::test]
 async fn runs_a_command_and_reports_its_captured_output_and_exit() {
-    let harness = Harness::new();
+    let harness = Harness::new().await;
     let info = harness.command("printf 'hello\\n'").await;
     let done = harness.shell.wait(&info.id.0).await.expect("the command ends");
     assert_eq!(done.status, ShellInfoStatus::Exited);
@@ -126,8 +128,19 @@ async fn runs_a_command_and_reports_its_captured_output_and_exit() {
 }
 
 #[tokio::test]
+async fn publishes_the_shell_created_event_before_the_pid_is_assigned() {
+    let harness = Harness::new().await;
+    let info = harness.command("printf 'hello\\n'").await;
+    assert!(info.pid.is_some());
+    harness.shell.wait(&info.id.0).await.expect("the command ends");
+    let created =
+        harness.drain_events().into_iter().find(|(name, _)| name == "shell.created").expect("the created event");
+    assert!(created.1["info"].get("pid").is_none(), "the created event omits the pid: {}", created.1);
+}
+
+#[tokio::test]
 async fn reports_exit_codes_and_signals() {
-    let harness = Harness::new();
+    let harness = Harness::new().await;
     let failed = harness.finish("exit 3").await;
     assert_eq!(failed.status, ShellInfoStatus::Exited);
     assert_eq!(failed.exit, Some(3.0));
@@ -141,7 +154,7 @@ async fn reports_exit_codes_and_signals() {
 
 #[tokio::test]
 async fn times_out_a_command_and_clears_a_replaced_timeout() {
-    let harness = Harness::new();
+    let harness = Harness::new().await;
     let mut timed = harness.input("sleep 60");
     timed.timeout = Some(100);
     let info = harness.create(timed).await;
@@ -156,28 +169,57 @@ async fn times_out_a_command_and_clears_a_replaced_timeout() {
     let mut cleared = harness.input("sleep 60");
     cleared.timeout = Some(300);
     let info = harness.create(cleared).await;
-    harness.shell.timeout(&info.id.0, 0).expect("the command is known");
+    harness.shell.timeout(&info.id.0, 0).await.expect("the command is known");
     tokio::time::sleep(Duration::from_millis(500)).await;
     assert_eq!(harness.shell.get(&info.id.0).expect("the command is known").status, ShellInfoStatus::Running);
-    harness.shell.stop(&info.id.0, StopReason::Killed).expect("the command is known");
+    harness.shell.stop(&info.id.0, StopReason::Killed).await.expect("the command is known");
     let done = harness.shell.wait(&info.id.0).await.expect("the command ends");
     assert_eq!(done.status, ShellInfoStatus::Killed);
 }
 
 #[tokio::test]
 async fn stop_escalates_to_sigkill_after_the_grace_period() {
-    let harness = Harness::new();
+    let harness = Harness::new().await;
     let info = harness.command("trap '' TERM; while :; do :; done").await;
     tokio::time::sleep(Duration::from_millis(200)).await;
-    harness.shell.stop(&info.id.0, StopReason::Killed).expect("the command is known");
+    harness.shell.stop(&info.id.0, StopReason::Killed).await.expect("the command is known");
     let done = harness.shell.wait(&info.id.0).await.expect("the command ends");
     assert_eq!(done.status, ShellInfoStatus::Killed);
     assert_eq!(done.signal.as_deref(), Some("SIGKILL"));
 }
 
 #[tokio::test]
+async fn shutdown_force_kills_a_command_that_ignores_sigterm() {
+    let harness = Harness::new().await;
+    let info = harness.command("trap '' TERM; while :; do sleep 1; done").await;
+    tokio::time::sleep(Duration::from_millis(100)).await;
+    harness.shell.shutdown();
+    tokio::time::sleep(Duration::from_millis(3500)).await;
+    let pid = rustix::process::Pid::from_raw(info.pid.expect("a pid") as i32).expect("a pid");
+    assert!(rustix::process::test_kill_process_group(pid).is_err(), "the process group outlived shutdown");
+}
+
+#[tokio::test]
+async fn ignores_a_stop_after_the_shell_process_has_exited() {
+    let harness = Harness::new().await;
+    let info = harness.command("(sleep 3 &) ; exit 0").await;
+    let pid = rustix::process::Pid::from_raw(info.pid.expect("a pid") as i32).expect("a pid");
+    for _ in 0..100 {
+        if rustix::process::test_kill_process(pid).is_err() {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    tokio::time::sleep(Duration::from_millis(200)).await;
+    harness.shell.stop(&info.id.0, StopReason::Killed).await.expect("the command is known");
+    let done = harness.shell.wait(&info.id.0).await.expect("the command ends");
+    assert_eq!(done.status, ShellInfoStatus::Exited);
+    assert_eq!(done.exit, Some(0.0));
+}
+
+#[tokio::test]
 async fn pages_output_across_utf8_boundaries() {
-    let harness = Harness::new();
+    let harness = Harness::new().await;
     let info = harness.command("printf 'a\\303\\251b'").await;
     harness.shell.wait(&info.id.0).await.expect("the command ends");
 
@@ -201,7 +243,7 @@ async fn pages_output_across_utf8_boundaries() {
 
 #[tokio::test]
 async fn captures_output_larger_than_the_pipe_buffer_and_pages_it() {
-    let harness = Harness::new();
+    let harness = Harness::new().await;
     let info = harness.finish("i=1; while [ $i -le 20000 ]; do echo $i; i=$((i+1)); done").await;
     let result = harness.shell.result(info.clone(), None).await;
     assert!(result.capture.expect("the output file is known").truncated);
@@ -223,7 +265,7 @@ async fn captures_output_larger_than_the_pipe_buffer_and_pages_it() {
 
 #[tokio::test]
 async fn holds_back_an_incomplete_character_while_the_command_runs() {
-    let harness = Harness::new();
+    let harness = Harness::new().await;
     let info = harness.command("printf '\\303'; sleep 1; printf '\\251'").await;
     let partial = poll_output(&harness.shell, &info.id.0, |page| page.size >= 1.0).await;
     assert_eq!(partial.output, "");
@@ -251,10 +293,10 @@ async fn poll_output(
 
 #[tokio::test]
 async fn removing_a_running_command_reports_killed_once_and_forgets_it() {
-    let harness = Harness::new();
+    let harness = Harness::new().await;
     let info = harness.command("sleep 60").await;
     harness.drain_events();
-    harness.shell.remove(&info.id.0).expect("the command is known");
+    harness.shell.remove(&info.id.0).await.expect("the command is known");
     assert!(matches!(harness.shell.get(&info.id.0), Err(ShellError::NotFound { .. })));
     assert!(matches!(harness.shell.wait(&info.id.0).await, Err(ShellError::NotFound { .. })));
 
@@ -272,28 +314,28 @@ async fn removing_a_running_command_reports_killed_once_and_forgets_it() {
 
 #[tokio::test]
 async fn lists_only_running_commands() {
-    let harness = Harness::new();
+    let harness = Harness::new().await;
     let info = harness.command("sleep 60").await;
     assert!(harness.shell.list().iter().any(|candidate| candidate.id == info.id));
-    harness.shell.stop(&info.id.0, StopReason::Killed).expect("the command is known");
+    harness.shell.stop(&info.id.0, StopReason::Killed).await.expect("the command is known");
     harness.shell.wait(&info.id.0).await.expect("the command ends");
     assert!(harness.shell.list().is_empty());
 }
 
 #[tokio::test]
 async fn result_returns_the_output_so_far_when_the_wait_expires() {
-    let harness = Harness::new();
+    let harness = Harness::new().await;
     let info = harness.command("sleep 60").await;
     let result = harness.shell.result(info.clone(), Some(Duration::from_millis(50))).await;
     assert_eq!(result.info.status, ShellInfoStatus::Running);
     assert!(result.capture.is_some());
-    harness.shell.stop(&info.id.0, StopReason::Killed).expect("the command is known");
+    harness.shell.stop(&info.id.0, StopReason::Killed).await.expect("the command is known");
     harness.shell.wait(&info.id.0).await.expect("the command ends");
 }
 
 #[tokio::test]
 async fn before_rewrites_the_invocation_and_keeps_the_tool_call() {
-    let harness = Harness::new();
+    let harness = Harness::new().await;
     std::fs::create_dir_all(harness.data.parent().expect("a parent").join("subdir")).expect("a subdirectory");
     let call = ToolCall {
         session_id: "ses_1".to_owned(),
@@ -321,5 +363,5 @@ async fn before_rewrites_the_invocation_and_keeps_the_tool_call() {
     let result = harness.shell.result(done, None).await;
     assert_eq!(result.capture.expect("the output file is known").output, "changed");
     assert_eq!(harness.shell.by_tool_call(&call).map(|found| found.id), Some(info.id));
-    assert!(!harness.shell.handoff_prepared());
+    assert!(!harness.shell.handoff_prepared().await);
 }

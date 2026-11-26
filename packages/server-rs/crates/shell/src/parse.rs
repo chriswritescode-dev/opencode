@@ -39,8 +39,8 @@ pub struct Options {
 }
 
 impl Options {
-    pub fn system() -> Self {
-        let environment: BTreeMap<String, String> = std::env::vars().collect();
+    pub fn from_env(vars: impl IntoIterator<Item = (String, String)>) -> Self {
+        let environment: BTreeMap<String, String> = vars.into_iter().collect();
         let home = home_from(&environment);
         Self {
             tilde_home: home.clone(),
@@ -57,10 +57,6 @@ impl Options {
     fn home(&self) -> Option<&str> {
         self.tilde_home.as_deref()
     }
-}
-
-pub fn scan(command: &str, shell: &str, cwd: &str) -> Result<Parsed, OpaqueError> {
-    scan_with(command, shell, cwd, &Options::system())
 }
 
 pub fn scan_with(command: &str, shell: &str, cwd: &str, options: &Options) -> Result<Parsed, OpaqueError> {

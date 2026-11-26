@@ -54,13 +54,14 @@ pub struct Spawn<'a> {
 }
 
 impl Running {
-    pub fn supervise(self, on_exit: impl FnOnce(Exit) + Send + 'static) {
+    pub fn supervise(self, exited: Arc<std::sync::atomic::AtomicBool>, on_exit: impl FnOnce(Exit) + Send + 'static) {
         let Running { mut child, mut stdout, mut stderr, file, .. } = self;
         tokio::spawn(async move {
             let exit = match child.wait().await {
                 Ok(status) => exit_of(status),
                 Err(_) => Exit::default(),
             };
+            exited.store(true, std::sync::atomic::Ordering::SeqCst);
             let drained = tokio::time::timeout(DRAIN_AFTER_EXIT, async {
                 let _ = (&mut stdout).await;
                 let _ = (&mut stderr).await;
