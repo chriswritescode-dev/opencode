@@ -24,6 +24,7 @@ import { GlobTool } from "@opencode/core/tool/plugin/glob"
 import { GrepTool } from "@opencode/core/tool/plugin/grep"
 import { PatchTool } from "@opencode/core/tool/plugin/patch"
 import { ReadTool } from "@opencode/core/tool/plugin/read"
+import { SkillTool } from "@opencode/core/tool/plugin/skill"
 import { WriteTool } from "@opencode/core/tool/plugin/write"
 import { ReadToolFileSystem } from "@opencode/core/tool/read-filesystem"
 import { definition, execute as executeTool } from "@opencode/core/tool/runtime"
@@ -1605,6 +1606,166 @@ async function exportRead() {
   console.log(`__TOOL_CORPUS__${JSON.stringify(exported)}`)
 }
 
+const skillToolNode = makeLocationNode({
+  name: "corpus/skill-tool-plugin",
+  layer: Layer.effectDiscard(registerToolPlugin(SkillTool.Plugin)),
+  deps: [Tool.node, FSUtil.node, Skill.node, Permission.node],
+})
+
+interface SkillCase {
+  name: string
+  fixtures?: Fixture[]
+  call: { id: string }
+  permission?: { deniedResources?: string[] }
+  skills?: SkillFixture[]
+}
+
+const exportedGuideSkill: SkillFixture = {
+  id: "guide",
+  name: "Guide",
+  path: "skill://guide/SKILL.md",
+  content: "# Guide\n\nFollow the reference.",
+  files: { "SKILL.md": "# Guide", "references/style.md": "Use concise sentences." },
+}
+
+const skillSpecs = (): SkillCase[] => [
+  {
+    name: "loads a built-in skill",
+    call: { id: "guide" },
+    skills: [exportedGuideSkill],
+  },
+  {
+    name: "loads a local skill with extra files",
+    fixtures: [
+      { path: "{{root}}/local/SKILL.md", parts: [{ text: "# Local\n" }] },
+      { path: "{{root}}/local/reference.md", parts: [{ text: "reference\n" }] },
+      { path: "{{root}}/local/scripts/run.sh", parts: [{ text: "echo hi\n" }] },
+    ],
+    call: { id: "local" },
+    skills: [{ id: "local", name: "Local", path: "{{root}}/local/SKILL.md", content: "# Local\n\nLocal guidance" }],
+  },
+  {
+    name: "returns a missing skill error",
+    call: { id: "missing" },
+  },
+  {
+    name: "denies a skill before loading its content",
+    call: { id: "guide" },
+    skills: [exportedGuideSkill],
+    permission: { deniedResources: ["guide"] },
+  },
+]
+
+function skillLayerFor(root: string, permission: Layer.Layer<Permission.Service>) {
+  return Layer.mergeAll(
+    AppNodeBuilder.build(LayerNode.group([Tool.node, skillToolNode, Skill.node]), [
+      Environment.node.replace(hostEnvironmentLayer),
+      Permission.node.replace(permission),
+      Config.node.replace(corpusConfig),
+      Location.node.replace(
+        Layer.succeed(Location.Service, Location.Service.of(location({ directory: AbsolutePath.make(root) }))),
+      ),
+      Global.node.replace(Global.layerWith({ data: Global.Path.data })),
+    ]),
+    corpusConfig,
+  ).pipe(Layer.provide(Layer.succeed(Flag.Overrides, undefined)))
+}
+
+async function exportSkill() {
+  const base = await fs.mkdtemp(path.join(os.tmpdir(), "opencode-tool-corpus-"))
+  const exported: Array<Record<string, unknown>> = []
+  try {
+    for (const [index, spec] of skillSpecs().entries()) {
+      const root = path.join(base, `${index}-${spec.name.replace(/[^a-zA-Z0-9]+/g, "-").slice(0, 40)}`)
+      const outside = `${root}-outside`
+      await fs.mkdir(root, { recursive: true })
+      await fs.mkdir(outside, { recursive: true })
+      await materializeFixtures(root, outside, spec.fixtures ?? [])
+      const assertions: Assertion[] = []
+      const denied = spec.permission?.deniedResources ?? []
+      const allowed = (input: { resources: readonly string[] }) =>
+        !input.resources.some((resource) => denied.includes(resource))
+      const permission = permissionLayer({
+        assert: (input) =>
+          Effect.sync(() => {
+            assertions.push({
+              action: input.action,
+              resources: [...input.resources],
+              ...(input.save === undefined ? {} : { save: [...input.save] }),
+            })
+          }).pipe(
+            Effect.andThen(
+              allowed(input)
+                ? Effect.void
+                : Effect.fail(
+                    new Permission.BlockedError({
+                      rules: [],
+                      permission: input.action,
+                      resources: input.resources,
+                    }),
+                  ),
+            ),
+          ),
+        allows: (input) => Effect.succeed(allowed(input)),
+      })
+      const program = Effect.gen(function* () {
+        const registry = yield* Tool.Service
+        if (spec.skills !== undefined) {
+          const skills = yield* Skill.Service
+          for (const fixture of spec.skills)
+            yield* skills.transform((editor) =>
+              editor.add(
+                Skill.Info.make({
+                  id: Skill.ID.make(fixture.id),
+                  name: Skill.Name.make(fixture.name),
+                  description: fixture.name,
+                  path: AbsolutePath.make(fixture.path.replaceAll("{{root}}", root)),
+                  content: fixture.content,
+                }),
+                fixture.files,
+              ),
+            )
+        }
+        return yield* (yield* registry.snapshot()).execute({
+          sessionID: Session.ID.make("ses_skill_tool_test"),
+          ...toolIdentity,
+          call: { type: "tool-call", id: `call-${index}`, name: "skill", input: spec.call },
+        }).pipe(
+          Effect.map((result) => ({ status: "completed" as const, ...result })),
+          Effect.catchTag("Tool.Error", (error) =>
+            Effect.succeed({ status: "error" as const, error: toSessionError(error) }),
+          ),
+        )
+      }).pipe(Effect.scoped, Effect.provide(skillLayerFor(root, permission)))
+      const exit = await Effect.runPromiseExit(program)
+      if (Exit.isFailure(exit)) {
+        console.error(`corpus: skill ${spec.name} failed`)
+        console.error(exit.cause)
+        process.exit(1)
+      }
+      const execution = exit.value
+      const tree = await fileTree(root, outside)
+      const expected: Record<string, unknown> = { status: execution.status }
+      if (execution.status === "completed") {
+        expected.output = execution.output
+        expected.content = execution.content
+        expected.metadata = execution.metadata
+      } else expected.error = execution.error?.message
+      expected.assertions = assertions
+      expected.tree = tree
+      const normalized = JSON.stringify({ ...spec, fixtures: spec.fixtures ?? [], expected })
+        .replaceAll(outside, "{{outside}}")
+        .replaceAll(root, "{{root}}")
+      exported.push(JSON.parse(normalized))
+      await fs.rm(root, { recursive: true, force: true })
+      await fs.rm(outside, { recursive: true, force: true })
+    }
+  } finally {
+    await fs.rm(base, { recursive: true, force: true })
+  }
+  console.log(`__TOOL_CORPUS__${JSON.stringify(exported)}`)
+}
+
 const writeToolNode = makeLocationNode({
   name: "corpus/write-tool-plugin",
   layer: Layer.effectDiscard(registerToolPlugin(WriteTool.Plugin)),
@@ -2843,6 +3004,7 @@ else if (area === "patch_parse") exportPatchParse()
 else if (area === "patch") await exportToolCases("patch", patchSpecs())
 else if (area === "glob") await exportSearchCases("glob", globSpecs())
 else if (area === "grep") await exportSearchCases("grep", grepSpecs())
+else if (area === "skill") await exportSkill()
 else {
   console.error(`corpus: unknown area ${area ?? ""}`)
   process.exit(1)

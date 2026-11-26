@@ -5,7 +5,7 @@ use serde_json::Value;
 
 use crate::definition::{ToolOptions, ToolSpec};
 use crate::registry::{ToolRegistration, ToolRegistry};
-use crate::tools::{edit, glob, grep, patch, read, write};
+use crate::tools::{edit, glob, grep, patch, read, skill, write};
 use crate::{ToolContext, ToolError, ToolOutput, ToolRuntime};
 
 #[derive(Clone, Default)]
@@ -17,6 +17,7 @@ pub struct BuiltinDeps {
     pub patch: Option<patch::PatchDeps>,
     pub glob: Option<glob::GlobDeps>,
     pub grep: Option<grep::GrepDeps>,
+    pub skill: Option<skill::SkillDeps>,
 }
 
 pub async fn activate(registry: &ToolRegistry, deps: &BuiltinDeps) -> opencode_location::state::Registration {
@@ -27,21 +28,30 @@ pub async fn activate(registry: &ToolRegistry, deps: &BuiltinDeps) -> opencode_l
     let patch_deps = deps.patch.clone();
     let glob_deps = deps.glob.clone();
     let grep_deps = deps.grep.clone();
+    let skill_deps = deps.skill.clone();
     registry
         .transform(move |editor| {
             for entry in entries {
                 let definition = &entry.definition;
-                let runtime: Arc<dyn ToolRuntime> =
-                    match (definition.name.as_str(), &reader, &writer, &edit_deps, &patch_deps, &glob_deps, &grep_deps)
-                    {
-                        ("read", Some(deps), _, _, _, _, _) => Arc::new(read::ReadRuntime::new(deps.clone())),
-                        ("write", _, Some(deps), _, _, _, _) => Arc::new(write::WriteRuntime::new(deps.clone())),
-                        ("edit", _, _, Some(deps), _, _, _) => Arc::new(edit::EditRuntime::new(deps.clone())),
-                        ("patch", _, _, _, Some(deps), _, _) => Arc::new(patch::PatchRuntime::new(deps.clone())),
-                        ("glob", _, _, _, _, Some(deps), _) => Arc::new(glob::GlobRuntime::new(deps.clone())),
-                        ("grep", _, _, _, _, _, Some(deps)) => Arc::new(grep::GrepRuntime::new(deps.clone())),
-                        _ => Arc::new(StubRuntime { name: definition.name.clone() }),
-                    };
+                let runtime: Arc<dyn ToolRuntime> = match (
+                    definition.name.as_str(),
+                    &reader,
+                    &writer,
+                    &edit_deps,
+                    &patch_deps,
+                    &glob_deps,
+                    &grep_deps,
+                    &skill_deps,
+                ) {
+                    ("read", Some(deps), _, _, _, _, _, _) => Arc::new(read::ReadRuntime::new(deps.clone())),
+                    ("write", _, Some(deps), _, _, _, _, _) => Arc::new(write::WriteRuntime::new(deps.clone())),
+                    ("edit", _, _, Some(deps), _, _, _, _) => Arc::new(edit::EditRuntime::new(deps.clone())),
+                    ("patch", _, _, _, Some(deps), _, _, _) => Arc::new(patch::PatchRuntime::new(deps.clone())),
+                    ("glob", _, _, _, _, Some(deps), _, _) => Arc::new(glob::GlobRuntime::new(deps.clone())),
+                    ("grep", _, _, _, _, _, Some(deps), _) => Arc::new(grep::GrepRuntime::new(deps.clone())),
+                    ("skill", _, _, _, _, _, _, Some(deps)) => Arc::new(skill::SkillRuntime::new(deps.clone())),
+                    _ => Arc::new(StubRuntime { name: definition.name.clone() }),
+                };
                 editor.add(ToolRegistration {
                     spec: ToolSpec {
                         name: definition.name.clone(),

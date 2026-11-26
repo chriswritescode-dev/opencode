@@ -7,6 +7,7 @@ mod patch_parse;
 mod read;
 mod registry;
 mod search;
+mod skill;
 mod snapshot;
 mod tools;
 mod validation;

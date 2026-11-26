@@ -5,4 +5,5 @@ pub mod patch;
 pub mod read;
 pub mod read_filesystem;
 pub mod search;
+pub mod skill;
 pub mod write;

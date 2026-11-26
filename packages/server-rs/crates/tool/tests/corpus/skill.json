@@ -1,0 +1,178 @@
+[
+  {
+    "name": "loads a built-in skill",
+    "call": {
+      "id": "guide"
+    },
+    "skills": [
+      {
+        "id": "guide",
+        "name": "Guide",
+        "path": "skill://guide/SKILL.md",
+        "content": "# Guide\n\nFollow the reference.",
+        "files": {
+          "SKILL.md": "# Guide",
+          "references/style.md": "Use concise sentences."
+        }
+      }
+    ],
+    "fixtures": [],
+    "expected": {
+      "status": "completed",
+      "output": {
+        "directory": "skill://guide",
+        "content": "<skill_content name=\"Guide\">\n# Skill: Guide\n\n# Guide\n\nFollow the reference.\n\nBase directory for this skill: skill://guide\nRelative paths in this skill (e.g., scripts/, reference/) are relative to this base directory.\nNote: file list is sampled.\n\n<skill_files>\n<file>skill://guide/references/style.md</file>\n</skill_files>\n</skill_content>"
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "<skill_content name=\"Guide\">\n# Skill: Guide\n\n# Guide\n\nFollow the reference.\n\nBase directory for this skill: skill://guide\nRelative paths in this skill (e.g., scripts/, reference/) are relative to this base directory.\nNote: file list is sampled.\n\n<skill_files>\n<file>skill://guide/references/style.md</file>\n</skill_files>\n</skill_content>"
+        }
+      ],
+      "metadata": {
+        "name": "Guide",
+        "directory": "skill://guide"
+      },
+      "assertions": [
+        {
+          "action": "skill",
+          "resources": [
+            "guide"
+          ],
+          "save": [
+            "guide"
+          ]
+        }
+      ],
+      "tree": {}
+    }
+  },
+  {
+    "name": "loads a local skill with extra files",
+    "fixtures": [
+      {
+        "path": "{{root}}/local/SKILL.md",
+        "parts": [
+          {
+            "text": "# Local\n"
+          }
+        ]
+      },
+      {
+        "path": "{{root}}/local/reference.md",
+        "parts": [
+          {
+            "text": "reference\n"
+          }
+        ]
+      },
+      {
+        "path": "{{root}}/local/scripts/run.sh",
+        "parts": [
+          {
+            "text": "echo hi\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "id": "local"
+    },
+    "skills": [
+      {
+        "id": "local",
+        "name": "Local",
+        "path": "{{root}}/local/SKILL.md",
+        "content": "# Local\n\nLocal guidance"
+      }
+    ],
+    "expected": {
+      "status": "completed",
+      "output": {
+        "directory": "{{root}}/local",
+        "content": "<skill_content name=\"Local\">\n# Skill: Local\n\n# Local\n\nLocal guidance\n\nBase directory for this skill: {{root}}/local\nRelative paths in this skill (e.g., scripts/, reference/) are relative to this base directory.\nNote: file list is sampled.\n\n<skill_files>\n<file>{{root}}/local/reference.md</file>\n<file>{{root}}/local/scripts/run.sh</file>\n</skill_files>\n</skill_content>"
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "<skill_content name=\"Local\">\n# Skill: Local\n\n# Local\n\nLocal guidance\n\nBase directory for this skill: {{root}}/local\nRelative paths in this skill (e.g., scripts/, reference/) are relative to this base directory.\nNote: file list is sampled.\n\n<skill_files>\n<file>{{root}}/local/reference.md</file>\n<file>{{root}}/local/scripts/run.sh</file>\n</skill_files>\n</skill_content>"
+        }
+      ],
+      "metadata": {
+        "name": "Local",
+        "directory": "{{root}}/local"
+      },
+      "assertions": [
+        {
+          "action": "skill",
+          "resources": [
+            "local"
+          ],
+          "save": [
+            "local"
+          ]
+        }
+      ],
+      "tree": {
+        "{{root}}/local": null,
+        "{{root}}/local/reference.md": "cmVmZXJlbmNlCg==",
+        "{{root}}/local/SKILL.md": "IyBMb2NhbAo=",
+        "{{root}}/local/scripts": null,
+        "{{root}}/local/scripts/run.sh": "ZWNobyBoaQo="
+      }
+    }
+  },
+  {
+    "name": "returns a missing skill error",
+    "call": {
+      "id": "missing"
+    },
+    "fixtures": [],
+    "expected": {
+      "status": "error",
+      "error": "Unable to load skill missing",
+      "assertions": [],
+      "tree": {}
+    }
+  },
+  {
+    "name": "denies a skill before loading its content",
+    "call": {
+      "id": "guide"
+    },
+    "skills": [
+      {
+        "id": "guide",
+        "name": "Guide",
+        "path": "skill://guide/SKILL.md",
+        "content": "# Guide\n\nFollow the reference.",
+        "files": {
+          "SKILL.md": "# Guide",
+          "references/style.md": "Use concise sentences."
+        }
+      }
+    ],
+    "permission": {
+      "deniedResources": [
+        "guide"
+      ]
+    },
+    "fixtures": [],
+    "expected": {
+      "status": "error",
+      "error": "Permission denied: skill",
+      "assertions": [
+        {
+          "action": "skill",
+          "resources": [
+            "guide"
+          ],
+          "save": [
+            "guide"
+          ]
+        }
+      ],
+      "tree": {}
+    }
+  }
+]
