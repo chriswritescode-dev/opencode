@@ -24,7 +24,7 @@
           "text": ""
         },
         {
-          "path": "src/app.tsx",
+          "path": "src/app-view.tsx",
           "text": ""
         },
         {
@@ -40,7 +40,7 @@
           "text": ""
         },
         {
-          "path": "src/.hidden.ts",
+          "path": "src/.hidden-file.ts",
           "text": ""
         },
         {
@@ -116,10 +116,6 @@
         "type": "file",
         "entries": [
           {
-            "path": "src/app.tsx",
-            "type": "file"
-          },
-          {
             "path": "src/index.ts",
             "type": "file"
           },
@@ -128,11 +124,15 @@
             "type": "file"
           },
           {
-            "path": "src/.hidden.ts",
+            "path": "src/app-view.tsx",
             "type": "file"
           },
           {
             "path": "src/nested/file.ts",
+            "type": "file"
+          },
+          {
+            "path": "src/.hidden-file.ts",
             "type": "file"
           },
           {
@@ -158,10 +158,6 @@
         "query": "ts",
         "entries": [
           {
-            "path": "src/app.tsx",
-            "type": "file"
-          },
-          {
             "path": "src/index.ts",
             "type": "file"
           },
@@ -170,7 +166,7 @@
             "type": "file"
           },
           {
-            "path": "src/.hidden.ts",
+            "path": "src/app-view.tsx",
             "type": "file"
           },
           {
@@ -179,6 +175,10 @@
           },
           {
             "path": "src/nested/file.ts",
+            "type": "file"
+          },
+          {
+            "path": "src/.hidden-file.ts",
             "type": "file"
           },
           {
@@ -208,15 +208,15 @@
         "limit": 3,
         "entries": [
           {
-            "path": "src/app.tsx",
-            "type": "file"
-          },
-          {
             "path": "src/index.ts",
             "type": "file"
           },
           {
-            "path": "src/.hidden.ts",
+            "path": "src/my file.ts",
+            "type": "file"
+          },
+          {
+            "path": "src/app-view.tsx",
             "type": "file"
           }
         ]
@@ -226,7 +226,7 @@
         "limit": 1,
         "entries": [
           {
-            "path": "src/app.tsx",
+            "path": "src/index.ts",
             "type": "file"
           }
         ]
@@ -329,7 +329,7 @@
         "type": "file",
         "entries": [
           {
-            "path": "src/.hidden.ts",
+            "path": "src/.hidden-file.ts",
             "type": "file"
           }
         ]
