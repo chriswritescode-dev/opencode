@@ -664,6 +664,14 @@ async fn waits_to_show_browser_success_until_the_sign_in_callback_succeeds() {
     let authorization = Url::parse(&attempt.url).expect("the ChatGPT authorization url");
     let mut callback =
         Url::parse(&param(&authorization, "redirect_uri").expect("the ChatGPT redirect")).expect("a redirect url");
+
+    let mut stray = callback.clone();
+    set_param(&mut stray, "error", "access_denied");
+    let response =
+        opencode_config::http::client().get(stray.as_str()).send().await.expect("fetch the stray ChatGPT callback");
+    assert_eq!(response.status(), 400);
+    assert!(response.text().await.expect("the stray ChatGPT callback page").contains("Invalid OAuth state"));
+
     set_param(&mut callback, "code", "test-code");
     set_param(&mut callback, "state", &param(&authorization, "state").expect("the ChatGPT state"));
 

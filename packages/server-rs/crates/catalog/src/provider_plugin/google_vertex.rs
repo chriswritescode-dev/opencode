@@ -100,7 +100,7 @@ pub async fn register(services: &Services, context: &super::PluginContext, built
                                 Value::String(replace_vertex_vars(base_url, project.as_deref(), &location)),
                             );
                         }
-                        provider.settings = Some(provider::decode_object(merged));
+                        provider.settings = provider::decode_object(merged);
                     });
                 }
                 Ok(())
@@ -138,7 +138,7 @@ pub async fn register(services: &Services, context: &super::PluginContext, built
                         editor.update(&provider_id, &model_id, |model| {
                             let mut merged = model.settings.as_ref().map(provider::json_object).unwrap_or_default();
                             merged.insert("baseURL".to_owned(), Value::String(base_url.clone()));
-                            model.settings = Some(provider::decode_object(merged));
+                            model.settings = provider::decode_object(merged);
                         });
                     }
                 }

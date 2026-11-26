@@ -40,7 +40,7 @@ fn pairs(value: &Value) -> Vec<(String, String)> {
 #[test]
 fn oauth_corpus_matches_the_pinned_typescript() {
     let cases = area("oauth");
-    assert_eq!(cases.len(), 12, "the corpus holds every pinned oauth case");
+    assert_eq!(cases.len(), 13, "the corpus holds every pinned oauth case");
 
     for (name, case) in &cases {
         match case["call"].as_str().expect("a call name") {

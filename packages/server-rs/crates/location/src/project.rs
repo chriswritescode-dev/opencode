@@ -1,12 +1,12 @@
-pub mod git;
 pub mod icon;
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::path::{Component, Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
 use opencode_storage::StorageError;
 use opencode_storage::project::{self, ProjectMetadataUpdate, ProjectRow};
+use opencode_storage::worktree as storage_worktree;
 use ring::digest::{SHA1_FOR_LEGACY_USE_ONLY, digest};
 use rusqlite::TransactionBehavior;
 use serde_json::Value;
@@ -162,25 +162,29 @@ struct GitCacheEntry {
 
 pub struct ProjectService {
     database: Arc<opencode_storage::Database>,
+    git: Arc<opencode_git::Git>,
     sender: broadcast::Sender<LocationEvent>,
     cache: Mutex<HashMap<String, GitCacheEntry>>,
-    announced: Mutex<HashSet<(String, String)>>,
     activated: Mutex<HashMap<String, i64>>,
     now: Arc<dyn Fn() -> i64 + Send + Sync>,
 }
 
 impl ProjectService {
-    pub fn new(database: Arc<opencode_storage::Database>) -> Self {
-        Self::with_now(database, Arc::new(opencode_storage::id::now_ms))
+    pub fn new(database: Arc<opencode_storage::Database>, git: Arc<opencode_git::Git>) -> Self {
+        Self::with_now(database, git, Arc::new(opencode_storage::id::now_ms))
     }
 
-    pub fn with_now(database: Arc<opencode_storage::Database>, now: Arc<dyn Fn() -> i64 + Send + Sync>) -> Self {
+    pub fn with_now(
+        database: Arc<opencode_storage::Database>,
+        git: Arc<opencode_git::Git>,
+        now: Arc<dyn Fn() -> i64 + Send + Sync>,
+    ) -> Self {
         let (sender, _) = broadcast::channel(256);
         ProjectService {
             database,
+            git,
             sender,
             cache: Mutex::new(HashMap::new()),
-            announced: Mutex::new(HashSet::new()),
             activated: Mutex::new(HashMap::new()),
             now,
         }
@@ -292,8 +296,26 @@ impl ProjectService {
             if matches!(exists(environment.files(), &project.worktree).await, Ok(true) | Err(_)) {
                 continue;
             }
-            let row =
-                self.database.read(|connection| project::set_archived(connection, &project.id, Some((self.now)())))?;
+            let known = self.database.read(|connection| storage_worktree::list(connection, &project.id))?;
+            let mut surviving = Vec::new();
+            for row in known.into_iter().filter(|row| row.directory != project.worktree) {
+                if matches!(exists(environment.files(), &row.directory).await, Ok(true) | Err(_)) {
+                    surviving.push(row);
+                }
+            }
+            // Linked worktrees carry a strategy; only another main checkout can become the canonical directory.
+            let main = surviving.iter().find(|row| row.strategy.is_none());
+            if main.is_none() && !surviving.is_empty() {
+                continue;
+            }
+            let row = match main {
+                Some(main) => self
+                    .database
+                    .read(|connection| project::sweep_canonical(connection, &project.id, &main.directory, cutoff))?,
+                None => self
+                    .database
+                    .read(|connection| project::sweep_archive(connection, &project.id, (self.now)(), cutoff))?,
+            };
             if let Some(row) = row {
                 self.publish(LocationEvent::ProjectUpdated(Project::from_row(row)?));
             }
@@ -302,8 +324,8 @@ impl ProjectService {
     }
 
     async fn resolve_git(&self, environment: &dyn Environment, dot_git: &str) -> Option<Resolved> {
-        let Some(fingerprint) = git::fingerprint(environment.files(), dot_git).await else {
-            return discover_git(environment, dot_git).await.resolved;
+        let Some(fingerprint) = self.git.fingerprint(dot_git).await else {
+            return discover_git(environment, &self.git, dot_git).await.resolved;
         };
         let key = format!("{dot_git}\0{fingerprint}");
         let cached = {
@@ -316,7 +338,7 @@ impl ProjectService {
             }
             return entry.resolved;
         }
-        let entry = discover_git(environment, dot_git).await;
+        let entry = discover_git(environment, &self.git, dot_git).await;
         if entry.cacheable {
             let mut cache = self.cache.lock().unwrap_or_else(|error| error.into_inner());
             if cache.len() >= GIT_CACHE_CAPACITY
@@ -353,10 +375,7 @@ impl ProjectService {
                 project::set_canonical(transaction, &project.id, &project.canonical)?;
                 changed = true;
             }
-            if !changed {
-                return Ok(None);
-            }
-            project::get(transaction, &project.id)
+            if changed { project::get(transaction, &project.id) } else { Ok(None) }
         })?;
         if let Some(row) = row {
             self.publish(LocationEvent::ProjectUpdated(Project::from_row(row)?));
@@ -366,27 +385,36 @@ impl ProjectService {
             Ok(None) => {}
             Err(error) => log::warn!("project icon refresh failed for {}: {error}", project.id),
         }
-        if project.vcs.is_some() {
-            let mut directories = vec![project.canonical.as_str()];
-            if project.directory != project.canonical {
-                directories.push(project.directory.as_str());
+        if project.vcs.is_none() {
+            return Ok(());
+        }
+        let strategy = matches!(project.vcs, Some(Vcs::Git { .. })).then_some("git");
+        let mut directories = vec![(project.canonical.as_str(), None)];
+        if project.directory != project.canonical {
+            directories.push((project.directory.as_str(), strategy));
+        }
+        for (directory, strategy) in directories {
+            let stored = self.database.read(|connection| storage_worktree::find(connection, &project.id, directory))?;
+            if stored.is_some() {
+                continue;
             }
-            for directory in directories {
-                let key = (project.id.clone(), directory.to_string());
-                {
-                    let mut announced = self.announced.lock().unwrap_or_else(|error| error.into_inner());
-                    if !announced.insert(key) {
-                        continue;
-                    }
+            let adopted = self.adopted(environment, &project.id, directory).await?;
+            let inserted = self.database.transaction(TransactionBehavior::Immediate, |transaction| {
+                if storage_worktree::find(transaction, &project.id, directory)?.is_some() {
+                    return Ok::<bool, StorageError>(false);
                 }
-                let adopted = self.adopted(environment, &project.id, directory).await?;
-                self.publish(LocationEvent::WorktreeResolved {
-                    project_id: project.id.clone(),
-                    directory: directory.to_string(),
-                    previous: project.previous.clone().unwrap_or_else(|| GLOBAL_ID.to_string()),
-                    adopted,
-                });
+                storage_worktree::insert_ignore(transaction, &project.id, directory, strategy)?;
+                Ok::<bool, StorageError>(true)
+            })?;
+            if !inserted {
+                continue;
             }
+            self.publish(LocationEvent::WorktreeResolved {
+                project_id: project.id.clone(),
+                directory: directory.to_string(),
+                previous: project.previous.clone().unwrap_or_else(|| GLOBAL_ID.to_string()),
+                adopted,
+            });
         }
         Ok(())
     }
@@ -501,17 +529,16 @@ async fn find_marker(files: &dyn Files, start: &Path, stop: Option<&Path>) -> Op
     None
 }
 
-async fn discover_git(environment: &dyn Environment, dot_git: &str) -> GitCacheEntry {
+async fn discover_git(environment: &dyn Environment, git: &opencode_git::Git, dot_git: &str) -> GitCacheEntry {
     let Some(parent) = Path::new(dot_git).parent() else {
         return GitCacheEntry { resolved: None, cacheable: false };
     };
-    let repository = match git::discover(environment.spawner(), &parent.to_string_lossy()).await {
-        Ok(Some(repository)) => repository,
-        Ok(None) | Err(_) => return GitCacheEntry { resolved: None, cacheable: false },
+    let Some(repository) = git.discover(&parent.to_string_lossy()).await else {
+        return GitCacheEntry { resolved: None, cacheable: false };
     };
     let mut cacheable = true;
     let previous = cached_id(environment.files(), &repository.common_directory).await;
-    let remote = match git::remote_get(environment.spawner(), &repository).await {
+    let remote = match git.remote_get(&repository).await {
         Ok(remote) => remote.and_then(|remote| remote_id(&remote)),
         Err(_) => {
             cacheable = false;
@@ -523,7 +550,7 @@ async fn discover_git(environment: &dyn Environment, dot_git: &str) -> GitCacheE
     } else if let Some(previous) = &previous {
         previous.clone()
     } else {
-        match git::root_commits(environment.spawner(), &repository).await {
+        match git.root_commits(&repository).await {
             Ok(commits) => commits.first().cloned().unwrap_or_else(|| GLOBAL_ID.to_string()),
             Err(_) => {
                 cacheable = false;
@@ -534,10 +561,10 @@ async fn discover_git(environment: &dyn Environment, dot_git: &str) -> GitCacheE
     let canonical = if repository.git_directory == repository.common_directory {
         repository.worktree.clone()
     } else {
-        match git::worktree_list(environment.spawner(), &repository).await {
+        match git.worktree_list(&repository).await {
             Ok(entries) => entries
                 .into_iter()
-                .find(|entry| entry.kind == git::WorktreeKind::Main)
+                .find(|entry| entry.kind == opencode_git::WorktreeKind::Main)
                 .map_or_else(|| repository.worktree.clone(), |entry| entry.directory),
             Err(_) => {
                 cacheable = false;

@@ -21,12 +21,17 @@ export type WsStep = {
 
 export type WaitEventStep = { type: string; match?: Record<string, unknown> }
 
+export type GitStep = { args: string[]; cwd?: string }
+
 export type Step =
   | { http: HttpStep }
   | { ws: WsStep }
   | { waitEvent: WaitEventStep; timeout?: number }
   | { files: Record<string, string> }
   | { settle: true }
+  | { git: GitStep }
+
+export type SetupStep = { files: Record<string, string> } | { git: GitStep }
 
 export type Reply =
   | { text: string }
@@ -37,6 +42,7 @@ export type ConsoleRoute = { status: number; body?: unknown; barrier?: true }
 
 export type Scenario = {
   files?: Record<string, string>
+  setup?: SetupStep[]
   config?: Record<string, unknown>
   env?: Record<string, string>
   models?: unknown

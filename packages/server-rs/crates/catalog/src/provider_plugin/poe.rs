@@ -1,5 +1,6 @@
 use std::io;
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use opencode_ai::HttpSender;
 use opencode_contract::generated::{
@@ -52,6 +53,8 @@ const INVALID_RESPONSE: &str = "Invalid Poe token response";
 const INVALID_EXPIRY: &str = "Invalid Poe API key expiry";
 
 const EXPIRED: &str = "Poe API key expired. Log in with Poe again.";
+
+const TOKEN_TIMEOUT: Duration = Duration::from_secs(10);
 
 struct PoeOAuth {
     integration_id: IntegrationID,
@@ -186,6 +189,9 @@ async fn handle(state: &str, responses: &CallbackResponses, request: Request) ->
         return Some((404, "", String::new()));
     }
     let params = parse_query(&request.query);
+    if param(&params, "state") != Some(state) {
+        return Some((400, "text/html", page::error("Invalid OAuth state", Some(page_options()))));
+    }
     if let Some(message) = callback_error(&params, state) {
         send(responses, Err(message.clone()));
         return Some((400, "text/html", page::error(&message, Some(page_options()))));
@@ -239,7 +245,7 @@ async fn exchange(
             ("code_verifier", verifier),
         ],
     );
-    match http::send(http, request, None).await {
+    match http::send(http, request, Some(TOKEN_TIMEOUT)).await {
         Ok(response) => parse_token(&response.body),
         Err(HttpError::Status(response)) => {
             Err(error(exchange_failure(response.status, &response.body, code, verifier)))

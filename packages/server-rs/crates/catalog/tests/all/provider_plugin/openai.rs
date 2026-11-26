@@ -587,6 +587,65 @@ async fn completes_the_headless_device_authorization() {
     assert_eq!(form_param(&fields, "code_verifier").as_deref(), Some("verifier"));
 }
 
+#[tokio::test(start_paused = true)]
+async fn waits_the_device_interval_plus_the_safety_margin_between_polls() {
+    let routes = Routes::new();
+    routes.route_json(
+        "POST",
+        USERCODE_URL,
+        json!({ "device_auth_id": "device", "user_code": "ABCD-EFGH", "interval": "5" }),
+    );
+    let polls = Arc::new(AtomicUsize::new(0));
+    routes.route_with("POST", DEVICE_TOKEN_URL, {
+        let polls = polls.clone();
+        move |_| {
+            if polls.fetch_add(1, Ordering::SeqCst) == 0 {
+                return Reply::status(403);
+            }
+            Reply::json(json!({ "authorization_code": "code", "code_verifier": "verifier" }))
+        }
+    });
+    routes.route_json(
+        "POST",
+        TOKEN_URL,
+        json!({
+            "id_token": id_token("acct_device"),
+            "access_token": "access",
+            "refresh_token": "refresh",
+            "expires_in": 3600,
+        }),
+    );
+    let mut harness = start(Input::new(Vec::new())).await;
+    let _context = add_plugin(&mut harness, routes.clone()).await;
+
+    let attempt = connect(&harness, HEADLESS).await;
+    for _ in 0..1_000 {
+        if polls.load(Ordering::SeqCst) > 0 {
+            break;
+        }
+        tokio::task::yield_now().await;
+    }
+    assert_eq!(polls.load(Ordering::SeqCst), 1);
+    for _ in 0..1_000 {
+        tokio::task::yield_now().await;
+    }
+
+    let start = tokio::time::Instant::now();
+    while polls.load(Ordering::SeqCst) < 2 && start.elapsed() < Duration::from_secs(12) {
+        tokio::time::advance(Duration::from_millis(100)).await;
+        tokio::task::yield_now().await;
+    }
+    let waited = start.elapsed();
+    assert_eq!(polls.load(Ordering::SeqCst), 2);
+    assert!(
+        waited >= Duration::from_millis(7_900) && waited <= Duration::from_millis(8_200),
+        "the second device poll waited {waited:?}"
+    );
+
+    let status = wait_for_status_advancing(&harness, &attempt).await;
+    assert!(matches!(status, AttemptStatus::Complete { .. }), "got {status:?}");
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn exchanges_a_browser_code_for_a_chatgpt_credential() {
     let routes = Routes::new();
@@ -616,6 +675,13 @@ async fn exchanges_a_browser_code_for_a_chatgpt_credential() {
     assert_eq!(redirect_url.host_str(), Some("localhost"));
     assert_eq!(redirect_url.path(), "/auth/callback");
     assert!(redirect_url.port().is_some_and(|port| port != 0));
+
+    let mut stray = redirect_url.clone();
+    set_param(&mut stray, "error", "access_denied");
+    let response =
+        opencode_config::http::client().get(stray.as_str()).send().await.expect("fetch the stray OpenAI callback");
+    assert_eq!(response.status(), 400);
+    assert!(response.text().await.expect("the stray OpenAI callback page").contains("Invalid OAuth state"));
 
     let mut callback = redirect_url.clone();
     set_param(&mut callback, "state", &param(&authorize, "state").expect("the OpenAI state"));

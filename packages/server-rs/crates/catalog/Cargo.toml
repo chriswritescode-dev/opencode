@@ -48,3 +48,6 @@ tokio = { workspace = true, features = ["test-util"] }
 [[test]]
 name = "all"
 path = "tests/all/main.rs"
+
+[target.'cfg(unix)'.dependencies]
+rustix.workspace = true

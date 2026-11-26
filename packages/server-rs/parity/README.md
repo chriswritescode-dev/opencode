@@ -12,29 +12,50 @@ Runs a scenario against the TypeScript reference server and a candidate server, 
 - `--deviations <dir>` selects the deviation ledger and defaults to `packages/server-rs/parity/deviations`; tests use it to supply a temporary ledger.
 - `--only <parts>` restricts the comparison to a comma list drawn from `steps,events,database,files,logs,model` and defaults to all six; see [Comparison modes](#comparison-modes).
 - `--tables <names>` is a comma list of table names that restricts the database comparison per database file; it requires `database` in `--only`.
+- `--allow-pending` loads deviations whose `Accepted:` line starts with `pending` and matches them like accepted ones, so a candidate can be checked before the owner accepts the deviation; see [Deviations](#deviations).
 - Remaining positional arguments are scenario files. With none, every `parity/scenarios/*.scenario.ts` file runs in sorted order. A scenario name is its path relative to `parity/scenarios` without `.scenario.ts`, falling back to the basename for files outside that directory.
 - Each run writes `parity/out/<scenario>/reference.json`, `candidate.json` and `differences.json`, and, once at least one scenario has been captured, `parity/out/coverage.md` and `parity/out/coverage.json`. Each repetition overwrites the previous files.
 - At startup the harness reads `packages/server-rs/upstream-pin`. When that commit exists in the clone and the TypeScript reference differs from it under the pinned source directories, a warning line names the number of changed files.
 
+## Scenarios
+
+`parity/scenarios` currently holds:
+
+- `agent-model-list`: `GET /api/agent` and `GET /api/model`.
+- `config-routes`: `GET /api/config`, `GET /api/config/shell`, `PATCH /api/experimental/config`, then a re-read.
+- `debug-routes`: `POST /api/debug/heap-dump`.
+- `file-read`: `GET /api/fs/read` for an existing and a missing file, and `GET /api/fs/list`.
+- `info-auth`: `GET /api/info` with basic, query and no credentials.
+- `location`: a location reload and a subdirectory Location load, each waiting for `plugin.updated`.
+- `location-routes`: the location, debug-location list, evict and reload routes, and directory-scoped loads including a missing directory.
+- `project-routes`: project list and update, and archived-query validation.
+- `prompt-text`: a text prompt through the Anthropic route.
+- `prompt-text-only`: a text prompt through the Anthropic route with every tool denied, so the model request has an empty tool list.
+- `prompt-tool`: a scripted `read` tool call.
+- `session-create-list`: session create with and without a title, the `session.created` events, list and get.
+
 ## Steps
 
-Each scenario runs its `steps` in order. `http` and `ws` steps add an entry to `steps`; `waitEvent`, `files` and `settle` steps do not.
+Each scenario runs its `steps` in order. `http` and `ws` steps add an entry to `steps`; `waitEvent`, `files`, `settle` and `git` steps do not.
 
 - `http`: `method` and `path` are required. `query` values are strings or arrays, and array values repeat the key. `headers` are sent as written and `body` is JSON. `auth` is `basic` (default), `query` or `none`. `location` defaults to `true` and sends `x-opencode-directory: <work>`. `as` saves the parsed response body for later placeholders.
 - `waitEvent`: waits for an event of `type`. `match` is an optional deep-partial match against the event's `data` after templating: every object key must match and arrays compare as a prefix. `timeout` is in milliseconds and defaults to `30000`. The next wait starts after the previously matched event.
 - `files`: writes a `{ path: contents }` map below `work` mid-scenario, unlike the scenario-level `files` written before the server starts.
 - `settle`: waits until the event stream has been quiet for one second, so events published asynchronously by earlier steps are captured before the next step. It adds no capture entry. When `events` is not compared there is no stream and it returns immediately.
+- `git`: runs `git` with `args` in `cwd`, both templated. `cwd` defaults to `work`, a relative value resolves below `work`, and an absolute value must resolve inside `work`; anything else fails the scenario. Each command runs with `HOME=<root>/home`, `GIT_CONFIG_NOSYSTEM=1`, `GIT_ALLOW_PROTOCOL=file`, `GIT_TERMINAL_PROMPT=0`, `TZ=UTC`, the fixed author and committer `Parity <parity@opencode.test>` and the fixed date `2026-01-01T00:00:00Z`, merged over the harness process environment. A non-zero exit is a scenario error and the run exits with code `2`.
 - `ws`: `path` is required, and the URL is the server base with the HTTP scheme replaced by `ws` (`wss` for `https`);
   `query` behaves as it does for `http`, with string or array values and arrays repeating the key. `auth` is `basic`
   (default), `query` or `none`, as for `http`. After the socket opens, each string in `send` is sent in order. Text
   frames are collected until `receive` frames have arrived or the socket closes, then the harness closes the socket
   with code 1000. `timeout` is in milliseconds and defaults to `10000`. `as` saves the capture for later placeholders.
   Templating (`{{work}}`, `{{root}}`, `{{endpoint}}`, `{{<as>.<path>}}`) applies to `path`, query values and `send`.
-- Templating: `{{work}}`, `{{root}}`, `{{endpoint}}` and `{{<as>.<dotted.path>}}` are replaced in paths, query values, header values and the string leaves of request bodies and `match` objects. `{{endpoint}}` is the scripted model endpoint's URL. An unresolved placeholder fails the scenario.
+- Templating: `{{work}}`, `{{root}}`, `{{endpoint}}` and `{{<as>.<dotted.path>}}` are replaced in paths, query values, header values, the string leaves of request bodies and `match` objects, and `git` args and `cwd`. `{{endpoint}}` is the scripted model endpoint's URL. An unresolved placeholder fails the scenario. Scenario-level `env` values are templated with `{{work}}` and `{{root}}` only, before either side starts.
 
 ## Adding a scenario
 
-A scenario is a `.scenario.ts` file under `parity/scenarios` that default-exports `defineScenario({ ... })`. Because the output directory and the deviation rules key off the file path, name it `<name>.scenario.ts`; the scenario name is that path below `parity/scenarios` without the suffix. `files`, `config`, `env`, `models`, `model` and `console` are optional and `steps` is required. Top-level `files` are written under `work` before the server starts, `config` deep-merges over the sandbox base config, and `env` adds string variables to both sides. `models` is any JSON value written verbatim to `root/models.json`, which the harness exposes as `OPENCODE_MODELS_PATH`; it defaults to `{}`.
+A scenario is a `.scenario.ts` file under `parity/scenarios` that default-exports `defineScenario({ ... })`. Because the output directory and the deviation rules key off the file path, name it `<name>.scenario.ts`; the scenario name is that path below `parity/scenarios` without the suffix. `files`, `setup`, `config`, `env`, `models`, `model` and `console` are optional and `steps` is required. Top-level `files` are written under `work` before the server starts, `config` deep-merges over the sandbox base config, and `env` adds string variables to both sides after templating `{{work}}` and `{{root}}`; an unresolved placeholder fails the scenario. `models` is any JSON value written verbatim to `root/models.json`, which the harness exposes as `OPENCODE_MODELS_PATH`; it defaults to `{}`.
+
+`setup` is an optional ordered list of `SetupStep` entries and accepts only `{ files: { path: contents } }` and `{ git: { args, cwd? } }`. Each entry runs once per side after the scenario-level `files` and before the server starts. `git` entries use the same environment, fixed author and committer identity and date, templating and `cwd` rules as the `git` step in [Steps](#steps); a non-zero exit or an unresolved placeholder fails the scenario with exit code `2`. Create a repository in `setup` when a scenario needs one: a Location whose repository already exists when the server warms it up settles deterministically, while a repository created after boot requires invalidating and re-booting the Location, whose first requests can race a partly loaded VCS service and return empty data.
 
 ```ts
 import { defineScenario } from "../lib/scenario"
@@ -62,6 +83,8 @@ Every step kind has a field reference in [Steps](#steps). In short:
 - `{ http: { ... } }` sends one request and saves its parsed body with `as`.
 - `{ waitEvent: { type, match? }, timeout? }` waits for a matching event without adding a captured step.
 - `{ files: { path: contents } }` writes files below `work` during the run without adding a captured step.
+- `{ git: { args, cwd? } }` runs one `git` command in `work` or `cwd` without adding a captured step.
+- `setup: SetupStep[]` runs `{ files }` and `{ git }` entries before the server starts, once per side.
 - `{ ws: { path, send?, receive, ... } }` opens a WebSocket, sends text frames and captures `receive` frames.
 
 Templating resolves `{{work}}`, `{{root}}` and `{{<as>.<dotted.path>}}` in paths, query values, header values and the string leaves of request bodies and `match` objects; an unresolved placeholder fails the scenario.
@@ -162,7 +185,7 @@ A capture is `{ steps, events, logs, model, database, files }`.
 - `logs`: for each session created in the run, the parsed frames of `GET /api/experimental/session/<id>/log`, keyed by the raw session id. A non-OK response is captured as `[{ status, body }]`.
 - `model`: `{ requests, console }`. `requests` holds one `{ method, path, body }` entry per outbound model request the scripted endpoint received, with the pathname only and the parsed JSON body. `console` holds the requests to the scenario's scripted Console routes, sorted by method then path, with their authorization and organization headers. Both sides are compared.
 - `database`: one entry per SQLite file under the sandbox, keyed by its relative path, captured after the server has exited. Each entry has `schema` (`type`, `name`, `tbl_name`, `sql`, sorted by type then name) and `tables` (one array of row objects per table). Blob values are `hex:<lowercase hex>`, and table rows are sorted by their serialised JSON after normalisation. The sort does not by itself erase insertion order: ids already numbered from `steps`, `events`, `logs` or `model` keep those numbers, while ids that first appear in a database row are numbered in row order before the sort.
-- `files`: every other file under the sandbox as relative path to contents, captured after the server has exited. Valid UTF-8 files store their text and other files store `sha256:<hex>`. Excluded are SQLite files and their `-wal`, `-shm` and `-journal` siblings (captured as `database` instead), `models.json` (written by the harness), and `home/.local/share/opencode/log/**` (log lines carry wall-clock times, run ids and process ids).
+- `files`: every other file under the sandbox as relative path to contents, captured after the server has exited. Valid UTF-8 files store their text and other files store `sha256:<hex>`. Excluded are SQLite files and their `-wal`, `-shm` and `-journal` siblings (captured as `database` instead), `models.json` (written by the harness), `home/.local/share/opencode/log/**` (log lines carry wall-clock times, run ids and process ids), and any path with a `.git` segment (git metadata records run-specific stat and reflog data, while the working tree files are still captured).
 
 Each run writes three files below `parity/out/<scenario>/`: `reference.json` and `candidate.json` hold the normalized captures, and `differences.json` holds the compared paths with their reference and candidate values.
 
@@ -178,7 +201,9 @@ Coverage is measured per reference-side scenario. An `http` step covers the oper
 
 By default every part of the capture is compared: `steps`, `events`, `database`, `files`, `logs` and `model`.
 
-`--only <parts>` restricts what is compared to a comma list of those parts; omitting it selects all six, and repeated names are collapsed. It never changes what a scenario runs, apart from `settle` steps, which have no stream to wait on: every other step, including `http`, `ws`, `files` and templating, still executes exactly as before. When `events` is not selected, neither side opens `/api/event` (not even the throwaway warm-up stream), the per-session log fetch is skipped so `logs` stays `{}`, and a scenario that contains a `waitEvent` step is refused before any sandbox is created with `FAIL <scenario>: scenario needs events` and exit 2; `settle` steps are allowed and become no-ops. `logs` requires `events` because the log keys come from sessions discovered on the event stream, and selecting `logs` without `events` fails with exit 2.
+`--only <parts>` restricts what is compared to a comma list of those parts; omitting it selects all six, and repeated names are collapsed. It never changes what a scenario runs, apart from `settle` steps, which have no captured stream to wait on: every other step, including `http`, `ws`, `files`, `git` and templating, still executes exactly as before. When `events` is not selected, the capture contains no events, the per-session log fetch is skipped so `logs` stays `{}`, and a scenario that contains a `waitEvent` step is refused before any sandbox is created with `FAIL <scenario>: scenario needs events` and exit 2; `settle` steps are allowed and become no-ops. `logs` requires `events` because the log keys come from sessions discovered on the event stream, and selecting `logs` without `events` fails with exit 2.
+
+Each side still opens one throwaway event stream before the first step in this mode and waits for it to go quiet, even though those frames are discarded, because a Location finishes loading its services asynchronously and the first step must not race that load. In this mode the throwaway stream is best effort: a side whose event stream cannot be opened, fails, or does not go quiet is not failed for that reason, since events are not compared.
 
 `--tables <names>` restricts the `database` comparison to those tables in every captured database file. It also filters the compared schema rows to those tables, including index rows, so an index whose `tbl_name` is not selected is dropped. A name that matches no captured table fails the scenario with exit 2 and `--tables <names> matched no table`, which catches a typo that would otherwise compare nothing.
 
@@ -190,6 +215,12 @@ Every difference from the TypeScript server must be covered by a file in the dev
 `packages/server-rs/parity/deviations`, overridable with `--deviations`). A file explains nothing until its
 `Accepted:` line has a non-empty owner and date; a value starting with `pending` in any case is not accepted, so the
 current ledger of `Accepted: pending owner` files explains nothing and only produces warnings.
+
+Without `--allow-pending`, a pending file explains nothing and only warns. With `--allow-pending`, pending files are
+loaded and matched like accepted ones, so they can check a candidate against deviations that wait for owner
+acceptance. A pending file with no `parity` block explains nothing, even with `--allow-pending`, and a scenario whose
+differences a pending deviation explains prints `PASS <scenario> (<n> explained by pending <ids>)`. CI never passes
+the flag, so a pending deviation still counts as a difference there.
 
 A scenario passes when every difference matches an accepted deviation. It prints
 `PASS <scenario> (<n> explained by <ids>)`; a difference that matches no accepted deviation still fails the scenario
@@ -213,5 +244,14 @@ messages.
 - `2`: a scenario, start, configuration or ledger error, such as a server that did not start, an invalid flag value, an
   unreadable cassette or a missing cassette interaction, unused model replies, an event stream that fails or ends while
   a `waitEvent` waits, a search index that does not settle within 30 s, or an accepted deviation file with no `parity`
-  block. Any unexpected harness error prints `parity: <message>` and exits `2`.
+  block. Any unexpected harness error prints `parity: <message>` and
+  exits `2`.
 - `128 + <signal>`: the harness received `SIGINT`, `SIGTERM` or `SIGHUP`.
+
+## Snapshot parity
+
+`bun run parity:snapshot [--keep] [variant...]` runs the snapshot corpus from the pinned `packages/core/script/snapshot-parity.ts` twice: once against the TypeScript snapshot engine and once against the Rust `opencode-vcs` engine through its `snapshot_driver` example. It builds the driver with cargo, writes an adapted copy of the corpus that swaps `snapshotLayer` for a driver-backed proxy to `packages/core/script/snapshot-parity-engine.ts` in the materialised `target/upstream-core/<pin>` tree, and runs both engines with the same Git config variant.
+
+The seven variants are `user`, `empty`, `split-index`, `skip-hash`, `autocrlf-and-no-untracked-cache`, `fsmonitor` and `template-hook`; with no arguments all of them run. Each variant keeps its two engines in separate `SNAPSHOT_BENCH_ROOT`s below `target/snapshot-parity/work/<variant>/<ts|rust>` and writes `target/snapshot-parity/<variant>-ts.json` and `<variant>-rust.json`. `--keep` keeps the temporary cases.
+
+Output compares every scenario step by step and prints `same      <name>` or `DIFFERENT <name>` with each diverging step and both values. Exit code `0` means every scenario of every selected variant matched, `1` means at least one diverged, and `2` is a build, engine or corpus error.

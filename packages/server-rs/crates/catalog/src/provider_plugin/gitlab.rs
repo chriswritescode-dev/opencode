@@ -54,6 +54,8 @@ const DEFAULT_EXPIRES_SECONDS: f64 = 7200.0;
 
 const DISCOVERY_TIMEOUT: Duration = Duration::from_secs(10);
 
+const TOKEN_TIMEOUT: Duration = Duration::from_secs(10);
+
 const REFRESH_RETENTION_MS: f64 = 60_000.0;
 
 const GITLAB_PACKAGE: &str = "aisdk:gitlab-ai-provider";
@@ -226,7 +228,7 @@ pub async fn register_with(services: &Services, context: &PluginContext, builtin
 
     let login = settings::credential_settings(services, builtin, &integration_id, |value| match value {
         CredentialValue::Oauth(oauth) => settings::metadata_settings(oauth.metadata.as_ref(), &["instanceUrl"]),
-        _ => provider::decode_object(serde_json::Map::new()),
+        _ => settings::empty_settings(),
     })
     .await;
 
@@ -341,7 +343,7 @@ pub async fn register_with(services: &Services, context: &PluginContext, builtin
                         let base = provider.settings.as_ref().map(provider::json_object);
                         let overlay = provider::json_object(&login_settings);
                         provider.settings = crate::aisdk_native::merge_overlay(base.as_ref(), Some(&overlay))
-                            .map(provider::decode_object);
+                            .and_then(provider::decode_object);
                     });
                 }
                 let Some(item) = editor.get(&provider_id).cloned() else {
@@ -359,10 +361,10 @@ pub async fn register_with(services: &Services, context: &PluginContext, builtin
                     let mut info = crate::provider::default_model(&provider_id, &model.id);
                     info.name = format!("Agent Platform ({})", model.name);
                     info.package = Some(GITLAB_PACKAGE.to_owned());
-                    info.settings = Some(provider::decode_object(serde_json::Map::from_iter([(
+                    info.settings = provider::decode_object(serde_json::Map::from_iter([(
                         "workflowRef".to_owned(),
                         Value::String(model.r#ref),
-                    )])));
+                    )]));
                     info.capabilities = ModelCapabilities {
                         tools: true,
                         freeform: None,
@@ -505,6 +507,9 @@ async fn handle(state: &str, responses: &CallbackResponses, request: Request) ->
         return Some((404, "", String::new()));
     }
     let params = parse_query(&request.query);
+    if param(&params, "state") != Some(state) {
+        return Some((400, "text/html", page::error(INVALID_STATE, Some(page_options()))));
+    }
     if let Some(message) = callback_error(&params, state) {
         send(responses, Err(message.clone()));
         return Some((400, "text/html", page::error(&message, Some(page_options()))));
@@ -542,7 +547,9 @@ async fn exchange(
 ) -> Result<Token, AuthorizationError> {
     let mut body = fields.to_vec();
     body.push(("client_id", client_id));
-    match http::send(http, http::form(format!("{instance_url}/oauth/token"), Vec::new(), &body), None).await {
+    match http::send(http, http::form(format!("{instance_url}/oauth/token"), Vec::new(), &body), Some(TOKEN_TIMEOUT))
+        .await
+    {
         Ok(response) => parse_token(&response.body),
         Err(HttpError::Status(response)) => {
             let parsed = serde_json::from_slice::<Failure>(&response.body).ok();

@@ -26,6 +26,8 @@ use crate::protocol::{MAGIC, Message, VERSION};
 /// The JS host's bundled source, written to the private directory and run by Bun.
 const HOST: &str = include_str!("../host/host.js");
 
+const PLUGINS: &str = include_str!("../host/plugins.js");
+
 /// The host's own `bunfig.toml`: Bun installs nothing the host imports.
 const BUNFIG: &str = "[install]\nauto = \"disable\"\n";
 
@@ -54,6 +56,10 @@ impl Spawned {
         }
         self.stderr()
     }
+
+    pub fn directory(&self) -> &std::path::Path {
+        self._dir.path()
+    }
 }
 
 impl Drop for Spawned {
@@ -68,6 +74,7 @@ impl Drop for Spawned {
 pub async fn spawn(config: &Config, runtime: &Runtime) -> Result<Spawned, SidecarError> {
     let dir = TempDir::new_in(&config.tmp).map_err(spawn_failed)?;
     std::fs::write(dir.path().join("host.js"), HOST).map_err(spawn_failed)?;
+    std::fs::write(dir.path().join("plugins.js"), PLUGINS).map_err(spawn_failed)?;
     std::fs::write(dir.path().join("bunfig.toml"), BUNFIG).map_err(spawn_failed)?;
 
     let (ours, theirs) = std::os::unix::net::UnixStream::pair().map_err(spawn_failed)?;

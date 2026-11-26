@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex, RwLock};
 
 use opencode_config::entry::{Entry, Origin, latest};
-use opencode_contract::codec::{self, Decode, Encode, JsonMap, encode_json};
+use opencode_contract::codec::{Decode, Encode, JsonMap, encode_json};
 use opencode_contract::generated::{
     ConfigEntryDocumentInfo, ConfigEntryDocumentInfoModel, ConfigEntryDocumentInfoProvidersValue,
     ConfigEntryDocumentInfoProvidersValueModelsValue, ConfigEntryDocumentInfoProvidersValueModelsValueCost,
@@ -177,13 +177,15 @@ pub async fn register(services: &Services, builtin: &mut Builtin) {
                     (sources.default_model.clone(), sources.definitions.clone())
                 };
                 if let Some(configured) = &default_model {
-                    let (provider_id, model_id) = match configured {
+                    let selection = match configured {
                         ConfigEntryDocumentInfoModel::String(value) => model::parse(&value.0),
                         ConfigEntryDocumentInfoModel::Object(value) => {
-                            (ProviderID(value.provider_id.clone()), value.model.clone())
+                            Some((ProviderID(value.provider_id.clone()), value.model.clone()))
                         }
                     };
-                    editor.set_default_selection(&provider_id, &model_id);
+                    if let Some((provider_id, model_id)) = selection {
+                        editor.set_default_selection(&provider_id, &model_id);
+                    }
                 }
                 for (item, definition) in &definitions {
                     let provider_package =
@@ -327,10 +329,12 @@ fn overlay_provider(
             provider.package = package.clone();
         }
         if let Some(compatibility) = &item.compatibility {
-            provider.compatibility = Some(merge_overlay(provider.compatibility.as_ref(), compatibility));
+            let base = provider.compatibility.clone();
+            provider.compatibility = merge_overlay(base.as_ref(), compatibility).or(base);
         }
         if let Some(settings) = &item.settings {
-            provider.settings = Some(merge_overlay(provider.settings.as_ref(), settings));
+            let base = provider.settings.clone();
+            provider.settings = merge_overlay(base.as_ref(), settings).or(base);
         }
         if let Some(headers) = &item.headers {
             provider.headers = merge_headers(provider.headers.as_ref(), headers);
@@ -374,13 +378,15 @@ fn overlay<M: ModelEdits>(models: &mut M, overlay: ModelOverlay<'_>) {
             model.time = ModelInfoTime { released: released(release_date) };
         }
         if let Some(compatibility) = &config.compatibility {
-            model.compatibility = Some(merge_overlay(model.compatibility.as_ref(), compatibility));
+            let base = model.compatibility.clone();
+            model.compatibility = merge_overlay(base.as_ref(), compatibility).or(base);
         }
         if let Some(package) = &config.package {
             model.package = Some(package.clone());
         }
         if let Some(settings) = &config.settings {
-            model.settings = Some(merge_overlay(model.settings.as_ref(), settings));
+            let base = model.settings.clone();
+            model.settings = merge_overlay(base.as_ref(), settings).or(base);
         }
         if let Some(headers) = &config.headers {
             model.headers = merge_headers(model.headers.as_ref(), headers);
@@ -423,7 +429,8 @@ fn overlay<M: ModelEdits>(models: &mut M, overlay: ModelOverlay<'_>) {
                 };
                 let existing = &mut model.variants[index];
                 if let Some(settings) = &configured.settings {
-                    existing.settings = Some(merge_overlay(existing.settings.as_ref(), settings));
+                    let base = existing.settings.clone();
+                    existing.settings = merge_overlay(base.as_ref(), settings).or(base);
                 }
                 if let Some(headers) = &configured.headers {
                     existing.headers = merge_headers(existing.headers.as_ref(), headers);
@@ -589,10 +596,10 @@ fn merge_body(base: Option<&JsonMap<Value>>, overlay: &JsonMap<Value>) -> Option
     aisdk_native::merge_overlay(base.as_ref(), Some(&overlay)).map(provider::body_from_native)
 }
 
-fn merge_overlay<T: Decode>(base: Option<&impl Encode>, overlay: &impl Encode) -> T {
+fn merge_overlay<T: Decode>(base: Option<&impl Encode>, overlay: &impl Encode) -> Option<T> {
     let base = base.map(json_map);
     let overlay = json_map(overlay);
-    decode_object(aisdk_native::merge_overlay(base.as_ref(), Some(&overlay)).expect("an overlay merges into a record"))
+    provider::decode_object(aisdk_native::merge_overlay(base.as_ref(), Some(&overlay))?)
 }
 
 fn json_map(value: &impl Encode) -> aisdk_native::JsonMap {
@@ -600,10 +607,6 @@ fn json_map(value: &impl Encode) -> aisdk_native::JsonMap {
         return aisdk_native::JsonMap::new();
     };
     map
-}
-
-fn decode_object<T: Decode>(map: aisdk_native::JsonMap) -> T {
-    T::decode(&Value::Object(map), &mut codec::Path::new()).expect("a configured overlay decodes")
 }
 
 fn released(date: &str) -> f64 {

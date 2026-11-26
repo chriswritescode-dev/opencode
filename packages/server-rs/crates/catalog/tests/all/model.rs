@@ -93,17 +93,24 @@ fn cost(input: f64, output: f64) -> ModelCost {
 }
 
 #[tokio::test]
-async fn parse_splits_at_the_first_slash() {
-    for (input, provider_id, model_id) in [
-        ("vendor/model", "vendor", "model"),
-        ("vendor/team/model", "vendor", "team/model"),
-        ("vendor", "vendor", ""),
-        ("", "", ""),
-        ("/model", "", "model"),
-        ("vendor/", "vendor", ""),
-        ("vendor//model/", "vendor", "/model/"),
+async fn parse_splits_at_the_first_slash_and_strips_the_variant() {
+    for (input, expected) in [
+        ("vendor/model", Some(("vendor", "model"))),
+        ("vendor/team/model", Some(("vendor", "team/model"))),
+        ("vendor/model#high", Some(("vendor", "model"))),
+        ("vendor/team/model#high", Some(("vendor", "team/model"))),
+        ("vendor//model/", Some(("vendor", "/model/"))),
+        ("vendor", None),
+        ("", None),
+        ("/model", None),
+        ("vendor/", None),
+        ("vendor/model#", None),
+        ("vendor#one/model", None),
     ] {
-        assert_eq!(model::parse(input), (ProviderID(provider_id.to_owned()), model_id.to_owned()));
+        assert_eq!(
+            model::parse(input),
+            expected.map(|(provider_id, model_id)| (ProviderID(provider_id.to_owned()), model_id.to_owned()))
+        );
     }
 }
 

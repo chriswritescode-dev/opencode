@@ -61,6 +61,7 @@ struct Loaded {
 
 struct Found {
     connection: ConnectionInfo,
+    url: String,
     deployments: Vec<Deployment>,
 }
 
@@ -76,7 +77,9 @@ pub async fn register_with(services: &Services, context: &PluginContext, builtin
         resolve_resource_name(configured.as_ref().map(|settings| settings.rest.0.as_slice()), None, &context.env)
             .is_some()
             || setting(configured.as_ref(), "baseURL").is_some();
-    let available = which("az", &context.env).is_some();
+    let cli = which("az", &context.env);
+    let available = cli.is_some();
+    let program = cli.map(|path| path.to_string_lossy().into_owned()).unwrap_or_else(|| "az".to_owned());
 
     let integration_registration = services
         .integration
@@ -123,6 +126,7 @@ pub async fn register_with(services: &Services, context: &PluginContext, builtin
             context.commands.clone(),
             context.app.useragent(),
             options.endpoints.management.clone(),
+            program,
         )),
         endpoints: options.endpoints.clone(),
         env: context.env.clone(),
@@ -169,7 +173,7 @@ pub async fn register_with(services: &Services, context: &PluginContext, builtin
                             settings
                                 .insert("baseURL".to_owned(), Value::String(expand_resource_name(base_url, resource)));
                         }
-                        provider.settings = Some(provider::decode_object(settings));
+                        provider.settings = provider::decode_object(settings);
                     });
                 }
                 if let Some(item) = editor.get(&provider_id).cloned() {
@@ -221,7 +225,7 @@ pub async fn register_with(services: &Services, context: &PluginContext, builtin
                                 return;
                             }
                             merged.insert("baseURL".to_owned(), Value::String(expanded.clone()));
-                            model.settings = Some(provider::decode_object(merged));
+                            model.settings = provider::decode_object(merged);
                         });
                     }
                 }
@@ -351,6 +355,7 @@ impl Azure {
             }
         };
         if changed {
+            self.discovery.clear_tokens();
             self.provider.reload().await;
         }
     }
@@ -435,7 +440,7 @@ impl Azure {
             })
             .await
             .ok()?;
-        Some(Found { connection, deployments: found })
+        Some(Found { connection, url, deployments: found })
     }
 
     async fn publish(self: &Arc<Self>, found: Found) {
@@ -443,6 +448,9 @@ impl Azure {
         {
             let state = self.state.lock().expect("lock the Azure state");
             if connection_key(state.connection.as_ref()) != connection_key(Some(&found.connection)) {
+                return;
+            }
+            if state.url.as_deref() != Some(found.url.as_str()) {
                 return;
             }
             if state.deployments.as_ref() == Some(&found.deployments) {
@@ -505,11 +513,10 @@ impl Default for Jobs {
 
 impl Jobs {
     fn start(&self, future: impl Future<Output = ()> + Send + 'static) {
-        let previous = self.current.lock().expect("lock the Azure discovery job").take();
-        if let Some(previous) = previous {
+        let mut current = self.current.lock().expect("lock the Azure discovery job");
+        if let Some(previous) = current.replace(tokio::spawn(future)) {
             previous.abort();
         }
-        *self.current.lock().expect("lock the Azure discovery job") = Some(tokio::spawn(future));
     }
 
     fn busy(&self) -> bool {

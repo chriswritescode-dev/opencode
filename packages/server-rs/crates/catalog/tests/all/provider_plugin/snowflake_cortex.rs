@@ -395,20 +395,40 @@ async fn manual_pat_uses_its_account_and_native_compatibility() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn rejects_a_mismatched_callback_state_before_token_exchange() {
+async fn ignores_a_mismatched_callback_state_and_still_completes_the_login() {
     let test = setup(Input::new(Vec::new())).await;
     let attempt = connect(&test.harness, Some(form_answer(&[("account", "myorg-myaccount")]))).await;
     let url = Url::parse(&attempt.url).expect("the Snowflake authorization url");
-    let mut callback =
-        Url::parse(&param(&url, "redirect_uri").expect("the Snowflake redirect")).expect("the Snowflake callback url");
-    set_param(&mut callback, "state", "wrong");
-    set_param(&mut callback, "code", "forged");
-    let response = client().get(callback.as_str()).send().await.expect("fetch the Snowflake callback");
+    let redirect = param(&url, "redirect_uri").expect("the Snowflake redirect");
+    let mut stray = Url::parse(&redirect).expect("the Snowflake callback url");
+    set_param(&mut stray, "state", "wrong");
+    set_param(&mut stray, "code", "forged");
+    let response = client().get(stray.as_str()).send().await.expect("fetch the Snowflake callback");
     assert_eq!(response.status(), 400);
+    let status = test
+        .harness
+        .services
+        .integration
+        .oauth()
+        .status(&integration_id(), &attempt.attempt_id)
+        .await
+        .expect("the Snowflake attempt status");
+    assert!(matches!(status, AttemptStatus::Pending { .. }));
+
+    test.routes.route_json(
+        "POST",
+        TOKEN,
+        json!({ "access_token": "access", "refresh_token": "refresh", "expires_in": 3600 }),
+    );
+    let mut callback = Url::parse(&redirect).expect("the Snowflake callback url");
+    set_param(&mut callback, "state", &param(&url, "state").expect("the Snowflake state"));
+    set_param(&mut callback, "code", "auth-code");
+    let response = client().get(callback.as_str()).send().await.expect("fetch the Snowflake callback");
+    assert_eq!(response.status(), 200);
     let status = wait_for_status(&test.harness, &attempt).await;
-    let AttemptStatus::Failed { message, .. } = status else { panic!("the Snowflake attempt fails, got {status:?}") };
-    assert_eq!(message, "Invalid OAuth state");
-    assert!(test.routes.requests().is_empty());
+    assert!(matches!(status, AttemptStatus::Complete { .. }), "got {status:?}");
+    let exchange = test.routes.requests().first().expect("the Snowflake token exchange").clone();
+    assert_eq!(form_param(&form(&exchange), "code").as_deref(), Some("auth-code"));
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -548,4 +568,43 @@ async fn refreshes_expired_oauth_during_native_model_resolution_and_persists_rot
         Some(json!("myorg-myaccount"))
     );
     assert!(matches!(resolved, CredentialValue::Oauth(_)));
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn concurrent_retries_share_one_token_refresh() {
+    let test = setup(Input::new(Vec::new())).await;
+    test.harness
+        .services
+        .credentials
+        .create(CreateInput {
+            id: None,
+            integration_id: integration_id(),
+            value: expired_oauth(ENDPOINT, "refresh"),
+            label: None,
+            activate: Some(true),
+        })
+        .expect("create the expired Snowflake credential");
+    test.routes.route_json(
+        "POST",
+        TOKEN,
+        json!({ "access_token": "renewed", "refresh_token": "", "expires_in": 3600 }),
+    );
+    test.routes.hold("POST", TOKEN);
+    let before = test.routes.count("POST", TOKEN);
+    let spawn = || {
+        let hooks = test.hooks.clone();
+        tokio::spawn(async move { hooks.trigger_retry(retry_event(2, RetryDecision::Retry { delay_ms: 1000 })).await })
+    };
+    let first = spawn();
+    let second = spawn();
+    test.routes.arrived().await;
+    tokio::time::sleep(Duration::from_millis(25)).await;
+    test.routes.release();
+    test.routes.release();
+
+    let first = first.await.expect("the first Snowflake retry");
+    let second = second.await.expect("the second Snowflake retry");
+    assert_eq!(first.decision, RetryDecision::Retry { delay_ms: 0 });
+    assert_eq!(second.decision, RetryDecision::Retry { delay_ms: 0 });
+    assert_eq!(test.routes.count("POST", TOKEN) - before, 1);
 }

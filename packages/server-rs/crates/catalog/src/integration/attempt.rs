@@ -282,7 +282,7 @@ impl OAuthService<'_> {
                         PendingMode::Code { callback } => match code {
                             Some(_) if !pending.completing => {
                                 pending.completing = true;
-                                Action::Code(callback.clone())
+                                Action::Code(callback.clone(), pending.scope.clone())
                             }
                             Some(_) => Action::None,
                             None => {
@@ -299,15 +299,30 @@ impl OAuthService<'_> {
                 (submit.as_ref())(code.unwrap_or_default().to_owned()).await?;
                 Ok(())
             }
-            Action::Code(callback) => {
-                let outcome = (callback.as_ref())(code.unwrap_or_default().to_owned()).await;
-                let error = outcome.as_ref().err().cloned();
+            Action::Code(callback, scope) => {
                 let service = self.service.clone();
-                let attempt_id = attempt_id.clone();
-                let persistence = tokio::spawn(async move { settle(&service, &attempt_id, outcome).await }).await;
-                match (error, persistence) {
-                    (Some(error), _) | (None, Ok(Err(error))) => Err(error.into()),
-                    _ => Ok(()),
+                let settled_attempt_id = attempt_id.clone();
+                let code = code.unwrap_or_default().to_owned();
+                let completion = tokio::spawn(async move {
+                    let outcome = tokio::select! {
+                        outcome = (callback.as_ref())(code) => outcome,
+                        _ = scope.cancelled() => Err(AuthorizationError::new(std::io::Error::other(
+                            "the authorization attempt was cancelled",
+                        ))),
+                    };
+                    let error = outcome.as_ref().err().cloned();
+                    let persistence = settle(&service, &settled_attempt_id, outcome).await;
+                    (error, persistence)
+                });
+                match completion.await {
+                    Ok((_, Ok(false))) => Err(AttemptError::AttemptNotFound {
+                        integration_id: integration_id.clone(),
+                        attempt_id: attempt_id.clone(),
+                    }),
+                    Ok((Some(error), _)) => Err(error.into()),
+                    Ok((None, Err(error))) => Err(error.into()),
+                    Ok((None, Ok(true))) => Ok(()),
+                    Err(error) => Err(AuthorizationError::new(std::io::Error::other(error)).into()),
                 }
             }
         }
@@ -337,23 +352,23 @@ impl OAuthService<'_> {
 enum Action {
     None,
     Submit(Arc<SubmitCallback>),
-    Code(Arc<CodeCallback>),
+    Code(Arc<CodeCallback>, CancellationToken),
 }
 
 async fn settle(
     service: &Arc<IntegrationService>,
     attempt_id: &IntegrationAttemptID,
     outcome: Result<CredentialOAuth, AuthorizationError>,
-) -> Result<(), AuthorizationError> {
+) -> Result<bool, AuthorizationError> {
     match claim(service, attempt_id, &outcome) {
-        Claim::None => Ok(()),
+        Claim::None => Ok(false),
         Claim::Failed(scope) => {
             scope.cancel();
-            Ok(())
+            Ok(true)
         }
         Claim::Success(claimed) => {
             let Ok(value) = outcome else {
-                return Ok(());
+                return Ok(true);
             };
             let label = match claimed.label.as_deref() {
                 Some(label) => Some(label.to_owned()),
@@ -363,7 +378,7 @@ async fn settle(
                 create_credential(service, &claimed.integration_id, label, CredentialValue::Oauth(value)).await;
             record(service, attempt_id, &claimed, persistence.clone());
             claimed.scope.cancel();
-            persistence
+            persistence.map(|()| true)
         }
     }
 }

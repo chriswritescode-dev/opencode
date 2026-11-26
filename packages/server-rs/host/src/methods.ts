@@ -1,9 +1,23 @@
-import type { Connection, Context, Outcome } from "./connection"
+import type { Connection, Context, Handler, Outcome } from "./connection"
 import type { JsonValue } from "./protocol.gen"
 
 const fs = process.getBuiltinModule("node:fs")
 const retained: Uint8Array[] = []
 let aborts = 0
+
+export const PLUGIN_METHODS = [
+  "npm.add",
+  "npm.resolve",
+  "npm.check",
+  "npm.update",
+  "npm.follows",
+  "npm.reject",
+  "plugin.resolve",
+  "plugin.load",
+  "plugin.activate",
+  "plugin.deactivate",
+  "plugin.close",
+] as const
 
 export function register(
   connection: Connection,
@@ -11,6 +25,24 @@ export function register(
 ): void {
   connection.register("host.echo", echo)
   connection.register("host.memory", memory)
+  let plugin: Promise<Record<string, Handler>> | undefined
+  const pluginHandlers = () =>
+    (plugin ??= import(
+      new URL(import.meta.url.endsWith(".js") ? "./plugins.js" : "./plugin/index.ts", import.meta.url).href
+    )
+      .then((module) => module.handlers)
+      .catch((error) => {
+        plugin = undefined
+        throw error
+      }))
+  for (const name of PLUGIN_METHODS) {
+    connection.register(name, async (ctx, params, bytes) => {
+      const handlers = await pluginHandlers()
+      const handler = handlers[name]
+      if (handler === undefined) throw new Error(`unknown plugin method ${name}`)
+      return handler(ctx, params, bytes)
+    })
+  }
   if (!options.test) return
   connection.register("host.sleep", sleep)
   connection.register("host.aborts", abortsHandler)

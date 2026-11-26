@@ -1,9 +1,11 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use opencode_ai::HttpSender;
 use opencode_contract::generated::CredentialValue;
+use opencode_util::time::{Date, UTC, Zone};
 use serde::Deserialize;
 use serde_json::{Value, json};
 
@@ -76,7 +78,10 @@ pub struct Discovery {
     commands: Arc<dyn CommandRunner>,
     user_agent: String,
     management: String,
+    program: String,
     tokens: Mutex<HashMap<String, Token>>,
+    token_locks: Mutex<HashMap<String, Arc<tokio::sync::Mutex<()>>>>,
+    token_generation: AtomicU64,
     resource_ids: Mutex<HashMap<String, String>>,
 }
 
@@ -86,15 +91,24 @@ impl Discovery {
         commands: Arc<dyn CommandRunner>,
         user_agent: String,
         management: String,
+        program: String,
     ) -> Self {
         Self {
             http,
             commands,
             user_agent,
             management,
+            program,
             tokens: Mutex::new(HashMap::new()),
+            token_locks: Mutex::new(HashMap::new()),
+            token_generation: AtomicU64::new(0),
             resource_ids: Mutex::new(HashMap::new()),
         }
+    }
+
+    pub fn clear_tokens(&self) {
+        self.token_generation.fetch_add(1, Ordering::SeqCst);
+        self.tokens.lock().expect("lock the Azure tokens").clear();
     }
 
     pub async fn deployments(
@@ -116,12 +130,21 @@ impl Discovery {
     }
 
     pub(crate) async fn token(&self, scope: &str) -> Result<Token, LoadError> {
-        let now = opencode_util::time::now_ms() as f64;
-        if let Some(cached) = self.tokens.lock().expect("lock the Azure tokens").get(scope).cloned()
-            && cached.expires - now > TOKEN_MARGIN_MS
-        {
+        if let Some(cached) = self.cached(scope, opencode_util::time::now_ms() as f64) {
             return Ok(cached);
         }
+        let lock = self
+            .token_locks
+            .lock()
+            .expect("lock the Azure token locks")
+            .entry(scope.to_owned())
+            .or_insert_with(|| Arc::new(tokio::sync::Mutex::new(())))
+            .clone();
+        let _permit = lock.lock().await;
+        if let Some(cached) = self.cached(scope, opencode_util::time::now_ms() as f64) {
+            return Ok(cached);
+        }
+        let generation = self.token_generation.load(Ordering::SeqCst);
         let args: Vec<String> = ["account", "get-access-token", "--scope", scope, "--output", "json"]
             .into_iter()
             .map(str::to_owned)
@@ -136,15 +159,27 @@ impl Discovery {
             return Err(LoadError::Message("Azure CLI returned an invalid token expiration".to_owned()));
         }
         let token = Token { access: response.access_token, expires };
-        self.tokens.lock().expect("lock the Azure tokens").insert(scope.to_owned(), token.clone());
+        if self.token_generation.load(Ordering::SeqCst) == generation {
+            self.tokens.lock().expect("lock the Azure tokens").insert(scope.to_owned(), token.clone());
+        }
         Ok(token)
     }
 
+    fn cached(&self, scope: &str, now: f64) -> Option<Token> {
+        self.tokens
+            .lock()
+            .expect("lock the Azure tokens")
+            .get(scope)
+            .filter(|cached| cached.expires - now > TOKEN_MARGIN_MS)
+            .cloned()
+    }
+
     async fn command(&self, args: &[String]) -> Result<TokenResponse, LoadError> {
-        let output = tokio::time::timeout(TOKEN_TIMEOUT, self.commands.run("az".to_owned(), args.to_vec(), Vec::new()))
-            .await
-            .map_err(|_| LoadError::Command("az did not answer within 10 seconds".to_owned()))?
-            .map_err(|error| LoadError::Command(error.to_string()))?;
+        let output =
+            tokio::time::timeout(TOKEN_TIMEOUT, self.commands.run(self.program.clone(), args.to_vec(), Vec::new()))
+                .await
+                .map_err(|_| LoadError::Command("az did not answer within 10 seconds".to_owned()))?
+                .map_err(|error| LoadError::Command(error.to_string()))?;
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr).trim().to_owned();
             return Err(LoadError::Command(if stderr.is_empty() { "az failed".to_owned() } else { stderr }));
@@ -210,8 +245,12 @@ impl Discovery {
         };
         let origin = url::Url::parse(&self.management).ok().map(|url| url.origin().ascii_serialization());
         let mut next = Some(format!("{}{}/deployments?api-version=2024-10-01", self.management, id));
+        let mut seen = HashSet::new();
         let mut deployments = Vec::new();
         while let Some(url) = next {
+            if !seen.insert(url.clone()) {
+                return Err(LoadError::Message("Azure repeated a deployment page".to_owned()));
+            }
             let page: ManagementDeployments = serde_json::from_value(self.management_get(&url).await?)
                 .map_err(|error| LoadError::Json(error.to_string()))?;
             if let Some(link) = &page.next_link {
@@ -341,28 +380,29 @@ fn resource_query(resource: &str) -> String {
 
 fn parse_expires_on(value: &str) -> Option<f64> {
     let value = value.trim();
-    let (date, rest) = value.split_at_checked(10)?;
-    let mut date = date.split('-');
-    let year: i64 = date.next()?.parse().ok()?;
+    let (date_text, rest) = value.split_at_checked(10)?;
+    let mut date = date_text.split('-');
+    let year: i32 = date.next()?.parse().ok()?;
     let month: u32 = date.next()?.parse().ok()?;
     let day: u32 = date.next()?.parse().ok()?;
     if date.next().is_some() {
         return None;
     }
+    let date = Date::new(year, month, day)?;
     let rest = rest.strip_prefix('T').or_else(|| rest.strip_prefix(' '))?;
-    let rest = rest.strip_suffix('Z').unwrap_or(rest);
+    let (rest, zone) = match rest.strip_suffix('Z') {
+        Some(rest) => (rest, UTC),
+        None => (rest, Zone::Local),
+    };
     let (clock, fraction) = match rest.split_once('.') {
         Some((clock, fraction)) => (clock, Some(fraction)),
         None => (rest, None),
     };
     let mut clock = clock.split(':');
-    let hour: u32 = clock.next()?.parse().ok()?;
-    let minute: u32 = clock.next()?.parse().ok()?;
-    let second: u32 = clock.next()?.parse().ok()?;
-    if clock.next().is_some() || !(1..=12).contains(&month) || !(1..=31).contains(&day) {
-        return None;
-    }
-    if hour > 23 || minute > 59 || second > 60 {
+    let hour: i64 = clock.next()?.parse().ok()?;
+    let minute: i64 = clock.next()?.parse().ok()?;
+    let second: i64 = clock.next()?.parse().ok()?;
+    if clock.next().is_some() || hour > 23 || minute > 59 || second > 60 {
         return None;
     }
     let millis = fraction
@@ -372,15 +412,47 @@ fn parse_expires_on(value: &str) -> Option<f64> {
             padded.parse::<u32>().ok()
         })
         .unwrap_or(Some(0))?;
-    let days = days_from_civil(year, month, day);
-    Some(((days * 86_400 + hour as i64 * 3_600 + minute as i64 * 60 + second as i64) * 1_000 + millis as i64) as f64)
+    Some((zone.instant(date, hour * 3_600 + minute * 60 + second) + i64::from(millis)) as f64)
 }
 
-fn days_from_civil(year: i64, month: u32, day: u32) -> i64 {
-    let year = if month <= 2 { year - 1 } else { year };
-    let era = if year >= 0 { year } else { year - 399 } / 400;
-    let year_of_era = year - era * 400;
-    let day_of_year = (153 * ((month + 9) % 12) as i64 + 2) / 5 + day as i64 - 1;
-    let day_of_era = year_of_era * 365 + year_of_era / 4 - year_of_era / 100 + day_of_year;
-    era * 146_097 + day_of_era - 719_468
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const TOKYO: f64 = 1_704_132_245_678.0;
+
+    #[test]
+    fn parses_the_cli_expiration_in_the_process_zone() {
+        if std::env::var("TZ").as_deref() != Ok("Asia/Tokyo") {
+            return;
+        }
+        assert_eq!(parse_expires_on("2024-01-02 03:04:05.678"), Some(TOKYO));
+        assert_eq!(parse_expires_on("2024-07-01T12:00:00"), Some(1_719_802_800_000.0));
+    }
+
+    #[test]
+    fn parses_the_cli_expiration_in_every_zone() {
+        let output = std::process::Command::new(std::env::current_exe().expect("the test binary"))
+            .args([
+                "--exact",
+                "provider_plugin::azure::discovery::tests::parses_the_cli_expiration_in_the_process_zone",
+            ])
+            .args(["--test-threads=1"])
+            .env("TZ", "Asia/Tokyo")
+            .output()
+            .expect("run the zone test");
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert!(output.status.success() && stdout.contains("1 passed"), "{stdout}\n{stderr}");
+    }
+
+    #[test]
+    fn parses_utc_expirations_and_rejects_malformed_ones() {
+        assert_eq!(parse_expires_on("2024-01-01T18:04:05.678Z"), Some(TOKYO));
+        assert_eq!(parse_expires_on("2024-02-29T00:00:00Z"), Some(1_709_164_800_000.0));
+        assert_eq!(parse_expires_on("2024-02-30T00:00:00Z"), None);
+        assert_eq!(parse_expires_on("2024-01-01"), None);
+        assert_eq!(parse_expires_on("2024-01-01T24:00:00Z"), None);
+        assert_eq!(parse_expires_on(""), None);
+    }
 }

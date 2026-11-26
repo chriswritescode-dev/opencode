@@ -18,8 +18,10 @@ use opencode_catalog::variant::Support;
 use opencode_contract::codec::{JsonMap, decode_json, encode_json};
 use opencode_contract::generated::{
     CredentialExternal, CredentialExternalType, CredentialKey, CredentialKeyType, CredentialOAuth, CredentialOAuthType,
-    CredentialValue, IntegrationID, IntegrationMethodID, ModelInfo, ModelRef, ModelVariant, ProviderID, ProviderInfo,
-    ProviderInfoActivation, ProviderSettings, ProviderTransport,
+    CredentialValue, IntegrationID, IntegrationMethodID, ModelInfo, ModelRef, ModelSettings, ModelVariant,
+    ModelVariantSettings, ProviderID, ProviderInfo, ProviderInfoActivation, ProviderSettings,
+    ProviderSettingsChunkTimeout, ProviderSettingsChunkTimeoutNumber, ProviderSettingsHeaderTimeout,
+    ProviderSettingsHeaderTimeoutNumber, ProviderSettingsTimeout, ProviderSettingsTimeoutNumber, ProviderTransport,
 };
 use opencode_location::state::Registration;
 
@@ -1338,6 +1340,54 @@ fn applies_provider_timeouts_to_image_video_and_decision_models() {
     assert_eq!(decision.transport.as_ref().and_then(|transport| transport.timeout.clone()), expected);
 }
 
+#[test]
+fn drops_non_finite_timeouts_instead_of_panicking() {
+    let mut runtime = catalog(Some("@opencode/ai/providers/openai/chat"), Options::default());
+    let mut settings = runtime.settings.clone().expect("the runtime settings");
+    settings.timeout = Some(ProviderSettingsTimeout::Number(ProviderSettingsTimeoutNumber(f64::INFINITY)));
+    settings.header_timeout =
+        Some(ProviderSettingsHeaderTimeout::Number(ProviderSettingsHeaderTimeoutNumber(f64::INFINITY)));
+    settings.chunk_timeout =
+        Some(ProviderSettingsChunkTimeout::Number(ProviderSettingsChunkTimeoutNumber(f64::INFINITY)));
+    runtime.settings = Some(settings);
+
+    let model = resolve(&runtime, Some(&key("secret"))).expect("resolves");
+    let options = options_json(&model);
+    assert!(options["timeout"].get("total").is_none());
+    assert_eq!(options["timeout"]["headers"].as_f64(), Some(300_000.0));
+    assert_eq!(options["timeout"]["chunk"].as_f64(), Some(900_000.0));
+}
+
+#[test]
+fn with_variant_drops_settings_that_do_not_decode() {
+    let mut info = catalog_model("test-provider", "fixture-model", "api-fixture", json!({}));
+    info.settings = Some(ModelSettings {
+        compaction: None,
+        cache: None,
+        encoding: None,
+        rest: JsonMap(vec![("cache".to_owned(), json!("invalid")), ("custom".to_owned(), json!(true))]),
+    });
+    info.variants.push(ModelVariant {
+        id: "high".to_owned(),
+        settings: Some(ModelVariantSettings {
+            compaction: None,
+            encoding: None,
+            rest: JsonMap(vec![("reasoningEffort".to_owned(), json!("high"))]),
+        }),
+        headers: None,
+        body: None,
+    });
+
+    let variant = with_variant(&info, Some("high")).expect("the variant resolves");
+    let settings = variant.settings.expect("the variant settings");
+    assert!(settings.cache.is_none());
+    assert_eq!(settings.rest.0.iter().find(|(key, _)| key == "custom").map(|(_, value)| value), Some(&json!(true)));
+    assert_eq!(
+        settings.rest.0.iter().find(|(key, _)| key == "reasoningEffort").map(|(_, value)| value),
+        Some(&json!("high"))
+    );
+}
+
 #[tokio::test]
 async fn resolves_a_stored_credential_through_the_provider_integration() {
     let harness = crate::provider::setup();
@@ -1396,6 +1446,67 @@ async fn uses_no_auth_for_an_enabled_provider_without_credentials() {
     assert!(matches!(&resolved.model.route.auth, Auth::None));
     assert_eq!(resolved.chunk_timeout, Some(opencode_catalog::provider::HttpTimeout::Millis(4000.0)));
     assert_eq!(resolved.transport, Some(ProviderTransport::Websocket));
+}
+
+#[tokio::test]
+async fn keeps_environment_auth_for_a_provider_that_is_not_explicitly_enabled() {
+    let harness = crate::provider::setup();
+    let provider_id = ProviderID("anthropic-test".to_owned());
+    let model = catalog_model("anthropic-test", "test-model", "test-model", json!({}));
+    let mut info = provider("anthropic-test", "@ai-sdk/anthropic", Some(json!({"baseURL": "http://127.0.0.1:9/v1"})));
+    info.activation = ProviderInfoActivation::Auto;
+    let _registration = register(&harness, info, std::slice::from_ref(&model)).await;
+    let models = models(&harness);
+    let resolver = Resolver::new(
+        harness.providers.clone(),
+        models.clone(),
+        harness.integrations.clone(),
+        Arc::new(env(&[("ANTHROPIC_API_KEY", "env-key")])),
+        Arc::new(resolver::NoBridge),
+    );
+    let reference = ModelRef { id: "test-model".to_owned(), provider_id, variant: None };
+    let resolved = resolver.resolve(Some(&reference)).await.expect("resolves").expect("a resolved model");
+    let headers = auth_headers(&resolved.model, &env(&[("ANTHROPIC_API_KEY", "env-key")]), "http://127.0.0.1:9/v1");
+
+    assert!(!matches!(&resolved.model.route.auth, Auth::None));
+    assert_eq!(header(&headers, "x-api-key"), Some("env-key"));
+}
+
+#[tokio::test]
+async fn drops_invalid_model_provider_settings_instead_of_panicking() {
+    let harness = crate::provider::setup();
+    let provider_id = ProviderID("test-provider".to_owned());
+    let model = catalog_model(
+        "test-provider",
+        "fixture-model",
+        "api-fixture",
+        json!({
+            "package": "@opencode/ai/providers/openai/chat",
+            "settings": {
+                "timeout": "soon",
+                "chunkTimeout": [],
+                "transport": 42,
+                "tls": "off",
+                "reasoningEffort": "high"
+            }
+        }),
+    );
+    let _registration = register(
+        &harness,
+        provider("test-provider", "", Some(json!({"baseURL": "https://openai.example/v1"}))),
+        std::slice::from_ref(&model),
+    )
+    .await;
+    let models = models(&harness);
+    let resolver = service_resolver(&harness, &models);
+    let reference = ModelRef { id: "fixture-model".to_owned(), provider_id, variant: None };
+    let resolved = resolver.resolve(Some(&reference)).await.expect("resolves").expect("a resolved model");
+    let options = options_json(&resolved.model);
+
+    assert!(options["timeout"].get("total").is_none());
+    assert_eq!(options["timeout"]["headers"].as_f64(), Some(300_000.0));
+    assert_eq!(options["timeout"]["chunk"].as_f64(), Some(900_000.0));
+    assert_eq!(options["providerOptions"]["reasoningEffort"], json!("high"));
 }
 
 #[tokio::test]

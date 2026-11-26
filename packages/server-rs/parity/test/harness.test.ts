@@ -276,6 +276,155 @@ export default defineScenario({
   60_000,
 )
 
+test(
+  "templates scenario env values",
+  async () => {
+    await withTempDir("parity-out-", async (outDir) => {
+      await withTempRoot(async (root) => {
+        const scenario = await writeScenario(
+          root,
+          "env-template",
+          `{
+  env: { FAKE_ECHO: "{{root}}/echo" },
+  steps: [{ http: { method: "GET", path: "/api/env?name=FAKE_ECHO" } }],
+}`,
+        )
+        const result = await runParity(outDir, ["--reference", fakeServer, "--candidate", fakeServer, scenario])
+        expect(result.exitCode).toBe(0)
+        const capture = (await Bun.file(path.join(outDir, "env-template/reference.json")).json()) as {
+          steps: { body: { value: string } }[]
+        }
+        expect(capture.steps[0].body.value.endsWith("<root>/echo")).toBe(true)
+      })
+    })
+  },
+  60_000,
+)
+
+test(
+  "creates a git repository whose metadata is not captured",
+  async () => {
+    await withTempDir("parity-out-", async (outDir) => {
+      await withTempRoot(async (root) => {
+        const scenario = await writeScenario(
+          root,
+          "git-repository",
+          `{
+  files: { "a.txt": "a\\n" },
+  steps: [
+    { git: { args: ["init", "-q"] } },
+    { git: { args: ["add", "."] } },
+    { git: { args: ["commit", "-qm", "one"] } },
+    { http: { method: "GET", path: "/api/config" } },
+  ],
+}`,
+        )
+        const result = await runParity(outDir, ["--reference", fakeServer, "--candidate", fakeServer, scenario])
+        expect(result.exitCode).toBe(0)
+        expect(result.output).toContain("PASS git-repository")
+        const capture = (await Bun.file(path.join(outDir, "git-repository/reference.json")).json()) as {
+          files: Record<string, string>
+        }
+        expect(capture.files["work/a.txt"]).toBe("a\n")
+        expect(Object.keys(capture.files).some((file) => file.includes(".git"))).toBe(false)
+      })
+    })
+  },
+  60_000,
+)
+
+test(
+  "stops the scenario when a git step fails",
+  async () => {
+    await withTempDir("parity-out-", async (outDir) => {
+      await withTempRoot(async (root) => {
+        const scenario = await writeScenario(
+          root,
+          "git-failure",
+          `{ steps: [{ git: { args: ["rev-parse", "--verify", "missing"] } }] }`,
+        )
+        const result = await runParity(outDir, ["--reference", fakeServer, "--candidate", fakeServer, scenario])
+        expect(result.exitCode).toBe(2)
+        expect(result.output).toContain("git rev-parse")
+      })
+    })
+  },
+  60_000,
+)
+
+test(
+  "rejects a git cwd outside the work directory",
+  async () => {
+    await withTempDir("parity-out-", async (outDir) => {
+      await withTempRoot(async (root) => {
+        const scenario = await writeScenario(
+          root,
+          "git-outside",
+          `{ steps: [{ git: { args: ["status"], cwd: "../outside" } }] }`,
+        )
+        const result = await runParity(outDir, ["--reference", fakeServer, "--candidate", fakeServer, scenario])
+        expect(result.exitCode).toBe(2)
+        expect(result.output).toContain("cwd is outside")
+      })
+    })
+  },
+  60_000,
+)
+
+test(
+  "runs setup git commands before the server starts",
+  async () => {
+    await withTempDir("parity-out-", async (outDir) => {
+      await withTempRoot(async (root) => {
+        const scenario = await writeScenario(
+          root,
+          "setup-git",
+          `{
+  setup: [
+    { files: { "a.txt": "a\\n" } },
+    { git: { args: ["init", "-q"] } },
+    { git: { args: ["add", "."] } },
+    { git: { args: ["commit", "-qm", "one"] } },
+  ],
+  steps: [{ http: { method: "GET", path: "/api/config" } }],
+}`,
+        )
+        const result = await runParity(outDir, ["--reference", fakeServer, "--candidate", fakeServer, scenario])
+        expect(result.exitCode).toBe(0)
+        expect(result.output).toContain("PASS setup-git")
+        const capture = (await Bun.file(path.join(outDir, "setup-git/reference.json")).json()) as {
+          files: Record<string, string>
+        }
+        expect(capture.files["work/a.txt"]).toBe("a\n")
+        expect(Object.keys(capture.files).some((file) => file.includes(".git"))).toBe(false)
+      })
+    })
+  },
+  60_000,
+)
+
+test(
+  "stops the scenario when a setup git step fails",
+  async () => {
+    await withTempDir("parity-out-", async (outDir) => {
+      await withTempRoot(async (root) => {
+        const scenario = await writeScenario(
+          root,
+          "setup-git-failure",
+          `{
+  setup: [{ git: { args: ["rev-parse", "--verify", "missing"] } }],
+  steps: [{ http: { method: "GET", path: "/api/config" } }],
+}`,
+        )
+        const result = await runParity(outDir, ["--reference", fakeServer, "--candidate", fakeServer, scenario])
+        expect(result.exitCode).toBe(2)
+        expect(result.output).toContain("git rev-parse")
+      })
+    })
+  },
+  60_000,
+)
+
 async function withTempDir(prefix: string, run: (directory: string) => Promise<void>) {
   await fs.mkdir("/tmp/opencode", { recursive: true })
   const directory = await fs.mkdtemp(path.join("/tmp/opencode", prefix))
@@ -288,6 +437,16 @@ async function withTempDir(prefix: string, run: (directory: string) => Promise<v
 
 async function withTempRoot(run: (root: string) => Promise<void>) {
   await withTempDir("parity-capture-", run)
+}
+
+async function writeScenario(root: string, name: string, source: string) {
+  const scenario = path.join(root, `${name}.scenario.ts`)
+  const scenarioModule = path.join(import.meta.dir, "../lib/scenario")
+  await Bun.write(
+    scenario,
+    `import { defineScenario } from ${JSON.stringify(scenarioModule)}\n\nexport default defineScenario(${source})\n`,
+  )
+  return scenario
 }
 
 test("parses SSE frames and ignores heartbeat comments", () => {
@@ -348,6 +507,17 @@ test("writes a scenario models value to the sandbox catalog", async () => {
     expect(await Bun.file(path.join(root, "models.json")).text()).toBe(JSON.stringify(models))
     await sandboxEnv(root, {}, {}, "http://127.0.0.1:1")
     expect(await Bun.file(path.join(root, "models.json")).text()).toBe("{}")
+  })
+})
+
+test("skips git metadata when listing files", async () => {
+  await withTempRoot(async (root) => {
+    await Bun.write(path.join(root, "file.txt"), "text")
+    await fs.mkdir(path.join(root, ".git"), { recursive: true })
+    await Bun.write(path.join(root, ".git/config"), "[core]\n")
+    await fs.mkdir(path.join(root, "work/.git"), { recursive: true })
+    await Bun.write(path.join(root, "work/.git/HEAD"), "ref: refs/heads/main\n")
+    expect(await listFiles(root)).toEqual({ "file.txt": "text" })
   })
 })
 

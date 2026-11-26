@@ -1,0 +1,402 @@
+{
+  "empty": [
+    {
+      "name": "empty-plain-path",
+      "file": "src/index.ts",
+      "patch": "Index: src/index.ts\n===================================================================\n--- src/index.ts\t\n+++ src/index.ts\t\n"
+    },
+    {
+      "name": "empty-path-with-space",
+      "file": "src/my file.ts",
+      "patch": "Index: src/my file.ts\n===================================================================\n--- src/my file.ts\t\n+++ src/my file.ts\t\n"
+    },
+    {
+      "name": "empty-non-ascii-path",
+      "file": "src/naïve/文件.ts",
+      "patch": "Index: src/naïve/文件.ts\n===================================================================\n--- src/naïve/文件.ts\t\n+++ src/naïve/文件.ts\t\n"
+    },
+    {
+      "name": "empty-path-with-tab",
+      "file": "src/with\ttab.ts",
+      "patch": "Index: src/with\ttab.ts\n===================================================================\n--- src/with\ttab.ts\t\n+++ src/with\ttab.ts\t\n"
+    }
+  ],
+  "add": [
+    {
+      "name": "add-empty-content",
+      "file": "src/added.ts",
+      "content": "",
+      "patch": "Index: src/added.ts\n===================================================================\n--- src/added.ts\t\n+++ src/added.ts\t\n"
+    },
+    {
+      "name": "add-one-line-trailing-newline",
+      "file": "src/added.ts",
+      "content": "alpha\n",
+      "patch": "Index: src/added.ts\n===================================================================\n--- src/added.ts\t\n+++ src/added.ts\t\n@@ -0,0 +1,1 @@\n+alpha\n"
+    },
+    {
+      "name": "add-one-line-no-trailing-newline",
+      "file": "src/added.ts",
+      "content": "alpha",
+      "patch": "Index: src/added.ts\n===================================================================\n--- src/added.ts\t\n+++ src/added.ts\t\n@@ -0,0 +1,1 @@\n+alpha\n\\ No newline at end of file\n"
+    },
+    {
+      "name": "add-several-lines-trailing-newline",
+      "file": "src/added.ts",
+      "content": "alpha\nbeta\ngamma\n",
+      "patch": "Index: src/added.ts\n===================================================================\n--- src/added.ts\t\n+++ src/added.ts\t\n@@ -0,0 +1,3 @@\n+alpha\n+beta\n+gamma\n"
+    },
+    {
+      "name": "add-several-lines-no-trailing-newline",
+      "file": "src/added.ts",
+      "content": "alpha\nbeta\ngamma",
+      "patch": "Index: src/added.ts\n===================================================================\n--- src/added.ts\t\n+++ src/added.ts\t\n@@ -0,0 +1,3 @@\n+alpha\n+beta\n+gamma\n\\ No newline at end of file\n"
+    },
+    {
+      "name": "add-lone-newline",
+      "file": "src/added.ts",
+      "content": "\n",
+      "patch": "Index: src/added.ts\n===================================================================\n--- src/added.ts\t\n+++ src/added.ts\t\n@@ -0,0 +1,1 @@\n+\n"
+    },
+    {
+      "name": "add-blank-line-in-middle",
+      "file": "src/added.ts",
+      "content": "alpha\n\nbeta\n",
+      "patch": "Index: src/added.ts\n===================================================================\n--- src/added.ts\t\n+++ src/added.ts\t\n@@ -0,0 +1,3 @@\n+alpha\n+\n+beta\n"
+    },
+    {
+      "name": "add-crlf-trailing-newline",
+      "file": "src/added.ts",
+      "content": "alpha\r\nbeta\r\n",
+      "patch": "Index: src/added.ts\n===================================================================\n--- src/added.ts\t\n+++ src/added.ts\t\n@@ -0,0 +1,2 @@\n+alpha\r\n+beta\r\n"
+    },
+    {
+      "name": "add-crlf-no-trailing-newline",
+      "file": "src/added.ts",
+      "content": "alpha\r\nbeta",
+      "patch": "Index: src/added.ts\n===================================================================\n--- src/added.ts\t\n+++ src/added.ts\t\n@@ -0,0 +1,2 @@\n+alpha\r\n+beta\n\\ No newline at end of file\n"
+    },
+    {
+      "name": "add-non-ascii-content",
+      "file": "src/added.ts",
+      "content": "héllo\n世界\n",
+      "patch": "Index: src/added.ts\n===================================================================\n--- src/added.ts\t\n+++ src/added.ts\t\n@@ -0,0 +1,2 @@\n+héllo\n+世界\n"
+    },
+    {
+      "name": "add-lone-carriage-return-suffix",
+      "file": "src/added.ts",
+      "content": "alpha\r",
+      "patch": "Index: src/added.ts\n===================================================================\n--- src/added.ts\t\n+++ src/added.ts\t\n@@ -0,0 +1,1 @@\n+alpha\r\n\\ No newline at end of file\n"
+    }
+  ],
+  "delete": [
+    {
+      "name": "delete-empty-content",
+      "file": "src/deleted.ts",
+      "content": "",
+      "patch": "Index: src/deleted.ts\n===================================================================\n--- src/deleted.ts\t\n+++ src/deleted.ts\t\n"
+    },
+    {
+      "name": "delete-one-line-trailing-newline",
+      "file": "src/deleted.ts",
+      "content": "alpha\n",
+      "patch": "Index: src/deleted.ts\n===================================================================\n--- src/deleted.ts\t\n+++ src/deleted.ts\t\n@@ -1,1 +0,0 @@\n-alpha\n"
+    },
+    {
+      "name": "delete-one-line-no-trailing-newline",
+      "file": "src/deleted.ts",
+      "content": "alpha",
+      "patch": "Index: src/deleted.ts\n===================================================================\n--- src/deleted.ts\t\n+++ src/deleted.ts\t\n@@ -1,1 +0,0 @@\n-alpha\n\\ No newline at end of file\n"
+    },
+    {
+      "name": "delete-several-lines-trailing-newline",
+      "file": "src/deleted.ts",
+      "content": "alpha\nbeta\ngamma\n",
+      "patch": "Index: src/deleted.ts\n===================================================================\n--- src/deleted.ts\t\n+++ src/deleted.ts\t\n@@ -1,3 +0,0 @@\n-alpha\n-beta\n-gamma\n"
+    },
+    {
+      "name": "delete-several-lines-no-trailing-newline",
+      "file": "src/deleted.ts",
+      "content": "alpha\nbeta\ngamma",
+      "patch": "Index: src/deleted.ts\n===================================================================\n--- src/deleted.ts\t\n+++ src/deleted.ts\t\n@@ -1,3 +0,0 @@\n-alpha\n-beta\n-gamma\n\\ No newline at end of file\n"
+    },
+    {
+      "name": "delete-lone-newline",
+      "file": "src/deleted.ts",
+      "content": "\n",
+      "patch": "Index: src/deleted.ts\n===================================================================\n--- src/deleted.ts\t\n+++ src/deleted.ts\t\n@@ -1,1 +0,0 @@\n-\n"
+    },
+    {
+      "name": "delete-blank-line-in-middle",
+      "file": "src/deleted.ts",
+      "content": "alpha\n\nbeta\n",
+      "patch": "Index: src/deleted.ts\n===================================================================\n--- src/deleted.ts\t\n+++ src/deleted.ts\t\n@@ -1,3 +0,0 @@\n-alpha\n-\n-beta\n"
+    },
+    {
+      "name": "delete-crlf-trailing-newline",
+      "file": "src/deleted.ts",
+      "content": "alpha\r\nbeta\r\n",
+      "patch": "Index: src/deleted.ts\n===================================================================\n--- src/deleted.ts\t\n+++ src/deleted.ts\t\n@@ -1,2 +0,0 @@\n-alpha\r\n-beta\r\n"
+    },
+    {
+      "name": "delete-crlf-no-trailing-newline",
+      "file": "src/deleted.ts",
+      "content": "alpha\r\nbeta",
+      "patch": "Index: src/deleted.ts\n===================================================================\n--- src/deleted.ts\t\n+++ src/deleted.ts\t\n@@ -1,2 +0,0 @@\n-alpha\r\n-beta\n\\ No newline at end of file\n"
+    },
+    {
+      "name": "delete-non-ascii-content",
+      "file": "src/deleted.ts",
+      "content": "héllo\n世界\n",
+      "patch": "Index: src/deleted.ts\n===================================================================\n--- src/deleted.ts\t\n+++ src/deleted.ts\t\n@@ -1,2 +0,0 @@\n-héllo\n-世界\n"
+    },
+    {
+      "name": "delete-lone-carriage-return-suffix",
+      "file": "src/deleted.ts",
+      "content": "alpha\r",
+      "patch": "Index: src/deleted.ts\n===================================================================\n--- src/deleted.ts\t\n+++ src/deleted.ts\t\n@@ -1,1 +0,0 @@\n-alpha\r\n\\ No newline at end of file\n"
+    }
+  ],
+  "count": [
+    {
+      "name": "count-added-file-patch",
+      "patch": "Index: src/count.ts\n===================================================================\n--- src/count.ts\t\n+++ src/count.ts\t\n@@ -0,0 +1,2 @@\n+one\n+two\n",
+      "additions": 2,
+      "deletions": 0
+    },
+    {
+      "name": "count-deleted-file-patch",
+      "patch": "Index: src/count.ts\n===================================================================\n--- src/count.ts\t\n+++ src/count.ts\t\n@@ -1,2 +0,0 @@\n-one\n-two\n",
+      "additions": 0,
+      "deletions": 2
+    },
+    {
+      "name": "count-file-headers-only",
+      "patch": "--- a/src/headers.ts\n+++ b/src/headers.ts\n",
+      "additions": 0,
+      "deletions": 0
+    },
+    {
+      "name": "count-added-and-removed-hunk",
+      "patch": "--- a/src/hunk.ts\n+++ b/src/hunk.ts\n@@ -1,2 +1,2 @@\n context\n-old\n+new\n",
+      "additions": 1,
+      "deletions": 1
+    },
+    {
+      "name": "count-header-like-content-lines",
+      "patch": "--- a/src/lookalike.ts\n+++ b/src/lookalike.ts\n@@ -1,3 +1,3 @@\n keep\n--- removed content line\n+++ added content line\n+actual addition\n- actual removal\n",
+      "additions": 1,
+      "deletions": 1
+    },
+    {
+      "name": "count-empty-text",
+      "patch": "",
+      "additions": 0,
+      "deletions": 0
+    }
+  ],
+  "fileFromPatchChunk": [
+    {
+      "name": "file-full-diff-header-and-file-headers",
+      "chunk": "diff --git a/src/one.ts b/src/one.ts\n--- a/src/one.ts\n+++ b/src/one.ts\n@@ -1 +1 @@\n-a\n+b\n",
+      "file": "src/one.ts"
+    },
+    {
+      "name": "file-only-file-headers",
+      "chunk": "--- a/src/only.ts\n+++ b/src/only.ts\n@@ -1 +1 @@\n-a\n+b\n",
+      "file": "src/only.ts"
+    },
+    {
+      "name": "file-new-side-dev-null",
+      "chunk": "--- a/src/old.ts\n+++ /dev/null\n@@ -1 +0,0 @@\n-a\n",
+      "file": "src/old.ts"
+    },
+    {
+      "name": "file-old-side-dev-null",
+      "chunk": "--- /dev/null\n+++ b/src/new.ts\n@@ -0,0 +1 @@\n+b\n",
+      "file": "src/new.ts"
+    },
+    {
+      "name": "file-both-sides-dev-null-with-header",
+      "chunk": "diff --git a/src/ghost.ts b/src/ghost.ts\n--- /dev/null\n+++ /dev/null\n@@ -0,0 +0,0 @@\n",
+      "file": "src/ghost.ts"
+    },
+    {
+      "name": "file-quoted-tab-escape",
+      "chunk": "--- \"a/src/with\\ttab.ts\"\n+++ \"b/src/with\\ttab.ts\"\n@@ -1 +1 @@\n-a\n+b\n",
+      "file": "src/with\ttab.ts"
+    },
+    {
+      "name": "file-quoted-octal-escapes",
+      "chunk": "--- \"a/src/caf\\303\\251.ts\"\n+++ \"b/src/caf\\303\\251.ts\"\n@@ -1 +1 @@\n-a\n+b\n",
+      "file": "src/caf303251.ts"
+    },
+    {
+      "name": "file-quoted-diff-header-without-file-headers",
+      "chunk": "diff --git \"a/src/one two.ts\" \"b/src/one two.ts\"\n@@ -1 +1 @@\n-a\n+b\n",
+      "file": "src/one two.ts"
+    },
+    {
+      "name": "file-unquoted-diff-header-with-spaces",
+      "chunk": "diff --git a/src/one two.ts b/src/one two.ts\n@@ -1 +1 @@\n-a\n+b\n",
+      "file": "src/one two.ts"
+    },
+    {
+      "name": "file-crlf-chunk",
+      "chunk": "diff --git a/src/crlf.ts b/src/crlf.ts\r\n--- a/src/crlf.ts\r\n+++ b/src/crlf.ts\r\n@@ -1 +1 @@\r\n-a\r\n+b\r\n",
+      "file": "src/crlf.ts"
+    },
+    {
+      "name": "file-no-path-information",
+      "chunk": "@@ -1 +1 @@\n-a\n+b\n",
+      "file": null
+    }
+  ],
+  "splitGitPatch": [
+    {
+      "name": "split-empty-text",
+      "text": "",
+      "truncated": false,
+      "chunks": []
+    },
+    {
+      "name": "split-one-chunk",
+      "text": "diff --git a/src/one.ts b/src/one.ts\n--- a/src/one.ts\n+++ b/src/one.ts\n@@ -1 +1 @@\n-a\n+b\n",
+      "truncated": false,
+      "chunks": [
+        "diff --git a/src/one.ts b/src/one.ts\n--- a/src/one.ts\n+++ b/src/one.ts\n@@ -1 +1 @@\n-a\n+b\n"
+      ]
+    },
+    {
+      "name": "split-two-chunks-lf",
+      "text": "diff --git a/src/one.ts b/src/one.ts\n--- a/src/one.ts\n+++ b/src/one.ts\n@@ -1 +1 @@\n-a\n+b\ndiff --git a/src/two.ts b/src/two.ts\n--- a/src/two.ts\n+++ b/src/two.ts\n@@ -1 +1 @@\n-a\n+b\n",
+      "truncated": false,
+      "chunks": [
+        "diff --git a/src/one.ts b/src/one.ts\n--- a/src/one.ts\n+++ b/src/one.ts\n@@ -1 +1 @@\n-a\n+b\n",
+        "diff --git a/src/two.ts b/src/two.ts\n--- a/src/two.ts\n+++ b/src/two.ts\n@@ -1 +1 @@\n-a\n+b\n"
+      ]
+    },
+    {
+      "name": "split-two-chunks-crlf",
+      "text": "diff --git a/src/one.ts b/src/one.ts\r\n--- a/src/one.ts\r\n+++ b/src/one.ts\r\n@@ -1 +1 @@\r\n-a\r\n+b\r\ndiff --git a/src/two.ts b/src/two.ts\r\n--- a/src/two.ts\r\n+++ b/src/two.ts\r\n@@ -1 +1 @@\r\n-a\r\n+b\r\n",
+      "truncated": false,
+      "chunks": [
+        "diff --git a/src/one.ts b/src/one.ts\r\n--- a/src/one.ts\r\n+++ b/src/one.ts\r\n@@ -1 +1 @@\r\n-a\r\n+b\r\n",
+        "diff --git a/src/two.ts b/src/two.ts\r\n--- a/src/two.ts\r\n+++ b/src/two.ts\r\n@@ -1 +1 @@\r\n-a\r\n+b\r\n"
+      ]
+    },
+    {
+      "name": "split-leading-preamble",
+      "text": "warning: excerpt from git diff\ndiff --git a/src/one.ts b/src/one.ts\n--- a/src/one.ts\n+++ b/src/one.ts\n@@ -1 +1 @@\n-a\n+b\ndiff --git a/src/two.ts b/src/two.ts\n--- a/src/two.ts\n+++ b/src/two.ts\n@@ -1 +1 @@\n-a\n+b\n",
+      "truncated": false,
+      "chunks": [
+        "diff --git a/src/one.ts b/src/one.ts\n--- a/src/one.ts\n+++ b/src/one.ts\n@@ -1 +1 @@\n-a\n+b\n",
+        "diff --git a/src/two.ts b/src/two.ts\n--- a/src/two.ts\n+++ b/src/two.ts\n@@ -1 +1 @@\n-a\n+b\n"
+      ]
+    },
+    {
+      "name": "split-truncated-two-chunks",
+      "text": "diff --git a/src/one.ts b/src/one.ts\n--- a/src/one.ts\n+++ b/src/one.ts\n@@ -1 +1 @@\n-a\n+b\ndiff --git a/src/two.ts b/src/two.ts\n--- a/src/two.ts\n+++ b/src/two.ts\n@@ -1 +1 @@\n-a\n+b\n",
+      "truncated": true,
+      "chunks": [
+        "diff --git a/src/one.ts b/src/one.ts\n--- a/src/one.ts\n+++ b/src/one.ts\n@@ -1 +1 @@\n-a\n+b\n"
+      ]
+    },
+    {
+      "name": "split-truncated-one-chunk",
+      "text": "diff --git a/src/one.ts b/src/one.ts\n--- a/src/one.ts\n+++ b/src/one.ts\n@@ -1 +1 @@\n-a\n+b\n",
+      "truncated": true,
+      "chunks": []
+    },
+    {
+      "name": "split-diff-not-at-line-start",
+      "text": "prefixdiff --git a/src/one.ts b/src/one.ts\n",
+      "truncated": false,
+      "chunks": []
+    }
+  ],
+  "chunksByFile": [
+    {
+      "name": "chunks-by-file-two-files",
+      "text": "diff --git a/src/one.ts b/src/one.ts\n--- a/src/one.ts\n+++ b/src/one.ts\n@@ -1 +1 @@\n-a\n+b\ndiff --git a/src/two.ts b/src/two.ts\n--- a/src/two.ts\n+++ b/src/two.ts\n@@ -1 +1 @@\n-a\n+b\n",
+      "truncated": false,
+      "fallback": [],
+      "files": {
+        "src/one.ts": "diff --git a/src/one.ts b/src/one.ts\n--- a/src/one.ts\n+++ b/src/one.ts\n@@ -1 +1 @@\n-a\n+b\n",
+        "src/two.ts": "diff --git a/src/two.ts b/src/two.ts\n--- a/src/two.ts\n+++ b/src/two.ts\n@@ -1 +1 @@\n-a\n+b\n"
+      }
+    },
+    {
+      "name": "chunks-by-file-same-file-twice",
+      "text": "diff --git a/src/same.ts b/src/same.ts\n--- a/src/same.ts\n+++ b/src/same.ts\n@@ -1 +1 @@\n-a\n+b\ndiff --git a/src/same.ts b/src/same.ts\n--- a/src/same.ts\n+++ b/src/same.ts\n@@ -3 +3 @@\n-c\n+d\n",
+      "truncated": false,
+      "fallback": [],
+      "files": {
+        "src/same.ts": "diff --git a/src/same.ts b/src/same.ts\n--- a/src/same.ts\n+++ b/src/same.ts\n@@ -1 +1 @@\n-a\n+b\ndiff --git a/src/same.ts b/src/same.ts\n--- a/src/same.ts\n+++ b/src/same.ts\n@@ -3 +3 @@\n-c\n+d\n"
+      }
+    },
+    {
+      "name": "chunks-by-file-dev-null-fallback",
+      "text": "diff --git /dev/null\n--- /dev/null\n+++ /dev/null\n@@ -0,0 +1 @@\n+new\n",
+      "truncated": false,
+      "fallback": [
+        "fallback.ts"
+      ],
+      "files": {
+        "fallback.ts": "diff --git /dev/null\n--- /dev/null\n+++ /dev/null\n@@ -0,0 +1 @@\n+new\n"
+      }
+    },
+    {
+      "name": "chunks-by-file-null-fallback-skips",
+      "text": "diff --git first\n@@ -1 +1 @@\n-a\n+b\n",
+      "truncated": false,
+      "fallback": [
+        null
+      ],
+      "files": {}
+    },
+    {
+      "name": "chunks-by-file-truncated-drops-last-before-fallback",
+      "text": "diff --git first\n@@ -1 +1 @@\n-a\n+b\ndiff --git second\n@@ -1 +1 @@\n-c\n+d\n",
+      "truncated": true,
+      "fallback": [
+        "kept.ts",
+        "dropped.ts"
+      ],
+      "files": {
+        "kept.ts": "diff --git first\n@@ -1 +1 @@\n-a\n+b\n"
+      }
+    },
+    {
+      "name": "chunks-by-file-quoted-path",
+      "text": "diff --git \"a/src/quote one.ts\" \"b/src/quote one.ts\"\n--- \"a/src/quote one.ts\"\n+++ \"b/src/quote one.ts\"\n@@ -1 +1 @@\n-a\n+b\n",
+      "truncated": false,
+      "fallback": [],
+      "files": {
+        "src/quote one.ts": "diff --git \"a/src/quote one.ts\" \"b/src/quote one.ts\"\n--- \"a/src/quote one.ts\"\n+++ \"b/src/quote one.ts\"\n@@ -1 +1 @@\n-a\n+b\n"
+      }
+    },
+    {
+      "name": "chunks-by-file-unquoted-non-ascii",
+      "text": "diff --git a/src/naïve/文件.ts b/src/naïve/文件.ts\n--- a/src/naïve/文件.ts\n+++ b/src/naïve/文件.ts\n@@ -1 +1 @@\n-a\n+b\n",
+      "truncated": false,
+      "fallback": [],
+      "files": {
+        "src/naïve/文件.ts": "diff --git a/src/naïve/文件.ts b/src/naïve/文件.ts\n--- a/src/naïve/文件.ts\n+++ b/src/naïve/文件.ts\n@@ -1 +1 @@\n-a\n+b\n"
+      }
+    },
+    {
+      "name": "chunks-by-file-fallback-index-after-match",
+      "text": "diff --git a/src/one.ts b/src/one.ts\n--- a/src/one.ts\n+++ b/src/one.ts\n@@ -1 +1 @@\n-a\n+b\ndiff --git second\n@@ -1 +1 @@\n-c\n+d\n",
+      "truncated": false,
+      "fallback": [
+        null,
+        "second.ts"
+      ],
+      "files": {
+        "src/one.ts": "diff --git a/src/one.ts b/src/one.ts\n--- a/src/one.ts\n+++ b/src/one.ts\n@@ -1 +1 @@\n-a\n+b\n",
+        "second.ts": "diff --git second\n@@ -1 +1 @@\n-c\n+d\n"
+      }
+    }
+  ]
+}

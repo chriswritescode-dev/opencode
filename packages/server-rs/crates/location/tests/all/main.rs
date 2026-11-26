@@ -10,9 +10,20 @@ mod state_replay;
 mod workspace;
 
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
+use opencode_location::project::ProjectService;
+
 static COUNTER: AtomicU64 = AtomicU64::new(0);
+
+pub fn test_git() -> Arc<opencode_git::Git> {
+    Arc::new(opencode_git::Git::new(Arc::new(|name: &str| std::env::var_os(name))))
+}
+
+pub fn project_service(database: Arc<opencode_storage::Database>) -> ProjectService {
+    ProjectService::new(database, test_git())
+}
 
 struct TempDir {
     path: PathBuf,

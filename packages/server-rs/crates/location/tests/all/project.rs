@@ -1,20 +1,17 @@
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicI64, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicI64, Ordering};
 use std::sync::{Arc, OnceLock};
 
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD;
-use futures_util::future::BoxFuture;
-use opencode_location::environment::local::{LocalEnvironment, LocalFiles, LocalSpawner};
-use opencode_location::environment::{
-    CommandOutput, CommandSpec, Environment, EnvironmentError, Files, LOCAL_ID, Spawner,
-};
+use opencode_location::environment::local::LocalEnvironment;
 use opencode_location::events::LocationEvent;
 use opencode_location::project::{
     self, CommandsInput, IconInput, Project, ProjectCommands, ProjectError, ProjectIcon, ProjectService, ProjectTime,
     ResolveOptions, UpdateInput, Vcs,
 };
 use opencode_storage::project as storage_project;
+use opencode_storage::worktree as storage_worktree;
 use opencode_storage::{Database, DatabaseLocation};
 use rusqlite::params;
 use tokio::sync::broadcast;
@@ -57,25 +54,27 @@ fn git_config() -> &'static Path {
     })
 }
 
-fn git(directory: &Path, args: &[&str]) -> String {
-    let output = std::process::Command::new("git")
-        .args(args)
-        .current_dir(directory)
-        .env("GIT_CONFIG_NOSYSTEM", "1")
-        .env("GIT_CONFIG_GLOBAL", git_config())
-        .output()
+async fn git(directory: &Path, args: &[&str]) -> String {
+    let output = crate::test_git()
+        .execute(
+            args,
+            opencode_git::RunOptions {
+                cwd: Some(path_text(directory)),
+                env: vec![
+                    ("GIT_CONFIG_NOSYSTEM".to_string(), "1".to_string()),
+                    ("GIT_CONFIG_GLOBAL".to_string(), path_text(git_config())),
+                ],
+                ..Default::default()
+            },
+        )
+        .await
         .expect("runs git");
-    assert!(
-        output.status.success(),
-        "git {args:?} failed in {}: {}",
-        directory.display(),
-        String::from_utf8_lossy(&output.stderr)
-    );
-    String::from_utf8_lossy(&output.stdout).trim().to_string()
+    assert!(output.status == 0, "git {args:?} failed in {}: {}", directory.display(), output.stderr_text());
+    output.text().trim().to_string()
 }
 
-fn init_repo(directory: &Path, commit: bool, remote: Option<&str>) {
-    git(directory, &["init"]);
+async fn init_repo(directory: &Path, commit: bool, remote: Option<&str>) {
+    git(directory, &["init"]).await;
     if commit {
         git(
             directory,
@@ -91,15 +90,16 @@ fn init_repo(directory: &Path, commit: bool, remote: Option<&str>) {
                 "-m",
                 "root",
             ],
-        );
+        )
+        .await;
     }
     if let Some(remote) = remote {
-        git(directory, &["remote", "add", "origin", remote]);
+        git(directory, &["remote", "add", "origin", remote]).await;
     }
 }
 
-fn root_commit(directory: &Path) -> String {
-    git(directory, &["rev-list", "--max-parents=0", "HEAD"])
+async fn root_commit(directory: &Path) -> String {
+    git(directory, &["rev-list", "--max-parents=0", "HEAD"]).await
 }
 
 fn drain(receiver: &mut broadcast::Receiver<LocationEvent>) -> Vec<LocationEvent> {
@@ -184,64 +184,12 @@ fn svg_url(contents: &str) -> String {
     format!("data:image/svg+xml;base64,{}", STANDARD.encode(contents))
 }
 
-struct CountingSpawner {
-    inner: LocalSpawner,
-    count: Arc<AtomicUsize>,
-}
-
-impl Spawner for CountingSpawner {
-    fn spawn<'a>(&'a self, command: &'a CommandSpec) -> BoxFuture<'a, Result<CommandOutput, EnvironmentError>> {
-        self.count.fetch_add(1, Ordering::Relaxed);
-        self.inner.spawn(command)
-    }
-}
-
-struct CountingEnvironment {
-    files: LocalFiles,
-    spawner: CountingSpawner,
-}
-
-impl CountingEnvironment {
-    fn new() -> Self {
-        CountingEnvironment {
-            files: LocalFiles::new(),
-            spawner: CountingSpawner { inner: LocalSpawner::new(), count: Arc::new(AtomicUsize::new(0)) },
-        }
-    }
-
-    fn spawns(&self) -> usize {
-        self.spawner.count.load(Ordering::Relaxed)
-    }
-}
-
-impl Environment for CountingEnvironment {
-    fn id(&self) -> &str {
-        LOCAL_ID
-    }
-
-    fn files(&self) -> &dyn Files {
-        &self.files
-    }
-
-    fn spawner(&self) -> &dyn Spawner {
-        &self.spawner
-    }
-
-    fn hosts_server(&self) -> bool {
-        true
-    }
-
-    fn searchable(&self) -> bool {
-        true
-    }
-}
-
 #[tokio::test]
 async fn markerless_directories_hash_deterministically() {
     let (_temp, root) = temp_root();
     let nested = directory(&root, "notes/drafts");
     let environment = LocalEnvironment::new();
-    let service = ProjectService::new(database());
+    let service = crate::project_service(database());
     let root_text = path_text(&root);
 
     let result = service.resolve(&environment, &root_text, ResolveOptions::default()).await.expect("resolves the root");
@@ -274,7 +222,7 @@ async fn git_marker_overrides_markerless_directory_projects() {
     let (_temp, root) = temp_root();
     let nested = directory(&root, "packages/app");
     let environment = LocalEnvironment::new();
-    let service = ProjectService::new(database());
+    let service = crate::project_service(database());
     let nested_text = path_text(&nested);
 
     let root_project =
@@ -284,7 +232,7 @@ async fn git_marker_overrides_markerless_directory_projects() {
         .await
         .expect("resolves the nested directory");
 
-    init_repo(&root, true, None);
+    init_repo(&root, true, None).await;
     let repository =
         service.resolve(&environment, &nested_text, ResolveOptions::default()).await.expect("resolves the repository");
 
@@ -298,8 +246,8 @@ async fn git_marker_overrides_markerless_directory_projects() {
 #[tokio::test]
 async fn normalized_origin_beats_the_root_commit() {
     let (_temp, root) = temp_root();
-    init_repo(&root, true, Some("git@github.com:Acme/App.git"));
-    let service = ProjectService::new(database());
+    init_repo(&root, true, Some("git@github.com:Acme/App.git")).await;
+    let service = crate::project_service(database());
 
     let result = service
         .resolve(&LocalEnvironment::new(), &path_text(&root), ResolveOptions::default())
@@ -307,7 +255,7 @@ async fn normalized_origin_beats_the_root_commit() {
         .expect("resolves the repository");
 
     assert_eq!(result.id, project::remote_id("git@github.com:Acme/App.git").expect("normalizes the remote"));
-    assert_ne!(result.id, root_commit(&root));
+    assert_ne!(result.id, root_commit(&root).await);
     assert_eq!(result.directory, real_path(&root));
     assert!(matches!(result.vcs, Some(Vcs::Git { .. })));
 }
@@ -317,9 +265,9 @@ async fn ssh_and_https_remotes_normalize_to_the_same_id() {
     let (_temp, root) = temp_root();
     let ssh = directory(&root, "ssh");
     let https = directory(&root, "https");
-    init_repo(&ssh, true, Some("git@github.com:owner/repo.git"));
-    init_repo(&https, true, Some("https://github.com/owner/repo.git"));
-    let service = ProjectService::new(database());
+    init_repo(&ssh, true, Some("git@github.com:owner/repo.git")).await;
+    init_repo(&https, true, Some("https://github.com/owner/repo.git")).await;
+    let service = crate::project_service(database());
     let environment = LocalEnvironment::new();
 
     let a = service.resolve(&environment, &path_text(&ssh), ResolveOptions::default()).await.expect("resolves ssh");
@@ -333,23 +281,23 @@ async fn ssh_and_https_remotes_normalize_to_the_same_id() {
 async fn file_remotes_are_ignored_and_the_root_commit_is_used() {
     let (_temp, root) = temp_root();
     let remote = format!("file://{}", path_text(&root));
-    init_repo(&root, true, Some(&remote));
-    let service = ProjectService::new(database());
+    init_repo(&root, true, Some(&remote)).await;
+    let service = crate::project_service(database());
 
     let result = service
         .resolve(&LocalEnvironment::new(), &path_text(&root), ResolveOptions::default())
         .await
         .expect("resolves the repository");
 
-    assert_eq!(result.id, root_commit(&root));
+    assert_eq!(result.id, root_commit(&root).await);
 }
 
 #[tokio::test]
 async fn previous_cached_id_is_read_from_the_common_dir() {
     let (_temp, root) = temp_root();
-    init_repo(&root, true, Some("git@github.com:owner/repo.git"));
+    init_repo(&root, true, Some("git@github.com:owner/repo.git")).await;
     write_file(&root.join(".git/opencode"), "old-id");
-    let service = ProjectService::new(database());
+    let service = crate::project_service(database());
 
     let result = service
         .resolve(&LocalEnvironment::new(), &path_text(&root), ResolveOptions::default())
@@ -363,8 +311,8 @@ async fn previous_cached_id_is_read_from_the_common_dir() {
 #[tokio::test]
 async fn resolving_never_writes_the_git_cache() {
     let (_temp, root) = temp_root();
-    init_repo(&root, true, Some("git@github.com:owner/repo.git"));
-    let service = ProjectService::new(database());
+    init_repo(&root, true, Some("git@github.com:owner/repo.git")).await;
+    let service = crate::project_service(database());
 
     service
         .resolve(&LocalEnvironment::new(), &path_text(&root), ResolveOptions::default())
@@ -379,9 +327,9 @@ async fn git_marker_inside_an_outer_mercurial_repository_is_preferred() {
     let (_temp, root) = temp_root();
     std::fs::create_dir_all(root.join(".hg")).expect("creates the outer mercurial marker");
     let nested = directory(&root, "nested");
-    init_repo(&nested, true, None);
+    init_repo(&nested, true, None).await;
     let app = directory(&nested, "app");
-    let service = ProjectService::new(database());
+    let service = crate::project_service(database());
 
     let result = service
         .resolve(&LocalEnvironment::new(), &path_text(&app), ResolveOptions::default())
@@ -395,11 +343,11 @@ async fn git_marker_inside_an_outer_mercurial_repository_is_preferred() {
 #[tokio::test]
 async fn mercurial_marker_inside_an_outer_git_repository_is_preferred() {
     let (_temp, root) = temp_root();
-    init_repo(&root, true, None);
+    init_repo(&root, true, None).await;
     let nested = directory(&root, "nested");
     std::fs::create_dir_all(nested.join(".hg")).expect("creates the nested mercurial marker");
     let app = directory(&nested, "app");
-    let service = ProjectService::new(database());
+    let service = crate::project_service(database());
 
     let result = service
         .resolve(&LocalEnvironment::new(), &path_text(&app), ResolveOptions::default())
@@ -413,9 +361,9 @@ async fn mercurial_marker_inside_an_outer_git_repository_is_preferred() {
 #[tokio::test]
 async fn git_metadata_wins_when_both_markers_share_a_directory() {
     let (_temp, root) = temp_root();
-    init_repo(&root, true, None);
+    init_repo(&root, true, None).await;
     std::fs::create_dir_all(root.join(".hg")).expect("creates the mercurial marker");
-    let service = ProjectService::new(database());
+    let service = crate::project_service(database());
 
     let result = service
         .resolve(&LocalEnvironment::new(), &path_text(&root), ResolveOptions::default())
@@ -429,7 +377,7 @@ async fn git_metadata_wins_when_both_markers_share_a_directory() {
 async fn empty_mercurial_metadata_resolves_as_hg_with_the_global_id() {
     let (_temp, root) = temp_root();
     std::fs::create_dir_all(root.join(".hg")).expect("creates the mercurial marker");
-    let service = ProjectService::new(database());
+    let service = crate::project_service(database());
 
     let result = service
         .resolve(&LocalEnvironment::new(), &path_text(&root), ResolveOptions::default())
@@ -444,11 +392,11 @@ async fn empty_mercurial_metadata_resolves_as_hg_with_the_global_id() {
 async fn linked_worktree_resolves_to_the_main_repository() {
     let (_temp, root) = temp_root();
     let main = directory(&root, "repo");
-    init_repo(&main, true, Some("git@github.com:owner/repo.git"));
+    init_repo(&main, true, Some("git@github.com:owner/repo.git")).await;
     write_file(&main.join(".git/opencode"), "old-id");
     let linked = root.join("linked");
-    git(&main, &["worktree", "add", &path_text(&linked), "-b", "linked"]);
-    let service = ProjectService::new(database());
+    git(&main, &["worktree", "add", &path_text(&linked), "-b", "linked"]).await;
+    let service = crate::project_service(database());
     let mut receiver = service.subscribe();
 
     let result = service
@@ -482,9 +430,98 @@ async fn linked_worktree_resolves_to_the_main_repository() {
 }
 
 #[tokio::test]
+async fn resolving_a_linked_worktree_stores_both_worktree_rows() {
+    let (_temp, root) = temp_root();
+    let main = directory(&root, "repo");
+    init_repo(&main, true, Some("git@github.com:owner/repo.git")).await;
+    let linked = root.join("linked");
+    git(&main, &["worktree", "add", &path_text(&linked), "-b", "linked"]).await;
+    let database = database();
+    let service = crate::project_service(database.clone());
+
+    let resolved = service
+        .resolve(&LocalEnvironment::new(), &path_text(&linked), ResolveOptions::default())
+        .await
+        .expect("resolves the linked worktree");
+
+    let rows =
+        database.read(|connection| storage_worktree::list(connection, &resolved.id)).expect("lists the worktree rows");
+    let mut stored: Vec<(String, Option<String>)> = rows.into_iter().map(|row| (row.directory, row.strategy)).collect();
+    stored.sort();
+    assert_eq!(stored, vec![(real_path(&linked), Some("git".to_string())), (real_path(&main), None),]);
+}
+
+#[tokio::test]
+async fn sweep_rehomes_a_project_to_a_surviving_main_checkout() {
+    let (_temp, root) = temp_root();
+    let main = directory(&root, "repo");
+    let clone = root.join("clone");
+    init_repo(&main, true, Some("git@github.com:owner/repo.git")).await;
+    git(&root, &["clone", "--no-hardlinks", &path_text(&main), &path_text(&clone)]).await;
+    git(&clone, &["remote", "set-url", "origin", "https://github.com/owner/repo.git"]).await;
+    let database = database();
+    let service = crate::project_service(database.clone());
+    let environment = LocalEnvironment::new();
+
+    let opened = service
+        .resolve(&environment, &path_text(&main), ResolveOptions::default())
+        .await
+        .expect("resolves the main repository");
+    let mirrored =
+        service.resolve(&environment, &path_text(&clone), ResolveOptions::default()).await.expect("resolves the clone");
+    assert_eq!(mirrored.id, opened.id);
+    set_times(&database, &opened.id, 1, 1, 1);
+    std::fs::remove_dir_all(&main).expect("removes the main checkout");
+
+    service.sweep(&environment).await.expect("sweeps the project");
+
+    let stored = service
+        .list(false)
+        .await
+        .expect("lists the project")
+        .into_iter()
+        .find(|project| project.id == opened.id)
+        .expect("the project survives");
+    assert_eq!(stored.canonical, real_path(&clone));
+    assert_eq!(stored.time.archived, None);
+}
+
+#[tokio::test]
+async fn sweep_keeps_a_project_whose_linked_worktrees_survive() {
+    let (_temp, root) = temp_root();
+    let main = directory(&root, "repo");
+    init_repo(&main, true, Some("git@github.com:owner/repo.git")).await;
+    let linked = root.join("linked");
+    git(&main, &["worktree", "add", &path_text(&linked), "-b", "linked"]).await;
+    let database = database();
+    let service = crate::project_service(database.clone());
+    let environment = LocalEnvironment::new();
+
+    let opened = service
+        .resolve(&environment, &path_text(&linked), ResolveOptions::default())
+        .await
+        .expect("resolves the linked worktree");
+    let canonical = opened.canonical.clone();
+    set_times(&database, &opened.id, 1, 1, 1);
+    std::fs::remove_dir_all(&main).expect("removes the main checkout");
+
+    service.sweep(&environment).await.expect("sweeps the project");
+
+    let stored = service
+        .list(false)
+        .await
+        .expect("lists the project")
+        .into_iter()
+        .find(|project| project.id == opened.id)
+        .expect("the project survives");
+    assert_eq!(stored.canonical, canonical, "a linked worktree is never promoted");
+    assert_eq!(stored.time.archived, None);
+}
+
+#[tokio::test]
 async fn list_orders_projects_by_recent_activity() {
     let database = database();
-    let service = ProjectService::new(database.clone());
+    let service = crate::project_service(database.clone());
     insert_project(
         &database,
         ProjectFixture {
@@ -593,7 +630,7 @@ async fn update_sets_and_clears_project_metadata() {
         .read(|connection| storage_project::upsert(connection, "update", &path_text(&project_dir), None))
         .expect("inserts the project");
     set_times(&database, "update", 1, 1, 1);
-    let service = ProjectService::new(database);
+    let service = crate::project_service(database);
 
     let updated = service
         .update(UpdateInput {
@@ -676,6 +713,7 @@ async fn activate_records_activity_and_throttles_repeats() {
     let clock = Arc::new(AtomicI64::new(100_000));
     let service = ProjectService::with_now(
         database,
+        crate::test_git(),
         Arc::new({
             let clock = clock.clone();
             move || clock.load(Ordering::Relaxed)
@@ -714,6 +752,7 @@ async fn sweep_archives_idle_missing_projects_and_resolve_unarchives_them() {
     let clock = Arc::new(AtomicI64::new(now));
     let service = ProjectService::with_now(
         database.clone(),
+        crate::test_git(),
         Arc::new({
             let clock = clock.clone();
             move || clock.load(Ordering::Relaxed)
@@ -811,10 +850,11 @@ async fn sweep_archives_idle_missing_projects_and_resolve_unarchives_them() {
 async fn git_discovery_is_cached_until_metadata_changes() {
     let (_temp, root) = temp_root();
     let nested = directory(&root, "packages/app");
-    init_repo(&root, true, None);
-    let root_id = root_commit(&root);
-    let environment = CountingEnvironment::new();
-    let service = ProjectService::new(database());
+    init_repo(&root, true, None).await;
+    let root_id = root_commit(&root).await;
+    let environment = LocalEnvironment::new();
+    let git = crate::test_git();
+    let service = ProjectService::new(database(), git.clone());
     let nested_text = path_text(&nested);
 
     let first = service
@@ -822,7 +862,7 @@ async fn git_discovery_is_cached_until_metadata_changes() {
         .await
         .expect("resolves the nested directory");
     assert_eq!(first.id, root_id);
-    let after_first = environment.spawns();
+    let after_first = git.executions();
     assert!(after_first > 0, "the first discovery spawns git");
 
     let again = service
@@ -833,15 +873,15 @@ async fn git_discovery_is_cached_until_metadata_changes() {
         service.resolve(&environment, &path_text(&root), ResolveOptions::default()).await.expect("resolves the root");
     assert_eq!(again.id, root_id);
     assert_eq!(at_root.id, root_id);
-    assert_eq!(environment.spawns(), after_first, "a cached discovery spawns nothing");
+    assert_eq!(git.executions(), after_first, "a cached discovery spawns nothing");
 
-    git(&root, &["remote", "add", "origin", "git@github.com:owner/repo.git"]);
+    self::git(&root, &["remote", "add", "origin", "git@github.com:owner/repo.git"]).await;
     let remote = service
         .resolve(&environment, &nested_text, ResolveOptions::default())
         .await
         .expect("resolves the changed repository");
     assert_eq!(remote.id, project::remote_id("git@github.com:owner/repo.git").expect("normalizes the remote"));
-    assert!(environment.spawns() > after_first, "changed git metadata invalidates the cache");
+    assert!(git.executions() > after_first, "changed git metadata invalidates the cache");
 }
 
 #[tokio::test]
@@ -967,7 +1007,7 @@ async fn icon_refresh_persists_changed_icons_and_preserves_overrides() {
 
     let resolved_dir = directory(&root, "resolved");
     write_file(&resolved_dir.join("favicon.svg"), SVG);
-    let service = ProjectService::new(database.clone());
+    let service = crate::project_service(database.clone());
     let mut receiver = service.subscribe();
     let resolved = service
         .resolve(&LocalEnvironment::new(), &path_text(&resolved_dir), ResolveOptions::default())
@@ -1013,9 +1053,9 @@ async fn icon_refresh_persists_changed_icons_and_preserves_overrides() {
 #[tokio::test]
 async fn corrupt_cached_id_falls_back_to_the_root_commit() {
     let (_temp, root) = temp_root();
-    init_repo(&root, true, None);
+    init_repo(&root, true, None).await;
     write_file(&root.join(".git/opencode"), "\u{0}".repeat(40));
-    let service = ProjectService::new(database());
+    let service = crate::project_service(database());
 
     let result = service
         .resolve(&LocalEnvironment::new(), &path_text(&root), ResolveOptions::default())
@@ -1023,15 +1063,15 @@ async fn corrupt_cached_id_falls_back_to_the_root_commit() {
         .expect("resolves the repository despite the corrupt cache");
 
     assert_eq!(result.previous, None);
-    assert_eq!(result.id, root_commit(&root));
+    assert_eq!(result.id, root_commit(&root).await);
     assert!(matches!(result.vcs, Some(Vcs::Git { .. })));
 }
 
 #[tokio::test]
 async fn empty_git_repository_resolves_to_the_global_id() {
     let (_temp, root) = temp_root();
-    init_repo(&root, false, None);
-    let service = ProjectService::new(database());
+    init_repo(&root, false, None).await;
+    let service = crate::project_service(database());
 
     let result = service
         .resolve(&LocalEnvironment::new(), &path_text(&root), ResolveOptions::default())
@@ -1051,8 +1091,8 @@ async fn renamed_canonical_preserves_metadata_and_publishes_once() {
     let (_temp, root) = temp_root();
     let before = directory(&root, "before");
     let after = root.join("after");
-    init_repo(&before, true, Some("git@github.com:owner/repo.git"));
-    let service = ProjectService::new(database());
+    init_repo(&before, true, Some("git@github.com:owner/repo.git")).await;
+    let service = crate::project_service(database());
     let environment = LocalEnvironment::new();
 
     let initial = service
@@ -1105,10 +1145,10 @@ async fn another_clone_keeps_the_existing_canonical() {
     let (_temp, root) = temp_root();
     let main = directory(&root, "repo");
     let clone = root.join("clone");
-    init_repo(&main, true, Some("git@github.com:owner/repo.git"));
-    git(&root, &["clone", "--no-hardlinks", &path_text(&main), &path_text(&clone)]);
-    git(&clone, &["remote", "set-url", "origin", "https://github.com/owner/repo.git"]);
-    let service = ProjectService::new(database());
+    init_repo(&main, true, Some("git@github.com:owner/repo.git")).await;
+    git(&root, &["clone", "--no-hardlinks", &path_text(&main), &path_text(&clone)]).await;
+    git(&clone, &["remote", "set-url", "origin", "https://github.com/owner/repo.git"]).await;
+    let service = crate::project_service(database());
     let environment = LocalEnvironment::new();
     let expected = project::remote_id("git@github.com:owner/repo.git").expect("normalizes the remote");
 
@@ -1141,8 +1181,8 @@ async fn another_clone_keeps_the_existing_canonical() {
 #[tokio::test]
 async fn repeated_resolutions_do_not_publish_project_updates() {
     let (_temp, root) = temp_root();
-    init_repo(&root, true, Some("git@github.com:owner/repo.git"));
-    let service = ProjectService::new(database());
+    init_repo(&root, true, Some("git@github.com:owner/repo.git")).await;
+    let service = crate::project_service(database());
     let environment = LocalEnvironment::new();
     let mut receiver = service.subscribe();
 

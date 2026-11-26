@@ -36,6 +36,8 @@ const SAFETY_MARGIN: Duration = Duration::from_secs(3);
 
 const SLOW_DOWN_FALLBACK: Duration = Duration::from_secs(5);
 
+const TOKEN_TIMEOUT: Duration = Duration::from_secs(10);
+
 #[derive(Clone, Debug, PartialEq, Deserialize)]
 pub struct User {
     #[serde(default)]
@@ -308,7 +310,10 @@ async fn poll(
         .await?;
         if let Some(access) = token.access_token.clone() {
             let user =
-                fetch_user(http.as_ref(), &access, user_agent, enterprise.then_some(domain), None).await.ok().flatten();
+                fetch_user(http.as_ref(), &access, user_agent, enterprise.then_some(domain), Some(TOKEN_TIMEOUT))
+                    .await
+                    .ok()
+                    .flatten();
             if let Some(message) = user.as_ref().and_then(copilot_entitlement_error) {
                 return Err(error(message));
             }
@@ -347,7 +352,7 @@ async fn send_request<T: DeserializeOwned>(
     http: &dyn HttpSender,
     request: PreparedHttp,
 ) -> Result<T, AuthorizationError> {
-    match http::send(http, request, None).await {
+    match http::send(http, request, Some(TOKEN_TIMEOUT)).await {
         Ok(response) => {
             serde_json::from_slice(&response.body).map_err(|failure| error(format!("Request failed: {failure}")))
         }

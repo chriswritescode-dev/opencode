@@ -281,6 +281,11 @@ async fn exchange_login(expiry: Expiry) {
     }
     routes.route_json("POST", TOKEN, token);
 
+    let mut stray = login.callback.clone();
+    set_param(&mut stray, "state", "another-login");
+    let response = client().get(stray.as_str()).send().await.expect("fetch the Poe callback");
+    assert_eq!(response.status(), 400);
+
     let before = opencode_util::time::now_ms();
     let response = client().get(callback.as_str()).send().await.expect("fetch the Poe callback");
     let after = opencode_util::time::now_ms();
@@ -427,9 +432,14 @@ async fn isolates_overlapping_login_attempts_and_closes_cancelled_listeners() {
     set_param(&mut crossed, "state", &param(&next.url, "state").expect("the next state"));
     let response = client().get(crossed.as_str()).send().await.expect("fetch the first callback");
     assert_eq!(response.status(), 400);
-    let status = wait_for_status(&harness, &first.attempt).await;
-    let AttemptStatus::Failed { message, .. } = status else { panic!("the first attempt fails, got {status:?}") };
-    assert_eq!(message, "Invalid OAuth state");
+    let status = harness
+        .services
+        .integration
+        .oauth()
+        .status(&integration_id(), &first.attempt.attempt_id)
+        .await
+        .expect("the first Poe attempt status");
+    assert!(matches!(status, AttemptStatus::Pending { .. }));
     let status = harness
         .services
         .integration
@@ -467,7 +477,6 @@ async fn rejects_callback(params: &[(&str, &str)], message: &str) {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn rejects_invalid_or_denied_callbacks() {
-    rejects_callback(&[("state", "")], "Invalid OAuth state").await;
     rejects_callback(&[("iss", "https://other.example"), ("error", "access_denied")], "Invalid OAuth issuer").await;
     rejects_callback(&[("iss", "https://poe.com/")], "Invalid OAuth issuer").await;
     rejects_callback(&[("iss", "")], "Invalid OAuth issuer").await;

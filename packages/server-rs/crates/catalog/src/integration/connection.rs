@@ -127,10 +127,11 @@ impl ConnectionService<'_> {
                 .get(&credential.integration_id.0)
                 .and_then(|entry| entry.implementations.get(&value.method_id.0))
                 .and_then(|implementation| implementation.revoke());
-            if let Some(revoke) = revoke
-                && revoke(value.clone()).await.is_err()
-            {
-                log::warn!("remote sign-out was not confirmed; removing the local credential");
+            if let Some(revoke) = revoke {
+                let revoked = tokio::time::timeout(std::time::Duration::from_secs(10), revoke(value.clone())).await;
+                if !matches!(revoked, Ok(Ok(()))) {
+                    log::warn!("remote sign-out was not confirmed; removing the local credential");
+                }
             }
         }
         self.service.credentials.remove(id)?;

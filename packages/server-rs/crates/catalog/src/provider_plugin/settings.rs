@@ -147,8 +147,19 @@ fn merge_provider_settings(base: Option<&ProviderSettings>, overlay: &ConfigProv
     provider::decode_object(
         aisdk_native::merge_overlay(base.as_ref(), Some(&overlay)).expect("an overlay merges into a record"),
     )
+    .unwrap_or_else(empty_settings)
 }
 
-fn empty_settings() -> ProviderSettings {
-    provider::decode_object(aisdk_native::JsonMap::new())
+pub(crate) fn empty_settings() -> ProviderSettings {
+    ProviderSettings {
+        timeout: None,
+        header_timeout: None,
+        chunk_timeout: None,
+        compaction: None,
+        cache: None,
+        transport: None,
+        encoding: None,
+        tls: None,
+        rest: JsonMap::default(),
+    }
 }

@@ -41,6 +41,11 @@ async fn measure() {
     let effect = Memory::read(pid);
     load(&sidecar, "sample-plugin.ts", json!(["default"])).await;
     let plugin = Memory::read(pid);
+    let reply = within(sidecar.call(Request::new("plugin.resolve", json!({ "directory": fixture_directory() }))))
+        .await
+        .expect("the first plugin method");
+    assert!(reply.value.is_object());
+    let first_plugin_method = Memory::read(pid);
 
     let small = small_latency(&sidecar).await;
     let binary = binary_latency(&sidecar).await;
@@ -53,15 +58,21 @@ async fn measure() {
     };
     let cpus = std::thread::available_parallelism().map(|cpus| cpus.get()).unwrap_or(1);
     let platform = format!("{} {}, {cpus} CPUs", std::env::consts::OS, std::env::consts::ARCH);
+    let plugins = std::fs::metadata(Path::new(env!("CARGO_MANIFEST_DIR")).join("host/plugins.js"))
+        .expect("the plugin bundle")
+        .len() as f64
+        / (1024.0 * 1024.0);
 
     println!(
         "| Measurement | Value |\n\
          | --- | --- |\n\
          | Bun | {bun} |\n\
          | Platform | {platform} |\n\
+         | plugins.js | {plugins:.1} MiB |\n\
          | Memory, idle: RSS / peak | {idle} |\n\
          | Memory, Effect loaded: RSS / peak | {effect} |\n\
          | Memory, sample plugin loaded: RSS / peak | {plugin} |\n\
+         | Memory, first plugin method: RSS / peak | {first_plugin_method} |\n\
          | Latency, small echo: p50 / p99 | {small} |\n\
          | Latency, 1 MiB echo: p50 / p99 | {binary} |"
     );
@@ -76,6 +87,11 @@ async fn load(sidecar: &Sidecar, name: &str, exports: Value) {
 fn fixture(name: &str) -> String {
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../host/test/fixtures").join(name);
     std::fs::canonicalize(&path).expect("a fixture").to_str().expect("a UTF-8 path").to_owned()
+}
+
+fn fixture_directory() -> String {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../host/test/fixtures");
+    std::fs::canonicalize(&path).expect("the fixture directory").to_str().expect("a UTF-8 path").to_owned()
 }
 
 async fn small_latency(sidecar: &Sidecar) -> Stats {

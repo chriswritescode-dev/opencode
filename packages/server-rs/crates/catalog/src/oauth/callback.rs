@@ -2,6 +2,7 @@ use std::future::Future;
 use std::io;
 use std::pin::Pin;
 use std::sync::Arc;
+use std::time::Duration;
 
 use bytes::Bytes;
 use http_body_util::{BodyExt, Full, Limited};
@@ -17,6 +18,8 @@ pub type Reply = (u16, &'static str, String);
 pub type HandlerFuture = Pin<Box<dyn Future<Output = Option<Reply>> + Send>>;
 
 type Handler = dyn Fn(Request) -> HandlerFuture + Send + Sync;
+
+const ACCEPT_RETRY_DELAY: Duration = Duration::from_millis(50);
 
 pub struct Request {
     pub method: String,
@@ -73,8 +76,12 @@ struct ConnectionClosed;
 
 async fn accept(listener: TcpListener, handler: Arc<Handler>) {
     loop {
-        let Ok((stream, _)) = listener.accept().await else {
-            continue;
+        let stream = match listener.accept().await {
+            Ok((stream, _)) => stream,
+            Err(_) => {
+                tokio::time::sleep(ACCEPT_RETRY_DELAY).await;
+                continue;
+            }
         };
         let handler = Arc::clone(&handler);
         tokio::spawn(async move {

@@ -45,7 +45,7 @@ A deviation that excepts a recorded cassette from the replay gate also has a `Ca
 - `OR-38-lone-surrogates.md`: the strict round-trip corpus skips samples with unpaired UTF-16 surrogates
 - `OR-38-request-bodies.md`: request bodies decode into the wire representation
 - `OR-38-request-non-finite-numbers.md`: non-finite numbers in string slots are rejected
-- `OR-39-not-implemented-operations.md`: a contract operation without a handler answers 501; fifteen routes are implemented
+- `OR-39-not-implemented-operations.md`: a contract operation without a handler answers 501; implemented routes are listed in IMPLEMENTED
 - `OR-39-persistent-pty-capability.md`: server info always reports the persistent PTY capability as unavailable
 - `OR-39-port-owner.md`: a port-in-use message names no owning process
 - `OR-39-wildcard-urls.md`: a wildcard bind reports only one loopback URL in server info
@@ -65,7 +65,6 @@ A deviation that excepts a recorded cassette from the replay gate also has a `Ca
 - `OR-42-observer-initial-apply.md`: the sources observer applies its initial load instead of returning it
 - `OR-42-watcher-ignore.md`: config watching ignores directories per event and uses one native watcher per target
 - `OR-43-heap-dump.md`: a heap dump writes a JSON memory report instead of a V8 heap snapshot
-- `OR-43-location-events.md`: project, worktree and location events are not published on the event feed
 - `OR-43-project-query-decode-messages.md`: a project.list query decode failure carries the contract decoder's message text
 - `OR-43-storage-failure-messages.md`: an unexpected 500 always carries the generic message, never a readable storage failure
 - `OR-44-aws-credentials.md`: Bedrock credentials come only from route configuration, not the AWS default chain
@@ -106,10 +105,12 @@ A deviation that excepts a recorded cassette from the replay gate also has a `Ca
 - `OR-46-resolver-errors.md`: bridge absence and construction failures report different error kinds and timing
 - `OR-46-route-failures.md`: integration and credential routes answer typed errors where TypeScript dies
 - `OR-46-transform-timing.md`: config observers spawn their catalog reload instead of awaiting it
-- `OR-47-azure-cli-expiry.md`: an Azure CLI token without `expires_on` reads `expiresOn` as UTC instead of local time
+- `OR-47-azure-pagination-guard.md`: Azure deployment discovery stops when a page link repeats
 - `OR-47-deferred-provider-plugins.md`: the SAP AI Core and Claude Agent provider plugins are left to OR-64
 - `OR-47-gitlab-discovery.md`: GitLab workflow models are not discovered until OR-64 supplies the sidecar seam
+- `OR-47-oauth-callback-state-first.md`: loopback OAuth callbacks reject a bad state without ending the pending sign-in
 - `OR-47-provider-hooks-unwired.md`: the provider-plugin hooks are registered but no Rust session triggers them until OR-54
+- `OR-47-provider-request-timeouts.md`: provider sign-in, token and JWKS requests are bounded in time
 - `OR-48-console-artifacts.md`: the Console artifact client normalises the server and uploads in fixed batches
 - `OR-48-console-config-decode.md`: a malformed Console config value is dropped instead of rejecting the whole config
 - `OR-48-console-http-errors.md`: Console request failures carry Rust HTTP and parser text instead of Effect errors
@@ -123,4 +124,17 @@ A deviation that excepts a recorded cassette from the replay gate also has a `Ca
 - `OR-48-console-utf16-cuts.md`: artifact titles and event descriptions count Unicode scalars instead of UTF-16 units
 - `OR-48-console-watches.md`: session lookup, hooks and tool results use the Rust seams instead of the plugin context
 - `OR-48-watch-socket-proxy.md`: the Console watch socket ignores proxy settings
+- `OR-49-registry-events.md`: plugin and catalog registries publish no updated events
+- `OR-49-prompt-attachments.md`: prompt file attachments and skills are rejected instead of materialized
+- `OR-49-title-generation.md`: an empty title does not regenerate the session title
+- `OR-49-tool-definitions.md`: requests omit the `skill` tool definition TypeScript sends when every tool is denied
+- `OR-50-frontmatter-yaml.md`: a YAML timestamp frontmatter value stays its source string instead of a `Date`
+- `OR-50-frontmatter-schema.md`: js-yaml 3 scalar coercion, merge keys and the `---json` engine differ from yaml-rust2
+- `OR-50-instruction-updates.md`: instruction update rendering is deferred to OR-55
+- `OR-50-permission-service.md`: permission service seams and failure shapes differ from the Effect service
+- `OR-50-references.md`: reference parsing, refresh scheduling and ordering differ from the TypeScript registry
+- `OR-50-skill-sources.md`: skill URL caches and files created after a scan are read and watched differently
+- `OR-50-form-pattern.md`: form patterns and date-time parsing use Rust regexes and an ISO date subset
+- `OR-53-snapshot-changed-file-retry.md`: a snapshot capture retries when a file changes while Git indexes it
+- `OR-53-worktree-resolved-commit.md`: a resolved worktree row and its durable `worktree.resolved` event commit separately
 - `OR-61-sidecar-environment.md`: plugins run in a sidecar with an allowlisted environment instead of inside the server

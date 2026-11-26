@@ -1,0 +1,11 @@
+pub mod git_provider;
+pub mod hg_provider;
+pub mod provider;
+pub mod repository;
+pub mod repository_cache;
+pub mod snapshot;
+mod task_set;
+pub mod vcs;
+pub mod watcher;
+pub mod worktree;
+pub mod worktree_strategies;

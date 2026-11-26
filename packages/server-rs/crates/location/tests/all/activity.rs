@@ -7,7 +7,6 @@ use opencode_location::activity::{Activity, ActivityOptions, ActivityProbe, Idle
 use opencode_location::lifecycle::Lifecycle;
 use opencode_location::location::{BootError, LocationInfo, LocationProject, LocationRef};
 use opencode_location::map::{LocationMap, LocationServices};
-use opencode_location::project::ProjectService;
 use opencode_storage::{Database, DatabaseLocation};
 
 const SWEEP: Duration = Duration::from_secs(1);
@@ -47,7 +46,7 @@ impl LocationServices for TestServices {
 }
 
 fn map() -> LocationMap<TestServices> {
-    let projects = Arc::new(ProjectService::new(database()));
+    let projects = Arc::new(crate::project_service(database()));
     LocationMap::new(move |reference: LocationRef| -> BoxFuture<'static, Result<Arc<TestServices>, BootError>> {
         let projects = projects.clone();
         Box::pin(async move {

@@ -3,7 +3,11 @@ use std::path::Path;
 use http::StatusCode;
 use serde_json::Value;
 
-use crate::{authorized, ready_app_with_services, services_at, services_at_with_env, temp_directory, text};
+use crate::{
+    authorized, ready_app_with_services, services_at, services_at_with_env, services_with_config, temp_directory, text,
+};
+
+const PARITY_CONFIG: &str = r#"{"model":"openai-test/test-model","providers":{"openai-test":{"name":"OpenAI Test","package":"@ai-sdk/openai-compatible","settings":{"apiKey":"parity","baseURL":"http://127.0.0.1:9/v1"},"models":{"test-model":{"name":"Test Model","capabilities":{"tools":true,"input":["text"],"output":["text"]},"cost":{"input":0,"output":0},"limit":{"context":100000,"output":10000}}}},"anthropic-test":{"name":"Anthropic Test","package":"@ai-sdk/anthropic","settings":{"apiKey":"parity","baseURL":"http://127.0.0.1:9/v1"},"models":{"test-model":{"name":"Test Model","capabilities":{"tools":true,"input":["text"],"output":["text"]},"cost":{"input":0,"output":0},"limit":{"context":100000,"output":10000}}}}}}"#;
 
 fn write_config(directory: &Path) {
     std::fs::write(
@@ -88,4 +92,51 @@ async fn invalid_query_is_a_400() {
         assert_eq!(body["_tag"], "InvalidRequestError", "{uri}");
         assert_eq!(body["kind"], "Query", "{uri}");
     }
+}
+
+fn variant_ids(model: &Value) -> Vec<&str> {
+    model["variants"]
+        .as_array()
+        .expect("a variant list")
+        .iter()
+        .map(|variant| variant["id"].as_str().expect("a variant id"))
+        .collect()
+}
+
+#[tokio::test]
+async fn model_list_returns_the_parity_catalog() {
+    let start = temp_directory("model-list-start");
+    let app = ready_app_with_services(services_with_config(&start, PARITY_CONFIG));
+    let response = app.handle(authorized("GET", "/api/model")).await;
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(response.headers().get("content-type").and_then(|value| value.to_str().ok()), Some("application/json"));
+    let body: Value = serde_json::from_str(&text(response).await).expect("a JSON body");
+
+    assert_eq!(body["location"]["directory"], start.to_string_lossy().as_ref());
+    let data = body["data"].as_array().expect("a model list");
+    let configured = data
+        .iter()
+        .filter(|model| model["providerID"] == "openai-test" || model["providerID"] == "anthropic-test")
+        .collect::<Vec<_>>();
+    assert_eq!(configured.len(), 2);
+    assert_eq!(configured[0]["providerID"], "openai-test");
+    assert_eq!(configured[1]["providerID"], "anthropic-test");
+    assert_eq!(configured[0]["package"], "@opencode/ai/providers/openai-compatible");
+    assert_eq!(configured[1]["package"], "@opencode/ai/providers/anthropic");
+    assert_eq!(configured[0]["settings"]["baseURL"], "http://127.0.0.1:9/v1");
+    assert_eq!(configured[0]["settings"]["provider"], "openai-test");
+    assert_eq!(configured[1]["settings"]["baseURL"], "http://127.0.0.1:9/v1");
+    assert_eq!(variant_ids(configured[0]), vec!["low", "medium", "high"]);
+    assert_eq!(variant_ids(configured[1]), vec!["low", "medium", "high", "xhigh", "max"]);
+}
+
+#[tokio::test]
+async fn model_list_filters_by_type() {
+    let start = temp_directory("model-filter-start");
+    let app = ready_app_with_services(services_with_config(&start, PARITY_CONFIG));
+    let response = app.handle(authorized("GET", "/api/model?types=image")).await;
+    assert_eq!(response.status(), StatusCode::OK);
+    let body: Value = serde_json::from_str(&text(response).await).expect("a JSON body");
+    let data = body["data"].as_array().expect("a model list");
+    assert!(!data.iter().any(|model| model["providerID"] == "openai-test" || model["providerID"] == "anthropic-test"));
 }

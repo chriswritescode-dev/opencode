@@ -1,5 +1,6 @@
 use std::io;
 use std::sync::{Arc, LazyLock, Mutex};
+use std::time::Duration;
 
 use base64::Engine;
 use base64::engine::general_purpose::{STANDARD, URL_SAFE_NO_PAD};
@@ -19,7 +20,7 @@ use serde_json::Value;
 use tokio::sync::oneshot;
 
 use crate::builtin::{Builtin, Services};
-use crate::credential::{CredentialService, Update};
+use crate::credential::CredentialService;
 use crate::integration::{
     AuthorizationError, AutoCallback, ConfigEnv, Implementation, IntegrationService, LabelCallback, OAuthAuthorization,
     OAuthFuture, OAuthImplementation, OAuthMode, RefreshCallback, SubmitCallback,
@@ -48,6 +49,8 @@ const INSTRUCTIONS: &str = "Complete Snowflake sign-in in your browser.";
 const CALLBACK_HOST: &str = "127.0.0.1";
 
 const DEFAULT_EXPIRY_SECONDS: f64 = 600.0;
+
+const TOKEN_TIMEOUT: Duration = Duration::from_secs(10);
 
 const INVALID_STATE: &str = "Invalid OAuth state";
 
@@ -219,7 +222,7 @@ pub async fn register(services: &Services, context: &PluginContext, builtin: &mu
                     if let Some(token) = settings.get("token").and_then(Value::as_str) {
                         settings.insert("apiKey".to_owned(), Value::String(token.to_owned()));
                     }
-                    provider.settings = Some(provider::decode_object::<ProviderSettings>(settings));
+                    provider.settings = provider::decode_object::<ProviderSettings>(settings);
                 });
                 Ok(())
             }
@@ -353,28 +356,31 @@ pub async fn register(services: &Services, context: &PluginContext, builtin: &mu
                 if value.method_id.0 != METHOD_ID {
                     return event;
                 }
-                let account = normalize_account(account_metadata(value.metadata.as_ref()).and_then(Value::as_str));
-                let refreshed = token(
-                    http.as_ref(),
-                    &user_agent,
-                    &account,
-                    &[("grant_type", "refresh_token"), ("refresh_token", value.refresh.as_str())],
-                )
-                .await;
-                let refreshed = match refreshed {
-                    Ok(refreshed) => refreshed,
+                let failed_access = value.access.clone();
+                let refreshed = credentials
+                    .refresh(&connection.id, move |current, _now| current.access == failed_access, {
+                        move |current| async move {
+                            let account =
+                                normalize_account(account_metadata(current.metadata.as_ref()).and_then(Value::as_str));
+                            token(
+                                http.as_ref(),
+                                &user_agent,
+                                &account,
+                                &[("grant_type", "refresh_token"), ("refresh_token", current.refresh.as_str())],
+                            )
+                            .await
+                            .map_err(|error| Arc::new(error) as crate::credential::RefreshError)
+                        }
+                    })
+                    .await;
+                match refreshed {
+                    Ok(Some(_)) => event.decision = RetryDecision::Retry { delay_ms: 0 },
+                    Ok(None) => return event,
                     Err(error) => {
                         log::warn!("Snowflake Cortex token refresh failed: {error}");
                         return event;
                     }
-                };
-                if let Err(error) = credentials
-                    .update(&connection.id, Update { label: None, value: Some(CredentialValue::Oauth(refreshed)) })
-                {
-                    log::warn!("Snowflake Cortex credential update failed: {error}");
-                    return event;
                 }
-                event.decision = RetryDecision::Retry { delay_ms: 0 };
                 event
             })
         }
@@ -462,9 +468,10 @@ fn handle(state: &str, responses: &CallbackResponses, request: Request) -> Reply
         return (404, "", String::new());
     }
     let params = parse_query(&request.query);
-    let outcome = if param(&params, "state") != Some(state) {
-        Err(INVALID_STATE.to_owned())
-    } else if let Some(detail) = param(&params, "error_description").filter(|detail| !detail.is_empty()) {
+    if param(&params, "state") != Some(state) {
+        return (400, "text/html", page::error(INVALID_STATE, Some(page_options())));
+    }
+    let outcome = if let Some(detail) = param(&params, "error_description").filter(|detail| !detail.is_empty()) {
         Err(detail.to_owned())
     } else if let Some(detail) = param(&params, "error").filter(|error| !error.is_empty()) {
         Err(detail.to_owned())
@@ -518,7 +525,7 @@ async fn token(
         ("authorization".to_owned(), format!("Basic {}", basic())),
     ];
     let request = http::form(format!("{}/oauth/token-request", issuer(account)), headers, &form);
-    match http::send(http, request, None).await {
+    match http::send(http, request, Some(TOKEN_TIMEOUT)).await {
         Ok(response) => credential(&response.body, account, request_refresh),
         Err(HttpError::Status(response)) => Err(error(format!(
             "Snowflake token request failed ({}): {}",

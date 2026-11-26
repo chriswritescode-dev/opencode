@@ -180,9 +180,9 @@ pub async fn register_with(services: &Services, context: &PluginContext, builtin
         CredentialValue::Oauth(oauth) => {
             let mut settings = serde_json::Map::new();
             settings.insert("baseURL".to_owned(), Value::String(oauth::copilot_base_url(oauth.metadata.as_ref())));
-            provider::decode_object(settings)
+            provider::decode_object(settings).unwrap_or_else(settings::empty_settings)
         }
-        _ => provider::decode_object(serde_json::Map::new()),
+        _ => settings::empty_settings(),
     })
     .await;
 

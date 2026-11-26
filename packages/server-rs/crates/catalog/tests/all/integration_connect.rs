@@ -5,10 +5,11 @@ use std::time::Duration;
 #[cfg(unix)]
 use std::collections::HashMap;
 
+use opencode_catalog::credential::CreateInput;
 use opencode_catalog::integration::{
     AttemptError, AttemptMode, AttemptStatus, AuthorizationError, AutoCallback, CodeCallback, CommandAttemptStatus,
     CommandConnectInput, CommandError, ExternalInput, Implementation, KeyInput, LabelCallback, OAuthAuthorization,
-    OAuthConnectInput, OAuthFuture, OAuthImplementation, OAuthMode, SubmitCallback,
+    OAuthConnectInput, OAuthFuture, OAuthImplementation, OAuthMode, RevokeCallback, SubmitCallback,
 };
 use opencode_contract::codec::JsonMap;
 use opencode_contract::generated::{
@@ -21,6 +22,8 @@ use opencode_contract::generated::{
 #[cfg(unix)]
 use opencode_contract::generated::{IntegrationCommandMethod, IntegrationCommandMethodType};
 use opencode_util::time::now_ms;
+#[cfg(unix)]
+use rustix::process::{Pid, test_kill_process};
 use serde_json::json;
 use tokio::sync::Semaphore;
 
@@ -30,12 +33,14 @@ use crate::integration::{integration_id, setup};
 
 type AuthorizeFn = Arc<dyn Fn(FormAnswer) -> OAuthFuture<OAuthAuthorization> + Send + Sync>;
 type LabelFn = Arc<dyn Fn(&CredentialOAuth) -> Option<String> + Send + Sync>;
+type RevokeFn = Arc<dyn Fn(CredentialOAuth) -> OAuthFuture<()> + Send + Sync>;
 
 struct ScriptedOAuth {
     integration_id: IntegrationID,
     method: IntegrationOAuthMethod,
     authorize: AuthorizeFn,
     label: Option<LabelFn>,
+    revoke: Option<RevokeFn>,
 }
 
 impl OAuthImplementation for ScriptedOAuth {
@@ -54,6 +59,11 @@ impl OAuthImplementation for ScriptedOAuth {
     fn label(&self) -> Option<LabelCallback> {
         let label = self.label.clone()?;
         Some(Box::new(move |value| label(value)))
+    }
+
+    fn revoke(&self) -> Option<RevokeCallback> {
+        let revoke = self.revoke.clone()?;
+        Some(Box::new(move |value| revoke(value)))
     }
 }
 
@@ -76,6 +86,7 @@ fn scripted(
         method,
         authorize: Arc::new(authorize),
         label,
+        revoke: None,
     }))
 }
 
@@ -997,6 +1008,189 @@ async fn code_completion_settles_after_the_caller_is_dropped() {
     assert_eq!(credentials.list(&integration).expect("list the credentials").len(), 1);
 }
 
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn code_completion_settles_when_the_caller_is_dropped_before_the_callback_returns() {
+    let (_dir, _database, _bus, credentials, service) = setup();
+    let integration = integration_id("openai");
+    let method_id = IntegrationMethodID("chatgpt".to_owned());
+    let release = Arc::new(Semaphore::new(0));
+    let entered = Arc::new(AtomicBool::new(false));
+    let _registration = service
+        .transform({
+            let integration = integration.clone();
+            let method_id = method_id.clone();
+            let release = release.clone();
+            let entered = entered.clone();
+            move |editor| {
+                let method_id = method_id.clone();
+                let release = release.clone();
+                let entered = entered.clone();
+                editor.method_update(scripted(
+                    &integration,
+                    oauth_method("chatgpt", "ChatGPT"),
+                    move |_| {
+                        let method_id = method_id.clone();
+                        let release = release.clone();
+                        let entered = entered.clone();
+                        Box::pin(async move {
+                            Ok(OAuthAuthorization {
+                                url: "https://example.com/authorize".to_owned(),
+                                instructions: "Paste the code".to_owned(),
+                                expires_at: None,
+                                mode: OAuthMode::Code {
+                                    callback: Box::new(move |_| {
+                                        let method_id = method_id.clone();
+                                        let release = release.clone();
+                                        let entered = entered.clone();
+                                        Box::pin(async move {
+                                            entered.store(true, Ordering::SeqCst);
+                                            release.acquire().await.expect("release the code callback").forget();
+                                            Ok(oauth_value(&method_id, "access"))
+                                        })
+                                    }),
+                                },
+                            })
+                        })
+                    },
+                    None,
+                ));
+                Ok(())
+            }
+        })
+        .await;
+
+    let attempt = service
+        .oauth()
+        .connect(OAuthConnectInput { integration_id: integration.clone(), method_id, answer: None, label: None })
+        .await
+        .expect("connect the oauth method");
+
+    let completion = tokio::spawn({
+        let service = service.clone();
+        let integration = integration.clone();
+        let attempt_id = attempt.attempt_id.clone();
+        async move { service.oauth().complete(&integration, &attempt_id, Some("1234")).await }
+    });
+    while !entered.load(Ordering::SeqCst) {
+        tokio::time::sleep(Duration::from_millis(1)).await;
+    }
+    completion.abort();
+    release.add_permits(1);
+
+    let status = eventually(|| {
+        let service = service.clone();
+        let integration = integration.clone();
+        let attempt_id = attempt.attempt_id.clone();
+        async move {
+            let status = service.oauth().status(&integration, &attempt_id).await.ok()?;
+            matches!(&status, AttemptStatus::Complete { .. }).then_some(status)
+        }
+    })
+    .await;
+    assert_eq!(status, AttemptStatus::Complete { time: attempt.time });
+    assert_eq!(credentials.list(&integration).expect("list the credentials").len(), 1);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn cancelling_a_code_attempt_interrupts_the_callback_and_reports_it_missing() {
+    let (_dir, _database, _bus, credentials, service) = setup();
+    let integration = integration_id("openai");
+    let method_id = IntegrationMethodID("chatgpt".to_owned());
+    let entered = Arc::new(AtomicBool::new(false));
+    let _registration = service
+        .transform({
+            let integration = integration.clone();
+            let entered = entered.clone();
+            move |editor| {
+                let entered = entered.clone();
+                editor.method_update(scripted(
+                    &integration,
+                    oauth_method("chatgpt", "ChatGPT"),
+                    move |_| {
+                        let entered = entered.clone();
+                        Box::pin(async move {
+                            Ok(OAuthAuthorization {
+                                url: "https://example.com/authorize".to_owned(),
+                                instructions: "Paste the code".to_owned(),
+                                expires_at: None,
+                                mode: OAuthMode::Code {
+                                    callback: Box::new(move |_| {
+                                        let entered = entered.clone();
+                                        Box::pin(async move {
+                                            entered.store(true, Ordering::SeqCst);
+                                            std::future::pending::<Result<CredentialOAuth, AuthorizationError>>().await
+                                        })
+                                    }),
+                                },
+                            })
+                        })
+                    },
+                    None,
+                ));
+                Ok(())
+            }
+        })
+        .await;
+
+    let attempt = service
+        .oauth()
+        .connect(OAuthConnectInput { integration_id: integration.clone(), method_id, answer: None, label: None })
+        .await
+        .expect("connect the oauth method");
+
+    let completion = tokio::spawn({
+        let service = service.clone();
+        let integration = integration.clone();
+        let attempt_id = attempt.attempt_id.clone();
+        async move { service.oauth().complete(&integration, &attempt_id, Some("1234")).await }
+    });
+    while !entered.load(Ordering::SeqCst) {
+        tokio::time::sleep(Duration::from_millis(1)).await;
+    }
+    service.oauth().cancel(&integration, &attempt.attempt_id).await;
+
+    let error = completion.await.expect("join the completion").expect_err("the attempt was removed");
+    assert!(matches!(error, AttemptError::AttemptNotFound { .. }));
+    assert!(credentials.list(&integration).expect("list the credentials").is_empty());
+}
+
+#[tokio::test(start_paused = true)]
+async fn times_out_a_hung_revoke_and_removes_the_local_credential() {
+    let (_dir, _database, _bus, credentials, service) = setup();
+    settle_runtime().await;
+    let integration = integration_id("openai");
+    let method_id = IntegrationMethodID("chatgpt".to_owned());
+    let _registration = service
+        .transform({
+            let integration = integration.clone();
+            move |editor| {
+                editor.method_update(Implementation::OAuth(Arc::new(ScriptedOAuth {
+                    integration_id: integration.clone(),
+                    method: oauth_method("chatgpt", "ChatGPT"),
+                    authorize: Arc::new(|_| -> OAuthFuture<OAuthAuthorization> { Box::pin(std::future::pending()) }),
+                    label: None,
+                    revoke: Some(Arc::new(|_| -> OAuthFuture<()> { Box::pin(std::future::pending()) })),
+                })));
+                Ok(())
+            }
+        })
+        .await;
+    let credential = credentials
+        .create(CreateInput {
+            id: None,
+            integration_id: integration.clone(),
+            value: CredentialValue::Oauth(oauth_value(&method_id, "access")),
+            label: None,
+            activate: None,
+        })
+        .expect("create the credential");
+
+    let started = tokio::time::Instant::now();
+    service.connection().remove(&credential.id).await.expect("remove the credential");
+    assert!(started.elapsed() >= Duration::from_secs(10));
+    assert!(credentials.list(&integration).expect("list the credentials").is_empty());
+}
+
 #[cfg(unix)]
 #[tokio::test(flavor = "multi_thread")]
 async fn runs_command_authentication_and_stores_the_final_output() {
@@ -1136,6 +1330,317 @@ async fn fails_command_authentication_with_the_trimmed_stderr() {
         }
         other => panic!("expected a failed attempt, got {other:?}"),
     }
+    assert!(credentials.list(&integration).expect("list the credentials").is_empty());
+}
+
+#[cfg(unix)]
+#[tokio::test(flavor = "multi_thread")]
+async fn decodes_command_stderr_across_read_boundaries() {
+    let (dir, _database, _bus, credentials, service) = setup();
+    let integration = integration_id("company");
+    let method_id = IntegrationMethodID("login".to_owned());
+    let path = dir.path().join("stderr");
+    let mut bytes = vec![b'a'; 4095];
+    bytes.extend_from_slice("é\n".as_bytes());
+    std::fs::write(&path, bytes).expect("write the stderr fixture");
+    let path = path.to_str().expect("the stderr path is utf-8").to_owned();
+    let stderr = "cat \"$1\" >&2; exit 3".to_owned();
+    let _registration = service
+        .transform({
+            let integration = integration.clone();
+            move |editor| {
+                editor.method_update(Implementation::Method {
+                    integration_id: integration.clone(),
+                    method: command_method("login", &["/bin/sh", "-c", &stderr, "sh", &path]),
+                });
+                Ok(())
+            }
+        })
+        .await;
+
+    let attempt = service
+        .command()
+        .connect(CommandConnectInput { integration_id: integration.clone(), method_id, label: None })
+        .await
+        .expect("connect the command attempt");
+    let failed = tokio::time::timeout(
+        Duration::from_secs(10),
+        eventually(|| {
+            let service = service.clone();
+            let integration = integration.clone();
+            let attempt_id = attempt.attempt_id.clone();
+            async move {
+                let status = service.command().status(&integration, &attempt_id).await.ok()?;
+                matches!(&status, CommandAttemptStatus::Failed { .. }).then_some(status)
+            }
+        }),
+    )
+    .await
+    .expect("the command fails");
+    match failed {
+        CommandAttemptStatus::Failed { message, .. } => {
+            assert_eq!(message, format!("{}é", "a".repeat(4095)));
+        }
+        other => panic!("expected a failed attempt, got {other:?}"),
+    }
+    assert!(credentials.list(&integration).expect("list the credentials").is_empty());
+}
+
+#[cfg(unix)]
+#[tokio::test(flavor = "multi_thread")]
+async fn preserves_utf8_after_invalid_stderr_bytes() {
+    let (_dir, _database, _bus, credentials, service) = setup();
+    let integration = integration_id("company");
+    let method_id = IntegrationMethodID("login".to_owned());
+    let stderr = "printf '\\377\\303' >&2; sleep 0.1; printf '\\251' >&2; exit 3";
+    let _registration = service
+        .transform({
+            let integration = integration.clone();
+            move |editor| {
+                editor.method_update(Implementation::Method {
+                    integration_id: integration.clone(),
+                    method: command_method("login", &["/bin/sh", "-c", stderr]),
+                });
+                Ok(())
+            }
+        })
+        .await;
+
+    let attempt = service
+        .command()
+        .connect(CommandConnectInput { integration_id: integration.clone(), method_id, label: None })
+        .await
+        .expect("connect the command attempt");
+    let failed = tokio::time::timeout(
+        Duration::from_secs(10),
+        eventually(|| {
+            let service = service.clone();
+            let integration = integration.clone();
+            let attempt_id = attempt.attempt_id.clone();
+            async move {
+                let status = service.command().status(&integration, &attempt_id).await.ok()?;
+                matches!(&status, CommandAttemptStatus::Failed { .. }).then_some(status)
+            }
+        }),
+    )
+    .await
+    .expect("the command fails");
+    match failed {
+        CommandAttemptStatus::Failed { message, .. } => {
+            assert_eq!(message, "\u{FFFD}é");
+        }
+        other => panic!("expected a failed attempt, got {other:?}"),
+    }
+    assert!(credentials.list(&integration).expect("list the credentials").is_empty());
+}
+
+#[cfg(unix)]
+#[tokio::test(flavor = "multi_thread")]
+async fn settles_when_a_background_child_holds_the_pipes_open() {
+    let (_dir, _database, _bus, credentials, service) = setup();
+    let integration = integration_id("company");
+    let method_id = IntegrationMethodID("login".to_owned());
+    let _registration = service
+        .transform({
+            let integration = integration.clone();
+            move |editor| {
+                editor.method_update(Implementation::Method {
+                    integration_id: integration.clone(),
+                    method: command_method("login", &["/bin/sh", "-c", "(sleep 20) & printf 'secret'"]),
+                });
+                Ok(())
+            }
+        })
+        .await;
+
+    let attempt = service
+        .command()
+        .connect(CommandConnectInput { integration_id: integration.clone(), method_id, label: None })
+        .await
+        .expect("connect the command attempt");
+    let complete = tokio::time::timeout(
+        Duration::from_secs(15),
+        eventually(|| {
+            let service = service.clone();
+            let integration = integration.clone();
+            let attempt_id = attempt.attempt_id.clone();
+            async move {
+                let status = service.command().status(&integration, &attempt_id).await.ok()?;
+                matches!(&status, CommandAttemptStatus::Complete { .. }).then_some(status)
+            }
+        }),
+    )
+    .await
+    .expect("the command completes without waiting for the background child");
+    assert_eq!(complete, CommandAttemptStatus::Complete { time: attempt.time });
+
+    let stored = credentials.list(&integration).expect("list the credentials");
+    assert_eq!(stored.len(), 1);
+    assert_eq!(
+        stored[0].value,
+        CredentialValue::Key(CredentialKey {
+            r#type: CredentialKeyType::Key,
+            key: "secret".to_owned(),
+            metadata: None,
+        })
+    );
+}
+
+#[cfg(unix)]
+#[tokio::test(flavor = "multi_thread")]
+async fn caps_long_stderr_at_the_message_limit() {
+    let (_dir, _database, _bus, credentials, service) = setup();
+    let integration = integration_id("company");
+    let method_id = IntegrationMethodID("login".to_owned());
+    let stderr = "yes a | head -c 131072 >&2; printf 'tail' >&2; exit 3";
+    let _registration = service
+        .transform({
+            let integration = integration.clone();
+            move |editor| {
+                editor.method_update(Implementation::Method {
+                    integration_id: integration.clone(),
+                    method: command_method("login", &["/bin/sh", "-c", stderr]),
+                });
+                Ok(())
+            }
+        })
+        .await;
+
+    let attempt = service
+        .command()
+        .connect(CommandConnectInput { integration_id: integration.clone(), method_id, label: None })
+        .await
+        .expect("connect the command attempt");
+    let failed = tokio::time::timeout(
+        Duration::from_secs(10),
+        eventually(|| {
+            let service = service.clone();
+            let integration = integration.clone();
+            let attempt_id = attempt.attempt_id.clone();
+            async move {
+                let status = service.command().status(&integration, &attempt_id).await.ok()?;
+                matches!(&status, CommandAttemptStatus::Failed { .. }).then_some(status)
+            }
+        }),
+    )
+    .await
+    .expect("the command fails");
+    match failed {
+        CommandAttemptStatus::Failed { message, .. } => {
+            assert!(message.len() <= 64 * 1024, "the message kept {} bytes", message.len());
+            assert!(message.ends_with("tail"), "the message lost its tail");
+        }
+        other => panic!("expected a failed attempt, got {other:?}"),
+    }
+    assert!(credentials.list(&integration).expect("list the credentials").is_empty());
+}
+
+#[cfg(unix)]
+#[tokio::test(flavor = "multi_thread")]
+async fn fails_when_the_command_output_exceeds_the_stdout_limit() {
+    let (_dir, _database, _bus, credentials, service) = setup();
+    let integration = integration_id("company");
+    let method_id = IntegrationMethodID("login".to_owned());
+    let _registration = service
+        .transform({
+            let integration = integration.clone();
+            move |editor| {
+                editor.method_update(Implementation::Method {
+                    integration_id: integration.clone(),
+                    method: command_method("login", &["/bin/sh", "-c", "yes a | head -c 1048577"]),
+                });
+                Ok(())
+            }
+        })
+        .await;
+
+    let attempt = service
+        .command()
+        .connect(CommandConnectInput { integration_id: integration.clone(), method_id, label: None })
+        .await
+        .expect("connect the command attempt");
+    let failed = tokio::time::timeout(
+        Duration::from_secs(10),
+        eventually(|| {
+            let service = service.clone();
+            let integration = integration.clone();
+            let attempt_id = attempt.attempt_id.clone();
+            async move {
+                let status = service.command().status(&integration, &attempt_id).await.ok()?;
+                matches!(&status, CommandAttemptStatus::Failed { .. }).then_some(status)
+            }
+        }),
+    )
+    .await
+    .expect("the command fails");
+    match failed {
+        CommandAttemptStatus::Failed { message, .. } => {
+            assert_eq!(message, "Authentication command output exceeded size limit");
+        }
+        other => panic!("expected a failed attempt, got {other:?}"),
+    }
+    assert!(credentials.list(&integration).expect("list the credentials").is_empty());
+}
+
+#[cfg(unix)]
+#[tokio::test(flavor = "multi_thread")]
+async fn cancelling_a_command_attempt_terminates_its_grandchild() {
+    let (dir, _database, _bus, credentials, service) = setup();
+    let integration = integration_id("company");
+    let method_id = IntegrationMethodID("login".to_owned());
+    let grandchild_path = dir.path().join("grandchild");
+    let grandchild_path = grandchild_path.to_str().expect("the grandchild path is utf-8").to_owned();
+    let _registration = service
+        .transform({
+            let integration = integration.clone();
+            let grandchild_path = grandchild_path.clone();
+            move |editor| {
+                editor.method_update(Implementation::Method {
+                    integration_id: integration.clone(),
+                    method: command_method(
+                        "login",
+                        &["/bin/sh", "-c", "sleep 30 & echo $! > \"$1\"; wait", "sh", &grandchild_path],
+                    ),
+                });
+                Ok(())
+            }
+        })
+        .await;
+
+    let attempt = service
+        .command()
+        .connect(CommandConnectInput { integration_id: integration.clone(), method_id, label: None })
+        .await
+        .expect("connect the command attempt");
+
+    let grandchild = tokio::time::timeout(Duration::from_secs(10), async {
+        loop {
+            let reported =
+                std::fs::read_to_string(&grandchild_path).ok().and_then(|text| text.trim().parse::<i32>().ok());
+            if let Some(pid) = reported {
+                break pid;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .expect("the command reports its grandchild");
+    let grandchild = Pid::from_raw(grandchild).expect("the grandchild pid is valid");
+    assert!(test_kill_process(grandchild).is_ok(), "the grandchild runs before the attempt is cancelled");
+
+    service.command().cancel(&integration, &attempt.attempt_id).await;
+    assert!(matches!(
+        service.command().status(&integration, &attempt.attempt_id).await,
+        Err(CommandError::AttemptNotFound { .. })
+    ));
+
+    tokio::time::timeout(Duration::from_secs(10), async {
+        while test_kill_process(grandchild).is_ok() {
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .expect("the grandchild exits after the attempt is cancelled");
     assert!(credentials.list(&integration).expect("list the credentials").is_empty());
 }
 

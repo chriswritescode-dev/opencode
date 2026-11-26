@@ -1,6 +1,6 @@
 use std::ffi::OsString;
 use std::io;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -11,7 +11,7 @@ use opencode_bus::{Definition, PublishOptions};
 use opencode_catalog::builtin::Builtin;
 use opencode_catalog::credential::{CreateInput, Update};
 use opencode_catalog::integration::ExternalInput;
-use opencode_catalog::provider_plugin::azure::discovery::Endpoints;
+use opencode_catalog::provider_plugin::azure::discovery::{Deployment, Discovery, Endpoints};
 use opencode_catalog::provider_plugin::azure::{self, Options};
 use opencode_catalog::provider_plugin::hooks::{HttpRequest, ProviderHooks, RequestKind, WsHandshake};
 use opencode_catalog::provider_plugin::{BoxFuture, CommandOutput, CommandRunner};
@@ -128,15 +128,20 @@ type Respond = dyn Fn(&[String]) -> Option<Value> + Send + Sync;
 struct ScriptedRunner {
     respond: Box<Respond>,
     calls: Mutex<Vec<Vec<String>>>,
+    programs: Mutex<Vec<String>>,
 }
 
 impl ScriptedRunner {
     fn new(respond: impl Fn(&[String]) -> Option<Value> + Send + Sync + 'static) -> Arc<Self> {
-        Arc::new(Self { respond: Box::new(respond), calls: Mutex::new(Vec::new()) })
+        Arc::new(Self { respond: Box::new(respond), calls: Mutex::new(Vec::new()), programs: Mutex::new(Vec::new()) })
     }
 
     fn calls(&self) -> Vec<Vec<String>> {
         self.calls.lock().expect("the az calls lock is never poisoned").clone()
+    }
+
+    fn programs(&self) -> Vec<String> {
+        self.programs.lock().expect("the az programs lock is never poisoned").clone()
     }
 }
 
@@ -148,6 +153,7 @@ impl CommandRunner for ScriptedRunner {
         _env: Vec<(OsString, OsString)>,
     ) -> BoxFuture<io::Result<CommandOutput>> {
         self.calls.lock().expect("the az calls lock is never poisoned").push(args.clone());
+        self.programs.lock().expect("the az programs lock is never poisoned").push(program.clone());
         let value = (self.respond)(&args);
         Box::pin(async move {
             let Some(value) = value else {
@@ -596,6 +602,30 @@ async fn publishes_the_management_list_only_after_its_last_page() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn stops_following_a_repeated_deployment_page() {
+    let mut harness = start(Input::new(Vec::new())).await;
+    install_az(&mut harness);
+    let runner = cli_runner();
+    let azure = fake_azure();
+    let looped = azure.deployments_url();
+    azure.routes.route_with("GET", &looped, {
+        let looped = looped.clone();
+        move |_| management_page(vec![managed("mini", "gpt-5-mini", "Succeeded")], Some(looped.clone()))
+    });
+    azure.routes.route_json(
+        "GET",
+        &azure.resource_url("test-resource"),
+        json!({ "data": [listed("from-resource", "gpt-5-nano", "succeeded")] }),
+    );
+    let _seeded = seed_catalog(&harness).await;
+    connect(&harness, cli_credential("test-resource")).await;
+    register(&mut harness, &azure, runner, azure.options()).await;
+
+    assert_eq!(eventually_ids(&harness, |ids| ids == ["from-resource"]).await, ["from-resource"]);
+    assert_eq!(path_count(&azure.routes, "/deployments?api-version=2024-10-01"), 1);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn keeps_the_last_complete_list_when_a_later_page_fails() {
     let mut harness = start(Input::new(Vec::new())).await;
     install_az(&mut harness);
@@ -787,6 +817,70 @@ async fn shows_the_new_account_without_waiting_for_the_previous_accounts_discove
     azure.routes.release();
     settle().await;
     assert_eq!(azure_model_ids(&harness).await, ["production-b"]);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn runs_the_azure_cli_resolved_from_the_path() {
+    let mut harness = start(Input::new(Vec::new())).await;
+    install_az(&mut harness);
+    let expected = harness.root().join("az").to_string_lossy().into_owned();
+    let runner = cli_runner();
+    let azure = fake_azure();
+    azure.routes.route_json("GET", &azure.deployments_url(), json!({ "value": [] }));
+    let _seeded = seed_catalog(&harness).await;
+    connect(&harness, cli_credential("test-resource")).await;
+    register(&mut harness, &azure, runner.clone(), azure.options()).await;
+
+    tokio::time::timeout(Duration::from_secs(5), async {
+        loop {
+            if !runner.programs().is_empty() {
+                return;
+            }
+            tokio::time::sleep(Duration::from_millis(5)).await;
+        }
+    })
+    .await
+    .expect("the Azure CLI runs");
+    assert!(runner.programs().iter().all(|program| *program == expected), "{:?}", runner.programs());
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn clears_the_cached_azure_cli_token_when_the_connection_changes() {
+    let mut harness = start(Input::new(Vec::new())).await;
+    install_az(&mut harness);
+    let issued = Arc::new(AtomicUsize::new(0));
+    let runner = ScriptedRunner::new({
+        let issued = issued.clone();
+        move |args: &[String]| {
+            let scope = args.iter().position(|arg| arg == "--scope").and_then(|index| args.get(index + 1))?;
+            let count = issued.fetch_add(1, Ordering::SeqCst) + 1;
+            Some(json!({
+                "accessToken": format!("{scope}-token-{count}"),
+                "expires_on": (opencode_util::time::now_ms() + HOUR_MS) / 1000,
+            }))
+        }
+    });
+    let azure = fake_azure();
+    azure.routes.route_with("GET", &azure.deployments_url(), |request| {
+        if header(request, "authorization").is_some_and(|value| value.ends_with("-token-1")) {
+            return management_page(vec![managed("production-a", "gpt-5-mini", "Succeeded")], None);
+        }
+        management_page(vec![managed("production-b", "gpt-5-mini", "Succeeded")], None)
+    });
+    let _seeded = seed_catalog(&harness).await;
+    connect(&harness, cli_credential("test-resource")).await;
+    register(&mut harness, &azure, runner, azure.options()).await;
+    assert_eq!(eventually_ids(&harness, |ids| ids == ["production-a"]).await, ["production-a"]);
+
+    connect(&harness, cli_credential("other-resource")).await;
+
+    assert_eq!(eventually_ids(&harness, |ids| ids == ["production-b"]).await, ["production-b"]);
+    assert!(
+        azure.routes.requests().iter().any(|request| {
+            header(request, "authorization") == Some("Bearer https://management.azure.com/.default-token-2")
+        }),
+        "the new connection fetches a fresh Azure CLI token"
+    );
 }
 
 struct ResourceCase {
@@ -1074,4 +1168,87 @@ async fn uses_the_cognitive_scope_for_models_endpoints_and_leaves_api_key_reques
         .await;
     assert_eq!(header(&request.request, "api-key"), Some("stored-token"));
     assert_eq!(header(&request.request, "authorization"), None);
+}
+
+struct GatedRunner {
+    calls: AtomicUsize,
+    started: Arc<tokio::sync::Notify>,
+    release: tokio::sync::watch::Receiver<bool>,
+}
+
+impl CommandRunner for GatedRunner {
+    fn run(
+        &self,
+        _program: String,
+        args: Vec<String>,
+        _env: Vec<(OsString, OsString)>,
+    ) -> BoxFuture<io::Result<CommandOutput>> {
+        self.calls.fetch_add(1, Ordering::SeqCst);
+        self.started.notify_one();
+        let mut release = self.release.clone();
+        let output = cli_token(&args);
+        Box::pin(async move {
+            loop {
+                let released = { *release.borrow() };
+                if released {
+                    break;
+                }
+                release.changed().await.map_err(io::Error::other)?;
+            }
+            let value = output.ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "no az token"))?;
+            Ok(CommandOutput {
+                status: std::process::ExitStatus::default(),
+                stdout: serde_json::to_vec(&value).expect("the az output serializes"),
+                stderr: Vec::new(),
+            })
+        })
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn concurrent_azure_cli_token_requests_spawn_one_command_per_scope() {
+    let routes = Routes::new();
+    let origin = "http://azure.test";
+    routes.route_json(
+        "POST",
+        &format!("{origin}/providers/Microsoft.ResourceGraph/resources?api-version=2022-10-01"),
+        json!({ "data": [] }),
+    );
+    let url = format!("{origin}/resource/test/openai/deployments?api-version=2022-12-01");
+    routes.route_json("GET", &url, json!({ "data": [listed("gpt-5", "gpt-5", "succeeded")] }));
+
+    let (sender, receiver) = tokio::sync::watch::channel(false);
+    let started = Arc::new(tokio::sync::Notify::new());
+    let runner = Arc::new(GatedRunner { calls: AtomicUsize::new(0), started: started.clone(), release: receiver });
+    let discovery = Arc::new(Discovery::new(
+        routes.clone(),
+        runner.clone(),
+        "opencode/test/test/opencode".to_owned(),
+        origin.to_owned(),
+        "az".to_owned(),
+    ));
+    let credential = cli_credential("test");
+    let barrier = Arc::new(tokio::sync::Barrier::new(2));
+    let spawn = || {
+        let discovery = discovery.clone();
+        let credential = credential.clone();
+        let url = url.clone();
+        let barrier = barrier.clone();
+        tokio::spawn(async move {
+            barrier.wait().await;
+            discovery.deployments(&url, "test", &credential).await
+        })
+    };
+    let first = spawn();
+    let second = spawn();
+
+    tokio::time::timeout(Duration::from_secs(5), started.notified()).await.expect("the first az call starts");
+    tokio::time::sleep(Duration::from_millis(25)).await;
+    sender.send(true).expect("release the az commands");
+
+    let first = first.await.expect("the first Azure discovery").expect("the first deployments");
+    let second = second.await.expect("the second Azure discovery").expect("the second deployments");
+    assert_eq!(first, second);
+    assert_eq!(first, vec![Deployment { name: "gpt-5".to_owned(), model: "gpt-5".to_owned() }]);
+    assert_eq!(runner.calls.load(Ordering::SeqCst), 2);
 }
