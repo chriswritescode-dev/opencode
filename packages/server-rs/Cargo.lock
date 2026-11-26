@@ -1225,9 +1225,16 @@ dependencies = [
 name = "opencode-shell"
 version = "0.1.0"
 dependencies = [
+ "flate2",
+ "opencode-config",
+ "opencode-contract",
+ "opencode-fs",
+ "opencode-util",
  "regress",
  "serde",
  "serde_json",
+ "thiserror",
+ "tokio",
 ]
 
 [[package]]

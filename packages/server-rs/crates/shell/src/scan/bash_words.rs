@@ -81,13 +81,13 @@ fn zsh_evaluates(input: &[u16], index: usize) -> bool {
     if starts_with(input, at, "{\\\n") {
         return true;
     }
-    if input.get(at) == Some(&b'{'.into()) && input.get(at + 1) == Some(&b'('.into()) {
+    if input.get(at) == Some(&u16::from(b'{')) && input.get(at + 1) == Some(&u16::from(b'(')) {
         if !ZSH_SAFE_FLAGS_RE.test_at(input, index) {
             return true;
         }
         at = ZSH_SAFE_FLAGS_RE.end_at(input, index).unwrap_or(at);
     }
-    if input.get(at) == Some(&b'{'.into()) {
+    if input.get(at) == Some(&u16::from(b'{')) {
         at += 1;
     }
     zsh_glob_modifier_at(input, at)

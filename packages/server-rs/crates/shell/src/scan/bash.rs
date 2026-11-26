@@ -183,17 +183,17 @@ pub(crate) fn scan_bash(
             return BashResult::Opaque(OpaqueReason::InvalidStructure);
         }
         let ch = input[index];
-        if ch == b'\\'.into() && input.get(index + 1) == Some(&b'\n'.into()) {
+        if ch == u16::from(b'\\') && input.get(index + 1) == Some(&u16::from(b'\n')) {
             index += 2;
             continue;
         }
         if !state.word_started {
             state.word_start = index;
-            if ch == b' '.into() || ch == b'\t'.into() {
+            if ch == u16::from(b' ') || ch == u16::from(b'\t') {
                 index += 1;
                 continue;
             }
-            if ch == b'}'.into()
+            if ch == u16::from(b'}')
                 && state.words.is_empty()
                 && !state.redirect_target
                 && (close == Some(Close::Brace) || close == Some(Close::Nofork))
@@ -203,7 +203,7 @@ pub(crate) fn scan_bash(
             {
                 return close_bash_list(&mut state, index);
             }
-            if ch == b'}'.into() {
+            if ch == u16::from(b'}') {
                 return BashResult::Opaque(if state.structures.is_empty() {
                     OpaqueReason::InvalidStructure
                 } else {
@@ -219,17 +219,17 @@ pub(crate) fn scan_bash(
                 Ok(None) => {}
             }
         }
-        if ch == b'\\'.into() && index + 1 >= input.len() {
+        if ch == u16::from(b'\\') && index + 1 >= input.len() {
             return BashResult::Opaque(OpaqueReason::UnterminatedEscape);
         }
         if !state.assignment_word
             && (matches!(ch, 0x27 | 0x22 | 0x5c)
-                || (ch == b'$'.into() && matches!(input.get(index + 1), Some(&0x27) | Some(&0x22))))
+                || (ch == u16::from(b'$') && matches!(input.get(index + 1), Some(&0x27) | Some(&0x22))))
         {
             state.assignment_head_unsafe = true;
         }
         let in_case_pattern = state.structures.last().is_some_and(|item| item.phase == Phase::Pattern);
-        let array = (ch == b'='.into() || ch == b'('.into())
+        let array = (ch == u16::from(b'=') || ch == u16::from(b'('))
             && state.assignment_word
             && state.word.len() > 1
             && state.word.ends_with('=')
@@ -239,7 +239,7 @@ pub(crate) fn scan_bash(
                     .raw_words
                     .get(state.command_word_index as usize)
                     .is_some_and(|word| BASH_ASSIGNMENT_DECLARATIONS.contains(word.as_str())));
-        if ch == b'='.into() && (!state.word_started || array) && input.get(index + 1) == Some(&b'('.into()) {
+        if ch == u16::from(b'=') && (!state.word_started || array) && input.get(index + 1) == Some(&u16::from(b'(')) {
             let end = match scan_bash_nested(
                 input,
                 &mut *state.context,
@@ -294,7 +294,7 @@ pub(crate) fn scan_bash(
             }
             Ok(None) => {}
         }
-        if ch == b'['.into()
+        if ch == u16::from(b'[')
             && !in_case_pattern
             && !state.assignment_word
             && !state.assignment_head_unsafe
@@ -330,7 +330,7 @@ pub(crate) fn scan_bash(
                 continue;
             }
         }
-        if ch == b'('.into()
+        if ch == u16::from(b'(')
             && (array
                 || ((in_case_pattern || state.context.dialect == Dialect::Bash)
                     && GLOB_SUFFIX_RE.is_match_str(&state.word)))
@@ -362,7 +362,7 @@ pub(crate) fn scan_bash(
             state.word_end = index;
             continue;
         }
-        if ch == b'#'.into() && !state.word_started {
+        if ch == u16::from(b'#') && !state.word_started {
             match index_of(input, index, "\n") {
                 Some(newline) => {
                     index = newline;
@@ -380,11 +380,11 @@ pub(crate) fn scan_bash(
                 }
             }
         }
-        if in_case_pattern && ch == b')'.into() {
+        if in_case_pattern && ch == u16::from(b')') {
             finish_bash_word(&mut state);
             continue;
         }
-        if ch == b')'.into() {
+        if ch == u16::from(b')') {
             if close != Some(Close::Paren)
                 || !state.structures.is_empty()
                 || (!state.heredocs_shared && !state.heredocs.is_empty())
@@ -393,7 +393,7 @@ pub(crate) fn scan_bash(
             }
             return close_bash_list(&mut state, index);
         }
-        if ch == b'('.into()
+        if ch == u16::from(b'(')
             && state.context.dialect == Dialect::Zsh
             && state.word_started
             && !in_case_pattern
@@ -405,7 +405,7 @@ pub(crate) fn scan_bash(
             state.word_end = index;
             continue;
         }
-        if ch == b'('.into() {
+        if ch == u16::from(b'(') {
             return BashResult::Opaque(if state.word_started {
                 OpaqueReason::DynamicExecution
             } else {
@@ -415,13 +415,13 @@ pub(crate) fn scan_bash(
         if is_js_space(ch) && !matches!(ch, 0x20 | 0x09 | 0x0a) {
             return BashResult::Opaque(OpaqueReason::InvalidStructure);
         }
-        if ch == b' '.into() || ch == b'\t'.into() {
+        if ch == u16::from(b' ') || ch == u16::from(b'\t') {
             finish_bash_word(&mut state);
             index += 1;
             continue;
         }
         state.word_started = true;
-        if ch == b'='.into()
+        if ch == u16::from(b'=')
             && !state.assignment_word
             && !state.assignment_head_unsafe
             && ASSIGNMENT_NAME_RE.is_match_str(&state.word)

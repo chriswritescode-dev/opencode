@@ -6,6 +6,10 @@ const areas = new Map([
   ["select", { crate: "config", file: "shell-select" }],
   ["scan-bash", { crate: "shell", file: "scan-bash" }],
   ["scan-powershell", { crate: "shell", file: "scan-powershell" }],
+  ["parse", { crate: "shell", file: "parse" }],
+  ["parse-parity", { crate: "shell", file: "parse-parity", binary: true }],
+  ["permissions", { crate: "shell", file: "permissions" }],
+  ["result", { crate: "shell", file: "result" }],
 ])
 const requested = process.argv[2]
 const selected = requested === undefined ? [...areas.keys()] : [requested]
@@ -28,6 +32,10 @@ await Bun.write(`${tree}/packages/core/test/opencode-rs-shell-corpus.ts`, await 
 await Bun.write(
   `${tree}/packages/core/test/opencode-rs-shell-corpus-record.ts`,
   await Bun.file(`${root}script/shell-corpus/record.ts`).text(),
+)
+await Bun.write(
+  `${tree}/packages/core/test/opencode-rs-shell-corpus-parse.ts`,
+  await Bun.file(`${root}script/shell-corpus/record-parse.ts`).text(),
 )
 
 for (const area of selected) {
@@ -66,14 +74,25 @@ for (const area of selected) {
     console.error(`corpus: exporting ${area} produced invalid JSON`)
     process.exit(1)
   }
-  if (!Array.isArray(parsed)) {
-    console.error(`corpus: exporting ${area} did not produce a JSON array`)
-    process.exit(1)
+  if ("binary" in target && target.binary) {
+    const encoded = parsed as { base64?: string } | null
+    if (typeof encoded?.base64 !== "string") {
+      console.error(`corpus: exporting ${area} did not produce binary data`)
+      process.exit(1)
+    }
+    await mkdir(`${root}crates/${target.crate}/tests/corpus`, { recursive: true })
+    await Bun.write(`${root}crates/${target.crate}/tests/corpus/${target.file}.jsonl.gz`, Buffer.from(encoded.base64, "base64"))
+    console.log(`corpus: ${area} written`)
+  } else {
+    if (!Array.isArray(parsed)) {
+      console.error(`corpus: exporting ${area} did not produce a JSON array`)
+      process.exit(1)
+    }
+    await mkdir(`${root}crates/${target.crate}/tests/corpus`, { recursive: true })
+    await Bun.write(
+      `${root}crates/${target.crate}/tests/corpus/${target.file}.json`,
+      `${JSON.stringify(parsed, null, 2)}\n`,
+    )
+    console.log(`corpus: ${area} ${parsed.length} cases`)
   }
-  await mkdir(`${root}crates/${target.crate}/tests/corpus`, { recursive: true })
-  await Bun.write(
-    `${root}crates/${target.crate}/tests/corpus/${target.file}.json`,
-    `${JSON.stringify(parsed, null, 2)}\n`,
-  )
-  console.log(`corpus: ${area} ${parsed.length} cases`)
 }

@@ -59,6 +59,30 @@ pub enum AccessError {
     Failed { path: String, cause: String },
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct ExternalDirectoryRequest {
+    pub resources: Vec<String>,
+    pub save: Vec<String>,
+}
+
+pub fn external_directory_request<'a>(
+    targets: impl IntoIterator<Item = &'a Target>,
+) -> Option<ExternalDirectoryRequest> {
+    let mut seen = Vec::new();
+    let mut resources = Vec::new();
+    let mut save = Vec::new();
+    for target in targets {
+        let Some(external) = &target.external_directory else { continue };
+        if seen.contains(&external.resource) {
+            continue;
+        }
+        seen.push(external.resource.clone());
+        resources.push(external.resource.clone());
+        save.push(external.save.clone());
+    }
+    (!resources.is_empty()).then_some(ExternalDirectoryRequest { resources, save })
+}
+
 pub trait Authorizer: Send + Sync {
     fn assert<'a>(&'a self, input: AssertInput) -> BoxFuture<'a, Result<(), PermissionError>>;
     fn allows<'a>(&'a self, input: AssertInput) -> BoxFuture<'a, Result<bool, PermissionError>>;
@@ -142,22 +166,12 @@ impl Access {
         metadata: Option<JsonMap<Value>>,
         authorizer: &dyn Authorizer,
     ) -> Result<(), AccessError> {
-        let mut seen = Vec::new();
-        let mut resources = Vec::new();
-        let mut save = Vec::new();
-        for target in targets {
-            let Some(external) = &target.external_directory else { continue };
-            if seen.contains(&external.resource) {
-                continue;
-            }
-            seen.push(external.resource.clone());
-            resources.push(external.resource.clone());
-            save.push(external.save.clone());
-        }
-        if resources.is_empty() {
+        let Some(request) = external_directory_request(targets.iter().copied()) else {
             return Ok(());
-        }
-        authorizer.assert(assert_input(context, "external_directory", resources, save, metadata)).await?;
+        };
+        authorizer
+            .assert(assert_input(context, "external_directory", request.resources, request.save, metadata))
+            .await?;
         Ok(())
     }
 

@@ -12,7 +12,7 @@ pub(crate) fn scan_bash_command_start(state: &mut BashState, index: usize, depth
     let ch = input[index];
     if state.structures.last().is_some_and(|structure| structure.phase == Phase::Pattern && !structure.pattern_started)
         && state.words.is_empty()
-        && ch == b'('.into()
+        && ch == u16::from(b'(')
     {
         if let Some(structure) = state.structures.last_mut() {
             structure.pattern_started = true;
@@ -29,7 +29,7 @@ pub(crate) fn scan_bash_command_start(state: &mut BashState, index: usize, depth
         }
         return Ok(Some(index));
     }
-    if state.structures.last().is_some_and(|structure| structure.phase == Phase::Pattern) && ch == b')'.into() {
+    if state.structures.last().is_some_and(|structure| structure.phase == Phase::Pattern) && ch == u16::from(b')') {
         if state.words.is_empty() {
             return Err(OpaqueReason::CompoundCommand);
         }
@@ -44,8 +44,8 @@ pub(crate) fn scan_bash_command_start(state: &mut BashState, index: usize, depth
         .structures
         .last()
         .is_some_and(|structure| structure.kind == StructureKind::For && structure.phase == Phase::Header)
-        && ch == b'('.into()
-        && input.get(index + 1) != Some(&b'('.into())
+        && ch == u16::from(b'(')
+        && input.get(index + 1) != Some(&u16::from(b'('))
     {
         let end = scan_bash_array_or_pattern(
             input,
@@ -86,17 +86,17 @@ pub(crate) fn scan_bash_command_start(state: &mut BashState, index: usize, depth
         .is_some_and(|structure| structure.kind == StructureKind::For && structure.phase == Phase::Do)
         && !matches!(ch, 0x0a | 0x23 | 0x3b)
     {
-        if ch != b'{'.into() || !space_continuation_ahead(input, index + 1) {
+        if ch != u16::from(b'{') || !space_continuation_ahead(input, index + 1) {
             return Err(OpaqueReason::CompoundCommand);
         }
         state.structures.pop();
     }
     let at_start = at_command_start(state);
-    let function_head = if at_start && ch == b'('.into() { bash_function_head_length(input, index) } else { 0 };
+    let function_head = if at_start && ch == u16::from(b'(') { bash_function_head_length(input, index) } else { 0 };
     if function_head > 0 {
         return Ok(Some(index + function_head - 1));
     }
-    if at_start && ch == b'!'.into() && negation_ahead(input, index + 1) {
+    if at_start && ch == u16::from(b'!') && negation_ahead(input, index + 1) {
         return Ok(Some(index));
     }
     let for_header = state
@@ -156,8 +156,8 @@ pub(crate) fn scan_bash_command_start(state: &mut BashState, index: usize, depth
             return Err(OpaqueReason::InvalidStructure);
         }
     }
-    if at_start && (ch == b'('.into() || (ch == b'{'.into() && space_continuation_ahead(input, index + 1))) {
-        let close = if ch == b'{'.into() { Close::Brace } else { Close::Paren };
+    if at_start && (ch == u16::from(b'(') || (ch == u16::from(b'{') && space_continuation_ahead(input, index + 1))) {
+        let close = if ch == u16::from(b'{') { Close::Brace } else { Close::Paren };
         let group =
             scan_bash(input, index + 1, depth + 1, state.context, Some(close), &mut *state.heredocs, true, None);
         let group = match group {

@@ -1,0 +1,345 @@
+[
+  {
+    "name": "permissions-scanned",
+    "command": "git status && npm run test -- --watch",
+    "program": "/bin/bash",
+    "once": false,
+    "target": {
+      "absolute": "/workspace",
+      "resource": "."
+    },
+    "resolved": {},
+    "rules": [],
+    "expected": [
+      {
+        "action": "shell",
+        "resources": [
+          "git status",
+          "npm run test -- --watch"
+        ],
+        "save": [
+          "git status *",
+          "npm run test *"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "permissions-external-directory",
+    "command": "cd /outside && git status",
+    "program": "/bin/bash",
+    "once": false,
+    "target": {
+      "absolute": "/workspace",
+      "resource": "."
+    },
+    "resolved": {
+      "/outside": {
+        "absolute": "/outside",
+        "resource": "/outside",
+        "externalDirectory": {
+          "action": "external_directory",
+          "directory": "/outside",
+          "resource": "/outside/*",
+          "save": "/outside/*"
+        }
+      }
+    },
+    "rules": [],
+    "expected": [
+      {
+        "action": "external_directory",
+        "resources": [
+          "/outside/*"
+        ],
+        "save": [
+          "/outside/*"
+        ]
+      },
+      {
+        "action": "shell",
+        "resources": [
+          "git status"
+        ],
+        "save": [
+          "git status *"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "permissions-directory-only",
+    "command": "cd /outside",
+    "program": "/bin/bash",
+    "once": false,
+    "target": {
+      "absolute": "/workspace",
+      "resource": "."
+    },
+    "resolved": {
+      "/outside": {
+        "absolute": "/outside",
+        "resource": "/outside",
+        "externalDirectory": {
+          "action": "external_directory",
+          "directory": "/outside",
+          "resource": "/outside/*",
+          "save": "/outside/*"
+        }
+      }
+    },
+    "rules": [],
+    "expected": [
+      {
+        "action": "external_directory",
+        "resources": [
+          "/outside/*"
+        ],
+        "save": [
+          "/outside/*"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "permissions-directory-only-once",
+    "command": "cd /outside",
+    "program": "/bin/bash",
+    "once": true,
+    "target": {
+      "absolute": "/workspace",
+      "resource": "."
+    },
+    "resolved": {
+      "/outside": {
+        "absolute": "/outside",
+        "resource": "/outside",
+        "externalDirectory": {
+          "action": "external_directory",
+          "directory": "/outside",
+          "resource": "/outside/*",
+          "save": "/outside/*"
+        }
+      }
+    },
+    "rules": [],
+    "expected": [
+      {
+        "action": "external_directory",
+        "resources": [
+          "/outside/*"
+        ]
+      },
+      {
+        "action": "shell",
+        "resources": [
+          "cd /outside"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "permissions-scanned-once",
+    "command": "git status && npm run test -- --watch",
+    "program": "/bin/bash",
+    "once": true,
+    "target": {
+      "absolute": "/workspace",
+      "resource": "."
+    },
+    "resolved": {},
+    "rules": [],
+    "expected": [
+      {
+        "action": "shell",
+        "resources": [
+          "git status",
+          "npm run test -- --watch"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "permissions-no-command",
+    "command": "FOO=bar",
+    "program": "/bin/bash",
+    "once": false,
+    "target": {
+      "absolute": "/workspace",
+      "resource": "."
+    },
+    "resolved": {},
+    "rules": [],
+    "expected": []
+  },
+  {
+    "name": "permissions-external-target",
+    "command": "git status",
+    "program": "/bin/bash",
+    "once": false,
+    "target": {
+      "absolute": "/outside",
+      "resource": "/outside",
+      "externalDirectory": {
+        "action": "external_directory",
+        "directory": "/outside",
+        "resource": "/outside/*",
+        "save": "/outside/*"
+      }
+    },
+    "resolved": {},
+    "rules": [],
+    "expected": [
+      {
+        "action": "external_directory",
+        "resources": [
+          "/outside/*"
+        ],
+        "save": [
+          "/outside/*"
+        ]
+      },
+      {
+        "action": "shell",
+        "resources": [
+          "git status"
+        ],
+        "save": [
+          "git status *"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "permissions-external-deduplicated",
+    "command": "cd /outside && pwd",
+    "program": "/bin/bash",
+    "once": false,
+    "target": {
+      "absolute": "/outside",
+      "resource": "/outside",
+      "externalDirectory": {
+        "action": "external_directory",
+        "directory": "/outside",
+        "resource": "/outside/*",
+        "save": "/outside/*"
+      }
+    },
+    "resolved": {
+      "/outside": {
+        "absolute": "/outside",
+        "resource": "/outside",
+        "externalDirectory": {
+          "action": "external_directory",
+          "directory": "/outside",
+          "resource": "/outside/*",
+          "save": "/outside/*"
+        }
+      }
+    },
+    "rules": [],
+    "expected": [
+      {
+        "action": "external_directory",
+        "resources": [
+          "/outside/*"
+        ],
+        "save": [
+          "/outside/*"
+        ]
+      },
+      {
+        "action": "shell",
+        "resources": [
+          "pwd"
+        ],
+        "save": [
+          "pwd *"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "permissions-opaque",
+    "command": "echo \"",
+    "program": "/bin/bash",
+    "once": false,
+    "target": {
+      "absolute": "/workspace",
+      "resource": "."
+    },
+    "resolved": {},
+    "rules": [],
+    "expected": [
+      {
+        "action": "external_directory",
+        "resources": [
+          "*"
+        ]
+      },
+      {
+        "action": "shell",
+        "resources": [
+          "echo \""
+        ],
+        "metadata": {
+          "reason": "unterminated-quote"
+        }
+      }
+    ]
+  },
+  {
+    "name": "permissions-opaque-deny",
+    "command": "echo \"",
+    "program": "/bin/bash",
+    "once": false,
+    "target": {
+      "absolute": "/workspace",
+      "resource": "."
+    },
+    "resolved": {},
+    "rules": [
+      {
+        "action": "*",
+        "resource": "*",
+        "effect": "deny"
+      }
+    ],
+    "error": "unterminated-quote"
+  },
+  {
+    "name": "permissions-opaque-other-deny",
+    "command": "echo \"",
+    "program": "/bin/bash",
+    "once": false,
+    "target": {
+      "absolute": "/workspace",
+      "resource": "."
+    },
+    "resolved": {},
+    "rules": [
+      {
+        "action": "git *",
+        "resource": "*",
+        "effect": "deny"
+      }
+    ],
+    "expected": [
+      {
+        "action": "external_directory",
+        "resources": [
+          "*"
+        ]
+      },
+      {
+        "action": "shell",
+        "resources": [
+          "echo \""
+        ],
+        "metadata": {
+          "reason": "unterminated-quote"
+        }
+      }
+    ]
+  }
+]

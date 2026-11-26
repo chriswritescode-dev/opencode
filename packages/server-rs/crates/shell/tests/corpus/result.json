@@ -1,0 +1,413 @@
+[
+  {
+    "name": "result-output-missing",
+    "kind": "output",
+    "result": {
+      "info": {
+        "id": "sh_result",
+        "status": "killed",
+        "command": "work",
+        "file": "/tmp/sh_result.out"
+      },
+      "capture": null
+    },
+    "expected": {
+      "output": "Shell command output is no longer available.",
+      "truncated": false
+    }
+  },
+  {
+    "name": "result-output-complete",
+    "kind": "output",
+    "result": {
+      "info": {
+        "id": "sh_result",
+        "status": "exited",
+        "command": "work",
+        "file": "/tmp/sh_result.out",
+        "exit": 0,
+        "signal": "SIGTERM"
+      },
+      "capture": {
+        "output": "done\n",
+        "truncated": false,
+        "killed": "Command was killed: the process daemon stopped"
+      }
+    },
+    "expected": {
+      "output": "done\n",
+      "truncated": false,
+      "exit": 0,
+      "signal": "SIGTERM",
+      "killed": "Command was killed: the process daemon stopped"
+    }
+  },
+  {
+    "name": "result-output-timeout",
+    "kind": "output",
+    "result": {
+      "info": {
+        "id": "sh_result",
+        "status": "timeout",
+        "command": "work",
+        "file": "/tmp/sh_result.out",
+        "signal": "SIGKILL"
+      },
+      "capture": {
+        "output": "waiting\n",
+        "truncated": true
+      }
+    },
+    "expected": {
+      "output": "waiting\n",
+      "truncated": true,
+      "signal": "SIGKILL",
+      "timeout": true
+    }
+  },
+  {
+    "name": "result-notice-none",
+    "kind": "notice",
+    "output": {
+      "output": "",
+      "truncated": false
+    },
+    "expected": null
+  },
+  {
+    "name": "result-notice-exit-zero",
+    "kind": "notice",
+    "output": {
+      "output": "",
+      "truncated": false,
+      "exit": 0
+    },
+    "expected": null
+  },
+  {
+    "name": "result-notice-exit",
+    "kind": "notice",
+    "output": {
+      "output": "",
+      "truncated": false,
+      "exit": 7
+    },
+    "timeout": 5,
+    "expected": "Exit code: 7"
+  },
+  {
+    "name": "result-notice-signal",
+    "kind": "notice",
+    "output": {
+      "output": "",
+      "truncated": false,
+      "signal": "SIGKILL"
+    },
+    "expected": "Exit code: 137 (SIGKILL)"
+  },
+  {
+    "name": "result-notice-unknown-signal",
+    "kind": "notice",
+    "output": {
+      "output": "",
+      "truncated": false,
+      "signal": "SIGMADEUP"
+    },
+    "expected": "Exit code: unknown"
+  },
+  {
+    "name": "result-notice-timeout",
+    "kind": "notice",
+    "output": {
+      "output": "",
+      "truncated": false,
+      "exit": 7,
+      "timeout": true
+    },
+    "timeout": 2500,
+    "expected": "Command timed out after 2.5 seconds. If it needs longer and isn't waiting for input, rerun with a larger timeout.\nExit code: 7"
+  },
+  {
+    "name": "result-notice-timeout-zero",
+    "kind": "notice",
+    "output": {
+      "output": "",
+      "truncated": false,
+      "exit": 7,
+      "timeout": true
+    },
+    "timeout": 0,
+    "expected": "Command timed out. If it needs longer and isn't waiting for input, rerun with a larger timeout.\nExit code: 7"
+  },
+  {
+    "name": "result-notice-killed",
+    "kind": "notice",
+    "output": {
+      "output": "",
+      "truncated": false,
+      "killed": "Command was killed"
+    },
+    "timeout": 9000,
+    "expected": "Command was killed"
+  },
+  {
+    "name": "result-interrupted-capture",
+    "kind": "interrupted",
+    "result": {
+      "info": {
+        "id": "sh_result",
+        "status": "killed",
+        "command": "work",
+        "file": "/tmp/sh_result.out"
+      },
+      "capture": {
+        "output": "partial\n",
+        "truncated": false
+      }
+    },
+    "expected": {
+      "output": "partial",
+      "notice": "[full output saved to /tmp/sh_result.out]\n\nCommand interrupted by the user (shell ID: sh_result).",
+      "message": "partial\n\n[full output saved to /tmp/sh_result.out]\n\nCommand interrupted by the user (shell ID: sh_result)."
+    }
+  },
+  {
+    "name": "result-interrupted-truncated",
+    "kind": "interrupted",
+    "result": {
+      "info": {
+        "id": "sh_result",
+        "status": "killed",
+        "command": "work",
+        "file": "/tmp/sh_result.out"
+      },
+      "capture": {
+        "output": "tail\n",
+        "truncated": true
+      }
+    },
+    "expected": {
+      "output": "tail\n",
+      "notice": "Command interrupted by the user (shell ID: sh_result).",
+      "message": "tail\n\n\nCommand interrupted by the user (shell ID: sh_result)."
+    }
+  },
+  {
+    "name": "result-interrupted-empty",
+    "kind": "interrupted",
+    "result": {
+      "info": {
+        "id": "sh_result",
+        "status": "running",
+        "command": "work",
+        "file": "/tmp/sh_result.out"
+      },
+      "capture": {
+        "output": "(no output)",
+        "truncated": false
+      }
+    },
+    "expected": {
+      "output": "",
+      "notice": "[no output; output file: /tmp/sh_result.out]\n\nCommand interrupted by the user (shell ID: sh_result); it is still being stopped.",
+      "message": "[no output; output file: /tmp/sh_result.out]\n\nCommand interrupted by the user (shell ID: sh_result); it is still being stopped."
+    }
+  },
+  {
+    "name": "result-interrupted-missing",
+    "kind": "interrupted",
+    "result": {
+      "info": {
+        "id": "sh_result",
+        "status": "killed",
+        "command": "work",
+        "file": "/tmp/sh_result.out"
+      },
+      "capture": null
+    },
+    "expected": {
+      "output": "Shell command output is no longer available.",
+      "notice": "Command interrupted by the user (shell ID: sh_result).",
+      "message": "Shell command output is no longer available.\n\nCommand interrupted by the user (shell ID: sh_result)."
+    }
+  },
+  {
+    "name": "result-metadata-capture",
+    "kind": "metadata",
+    "result": {
+      "info": {
+        "id": "sh_result",
+        "status": "killed",
+        "command": "work",
+        "file": "/tmp/sh_result.out"
+      },
+      "capture": {
+        "output": "partial\n",
+        "truncated": false
+      }
+    },
+    "expected": {
+      "truncated": false
+    }
+  },
+  {
+    "name": "result-metadata-truncated",
+    "kind": "metadata",
+    "result": {
+      "info": {
+        "id": "sh_result",
+        "status": "killed",
+        "command": "work",
+        "file": "/tmp/sh_result.out"
+      },
+      "capture": {
+        "output": "tail\n",
+        "truncated": true
+      }
+    },
+    "expected": {
+      "truncated": true
+    }
+  },
+  {
+    "name": "result-metadata-empty",
+    "kind": "metadata",
+    "result": {
+      "info": {
+        "id": "sh_result",
+        "status": "running",
+        "command": "work",
+        "file": "/tmp/sh_result.out"
+      },
+      "capture": {
+        "output": "(no output)",
+        "truncated": false
+      }
+    },
+    "expected": {
+      "truncated": false
+    }
+  },
+  {
+    "name": "result-metadata-missing",
+    "kind": "metadata",
+    "result": {
+      "info": {
+        "id": "sh_result",
+        "status": "killed",
+        "command": "work",
+        "file": "/tmp/sh_result.out"
+      },
+      "capture": null
+    },
+    "expected": {
+      "truncated": false
+    }
+  },
+  {
+    "name": "result-notification",
+    "kind": "notification",
+    "input": {
+      "shellID": "sh_result",
+      "jobID": "job_1",
+      "command": "work",
+      "state": "completed",
+      "text": "done",
+      "output": {
+        "output": "done\n",
+        "truncated": false,
+        "exit": 0
+      }
+    },
+    "expected": {
+      "text": "<background-result kind=\"shell\" id=\"job_1\" state=\"completed\" command=\"work\">\ndone\n</background-result>",
+      "metadata": {
+        "source": "shell",
+        "shellID": "sh_result",
+        "jobID": "job_1",
+        "state": "completed",
+        "truncated": false,
+        "exit": 0
+      }
+    }
+  },
+  {
+    "name": "result-user-notification-done",
+    "kind": "userNotification",
+    "result": {
+      "info": {
+        "id": "sh_result",
+        "status": "exited",
+        "command": "work",
+        "file": "/tmp/sh_result.out",
+        "exit": 0
+      },
+      "capture": {
+        "output": "done\n",
+        "truncated": false
+      }
+    },
+    "expected": {
+      "text": "The following shell command was executed by the user:\n<background-result kind=\"shell\" id=\"sh_result\" state=\"completed\" command=\"work\">\ndone\n\n</background-result>",
+      "metadata": {
+        "source": "shell",
+        "shellID": "sh_result",
+        "state": "completed",
+        "truncated": false,
+        "exit": 0
+      }
+    }
+  },
+  {
+    "name": "result-user-notification-failed",
+    "kind": "userNotification",
+    "result": {
+      "info": {
+        "id": "sh_result",
+        "status": "exited",
+        "command": "work",
+        "file": "/tmp/sh_result.out",
+        "exit": 7
+      },
+      "capture": {
+        "output": "bad\n",
+        "truncated": false
+      }
+    },
+    "expected": {
+      "text": "The following shell command was executed by the user:\n<background-result kind=\"shell\" id=\"sh_result\" state=\"completed\" command=\"work\">\nbad\n\n\nExit code: 7\n</background-result>",
+      "metadata": {
+        "source": "shell",
+        "shellID": "sh_result",
+        "state": "completed",
+        "truncated": false,
+        "exit": 7
+      }
+    }
+  },
+  {
+    "name": "result-user-notification-cancelled",
+    "kind": "userNotification",
+    "result": {
+      "info": {
+        "id": "sh_result",
+        "status": "killed",
+        "command": "work",
+        "file": "/tmp/sh_result.out"
+      },
+      "capture": {
+        "output": "",
+        "truncated": false
+      }
+    },
+    "expected": {
+      "text": "The following shell command was executed by the user:\n<background-result kind=\"shell\" id=\"sh_result\" state=\"cancelled\" command=\"work\">\nCancelled\n</background-result>",
+      "metadata": {
+        "source": "shell",
+        "shellID": "sh_result",
+        "state": "cancelled",
+        "truncated": false
+      }
+    }
+  }
+]
