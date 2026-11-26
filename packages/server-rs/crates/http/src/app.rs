@@ -53,6 +53,7 @@ pub const IMPLEMENTED: &[&str] = &[
     "integration.command.connect",
     "integration.command.status",
     "integration.command.cancel",
+    "experimental.usage.limits",
 ];
 
 pub struct Options {
@@ -285,6 +286,10 @@ impl App {
             },
             "integration.command.cancel" => match self.location(&raw).await {
                 Ok(lease) => crate::handlers::integration::command_cancel(&raw, lease.services()).await,
+                Err(response) => response,
+            },
+            "experimental.usage.limits" => match self.location(&raw).await {
+                Ok(lease) => crate::handlers::usage::limits(&raw, lease.services()).await,
                 Err(response) => response,
             },
             _ => not_implemented(found.route.identifier),

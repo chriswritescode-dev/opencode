@@ -19,6 +19,7 @@ mod serve;
 mod session_log;
 mod status;
 mod ticket;
+mod usage;
 
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};

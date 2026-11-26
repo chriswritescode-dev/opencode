@@ -18,6 +18,7 @@ use opencode_catalog::provider_plugin::gitlab::NoDiscovery;
 use opencode_catalog::provider_plugin::hooks::ProviderHooks;
 use opencode_catalog::provider_plugin::{AppInfo, CommandRunner, NoSessions, PluginContext, TokioCommandRunner};
 use opencode_catalog::shared_cache::SharedCache;
+use opencode_catalog::usage_limits::UsageLimits;
 use opencode_config::entry::Entry;
 use opencode_config::flag;
 use opencode_config::options::{ConfigLocation, ConfigOptions};
@@ -70,6 +71,7 @@ pub struct LocationServices {
     pub providers: Arc<ProviderService>,
     pub models: Arc<ModelService>,
     pub provider_hooks: Arc<ProviderHooks>,
+    pub usage_limits: Arc<UsageLimits>,
     registrations: Mutex<Option<Builtin>>,
 }
 
@@ -171,6 +173,7 @@ impl GlobalServices {
                 );
                 let providers = ProviderService::new(integrations.clone(), bus.clone(), location.clone());
                 let models = ModelService::new(providers.clone(), bus.clone(), location.clone(), config_env.clone());
+                let usage_limits = Arc::new(UsageLimits::new(integrations.clone(), http.clone()));
                 let provider_hooks = Arc::new(ProviderHooks::default());
                 let registrations = builtin::register(
                     builtin::Services {
@@ -209,6 +212,7 @@ impl GlobalServices {
                     providers,
                     models,
                     provider_hooks,
+                    usage_limits,
                     registrations: Mutex::new(Some(registrations)),
                 }))
             })
