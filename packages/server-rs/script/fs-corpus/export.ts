@@ -122,10 +122,10 @@ function exportMime() {
     })
 
   detect("empty", Uint8Array.of())
-  detect("ascii", Uint8Array.of(65))
+  media("ascii", Uint8Array.of(65))
   detect("nul", Uint8Array.of(0))
-  detect("high-byte", Uint8Array.of(0xff))
-  detect("truncated-utf8", Uint8Array.of(0xe2, 0x82))
+  media("high-byte", Uint8Array.of(0xff))
+  media("truncated-utf8", Uint8Array.of(0xe2, 0x82))
   detect("controls-at-limit", Uint8Array.of(1, 2, 3, 97, 98, 99, 100, 101, 102, 103))
   detect("controls-over-limit", Uint8Array.of(1, 2, 3, 4, 97, 98, 99, 100, 101, 102))
   detect("allowed-controls", Uint8Array.of(9, 10, 13))
@@ -154,7 +154,7 @@ function exportMime() {
     ["heic", "000000246674797068656963000000006d6966314d6950726d6961664d694842"],
     ["mif1-heic", "00000018667479706d69663100000000686569636d69663100000000"],
     ["mp4", "000000206674797069736f6d0000020069736f6d69736f32617663316d703431"],
-    ["quicktime", "0000001466747970717420200000020071742020200000000877696465"],
+    ["quicktime", "00000014667479707174202000000200717420200000000877696465"],
     ["m4a", "0000001c667479704d344120000002004d34412069736f6d69736f3200000008"],
   ] as const)
     media(`ftyp-${name}`, Buffer.from(value, "hex"))

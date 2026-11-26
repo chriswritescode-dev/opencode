@@ -163,3 +163,28 @@ async fn a_disabled_watcher_ends_every_subscription() {
     assert!(matches!(subscription.recv().await, Err(RecvError::Closed)));
     assert_eq!(watcher.active(), 0);
 }
+
+#[tokio::test]
+async fn watches_in_one_directory_share_a_target_until_the_last_release() {
+    let directory = TempDir::new("watcher-shared");
+    let first = directory.path().join("a.json");
+    let second = directory.path().join("b.json");
+    std::fs::write(&first, "one").expect("writes the first file");
+    std::fs::write(&second, "one").expect("writes the second file");
+    let watcher = Watcher::new(true);
+    let first_subscription = watcher.subscribe(WatchInput::File { path: first.clone() });
+    let mut second_subscription = watcher.subscribe(WatchInput::File { path: second.clone() });
+    assert_eq!(watcher.active(), 2);
+
+    drop(first_subscription);
+    assert_eq!(watcher.active(), 1);
+    std::fs::write(&second, "two").expect("modifies the second file");
+    let update = receive(&mut second_subscription).await;
+    assert_eq!(update.path, second);
+
+    drop(second_subscription);
+    assert_eq!(watcher.active(), 0);
+    let mut renewed = watcher.subscribe(WatchInput::File { path: first.clone() });
+    std::fs::write(&first, "two").expect("modifies the first file");
+    assert_eq!(receive(&mut renewed).await.path, first);
+}

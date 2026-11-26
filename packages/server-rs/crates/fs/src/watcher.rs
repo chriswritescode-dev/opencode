@@ -31,10 +31,12 @@ pub enum WatchInput {
     Directory { path: PathBuf, ignore: Vec<String> },
 }
 
-/// Starts watches and hands their updates to every subscriber of an equivalent input.
+/// Starts watches and hands their updates to every subscriber of an equivalent input. All watches
+/// of one `Watcher` share a single notify instance.
 pub struct Watcher {
     enabled: bool,
     registry: Arc<Mutex<Registry>>,
+    routes: Arc<Mutex<HashMap<Key, Route>>>,
 }
 
 /// The seam `FileWatch` uses so tests can drive subscription lifecycles without the filesystem.
@@ -50,7 +52,11 @@ impl WatchSource for Watcher {
 
 impl Watcher {
     pub fn new(enabled: bool) -> Watcher {
-        Watcher { enabled, registry: Arc::new(Mutex::new(Registry::default())) }
+        Watcher {
+            enabled,
+            registry: Arc::new(Mutex::new(Registry::default())),
+            routes: Arc::new(Mutex::new(HashMap::new())),
+        }
     }
 
     /// Subscribes to `input`, sharing one underlying watch with equivalent subscribers. An input
@@ -63,42 +69,41 @@ impl Watcher {
         let mut registry = lock(&self.registry);
         if let Some(entry) = registry.entries.get_mut(&key) {
             entry.users += 1;
-            return Subscription {
-                receiver: entry.sender.subscribe(),
-                release: Some(Release { registry: self.registry.clone(), key }),
+            let Some(route) = lock(&self.routes).get(&key).map(|route| route.sender.subscribe()) else {
+                return Subscription::closed();
             };
+            return Subscription { receiver: route, release: Some(self.release(key)) };
         }
-        let (sender, receiver) = broadcast::channel(CHANNEL_CAPACITY);
-        let publish = sender.clone();
         let (target, mode) = matcher.target();
-        let mut watcher = match notify::recommended_watcher(move |event: notify::Result<notify::Event>| {
-            let Ok(event) = event else { return };
-            let Some(kind) = update_kind(&event.kind, &matcher) else { return };
-            for path in event.paths {
-                if matcher.matches(&path) {
-                    let _ = publish.send(Update { path, kind });
+        let recursive = mode == RecursiveMode::Recursive;
+        let watched = registry.targets.get(&target).map(|watch| watch.recursive);
+        if watched.is_none() || (recursive && watched == Some(false)) {
+            let Some(notify) = registry.notify(&self.routes) else {
+                return Subscription::closed();
+            };
+            if let Err(error) = notify.watch(&target, mode) {
+                if !matches!(error.kind, notify::ErrorKind::PathNotFound) {
+                    log::error!("failed to watch {}: {error}", target.display());
                 }
-            }
-        }) {
-            Ok(watcher) => watcher,
-            Err(error) => {
-                log::error!("failed to create a file watcher: {error}");
                 return Subscription::closed();
             }
-        };
-        if let Err(error) = watcher.watch(&target, mode) {
-            if !matches!(error.kind, notify::ErrorKind::PathNotFound) {
-                log::error!("failed to watch {}: {error}", target.display());
-            }
-            return Subscription::closed();
         }
-        registry.entries.insert(key.clone(), Entry { _watcher: watcher, sender, users: 1 });
-        Subscription { receiver, release: Some(Release { registry: self.registry.clone(), key }) }
+        let watch = registry.targets.entry(target.clone()).or_insert(TargetWatch { users: 0, recursive });
+        watch.users += 1;
+        watch.recursive |= recursive;
+        let (sender, receiver) = broadcast::channel(CHANNEL_CAPACITY);
+        lock(&self.routes).insert(key.clone(), Route { matcher, sender });
+        registry.entries.insert(key.clone(), Entry { target, users: 1 });
+        Subscription { receiver, release: Some(self.release(key)) }
     }
 
     /// The number of underlying watches currently held, for diagnostics and tests.
     pub fn active(&self) -> usize {
         lock(&self.registry).entries.len()
+    }
+
+    fn release(&self, key: Key) -> Release {
+        Release { registry: self.registry.clone(), routes: self.routes.clone(), key }
     }
 }
 
@@ -133,7 +138,11 @@ impl Subscription {
 
 impl Drop for Watcher {
     fn drop(&mut self) {
-        lock(&self.registry).entries.clear();
+        let mut registry = lock(&self.registry);
+        registry.entries.clear();
+        registry.targets.clear();
+        registry.notify = None;
+        lock(&self.routes).clear();
     }
 }
 
@@ -143,25 +152,77 @@ impl Drop for Subscription {
         let mut registry = lock(&release.registry);
         let Some(entry) = registry.entries.get_mut(&release.key) else { return };
         entry.users = entry.users.saturating_sub(1);
-        if entry.users == 0 {
-            registry.entries.remove(&release.key);
+        if entry.users > 0 {
+            return;
+        }
+        let Some(entry) = registry.entries.remove(&release.key) else { return };
+        lock(&release.routes).remove(&release.key);
+        let remaining = registry.targets.get_mut(&entry.target).map(|watch| {
+            watch.users = watch.users.saturating_sub(1);
+            watch.users
+        });
+        if remaining == Some(0) {
+            registry.targets.remove(&entry.target);
+            if let Some(notify) = registry.notify.as_mut() {
+                let _ = notify.unwatch(&entry.target);
+            }
         }
     }
 }
 
 #[derive(Default)]
 struct Registry {
+    notify: Option<notify::RecommendedWatcher>,
+    targets: HashMap<PathBuf, TargetWatch>,
     entries: HashMap<Key, Entry>,
 }
 
+impl Registry {
+    fn notify(&mut self, routes: &Arc<Mutex<HashMap<Key, Route>>>) -> Option<&mut notify::RecommendedWatcher> {
+        if self.notify.is_none() {
+            let routes = Arc::downgrade(routes);
+            let created = notify::recommended_watcher(move |event: notify::Result<notify::Event>| {
+                let Ok(event) = event else { return };
+                let Some(routes) = routes.upgrade() else { return };
+                for route in lock(&routes).values() {
+                    let Some(kind) = update_kind(&event.kind, &route.matcher) else { continue };
+                    for path in &event.paths {
+                        if route.matcher.matches(path) {
+                            let _ = route.sender.send(Update { path: path.clone(), kind });
+                        }
+                    }
+                }
+            });
+            match created {
+                Ok(watcher) => self.notify = Some(watcher),
+                Err(error) => {
+                    log::error!("failed to create a file watcher: {error}");
+                    return None;
+                }
+            }
+        }
+        self.notify.as_mut()
+    }
+}
+
 struct Entry {
-    _watcher: notify::RecommendedWatcher,
-    sender: broadcast::Sender<Update>,
+    target: PathBuf,
     users: usize,
+}
+
+struct TargetWatch {
+    users: usize,
+    recursive: bool,
+}
+
+struct Route {
+    matcher: Matcher,
+    sender: broadcast::Sender<Update>,
 }
 
 struct Release {
     registry: Arc<Mutex<Registry>>,
+    routes: Arc<Mutex<HashMap<Key, Route>>>,
     key: Key,
 }
 
@@ -332,6 +393,6 @@ fn segment_matches(pattern: &str, text: &str) -> bool {
     pattern_index == pattern.len()
 }
 
-fn lock(registry: &Arc<Mutex<Registry>>) -> std::sync::MutexGuard<'_, Registry> {
-    registry.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
+fn lock<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
+    mutex.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
 }

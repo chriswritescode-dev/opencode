@@ -47,6 +47,24 @@ fn small_png_is_unchanged() {
 }
 
 #[test]
+fn unpadded_and_wrapped_base64_decodes_like_node() {
+    let content = png(33, 33, opaque);
+    let unpadded = content.trim_end_matches('=').to_owned();
+    let wrapped = content
+        .as_bytes()
+        .chunks(76)
+        .map(|chunk| std::str::from_utf8(chunk).expect("base64 is ASCII"))
+        .collect::<Vec<_>>()
+        .join("\r\n");
+    assert_ne!(unpadded, content, "the fixture needs padding");
+    for input in [unpadded, wrapped] {
+        let result = opencode_tool::image::normalize("fixture.png", "image/png", &input, Limits::default())
+            .expect("lenient base64 decodes");
+        assert!(result.is_none());
+    }
+}
+
+#[test]
 fn oversize_image_without_auto_resize_reports_its_size() {
     let content = png(10, 10, opaque);
     let limits = Limits { auto_resize: false, max_width: 5, ..Limits::default() };

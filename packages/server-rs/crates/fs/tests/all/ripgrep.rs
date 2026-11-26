@@ -438,3 +438,39 @@ fn tar_gz(name: &str, contents: &[u8]) -> Vec<u8> {
     std::io::Write::write_all(&mut encoder, &archive).expect("writes the tar archive");
     encoder.finish().expect("finishes the gzip stream")
 }
+
+#[cfg(target_os = "linux")]
+#[tokio::test]
+async fn dropping_a_search_kills_ripgrep() {
+    use std::os::unix::fs::PermissionsExt;
+    let tmp = TempDir::new("rg-drop");
+    let paths = test_paths(tmp.path());
+    let pid_file = tmp.path().join("rg.pid");
+    fs::create_dir_all(&paths.bin).expect("creates the bin directory");
+    let stub = paths.bin.join("rg");
+    write(&stub, format!("#!/bin/sh\necho $$ > '{}'\nexec sleep 30\n", pid_file.display()));
+    fs::set_permissions(&stub, fs::Permissions::from_mode(0o755)).expect("marks the stub executable");
+    let ripgrep = Ripgrep::new(Binary::new(paths, |_| None, releases()));
+
+    let search = ripgrep.glob(GlobInput {
+        cwd: tmp.path().display().to_string(),
+        pattern: "*".to_owned(),
+        limit: 10,
+        ..GlobInput::default()
+    });
+    let outcome = tokio::time::timeout(std::time::Duration::from_millis(500), search).await;
+    assert!(outcome.is_err(), "the stub never finishes");
+
+    let pid = fs::read_to_string(&pid_file).expect("the stub wrote its pid").trim().to_owned();
+    let alive = || {
+        fs::read_to_string(format!("/proc/{pid}/stat"))
+            .is_ok_and(|stat| stat.rsplit(')').next().is_some_and(|rest| !rest.trim_start().starts_with('Z')))
+    };
+    for _ in 0..50 {
+        if !alive() {
+            return;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+    }
+    panic!("ripgrep {pid} kept running after the search was dropped");
+}

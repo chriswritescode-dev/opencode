@@ -916,3 +916,128 @@ async fn every_wake_drains_its_prompt() {
         .count();
     assert_eq!(assistants, rounds);
 }
+
+struct GateTool {
+    started: Arc<tokio::sync::Notify>,
+    release: Arc<tokio::sync::Notify>,
+}
+
+impl ToolRuntime for GateTool {
+    fn execute<'a>(&'a self, _input: Value, _context: &'a ToolContext) -> BoxFuture<'a, Result<ToolOutput, ToolError>> {
+        Box::pin(async move {
+            let released = self.release.notified();
+            self.started.notify_one();
+            released.await;
+            Ok(ToolOutput { output: json!("opened"), content: Vec::new(), metadata: None })
+        })
+    }
+}
+
+#[tokio::test]
+async fn a_steer_admitted_during_a_tool_call_is_delivered_at_the_next_step() {
+    let captured: Captured = Arc::new(std::sync::Mutex::new(Vec::new()));
+    let port = start_sequence(
+        vec![
+            Response {
+                status: 200,
+                reason: "OK",
+                content_type: "text/event-stream; charset=utf-8",
+                extra: "",
+                body: tool_body("gate", "{}", "tool_use"),
+                delay: None,
+                after_first_delta: false,
+            },
+            Response::cassette(),
+        ],
+        Some(captured.clone()),
+    )
+    .await;
+    let started = Arc::new(tokio::sync::Notify::new());
+    let release = Arc::new(tokio::sync::Notify::new());
+    let factory: ToolFactory = {
+        let started = started.clone();
+        let release = release.clone();
+        Arc::new(move |work, root| {
+            let started = started.clone();
+            let release = release.clone();
+            Box::pin(async move {
+                let tools = crate::test_tools(&work, &root, Arc::new(crate::AllowAll), false).await;
+                let registration = tools
+                    .registry()
+                    .transform(move |editor| {
+                        editor.add(ToolRegistration {
+                            spec: ToolSpec {
+                                name: "gate".to_owned(),
+                                description: Some("A tool that waits until the test releases it".to_owned()),
+                                input_schema: Some(json!({ "type": "object" })),
+                                ..ToolSpec::default()
+                            },
+                            options: ToolOptions::default(),
+                            runtime: Arc::new(GateTool { started: started.clone(), release: release.clone() }),
+                        });
+                    })
+                    .await;
+                std::mem::forget(registration);
+                tools
+            })
+        })
+    };
+    let setup = setup_placements_with(port, false, Some(factory)).await;
+    let mut subscription = setup.bus.subscribe_all(None);
+    prompt(&setup.sessions);
+    tokio::time::timeout(Duration::from_secs(10), started.notified())
+        .await
+        .expect("the tool starts before the timeout");
+    setup
+        .sessions
+        .prompt(
+            "ses_1",
+            PromptInput {
+                id: None,
+                text: "steer while the tool runs".to_owned(),
+                agents: None,
+                metadata: None,
+                delivery: SessionInboxDelivery::Steer,
+                resume: false,
+            },
+        )
+        .expect("admit the steer");
+    release.notify_one();
+    collect_until(&mut subscription, "session.execution.succeeded").await;
+    let requests = captured.lock().expect("the captured lock is never poisoned");
+    assert_eq!(requests.len(), 2, "the tool result triggers a second request");
+    assert!(requests[1].to_string().contains("steer while the tool runs"), "the steer joins the next step");
+}
+
+#[tokio::test]
+async fn a_stream_failure_during_tool_input_settles_the_tool_before_the_step_fails() {
+    let full = tool_body("read", "{\"path\":", "tool_use");
+    let cut = full.find("event: content_block_stop").expect("the tool body has a block stop");
+    let body = format!(
+        "{}event: error\ndata: {{\"type\":\"error\",\"error\":{{\"type\":\"invalid_request_error\",\"message\":\"boom\"}}}}\n\n",
+        &full[..cut]
+    );
+    let port = start_sequence(
+        vec![Response {
+            status: 200,
+            reason: "OK",
+            content_type: "text/event-stream; charset=utf-8",
+            extra: "",
+            body,
+            delay: None,
+            after_first_delta: false,
+        }],
+        None,
+    )
+    .await;
+    let setup = setup(port).await;
+    let mut subscription = setup.bus.subscribe_all(None);
+    prompt(&setup.sessions);
+    let events = collect_until(&mut subscription, "session.execution.failed").await;
+    let position = |r#type: &str| {
+        events.iter().position(|event| event.r#type() == r#type).unwrap_or_else(|| panic!("missing {}", r#type))
+    };
+    let failed = &events[position("session.tool.failed")];
+    assert_eq!(failed.data()["error"]["type"], json!("tool.input-incomplete"));
+    assert!(position("session.tool.failed") < position("session.step.failed"));
+}

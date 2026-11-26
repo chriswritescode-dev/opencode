@@ -43,6 +43,12 @@ struct ToolRun {
     handle: JoinHandle<Result<ToolOutput, ToolError>>,
 }
 
+impl Drop for ToolRun {
+    fn drop(&mut self) {
+        self.handle.abort();
+    }
+}
+
 pub struct Runner {
     store: SessionStore,
     bus: Arc<Bus>,
@@ -92,11 +98,11 @@ impl Runner {
             let location = placed.location().cloned();
             let list = instructions::builtins(placed.builtins().clone())
                 .map_err(|error| ExecutionError::Message(error.to_string()))?;
-            if !continuation {
-                let promotable = self.store.promotable(session_id, true).map_err(bus_error)?;
-                if promotable.is_empty() {
-                    return Ok(());
-                }
+            let promotable = self.store.promotable(session_id, !continuation).map_err(bus_error)?;
+            if !continuation && promotable.is_empty() {
+                return Ok(());
+            }
+            if !promotable.is_empty() {
                 instruction_state::prepare_at(&self.database, &self.bus, &list, session_id, location.clone())
                     .map_err(bus_error)?;
                 for inbox_id in promotable {
@@ -289,6 +295,7 @@ impl Runner {
             if *cancel.borrow() {
                 return self.interrupted(session_id, assistant_id, &mut publisher, location);
             }
+            publisher.fail_incomplete_tools().map_err(bus_error)?;
             publisher.start().map_err(bus_error)?;
             self.publish_durable(
                 "session.step.failed",
@@ -437,7 +444,7 @@ impl Runner {
         let output = tools.output();
         let mut declined = false;
         while !runs.is_empty() {
-            let run = runs.remove(0);
+            let mut run = runs.remove(0);
             if *cancel.borrow() {
                 run.handle.abort();
                 for rest in runs.drain(..) {
@@ -460,7 +467,7 @@ impl Runner {
                         .map_err(bus_error)?;
                     return Ok(declined);
                 }
-                joined = run.handle => joined,
+                joined = &mut run.handle => joined,
             };
             match joined {
                 Ok(Ok(result)) => {
@@ -498,6 +505,9 @@ impl Runner {
         if !publisher.has_started() {
             return Err(ExecutionError::Interrupted);
         }
+        publisher
+            .fail_unsettled_tools(&structured_error("aborted", "Tool execution interrupted"))
+            .map_err(bus_error)?;
         publisher.streamed().map_err(bus_error)?;
         self.publish_durable(
             "session.step.failed",

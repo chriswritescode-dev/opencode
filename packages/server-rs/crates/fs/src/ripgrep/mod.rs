@@ -190,7 +190,13 @@ impl Ripgrep {
         let Spawn { cwd, args, limit, signal, pattern } = spawn;
         let program = self.binary.filepath().await.map_err(|error| Error::Failed { message: error.message })?;
         let mut command = tokio::process::Command::new(program);
-        command.args(&args).current_dir(&cwd).stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::piped());
+        command
+            .args(&args)
+            .current_dir(&cwd)
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .kill_on_drop(true);
         let mut child = command.spawn().map_err(|error| failed(format!("ripgrep execution failed: {error}")))?;
         let stdout = child.stdout.take().ok_or_else(|| failed("ripgrep stdout was not captured"))?;
         let stderr = child.stderr.take().ok_or_else(|| failed("ripgrep stderr was not captured"))?;

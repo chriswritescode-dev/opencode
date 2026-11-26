@@ -12,6 +12,12 @@
     "expected": "text/plain"
   },
   {
+    "name": "media-ascii",
+    "kind": "media",
+    "bytes": "QQ==",
+    "expected": null
+  },
+  {
     "name": "detect-nul",
     "kind": "detect",
     "bytes": "AA==",
@@ -24,10 +30,22 @@
     "expected": "application/octet-stream"
   },
   {
+    "name": "media-high-byte",
+    "kind": "media",
+    "bytes": "/w==",
+    "expected": null
+  },
+  {
     "name": "detect-truncated-utf8",
     "kind": "detect",
     "bytes": "4oI=",
     "expected": "text/plain"
+  },
+  {
+    "name": "media-truncated-utf8",
+    "kind": "media",
+    "bytes": "4oI=",
+    "expected": null
   },
   {
     "name": "detect-controls-at-limit",
@@ -266,13 +284,13 @@
   {
     "name": "detect-ftyp-quicktime",
     "kind": "detect",
-    "bytes": "AAAAFGZ0eXBxdCAgAAACAHF0ICAgAAAACHdpZGU=",
+    "bytes": "AAAAFGZ0eXBxdCAgAAACAHF0ICAAAAAId2lkZQ==",
     "expected": "video/quicktime"
   },
   {
     "name": "media-ftyp-quicktime",
     "kind": "media",
-    "bytes": "AAAAFGZ0eXBxdCAgAAACAHF0ICAgAAAACHdpZGU=",
+    "bytes": "AAAAFGZ0eXBxdCAgAAACAHF0ICAAAAAId2lkZQ==",
     "expected": "video/quicktime"
   },
   {

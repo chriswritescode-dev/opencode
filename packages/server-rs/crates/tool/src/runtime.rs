@@ -86,8 +86,10 @@ async fn execute_tool(
     hooks: &dyn ToolHooks,
     image: &Image,
 ) -> Result<ToolOutput, ToolError> {
-    let decoded = input::decode(name, &tool.definition.input_schema, &input)?;
-    let mut result = tool.runtime.execute(decoded, context).await;
+    let mut result = match input::decode(name, &tool.definition.input_schema, &input) {
+        Ok(decoded) => tool.runtime.execute(decoded, context).await,
+        Err(error) => Err(error),
+    };
     if let Ok(output) = &mut result {
         normalize_content(output);
     }

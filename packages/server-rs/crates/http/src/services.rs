@@ -359,8 +359,9 @@ impl GlobalServices {
                     let config_env = config_env.clone();
                     Arc::new(move |name: &str| config_env(name).map(|value| value.to_string_lossy().into_owned()))
                 };
-                let discovery =
-                    InstructionDiscovery::new(events.clone(), InstructionOptions::from_vars(|name| string_env(name)));
+                let instruction_options = InstructionOptions::from_vars(|name| string_env(name));
+                let claude = instruction_options.claude;
+                let discovery = InstructionDiscovery::new(events.clone(), instruction_options);
                 let activation = builtin::activate(builtin::Deps {
                     config: config.clone(),
                     agents: agents.clone(),
@@ -437,7 +438,7 @@ impl GlobalServices {
                         authorizer: permissions.clone(),
                         output: ToolOutputStore::new(data),
                         image: Arc::new(ToolImage::new()),
-                        claude: true,
+                        claude,
                         full_codemode,
                     })
                     .await,

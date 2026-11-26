@@ -274,13 +274,18 @@ fn clone_headers(headers: &[(HeaderName, String)]) -> Vec<(HeaderName, String)> 
 }
 
 fn content_type(mime: &str) -> &str {
-    let media = mime.split(';').next().unwrap_or_default().trim().to_ascii_lowercase();
-    let textual = matches!(
-        media.as_str(),
-        "text/html" | "text/javascript" | "application/javascript" | "application/x-javascript"
-    ) || media.ends_with("/xml")
-        || media.ends_with("+xml");
+    let lower = mime.to_ascii_lowercase();
+    let textual = ["text/html", "text/javascript", "application/javascript", "application/x-javascript"]
+        .iter()
+        .any(|prefix| lower.starts_with(prefix) && word_boundary_after(&lower, prefix.len()))
+        || ["/xml", "+xml"].iter().any(|needle| {
+            lower.match_indices(needle).any(|(index, _)| word_boundary_after(&lower, index + needle.len()))
+        });
     if textual { TEXT_TYPE } else { mime }
+}
+
+fn word_boundary_after(text: &str, index: usize) -> bool {
+    text.as_bytes().get(index).is_none_or(|byte| !(byte.is_ascii_alphanumeric() || *byte == b'_'))
 }
 
 fn basename(path: &str) -> String {

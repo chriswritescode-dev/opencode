@@ -1,6 +1,10 @@
 use std::sync::RwLock;
 
 use base64::Engine;
+use base64::alphabet;
+use base64::engine::DecodePaddingMode;
+use base64::engine::GeneralPurpose;
+use base64::engine::GeneralPurposeConfig;
 use base64::engine::general_purpose::STANDARD;
 use opencode_config::entry::Entry;
 use opencode_contract::generated::ConfigEntryDocumentInfoMediaImage;
@@ -19,6 +23,12 @@ pub const DEFAULT_MAX_BASE64_BYTES: usize = 5 * 1024 * 1024;
 const PNG_PASSTHROUGH_MAX_BASE64_BYTES: usize = 384 * 1024;
 const SMALL_PNG_MAX_PIXELS: u64 = 256 * 256;
 const JPEG_QUALITIES: [u8; 4] = [80, 70, 55, 40];
+const LENIENT: GeneralPurpose = GeneralPurpose::new(
+    &alphabet::STANDARD,
+    GeneralPurposeConfig::new()
+        .with_decode_padding_mode(DecodePaddingMode::Indifferent)
+        .with_decode_allow_trailing_bits(true),
+);
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Limits {
@@ -108,10 +118,23 @@ impl Image {
     }
 }
 
+fn base64_alphabet(content: &str) -> String {
+    content
+        .chars()
+        .take_while(|character| *character != '=')
+        .filter_map(|character| match character {
+            '-' => Some('+'),
+            '_' => Some('/'),
+            'A'..='Z' | 'a'..='z' | '0'..='9' | '+' | '/' => Some(character),
+            _ => None,
+        })
+        .collect()
+}
+
 pub fn normalize(resource: &str, mime: &str, content: &str, limits: Limits) -> Result<Option<Normalized>, ImageError> {
     let bytes = content.len();
-    let decoded = STANDARD
-        .decode(content)
+    let decoded = LENIENT
+        .decode(base64_alphabet(content))
         .ok()
         .and_then(|bytes| ::image::load_from_memory(&bytes).ok())
         .ok_or_else(|| ImageError::Decode { resource: resource.to_owned() })?;
