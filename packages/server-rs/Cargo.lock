@@ -865,6 +865,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "opencode-fs"
+version = "0.1.0"
+dependencies = [
+ "base64",
+ "opencode-util",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
 name = "opencode-git"
 version = "0.1.0"
 dependencies = [

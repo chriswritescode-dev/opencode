@@ -1,0 +1,23 @@
+[package]
+name = "opencode-fs"
+description = "Path rules, MIME detection, BOM handling and keyed locks for the server's filesystem code."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+autotests = false
+
+[lints]
+workspace = true
+
+[dependencies]
+opencode-util.workspace = true
+tokio.workspace = true
+
+[dev-dependencies]
+base64.workspace = true
+serde_json.workspace = true
+
+[[test]]
+name = "all"
+path = "tests/all/main.rs"

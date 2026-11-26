@@ -1,0 +1,422 @@
+[
+  {
+    "name": "detect-empty",
+    "kind": "detect",
+    "bytes": "",
+    "expected": "text/plain"
+  },
+  {
+    "name": "detect-ascii",
+    "kind": "detect",
+    "bytes": "QQ==",
+    "expected": "text/plain"
+  },
+  {
+    "name": "detect-nul",
+    "kind": "detect",
+    "bytes": "AA==",
+    "expected": "application/octet-stream"
+  },
+  {
+    "name": "detect-high-byte",
+    "kind": "detect",
+    "bytes": "/w==",
+    "expected": "application/octet-stream"
+  },
+  {
+    "name": "detect-truncated-utf8",
+    "kind": "detect",
+    "bytes": "4oI=",
+    "expected": "text/plain"
+  },
+  {
+    "name": "detect-controls-at-limit",
+    "kind": "detect",
+    "bytes": "AQIDYWJjZGVmZw==",
+    "expected": "text/plain"
+  },
+  {
+    "name": "detect-controls-over-limit",
+    "kind": "detect",
+    "bytes": "AQIDBGFiY2RlZg==",
+    "expected": "application/octet-stream"
+  },
+  {
+    "name": "detect-allowed-controls",
+    "kind": "detect",
+    "bytes": "CQoN",
+    "expected": "text/plain"
+  },
+  {
+    "name": "detect-bm-text",
+    "kind": "detect",
+    "bytes": "Qk0=",
+    "expected": "text/plain"
+  },
+  {
+    "name": "detect-bmw-text",
+    "kind": "detect",
+    "bytes": "Qk1XIHNlcnZpY2Ugc2NoZWR1bGUK",
+    "expected": "text/plain"
+  },
+  {
+    "name": "detect-bmp-windows",
+    "kind": "detect",
+    "bytes": "Qk06AAAAAAAAADYAAAAoAAAAAQAAAAEAAAABABgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+    "expected": "image/bmp"
+  },
+  {
+    "name": "media-bmp-windows",
+    "kind": "media",
+    "bytes": "Qk06AAAAAAAAADYAAAAoAAAAAQAAAAEAAAABABgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+    "expected": "image/bmp"
+  },
+  {
+    "name": "detect-bmp-windows-prefix",
+    "kind": "detect",
+    "bytes": "Qk06AAAAAAAAADYAAAAoAAAA",
+    "expected": "image/bmp"
+  },
+  {
+    "name": "media-bmp-windows-prefix",
+    "kind": "media",
+    "bytes": "Qk06AAAAAAAAADYAAAAoAAAA",
+    "expected": "image/bmp"
+  },
+  {
+    "name": "detect-bmp-os2",
+    "kind": "detect",
+    "bytes": "Qk0eAAAAAAAAABoAAAAMAAAAAQABAAEAGAAAAAAA",
+    "expected": "image/bmp"
+  },
+  {
+    "name": "media-bmp-os2",
+    "kind": "media",
+    "bytes": "Qk0eAAAAAAAAABoAAAAMAAAAAQABAAEAGAAAAAAA",
+    "expected": "image/bmp"
+  },
+  {
+    "name": "detect-bmp-os2-prefix",
+    "kind": "detect",
+    "bytes": "Qk0eAAAAAAAAABoAAAAMAAAA",
+    "expected": "image/bmp"
+  },
+  {
+    "name": "media-bmp-os2-prefix",
+    "kind": "media",
+    "bytes": "Qk0eAAAAAAAAABoAAAAMAAAA",
+    "expected": "image/bmp"
+  },
+  {
+    "name": "detect-png",
+    "kind": "detect",
+    "bytes": "iVBORw0KGgoAAAANSUhEUg==",
+    "expected": "image/png"
+  },
+  {
+    "name": "media-png",
+    "kind": "media",
+    "bytes": "iVBORw0KGgoAAAANSUhEUg==",
+    "expected": "image/png"
+  },
+  {
+    "name": "detect-jpeg",
+    "kind": "detect",
+    "bytes": "/9j/4AAQSkZJRg==",
+    "expected": "image/jpeg"
+  },
+  {
+    "name": "media-jpeg",
+    "kind": "media",
+    "bytes": "/9j/4AAQSkZJRg==",
+    "expected": "image/jpeg"
+  },
+  {
+    "name": "detect-gif87a",
+    "kind": "detect",
+    "bytes": "R0lGODdh",
+    "expected": "image/gif"
+  },
+  {
+    "name": "media-gif87a",
+    "kind": "media",
+    "bytes": "R0lGODdh",
+    "expected": "image/gif"
+  },
+  {
+    "name": "detect-gif89a",
+    "kind": "detect",
+    "bytes": "R0lGODlh",
+    "expected": "image/gif"
+  },
+  {
+    "name": "media-gif89a",
+    "kind": "media",
+    "bytes": "R0lGODlh",
+    "expected": "image/gif"
+  },
+  {
+    "name": "detect-pdf",
+    "kind": "detect",
+    "bytes": "JVBERi0xLjcK",
+    "expected": "application/pdf"
+  },
+  {
+    "name": "media-pdf",
+    "kind": "media",
+    "bytes": "JVBERi0xLjcK",
+    "expected": "application/pdf"
+  },
+  {
+    "name": "detect-webp",
+    "kind": "detect",
+    "bytes": "UklGRhgAAABXRUJQVlA4IA==",
+    "expected": "image/webp"
+  },
+  {
+    "name": "media-webp",
+    "kind": "media",
+    "bytes": "UklGRhgAAABXRUJQVlA4IA==",
+    "expected": "image/webp"
+  },
+  {
+    "name": "detect-riff-not-webp",
+    "kind": "detect",
+    "bytes": "UklGRhgAAABXQVZFVlA4IA==",
+    "expected": "application/octet-stream"
+  },
+  {
+    "name": "media-riff-not-webp",
+    "kind": "media",
+    "bytes": "UklGRhgAAABXQVZFVlA4IA==",
+    "expected": null
+  },
+  {
+    "name": "detect-ftyp-avif",
+    "kind": "detect",
+    "bytes": "AAAAIGZ0eXBhdmlmAAAAAE1pUHJhdmlmbWlhZm1pZjE=",
+    "expected": "image/avif"
+  },
+  {
+    "name": "media-ftyp-avif",
+    "kind": "media",
+    "bytes": "AAAAIGZ0eXBhdmlmAAAAAE1pUHJhdmlmbWlhZm1pZjE=",
+    "expected": "image/avif"
+  },
+  {
+    "name": "detect-ftyp-avis",
+    "kind": "detect",
+    "bytes": "AAAAGGZ0eXBhdmlzAAAAAG1zZjFhdmlz",
+    "expected": "image/avif"
+  },
+  {
+    "name": "media-ftyp-avis",
+    "kind": "media",
+    "bytes": "AAAAGGZ0eXBhdmlzAAAAAG1zZjFhdmlz",
+    "expected": "image/avif"
+  },
+  {
+    "name": "detect-ftyp-mif1-avif",
+    "kind": "detect",
+    "bytes": "AAAAGGZ0eXBtaWYxAAAAAGF2aWZtaWYxAAAAAA==",
+    "expected": "image/avif"
+  },
+  {
+    "name": "media-ftyp-mif1-avif",
+    "kind": "media",
+    "bytes": "AAAAGGZ0eXBtaWYxAAAAAGF2aWZtaWYxAAAAAA==",
+    "expected": "image/avif"
+  },
+  {
+    "name": "detect-ftyp-heic",
+    "kind": "detect",
+    "bytes": "AAAAJGZ0eXBoZWljAAAAAG1pZjFNaVBybWlhZk1pSEI=",
+    "expected": "image/heic"
+  },
+  {
+    "name": "media-ftyp-heic",
+    "kind": "media",
+    "bytes": "AAAAJGZ0eXBoZWljAAAAAG1pZjFNaVBybWlhZk1pSEI=",
+    "expected": "image/heic"
+  },
+  {
+    "name": "detect-ftyp-mif1-heic",
+    "kind": "detect",
+    "bytes": "AAAAGGZ0eXBtaWYxAAAAAGhlaWNtaWYxAAAAAA==",
+    "expected": "image/heic"
+  },
+  {
+    "name": "media-ftyp-mif1-heic",
+    "kind": "media",
+    "bytes": "AAAAGGZ0eXBtaWYxAAAAAGhlaWNtaWYxAAAAAA==",
+    "expected": "image/heic"
+  },
+  {
+    "name": "detect-ftyp-mp4",
+    "kind": "detect",
+    "bytes": "AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDE=",
+    "expected": "video/mp4"
+  },
+  {
+    "name": "media-ftyp-mp4",
+    "kind": "media",
+    "bytes": "AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDE=",
+    "expected": "video/mp4"
+  },
+  {
+    "name": "detect-ftyp-quicktime",
+    "kind": "detect",
+    "bytes": "AAAAFGZ0eXBxdCAgAAACAHF0ICAgAAAACHdpZGU=",
+    "expected": "video/quicktime"
+  },
+  {
+    "name": "media-ftyp-quicktime",
+    "kind": "media",
+    "bytes": "AAAAFGZ0eXBxdCAgAAACAHF0ICAgAAAACHdpZGU=",
+    "expected": "video/quicktime"
+  },
+  {
+    "name": "detect-ftyp-m4a",
+    "kind": "detect",
+    "bytes": "AAAAHGZ0eXBNNEEgAAACAE00QSBpc29taXNvMgAAAAg=",
+    "expected": "audio/mp4"
+  },
+  {
+    "name": "media-ftyp-m4a",
+    "kind": "media",
+    "bytes": "AAAAHGZ0eXBNNEEgAAACAE00QSBpc29taXNvMgAAAAg=",
+    "expected": "audio/mp4"
+  },
+  {
+    "name": "textual-empty",
+    "kind": "textual",
+    "mime": "",
+    "expected": true
+  },
+  {
+    "name": "textual-text",
+    "kind": "textual",
+    "mime": "text/plain",
+    "expected": true
+  },
+  {
+    "name": "textual-json",
+    "kind": "textual",
+    "mime": "application/json",
+    "expected": true
+  },
+  {
+    "name": "textual-json-suffix",
+    "kind": "textual",
+    "mime": "application/ld+json",
+    "expected": true
+  },
+  {
+    "name": "textual-xml",
+    "kind": "textual",
+    "mime": "application/xml",
+    "expected": true
+  },
+  {
+    "name": "textual-xml-suffix",
+    "kind": "textual",
+    "mime": "image/svg+xml",
+    "expected": true
+  },
+  {
+    "name": "textual-javascript",
+    "kind": "textual",
+    "mime": "application/javascript",
+    "expected": true
+  },
+  {
+    "name": "textual-x-javascript",
+    "kind": "textual",
+    "mime": "application/x-javascript",
+    "expected": true
+  },
+  {
+    "name": "textual-binary",
+    "kind": "textual",
+    "mime": "application/octet-stream",
+    "expected": false
+  },
+  {
+    "name": "textual-image",
+    "kind": "textual",
+    "mime": "image/png",
+    "expected": false
+  },
+  {
+    "name": "lookup-empty",
+    "kind": "lookup",
+    "path": "",
+    "expected": "application/octet-stream"
+  },
+  {
+    "name": "lookup-file.png",
+    "kind": "lookup",
+    "path": "file.png",
+    "expected": "image/png"
+  },
+  {
+    "name": "lookup-photo.JPEG",
+    "kind": "lookup",
+    "path": "photo.JPEG",
+    "expected": "image/jpeg"
+  },
+  {
+    "name": "lookup-archive.tar.gz",
+    "kind": "lookup",
+    "path": "archive.tar.gz",
+    "expected": "application/gzip"
+  },
+  {
+    "name": "lookup-index.html",
+    "kind": "lookup",
+    "path": "index.html",
+    "expected": "text/html"
+  },
+  {
+    "name": "lookup-style.css",
+    "kind": "lookup",
+    "path": "style.css",
+    "expected": "text/css"
+  },
+  {
+    "name": "lookup-unknown.ext",
+    "kind": "lookup",
+    "path": "unknown.ext",
+    "expected": "application/vnd.novadigm.ext"
+  },
+  {
+    "name": "lookup-no-extension",
+    "kind": "lookup",
+    "path": "no-extension",
+    "expected": "application/octet-stream"
+  },
+  {
+    "name": "lookup-.gitignore",
+    "kind": "lookup",
+    "path": ".gitignore",
+    "expected": "application/octet-stream"
+  },
+  {
+    "name": "lookup-dir/file.",
+    "kind": "lookup",
+    "path": "dir/file.",
+    "expected": "application/octet-stream"
+  },
+  {
+    "name": "lookup-dir/",
+    "kind": "lookup",
+    "path": "dir/",
+    "expected": "application/x-director"
+  },
+  {
+    "name": "lookup-C:\\tmp\\photo.PNG",
+    "kind": "lookup",
+    "path": "C:\\tmp\\photo.PNG",
+    "expected": "image/png"
+  }
+]

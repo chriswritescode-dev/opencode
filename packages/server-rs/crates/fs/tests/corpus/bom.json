@@ -1,0 +1,162 @@
+[
+  {
+    "name": "sync-\"\"-false",
+    "kind": "sync",
+    "input": "Ye+7v8Op",
+    "bom": false,
+    "text": "a﻿é",
+    "bytes": null
+  },
+  {
+    "name": "sync-\"\"-true",
+    "kind": "sync",
+    "input": "Ye+7v8Op",
+    "bom": true,
+    "text": "a﻿é",
+    "bytes": "77u/Ye+7v8Op"
+  },
+  {
+    "name": "sync-\"﻿\"-false",
+    "kind": "sync",
+    "input": "77u/Ye+7v8Op",
+    "bom": false,
+    "text": "a﻿é",
+    "bytes": "Ye+7v8Op"
+  },
+  {
+    "name": "sync-\"﻿\"-true",
+    "kind": "sync",
+    "input": "77u/Ye+7v8Op",
+    "bom": true,
+    "text": "a﻿é",
+    "bytes": null
+  },
+  {
+    "name": "sync-\"﻿﻿\"-false",
+    "kind": "sync",
+    "input": "77u/77u/Ye+7v8Op",
+    "bom": false,
+    "text": "a﻿é",
+    "bytes": "Ye+7v8Op"
+  },
+  {
+    "name": "sync-\"﻿﻿\"-true",
+    "kind": "sync",
+    "input": "77u/77u/Ye+7v8Op",
+    "bom": true,
+    "text": "a﻿é",
+    "bytes": "77u/Ye+7v8Op"
+  },
+  {
+    "name": "split-\"\"",
+    "kind": "split",
+    "text": "",
+    "bom": false,
+    "expected": ""
+  },
+  {
+    "name": "split-\"﻿\"",
+    "kind": "split",
+    "text": "﻿",
+    "bom": true,
+    "expected": ""
+  },
+  {
+    "name": "split-\"﻿﻿x\"",
+    "kind": "split",
+    "text": "﻿﻿x",
+    "bom": true,
+    "expected": "x"
+  },
+  {
+    "name": "split-\"a﻿\"",
+    "kind": "split",
+    "text": "a﻿",
+    "bom": false,
+    "expected": "a﻿"
+  },
+  {
+    "name": "split-\"plain\"",
+    "kind": "split",
+    "text": "plain",
+    "bom": false,
+    "expected": "plain"
+  },
+  {
+    "name": "split-\"﻿﻿\"",
+    "kind": "split",
+    "text": "﻿﻿",
+    "bom": true,
+    "expected": ""
+  },
+  {
+    "name": "join-\"\"-false",
+    "kind": "join",
+    "text": "",
+    "bom": false,
+    "expected": ""
+  },
+  {
+    "name": "join-\"\"-true",
+    "kind": "join",
+    "text": "",
+    "bom": true,
+    "expected": "﻿"
+  },
+  {
+    "name": "join-\"﻿\"-false",
+    "kind": "join",
+    "text": "﻿",
+    "bom": false,
+    "expected": ""
+  },
+  {
+    "name": "join-\"﻿\"-true",
+    "kind": "join",
+    "text": "﻿",
+    "bom": true,
+    "expected": "﻿"
+  },
+  {
+    "name": "join-\"﻿﻿x\"-false",
+    "kind": "join",
+    "text": "﻿﻿x",
+    "bom": false,
+    "expected": "x"
+  },
+  {
+    "name": "join-\"﻿﻿x\"-true",
+    "kind": "join",
+    "text": "﻿﻿x",
+    "bom": true,
+    "expected": "﻿x"
+  },
+  {
+    "name": "join-\"a﻿\"-false",
+    "kind": "join",
+    "text": "a﻿",
+    "bom": false,
+    "expected": "a﻿"
+  },
+  {
+    "name": "join-\"a﻿\"-true",
+    "kind": "join",
+    "text": "a﻿",
+    "bom": true,
+    "expected": "﻿a﻿"
+  },
+  {
+    "name": "join-\"plain\"-false",
+    "kind": "join",
+    "text": "plain",
+    "bom": false,
+    "expected": "plain"
+  },
+  {
+    "name": "join-\"plain\"-true",
+    "kind": "join",
+    "text": "plain",
+    "bom": true,
+    "expected": "﻿plain"
+  }
+]

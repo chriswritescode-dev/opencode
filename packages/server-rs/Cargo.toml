@@ -26,6 +26,7 @@ opencode-bus = { path = "crates/bus" }
 opencode-catalog = { path = "crates/catalog" }
 opencode-config = { path = "crates/config" }
 opencode-contract = { path = "crates/contract" }
+opencode-fs = { path = "crates/fs" }
 opencode-git = { path = "crates/git" }
 opencode-http = { path = "crates/http" }
 opencode-location = { path = "crates/location" }
