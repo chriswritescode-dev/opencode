@@ -387,7 +387,7 @@ pub(crate) fn default_model(provider_id: &ProviderID, model_id: &str) -> ModelIn
 }
 
 fn millis(value: f64) -> Option<HttpTimeout> {
-    (value > 0.0).then_some(HttpTimeout::Millis(value))
+    (value.is_finite() && value > 0.0).then_some(HttpTimeout::Millis(value))
 }
 
 fn index(provider_id: &ProviderID, models: &[ModelInfo]) -> IndexMap<String, ModelInfo> {

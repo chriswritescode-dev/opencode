@@ -19,7 +19,9 @@ use opencode_contract::codec::{JsonMap, decode_json, encode_json};
 use opencode_contract::generated::{
     CredentialExternal, CredentialExternalType, CredentialKey, CredentialKeyType, CredentialOAuth, CredentialOAuthType,
     CredentialValue, IntegrationID, IntegrationMethodID, ModelInfo, ModelRef, ModelSettings, ModelVariant,
-    ModelVariantSettings, ProviderID, ProviderInfo, ProviderInfoActivation, ProviderSettings, ProviderTransport,
+    ModelVariantSettings, ProviderID, ProviderInfo, ProviderInfoActivation, ProviderSettings,
+    ProviderSettingsChunkTimeout, ProviderSettingsChunkTimeoutNumber, ProviderSettingsHeaderTimeout,
+    ProviderSettingsHeaderTimeoutNumber, ProviderSettingsTimeout, ProviderSettingsTimeoutNumber, ProviderTransport,
 };
 use opencode_location::state::Registration;
 
@@ -1336,6 +1338,24 @@ fn applies_provider_timeouts_to_image_video_and_decision_models() {
     assert_eq!(image.transport.as_ref().and_then(|transport| transport.timeout.clone()), expected);
     assert_eq!(video.transport.as_ref().and_then(|transport| transport.timeout.clone()), expected);
     assert_eq!(decision.transport.as_ref().and_then(|transport| transport.timeout.clone()), expected);
+}
+
+#[test]
+fn drops_non_finite_timeouts_instead_of_panicking() {
+    let mut runtime = catalog(Some("@opencode/ai/providers/openai/chat"), Options::default());
+    let mut settings = runtime.settings.clone().expect("the runtime settings");
+    settings.timeout = Some(ProviderSettingsTimeout::Number(ProviderSettingsTimeoutNumber(f64::INFINITY)));
+    settings.header_timeout =
+        Some(ProviderSettingsHeaderTimeout::Number(ProviderSettingsHeaderTimeoutNumber(f64::INFINITY)));
+    settings.chunk_timeout =
+        Some(ProviderSettingsChunkTimeout::Number(ProviderSettingsChunkTimeoutNumber(f64::INFINITY)));
+    runtime.settings = Some(settings);
+
+    let model = resolve(&runtime, Some(&key("secret"))).expect("resolves");
+    let options = options_json(&model);
+    assert!(options["timeout"].get("total").is_none());
+    assert_eq!(options["timeout"]["headers"].as_f64(), Some(300_000.0));
+    assert_eq!(options["timeout"]["chunk"].as_f64(), Some(900_000.0));
 }
 
 #[test]

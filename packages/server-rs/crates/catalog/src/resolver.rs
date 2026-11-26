@@ -609,9 +609,9 @@ fn request_overlay(configured: &ProviderSettings) -> RequestOptions {
     let timeouts = provider::timeouts(configured);
     RequestOptions {
         timeout: Some(RequestTimeout::Config(TimeoutOptions {
-            total: timeouts.timeout.map(request_timeout),
-            headers: Some(request_timeout(timeouts.header_timeout)),
-            chunk: Some(request_timeout(timeouts.chunk_timeout)),
+            total: timeouts.timeout.and_then(request_timeout),
+            headers: request_timeout(timeouts.header_timeout),
+            chunk: request_timeout(timeouts.chunk_timeout),
         })),
         http: Some(HttpOptions {
             encoding: provider::encoding(configured).map(request_encoding),
@@ -626,9 +626,9 @@ fn media_overlay(configured: &ProviderSettings) -> RequestOptions {
     let timeouts = provider::timeouts(configured);
     RequestOptions {
         timeout: Some(RequestTimeout::Config(TimeoutOptions {
-            total: timeouts.timeout.map(request_timeout),
-            headers: Some(request_timeout(timeouts.header_timeout)),
-            chunk: Some(request_timeout(timeouts.chunk_timeout)),
+            total: timeouts.timeout.and_then(request_timeout),
+            headers: request_timeout(timeouts.header_timeout),
+            chunk: request_timeout(timeouts.chunk_timeout),
         })),
         http: Some(HttpOptions { tls: provider::tls(configured).map(client_tls), ..HttpOptions::default() }),
         ..RequestOptions::default()
@@ -812,18 +812,16 @@ fn uses_api_key_auth(package: Option<&str>) -> bool {
 fn chunk_timeout(value: Option<&ProviderSettingsChunkTimeout>) -> Option<provider::HttpTimeout> {
     match value? {
         ProviderSettingsChunkTimeout::Number(number) => {
-            (number.0 > 0.0).then_some(provider::HttpTimeout::Millis(number.0))
+            (number.0.is_finite() && number.0 > 0.0).then_some(provider::HttpTimeout::Millis(number.0))
         }
         ProviderSettingsChunkTimeout::Bool(_) => Some(provider::HttpTimeout::Disabled),
     }
 }
 
-fn request_timeout(value: provider::HttpTimeout) -> HttpTimeout {
+fn request_timeout(value: provider::HttpTimeout) -> Option<HttpTimeout> {
     match value {
-        provider::HttpTimeout::Millis(value) => {
-            HttpTimeout::Millis(serde_json::Number::from_f64(value).expect("a finite timeout in milliseconds"))
-        }
-        provider::HttpTimeout::Disabled => HttpTimeout::Disabled(false),
+        provider::HttpTimeout::Millis(value) => serde_json::Number::from_f64(value).map(HttpTimeout::Millis),
+        provider::HttpTimeout::Disabled => Some(HttpTimeout::Disabled(false)),
     }
 }
 
