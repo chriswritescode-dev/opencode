@@ -8,6 +8,7 @@ use opencode_fs::write::{FileWriter, WriteError};
 use serde_json::{Value, json};
 
 use crate::context::{Content, ToolContext, ToolError, ToolOutput, ToolRuntime, file_invocation, permission_input};
+use crate::normalize::normalize_for_match;
 
 const HINT_LINES: usize = 12;
 const HINT_LINE_LENGTH: usize = 200;
@@ -38,9 +39,10 @@ impl EditRuntime {
         if old.is_empty() {
             return Err(ToolError::new("oldString must not be empty. Use write to create or overwrite a file."));
         }
+        let lock = self.deps.writer.locate(&path);
         self.deps
             .mutation
-            .with_lock(std::slice::from_ref(&path), self.edit(&path, &old, &new, replace_all, context))
+            .with_lock(std::slice::from_ref(&lock), self.edit(&path, &old, &new, replace_all, context))
             .await
     }
 
@@ -405,19 +407,6 @@ fn apply_matches(source: &str, matches: &[Match], replacements: &[String]) -> St
 
 fn replace_crlf(value: &str) -> String {
     value.replace("\r\n", "\n")
-}
-
-fn normalize_for_match(value: &str) -> String {
-    value
-        .chars()
-        .map(|character| match character {
-            '‘' | '’' | '‚' | '‛' => '\'',
-            '“' | '”' | '„' | '‟' => '"',
-            '‐' | '‑' | '‒' | '–' | '—' | '―' | '−' => '-',
-            '\u{00A0}' | '\u{2002}'..='\u{200A}' | '\u{202F}' | '\u{205F}' | '\u{3000}' => ' ',
-            character => character,
-        })
-        .collect()
 }
 
 fn line_ending(text: &str, fallback: &str) -> String {

@@ -1,4 +1,4 @@
-import { Cause, Duration, Effect, Exit, Layer, LayerMap, Stream } from "effect"
+import { Cause, Duration, Effect, Exit, Layer, LayerMap, Result, Stream } from "effect"
 import fs from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
@@ -20,6 +20,7 @@ import { SessionMessage } from "@opencode/core/session/message"
 import { Tool } from "@opencode/core/tool"
 import { modelTools } from "@opencode/core/tool/model-policy"
 import { EditTool } from "@opencode/core/tool/plugin/edit"
+import { PatchTool } from "@opencode/core/tool/plugin/patch"
 import { ReadTool } from "@opencode/core/tool/plugin/read"
 import { WriteTool } from "@opencode/core/tool/plugin/write"
 import { ReadToolFileSystem } from "@opencode/core/tool/read-filesystem"
@@ -33,6 +34,7 @@ import { CrossSpawnSpawner } from "@opencode/util/cross-spawn-spawner"
 import { FSUtil } from "@opencode/util/fs-util"
 import { Global } from "@opencode/util/global"
 import { Npm } from "@opencode/util/npm"
+import { Patch } from "@opencode/util/patch"
 import { ChildProcessSpawner } from "effect/process"
 import { Bus } from "../src/bus"
 import { Database } from "../src/database/database"
@@ -1621,15 +1623,43 @@ const editToolNode = makeLocationNode({
   ],
 })
 
+const patchToolNode = makeLocationNode({
+  name: "corpus/patch-tool-plugin",
+  layer: Layer.effectDiscard(registerToolPlugin(PatchTool.Plugin)),
+  deps: [
+    Tool.node,
+    FileAccess.node,
+    FileMutation.node,
+    Environment.node,
+    Formatter.node,
+    Location.node,
+    Permission.node,
+    Config.node,
+    Flag.node,
+  ],
+})
+
 const corpusFormatter = Layer.mock(Formatter.Service, { file: () => Effect.succeed(false) })
 
-function toolLayerFor(tool: "write" | "edit", root: string, permission: Layer.Layer<Permission.Service>) {
+interface LocationSpec {
+  directory?: string
+  projectDirectory?: string
+}
+
+function toolLayerFor(
+  tool: "write" | "edit" | "patch",
+  root: string,
+  permission: Layer.Layer<Permission.Service>,
+  place: LocationSpec = {},
+) {
+  const directory = AbsolutePath.make(place.directory?.replaceAll("{{root}}", root) ?? root)
+  const projectDirectory = AbsolutePath.make(place.projectDirectory?.replaceAll("{{root}}", root) ?? directory)
   return AppNodeBuilder.build(
     LayerNode.group([
       Tool.node,
       FileAccess.node,
       FileMutation.node,
-      tool === "write" ? writeToolNode : editToolNode,
+      tool === "write" ? writeToolNode : tool === "edit" ? editToolNode : patchToolNode,
     ]),
     [
       Environment.node.replace(hostEnvironmentLayer),
@@ -1637,7 +1667,7 @@ function toolLayerFor(tool: "write" | "edit", root: string, permission: Layer.La
       Config.node.replace(corpusConfig),
       Formatter.node.replace(corpusFormatter),
       Location.node.replace(
-        Layer.succeed(Location.Service, Location.Service.of(location({ directory: AbsolutePath.make(root) }))),
+        Layer.succeed(Location.Service, Location.Service.of(location({ directory }, { projectDirectory }))),
       ),
     ],
   ).pipe(Layer.provide(Layer.succeed(Flag.Overrides, undefined)))
@@ -1655,9 +1685,10 @@ interface ToolCase {
   fixtures?: Fixture[]
   call: Record<string, unknown>
   permission?: ToolPermission
+  location?: LocationSpec
 }
 
-async function exportToolCases(tool: "write" | "edit", specs: ToolCase[]) {
+async function exportToolCases(tool: "write" | "edit" | "patch", specs: ToolCase[]) {
   const base = await fs.mkdtemp(path.join(os.tmpdir(), "opencode-tool-corpus-"))
   const exported: Array<Record<string, unknown>> = []
   try {
@@ -1718,7 +1749,7 @@ async function exportToolCases(tool: "write" | "edit", specs: ToolCase[]) {
             Effect.succeed({ status: "error" as const, error: toSessionError(error) }),
           ),
         )
-      }).pipe(Effect.scoped, Effect.provide(toolLayerFor(tool, root, permission)))
+      }).pipe(Effect.scoped, Effect.provide(toolLayerFor(tool, root, permission, spec.location)))
       const exit = await Effect.runPromiseExit(program)
       if (Exit.isFailure(exit)) {
         console.error(`corpus: ${tool} ${spec.name} failed`)
@@ -2023,6 +2054,547 @@ const editSpecs = (): ToolCase[] => [
   },
 ]
 
+const patchSpecs = (): ToolCase[] => [
+  {
+    name: "applies add, update, and delete hunks sequentially",
+    fixtures: [
+      { path: "{{root}}/update.txt", parts: [{ text: "before\n" }] },
+      { path: "{{root}}/remove.txt", parts: [{ text: "remove\n" }] },
+    ],
+    call: {
+      patchText:
+        "*** Begin Patch\n*** Add File: nested/new.txt\n+created\n*** Update File: update.txt\n@@\n-before\n+after\n*** Delete File: remove.txt\n*** End Patch",
+    },
+  },
+  {
+    name: "replaces a file with a directory containing an added file",
+    fixtures: [{ path: "{{root}}/parent", parts: [{ text: "before\n" }] }],
+    call: {
+      patchText: "*** Begin Patch\n*** Delete File: parent\n*** Add File: parent/child.txt\n+after\n*** End Patch",
+    },
+  },
+  {
+    name: "counts deleted lines with and without a trailing newline",
+    fixtures: [
+      { path: "{{root}}/trailing.txt", parts: [{ text: "remove\n" }] },
+      { path: "{{root}}/unterminated.txt", parts: [{ text: "remove" }] },
+    ],
+    call: { patchText: "*** Begin Patch\n*** Delete File: trailing.txt\n*** Delete File: unterminated.txt\n*** End Patch" },
+  },
+  {
+    name: "moves and updates a file",
+    fixtures: [{ path: "{{root}}/old.txt", parts: [{ text: "before\n" }] }],
+    call: {
+      patchText:
+        "*** Begin Patch\n*** Add File: created.txt\n+created\n*** Update File: old.txt\n*** Move to: moved.txt\n@@\n-before\n+after\n*** End Patch",
+    },
+  },
+  {
+    name: "moves a file over an existing destination",
+    fixtures: [
+      { path: "{{root}}/old.txt", parts: [{ text: "before\n" }] },
+      { path: "{{root}}/nested/moved.txt", parts: [{ text: "existing\n" }] },
+    ],
+    call: {
+      patchText: "*** Begin Patch\n*** Update File: old.txt\n*** Move to: nested/moved.txt\n@@\n-before\n+after\n*** End Patch",
+    },
+  },
+  {
+    name: "moves a file without changing its contents",
+    fixtures: [{ path: "{{root}}/old.txt", parts: [{ text: "same\n" }] }],
+    call: { patchText: "*** Begin Patch\n*** Update File: old.txt\n*** Move to: moved.txt\n@@\n same\n*** End Patch" },
+  },
+  {
+    name: "refuses to rewrite a file that is not valid UTF-8 and applies none of the patch",
+    fixtures: [
+      { path: "{{root}}/a.txt", parts: [{ text: "before\n" }] },
+      { path: "{{root}}/Invoice.java", kind: "binary", base64: latin1Java() },
+    ],
+    call: {
+      patchText:
+        "*** Begin Patch\n*** Update File: a.txt\n@@\n-before\n+after\n*** Update File: Invoice.java\n@@\n-int MAX = 10;\n+int MAX = 25;\n*** End Patch",
+    },
+  },
+  {
+    name: "deletes a file that is not valid UTF-8 without rewriting its bytes",
+    fixtures: [{ path: "{{root}}/Old.java", kind: "binary", base64: latin1Java() }],
+    call: { patchText: "*** Begin Patch\n*** Delete File: Old.java\n*** End Patch" },
+  },
+  {
+    name: "renames a file when the move only changes its case",
+    fixtures: [{ path: "{{root}}/same.txt", parts: [{ text: "before\n" }] }],
+    call: { patchText: "*** Begin Patch\n*** Update File: same.txt\n*** Move to: Same.txt\n@@\n-before\n+after\n*** End Patch" },
+  },
+  {
+    name: "moves into a directory whose name differs only in case",
+    fixtures: [{ path: "{{root}}/Foo/a.txt", parts: [{ text: "before\n" }] }],
+    call: {
+      patchText: "*** Begin Patch\n*** Update File: Foo/a.txt\n*** Move to: foo/a.txt\n@@\n-before\n+after\n*** End Patch",
+    },
+  },
+  {
+    name: "moves a symlink without deleting its target",
+    fixtures: [
+      { path: "{{root}}/target.txt", parts: [{ text: "before\n" }] },
+      { path: "{{root}}/link.txt", kind: "symlink", target: "{{root}}/target.txt" },
+    ],
+    call: { patchText: "*** Begin Patch\n*** Update File: link.txt\n*** Move to: moved.txt\n@@\n-before\n+after\n*** End Patch" },
+  },
+  {
+    name: "includes move file info in metadata",
+    fixtures: [{ path: "{{root}}/old/name.txt", parts: [{ text: "old content\n" }] }],
+    call: {
+      patchText:
+        "*** Begin Patch\n*** Update File: old/name.txt\n*** Move to: renamed/dir/name.txt\n@@\n-old content\n+new content\n*** End Patch",
+    },
+  },
+  {
+    name: "uses Location-relative resources for move targets in a nested Location",
+    location: { directory: "{{root}}/nested/location", projectDirectory: "{{root}}" },
+    fixtures: [{ path: "{{root}}/nested/location/old.txt", parts: [{ text: "before\n" }] }],
+    call: { patchText: "*** Begin Patch\n*** Update File: old.txt\n*** Move to: moved.txt\n@@\n-before\n+after\n*** End Patch" },
+  },
+  {
+    name: "inserts lines with an insert-only hunk",
+    fixtures: [{ path: "{{root}}/insert-only.txt", parts: [{ text: "alpha\nomega\n" }] }],
+    call: { patchText: "*** Begin Patch\n*** Update File: insert-only.txt\n@@\n alpha\n+beta\n omega\n*** End Patch" },
+  },
+  {
+    name: "rejects deleting a directory",
+    fixtures: [{ path: "{{root}}/dir", kind: "directory" }],
+    call: { patchText: "*** Begin Patch\n*** Delete File: dir\n*** End Patch" },
+  },
+  {
+    name: "rejects a missing second chunk context",
+    fixtures: [{ path: "{{root}}/two-chunks.txt", parts: [{ text: "a\nb\nc\nd\n" }] }],
+    call: { patchText: "*** Begin Patch\n*** Update File: two-chunks.txt\n@@\n-b\n+B\n\n-d\n+D\n*** End Patch" },
+  },
+  { name: "requires patchText", call: { patchText: "" } },
+  { name: "rejects invalid patch format", call: { patchText: "invalid patch" } },
+  {
+    name: "rejects a patch without an end marker",
+    call: { patchText: "*** Begin Patch\n*** Add File: foo\n+hello" },
+  },
+  {
+    name: "rejects an empty patch",
+    call: { patchText: "*** Begin Patch\n*** End Patch" },
+  },
+  {
+    name: "rejects an empty patch with whitespace",
+    call: { patchText: " *** Begin Patch \n *** End Patch " },
+  },
+  {
+    name: "rejects a heredoc-wrapped empty patch",
+    call: { patchText: "<<EOF\n*** Begin Patch\n*** End Patch\nEOF" },
+  },
+  {
+    name: "rejects an empty patch with an environment preamble",
+    call: { patchText: "*** Begin Patch\n*** Environment ID: remote\n*** End Patch" },
+  },
+  {
+    name: "rejects an invalid hunk header",
+    call: { patchText: "*** Begin Patch\n*** Frobnicate File: foo\n*** End Patch" },
+  },
+  {
+    name: "applies successive update operations to one file",
+    fixtures: [{ path: "{{root}}/successive.txt", parts: [{ text: "a\nb\n" }] }],
+    call: {
+      patchText:
+        "*** Begin Patch\n*** Update File: successive.txt\n@@\n-a\n+A\n*** Update File: successive.txt\n@@\n-b\n+B\n*** End Patch",
+    },
+  },
+  {
+    name: "preserves files across self-moves and multi-hunk moves in one patch",
+    fixtures: [
+      { path: "{{root}}/same.txt", parts: [{ text: "before\n" }] },
+      { path: "{{root}}/old.txt", parts: [{ text: "a\nb\nc\n" }] },
+    ],
+    call: {
+      patchText: [
+        "*** Begin Patch",
+        "*** Update File: same.txt",
+        "*** Move to: ./same.txt",
+        "@@",
+        "-before",
+        "+after",
+        "*** Update File: old.txt",
+        "@@",
+        "-a",
+        "+A",
+        "*** Update File: old.txt",
+        "*** Move to: moved.txt",
+        "@@",
+        "-b",
+        "+B",
+        "*** Update File: moved.txt",
+        "@@",
+        "-c",
+        "+C",
+        "*** End Patch",
+      ].join("\n"),
+    },
+  },
+  {
+    name: "rejects an update with missing context",
+    fixtures: [{ path: "{{root}}/unchanged.txt", parts: [{ text: "line1\nline2\n" }] }],
+    call: {
+      patchText: "*** Begin Patch\n*** Update File: unchanged.txt\n@@\n-missing\n+changed\n*** End Patch",
+    },
+  },
+  {
+    name: "rejects an update when the target file is missing",
+    call: { patchText: "*** Begin Patch\n*** Update File: missing.txt\n@@\n-old\n+new\n*** End Patch" },
+  },
+  {
+    name: "identifies a directory used as an update target",
+    fixtures: [{ path: "{{root}}/nested", kind: "directory" }],
+    call: { patchText: "*** Begin Patch\n*** Update File: nested\n@@\n-old\n+new\n*** End Patch" },
+  },
+  { name: "identifies a missing delete target", call: { patchText: "*** Begin Patch\n*** Delete File: missing.txt\n*** End Patch" } },
+  {
+    name: "approves an external directory before reading and requests edit permission afterward",
+    fixtures: [
+      { path: "{{outside}}/repository/.git", kind: "directory" },
+      { path: "{{outside}}/repository/nested/external.txt", parts: [{ text: "before\n" }] },
+    ],
+    call: {
+      patchText:
+        "*** Begin Patch\n*** Update File: {{outside}}/repository/nested/external.txt\n@@\n-before\n+after\n*** End Patch",
+    },
+  },
+  {
+    name: "does not inspect an external file when external permission is denied",
+    fixtures: [{ path: "{{outside}}/external.txt", parts: [{ text: "before\n" }] }],
+    call: { patchText: "*** Begin Patch\n*** Update File: {{outside}}/external.txt\n@@\n-before\n+after\n*** End Patch" },
+    permission: { deniedActions: ["external_directory"] },
+  },
+  {
+    name: "preserves edit permission rejection",
+    fixtures: [{ path: "{{root}}/target.txt", parts: [{ text: "before\n" }] }],
+    call: { patchText: "*** Begin Patch\n*** Update File: target.txt\n@@\n-before\n+after\n*** End Patch" },
+    permission: { deniedActions: ["edit"] },
+  },
+  {
+    name: "treats a sibling path inside the project worktree as internal",
+    location: { directory: "{{root}}/active", projectDirectory: "{{root}}" },
+    fixtures: [
+      { path: "{{root}}/active", kind: "directory" },
+      { path: "{{root}}/sibling.txt", parts: [{ text: "before\n" }] },
+    ],
+    call: { patchText: "*** Begin Patch\n*** Update File: ../sibling.txt\n@@\n-before\n+after\n*** End Patch" },
+  },
+  {
+    name: "follows an internal symlink to an external file without external permission",
+    fixtures: [
+      { path: "{{outside}}/external.txt", parts: [{ text: "before\n" }] },
+      { path: "{{root}}/link.txt", kind: "symlink", target: "{{outside}}/external.txt" },
+    ],
+    call: { patchText: "*** Begin Patch\n*** Update File: link.txt\n@@\n-before\n+after\n*** End Patch" },
+  },
+  {
+    name: "uses canonical external permissions and resources for a move destination",
+    fixtures: [{ path: "{{root}}/source.txt", parts: [{ text: "before\n" }] }],
+    call: {
+      patchText:
+        "*** Begin Patch\n*** Update File: source.txt\n*** Move to: {{outside}}/moved.txt\n@@\n-before\n+after\n*** End Patch",
+    },
+  },
+  {
+    name: "approves each external file under the same parent",
+    fixtures: [
+      { path: "{{outside}}/first.txt", parts: [{ text: "before\n" }] },
+      { path: "{{outside}}/second.txt", parts: [{ text: "before\n" }] },
+    ],
+    call: {
+      patchText:
+        "*** Begin Patch\n*** Update File: {{outside}}/first.txt\n@@\n-before\n+after\n*** Update File: {{outside}}/second.txt\n@@\n-before\n+after\n*** End Patch",
+    },
+  },
+  {
+    name: "rejects invalid later update before applying an earlier add",
+    call: {
+      patchText:
+        "*** Begin Patch\n*** Add File: created.txt\n+created\n*** Update File: missing.txt\n@@\n-before\n+after\n*** End Patch",
+    },
+  },
+  {
+    name: "adds files by overwriting existing targets",
+    fixtures: [{ path: "{{root}}/existing.txt", parts: [{ text: "sentinel\n" }] }],
+    call: { patchText: "*** Begin Patch\n*** Add File: existing.txt\n+replacement\n*** End Patch" },
+  },
+]
+
+const latin1Java = () =>
+  Buffer.concat([Buffer.from("// Jos\xe9\n", "latin1"), Buffer.from("int MAX = 10;\n")]).toString("base64")
+
+function exportPatchParse() {
+  const cases: Array<Record<string, unknown>> = []
+  const parse = (name: string, input: string) => {
+    const result = Patch.parse(input)
+    if (Result.isFailure(result)) {
+      cases.push({ name, operation: "parse", input, error: result.failure.message })
+      return
+    }
+    cases.push({ name, operation: "parse", input, expected: result.success })
+  }
+  const derive = (
+    name: string,
+    path: string,
+    chunks: Array<{ oldLines: string[]; newLines: string[]; changeContext?: string; endOfFile?: boolean }>,
+    original: string,
+  ) => {
+    try {
+      cases.push({ name, operation: "derive", path, chunks, original, expected: Patch.derive(path, chunks, original) })
+    } catch (failure) {
+      cases.push({
+        name,
+        operation: "derive",
+        path,
+        chunks,
+        original,
+        error: failure instanceof Error ? failure.message : String(failure),
+      })
+    }
+  }
+
+  parse(
+    "parses add, update, and delete hunks",
+    "*** Begin Patch\n*** Add File: add.txt\n+added\n*** Update File: update.txt\n@@ section\n-old\n+new\n*** Delete File: delete.txt\n*** End Patch",
+  )
+  parse("parses an empty patch", "*** Begin Patch\n*** End Patch")
+  parse(
+    "ignores a Codex environment preamble",
+    "*** Begin Patch\n*** Environment ID: remote\n*** Add File: file.txt\n+content\n*** End Patch",
+  )
+  parse(
+    "parses an update followed by an add",
+    "*** Begin Patch\n*** Update File: update.txt\n@@\n+line\n*** Add File: add.txt\n+content\n*** End Patch",
+  )
+  parse(
+    "parses a file move",
+    "*** Begin Patch\n*** Update File: old.txt\n*** Move to: new.txt\n@@\n-old\n+new\n*** End Patch",
+  )
+  parse("rejects a missing first boundary", "This is not a valid patch")
+  parse("rejects a missing last boundary", "*** Begin Patch\n*** Add File: add.txt\n+added")
+  parse("rejects extra text before the first boundary", "extra\n*** Begin Patch\n*** End Patch")
+  parse("rejects extra text after the last boundary", "*** Begin Patch\n*** Add File: add.txt\n+added\n*** End Patch\nextra")
+  parse("allows whitespace after the end marker", "*** Begin Patch\n*** Add File: add.txt\n+added\n*** End Patch\n \t\n")
+  parse(
+    "strips a heredoc wrapper",
+    "cat <<'EOF'\n*** Begin Patch\n*** Add File: add.txt\n+added\n*** End Patch\nEOF",
+  )
+  parse("strips a heredoc wrapper without cat", "<<EOF\n*** Begin Patch\n*** Add File: add.txt\n+added\n*** End Patch\nEOF")
+  const heredocPatch = "*** Begin Patch\n*** Add File: add.txt\n+added\n*** End Patch"
+  parse("strips a single-quoted heredoc wrapper", `<<'EOF'\n${heredocPatch}\nEOF`)
+  parse("strips a double-quoted heredoc wrapper", `<<\"EOF\"\n${heredocPatch}\nEOF`)
+  parse("rejects a malformed heredoc quote", `<<\"EOF'\n${heredocPatch}\nEOF`)
+  parse("rejects a missing heredoc end", "<<EOF\n*** Begin Patch\n*** Add File: add.txt\n+added\nEOF")
+  parse(
+    "parses a whitespace-padded hunk header",
+    "*** Begin Patch\n  *** Update File: foo.txt\n@@\n-old\n+new\n*** End Patch",
+  )
+  parse(
+    "parses leading and trailing whitespace around patch markers",
+    " *** Begin Patch\n*** Update File: file.txt\n@@\n-one\n+two\n*** End Patch ",
+  )
+  parse(
+    "parses whitespace on the inner sides of patch marker lines",
+    "*** Begin Patch \n*** Update File: file.txt\n@@\n-one\n+two\n *** End Patch",
+  )
+  parse(
+    "parses relative and absolute hunk paths",
+    "*** Begin Patch\n*** Add File: relative.txt\n+content\n*** Delete File: /tmp/delete.txt\n*** Update File: /tmp/update.txt\n@@\n-old\n+new\n*** End Patch",
+  )
+  parse(
+    "strips one carriage return from CRLF patch lines",
+    "*** Begin Patch\r\n*** Update File: file.txt\r\n@@\r\n-old\r\n+new\r\n*** End Patch\r\n",
+  )
+  parse(
+    "preserves an extra carriage return in CRLF patch lines",
+    "*** Begin Patch\r\n*** Update File: file.txt\r\n@@\r\n-old\r\r\n+new\r\n*** End Patch\r\n",
+  )
+  parse(
+    "preserves the end-of-file marker",
+    "*** Begin Patch\n*** Update File: file.txt\n@@\n+quux\n*** End of File\n\n*** End Patch",
+  )
+  parse(
+    "allows an end-of-file marker before an explicit chunk",
+    "*** Begin Patch\n*** Update File: file.txt\n*** End of File\n@@\n-old\n+new\n*** End Patch",
+  )
+  parse(
+    "allows an end-of-file marker before an implicit chunk",
+    "*** Begin Patch\n*** Update File: file.txt\n*** End of File\n-old\n+new\n*** End Patch",
+  )
+  parse(
+    "allows an end-of-file marker before an implicit chunk and move",
+    "*** Begin Patch\n*** Update File: old.txt\n*** End of File\n*** Move to: new.txt\n@@\n-old\n+new\n*** End Patch",
+  )
+  parse(
+    "parses an update without an explicit first chunk header",
+    "*** Begin Patch\n*** Update File: file.txt\n import foo\n+bar\n*** End Patch",
+  )
+  parse(
+    "keeps indented update markers as context lines",
+    "*** Begin Patch\n*** Update File: a.txt\n@@\n-old a\n+new a\n *** Update File: b.txt\n@@\n-old b\n+new b\n*** End Patch",
+  )
+  parse(
+    "keeps indented move and EOF markers as context lines",
+    "*** Begin Patch\n*** Update File: file.txt\n@@\n before\n *** Move to: moved.txt\n *** End of File\n*** End Patch",
+  )
+  parse(
+    "preserves update context indentation",
+    "*** Begin Patch\n*** Update File: file.txt\n@@   section\n-old\n+new\n*** End Patch",
+  )
+  parse(
+    "preserves bare empty update lines as context",
+    "*** Begin Patch\n*** Update File: file.txt\n@@\n context before\n\n context after\n*** End Patch",
+  )
+  parse("rejects an invalid add line", "*** Begin Patch\n*** Add File: file.txt\nbad\n*** End Patch")
+  parse("rejects an invalid delete line", "*** Begin Patch\n*** Delete File: file.txt\nbad\n*** End Patch")
+  parse(
+    "rejects an invalid hunk after a delete",
+    "*** Begin Patch\n*** Delete File: file.txt\n*** Frobnicate File: next.txt\n*** End Patch",
+  )
+  parse("rejects an empty update hunk", "*** Begin Patch\n*** Update File: file.txt\n*** End Patch")
+  parse(
+    "rejects an empty update hunk after a move",
+    "*** Begin Patch\n*** Update File: old.txt\n*** Move to: new.txt\n*** Delete File: other.txt\n*** End Patch",
+  )
+  parse("rejects an empty update hunk after an EOF marker", "*** Begin Patch\n*** Update File: file.txt\n*** End of File\n*** End Patch")
+  parse("rejects an empty update chunk", "*** Begin Patch\n*** Update File: file.txt\n@@\n*** End Patch")
+  parse(
+    "rejects an empty update chunk before an EOF marker",
+    "*** Begin Patch\n*** Update File: file.txt\n@@\n*** End of File\n*** End Patch",
+  )
+  parse("rejects a repeated context marker", "*** Begin Patch\n*** Update File: file.txt\n@@\n@@\n-old\n+new\n*** End Patch")
+  parse(
+    "rejects a boundary inside an update chunk",
+    "*** Begin Patch\n*** Update File: file.txt\n@@\n*** Update File: other.txt\n@@\n-old\n+new\n*** End Patch",
+  )
+  parse("rejects a bad update line", "*** Begin Patch\n*** Update File: file.txt\n@@\nbad\n*** End Patch")
+  parse("rejects a bad line after a removed line", "*** Begin Patch\n*** Update File: file.txt\n@@\n-old\nbad\n*** End Patch")
+  parse("rejects a bad context marker", "*** Begin Patch\n*** Update File: file.txt\n@@foo\n*** End Patch")
+  parse(
+    "rejects a bad line after a removed line and invalid header",
+    "*** Begin Patch\n*** Update File: file.txt\n@@\n-old\n*** Frobnicate File: foo\n*** End Patch",
+  )
+  parse("rejects an invalid hunk header", "*** Begin Patch\n*** Frobnicate File: foo\n*** End Patch")
+  parse("rejects a pathless add header", "*** Begin Patch\n*** Add File:\n*** End Patch")
+  for (const header of ["*** Add File: ", "*** Delete File: ", "*** Update File: "])
+    parse(`rejects a blank path in '${header.trim()}'`, `*** Begin Patch\n${header}\n*** End Patch`)
+  parse(
+    "rejects an empty move destination",
+    "*** Begin Patch\n*** Update File: old.txt\n*** Move to: \n@@\n-old\n+new\n*** End Patch",
+  )
+
+  derive("derives fuzzy line updates while preserving BOM", "update.txt", [{ oldLines: ["  old   "], newLines: ["new"] }], "\uFEFFold\n")
+  derive(
+    "derives multiple update chunks",
+    "update.txt",
+    [
+      { oldLines: ["line 2"], newLines: ["LINE 2"] },
+      { oldLines: ["line 4"], newLines: ["LINE 4"] },
+    ],
+    "line 1\nline 2\nline 3\nline 4\n",
+  )
+  derive(
+    "appends a pure-addition chunk to a nonempty file",
+    "update.txt",
+    [{ oldLines: [], newLines: ["added 1", "added 2"] }],
+    "line 1\nline 2\n",
+  )
+  for (const original of ["", "original\n"])
+    derive(`preserves equal-offset insertion order for ${JSON.stringify(original)}`, "update.txt", [
+      { oldLines: [], newLines: ["first"] },
+      { oldLines: [], newLines: ["second", "third"] },
+    ], original)
+  derive(
+    "applies a pure-addition chunk after an earlier replacement",
+    "update.txt",
+    [
+      { oldLines: [], newLines: ["after-context", "second-line"] },
+      { oldLines: ["line1", "line2", "line3"], newLines: ["line1", "line2-replacement"] },
+    ],
+    "line1\nline2\nline3\n",
+  )
+  derive(
+    "applies a deletion-only update chunk",
+    "update.txt",
+    [{ oldLines: ["line1", "line2", "line3"], newLines: ["line1", "line3"] }],
+    "line1\nline2\nline3\n",
+  )
+  derive("updates an empty file and adds a trailing newline", "empty.txt", [{ oldLines: [], newLines: ["First line"] }], "")
+  derive("adds a trailing newline to an unterminated file", "no-newline.txt", [{ oldLines: ["old"], newLines: ["new"] }], "old")
+  derive(
+    "disambiguates updates with change context",
+    "update.txt",
+    [{ oldLines: ["x=10"], newLines: ["x=11"], changeContext: "fn b" }],
+    "fn a\nx=10\nfn b\nx=10\n",
+  )
+  derive("matches leading whitespace differences", "leading.txt", [{ oldLines: ["line"], newLines: ["next"] }], "  line\n")
+  derive("matches trailing whitespace differences", "trailing.txt", [{ oldLines: ["line"], newLines: ["next"] }], "line  \n")
+  derive(
+    "matches Unicode punctuation differences",
+    "unicode.txt",
+    [{ oldLines: ['He said "hello"'], newLines: ['He said "hi"'] }],
+    "He said “hello”\n",
+  )
+  derive(
+    "matches Unicode minus signs",
+    "minus.txt",
+    [{ oldLines: ["value - 1"], newLines: ["value - 2"] }],
+    "value − 1\n",
+  )
+  for (const space of [
+    "\u00A0",
+    "\u2002",
+    "\u2003",
+    "\u2004",
+    "\u2005",
+    "\u2006",
+    "\u2007",
+    "\u2008",
+    "\u2009",
+    "\u200A",
+    "\u202F",
+    "\u205F",
+    "\u3000",
+  ])
+    derive(
+      `matches the Unicode space U+${space.charCodeAt(0).toString(16).toUpperCase()}`,
+      "spaces.txt",
+      [{ oldLines: ["hello world"], newLines: ["hello there"] }],
+      `hello${space}world\n`,
+    )
+  derive(
+    "does not normalize ellipses",
+    "ellipsis.txt",
+    [{ oldLines: ["wait..."], newLines: ["done"] }],
+    "wait…\n",
+  )
+  derive(
+    "prefers a later exact match over an earlier normalized match",
+    "quotes.txt",
+    [{ oldLines: ['He said "hello"'], newLines: ['He said "goodbye"'] }],
+    'He said “hello”\nmiddle\nHe said "hello"\n',
+  )
+  derive(
+    "matches EOF-anchored chunks from the end",
+    "update.txt",
+    [{ oldLines: ["marker", "end"], newLines: ["marker changed", "end"], endOfFile: true }],
+    "marker\nmiddle\nmarker\nend\n",
+  )
+  derive(
+    "does not fall back to a non-EOF match",
+    "update.txt",
+    [{ oldLines: ["marker", "end"], newLines: ["changed", "end"], endOfFile: true }],
+    "marker\nend\nmiddle\n",
+  )
+  derive("identifies a missing blank line", "update.txt", [{ oldLines: [""], newLines: ["added"] }], "content\n")
+
+  console.log(`__TOOL_CORPUS__${JSON.stringify(cases)}`)
+}
+
 if (area === "definitions") await exportDefinitions()
 else if (area === "snapshot") await exportSnapshot()
 else if (area === "validation") await exportValidation()
@@ -2031,6 +2603,8 @@ else if (area === "read_filesystem") await exportReadFilesystem()
 else if (area === "read") await exportRead()
 else if (area === "write") await exportToolCases("write", writeSpecs())
 else if (area === "edit") await exportToolCases("edit", editSpecs())
+else if (area === "patch_parse") exportPatchParse()
+else if (area === "patch") await exportToolCases("patch", patchSpecs())
 else {
   console.error(`corpus: unknown area ${area ?? ""}`)
   process.exit(1)

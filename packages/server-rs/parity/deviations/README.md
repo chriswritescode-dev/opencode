@@ -111,6 +111,7 @@ A deviation that excepts a recorded cassette from the replay gate also has a `Ca
 - `OR-51-fuzzy-find.md`: fuzzy file search always uses the ripgrep index instead of the native fff picker
 - `OR-51-image-encoding.md`: re-encoded and resized images match photon's dimensions and MIME type, not its bytes
 - `OR-51-read-tool.md`: missing-path suggestions fold Unicode without NFC and sort equally ranked names by byte order
+- `OR-51-patch-tool.md`: patch targets one local environment, and its line matching and preparation errors follow Rust whitespace and error text
 - `OR-51-write-edit.md`: edit hints truncate by Unicode scalar instead of UTF-16 unit, and a non-directory wrong kind is reported as an edit failure
 - `OR-51-watcher.md`: recursive watcher ignore patterns support `*`, `**` and `?` only, and access events are filtered
 - `OR-53-snapshot-changed-file-retry.md`: a snapshot capture retries when a file changes while Git indexes it

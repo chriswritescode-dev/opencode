@@ -98,6 +98,11 @@ impl Access {
         &self.working_directory
     }
 
+    /// Expands and resolves a typed path from this Location without confinement or permission work.
+    pub fn locate(&self, path: &str) -> String {
+        path::resolve_path(&self.working_directory, path, &self.home)
+    }
+
     pub async fn resolve(&self, input: ResolveInput) -> Result<Target, AccessError> {
         let flavor = Flavor::NATIVE;
         let from = input.base.as_ref().map_or(self.working_directory.as_str(), |base| base.absolute.as_str());

@@ -197,6 +197,7 @@ async fn read_corpus_matches() {
             }),
             write: None,
             edit: None,
+            patch: None,
         };
         let registry = ToolRegistry::new();
         registrations.push(builtin::activate(&registry, &deps).await);

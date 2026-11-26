@@ -2,6 +2,8 @@ mod corpus;
 mod edit;
 mod image;
 mod output;
+mod patch;
+mod patch_parse;
 mod read;
 mod registry;
 mod snapshot;

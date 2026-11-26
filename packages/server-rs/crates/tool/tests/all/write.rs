@@ -6,11 +6,13 @@ use opencode_fs::mutation::Mutation;
 use opencode_fs::write::{FileWriter, FormatHook, NoFormat};
 use opencode_tool::builtin::{self, BuiltinDeps};
 use opencode_tool::tools::write::WriteDeps;
-use opencode_tool::{SnapshotOptions, ToolCall, ToolContext, ToolOutput, ToolRegistry};
+use opencode_tool::{SnapshotOptions, ToolCall, ToolContext, ToolRegistry};
 use serde::Deserialize;
 use serde_json::{Value, json};
 
-use crate::tools::{Fixture, RecordingAuthorizer, file_tree, materialize, replace_placeholders, unique_directory};
+use crate::tools::{
+    Fixture, PermissionSpec, RecordingAuthorizer, materialize, replace_placeholders, result_value, unique_directory,
+};
 
 #[derive(Deserialize)]
 struct WriteCase {
@@ -21,16 +23,6 @@ struct WriteCase {
     #[serde(default)]
     permission: PermissionSpec,
     expected: Value,
-}
-
-#[derive(Default, Deserialize)]
-struct PermissionSpec {
-    #[serde(default)]
-    allow: Option<bool>,
-    #[serde(default, rename = "deniedResources")]
-    denied_resources: Vec<String>,
-    #[serde(default, rename = "deniedActions")]
-    denied_actions: Vec<String>,
 }
 
 #[tokio::test]
@@ -142,31 +134,4 @@ impl FormatHook for TripleBom {
             true
         })
     }
-}
-
-fn result_value(
-    result: Result<ToolOutput, opencode_tool::ToolError>,
-    authorizer: &RecordingAuthorizer,
-    root: &std::path::Path,
-    outside: &std::path::Path,
-) -> Value {
-    let mut actual = json!({
-        "assertions": authorizer.assertions(),
-        "tree": file_tree(root, outside),
-    });
-    match result {
-        Ok(ToolOutput { output, content, metadata }) => {
-            actual["status"] = json!("completed");
-            actual["output"] = output;
-            actual["content"] = json!(content.iter().map(opencode_tool::Content::to_value).collect::<Vec<_>>());
-            if let Some(metadata) = metadata {
-                actual["metadata"] = metadata;
-            }
-        }
-        Err(error) => {
-            actual["status"] = json!("error");
-            actual["error"] = json!(error.message);
-        }
-    }
-    actual
 }

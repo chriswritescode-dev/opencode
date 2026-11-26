@@ -244,3 +244,41 @@ fn collect_tree(directory: &Path, prefix: &str, tree: &mut serde_json::Map<Strin
         }
     }
 }
+
+#[derive(Default, Deserialize)]
+pub struct PermissionSpec {
+    #[serde(default)]
+    pub allow: Option<bool>,
+    #[serde(default, rename = "deniedResources")]
+    pub denied_resources: Vec<String>,
+    #[serde(default, rename = "deniedActions")]
+    pub denied_actions: Vec<String>,
+}
+
+pub fn result_value(
+    result: Result<opencode_tool::ToolOutput, opencode_tool::ToolError>,
+    authorizer: &RecordingAuthorizer,
+    root: &Path,
+    outside: &Path,
+) -> serde_json::Value {
+    let mut actual = serde_json::json!({
+        "assertions": authorizer.assertions(),
+        "tree": file_tree(root, outside),
+    });
+    match result {
+        Ok(opencode_tool::ToolOutput { output, content, metadata }) => {
+            actual["status"] = serde_json::json!("completed");
+            actual["output"] = output;
+            actual["content"] =
+                serde_json::json!(content.iter().map(opencode_tool::Content::to_value).collect::<Vec<_>>());
+            if let Some(metadata) = metadata {
+                actual["metadata"] = metadata;
+            }
+        }
+        Err(error) => {
+            actual["status"] = serde_json::json!("error");
+            actual["error"] = serde_json::json!(error.message);
+        }
+    }
+    actual
+}

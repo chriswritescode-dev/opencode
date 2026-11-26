@@ -1,0 +1,1323 @@
+[
+  {
+    "name": "parses add, update, and delete hunks",
+    "operation": "parse",
+    "input": "*** Begin Patch\n*** Add File: add.txt\n+added\n*** Update File: update.txt\n@@ section\n-old\n+new\n*** Delete File: delete.txt\n*** End Patch",
+    "expected": [
+      {
+        "type": "add",
+        "path": "add.txt",
+        "contents": "added"
+      },
+      {
+        "type": "update",
+        "path": "update.txt",
+        "chunks": [
+          {
+            "oldLines": [
+              "old"
+            ],
+            "newLines": [
+              "new"
+            ],
+            "changeContext": "section"
+          }
+        ]
+      },
+      {
+        "type": "delete",
+        "path": "delete.txt"
+      }
+    ]
+  },
+  {
+    "name": "parses an empty patch",
+    "operation": "parse",
+    "input": "*** Begin Patch\n*** End Patch",
+    "expected": []
+  },
+  {
+    "name": "ignores a Codex environment preamble",
+    "operation": "parse",
+    "input": "*** Begin Patch\n*** Environment ID: remote\n*** Add File: file.txt\n+content\n*** End Patch",
+    "expected": [
+      {
+        "type": "add",
+        "path": "file.txt",
+        "contents": "content"
+      }
+    ]
+  },
+  {
+    "name": "parses an update followed by an add",
+    "operation": "parse",
+    "input": "*** Begin Patch\n*** Update File: update.txt\n@@\n+line\n*** Add File: add.txt\n+content\n*** End Patch",
+    "expected": [
+      {
+        "type": "update",
+        "path": "update.txt",
+        "chunks": [
+          {
+            "oldLines": [],
+            "newLines": [
+              "line"
+            ]
+          }
+        ]
+      },
+      {
+        "type": "add",
+        "path": "add.txt",
+        "contents": "content"
+      }
+    ]
+  },
+  {
+    "name": "parses a file move",
+    "operation": "parse",
+    "input": "*** Begin Patch\n*** Update File: old.txt\n*** Move to: new.txt\n@@\n-old\n+new\n*** End Patch",
+    "expected": [
+      {
+        "type": "update",
+        "path": "old.txt",
+        "movePath": "new.txt",
+        "chunks": [
+          {
+            "oldLines": [
+              "old"
+            ],
+            "newLines": [
+              "new"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "rejects a missing first boundary",
+    "operation": "parse",
+    "input": "This is not a valid patch",
+    "error": "The first line of the patch must be '*** Begin Patch'"
+  },
+  {
+    "name": "rejects a missing last boundary",
+    "operation": "parse",
+    "input": "*** Begin Patch\n*** Add File: add.txt\n+added",
+    "error": "The last line of the patch must be '*** End Patch'"
+  },
+  {
+    "name": "rejects extra text before the first boundary",
+    "operation": "parse",
+    "input": "extra\n*** Begin Patch\n*** End Patch",
+    "error": "The first line of the patch must be '*** Begin Patch'"
+  },
+  {
+    "name": "rejects extra text after the last boundary",
+    "operation": "parse",
+    "input": "*** Begin Patch\n*** Add File: add.txt\n+added\n*** End Patch\nextra",
+    "error": "The last line of the patch must be '*** End Patch'"
+  },
+  {
+    "name": "allows whitespace after the end marker",
+    "operation": "parse",
+    "input": "*** Begin Patch\n*** Add File: add.txt\n+added\n*** End Patch\n \t\n",
+    "expected": [
+      {
+        "type": "add",
+        "path": "add.txt",
+        "contents": "added"
+      }
+    ]
+  },
+  {
+    "name": "strips a heredoc wrapper",
+    "operation": "parse",
+    "input": "cat <<'EOF'\n*** Begin Patch\n*** Add File: add.txt\n+added\n*** End Patch\nEOF",
+    "expected": [
+      {
+        "type": "add",
+        "path": "add.txt",
+        "contents": "added"
+      }
+    ]
+  },
+  {
+    "name": "strips a heredoc wrapper without cat",
+    "operation": "parse",
+    "input": "<<EOF\n*** Begin Patch\n*** Add File: add.txt\n+added\n*** End Patch\nEOF",
+    "expected": [
+      {
+        "type": "add",
+        "path": "add.txt",
+        "contents": "added"
+      }
+    ]
+  },
+  {
+    "name": "strips a single-quoted heredoc wrapper",
+    "operation": "parse",
+    "input": "<<'EOF'\n*** Begin Patch\n*** Add File: add.txt\n+added\n*** End Patch\nEOF",
+    "expected": [
+      {
+        "type": "add",
+        "path": "add.txt",
+        "contents": "added"
+      }
+    ]
+  },
+  {
+    "name": "strips a double-quoted heredoc wrapper",
+    "operation": "parse",
+    "input": "<<\"EOF\"\n*** Begin Patch\n*** Add File: add.txt\n+added\n*** End Patch\nEOF",
+    "expected": [
+      {
+        "type": "add",
+        "path": "add.txt",
+        "contents": "added"
+      }
+    ]
+  },
+  {
+    "name": "rejects a malformed heredoc quote",
+    "operation": "parse",
+    "input": "<<\"EOF'\n*** Begin Patch\n*** Add File: add.txt\n+added\n*** End Patch\nEOF",
+    "error": "The first line of the patch must be '*** Begin Patch'"
+  },
+  {
+    "name": "rejects a missing heredoc end",
+    "operation": "parse",
+    "input": "<<EOF\n*** Begin Patch\n*** Add File: add.txt\n+added\nEOF",
+    "error": "The last line of the patch must be '*** End Patch'"
+  },
+  {
+    "name": "parses a whitespace-padded hunk header",
+    "operation": "parse",
+    "input": "*** Begin Patch\n  *** Update File: foo.txt\n@@\n-old\n+new\n*** End Patch",
+    "expected": [
+      {
+        "type": "update",
+        "path": "foo.txt",
+        "chunks": [
+          {
+            "oldLines": [
+              "old"
+            ],
+            "newLines": [
+              "new"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "parses leading and trailing whitespace around patch markers",
+    "operation": "parse",
+    "input": " *** Begin Patch\n*** Update File: file.txt\n@@\n-one\n+two\n*** End Patch ",
+    "expected": [
+      {
+        "type": "update",
+        "path": "file.txt",
+        "chunks": [
+          {
+            "oldLines": [
+              "one"
+            ],
+            "newLines": [
+              "two"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "parses whitespace on the inner sides of patch marker lines",
+    "operation": "parse",
+    "input": "*** Begin Patch \n*** Update File: file.txt\n@@\n-one\n+two\n *** End Patch",
+    "expected": [
+      {
+        "type": "update",
+        "path": "file.txt",
+        "chunks": [
+          {
+            "oldLines": [
+              "one"
+            ],
+            "newLines": [
+              "two"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "parses relative and absolute hunk paths",
+    "operation": "parse",
+    "input": "*** Begin Patch\n*** Add File: relative.txt\n+content\n*** Delete File: /tmp/delete.txt\n*** Update File: /tmp/update.txt\n@@\n-old\n+new\n*** End Patch",
+    "expected": [
+      {
+        "type": "add",
+        "path": "relative.txt",
+        "contents": "content"
+      },
+      {
+        "type": "delete",
+        "path": "/tmp/delete.txt"
+      },
+      {
+        "type": "update",
+        "path": "/tmp/update.txt",
+        "chunks": [
+          {
+            "oldLines": [
+              "old"
+            ],
+            "newLines": [
+              "new"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "strips one carriage return from CRLF patch lines",
+    "operation": "parse",
+    "input": "*** Begin Patch\r\n*** Update File: file.txt\r\n@@\r\n-old\r\n+new\r\n*** End Patch\r\n",
+    "expected": [
+      {
+        "type": "update",
+        "path": "file.txt",
+        "chunks": [
+          {
+            "oldLines": [
+              "old"
+            ],
+            "newLines": [
+              "new"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "preserves an extra carriage return in CRLF patch lines",
+    "operation": "parse",
+    "input": "*** Begin Patch\r\n*** Update File: file.txt\r\n@@\r\n-old\r\r\n+new\r\n*** End Patch\r\n",
+    "expected": [
+      {
+        "type": "update",
+        "path": "file.txt",
+        "chunks": [
+          {
+            "oldLines": [
+              "old\r"
+            ],
+            "newLines": [
+              "new"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "preserves the end-of-file marker",
+    "operation": "parse",
+    "input": "*** Begin Patch\n*** Update File: file.txt\n@@\n+quux\n*** End of File\n\n*** End Patch",
+    "expected": [
+      {
+        "type": "update",
+        "path": "file.txt",
+        "chunks": [
+          {
+            "oldLines": [],
+            "newLines": [
+              "quux"
+            ],
+            "endOfFile": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "allows an end-of-file marker before an explicit chunk",
+    "operation": "parse",
+    "input": "*** Begin Patch\n*** Update File: file.txt\n*** End of File\n@@\n-old\n+new\n*** End Patch",
+    "expected": [
+      {
+        "type": "update",
+        "path": "file.txt",
+        "chunks": [
+          {
+            "oldLines": [
+              "old"
+            ],
+            "newLines": [
+              "new"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "allows an end-of-file marker before an implicit chunk",
+    "operation": "parse",
+    "input": "*** Begin Patch\n*** Update File: file.txt\n*** End of File\n-old\n+new\n*** End Patch",
+    "expected": [
+      {
+        "type": "update",
+        "path": "file.txt",
+        "chunks": [
+          {
+            "oldLines": [
+              "old"
+            ],
+            "newLines": [
+              "new"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "allows an end-of-file marker before an implicit chunk and move",
+    "operation": "parse",
+    "input": "*** Begin Patch\n*** Update File: old.txt\n*** End of File\n*** Move to: new.txt\n@@\n-old\n+new\n*** End Patch",
+    "expected": [
+      {
+        "type": "update",
+        "path": "old.txt",
+        "movePath": "new.txt",
+        "chunks": [
+          {
+            "oldLines": [
+              "old"
+            ],
+            "newLines": [
+              "new"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "parses an update without an explicit first chunk header",
+    "operation": "parse",
+    "input": "*** Begin Patch\n*** Update File: file.txt\n import foo\n+bar\n*** End Patch",
+    "expected": [
+      {
+        "type": "update",
+        "path": "file.txt",
+        "chunks": [
+          {
+            "oldLines": [
+              "import foo"
+            ],
+            "newLines": [
+              "import foo",
+              "bar"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "keeps indented update markers as context lines",
+    "operation": "parse",
+    "input": "*** Begin Patch\n*** Update File: a.txt\n@@\n-old a\n+new a\n *** Update File: b.txt\n@@\n-old b\n+new b\n*** End Patch",
+    "expected": [
+      {
+        "type": "update",
+        "path": "a.txt",
+        "chunks": [
+          {
+            "oldLines": [
+              "old a",
+              "*** Update File: b.txt"
+            ],
+            "newLines": [
+              "new a",
+              "*** Update File: b.txt"
+            ]
+          },
+          {
+            "oldLines": [
+              "old b"
+            ],
+            "newLines": [
+              "new b"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "keeps indented move and EOF markers as context lines",
+    "operation": "parse",
+    "input": "*** Begin Patch\n*** Update File: file.txt\n@@\n before\n *** Move to: moved.txt\n *** End of File\n*** End Patch",
+    "expected": [
+      {
+        "type": "update",
+        "path": "file.txt",
+        "chunks": [
+          {
+            "oldLines": [
+              "before",
+              "*** Move to: moved.txt",
+              "*** End of File"
+            ],
+            "newLines": [
+              "before",
+              "*** Move to: moved.txt",
+              "*** End of File"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "preserves update context indentation",
+    "operation": "parse",
+    "input": "*** Begin Patch\n*** Update File: file.txt\n@@   section\n-old\n+new\n*** End Patch",
+    "expected": [
+      {
+        "type": "update",
+        "path": "file.txt",
+        "chunks": [
+          {
+            "oldLines": [
+              "old"
+            ],
+            "newLines": [
+              "new"
+            ],
+            "changeContext": "  section"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "preserves bare empty update lines as context",
+    "operation": "parse",
+    "input": "*** Begin Patch\n*** Update File: file.txt\n@@\n context before\n\n context after\n*** End Patch",
+    "expected": [
+      {
+        "type": "update",
+        "path": "file.txt",
+        "chunks": [
+          {
+            "oldLines": [
+              "context before",
+              "",
+              "context after"
+            ],
+            "newLines": [
+              "context before",
+              "",
+              "context after"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "rejects an invalid add line",
+    "operation": "parse",
+    "input": "*** Begin Patch\n*** Add File: file.txt\nbad\n*** End Patch",
+    "error": "Invalid hunk at line 3: Invalid Add File line for 'file.txt': expected a line starting with '+', got 'bad'"
+  },
+  {
+    "name": "rejects an invalid delete line",
+    "operation": "parse",
+    "input": "*** Begin Patch\n*** Delete File: file.txt\nbad\n*** End Patch",
+    "error": "Invalid hunk at line 3: Unexpected line after Delete File 'file.txt': 'bad'. Delete hunks do not contain body lines"
+  },
+  {
+    "name": "rejects an invalid hunk after a delete",
+    "operation": "parse",
+    "input": "*** Begin Patch\n*** Delete File: file.txt\n*** Frobnicate File: next.txt\n*** End Patch",
+    "error": "Invalid hunk at line 3: '*** Frobnicate File: next.txt' is not a valid hunk header. Valid hunk headers: '*** Add File: {path}', '*** Delete File: {path}', '*** Update File: {path}'"
+  },
+  {
+    "name": "rejects an empty update hunk",
+    "operation": "parse",
+    "input": "*** Begin Patch\n*** Update File: file.txt\n*** End Patch",
+    "error": "Invalid hunk at line 2: Update file hunk for path 'file.txt' is empty"
+  },
+  {
+    "name": "rejects an empty update hunk after a move",
+    "operation": "parse",
+    "input": "*** Begin Patch\n*** Update File: old.txt\n*** Move to: new.txt\n*** Delete File: other.txt\n*** End Patch",
+    "error": "Invalid hunk at line 2: Update file hunk for path 'old.txt' is empty"
+  },
+  {
+    "name": "rejects an empty update hunk after an EOF marker",
+    "operation": "parse",
+    "input": "*** Begin Patch\n*** Update File: file.txt\n*** End of File\n*** End Patch",
+    "error": "Invalid hunk at line 2: Update file hunk for path 'file.txt' is empty"
+  },
+  {
+    "name": "rejects an empty update chunk",
+    "operation": "parse",
+    "input": "*** Begin Patch\n*** Update File: file.txt\n@@\n*** End Patch",
+    "error": "Invalid hunk at line 4: Update hunk does not contain any lines"
+  },
+  {
+    "name": "rejects an empty update chunk before an EOF marker",
+    "operation": "parse",
+    "input": "*** Begin Patch\n*** Update File: file.txt\n@@\n*** End of File\n*** End Patch",
+    "error": "Invalid hunk at line 4: Update hunk does not contain any lines"
+  },
+  {
+    "name": "rejects a repeated context marker",
+    "operation": "parse",
+    "input": "*** Begin Patch\n*** Update File: file.txt\n@@\n@@\n-old\n+new\n*** End Patch",
+    "error": "Invalid hunk at line 4: Unexpected line found in update hunk: '@@'. Every line should start with ' ' (context line), '+' (added line), or '-' (removed line)"
+  },
+  {
+    "name": "rejects a boundary inside an update chunk",
+    "operation": "parse",
+    "input": "*** Begin Patch\n*** Update File: file.txt\n@@\n*** Update File: other.txt\n@@\n-old\n+new\n*** End Patch",
+    "error": "Invalid hunk at line 4: Unexpected line found in update hunk: '*** Update File: other.txt'. Every line should start with ' ' (context line), '+' (added line), or '-' (removed line)"
+  },
+  {
+    "name": "rejects a bad update line",
+    "operation": "parse",
+    "input": "*** Begin Patch\n*** Update File: file.txt\n@@\nbad\n*** End Patch",
+    "error": "Invalid hunk at line 4: Unexpected line found in update hunk: 'bad'. Every line should start with ' ' (context line), '+' (added line), or '-' (removed line)"
+  },
+  {
+    "name": "rejects a bad line after a removed line",
+    "operation": "parse",
+    "input": "*** Begin Patch\n*** Update File: file.txt\n@@\n-old\nbad\n*** End Patch",
+    "error": "Invalid hunk at line 5: Expected update hunk to start with a @@ context marker, got: 'bad'"
+  },
+  {
+    "name": "rejects a bad context marker",
+    "operation": "parse",
+    "input": "*** Begin Patch\n*** Update File: file.txt\n@@foo\n*** End Patch",
+    "error": "Invalid hunk at line 3: Unexpected line found in update hunk: '@@foo'. Every line should start with ' ' (context line), '+' (added line), or '-' (removed line)"
+  },
+  {
+    "name": "rejects a bad line after a removed line and invalid header",
+    "operation": "parse",
+    "input": "*** Begin Patch\n*** Update File: file.txt\n@@\n-old\n*** Frobnicate File: foo\n*** End Patch",
+    "error": "Invalid hunk at line 5: Expected update hunk to start with a @@ context marker, got: '*** Frobnicate File: foo'"
+  },
+  {
+    "name": "rejects an invalid hunk header",
+    "operation": "parse",
+    "input": "*** Begin Patch\n*** Frobnicate File: foo\n*** End Patch",
+    "error": "Invalid hunk at line 2: '*** Frobnicate File: foo' is not a valid hunk header. Valid hunk headers: '*** Add File: {path}', '*** Delete File: {path}', '*** Update File: {path}'"
+  },
+  {
+    "name": "rejects a pathless add header",
+    "operation": "parse",
+    "input": "*** Begin Patch\n*** Add File:\n*** End Patch",
+    "error": "Invalid hunk at line 2: '*** Add File:' is not a valid hunk header. Valid hunk headers: '*** Add File: {path}', '*** Delete File: {path}', '*** Update File: {path}'"
+  },
+  {
+    "name": "rejects a blank path in '*** Add File:'",
+    "operation": "parse",
+    "input": "*** Begin Patch\n*** Add File: \n*** End Patch",
+    "error": "Invalid hunk at line 2: '*** Add File:' is not a valid hunk header. Valid hunk headers: '*** Add File: {path}', '*** Delete File: {path}', '*** Update File: {path}'"
+  },
+  {
+    "name": "rejects a blank path in '*** Delete File:'",
+    "operation": "parse",
+    "input": "*** Begin Patch\n*** Delete File: \n*** End Patch",
+    "error": "Invalid hunk at line 2: '*** Delete File:' is not a valid hunk header. Valid hunk headers: '*** Add File: {path}', '*** Delete File: {path}', '*** Update File: {path}'"
+  },
+  {
+    "name": "rejects a blank path in '*** Update File:'",
+    "operation": "parse",
+    "input": "*** Begin Patch\n*** Update File: \n*** End Patch",
+    "error": "Invalid hunk at line 2: '*** Update File:' is not a valid hunk header. Valid hunk headers: '*** Add File: {path}', '*** Delete File: {path}', '*** Update File: {path}'"
+  },
+  {
+    "name": "rejects an empty move destination",
+    "operation": "parse",
+    "input": "*** Begin Patch\n*** Update File: old.txt\n*** Move to: \n@@\n-old\n+new\n*** End Patch",
+    "error": "Invalid hunk at line 3: Move destination for 'old.txt' must not be empty"
+  },
+  {
+    "name": "derives fuzzy line updates while preserving BOM",
+    "operation": "derive",
+    "path": "update.txt",
+    "chunks": [
+      {
+        "oldLines": [
+          "  old   "
+        ],
+        "newLines": [
+          "new"
+        ]
+      }
+    ],
+    "original": "﻿old\n",
+    "expected": {
+      "content": "new\n",
+      "bom": true
+    }
+  },
+  {
+    "name": "derives multiple update chunks",
+    "operation": "derive",
+    "path": "update.txt",
+    "chunks": [
+      {
+        "oldLines": [
+          "line 2"
+        ],
+        "newLines": [
+          "LINE 2"
+        ]
+      },
+      {
+        "oldLines": [
+          "line 4"
+        ],
+        "newLines": [
+          "LINE 4"
+        ]
+      }
+    ],
+    "original": "line 1\nline 2\nline 3\nline 4\n",
+    "expected": {
+      "content": "line 1\nLINE 2\nline 3\nLINE 4\n",
+      "bom": false
+    }
+  },
+  {
+    "name": "appends a pure-addition chunk to a nonempty file",
+    "operation": "derive",
+    "path": "update.txt",
+    "chunks": [
+      {
+        "oldLines": [],
+        "newLines": [
+          "added 1",
+          "added 2"
+        ]
+      }
+    ],
+    "original": "line 1\nline 2\n",
+    "expected": {
+      "content": "line 1\nline 2\nadded 1\nadded 2\n",
+      "bom": false
+    }
+  },
+  {
+    "name": "preserves equal-offset insertion order for \"\"",
+    "operation": "derive",
+    "path": "update.txt",
+    "chunks": [
+      {
+        "oldLines": [],
+        "newLines": [
+          "first"
+        ]
+      },
+      {
+        "oldLines": [],
+        "newLines": [
+          "second",
+          "third"
+        ]
+      }
+    ],
+    "original": "",
+    "expected": {
+      "content": "first\nsecond\nthird\n",
+      "bom": false
+    }
+  },
+  {
+    "name": "preserves equal-offset insertion order for \"original\\n\"",
+    "operation": "derive",
+    "path": "update.txt",
+    "chunks": [
+      {
+        "oldLines": [],
+        "newLines": [
+          "first"
+        ]
+      },
+      {
+        "oldLines": [],
+        "newLines": [
+          "second",
+          "third"
+        ]
+      }
+    ],
+    "original": "original\n",
+    "expected": {
+      "content": "original\nfirst\nsecond\nthird\n",
+      "bom": false
+    }
+  },
+  {
+    "name": "applies a pure-addition chunk after an earlier replacement",
+    "operation": "derive",
+    "path": "update.txt",
+    "chunks": [
+      {
+        "oldLines": [],
+        "newLines": [
+          "after-context",
+          "second-line"
+        ]
+      },
+      {
+        "oldLines": [
+          "line1",
+          "line2",
+          "line3"
+        ],
+        "newLines": [
+          "line1",
+          "line2-replacement"
+        ]
+      }
+    ],
+    "original": "line1\nline2\nline3\n",
+    "expected": {
+      "content": "line1\nline2-replacement\nafter-context\nsecond-line\n",
+      "bom": false
+    }
+  },
+  {
+    "name": "applies a deletion-only update chunk",
+    "operation": "derive",
+    "path": "update.txt",
+    "chunks": [
+      {
+        "oldLines": [
+          "line1",
+          "line2",
+          "line3"
+        ],
+        "newLines": [
+          "line1",
+          "line3"
+        ]
+      }
+    ],
+    "original": "line1\nline2\nline3\n",
+    "expected": {
+      "content": "line1\nline3\n",
+      "bom": false
+    }
+  },
+  {
+    "name": "updates an empty file and adds a trailing newline",
+    "operation": "derive",
+    "path": "empty.txt",
+    "chunks": [
+      {
+        "oldLines": [],
+        "newLines": [
+          "First line"
+        ]
+      }
+    ],
+    "original": "",
+    "expected": {
+      "content": "First line\n",
+      "bom": false
+    }
+  },
+  {
+    "name": "adds a trailing newline to an unterminated file",
+    "operation": "derive",
+    "path": "no-newline.txt",
+    "chunks": [
+      {
+        "oldLines": [
+          "old"
+        ],
+        "newLines": [
+          "new"
+        ]
+      }
+    ],
+    "original": "old",
+    "expected": {
+      "content": "new\n",
+      "bom": false
+    }
+  },
+  {
+    "name": "disambiguates updates with change context",
+    "operation": "derive",
+    "path": "update.txt",
+    "chunks": [
+      {
+        "oldLines": [
+          "x=10"
+        ],
+        "newLines": [
+          "x=11"
+        ],
+        "changeContext": "fn b"
+      }
+    ],
+    "original": "fn a\nx=10\nfn b\nx=10\n",
+    "expected": {
+      "content": "fn a\nx=10\nfn b\nx=11\n",
+      "bom": false
+    }
+  },
+  {
+    "name": "matches leading whitespace differences",
+    "operation": "derive",
+    "path": "leading.txt",
+    "chunks": [
+      {
+        "oldLines": [
+          "line"
+        ],
+        "newLines": [
+          "next"
+        ]
+      }
+    ],
+    "original": "  line\n",
+    "expected": {
+      "content": "next\n",
+      "bom": false
+    }
+  },
+  {
+    "name": "matches trailing whitespace differences",
+    "operation": "derive",
+    "path": "trailing.txt",
+    "chunks": [
+      {
+        "oldLines": [
+          "line"
+        ],
+        "newLines": [
+          "next"
+        ]
+      }
+    ],
+    "original": "line  \n",
+    "expected": {
+      "content": "next\n",
+      "bom": false
+    }
+  },
+  {
+    "name": "matches Unicode punctuation differences",
+    "operation": "derive",
+    "path": "unicode.txt",
+    "chunks": [
+      {
+        "oldLines": [
+          "He said \"hello\""
+        ],
+        "newLines": [
+          "He said \"hi\""
+        ]
+      }
+    ],
+    "original": "He said “hello”\n",
+    "expected": {
+      "content": "He said \"hi\"\n",
+      "bom": false
+    }
+  },
+  {
+    "name": "matches Unicode minus signs",
+    "operation": "derive",
+    "path": "minus.txt",
+    "chunks": [
+      {
+        "oldLines": [
+          "value - 1"
+        ],
+        "newLines": [
+          "value - 2"
+        ]
+      }
+    ],
+    "original": "value − 1\n",
+    "expected": {
+      "content": "value - 2\n",
+      "bom": false
+    }
+  },
+  {
+    "name": "matches the Unicode space U+A0",
+    "operation": "derive",
+    "path": "spaces.txt",
+    "chunks": [
+      {
+        "oldLines": [
+          "hello world"
+        ],
+        "newLines": [
+          "hello there"
+        ]
+      }
+    ],
+    "original": "hello world\n",
+    "expected": {
+      "content": "hello there\n",
+      "bom": false
+    }
+  },
+  {
+    "name": "matches the Unicode space U+2002",
+    "operation": "derive",
+    "path": "spaces.txt",
+    "chunks": [
+      {
+        "oldLines": [
+          "hello world"
+        ],
+        "newLines": [
+          "hello there"
+        ]
+      }
+    ],
+    "original": "hello world\n",
+    "expected": {
+      "content": "hello there\n",
+      "bom": false
+    }
+  },
+  {
+    "name": "matches the Unicode space U+2003",
+    "operation": "derive",
+    "path": "spaces.txt",
+    "chunks": [
+      {
+        "oldLines": [
+          "hello world"
+        ],
+        "newLines": [
+          "hello there"
+        ]
+      }
+    ],
+    "original": "hello world\n",
+    "expected": {
+      "content": "hello there\n",
+      "bom": false
+    }
+  },
+  {
+    "name": "matches the Unicode space U+2004",
+    "operation": "derive",
+    "path": "spaces.txt",
+    "chunks": [
+      {
+        "oldLines": [
+          "hello world"
+        ],
+        "newLines": [
+          "hello there"
+        ]
+      }
+    ],
+    "original": "hello world\n",
+    "expected": {
+      "content": "hello there\n",
+      "bom": false
+    }
+  },
+  {
+    "name": "matches the Unicode space U+2005",
+    "operation": "derive",
+    "path": "spaces.txt",
+    "chunks": [
+      {
+        "oldLines": [
+          "hello world"
+        ],
+        "newLines": [
+          "hello there"
+        ]
+      }
+    ],
+    "original": "hello world\n",
+    "expected": {
+      "content": "hello there\n",
+      "bom": false
+    }
+  },
+  {
+    "name": "matches the Unicode space U+2006",
+    "operation": "derive",
+    "path": "spaces.txt",
+    "chunks": [
+      {
+        "oldLines": [
+          "hello world"
+        ],
+        "newLines": [
+          "hello there"
+        ]
+      }
+    ],
+    "original": "hello world\n",
+    "expected": {
+      "content": "hello there\n",
+      "bom": false
+    }
+  },
+  {
+    "name": "matches the Unicode space U+2007",
+    "operation": "derive",
+    "path": "spaces.txt",
+    "chunks": [
+      {
+        "oldLines": [
+          "hello world"
+        ],
+        "newLines": [
+          "hello there"
+        ]
+      }
+    ],
+    "original": "hello world\n",
+    "expected": {
+      "content": "hello there\n",
+      "bom": false
+    }
+  },
+  {
+    "name": "matches the Unicode space U+2008",
+    "operation": "derive",
+    "path": "spaces.txt",
+    "chunks": [
+      {
+        "oldLines": [
+          "hello world"
+        ],
+        "newLines": [
+          "hello there"
+        ]
+      }
+    ],
+    "original": "hello world\n",
+    "expected": {
+      "content": "hello there\n",
+      "bom": false
+    }
+  },
+  {
+    "name": "matches the Unicode space U+2009",
+    "operation": "derive",
+    "path": "spaces.txt",
+    "chunks": [
+      {
+        "oldLines": [
+          "hello world"
+        ],
+        "newLines": [
+          "hello there"
+        ]
+      }
+    ],
+    "original": "hello world\n",
+    "expected": {
+      "content": "hello there\n",
+      "bom": false
+    }
+  },
+  {
+    "name": "matches the Unicode space U+200A",
+    "operation": "derive",
+    "path": "spaces.txt",
+    "chunks": [
+      {
+        "oldLines": [
+          "hello world"
+        ],
+        "newLines": [
+          "hello there"
+        ]
+      }
+    ],
+    "original": "hello world\n",
+    "expected": {
+      "content": "hello there\n",
+      "bom": false
+    }
+  },
+  {
+    "name": "matches the Unicode space U+202F",
+    "operation": "derive",
+    "path": "spaces.txt",
+    "chunks": [
+      {
+        "oldLines": [
+          "hello world"
+        ],
+        "newLines": [
+          "hello there"
+        ]
+      }
+    ],
+    "original": "hello world\n",
+    "expected": {
+      "content": "hello there\n",
+      "bom": false
+    }
+  },
+  {
+    "name": "matches the Unicode space U+205F",
+    "operation": "derive",
+    "path": "spaces.txt",
+    "chunks": [
+      {
+        "oldLines": [
+          "hello world"
+        ],
+        "newLines": [
+          "hello there"
+        ]
+      }
+    ],
+    "original": "hello world\n",
+    "expected": {
+      "content": "hello there\n",
+      "bom": false
+    }
+  },
+  {
+    "name": "matches the Unicode space U+3000",
+    "operation": "derive",
+    "path": "spaces.txt",
+    "chunks": [
+      {
+        "oldLines": [
+          "hello world"
+        ],
+        "newLines": [
+          "hello there"
+        ]
+      }
+    ],
+    "original": "hello　world\n",
+    "expected": {
+      "content": "hello there\n",
+      "bom": false
+    }
+  },
+  {
+    "name": "does not normalize ellipses",
+    "operation": "derive",
+    "path": "ellipsis.txt",
+    "chunks": [
+      {
+        "oldLines": [
+          "wait..."
+        ],
+        "newLines": [
+          "done"
+        ]
+      }
+    ],
+    "original": "wait…\n",
+    "error": "Failed to find expected lines in ellipsis.txt:\nwait..."
+  },
+  {
+    "name": "prefers a later exact match over an earlier normalized match",
+    "operation": "derive",
+    "path": "quotes.txt",
+    "chunks": [
+      {
+        "oldLines": [
+          "He said \"hello\""
+        ],
+        "newLines": [
+          "He said \"goodbye\""
+        ]
+      }
+    ],
+    "original": "He said “hello”\nmiddle\nHe said \"hello\"\n",
+    "expected": {
+      "content": "He said “hello”\nmiddle\nHe said \"goodbye\"\n",
+      "bom": false
+    }
+  },
+  {
+    "name": "matches EOF-anchored chunks from the end",
+    "operation": "derive",
+    "path": "update.txt",
+    "chunks": [
+      {
+        "oldLines": [
+          "marker",
+          "end"
+        ],
+        "newLines": [
+          "marker changed",
+          "end"
+        ],
+        "endOfFile": true
+      }
+    ],
+    "original": "marker\nmiddle\nmarker\nend\n",
+    "expected": {
+      "content": "marker\nmiddle\nmarker changed\nend\n",
+      "bom": false
+    }
+  },
+  {
+    "name": "does not fall back to a non-EOF match",
+    "operation": "derive",
+    "path": "update.txt",
+    "chunks": [
+      {
+        "oldLines": [
+          "marker",
+          "end"
+        ],
+        "newLines": [
+          "changed",
+          "end"
+        ],
+        "endOfFile": true
+      }
+    ],
+    "original": "marker\nend\nmiddle\n",
+    "error": "Failed to find expected lines in update.txt:\nmarker\nend"
+  },
+  {
+    "name": "identifies a missing blank line",
+    "operation": "derive",
+    "path": "update.txt",
+    "chunks": [
+      {
+        "oldLines": [
+          ""
+        ],
+        "newLines": [
+          "added"
+        ]
+      }
+    ],
+    "original": "content\n",
+    "error": "Failed to find an expected blank line in update.txt"
+  }
+]

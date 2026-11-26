@@ -64,6 +64,10 @@ impl FileWriter {
         Self { access, mutation, authorizer, format }
     }
 
+    pub fn locate(&self, file: &str) -> String {
+        self.access.locate(file)
+    }
+
     pub async fn target(&self, file: &str, context: &Invocation) -> Result<Target, AccessError> {
         let target =
             self.access.resolve(ResolveInput { path: file.to_owned(), kind: Some(Kind::File), base: None }).await?;

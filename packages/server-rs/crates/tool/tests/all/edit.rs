@@ -1,9 +1,11 @@
 use std::sync::Arc;
+use std::time::Duration;
 
 use futures_util::future::BoxFuture;
 use opencode_fs::access::{Access, Authorizer, Target};
 use opencode_fs::mutation::Mutation;
 use opencode_fs::write::{FileWriter, FormatHook, NoFormat};
+use opencode_permission::service::{AssertInput, PermissionError};
 use opencode_tool::builtin::{self, BuiltinDeps};
 use opencode_tool::tools::edit::EditDeps;
 use opencode_tool::{SnapshotOptions, ToolCall, ToolContext, ToolOutput, ToolRegistry};
@@ -166,6 +168,59 @@ async fn serializes_concurrent_edit_transactions() {
     std::fs::remove_dir_all(&root).expect("the test root directory is removed");
 }
 
+#[tokio::test]
+async fn serializes_a_relative_and_an_absolute_edit_transaction() {
+    let root = unique_directory("edit-concurrent-paths");
+    std::fs::write(root.join("concurrent.txt"), "one\ntwo\n").expect("the fixture file is written");
+    let authorizer: Arc<dyn Authorizer> = Arc::new(SlowAuthorizer);
+    let mutation = Mutation::new();
+    let root_text = root.to_string_lossy().into_owned();
+    let writer = FileWriter::new(
+        Access::new(root_text.clone(), root_text, std::env::var("HOME").unwrap_or_else(|_| "/".to_owned())),
+        mutation.clone(),
+        authorizer.clone(),
+        Arc::new(NoFormat),
+    );
+    let deps =
+        BuiltinDeps { full_codemode: false, edit: Some(EditDeps { writer, mutation }), ..BuiltinDeps::default() };
+    let registry = ToolRegistry::new();
+    let _registration = builtin::activate(&registry, &deps).await;
+    let snapshot = registry.snapshot(&[], &SnapshotOptions::default()).await.expect("the snapshot builds");
+    let context = ToolContext {
+        session_id: "ses_edit_tool_test".to_owned(),
+        agent: "build".to_owned(),
+        message_id: "msg_tool_test".to_owned(),
+        call_id: "call-edit".to_owned(),
+        authorizer,
+        ..ToolContext::default()
+    };
+    let first = ToolContext { call_id: "call-edit-relative".to_owned(), ..context.clone() };
+    let second = ToolContext { call_id: "call-edit-absolute".to_owned(), ..context.clone() };
+    let absolute = root.join("concurrent.txt").to_string_lossy().into_owned();
+    let (relative, absolute_result) = tokio::join!(
+        snapshot.execute(
+            ToolCall {
+                id: "call-edit-relative".to_owned(),
+                name: "edit".to_owned(),
+                input: json!({ "path": "concurrent.txt", "oldString": "one", "newString": "ONE" }),
+            },
+            &first,
+        ),
+        snapshot.execute(
+            ToolCall {
+                id: "call-edit-absolute".to_owned(),
+                name: "edit".to_owned(),
+                input: json!({ "path": absolute, "oldString": "two", "newString": "TWO" }),
+            },
+            &second,
+        )
+    );
+    assert!(relative.is_ok(), "the relative edit completes");
+    assert!(absolute_result.is_ok(), "the absolute edit completes");
+    assert_eq!(std::fs::read_to_string(root.join("concurrent.txt")).unwrap(), "ONE\nTWO\n");
+    std::fs::remove_dir_all(&root).expect("the test root directory is removed");
+}
+
 async fn build(
     root: &std::path::Path,
     format: Arc<dyn FormatHook>,
@@ -244,5 +299,20 @@ impl FormatHook for StripBom {
             std::fs::write(&target.absolute, text.trim_start_matches('\u{feff}')).expect("the file is formatted");
             true
         })
+    }
+}
+
+struct SlowAuthorizer;
+
+impl Authorizer for SlowAuthorizer {
+    fn assert<'a>(&'a self, _input: AssertInput) -> BoxFuture<'a, Result<(), PermissionError>> {
+        Box::pin(async move {
+            tokio::time::sleep(Duration::from_millis(20)).await;
+            Ok(())
+        })
+    }
+
+    fn allows<'a>(&'a self, _input: AssertInput) -> BoxFuture<'a, Result<bool, PermissionError>> {
+        Box::pin(async { Ok(true) })
     }
 }
