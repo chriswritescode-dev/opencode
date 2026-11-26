@@ -256,17 +256,30 @@ async fn execute(
     let mut stderr_task = tokio::spawn(async move {
         let mut reader = stderr;
         let mut buffer = [0u8; 4096];
+        let mut pending_bytes = Vec::new();
         while let Ok(read) = reader.read(&mut buffer).await {
             if read == 0 {
                 break;
             }
-            let chunk = String::from_utf8_lossy(&buffer[..read]).into_owned();
+            pending_bytes.extend_from_slice(&buffer[..read]);
+            let chunk = decode_stderr(&mut pending_bytes);
+            if chunk.is_empty() {
+                continue;
+            }
             if let Some(service) = stderr_service.upgrade()
                 && let Ok(mut attempts) = service.command_attempts.lock()
                 && let Some(CommandEntry::Pending(pending)) = attempts.get_mut(&stderr_attempt.0)
             {
                 pending.message.push_str(&chunk);
             }
+        }
+        let tail = String::from_utf8_lossy(&pending_bytes).into_owned();
+        if !tail.is_empty()
+            && let Some(service) = stderr_service.upgrade()
+            && let Ok(mut attempts) = service.command_attempts.lock()
+            && let Some(CommandEntry::Pending(pending)) = attempts.get_mut(&stderr_attempt.0)
+        {
+            pending.message.push_str(&tail);
         }
     });
     let mut stdout_task = tokio::spawn(async move {
@@ -319,6 +332,27 @@ async fn execute(
         ))));
     }
     Some(Ok(stdout))
+}
+
+fn decode_stderr(pending: &mut Vec<u8>) -> String {
+    match std::str::from_utf8(pending) {
+        Ok(text) => {
+            let decoded = text.to_owned();
+            pending.clear();
+            decoded
+        }
+        Err(error) if error.error_len().is_some() => {
+            let decoded = String::from_utf8_lossy(pending).into_owned();
+            pending.clear();
+            decoded
+        }
+        Err(error) => {
+            let valid = error.valid_up_to();
+            let decoded = String::from_utf8_lossy(&pending[..valid]).into_owned();
+            pending.drain(..valid);
+            decoded
+        }
+    }
 }
 
 async fn settle_command(

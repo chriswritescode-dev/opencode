@@ -1224,6 +1224,59 @@ async fn fails_command_authentication_with_the_trimmed_stderr() {
 
 #[cfg(unix)]
 #[tokio::test(flavor = "multi_thread")]
+async fn decodes_command_stderr_across_read_boundaries() {
+    let (dir, _database, _bus, credentials, service) = setup();
+    let integration = integration_id("company");
+    let method_id = IntegrationMethodID("login".to_owned());
+    let path = dir.path().join("stderr");
+    let mut bytes = vec![b'a'; 4095];
+    bytes.extend_from_slice("é\n".as_bytes());
+    std::fs::write(&path, bytes).expect("write the stderr fixture");
+    let path = path.to_str().expect("the stderr path is utf-8").to_owned();
+    let stderr = "cat \"$1\" >&2; exit 3".to_owned();
+    let _registration = service
+        .transform({
+            let integration = integration.clone();
+            move |editor| {
+                editor.method_update(Implementation::Method {
+                    integration_id: integration.clone(),
+                    method: command_method("login", &["/bin/sh", "-c", &stderr, "sh", &path]),
+                });
+                Ok(())
+            }
+        })
+        .await;
+
+    let attempt = service
+        .command()
+        .connect(CommandConnectInput { integration_id: integration.clone(), method_id, label: None })
+        .await
+        .expect("connect the command attempt");
+    let failed = tokio::time::timeout(
+        Duration::from_secs(10),
+        eventually(|| {
+            let service = service.clone();
+            let integration = integration.clone();
+            let attempt_id = attempt.attempt_id.clone();
+            async move {
+                let status = service.command().status(&integration, &attempt_id).await.ok()?;
+                matches!(&status, CommandAttemptStatus::Failed { .. }).then_some(status)
+            }
+        }),
+    )
+    .await
+    .expect("the command fails");
+    match failed {
+        CommandAttemptStatus::Failed { message, .. } => {
+            assert_eq!(message, format!("{}é", "a".repeat(4095)));
+        }
+        other => panic!("expected a failed attempt, got {other:?}"),
+    }
+    assert!(credentials.list(&integration).expect("list the credentials").is_empty());
+}
+
+#[cfg(unix)]
+#[tokio::test(flavor = "multi_thread")]
 async fn fails_when_the_command_returns_no_credential() {
     let (_dir, _database, _bus, credentials, service) = setup();
     let integration = integration_id("company");
