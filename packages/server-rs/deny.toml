@@ -23,11 +23,15 @@ allow = [
     # MIT). rusqlite, libsqlite3-sys (which vendors the bundled SQLite) and hashlink are MIT too. yaml-rust2, arraydeque,
     # core_detect, multiversion_no_op and scopeguard (through yaml-rust2 for opencode-registry) are MIT too. opencode-tool's
     # image stack (image, image-webp, png, fdeflate, color_quant, num-traits, zune-core, zune-jpeg, bytemuck, byteorder-lite
-    # and quick-error) offers MIT too, and moxcms offers Apache-2.0 below.
+    # and quick-error) offers MIT too, and moxcms offers Apache-2.0 below. opencode-terminal's portable-pty stack
+    # (portable-pty, anyhow, bitflags 1.3.2, downcast-rs, filedescriptor, lazy_static, nix, shell-words, winapi and
+    # winreg) offers MIT too, and so does regress (through opencode-shell); serial2 and shared_library offer
+    # Apache-2.0 below.
     "MIT",
     # ring (with ISC) and sync_wrapper; reqwest, rustls, tokio-tungstenite, flate2, crc32fast and most others offer it
     # beside MIT. yaml-rust2, arraydeque, core_detect, multiversion_no_op, scopeguard and encoding_rs (through
-    # yaml-rust2 for opencode-registry) offer it too.
+    # yaml-rust2 for opencode-registry) offer it too. serial2 (BSD-2-Clause OR Apache-2.0) and shared_library
+    # (Apache-2.0/MIT), through opencode-terminal and portable-pty, offer it too.
     "Apache-2.0",
     # subtle, brotli, brotli-decompressor, alloc-no-stdlib and alloc-stdlib; encoding_rs (with Apache-2.0 OR MIT,
     # through yaml-rust2 for opencode-registry).

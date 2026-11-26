@@ -38,6 +38,7 @@ opencode-shell = { path = "crates/shell" }
 opencode-sidecar = { path = "crates/sidecar" }
 opencode-session = { path = "crates/session" }
 opencode-storage = { path = "crates/storage" }
+opencode-terminal = { path = "crates/terminal" }
 opencode-tool = { path = "crates/tool" }
 opencode-vcs = { path = "crates/vcs" }
 opencode-api-types = { path = "../cli-rs/crates/api-types" }
@@ -61,6 +62,7 @@ indexmap = "2"
 log = { version = "0.4", features = ["std"] }
 notify = "8"
 percent-encoding = "2"
+portable-pty = "0.9"
 rand = "0.10"
 regress = "0.12"
 regex-lite = "0.1"

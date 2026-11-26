@@ -1,0 +1,26 @@
+[package]
+name = "opencode-terminal"
+description = "Interactive PTY sessions on the Location service graph."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+autotests = false
+
+[lints]
+workspace = true
+
+[dependencies]
+log.workspace = true
+opencode-bus.workspace = true
+opencode-config.workspace = true
+opencode-contract.workspace = true
+opencode-storage.workspace = true
+opencode-util.workspace = true
+portable-pty.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+
+[[test]]
+name = "all"
+path = "tests/all/main.rs"
