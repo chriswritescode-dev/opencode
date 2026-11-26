@@ -146,6 +146,12 @@ fn sample_request(operation: &str) -> Option<(&'static str, &'static str)> {
         "vcs.branch.list" => Some(("GET", "/api/vcs/branch")),
         "vcs.diff" => Some(("GET", "/api/vcs/diff?mode=working")),
         "reference.list" => Some(("GET", "/api/reference")),
+        "fs.read" => Some(("GET", "/api/fs/read/hello.txt")),
+        "fs.list" => Some(("GET", "/api/fs/list")),
+        "fs.find" => Some(("GET", "/api/fs/find?query=hello")),
+        "experimental.fs.write" => Some(("POST", "/api/experimental/fs/write?path=hello.txt")),
+        "experimental.fs.watch" => Some(("POST", "/api/experimental/fs/watch")),
+        "experimental.fs.unwatch" => Some(("DELETE", "/api/experimental/fs/watch")),
         "worktree.list" => Some(("GET", "/api/worktree?projectID=unknown")),
         "worktree.create" => Some(("POST", "/api/worktree")),
         "worktree.remove" => Some(("DELETE", "/api/worktree")),
@@ -255,6 +261,12 @@ fn implemented_lists_the_ported_operations() {
     assert!(opencode_http::app::IMPLEMENTED.contains(&"vcs.branch.list"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"vcs.diff"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"reference.list"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"fs.read"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"fs.list"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"fs.find"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"experimental.fs.write"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"experimental.fs.watch"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"experimental.fs.unwatch"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"worktree.list"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"worktree.create"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"worktree.remove"));
@@ -323,5 +335,5 @@ fn implemented_lists_the_ported_operations() {
     assert!(opencode_http::app::IMPLEMENTED.contains(&"plugin.gui"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"plugin.check"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"plugin.update"));
-    assert_eq!(opencode_http::app::IMPLEMENTED.len(), 83);
+    assert_eq!(opencode_http::app::IMPLEMENTED.len(), 89);
 }

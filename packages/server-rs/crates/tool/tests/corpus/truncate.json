@@ -1,0 +1,752 @@
+[
+  {
+    "name": "line-limit",
+    "limits": {
+      "maxLines": 2,
+      "maxBytes": 1000
+    },
+    "content": [
+      {
+        "type": "text",
+        "text": "one\ntwo\nthree"
+      }
+    ],
+    "expected": {
+      "content": [
+        {
+          "type": "text",
+          "text": "one\ntwo"
+        },
+        {
+          "type": "text",
+          "text": "[showing lines 1-2 of 3; full output saved to {{output}}]"
+        }
+      ],
+      "metadata": {
+        "truncated": true,
+        "outputPath": "{{output}}"
+      },
+      "saved": "one\ntwo\nthree"
+    }
+  },
+  {
+    "name": "byte-limit-inside-line",
+    "limits": {
+      "maxLines": 100,
+      "maxBytes": 5
+    },
+    "content": [
+      {
+        "type": "text",
+        "text": "one\ntwo"
+      }
+    ],
+    "expected": {
+      "content": [
+        {
+          "type": "text",
+          "text": "one\nt"
+        },
+        {
+          "type": "text",
+          "text": "[showing lines 1-2 of 2 (last line cut); full output saved to {{output}}]"
+        }
+      ],
+      "metadata": {
+        "truncated": true,
+        "outputPath": "{{output}}"
+      },
+      "saved": "one\ntwo"
+    }
+  },
+  {
+    "name": "single-line-longer-than-byte-limit",
+    "limits": {
+      "maxLines": 100,
+      "maxBytes": 20
+    },
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"items\":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49]}"
+      }
+    ],
+    "expected": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"items\":[0,1,2,3,4,"
+        },
+        {
+          "type": "text",
+          "text": "[showing lines 1-1 of 1 (last line cut); full output saved to {{output}}]"
+        }
+      ],
+      "metadata": {
+        "truncated": true,
+        "outputPath": "{{output}}"
+      },
+      "saved": "{\"items\":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49]}"
+    }
+  },
+  {
+    "name": "multibyte-check",
+    "limits": {
+      "maxLines": 100,
+      "maxBytes": 7
+    },
+    "content": [
+      {
+        "type": "text",
+        "text": "ab✓✓✓"
+      }
+    ],
+    "expected": {
+      "content": [
+        {
+          "type": "text",
+          "text": "ab✓"
+        },
+        {
+          "type": "text",
+          "text": "[showing lines 1-1 of 1 (last line cut); full output saved to {{output}}]"
+        }
+      ],
+      "metadata": {
+        "truncated": true,
+        "outputPath": "{{output}}"
+      },
+      "saved": "ab✓✓✓"
+    }
+  },
+  {
+    "name": "emoji-zwj",
+    "limits": {
+      "maxLines": 100,
+      "maxBytes": 7
+    },
+    "content": [
+      {
+        "type": "text",
+        "text": "ab👨‍👩‍👧‍👦cd"
+      }
+    ],
+    "expected": {
+      "content": [
+        {
+          "type": "text",
+          "text": "ab"
+        },
+        {
+          "type": "text",
+          "text": "[showing lines 1-1 of 1 (last line cut); full output saved to {{output}}]"
+        }
+      ],
+      "metadata": {
+        "truncated": true,
+        "outputPath": "{{output}}"
+      },
+      "saved": "ab👨‍👩‍👧‍👦cd"
+    }
+  },
+  {
+    "name": "emoji-modifier",
+    "limits": {
+      "maxLines": 100,
+      "maxBytes": 7
+    },
+    "content": [
+      {
+        "type": "text",
+        "text": "ab👍🏽cd"
+      }
+    ],
+    "expected": {
+      "content": [
+        {
+          "type": "text",
+          "text": "ab"
+        },
+        {
+          "type": "text",
+          "text": "[showing lines 1-1 of 1 (last line cut); full output saved to {{output}}]"
+        }
+      ],
+      "metadata": {
+        "truncated": true,
+        "outputPath": "{{output}}"
+      },
+      "saved": "ab👍🏽cd"
+    }
+  },
+  {
+    "name": "emoji-flag",
+    "limits": {
+      "maxLines": 100,
+      "maxBytes": 7
+    },
+    "content": [
+      {
+        "type": "text",
+        "text": "ab🇯🇵cd"
+      }
+    ],
+    "expected": {
+      "content": [
+        {
+          "type": "text",
+          "text": "ab"
+        },
+        {
+          "type": "text",
+          "text": "[showing lines 1-1 of 1 (last line cut); full output saved to {{output}}]"
+        }
+      ],
+      "metadata": {
+        "truncated": true,
+        "outputPath": "{{output}}"
+      },
+      "saved": "ab🇯🇵cd"
+    }
+  },
+  {
+    "name": "astral-character",
+    "limits": {
+      "maxLines": 100,
+      "maxBytes": 7
+    },
+    "content": [
+      {
+        "type": "text",
+        "text": "ab𝒳𝒳"
+      }
+    ],
+    "expected": {
+      "content": [
+        {
+          "type": "text",
+          "text": "ab𝒳"
+        },
+        {
+          "type": "text",
+          "text": "[showing lines 1-1 of 1 (last line cut); full output saved to {{output}}]"
+        }
+      ],
+      "metadata": {
+        "truncated": true,
+        "outputPath": "{{output}}"
+      },
+      "saved": "ab𝒳𝒳"
+    }
+  },
+  {
+    "name": "long-flag-sequence",
+    "limits": {
+      "maxLines": 100,
+      "maxBytes": 165
+    },
+    "content": [
+      {
+        "type": "text",
+        "text": "a🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵"
+      }
+    ],
+    "expected": {
+      "content": [
+        {
+          "type": "text",
+          "text": "a🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵"
+        },
+        {
+          "type": "text",
+          "text": "[showing lines 1-1 of 1 (last line cut); full output saved to {{output}}]"
+        }
+      ],
+      "metadata": {
+        "truncated": true,
+        "outputPath": "{{output}}"
+      },
+      "saved": "a🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵🇯🇵"
+    }
+  },
+  {
+    "name": "long-grapheme-cluster",
+    "limits": {
+      "maxLines": 100,
+      "maxBytes": 165
+    },
+    "content": [
+      {
+        "type": "text",
+        "text": "ab👍🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́z"
+      }
+    ],
+    "expected": {
+      "content": [
+        {
+          "type": "text",
+          "text": "ab"
+        },
+        {
+          "type": "text",
+          "text": "[showing lines 1-1 of 1 (last line cut); full output saved to {{output}}]"
+        }
+      ],
+      "metadata": {
+        "truncated": true,
+        "outputPath": "{{output}}"
+      },
+      "saved": "ab👍🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́🏽́z"
+    }
+  },
+  {
+    "name": "cut-inside-later-part",
+    "limits": {
+      "maxLines": 100,
+      "maxBytes": 6
+    },
+    "content": [
+      {
+        "type": "text",
+        "text": ""
+      },
+      {
+        "type": "text",
+        "text": "abc"
+      },
+      {
+        "type": "text",
+        "text": "defgh"
+      },
+      {
+        "type": "text",
+        "text": ""
+      }
+    ],
+    "expected": {
+      "content": [
+        {
+          "type": "text",
+          "text": ""
+        },
+        {
+          "type": "text",
+          "text": "abc"
+        },
+        {
+          "type": "text",
+          "text": "de"
+        },
+        {
+          "type": "text",
+          "text": "[showing lines 1-2 of 2 (last line cut); full output saved to {{output}}]"
+        }
+      ],
+      "metadata": {
+        "truncated": true,
+        "outputPath": "{{output}}"
+      },
+      "saved": "abc\ndefgh\n"
+    }
+  },
+  {
+    "name": "cut-between-parts",
+    "limits": {
+      "maxLines": 100,
+      "maxBytes": 6
+    },
+    "content": [
+      {
+        "type": "text",
+        "text": "abcde"
+      },
+      {
+        "type": "text",
+        "text": "fgh"
+      }
+    ],
+    "expected": {
+      "content": [
+        {
+          "type": "text",
+          "text": "abcde"
+        },
+        {
+          "type": "text",
+          "text": "[showing lines 1-1 of 2; full output saved to {{output}}]"
+        }
+      ],
+      "metadata": {
+        "truncated": true,
+        "outputPath": "{{output}}"
+      },
+      "saved": "abcde\nfgh"
+    }
+  },
+  {
+    "name": "crlf-line-cut",
+    "limits": {
+      "maxLines": 1,
+      "maxBytes": 1000
+    },
+    "content": [
+      {
+        "type": "text",
+        "text": "one\r\ntwo\r\nthree"
+      }
+    ],
+    "expected": {
+      "content": [
+        {
+          "type": "text",
+          "text": "one"
+        },
+        {
+          "type": "text",
+          "text": "[showing lines 1-1 of 3; full output saved to {{output}}]"
+        }
+      ],
+      "metadata": {
+        "truncated": true,
+        "outputPath": "{{output}}"
+      },
+      "saved": "one\r\ntwo\r\nthree"
+    }
+  },
+  {
+    "name": "blank-first-line",
+    "limits": {
+      "maxLines": 1,
+      "maxBytes": 1000
+    },
+    "content": [
+      {
+        "type": "text",
+        "text": "\nfoo\nbar"
+      }
+    ],
+    "expected": {
+      "content": [
+        {
+          "type": "text",
+          "text": "[showing lines 1-1 of 3; full output saved to {{output}}]"
+        }
+      ],
+      "metadata": {
+        "truncated": true,
+        "outputPath": "{{output}}"
+      },
+      "saved": "\nfoo\nbar"
+    }
+  },
+  {
+    "name": "blank-last-preview-line",
+    "limits": {
+      "maxLines": 2,
+      "maxBytes": 1000
+    },
+    "content": [
+      {
+        "type": "text",
+        "text": "a\n\n\nb"
+      }
+    ],
+    "expected": {
+      "content": [
+        {
+          "type": "text",
+          "text": "a\n"
+        },
+        {
+          "type": "text",
+          "text": "[showing lines 1-2 of 4; full output saved to {{output}}]"
+        }
+      ],
+      "metadata": {
+        "truncated": true,
+        "outputPath": "{{output}}"
+      },
+      "saved": "a\n\n\nb"
+    }
+  },
+  {
+    "name": "zero-line-limit",
+    "limits": {
+      "maxLines": 0,
+      "maxBytes": 1000
+    },
+    "content": [
+      {
+        "type": "text",
+        "text": "secret"
+      }
+    ],
+    "expected": {
+      "content": [
+        {
+          "type": "text",
+          "text": "[showing 0 lines of 1; full output saved to {{output}}]"
+        }
+      ],
+      "metadata": {
+        "truncated": true,
+        "outputPath": "{{output}}"
+      },
+      "saved": "secret"
+    }
+  },
+  {
+    "name": "join-text-parts",
+    "limits": {
+      "maxLines": 2,
+      "maxBytes": 1000
+    },
+    "content": [
+      {
+        "type": "text",
+        "text": "one\n"
+      },
+      {
+        "type": "text",
+        "text": "two"
+      },
+      {
+        "type": "text",
+        "text": "three"
+      }
+    ],
+    "expected": {
+      "content": [
+        {
+          "type": "text",
+          "text": "one\n"
+        },
+        {
+          "type": "text",
+          "text": "two"
+        },
+        {
+          "type": "text",
+          "text": "[showing lines 1-2 of 3; full output saved to {{output}}]"
+        }
+      ],
+      "metadata": {
+        "truncated": true,
+        "outputPath": "{{output}}"
+      },
+      "saved": "one\ntwo\nthree"
+    }
+  },
+  {
+    "name": "mixed-content",
+    "limits": {
+      "maxLines": 2,
+      "maxBytes": 1000
+    },
+    "content": [
+      {
+        "type": "text",
+        "text": "before"
+      },
+      {
+        "type": "file",
+        "uri": "file:///image.png",
+        "mime": "image/png"
+      },
+      {
+        "type": "text",
+        "text": "after\nomitted"
+      }
+    ],
+    "expected": {
+      "content": [
+        {
+          "type": "text",
+          "text": "before"
+        },
+        {
+          "type": "file",
+          "uri": "file:///image.png",
+          "mime": "image/png"
+        },
+        {
+          "type": "text",
+          "text": "after"
+        },
+        {
+          "type": "text",
+          "text": "[showing lines 1-2 of 3; full output saved to {{output}}]"
+        }
+      ],
+      "metadata": {
+        "truncated": true,
+        "outputPath": "{{output}}"
+      },
+      "saved": "before\nafter\nomitted"
+    }
+  },
+  {
+    "name": "skip-reports-truncation",
+    "limits": {
+      "maxLines": 2000,
+      "maxBytes": 51200
+    },
+    "content": [
+      {
+        "type": "text",
+        "text": "one\ntwo"
+      }
+    ],
+    "metadata": {
+      "truncated": true,
+      "source": "tool"
+    },
+    "expected": {
+      "content": [
+        {
+          "type": "text",
+          "text": "one\ntwo"
+        }
+      ],
+      "metadata": {
+        "truncated": true,
+        "source": "tool"
+      }
+    }
+  },
+  {
+    "name": "skip-reports-retention",
+    "limits": {
+      "maxLines": 2000,
+      "maxBytes": 51200
+    },
+    "content": [
+      {
+        "type": "text",
+        "text": "one\ntwo"
+      }
+    ],
+    "metadata": {
+      "truncated": false,
+      "source": "tool"
+    },
+    "expected": {
+      "content": [
+        {
+          "type": "text",
+          "text": "one\ntwo"
+        }
+      ],
+      "metadata": {
+        "truncated": false,
+        "source": "tool"
+      }
+    }
+  },
+  {
+    "name": "fits",
+    "limits": {
+      "maxLines": 2000,
+      "maxBytes": 51200
+    },
+    "content": [
+      {
+        "type": "text",
+        "text": "small"
+      }
+    ],
+    "expected": {
+      "content": [
+        {
+          "type": "text",
+          "text": "small"
+        }
+      ],
+      "metadata": {
+        "truncated": false
+      }
+    }
+  },
+  {
+    "name": "trailing-newline",
+    "limits": {
+      "maxLines": 2,
+      "maxBytes": 1000
+    },
+    "content": [
+      {
+        "type": "text",
+        "text": "one\ntwo\n"
+      }
+    ],
+    "expected": {
+      "content": [
+        {
+          "type": "text",
+          "text": "one\ntwo\n"
+        }
+      ],
+      "metadata": {
+        "truncated": false
+      }
+    }
+  },
+  {
+    "name": "trailing-newline-byte-limit",
+    "limits": {
+      "maxLines": 2,
+      "maxBytes": 3
+    },
+    "content": [
+      {
+        "type": "text",
+        "text": "one\n"
+      }
+    ],
+    "expected": {
+      "content": [
+        {
+          "type": "text",
+          "text": "one"
+        },
+        {
+          "type": "text",
+          "text": "[showing lines 1-1 of 1; full output saved to {{output}}]"
+        }
+      ],
+      "metadata": {
+        "truncated": true,
+        "outputPath": "{{output}}"
+      },
+      "saved": "one\n"
+    }
+  },
+  {
+    "name": "save-failure",
+    "limits": {
+      "maxLines": 2,
+      "maxBytes": 1000
+    },
+    "content": [
+      {
+        "type": "text",
+        "text": "one\ntwo\nthree"
+      }
+    ],
+    "expected": {
+      "content": [
+        {
+          "type": "text",
+          "text": "one\ntwo"
+        },
+        {
+          "type": "text",
+          "text": "[showing lines 1-2 of 3; full output could not be saved: {{error}}]"
+        }
+      ],
+      "metadata": {
+        "truncated": true
+      }
+    }
+  }
+]

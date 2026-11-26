@@ -1,0 +1,383 @@
+[
+  {
+    "name": "read-text",
+    "kind": "read",
+    "location": ".",
+    "fixture": {
+      "files": [
+        {
+          "path": "text.txt",
+          "text": "hello"
+        }
+      ]
+    },
+    "input": "text.txt",
+    "expected": {
+      "mime": "text/plain",
+      "size": 5,
+      "mtime": true,
+      "bytes": "aGVsbG8="
+    }
+  },
+  {
+    "name": "read-binary",
+    "kind": "read",
+    "location": ".",
+    "fixture": {
+      "files": [
+        {
+          "path": "data.bin",
+          "base64": "AAECAwQ="
+        }
+      ]
+    },
+    "input": "data.bin",
+    "expected": {
+      "mime": "application/octet-stream",
+      "size": 5,
+      "mtime": true,
+      "bytes": "AAECAwQ="
+    }
+  },
+  {
+    "name": "read-range",
+    "kind": "read",
+    "location": ".",
+    "fixture": {
+      "files": [
+        {
+          "path": "data.bin",
+          "base64": "AAECAwQ="
+        }
+      ]
+    },
+    "input": "data.bin",
+    "range": {
+      "offset": 1,
+      "bytesToRead": 3
+    },
+    "expected": {
+      "mime": "application/octet-stream",
+      "size": 5,
+      "mtime": true,
+      "bytes": "AQID"
+    }
+  },
+  {
+    "name": "read-lexical-escape",
+    "kind": "read",
+    "location": "current",
+    "fixture": {
+      "dirs": [
+        "current"
+      ],
+      "files": [
+        {
+          "path": "outside.txt",
+          "text": "outside"
+        }
+      ]
+    },
+    "input": "../outside.txt",
+    "expected": {
+      "error": "FileSystem.NotFoundError"
+    }
+  },
+  {
+    "name": "read-nul",
+    "kind": "read",
+    "location": ".",
+    "fixture": {
+      "files": [
+        {
+          "path": "text.txt",
+          "text": "hello"
+        }
+      ]
+    },
+    "input": "te\u0000xt",
+    "expected": {
+      "error": "FileSystem.NotFoundError"
+    }
+  },
+  {
+    "name": "read-symlink-escape",
+    "kind": "read",
+    "location": "current",
+    "fixture": {
+      "dirs": [
+        "current",
+        "outside"
+      ],
+      "files": [
+        {
+          "path": "outside/file.txt",
+          "text": "outside"
+        }
+      ],
+      "symlinks": [
+        {
+          "path": "current/link",
+          "target": "../outside"
+        }
+      ]
+    },
+    "input": "link/file.txt",
+    "expected": {
+      "error": "FileSystem.NotFoundError"
+    }
+  },
+  {
+    "name": "read-missing",
+    "kind": "read",
+    "location": ".",
+    "input": "missing.txt",
+    "expected": {
+      "error": "FileSystem.NotFoundError"
+    }
+  },
+  {
+    "name": "read-directory",
+    "kind": "read",
+    "location": ".",
+    "fixture": {
+      "dirs": [
+        "src"
+      ]
+    },
+    "input": "src",
+    "expected": {
+      "error": "FileSystem.NotFoundError"
+    }
+  },
+  {
+    "name": "list-direct-children",
+    "kind": "list",
+    "location": ".",
+    "fixture": {
+      "dirs": [
+        "src"
+      ],
+      "files": [
+        {
+          "path": "README.md",
+          "text": "# Test"
+        }
+      ]
+    },
+    "expected": [
+      {
+        "path": "src/",
+        "type": "directory"
+      },
+      {
+        "path": "README.md",
+        "type": "file"
+      }
+    ]
+  },
+  {
+    "name": "list-sorted",
+    "kind": "list",
+    "location": ".",
+    "fixture": {
+      "dirs": [
+        "z-dir",
+        "a-dir"
+      ],
+      "files": [
+        {
+          "path": "b.txt",
+          "text": "b"
+        },
+        {
+          "path": "a.txt",
+          "text": "a"
+        },
+        {
+          "path": "c.json",
+          "text": "{}"
+        }
+      ]
+    },
+    "input": ".",
+    "expected": [
+      {
+        "path": "a-dir/",
+        "type": "directory"
+      },
+      {
+        "path": "z-dir/",
+        "type": "directory"
+      },
+      {
+        "path": "a.txt",
+        "type": "file"
+      },
+      {
+        "path": "b.txt",
+        "type": "file"
+      },
+      {
+        "path": "c.json",
+        "type": "file"
+      }
+    ]
+  },
+  {
+    "name": "list-parent",
+    "kind": "list",
+    "location": "current",
+    "fixture": {
+      "dirs": [
+        "current",
+        "sibling"
+      ],
+      "files": [
+        {
+          "path": "sibling/file.txt",
+          "text": "outside"
+        }
+      ]
+    },
+    "input": "..",
+    "expected": [
+      {
+        "path": "../sibling/",
+        "type": "directory"
+      },
+      {
+        "path": "./",
+        "type": "directory"
+      }
+    ]
+  },
+  {
+    "name": "list-sibling",
+    "kind": "list",
+    "location": "current",
+    "fixture": {
+      "dirs": [
+        "current",
+        "sibling"
+      ],
+      "files": [
+        {
+          "path": "sibling/file.txt",
+          "text": "outside"
+        }
+      ]
+    },
+    "input": "../sibling",
+    "expected": [
+      {
+        "path": "../sibling/file.txt",
+        "type": "file"
+      }
+    ]
+  },
+  {
+    "name": "list-absolute",
+    "kind": "list",
+    "location": "current",
+    "fixture": {
+      "dirs": [
+        "current",
+        "sibling"
+      ],
+      "files": [
+        {
+          "path": "sibling/file.txt",
+          "text": "outside"
+        }
+      ]
+    },
+    "absoluteInput": "sibling",
+    "input": "{{root}}/list-absolute/sibling",
+    "expected": [
+      {
+        "path": "../sibling/file.txt",
+        "type": "file"
+      }
+    ]
+  },
+  {
+    "name": "list-symlink",
+    "kind": "list",
+    "location": "current",
+    "fixture": {
+      "dirs": [
+        "current",
+        "outside"
+      ],
+      "files": [
+        {
+          "path": "outside/file.txt",
+          "text": "outside"
+        }
+      ],
+      "symlinks": [
+        {
+          "path": "current/link",
+          "target": "../outside"
+        }
+      ]
+    },
+    "input": "link",
+    "expected": [
+      {
+        "path": "link/file.txt",
+        "type": "file"
+      }
+    ]
+  },
+  {
+    "name": "list-file",
+    "kind": "list",
+    "location": ".",
+    "fixture": {
+      "files": [
+        {
+          "path": "text.txt",
+          "text": "hello"
+        }
+      ]
+    },
+    "input": "text.txt",
+    "expected": {
+      "error": "FileSystem.NotFoundError"
+    }
+  },
+  {
+    "name": "list-missing",
+    "kind": "list",
+    "location": ".",
+    "input": "missing",
+    "expected": {
+      "error": "FileSystem.NotFoundError"
+    }
+  },
+  {
+    "name": "write-symlink",
+    "kind": "write",
+    "location": "current",
+    "fixture": {
+      "dirs": [
+        "current",
+        "outside"
+      ],
+      "symlinks": [
+        {
+          "path": "current/link",
+          "target": "../outside"
+        }
+      ]
+    },
+    "input": "link/new.txt",
+    "base64": "Y3JlYXRlZA==",
+    "expected": {
+      "path": "{{root}}/write-symlink/current/link/new.txt",
+      "bytes": "Y3JlYXRlZA=="
+    }
+  }
+]

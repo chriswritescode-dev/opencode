@@ -69,6 +69,12 @@ pub const IMPLEMENTED: &[&str] = &[
     "command.list",
     "skill.list",
     "reference.list",
+    "fs.read",
+    "fs.list",
+    "fs.find",
+    "experimental.fs.write",
+    "experimental.fs.watch",
+    "experimental.fs.unwatch",
     "form.list",
     "permission.request.list",
     "permission.saved.list",
@@ -456,6 +462,36 @@ impl App {
             },
             "reference.list" => match self.location(&raw).await {
                 Ok(lease) => crate::handlers::registry::reference_list(&raw, lease.services()).await,
+                Err(response) => response,
+            },
+            "fs.read" => match self.location(&raw).await {
+                Ok(lease) => crate::handlers::fs::read(request.method(), &raw, lease.services()).await,
+                Err(response) => response,
+            },
+            "fs.list" => match self.location(&raw).await {
+                Ok(lease) => crate::handlers::fs::list(&raw, lease.services()).await,
+                Err(response) => response,
+            },
+            "fs.find" => match self.location(&raw).await {
+                Ok(lease) => crate::handlers::fs::find(&raw, lease.services()).await,
+                Err(response) => response,
+            },
+            "experimental.fs.write" => match self.location(&raw).await {
+                Ok(lease) => crate::handlers::fs::write(&raw, lease.services()).await,
+                Err(response) => response,
+            },
+            "experimental.fs.watch" => match self.location(&raw).await {
+                Ok(lease) => match self.services() {
+                    Some(services) => crate::handlers::fs::watch(&raw, lease.services(), &services.file_watch).await,
+                    None => crate::services::services_unavailable(),
+                },
+                Err(response) => response,
+            },
+            "experimental.fs.unwatch" => match self.location(&raw).await {
+                Ok(lease) => match self.services() {
+                    Some(services) => crate::handlers::fs::unwatch(&raw, lease.services(), &services.file_watch).await,
+                    None => crate::services::services_unavailable(),
+                },
                 Err(response) => response,
             },
             "form.list" => match self.location(&raw).await {

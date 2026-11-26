@@ -1,0 +1,188 @@
+[
+  {
+    "tool": "read",
+    "input": {},
+    "message": "Invalid arguments for tool \"read\":\n- path: Missing key\n\nArguments provided:\n{}\n\nUpdate the arguments and call the tool again."
+  },
+  {
+    "tool": "read",
+    "input": {
+      "path": 1
+    },
+    "message": "Invalid arguments for tool \"read\":\n- path: Expected string\n\nArguments provided:\n{\n  \"path\": 1\n}\n\nUpdate the arguments and call the tool again."
+  },
+  {
+    "tool": "read",
+    "input": {
+      "path": "a",
+      "offset": "x"
+    },
+    "message": "Invalid arguments for tool \"read\":\n- offset: Expected number\n\nArguments provided:\n{\n  \"path\": \"a\",\n  \"offset\": \"x\"\n}\n\nUpdate the arguments and call the tool again."
+  },
+  {
+    "tool": "read",
+    "input": {
+      "path": "a",
+      "offset": 1.5
+    },
+    "message": "Invalid arguments for tool \"read\":\n- offset: Expected an integer\n\nArguments provided:\n{\n  \"path\": \"a\",\n  \"offset\": 1.5\n}\n\nUpdate the arguments and call the tool again."
+  },
+  {
+    "tool": "read",
+    "input": {
+      "path": "a",
+      "limit": -1
+    },
+    "message": "Invalid arguments for tool \"read\":\n- limit: Expected a value greater than or equal to 0\n\nArguments provided:\n{\n  \"path\": \"a\",\n  \"limit\": -1\n}\n\nUpdate the arguments and call the tool again."
+  },
+  {
+    "tool": "read",
+    "input": {
+      "offset": "x",
+      "limit": "y",
+      "extra": true
+    },
+    "message": "Invalid arguments for tool \"read\":\n- path: Missing key\n- offset: Expected number\n- limit: Expected number\n\nArguments provided:\n{\n  \"offset\": \"x\",\n  \"limit\": \"y\",\n  \"extra\": true\n}\n\nUpdate the arguments and call the tool again."
+  },
+  {
+    "tool": "glob",
+    "input": {
+      "pattern": "x",
+      "limit": 0
+    },
+    "message": "Invalid arguments for tool \"glob\":\n- limit: Expected a value greater than 0\n\nArguments provided:\n{\n  \"pattern\": \"x\",\n  \"limit\": 0\n}\n\nUpdate the arguments and call the tool again."
+  },
+  {
+    "tool": "glob",
+    "input": {
+      "pattern": "x",
+      "hidden": "yes"
+    },
+    "message": "Invalid arguments for tool \"glob\":\n- hidden: Expected boolean\n\nArguments provided:\n{\n  \"pattern\": \"x\",\n  \"hidden\": \"yes\"\n}\n\nUpdate the arguments and call the tool again."
+  },
+  {
+    "tool": "glob",
+    "input": {
+      "pattern": 1
+    },
+    "message": "Invalid arguments for tool \"glob\":\n- pattern: Expected string\n\nArguments provided:\n{\n  \"pattern\": 1\n}\n\nUpdate the arguments and call the tool again."
+  },
+  {
+    "tool": "glob",
+    "input": {
+      "pattern": "x",
+      "path": 1
+    },
+    "message": "Invalid arguments for tool \"glob\":\n- path: Expected RelativePath\n\nArguments provided:\n{\n  \"pattern\": \"x\",\n  \"path\": 1\n}\n\nUpdate the arguments and call the tool again."
+  },
+  {
+    "tool": "grep",
+    "input": {
+      "pattern": ""
+    },
+    "message": "Invalid arguments for tool \"grep\":\n- pattern: Pattern must not be empty\n\nArguments provided:\n{\n  \"pattern\": \"\"\n}\n\nUpdate the arguments and call the tool again."
+  },
+  {
+    "tool": "grep",
+    "input": {},
+    "message": "Invalid arguments for tool \"grep\":\n- pattern: Missing key\n\nArguments provided:\n{}\n\nUpdate the arguments and call the tool again."
+  },
+  {
+    "tool": "write",
+    "input": {
+      "path": "a"
+    },
+    "message": "Invalid arguments for tool \"write\":\n- content: Missing key\n\nArguments provided:\n{\n  \"path\": \"a\"\n}\n\nUpdate the arguments and call the tool again."
+  },
+  {
+    "tool": "write",
+    "input": {
+      "path": "a",
+      "content": 1
+    },
+    "message": "Invalid arguments for tool \"write\":\n- content: Expected string\n\nArguments provided:\n{\n  \"path\": \"a\",\n  \"content\": 1\n}\n\nUpdate the arguments and call the tool again."
+  },
+  {
+    "tool": "write",
+    "input": {
+      "path": 1,
+      "content": "x"
+    },
+    "message": "Invalid arguments for tool \"write\":\n- path: Expected string\n\nArguments provided:\n{\n  \"path\": 1,\n  \"content\": \"x\"\n}\n\nUpdate the arguments and call the tool again."
+  },
+  {
+    "tool": "edit",
+    "input": {
+      "path": "a",
+      "oldString": 1,
+      "newString": "b"
+    },
+    "message": "Invalid arguments for tool \"edit\":\n- oldString: Expected string\n\nArguments provided:\n{\n  \"path\": \"a\",\n  \"oldString\": 1,\n  \"newString\": \"b\"\n}\n\nUpdate the arguments and call the tool again."
+  },
+  {
+    "tool": "edit",
+    "input": {
+      "path": 1,
+      "oldString": "a",
+      "newString": "b"
+    },
+    "message": "Invalid arguments for tool \"edit\":\n- path: Expected string\n\nArguments provided:\n{\n  \"path\": 1,\n  \"oldString\": \"a\",\n  \"newString\": \"b\"\n}\n\nUpdate the arguments and call the tool again."
+  },
+  {
+    "tool": "patch",
+    "input": {},
+    "message": "Invalid arguments for tool \"patch\":\n- patchText: Missing key\n\nArguments provided:\n{}\n\nUpdate the arguments and call the tool again."
+  },
+  {
+    "tool": "patch",
+    "input": {
+      "patchText": 5
+    },
+    "message": "Invalid arguments for tool \"patch\":\n- patchText: Expected string\n\nArguments provided:\n{\n  \"patchText\": 5\n}\n\nUpdate the arguments and call the tool again."
+  },
+  {
+    "tool": "skill",
+    "input": {},
+    "message": "Invalid arguments for tool \"skill\":\n- id: Missing key\n\nArguments provided:\n{}\n\nUpdate the arguments and call the tool again."
+  },
+  {
+    "tool": "skill",
+    "input": {
+      "id": 1
+    },
+    "message": "Invalid arguments for tool \"skill\":\n- id: Expected Skill.ID\n\nArguments provided:\n{\n  \"id\": 1\n}\n\nUpdate the arguments and call the tool again."
+  },
+  {
+    "tool": "grep",
+    "input": {
+      "path": 1,
+      "include": 1,
+      "literal": 1,
+      "caseSensitive": 1
+    },
+    "message": "Invalid arguments for tool \"grep\":\n- pattern: Missing key\n- path: Expected RelativePath\n- include: Expected string\n- literal: Expected boolean\n- caseSensitive: Expected boolean\n\nArguments provided:\n{\n  \"path\": 1,\n  \"include\": 1,\n  \"literal\": 1,\n  \"caseSensitive\": 1\n}\n\nUpdate the arguments and call the tool again."
+  },
+  {
+    "tool": "grep",
+    "input": {
+      "path": 1,
+      "include": 1,
+      "literal": 1,
+      "caseSensitive": 1,
+      "limit": 0
+    },
+    "message": "Invalid arguments for tool \"grep\":\n- pattern: Missing key\n- path: Expected RelativePath\n- include: Expected string\n- literal: Expected boolean\n- caseSensitive: Expected boolean\n- ...and 1 more issue\n\nArguments provided:\n{\n  \"path\": 1,\n  \"include\": 1,\n  \"literal\": 1,\n  \"caseSensitive\": 1,\n  \"limit\": 0\n}\n\nUpdate the arguments and call the tool again."
+  },
+  {
+    "tool": "grep",
+    "input": {
+      "pattern": "",
+      "path": 1,
+      "include": 1,
+      "literal": 1,
+      "caseSensitive": 1,
+      "limit": 0
+    },
+    "message": "Invalid arguments for tool \"grep\":\n- pattern: Pattern must not be empty\n- path: Expected RelativePath\n- include: Expected string\n- literal: Expected boolean\n- caseSensitive: Expected boolean\n- ...and 1 more issue\n\nArguments provided:\n{\n  \"pattern\": \"\",\n  \"path\": 1,\n  \"include\": 1,\n  \"literal\": 1,\n  \"caseSensitive\": 1,\n  \"limit\": 0\n}\n\nUpdate the arguments and call the tool again."
+  }
+]

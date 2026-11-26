@@ -1,0 +1,359 @@
+[
+  {
+    "name": "tree",
+    "fixture": {
+      "dirs": [
+        "src/nested/deep",
+        "docs",
+        "empty",
+        "packages/app",
+        "packages/core/src",
+        "café"
+      ],
+      "files": [
+        {
+          "path": "README.md",
+          "text": "# readme"
+        },
+        {
+          "path": "package.json",
+          "text": "{}"
+        },
+        {
+          "path": "src/index.ts",
+          "text": ""
+        },
+        {
+          "path": "src/app-view.tsx",
+          "text": ""
+        },
+        {
+          "path": "src/nested/file.ts",
+          "text": ""
+        },
+        {
+          "path": "src/nested/deep/placed.ts",
+          "text": ""
+        },
+        {
+          "path": "src/my file.ts",
+          "text": ""
+        },
+        {
+          "path": "src/.hidden-file.ts",
+          "text": ""
+        },
+        {
+          "path": "docs/guide.md",
+          "text": ""
+        },
+        {
+          "path": "packages/app/button.tsx",
+          "text": ""
+        },
+        {
+          "path": "packages/core/src/search.ts",
+          "text": ""
+        },
+        {
+          "path": "café/résumé.md",
+          "text": ""
+        },
+        {
+          "path": ".github/workflows/ci.yml",
+          "text": ""
+        },
+        {
+          "path": ".gitignore",
+          "text": "ignored/\n"
+        },
+        {
+          "path": "ignored/secret.ts",
+          "text": ""
+        }
+      ]
+    },
+    "queries": [
+      {
+        "query": "index",
+        "type": "file",
+        "entries": [
+          {
+            "path": "src/index.ts",
+            "type": "file"
+          }
+        ]
+      },
+      {
+        "query": "index",
+        "type": "directory",
+        "entries": []
+      },
+      {
+        "query": "src",
+        "type": "directory",
+        "entries": [
+          {
+            "path": "src/",
+            "type": "directory"
+          },
+          {
+            "path": "src/nested/",
+            "type": "directory"
+          },
+          {
+            "path": "src/nested/deep/",
+            "type": "directory"
+          },
+          {
+            "path": "packages/core/src/",
+            "type": "directory"
+          }
+        ]
+      },
+      {
+        "query": "src",
+        "type": "file",
+        "entries": [
+          {
+            "path": "src/index.ts",
+            "type": "file"
+          },
+          {
+            "path": "src/my file.ts",
+            "type": "file"
+          },
+          {
+            "path": "src/app-view.tsx",
+            "type": "file"
+          },
+          {
+            "path": "src/nested/file.ts",
+            "type": "file"
+          },
+          {
+            "path": "src/.hidden-file.ts",
+            "type": "file"
+          },
+          {
+            "path": "src/nested/deep/placed.ts",
+            "type": "file"
+          },
+          {
+            "path": "packages/core/src/search.ts",
+            "type": "file"
+          }
+        ]
+      },
+      {
+        "query": "guide",
+        "entries": [
+          {
+            "path": "docs/guide.md",
+            "type": "file"
+          }
+        ]
+      },
+      {
+        "query": "ts",
+        "entries": [
+          {
+            "path": "src/index.ts",
+            "type": "file"
+          },
+          {
+            "path": "src/my file.ts",
+            "type": "file"
+          },
+          {
+            "path": "src/app-view.tsx",
+            "type": "file"
+          },
+          {
+            "path": "ignored/secret.ts",
+            "type": "file"
+          },
+          {
+            "path": "src/nested/file.ts",
+            "type": "file"
+          },
+          {
+            "path": "src/.hidden-file.ts",
+            "type": "file"
+          },
+          {
+            "path": "packages/app/button.tsx",
+            "type": "file"
+          },
+          {
+            "path": "src/nested/deep/placed.ts",
+            "type": "file"
+          },
+          {
+            "path": "packages/core/src/search.ts",
+            "type": "file"
+          },
+          {
+            "path": ".github/workflows/",
+            "type": "directory"
+          },
+          {
+            "path": ".github/workflows/ci.yml",
+            "type": "file"
+          }
+        ]
+      },
+      {
+        "query": "ts",
+        "limit": 3,
+        "entries": [
+          {
+            "path": "src/index.ts",
+            "type": "file"
+          },
+          {
+            "path": "src/my file.ts",
+            "type": "file"
+          },
+          {
+            "path": "src/app-view.tsx",
+            "type": "file"
+          }
+        ]
+      },
+      {
+        "query": "ts",
+        "limit": 1,
+        "entries": [
+          {
+            "path": "src/index.ts",
+            "type": "file"
+          }
+        ]
+      },
+      {
+        "query": "nested",
+        "type": "directory",
+        "entries": [
+          {
+            "path": "src/nested/",
+            "type": "directory"
+          },
+          {
+            "path": "src/nested/deep/",
+            "type": "directory"
+          }
+        ]
+      },
+      {
+        "query": "",
+        "entries": []
+      },
+      {
+        "query": "zzz",
+        "entries": []
+      },
+      {
+        "query": "my file",
+        "entries": [
+          {
+            "path": "src/my file.ts",
+            "type": "file"
+          }
+        ]
+      },
+      {
+        "query": "cafe",
+        "entries": [
+          {
+            "path": "café/",
+            "type": "directory"
+          },
+          {
+            "path": "café/résumé.md",
+            "type": "file"
+          }
+        ]
+      },
+      {
+        "query": "resume",
+        "entries": [
+          {
+            "path": "café/résumé.md",
+            "type": "file"
+          }
+        ]
+      },
+      {
+        "query": "README",
+        "type": "file",
+        "entries": [
+          {
+            "path": "README.md",
+            "type": "file"
+          }
+        ]
+      },
+      {
+        "query": "packages core",
+        "entries": [
+          {
+            "path": "packages/core/",
+            "type": "directory"
+          },
+          {
+            "path": "packages/core/src/",
+            "type": "directory"
+          },
+          {
+            "path": "packages/core/src/search.ts",
+            "type": "file"
+          }
+        ]
+      },
+      {
+        "query": "workflows",
+        "entries": [
+          {
+            "path": ".github/workflows/",
+            "type": "directory"
+          },
+          {
+            "path": ".github/workflows/ci.yml",
+            "type": "file"
+          }
+        ]
+      },
+      {
+        "query": "hidden",
+        "type": "file",
+        "entries": [
+          {
+            "path": "src/.hidden-file.ts",
+            "type": "file"
+          }
+        ]
+      },
+      {
+        "query": "ignored",
+        "type": "file",
+        "entries": [
+          {
+            "path": "ignored/secret.ts",
+            "type": "file"
+          }
+        ]
+      },
+      {
+        "query": "src index",
+        "type": "file",
+        "entries": [
+          {
+            "path": "src/index.ts",
+            "type": "file"
+          }
+        ]
+      }
+    ]
+  }
+]

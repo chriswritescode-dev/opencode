@@ -9,6 +9,7 @@ pub mod debug;
 pub mod defect;
 pub mod event;
 pub mod form;
+pub mod fs;
 pub mod integration;
 pub mod integration_policy;
 pub mod invalid;

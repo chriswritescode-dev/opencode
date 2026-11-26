@@ -1,0 +1,1303 @@
+[
+  {
+    "name": "flatten-and-latest-wins",
+    "namespaces": [],
+    "adds": [
+      {
+        "name": "before",
+        "text": "before"
+      },
+      {
+        "name": "",
+        "text": "invalid"
+      },
+      {
+        "name": "echo.tool",
+        "text": "first"
+      },
+      {
+        "name": "echo_tool",
+        "text": "last"
+      },
+      {
+        "name": "execute",
+        "codemode": false,
+        "text": "reserved"
+      },
+      {
+        "name": "after",
+        "text": "after"
+      }
+    ],
+    "removes": [],
+    "permissions": [
+      {
+        "action": "execute",
+        "resource": "*",
+        "effect": "deny"
+      }
+    ],
+    "hidden": [],
+    "calls": [
+      {
+        "name": "before",
+        "input": {
+          "text": "before"
+        }
+      },
+      {
+        "name": "echo_tool",
+        "input": {
+          "text": "last"
+        }
+      },
+      {
+        "name": "after",
+        "input": {
+          "text": "after"
+        }
+      }
+    ],
+    "expected": {
+      "definitions": [
+        {
+          "name": "after",
+          "description": "Return text",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "name": "before",
+          "description": "Return text",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "name": "echo_tool",
+          "description": "Return text",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "ids": [
+        "before",
+        "echo_tool",
+        "after"
+      ],
+      "calls": [
+        {
+          "name": "before",
+          "status": "completed",
+          "output": {
+            "text": "before"
+          }
+        },
+        {
+          "name": "echo_tool",
+          "status": "completed",
+          "output": {
+            "text": "last"
+          }
+        },
+        {
+          "name": "after",
+          "status": "completed",
+          "output": {
+            "text": "after"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "nonletter-names",
+    "namespaces": [],
+    "adds": [
+      {
+        "name": "2d_get_scene",
+        "text": "2d_get_scene"
+      },
+      {
+        "name": "123",
+        "text": "123"
+      },
+      {
+        "name": "_lookup",
+        "text": "_lookup"
+      },
+      {
+        "name": "-lookup",
+        "text": "-lookup"
+      },
+      {
+        "name": "2d_get_scene",
+        "namespace": "123._private.-tools",
+        "text": "namespaced"
+      }
+    ],
+    "removes": [],
+    "permissions": [
+      {
+        "action": "execute",
+        "resource": "*",
+        "effect": "deny"
+      }
+    ],
+    "hidden": [],
+    "calls": [
+      {
+        "name": "2d_get_scene",
+        "input": {
+          "text": "digit"
+        }
+      },
+      {
+        "name": "123",
+        "input": {
+          "text": "numeric"
+        }
+      },
+      {
+        "name": "_lookup",
+        "input": {
+          "text": "underscore"
+        }
+      },
+      {
+        "name": "-lookup",
+        "input": {
+          "text": "hyphen"
+        }
+      },
+      {
+        "name": "123__private_-tools_2d_get_scene",
+        "input": {
+          "text": "namespaced"
+        }
+      }
+    ],
+    "expected": {
+      "definitions": [
+        {
+          "name": "-lookup",
+          "description": "Return text",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "name": "123",
+          "description": "Return text",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "name": "123__private_-tools_2d_get_scene",
+          "description": "Return text",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "name": "2d_get_scene",
+          "description": "Return text",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "name": "_lookup",
+          "description": "Return text",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "ids": [
+        "2d_get_scene",
+        "123",
+        "_lookup",
+        "-lookup",
+        "123__private_-tools_2d_get_scene"
+      ],
+      "calls": [
+        {
+          "name": "2d_get_scene",
+          "status": "completed",
+          "output": {
+            "text": "2d_get_scene"
+          }
+        },
+        {
+          "name": "123",
+          "status": "completed",
+          "output": {
+            "text": "123"
+          }
+        },
+        {
+          "name": "_lookup",
+          "status": "completed",
+          "output": {
+            "text": "_lookup"
+          }
+        },
+        {
+          "name": "-lookup",
+          "status": "completed",
+          "output": {
+            "text": "-lookup"
+          }
+        },
+        {
+          "name": "123__private_-tools_2d_get_scene",
+          "status": "completed",
+          "output": {
+            "text": "namespaced"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "canonical-order",
+    "namespaces": [],
+    "adds": [
+      {
+        "name": "zeta",
+        "text": "zeta"
+      },
+      {
+        "name": "alpha",
+        "text": "alpha"
+      },
+      {
+        "name": "beta",
+        "namespace": "alpha",
+        "text": "beta"
+      },
+      {
+        "name": "echo",
+        "text": "echo"
+      }
+    ],
+    "removes": [],
+    "permissions": [
+      {
+        "action": "execute",
+        "resource": "*",
+        "effect": "deny"
+      }
+    ],
+    "hidden": [],
+    "calls": [],
+    "expected": {
+      "definitions": [
+        {
+          "name": "alpha",
+          "description": "Return text",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "name": "alpha_beta",
+          "description": "Return text",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "name": "echo",
+          "description": "Return text",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "name": "zeta",
+          "description": "Return text",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "ids": [
+        "zeta",
+        "alpha",
+        "alpha_beta",
+        "echo"
+      ],
+      "calls": []
+    }
+  },
+  {
+    "name": "invalid-namespace",
+    "namespaces": [
+      {
+        "name": "invalid..namespace",
+        "description": "Invalid"
+      }
+    ],
+    "adds": [
+      {
+        "name": "first",
+        "text": "first"
+      },
+      {
+        "name": "second",
+        "namespace": "invalid..namespace",
+        "text": "second"
+      },
+      {
+        "name": "third",
+        "namespace": "invalid__namespace",
+        "text": "third"
+      }
+    ],
+    "removes": [],
+    "permissions": [
+      {
+        "action": "execute",
+        "resource": "*",
+        "effect": "deny"
+      }
+    ],
+    "hidden": [],
+    "calls": [],
+    "expected": {
+      "definitions": [
+        {
+          "name": "first",
+          "description": "Return text",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "name": "invalid__namespace_third",
+          "description": "Return text",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "ids": [
+        "first",
+        "invalid__namespace_third"
+      ],
+      "calls": []
+    }
+  },
+  {
+    "name": "deny-question-alias",
+    "namespaces": [],
+    "adds": [
+      {
+        "name": "question",
+        "codemode": false,
+        "text": "question"
+      },
+      {
+        "name": "bash",
+        "codemode": false,
+        "text": "bash"
+      },
+      {
+        "name": "edit",
+        "permission": "edit",
+        "codemode": false,
+        "text": "edit"
+      },
+      {
+        "name": "write",
+        "permission": "edit",
+        "codemode": false,
+        "text": "write"
+      }
+    ],
+    "removes": [],
+    "permissions": [
+      {
+        "action": "execute",
+        "resource": "*",
+        "effect": "deny"
+      },
+      {
+        "action": "question",
+        "resource": "*",
+        "effect": "deny"
+      }
+    ],
+    "hidden": [],
+    "calls": [],
+    "expected": {
+      "definitions": [
+        {
+          "name": "bash",
+          "description": "Return text",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "name": "edit",
+          "description": "Return text",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "name": "write",
+          "description": "Return text",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "ids": [
+        "question",
+        "bash",
+        "edit",
+        "write"
+      ],
+      "calls": []
+    }
+  },
+  {
+    "name": "deny-all-then-question-private",
+    "namespaces": [],
+    "adds": [
+      {
+        "name": "question",
+        "codemode": false,
+        "text": "question"
+      },
+      {
+        "name": "bash",
+        "codemode": false,
+        "text": "bash"
+      },
+      {
+        "name": "edit",
+        "permission": "edit",
+        "codemode": false,
+        "text": "edit"
+      },
+      {
+        "name": "write",
+        "permission": "edit",
+        "codemode": false,
+        "text": "write"
+      }
+    ],
+    "removes": [],
+    "permissions": [
+      {
+        "action": "execute",
+        "resource": "*",
+        "effect": "deny"
+      },
+      {
+        "action": "*",
+        "resource": "*",
+        "effect": "deny"
+      },
+      {
+        "action": "question",
+        "resource": "private",
+        "effect": "allow"
+      }
+    ],
+    "hidden": [],
+    "calls": [],
+    "expected": {
+      "definitions": [
+        {
+          "name": "question",
+          "description": "Return text",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "ids": [
+        "question",
+        "bash",
+        "edit",
+        "write"
+      ],
+      "calls": []
+    }
+  },
+  {
+    "name": "question-private-then-deny-all",
+    "namespaces": [],
+    "adds": [
+      {
+        "name": "question",
+        "codemode": false,
+        "text": "question"
+      },
+      {
+        "name": "bash",
+        "codemode": false,
+        "text": "bash"
+      },
+      {
+        "name": "edit",
+        "permission": "edit",
+        "codemode": false,
+        "text": "edit"
+      },
+      {
+        "name": "write",
+        "permission": "edit",
+        "codemode": false,
+        "text": "write"
+      }
+    ],
+    "removes": [],
+    "permissions": [
+      {
+        "action": "execute",
+        "resource": "*",
+        "effect": "deny"
+      },
+      {
+        "action": "question",
+        "resource": "private",
+        "effect": "allow"
+      },
+      {
+        "action": "*",
+        "resource": "*",
+        "effect": "deny"
+      }
+    ],
+    "hidden": [],
+    "calls": [],
+    "expected": {
+      "definitions": [],
+      "ids": [
+        "question",
+        "bash",
+        "edit",
+        "write"
+      ],
+      "calls": []
+    }
+  },
+  {
+    "name": "deny-edit-alias",
+    "namespaces": [],
+    "adds": [
+      {
+        "name": "question",
+        "codemode": false,
+        "text": "question"
+      },
+      {
+        "name": "bash",
+        "codemode": false,
+        "text": "bash"
+      },
+      {
+        "name": "edit",
+        "permission": "edit",
+        "codemode": false,
+        "text": "edit"
+      },
+      {
+        "name": "write",
+        "permission": "edit",
+        "codemode": false,
+        "text": "write"
+      }
+    ],
+    "removes": [],
+    "permissions": [
+      {
+        "action": "execute",
+        "resource": "*",
+        "effect": "deny"
+      },
+      {
+        "action": "edit",
+        "resource": "*",
+        "effect": "deny"
+      }
+    ],
+    "hidden": [],
+    "calls": [],
+    "expected": {
+      "definitions": [
+        {
+          "name": "bash",
+          "description": "Return text",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "name": "question",
+          "description": "Return text",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "ids": [
+        "question",
+        "bash",
+        "edit",
+        "write"
+      ],
+      "calls": []
+    }
+  },
+  {
+    "name": "permission-isolation",
+    "namespaces": [],
+    "adds": [
+      {
+        "name": "first",
+        "codemode": false,
+        "text": "first"
+      },
+      {
+        "name": "second",
+        "permission": "edit",
+        "codemode": false,
+        "text": "second"
+      }
+    ],
+    "removes": [],
+    "permissions": [
+      {
+        "action": "execute",
+        "resource": "*",
+        "effect": "deny"
+      },
+      {
+        "action": "edit",
+        "resource": "*",
+        "effect": "deny"
+      }
+    ],
+    "hidden": [],
+    "calls": [],
+    "expected": {
+      "definitions": [
+        {
+          "name": "first",
+          "description": "Return text",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "ids": [
+        "first",
+        "second"
+      ],
+      "calls": []
+    }
+  },
+  {
+    "name": "missing-input",
+    "namespaces": [],
+    "adds": [
+      {
+        "name": "echo",
+        "input": "missing",
+        "output": "missing",
+        "text": "echo"
+      },
+      {
+        "name": "direct",
+        "codemode": false,
+        "input": "missing",
+        "text": "direct"
+      }
+    ],
+    "removes": [],
+    "permissions": [
+      {
+        "action": "execute",
+        "resource": "*",
+        "effect": "deny"
+      }
+    ],
+    "hidden": [],
+    "calls": [
+      {
+        "name": "direct",
+        "input": {
+          "text": "direct"
+        }
+      }
+    ],
+    "expected": {
+      "definitions": [
+        {
+          "name": "direct",
+          "description": "Return text",
+          "inputSchema": {},
+          "outputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "name": "echo",
+          "description": "Return text",
+          "inputSchema": {}
+        }
+      ],
+      "ids": [
+        "echo",
+        "direct"
+      ],
+      "calls": [
+        {
+          "name": "direct",
+          "status": "completed",
+          "output": {
+            "text": "direct"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "removes-registration",
+    "namespaces": [],
+    "adds": [
+      {
+        "name": "keep",
+        "codemode": false,
+        "text": "keep"
+      },
+      {
+        "name": "drop",
+        "codemode": false,
+        "text": "drop"
+      }
+    ],
+    "removes": [
+      "drop"
+    ],
+    "permissions": [
+      {
+        "action": "execute",
+        "resource": "*",
+        "effect": "deny"
+      }
+    ],
+    "hidden": [],
+    "calls": [
+      {
+        "name": "drop",
+        "input": {
+          "text": "drop"
+        }
+      }
+    ],
+    "expected": {
+      "definitions": [
+        {
+          "name": "keep",
+          "description": "Return text",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "ids": [
+        "keep"
+      ],
+      "calls": [
+        {
+          "name": "drop",
+          "status": "error",
+          "message": "No tool named \"drop\" is currently available. Please use a tool from the available tool list."
+        }
+      ]
+    }
+  }
+]

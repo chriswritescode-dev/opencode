@@ -1,4 +1,5 @@
 use std::fmt;
+use std::sync::Arc;
 
 use opencode_ai::Model;
 use opencode_catalog::model::ModelService;
@@ -6,6 +7,7 @@ use opencode_catalog::resolver::{self, Resolver};
 use opencode_contract::generated::{AgentInfo, ModelInfo, ModelRef, SessionInfo, SessionMessageInfo};
 use opencode_registry::agent::AgentService;
 use opencode_storage::Database;
+use opencode_tool::{LocationTools, SnapshotOptions};
 
 use crate::instruction_state;
 use crate::instructions::{self, BuiltinsInput, List, Rendered};
@@ -19,6 +21,7 @@ pub struct Loaded {
     pub runtime: Model,
     pub initial: Vec<Rendered>,
     pub messages: Vec<SessionMessageInfo>,
+    pub snapshot: Arc<opencode_tool::Snapshot>,
 }
 
 impl Loaded {
@@ -38,6 +41,7 @@ pub struct LoadInput<'a> {
     pub resolver: &'a Resolver,
     pub agents: &'a AgentService,
     pub builtins: BuiltinsInput,
+    pub tools: &'a LocationTools,
 }
 
 #[derive(Debug)]
@@ -51,6 +55,7 @@ pub enum ContextError {
     Instructions(String),
     History(String),
     Database(String),
+    Tools(String),
 }
 
 impl fmt::Display for ContextError {
@@ -69,6 +74,7 @@ impl fmt::Display for ContextError {
             Self::Instructions(message) => write!(formatter, "Instructions unavailable: {message}"),
             Self::History(message) => write!(formatter, "Session history unavailable: {message}"),
             Self::Database(message) => write!(formatter, "Session store unavailable: {message}"),
+            Self::Tools(message) => write!(formatter, "Tools unavailable: {message}"),
         }
     }
 }
@@ -99,7 +105,30 @@ pub async fn load_with(input: &LoadInput<'_>, session_id: &str, list: List) -> R
             cursor: None,
         })
         .map_err(|error| ContextError::History(error.to_string()))?;
-    Ok(Loaded { session, agent, model, variant, runtime, initial, messages })
+    let snapshot = Arc::new(
+        snapshot(input.tools, &agent, &session, &model)
+            .await
+            .map_err(|error| ContextError::Tools(error.to_string()))?,
+    );
+    Ok(Loaded { session, agent, model, variant, runtime, initial, messages, snapshot })
+}
+
+async fn snapshot(
+    tools: &LocationTools,
+    agent: &AgentInfo,
+    session: &SessionInfo,
+    model: &ModelInfo,
+) -> Result<opencode_tool::Snapshot, opencode_location::state::StateError> {
+    let permissions = opencode_permission::rule::merge(&[
+        agent.permissions.as_slice(),
+        session.permissions.as_deref().unwrap_or(&[]),
+    ]);
+    let policy = opencode_tool::policy::model_tools(
+        Some(&opencode_tool::policy::ModelInfo { id: model.id.clone(), model_id: model.model_id.clone() }),
+        false,
+        tools.full_codemode() && !opencode_tool::snapshot::wholly_disabled("execute", &permissions),
+    );
+    tools.snapshot(&permissions, &SnapshotOptions { hidden: policy.hidden, direct: policy.direct }).await
 }
 
 fn require_session(store: &SessionStore, session_id: &str) -> Result<SessionInfo, ContextError> {

@@ -165,3 +165,12 @@ fn a_false_disable_value_still_watches() {
     std::fs::write(&file, "two").expect("modify the file");
     assert!(receives(&receiver, Duration::from_secs(1)));
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn drops_inside_a_runtime() {
+    let dir = TempDir::new();
+    let file = dir.path().join("instructions.md");
+    std::fs::write(&file, "one").expect("write the file");
+    let handle = watch_files([file], later(), || {});
+    tokio::spawn(async move { drop(handle) }).await.expect("the drop task completes");
+}

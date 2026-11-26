@@ -1,9 +1,13 @@
-use opencode_ai::{AssistantMessage, ContentPart, Message, ProviderMetadata, ReasoningPart, TextPart, UserMessage};
+use opencode_ai::{
+    AssistantMessage, ContentPart, Message, ProviderMetadata, ReasoningPart, TextPart, ToolCallPart,
+    ToolContent as AiToolContent, ToolMessage, ToolResultPart, ToolResultValue, UserMessage,
+};
+use opencode_contract::codec::encode_json;
 use opencode_contract::generated::{
     ModelRef, SessionMessageAssistant, SessionMessageAssistantContentItem, SessionMessageAssistantTool1,
-    SessionMessageAssistantTool1State, SessionMessageInfo, SessionMessageNative1, SessionMessageUser,
+    SessionMessageAssistantTool1State, SessionMessageInfo, SessionMessageNative1, SessionMessageUser, ToolContent1,
 };
-use serde_json::Value;
+use serde_json::{Map, Value};
 
 pub fn to_llm_messages(messages: &[SessionMessageInfo], model: &ModelRef, provider_metadata_key: &str) -> Vec<Message> {
     messages
@@ -55,6 +59,7 @@ fn assistant_messages(
         kept.iter().collect::<Vec<_>>()
     };
     let mut content = Vec::new();
+    let mut results = Vec::new();
     for (index, item) in items.iter().copied().enumerate() {
         match item {
             SessionMessageAssistantContentItem::Text(text) => {
@@ -99,7 +104,25 @@ fn assistant_messages(
                 };
                 content.push(ContentPart::Reasoning(part));
             }
-            SessionMessageAssistantContentItem::Tool(_) => {}
+            SessionMessageAssistantContentItem::Tool(tool) => {
+                let provider_executed = tool.executed == Some(true);
+                content.push(ContentPart::ToolCall(tool_call(
+                    tool,
+                    same_model.then(|| provider_metadata(provider_metadata_key, tool.native.as_ref())).flatten(),
+                )));
+                let same = if provider_executed { same_provider } else { same_model };
+                let result = tool_result(
+                    tool,
+                    same.then(|| provider_metadata(provider_metadata_key, tool.native.as_ref())).flatten(),
+                );
+                let Some(result) = result else { continue };
+                if provider_executed {
+                    content.push(ContentPart::ToolResult(result));
+                } else {
+                    results
+                        .push(Message::Tool(ToolMessage { id: None, content: vec![ContentPart::ToolResult(result)] }));
+                }
+            }
         }
     }
     let content = content
@@ -120,9 +143,90 @@ fn assistant_messages(
         })
         .collect::<Vec<_>>();
     if content.is_empty() {
-        return Vec::new();
+        return results;
     }
-    vec![Message::Assistant(AssistantMessage { id: Some(assistant.id.0.clone()), content, provider_metadata: None })]
+    let mut messages = vec![Message::Assistant(AssistantMessage {
+        id: Some(assistant.id.0.clone()),
+        content,
+        provider_metadata: None,
+    })];
+    messages.extend(results);
+    messages
+}
+
+fn tool_call(tool: &SessionMessageAssistantTool1, provider_metadata: Option<ProviderMetadata>) -> ToolCallPart {
+    ToolCallPart {
+        id: tool.id.clone(),
+        name: tool.name.clone(),
+        namespace: None,
+        input: tool_input(tool),
+        provider_executed: tool.executed,
+        cache: None,
+        provider_metadata,
+    }
+}
+
+fn tool_result(
+    tool: &SessionMessageAssistantTool1,
+    provider_metadata: Option<ProviderMetadata>,
+) -> Option<ToolResultPart> {
+    let result = match &tool.state {
+        SessionMessageAssistantTool1State::Completed(completed) => {
+            let single = (completed.content.len() == 1).then(|| &completed.content[0]);
+            match single {
+                Some(ToolContent1::Text(text)) => ToolResultValue::Text { value: Value::String(text.text.clone()) },
+                _ => ToolResultValue::Content {
+                    value: completed.content.iter().map(ai_tool_content).collect::<Vec<AiToolContent>>(),
+                },
+            }
+        }
+        SessionMessageAssistantTool1State::Error(error) => {
+            let structured = serde_json::from_str::<Value>(&encode_json(&error.error)).unwrap_or(Value::Null);
+            let content = match &error.content {
+                Some(content) => {
+                    serde_json::from_str::<Value>(&encode_json(content)).unwrap_or(Value::Array(Vec::new()))
+                }
+                None => Value::Array(Vec::new()),
+            };
+            ToolResultValue::Error { value: serde_json::json!({ "error": structured, "content": content }) }
+        }
+        SessionMessageAssistantTool1State::Streaming(_) | SessionMessageAssistantTool1State::Running(_) => {
+            return None;
+        }
+    };
+    Some(ToolResultPart {
+        id: tool.id.clone(),
+        name: tool.name.clone(),
+        namespace: None,
+        result,
+        provider_executed: tool.executed,
+        cache: None,
+        provider_metadata,
+    })
+}
+
+fn tool_input(tool: &SessionMessageAssistantTool1) -> Value {
+    match &tool.state {
+        SessionMessageAssistantTool1State::Streaming(streaming) => {
+            serde_json::from_str(&streaming.input).unwrap_or_else(|_| Value::String(streaming.input.clone()))
+        }
+        SessionMessageAssistantTool1State::Running(running) => object(&running.input),
+        SessionMessageAssistantTool1State::Completed(completed) => object(&completed.input),
+        SessionMessageAssistantTool1State::Error(error) => object(&error.input),
+    }
+}
+
+fn object(value: &opencode_contract::codec::JsonMap<Value>) -> Value {
+    Value::Object(value.0.iter().cloned().collect::<Map<String, Value>>())
+}
+
+fn ai_tool_content(content: &ToolContent1) -> AiToolContent {
+    match content {
+        ToolContent1::Text(text) => AiToolContent::Text { text: text.text.clone() },
+        ToolContent1::File(file) => {
+            AiToolContent::File { uri: file.uri.clone(), mime: file.mime.clone(), name: file.name.clone().flatten() }
+        }
+    }
 }
 
 fn kept_when_cut(item: &SessionMessageAssistantContentItem) -> bool {

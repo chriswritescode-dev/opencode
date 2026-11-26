@@ -1,6 +1,6 @@
 # Operation coverage
 
-Implemented: 83 of 178 operations
+Implemented: 89 of 178 operations
 
 | Operation | Method | Path | Stability | Status |
 | --- | --- | --- | --- | --- |
@@ -107,12 +107,12 @@ Implemented: 83 of 178 operations
 | `session.permission.list` | GET | `/api/session/{sessionID}/permission` | stable | implemented |
 | `session.permission.get` | GET | `/api/session/{sessionID}/permission/{requestID}` | stable | implemented |
 | `session.permission.reply` | POST | `/api/session/{sessionID}/permission/{requestID}/reply` | stable | implemented |
-| `fs.read` | GET | `/api/fs/read/*` | stable | not implemented (501) |
-| `fs.list` | GET | `/api/fs/list` | stable | not implemented (501) |
-| `fs.find` | GET | `/api/fs/find` | stable | not implemented (501) |
-| `experimental.fs.write` | POST | `/api/experimental/fs/write` | experimental | not implemented (501) |
-| `experimental.fs.watch` | POST | `/api/experimental/fs/watch` | experimental | not implemented (501) |
-| `experimental.fs.unwatch` | DELETE | `/api/experimental/fs/watch` | experimental | not implemented (501) |
+| `fs.read` | GET | `/api/fs/read/*` | stable | implemented |
+| `fs.list` | GET | `/api/fs/list` | stable | implemented |
+| `fs.find` | GET | `/api/fs/find` | stable | implemented |
+| `experimental.fs.write` | POST | `/api/experimental/fs/write` | experimental | implemented |
+| `experimental.fs.watch` | POST | `/api/experimental/fs/watch` | experimental | implemented |
+| `experimental.fs.unwatch` | DELETE | `/api/experimental/fs/watch` | experimental | implemented |
 | `command.list` | GET | `/api/command` | stable | implemented |
 | `skill.list` | GET | `/api/skill` | stable | implemented |
 | `rpc.call` | POST | `/api/rpc/{rpcID}/{method}` | stable | not implemented (501) |

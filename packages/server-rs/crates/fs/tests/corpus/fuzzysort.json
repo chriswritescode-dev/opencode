@@ -1,0 +1,6356 @@
+[
+  {
+    "name": "files-0",
+    "query": "src",
+    "targets": [
+      "src/index.ts",
+      "src/app.tsx",
+      "src/lib/utils.ts",
+      "test/index.test.ts",
+      "README.md",
+      "package.json",
+      "packages/core/src/filesystem/search.ts",
+      "packages/app/components/button.tsx",
+      "docs/guide.md",
+      "crates/fs/src/search/mod.rs",
+      "Makefile",
+      ".github/workflows/ci.yml",
+      "a",
+      "ab",
+      "abc",
+      "a-b-c",
+      "ABC",
+      "AbC",
+      "src/nested/deeply/placed/file.ts",
+      "src/nested/deeply/placed/file.tsx",
+      "src/nested/file.ts"
+    ],
+    "results": [
+      {
+        "target": "src/app.tsx",
+        "score": "0.865635999",
+        "raw": -4.04,
+        "indexes": [
+          0,
+          1,
+          2
+        ]
+      },
+      {
+        "target": "src/index.ts",
+        "score": "0.858019945",
+        "raw": -4.545,
+        "indexes": [
+          0,
+          1,
+          2
+        ]
+      },
+      {
+        "target": "src/lib/utils.ts",
+        "score": "0.833494335",
+        "raw": -6.565,
+        "indexes": [
+          0,
+          1,
+          2
+        ]
+      },
+      {
+        "target": "src/nested/file.ts",
+        "score": "0.823708810",
+        "raw": -7.575,
+        "indexes": [
+          0,
+          1,
+          2
+        ]
+      },
+      {
+        "target": "crates/fs/src/search/mod.rs",
+        "score": "0.789818924",
+        "raw": -12.32,
+        "indexes": [
+          10,
+          11,
+          12
+        ]
+      },
+      {
+        "target": "src/nested/deeply/placed/file.ts",
+        "score": "0.777634264",
+        "raw": -14.645,
+        "indexes": [
+          0,
+          1,
+          2
+        ]
+      },
+      {
+        "target": "src/nested/deeply/placed/file.tsx",
+        "score": "0.775240678",
+        "raw": -15.15,
+        "indexes": [
+          0,
+          1,
+          2
+        ]
+      },
+      {
+        "target": "packages/core/src/filesystem/search.ts",
+        "score": "0.762797465",
+        "raw": -18.067,
+        "indexes": [
+          14,
+          15,
+          16
+        ]
+      }
+    ]
+  },
+  {
+    "name": "files-1",
+    "query": "index",
+    "targets": [
+      "src/index.ts",
+      "src/app.tsx",
+      "src/lib/utils.ts",
+      "test/index.test.ts",
+      "README.md",
+      "package.json",
+      "packages/core/src/filesystem/search.ts",
+      "packages/app/components/button.tsx",
+      "docs/guide.md",
+      "crates/fs/src/search/mod.rs",
+      "Makefile",
+      ".github/workflows/ci.yml",
+      "a",
+      "ab",
+      "abc",
+      "a-b-c",
+      "ABC",
+      "AbC",
+      "src/nested/deeply/placed/file.ts",
+      "src/nested/deeply/placed/file.tsx",
+      "src/nested/file.ts"
+    ],
+    "results": [
+      {
+        "target": "src/index.ts",
+        "score": "0.874544529",
+        "raw": -3.5099112426035504,
+        "indexes": [
+          4,
+          5,
+          6,
+          7,
+          8
+        ]
+      },
+      {
+        "target": "test/index.test.ts",
+        "score": "0.833992914",
+        "raw": -6.5170118343195265,
+        "indexes": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ]
+      }
+    ]
+  },
+  {
+    "name": "files-2",
+    "query": "file",
+    "targets": [
+      "src/index.ts",
+      "src/app.tsx",
+      "src/lib/utils.ts",
+      "test/index.test.ts",
+      "README.md",
+      "package.json",
+      "packages/core/src/filesystem/search.ts",
+      "packages/app/components/button.tsx",
+      "docs/guide.md",
+      "crates/fs/src/search/mod.rs",
+      "Makefile",
+      ".github/workflows/ci.yml",
+      "a",
+      "ab",
+      "abc",
+      "a-b-c",
+      "ABC",
+      "AbC",
+      "src/nested/deeply/placed/file.ts",
+      "src/nested/deeply/placed/file.tsx",
+      "src/nested/file.ts"
+    ],
+    "results": [
+      {
+        "target": "src/nested/file.ts",
+        "score": "0.828074204",
+        "raw": -7.10795847750865,
+        "indexes": [
+          11,
+          12,
+          13,
+          14
+        ]
+      },
+      {
+        "target": "src/nested/deeply/placed/file.ts",
+        "score": "0.778429292",
+        "raw": -14.480968858131488,
+        "indexes": [
+          25,
+          26,
+          27,
+          28
+        ]
+      },
+      {
+        "target": "src/nested/deeply/placed/file.tsx",
+        "score": "0.776024802",
+        "raw": -14.982698961937716,
+        "indexes": [
+          25,
+          26,
+          27,
+          28
+        ]
+      },
+      {
+        "target": "packages/core/src/filesystem/search.ts",
+        "score": "0.765933264",
+        "raw": -17.28304498269896,
+        "indexes": [
+          18,
+          19,
+          20,
+          21
+        ]
+      },
+      {
+        "target": "Makefile",
+        "score": "0.601763436",
+        "raw": -190.35294117647058,
+        "indexes": [
+          4,
+          5,
+          6,
+          7
+        ]
+      }
+    ]
+  },
+  {
+    "name": "files-3",
+    "query": "fs",
+    "targets": [
+      "src/index.ts",
+      "src/app.tsx",
+      "src/lib/utils.ts",
+      "test/index.test.ts",
+      "README.md",
+      "package.json",
+      "packages/core/src/filesystem/search.ts",
+      "packages/app/components/button.tsx",
+      "docs/guide.md",
+      "crates/fs/src/search/mod.rs",
+      "Makefile",
+      ".github/workflows/ci.yml",
+      "a",
+      "ab",
+      "abc",
+      "a-b-c",
+      "ABC",
+      "AbC",
+      "src/nested/deeply/placed/file.ts",
+      "src/nested/deeply/placed/file.tsx",
+      "src/nested/file.ts"
+    ],
+    "results": [
+      {
+        "target": "crates/fs/src/search/mod.rs",
+        "score": "0.783943459",
+        "raw": -13.392,
+        "indexes": [
+          7,
+          8
+        ]
+      },
+      {
+        "target": "packages/core/src/filesystem/search.ts",
+        "score": "0.616494417",
+        "raw": -151.8,
+        "indexes": [
+          18,
+          29
+        ]
+      },
+      {
+        "target": "src/nested/file.ts",
+        "score": "0.298736158",
+        "raw": -58216,
+        "indexes": [
+          11,
+          17
+        ]
+      },
+      {
+        "target": ".github/workflows/ci.yml",
+        "score": "0.297614309",
+        "raw": -59822,
+        "indexes": [
+          12,
+          16
+        ]
+      },
+      {
+        "target": "src/nested/deeply/placed/file.ts",
+        "score": "0.256072063",
+        "raw": -173030,
+        "indexes": [
+          25,
+          31
+        ]
+      },
+      {
+        "target": "src/nested/deeply/placed/file.tsx",
+        "score": "0.256071849",
+        "raw": -173031,
+        "indexes": [
+          25,
+          31
+        ]
+      }
+    ]
+  },
+  {
+    "name": "files-4",
+    "query": "rs",
+    "targets": [
+      "src/index.ts",
+      "src/app.tsx",
+      "src/lib/utils.ts",
+      "test/index.test.ts",
+      "README.md",
+      "package.json",
+      "packages/core/src/filesystem/search.ts",
+      "packages/app/components/button.tsx",
+      "docs/guide.md",
+      "crates/fs/src/search/mod.rs",
+      "Makefile",
+      ".github/workflows/ci.yml",
+      "a",
+      "ab",
+      "abc",
+      "a-b-c",
+      "ABC",
+      "AbC",
+      "src/nested/deeply/placed/file.ts",
+      "src/nested/deeply/placed/file.tsx",
+      "src/nested/file.ts"
+    ],
+    "results": [
+      {
+        "target": "crates/fs/src/search/mod.rs",
+        "score": "0.763060101",
+        "raw": -18,
+        "indexes": [
+          25,
+          26
+        ]
+      },
+      {
+        "target": "src/nested/file.ts",
+        "score": "0.340340223",
+        "raw": -22216,
+        "indexes": [
+          1,
+          6
+        ]
+      },
+      {
+        "target": "src/nested/deeply/placed/file.ts",
+        "score": "0.340311803",
+        "raw": -22230,
+        "indexes": [
+          1,
+          6
+        ]
+      },
+      {
+        "target": "src/nested/deeply/placed/file.tsx",
+        "score": "0.340309774",
+        "raw": -22231,
+        "indexes": [
+          1,
+          6
+        ]
+      },
+      {
+        "target": "src/app.tsx",
+        "score": "0.329680592",
+        "raw": -28209,
+        "indexes": [
+          1,
+          9
+        ]
+      },
+      {
+        "target": "src/index.ts",
+        "score": "0.323859531",
+        "raw": -32210.000000000004,
+        "indexes": [
+          1,
+          11
+        ]
+      },
+      {
+        "target": "src/lib/utils.ts",
+        "score": "0.321233857",
+        "raw": -34214,
+        "indexes": [
+          1,
+          12
+        ]
+      },
+      {
+        "target": "packages/core/src/filesystem/search.ts",
+        "score": "0.303233265",
+        "raw": -52236,
+        "indexes": [
+          11,
+          14
+        ]
+      },
+      {
+        "target": ".github/workflows/ci.yml",
+        "score": "0.302610856",
+        "raw": -53022,
+        "indexes": [
+          10,
+          16
+        ]
+      }
+    ]
+  },
+  {
+    "name": "files-5",
+    "query": "SEARCH",
+    "targets": [
+      "src/index.ts",
+      "src/app.tsx",
+      "src/lib/utils.ts",
+      "test/index.test.ts",
+      "README.md",
+      "package.json",
+      "packages/core/src/filesystem/search.ts",
+      "packages/app/components/button.tsx",
+      "docs/guide.md",
+      "crates/fs/src/search/mod.rs",
+      "Makefile",
+      ".github/workflows/ci.yml",
+      "a",
+      "ab",
+      "abc",
+      "a-b-c",
+      "ABC",
+      "AbC",
+      "src/nested/deeply/placed/file.ts",
+      "src/nested/deeply/placed/file.tsx",
+      "src/nested/file.ts"
+    ],
+    "results": [
+      {
+        "target": "crates/fs/src/search/mod.rs",
+        "score": "0.800795906",
+        "raw": -10.536303871439006,
+        "indexes": [
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      },
+      {
+        "target": "packages/core/src/filesystem/search.ts",
+        "score": "0.770792990",
+        "raw": -16.1345507669832,
+        "indexes": [
+          29,
+          30,
+          31,
+          32,
+          33,
+          34
+        ]
+      }
+    ]
+  },
+  {
+    "name": "files-6",
+    "query": "s/i",
+    "targets": [
+      "src/index.ts",
+      "src/app.tsx",
+      "src/lib/utils.ts",
+      "test/index.test.ts",
+      "README.md",
+      "package.json",
+      "packages/core/src/filesystem/search.ts",
+      "packages/app/components/button.tsx",
+      "docs/guide.md",
+      "crates/fs/src/search/mod.rs",
+      "Makefile",
+      ".github/workflows/ci.yml",
+      "a",
+      "ab",
+      "abc",
+      "a-b-c",
+      "ABC",
+      "AbC",
+      "src/nested/deeply/placed/file.ts",
+      "src/nested/deeply/placed/file.tsx",
+      "src/nested/file.ts"
+    ],
+    "results": [
+      {
+        "target": "src/index.ts",
+        "score": "0.737092455",
+        "raw": -26,
+        "indexes": [
+          0,
+          3,
+          4
+        ]
+      },
+      {
+        "target": "test/index.test.ts",
+        "score": "0.350398620",
+        "raw": -17815,
+        "indexes": [
+          2,
+          4,
+          5
+        ]
+      },
+      {
+        "target": "docs/guide.md",
+        "score": "0.339151240",
+        "raw": -22810,
+        "indexes": [
+          3,
+          4,
+          7
+        ]
+      },
+      {
+        "target": "src/lib/utils.ts",
+        "score": "0.316688190",
+        "raw": -38013,
+        "indexes": [
+          0,
+          3,
+          5
+        ]
+      },
+      {
+        "target": "packages/core/src/filesystem/search.ts",
+        "score": "0.304368517",
+        "raw": -50835,
+        "indexes": [
+          7,
+          8,
+          19
+        ]
+      },
+      {
+        "target": "src/nested/file.ts",
+        "score": "0.298173848",
+        "raw": -59015,
+        "indexes": [
+          0,
+          3,
+          12
+        ]
+      },
+      {
+        "target": ".github/workflows/ci.yml",
+        "score": "0.284235607",
+        "raw": -83221,
+        "indexes": [
+          16,
+          17,
+          19
+        ]
+      },
+      {
+        "target": "src/nested/deeply/placed/file.ts",
+        "score": "0.276574633",
+        "raw": -101029,
+        "indexes": [
+          0,
+          3,
+          26
+        ]
+      },
+      {
+        "target": "src/nested/deeply/placed/file.tsx",
+        "score": "0.276574246",
+        "raw": -101030,
+        "indexes": [
+          0,
+          3,
+          26
+        ]
+      }
+    ]
+  },
+  {
+    "name": "files-7",
+    "query": "test",
+    "targets": [
+      "src/index.ts",
+      "src/app.tsx",
+      "src/lib/utils.ts",
+      "test/index.test.ts",
+      "README.md",
+      "package.json",
+      "packages/core/src/filesystem/search.ts",
+      "packages/app/components/button.tsx",
+      "docs/guide.md",
+      "crates/fs/src/search/mod.rs",
+      "Makefile",
+      ".github/workflows/ci.yml",
+      "a",
+      "ab",
+      "abc",
+      "a-b-c",
+      "ABC",
+      "AbC",
+      "src/nested/deeply/placed/file.ts",
+      "src/nested/deeply/placed/file.tsx",
+      "src/nested/file.ts"
+    ],
+    "results": [
+      {
+        "target": "test/index.test.ts",
+        "score": "0.828884782",
+        "raw": -7.024221453287197,
+        "indexes": [
+          0,
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "target": "packages/core/src/filesystem/search.ts",
+        "score": "0.245664705",
+        "raw": -230034,
+        "indexes": [
+          25,
+          26,
+          29,
+          36
+        ]
+      }
+    ]
+  },
+  {
+    "name": "files-8",
+    "query": "a",
+    "targets": [
+      "src/index.ts",
+      "src/app.tsx",
+      "src/lib/utils.ts",
+      "test/index.test.ts",
+      "README.md",
+      "package.json",
+      "packages/core/src/filesystem/search.ts",
+      "packages/app/components/button.tsx",
+      "docs/guide.md",
+      "crates/fs/src/search/mod.rs",
+      "Makefile",
+      ".github/workflows/ci.yml",
+      "a",
+      "ab",
+      "abc",
+      "a-b-c",
+      "ABC",
+      "AbC",
+      "src/nested/deeply/placed/file.ts",
+      "src/nested/deeply/placed/file.tsx",
+      "src/nested/file.ts"
+    ],
+    "results": [
+      {
+        "target": "a",
+        "score": "1.000000000",
+        "raw": 0,
+        "indexes": [
+          0
+        ]
+      },
+      {
+        "target": "ab",
+        "score": "0.941192222",
+        "raw": -1,
+        "indexes": [
+          0
+        ]
+      },
+      {
+        "target": "ABC",
+        "score": "0.907638491",
+        "raw": -2,
+        "indexes": [
+          0
+        ]
+      },
+      {
+        "target": "abc",
+        "score": "0.907638491",
+        "raw": -2,
+        "indexes": [
+          0
+        ]
+      },
+      {
+        "target": "AbC",
+        "score": "0.907638491",
+        "raw": -2,
+        "indexes": [
+          0
+        ]
+      },
+      {
+        "target": "a-b-c",
+        "score": "0.866273143",
+        "raw": -4,
+        "indexes": [
+          0
+        ]
+      },
+      {
+        "target": "src/app.tsx",
+        "score": "0.784961158",
+        "raw": -13.2,
+        "indexes": [
+          4
+        ]
+      },
+      {
+        "target": "packages/app/components/button.tsx",
+        "score": "0.692503654",
+        "raw": -49.2,
+        "indexes": [
+          9
+        ]
+      },
+      {
+        "target": "Makefile",
+        "score": "0.596355974",
+        "raw": -207,
+        "indexes": [
+          1
+        ]
+      },
+      {
+        "target": "package.json",
+        "score": "0.595125329",
+        "raw": -211,
+        "indexes": [
+          1
+        ]
+      },
+      {
+        "target": "packages/core/src/filesystem/search.ts",
+        "score": "0.587684241",
+        "raw": -237,
+        "indexes": [
+          1
+        ]
+      },
+      {
+        "target": "README.md",
+        "score": "0.512451112",
+        "raw": -808,
+        "indexes": [
+          2
+        ]
+      },
+      {
+        "target": "crates/fs/src/search/mod.rs",
+        "score": "0.511156035",
+        "raw": -826,
+        "indexes": [
+          2
+        ]
+      },
+      {
+        "target": "src/nested/deeply/placed/file.ts",
+        "score": "0.285797441",
+        "raw": -80031,
+        "indexes": [
+          20
+        ]
+      },
+      {
+        "target": "src/nested/deeply/placed/file.tsx",
+        "score": "0.285796941",
+        "raw": -80032,
+        "indexes": [
+          20
+        ]
+      }
+    ]
+  },
+  {
+    "name": "files-9",
+    "query": "ab",
+    "targets": [
+      "src/index.ts",
+      "src/app.tsx",
+      "src/lib/utils.ts",
+      "test/index.test.ts",
+      "README.md",
+      "package.json",
+      "packages/core/src/filesystem/search.ts",
+      "packages/app/components/button.tsx",
+      "docs/guide.md",
+      "crates/fs/src/search/mod.rs",
+      "Makefile",
+      ".github/workflows/ci.yml",
+      "a",
+      "ab",
+      "abc",
+      "a-b-c",
+      "ABC",
+      "AbC",
+      "src/nested/deeply/placed/file.ts",
+      "src/nested/deeply/placed/file.tsx",
+      "src/nested/file.ts"
+    ],
+    "results": [
+      {
+        "target": "ab",
+        "score": "1.000000000",
+        "raw": 0,
+        "indexes": [
+          0,
+          1
+        ]
+      },
+      {
+        "target": "abc",
+        "score": "0.964259440",
+        "raw": -0.52,
+        "indexes": [
+          0,
+          1
+        ]
+      },
+      {
+        "target": "AbC",
+        "score": "0.964259440",
+        "raw": -0.52,
+        "indexes": [
+          0,
+          1
+        ]
+      },
+      {
+        "target": "ABC",
+        "score": "0.964259440",
+        "raw": -0.52,
+        "indexes": [
+          0,
+          1
+        ]
+      },
+      {
+        "target": "a-b-c",
+        "score": "0.763060101",
+        "raw": -18,
+        "indexes": [
+          0,
+          2
+        ]
+      },
+      {
+        "target": "packages/app/components/button.tsx",
+        "score": "0.645376313",
+        "raw": -98.2,
+        "indexes": [
+          9,
+          24
+        ]
+      }
+    ]
+  },
+  {
+    "name": "files-10",
+    "query": "abc",
+    "targets": [
+      "src/index.ts",
+      "src/app.tsx",
+      "src/lib/utils.ts",
+      "test/index.test.ts",
+      "README.md",
+      "package.json",
+      "packages/core/src/filesystem/search.ts",
+      "packages/app/components/button.tsx",
+      "docs/guide.md",
+      "crates/fs/src/search/mod.rs",
+      "Makefile",
+      ".github/workflows/ci.yml",
+      "a",
+      "ab",
+      "abc",
+      "a-b-c",
+      "ABC",
+      "AbC",
+      "src/nested/deeply/placed/file.ts",
+      "src/nested/deeply/placed/file.tsx",
+      "src/nested/file.ts"
+    ],
+    "results": [
+      {
+        "target": "ABC",
+        "score": "1.000000000",
+        "raw": 0,
+        "indexes": [
+          0,
+          1,
+          2
+        ]
+      },
+      {
+        "target": "AbC",
+        "score": "1.000000000",
+        "raw": 0,
+        "indexes": [
+          0,
+          1,
+          2
+        ]
+      },
+      {
+        "target": "abc",
+        "score": "1.000000000",
+        "raw": 0,
+        "indexes": [
+          0,
+          1,
+          2
+        ]
+      },
+      {
+        "target": "a-b-c",
+        "score": "0.714240297",
+        "raw": -36,
+        "indexes": [
+          0,
+          2,
+          4
+        ]
+      }
+    ]
+  },
+  {
+    "name": "files-11",
+    "query": "app",
+    "targets": [
+      "src/index.ts",
+      "src/app.tsx",
+      "src/lib/utils.ts",
+      "test/index.test.ts",
+      "README.md",
+      "package.json",
+      "packages/core/src/filesystem/search.ts",
+      "packages/app/components/button.tsx",
+      "docs/guide.md",
+      "crates/fs/src/search/mod.rs",
+      "Makefile",
+      ".github/workflows/ci.yml",
+      "a",
+      "ab",
+      "abc",
+      "a-b-c",
+      "ABC",
+      "AbC",
+      "src/nested/deeply/placed/file.ts",
+      "src/nested/deeply/placed/file.tsx",
+      "src/nested/file.ts"
+    ],
+    "results": [
+      {
+        "target": "src/app.tsx",
+        "score": "0.865130092",
+        "raw": -4.072,
+        "indexes": [
+          4,
+          5,
+          6
+        ]
+      },
+      {
+        "target": "packages/app/components/button.tsx",
+        "score": "0.772197427",
+        "raw": -15.817,
+        "indexes": [
+          9,
+          10,
+          11
+        ]
+      }
+    ]
+  },
+  {
+    "name": "files-12",
+    "query": "nested",
+    "targets": [
+      "src/index.ts",
+      "src/app.tsx",
+      "src/lib/utils.ts",
+      "test/index.test.ts",
+      "README.md",
+      "package.json",
+      "packages/core/src/filesystem/search.ts",
+      "packages/app/components/button.tsx",
+      "docs/guide.md",
+      "crates/fs/src/search/mod.rs",
+      "Makefile",
+      ".github/workflows/ci.yml",
+      "a",
+      "ab",
+      "abc",
+      "a-b-c",
+      "ABC",
+      "AbC",
+      "src/nested/deeply/placed/file.ts",
+      "src/nested/deeply/placed/file.tsx",
+      "src/nested/file.ts"
+    ],
+    "results": [
+      {
+        "target": "src/nested/file.ts",
+        "score": "0.839511440",
+        "raw": -6.006720233747261,
+        "indexes": [
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ]
+      },
+      {
+        "target": "src/nested/deeply/placed/file.ts",
+        "score": "0.785972701",
+        "raw": -13.0118334550767,
+        "indexes": [
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ]
+      },
+      {
+        "target": "src/nested/deeply/placed/file.tsx",
+        "score": "0.783313599",
+        "raw": -13.512198685171658,
+        "indexes": [
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ]
+      }
+    ]
+  },
+  {
+    "name": "files-13",
+    "query": "deep",
+    "targets": [
+      "src/index.ts",
+      "src/app.tsx",
+      "src/lib/utils.ts",
+      "test/index.test.ts",
+      "README.md",
+      "package.json",
+      "packages/core/src/filesystem/search.ts",
+      "packages/app/components/button.tsx",
+      "docs/guide.md",
+      "crates/fs/src/search/mod.rs",
+      "Makefile",
+      ".github/workflows/ci.yml",
+      "a",
+      "ab",
+      "abc",
+      "a-b-c",
+      "ABC",
+      "AbC",
+      "src/nested/deeply/placed/file.ts",
+      "src/nested/deeply/placed/file.tsx",
+      "src/nested/file.ts"
+    ],
+    "results": [
+      {
+        "target": "src/nested/deeply/placed/file.ts",
+        "score": "0.780149728",
+        "raw": -14.132179930795848,
+        "indexes": [
+          11,
+          12,
+          13,
+          14
+        ]
+      },
+      {
+        "target": "src/nested/deeply/placed/file.tsx",
+        "score": "0.777687737",
+        "raw": -14.633910034602076,
+        "indexes": [
+          11,
+          12,
+          13,
+          14
+        ]
+      }
+    ]
+  },
+  {
+    "name": "files-14",
+    "query": ".ts",
+    "targets": [
+      "src/index.ts",
+      "src/app.tsx",
+      "src/lib/utils.ts",
+      "test/index.test.ts",
+      "README.md",
+      "package.json",
+      "packages/core/src/filesystem/search.ts",
+      "packages/app/components/button.tsx",
+      "docs/guide.md",
+      "crates/fs/src/search/mod.rs",
+      "Makefile",
+      ".github/workflows/ci.yml",
+      "a",
+      "ab",
+      "abc",
+      "a-b-c",
+      "ABC",
+      "AbC",
+      "src/nested/deeply/placed/file.ts",
+      "src/nested/deeply/placed/file.tsx",
+      "src/nested/file.ts"
+    ],
+    "results": [
+      {
+        "target": "src/app.tsx",
+        "score": "0.864097155",
+        "raw": -4.138,
+        "indexes": [
+          7,
+          8,
+          9
+        ]
+      },
+      {
+        "target": "src/index.ts",
+        "score": "0.855730255",
+        "raw": -4.707,
+        "indexes": [
+          9,
+          10,
+          11
+        ]
+      },
+      {
+        "target": "src/lib/utils.ts",
+        "score": "0.830074101",
+        "raw": -6.9030000000000005,
+        "indexes": [
+          13,
+          14,
+          15
+        ]
+      },
+      {
+        "target": "test/index.test.ts",
+        "score": "0.819732999",
+        "raw": -8.025,
+        "indexes": [
+          15,
+          16,
+          17
+        ]
+      },
+      {
+        "target": "src/nested/file.ts",
+        "score": "0.819732999",
+        "raw": -8.025,
+        "indexes": [
+          15,
+          16,
+          17
+        ]
+      },
+      {
+        "target": "src/nested/deeply/placed/file.ts",
+        "score": "0.769955133",
+        "raw": -16.327,
+        "indexes": [
+          29,
+          30,
+          31
+        ]
+      },
+      {
+        "target": "src/nested/deeply/placed/file.tsx",
+        "score": "0.767802363",
+        "raw": -16.832,
+        "indexes": [
+          29,
+          30,
+          31
+        ]
+      },
+      {
+        "target": "packages/app/components/button.tsx",
+        "score": "0.765233465",
+        "raw": -17.455,
+        "indexes": [
+          30,
+          31,
+          32
+        ]
+      },
+      {
+        "target": "packages/core/src/filesystem/search.ts",
+        "score": "0.755172273",
+        "raw": -20.125,
+        "indexes": [
+          35,
+          36,
+          37
+        ]
+      },
+      {
+        "target": ".github/workflows/ci.yml",
+        "score": "0.290606914",
+        "raw": -71021,
+        "indexes": [
+          0,
+          3,
+          16
+        ]
+      }
+    ]
+  },
+  {
+    "name": "files-15",
+    "query": "json",
+    "targets": [
+      "src/index.ts",
+      "src/app.tsx",
+      "src/lib/utils.ts",
+      "test/index.test.ts",
+      "README.md",
+      "package.json",
+      "packages/core/src/filesystem/search.ts",
+      "packages/app/components/button.tsx",
+      "docs/guide.md",
+      "crates/fs/src/search/mod.rs",
+      "Makefile",
+      ".github/workflows/ci.yml",
+      "a",
+      "ab",
+      "abc",
+      "a-b-c",
+      "ABC",
+      "AbC",
+      "src/nested/deeply/placed/file.ts",
+      "src/nested/deeply/placed/file.tsx",
+      "src/nested/file.ts"
+    ],
+    "results": [
+      {
+        "target": "package.json",
+        "score": "0.865348935",
+        "raw": -4.058131487889273,
+        "indexes": [
+          8,
+          9,
+          10,
+          11
+        ]
+      }
+    ]
+  },
+  {
+    "name": "files-16",
+    "query": "src index",
+    "targets": [
+      "src/index.ts",
+      "src/app.tsx",
+      "src/lib/utils.ts",
+      "test/index.test.ts",
+      "README.md",
+      "package.json",
+      "packages/core/src/filesystem/search.ts",
+      "packages/app/components/button.tsx",
+      "docs/guide.md",
+      "crates/fs/src/search/mod.rs",
+      "Makefile",
+      ".github/workflows/ci.yml",
+      "a",
+      "ab",
+      "abc",
+      "a-b-c",
+      "ABC",
+      "AbC",
+      "src/nested/deeply/placed/file.ts",
+      "src/nested/deeply/placed/file.tsx",
+      "src/nested/file.ts"
+    ],
+    "results": [
+      {
+        "target": "src/index.ts",
+        "score": "0.865835241",
+        "raw": -4.027455621301775,
+        "indexes": [
+          0,
+          1,
+          2,
+          4,
+          5,
+          6,
+          7,
+          8
+        ]
+      }
+    ]
+  },
+  {
+    "name": "files-17",
+    "query": "index src",
+    "targets": [
+      "src/index.ts",
+      "src/app.tsx",
+      "src/lib/utils.ts",
+      "test/index.test.ts",
+      "README.md",
+      "package.json",
+      "packages/core/src/filesystem/search.ts",
+      "packages/app/components/button.tsx",
+      "docs/guide.md",
+      "crates/fs/src/search/mod.rs",
+      "Makefile",
+      ".github/workflows/ci.yml",
+      "a",
+      "ab",
+      "abc",
+      "a-b-c",
+      "ABC",
+      "AbC",
+      "src/nested/deeply/placed/file.ts",
+      "src/nested/deeply/placed/file.tsx",
+      "src/nested/file.ts"
+    ],
+    "results": [
+      {
+        "target": "src/index.ts",
+        "score": "0.791509062",
+        "raw": -12.027455621301776,
+        "indexes": [
+          0,
+          1,
+          2,
+          4,
+          5,
+          6,
+          7,
+          8
+        ]
+      }
+    ]
+  },
+  {
+    "name": "files-18",
+    "query": "crate mod",
+    "targets": [
+      "src/index.ts",
+      "src/app.tsx",
+      "src/lib/utils.ts",
+      "test/index.test.ts",
+      "README.md",
+      "package.json",
+      "packages/core/src/filesystem/search.ts",
+      "packages/app/components/button.tsx",
+      "docs/guide.md",
+      "crates/fs/src/search/mod.rs",
+      "Makefile",
+      ".github/workflows/ci.yml",
+      "a",
+      "ab",
+      "abc",
+      "a-b-c",
+      "ABC",
+      "AbC",
+      "src/nested/deeply/placed/file.ts",
+      "src/nested/deeply/placed/file.tsx",
+      "src/nested/file.ts"
+    ],
+    "results": [
+      {
+        "target": "crates/fs/src/search/mod.rs",
+        "score": "0.791616228",
+        "raw": -12.009136094674556,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          21,
+          22,
+          23
+        ]
+      }
+    ]
+  },
+  {
+    "name": "files-19",
+    "query": "packages core",
+    "targets": [
+      "src/index.ts",
+      "src/app.tsx",
+      "src/lib/utils.ts",
+      "test/index.test.ts",
+      "README.md",
+      "package.json",
+      "packages/core/src/filesystem/search.ts",
+      "packages/app/components/button.tsx",
+      "docs/guide.md",
+      "crates/fs/src/search/mod.rs",
+      "Makefile",
+      ".github/workflows/ci.yml",
+      "a",
+      "ab",
+      "abc",
+      "a-b-c",
+      "ABC",
+      "AbC",
+      "src/nested/deeply/placed/file.ts",
+      "src/nested/deeply/placed/file.tsx",
+      "src/nested/file.ts"
+    ],
+    "results": [
+      {
+        "target": "packages/core/src/filesystem/search.ts",
+        "score": "0.771123683",
+        "raw": -16.059214594295774,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          9,
+          10,
+          11,
+          12
+        ]
+      }
+    ]
+  },
+  {
+    "name": "accents-0",
+    "query": "cafe",
+    "targets": [
+      "café",
+      "naïve",
+      "über",
+      "résumé",
+      "coöperate",
+      "Ångström",
+      "façade",
+      "São Paulo",
+      "plain",
+      "smørrebrød"
+    ],
+    "results": [
+      {
+        "target": "café",
+        "score": "1.000000000",
+        "raw": 0,
+        "indexes": [
+          0,
+          1,
+          2,
+          3
+        ]
+      }
+    ]
+  },
+  {
+    "name": "accents-1",
+    "query": "café",
+    "targets": [
+      "café",
+      "naïve",
+      "über",
+      "résumé",
+      "coöperate",
+      "Ångström",
+      "façade",
+      "São Paulo",
+      "plain",
+      "smørrebrød"
+    ],
+    "results": [
+      {
+        "target": "café",
+        "score": "1.000000000",
+        "raw": 0,
+        "indexes": [
+          0,
+          1,
+          2,
+          3
+        ]
+      }
+    ]
+  },
+  {
+    "name": "accents-2",
+    "query": "resume",
+    "targets": [
+      "café",
+      "naïve",
+      "über",
+      "résumé",
+      "coöperate",
+      "Ångström",
+      "façade",
+      "São Paulo",
+      "plain",
+      "smørrebrød"
+    ],
+    "results": [
+      {
+        "target": "résumé",
+        "score": "1.000000000",
+        "raw": 0,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      }
+    ]
+  },
+  {
+    "name": "accents-3",
+    "query": "uber",
+    "targets": [
+      "café",
+      "naïve",
+      "über",
+      "résumé",
+      "coöperate",
+      "Ångström",
+      "façade",
+      "São Paulo",
+      "plain",
+      "smørrebrød"
+    ],
+    "results": [
+      {
+        "target": "über",
+        "score": "1.000000000",
+        "raw": 0,
+        "indexes": [
+          0,
+          1,
+          2,
+          3
+        ]
+      }
+    ]
+  },
+  {
+    "name": "accents-4",
+    "query": "angstrom",
+    "targets": [
+      "café",
+      "naïve",
+      "über",
+      "résumé",
+      "coöperate",
+      "Ångström",
+      "façade",
+      "São Paulo",
+      "plain",
+      "smørrebrød"
+    ],
+    "results": [
+      {
+        "target": "Ångström",
+        "score": "1.000000000",
+        "raw": 0,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      }
+    ]
+  },
+  {
+    "name": "accents-5",
+    "query": "facade",
+    "targets": [
+      "café",
+      "naïve",
+      "über",
+      "résumé",
+      "coöperate",
+      "Ångström",
+      "façade",
+      "São Paulo",
+      "plain",
+      "smørrebrød"
+    ],
+    "results": [
+      {
+        "target": "façade",
+        "score": "1.000000000",
+        "raw": 0,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      }
+    ]
+  },
+  {
+    "name": "accents-6",
+    "query": "sao",
+    "targets": [
+      "café",
+      "naïve",
+      "über",
+      "résumé",
+      "coöperate",
+      "Ångström",
+      "façade",
+      "São Paulo",
+      "plain",
+      "smørrebrød"
+    ],
+    "results": [
+      {
+        "target": "São Paulo",
+        "score": "0.883613278",
+        "raw": -3.03,
+        "indexes": [
+          0,
+          1,
+          2
+        ]
+      }
+    ]
+  },
+  {
+    "name": "accents-7",
+    "query": "naive",
+    "targets": [
+      "café",
+      "naïve",
+      "über",
+      "résumé",
+      "coöperate",
+      "Ångström",
+      "façade",
+      "São Paulo",
+      "plain",
+      "smørrebrød"
+    ],
+    "results": [
+      {
+        "target": "naïve",
+        "score": "1.000000000",
+        "raw": 0,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ]
+      }
+    ]
+  },
+  {
+    "name": "accents-8",
+    "query": "plain",
+    "targets": [
+      "café",
+      "naïve",
+      "über",
+      "résumé",
+      "coöperate",
+      "Ångström",
+      "façade",
+      "São Paulo",
+      "plain",
+      "smørrebrød"
+    ],
+    "results": [
+      {
+        "target": "plain",
+        "score": "1.000000000",
+        "raw": 0,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ]
+      }
+    ]
+  },
+  {
+    "name": "accents-9",
+    "query": "ö",
+    "targets": [
+      "café",
+      "naïve",
+      "über",
+      "résumé",
+      "coöperate",
+      "Ångström",
+      "façade",
+      "São Paulo",
+      "plain",
+      "smørrebrød"
+    ],
+    "results": [
+      {
+        "target": "coöperate",
+        "score": "0.596045964",
+        "raw": -208,
+        "indexes": [
+          1
+        ]
+      },
+      {
+        "target": "São Paulo",
+        "score": "0.512451112",
+        "raw": -808,
+        "indexes": [
+          2
+        ]
+      },
+      {
+        "target": "Ångström",
+        "score": "0.393706612",
+        "raw": -7207,
+        "indexes": [
+          6
+        ]
+      }
+    ]
+  },
+  {
+    "name": "accents-10",
+    "query": "smorrebrod",
+    "targets": [
+      "café",
+      "naïve",
+      "über",
+      "résumé",
+      "coöperate",
+      "Ångström",
+      "façade",
+      "São Paulo",
+      "plain",
+      "smørrebrød"
+    ],
+    "results": []
+  },
+  {
+    "name": "unicode-0",
+    "query": "日本語",
+    "targets": [
+      "日本語/ファイル.ts",
+      "src/日本語.ts",
+      "emoji/🙂.txt",
+      "Ω/omega.ts",
+      "src/Привет.ts"
+    ],
+    "results": [
+      {
+        "target": "src/日本語.ts",
+        "score": "0.873533702",
+        "raw": -3.567,
+        "indexes": [
+          4,
+          5,
+          6
+        ]
+      },
+      {
+        "target": "日本語/ファイル.ts",
+        "score": "0.865635999",
+        "raw": -4.04,
+        "indexes": [
+          0,
+          1,
+          2
+        ]
+      }
+    ]
+  },
+  {
+    "name": "unicode-1",
+    "query": "ファイル",
+    "targets": [
+      "日本語/ファイル.ts",
+      "src/日本語.ts",
+      "emoji/🙂.txt",
+      "Ω/omega.ts",
+      "src/Привет.ts"
+    ],
+    "results": [
+      {
+        "target": "日本語/ファイル.ts",
+        "score": "0.874308336",
+        "raw": -3.5231833910034602,
+        "indexes": [
+          4,
+          5,
+          6,
+          7
+        ]
+      }
+    ]
+  },
+  {
+    "name": "unicode-2",
+    "query": "emoji",
+    "targets": [
+      "日本語/ファイル.ts",
+      "src/日本語.ts",
+      "emoji/🙂.txt",
+      "Ω/omega.ts",
+      "src/Привет.ts"
+    ],
+    "results": [
+      {
+        "target": "emoji/🙂.txt",
+        "score": "0.874628947",
+        "raw": -3.5051775147928996,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ]
+      }
+    ]
+  },
+  {
+    "name": "unicode-3",
+    "query": "omega",
+    "targets": [
+      "日本語/ファイル.ts",
+      "src/日本語.ts",
+      "emoji/🙂.txt",
+      "Ω/omega.ts",
+      "src/Привет.ts"
+    ],
+    "results": [
+      {
+        "target": "Ω/omega.ts",
+        "score": "0.894935078",
+        "raw": -2.504881656804734,
+        "indexes": [
+          2,
+          3,
+          4,
+          5,
+          6
+        ]
+      }
+    ]
+  },
+  {
+    "name": "unicode-4",
+    "query": "Ω",
+    "targets": [
+      "日本語/ファイル.ts",
+      "src/日本語.ts",
+      "emoji/🙂.txt",
+      "Ω/omega.ts",
+      "src/Привет.ts"
+    ],
+    "results": [
+      {
+        "target": "Ω/omega.ts",
+        "score": "0.811790334",
+        "raw": -9,
+        "indexes": [
+          0
+        ]
+      }
+    ]
+  },
+  {
+    "name": "unicode-5",
+    "query": "ts",
+    "targets": [
+      "日本語/ファイル.ts",
+      "src/日本語.ts",
+      "emoji/🙂.txt",
+      "Ω/omega.ts",
+      "src/Привет.ts"
+    ],
+    "results": [
+      {
+        "target": "Ω/omega.ts",
+        "score": "0.856219112",
+        "raw": -4.672,
+        "indexes": [
+          8,
+          9
+        ]
+      },
+      {
+        "target": "src/日本語.ts",
+        "score": "0.856219112",
+        "raw": -4.672,
+        "indexes": [
+          8,
+          9
+        ]
+      },
+      {
+        "target": "日本語/ファイル.ts",
+        "score": "0.847544430",
+        "raw": -5.328,
+        "indexes": [
+          9,
+          10
+        ]
+      },
+      {
+        "target": "src/Привет.ts",
+        "score": "0.832231436",
+        "raw": -6.688000000000001,
+        "indexes": [
+          11,
+          12
+        ]
+      }
+    ]
+  },
+  {
+    "name": "unicode-6",
+    "query": "🙂",
+    "targets": [
+      "日本語/ファイル.ts",
+      "src/日本語.ts",
+      "emoji/🙂.txt",
+      "Ω/omega.ts",
+      "src/Привет.ts"
+    ],
+    "results": [
+      {
+        "target": "emoji/🙂.txt",
+        "score": "0.845571890",
+        "raw": -5.4879999999999995,
+        "indexes": [
+          6,
+          7
+        ]
+      }
+    ]
+  },
+  {
+    "name": "unicode-7",
+    "query": "Привет",
+    "targets": [
+      "日本語/ファイル.ts",
+      "src/日本語.ts",
+      "emoji/🙂.txt",
+      "Ω/omega.ts",
+      "src/Привет.ts"
+    ],
+    "results": [
+      {
+        "target": "src/Привет.ts",
+        "score": "0.874634004",
+        "raw": -3.5048940832724615,
+        "indexes": [
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ]
+      }
+    ]
+  },
+  {
+    "name": "unicode-8",
+    "query": "",
+    "targets": [
+      "日本語/ファイル.ts",
+      "src/日本語.ts",
+      "emoji/🙂.txt",
+      "Ω/omega.ts",
+      "src/Привет.ts"
+    ],
+    "results": []
+  },
+  {
+    "name": "spaces-0",
+    "query": "my file",
+    "targets": [
+      "my documents/report final.pdf",
+      "src/my file.ts",
+      "alpha beta gamma",
+      "c man",
+      "CheatManager.h",
+      "Manifest.cpp",
+      "straw berry.txt",
+      "Cheat Manager.md"
+    ],
+    "results": [
+      {
+        "target": "src/my file.ts",
+        "score": "0.874673523",
+        "raw": -3.50268,
+        "indexes": [
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10
+        ]
+      }
+    ]
+  },
+  {
+    "name": "spaces-1",
+    "query": "report final",
+    "targets": [
+      "my documents/report final.pdf",
+      "src/my file.ts",
+      "alpha beta gamma",
+      "c man",
+      "CheatManager.h",
+      "Manifest.cpp",
+      "straw berry.txt",
+      "Cheat Manager.md"
+    ],
+    "results": [
+      {
+        "target": "my documents/report final.pdf",
+        "score": "0.815739992",
+        "raw": -8.50201189060642,
+        "indexes": [
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24
+        ]
+      }
+    ]
+  },
+  {
+    "name": "spaces-2",
+    "query": "alpha gamma",
+    "targets": [
+      "my documents/report final.pdf",
+      "src/my file.ts",
+      "alpha beta gamma",
+      "c man",
+      "CheatManager.h",
+      "Manifest.cpp",
+      "straw berry.txt",
+      "Cheat Manager.md"
+    ],
+    "results": [
+      {
+        "target": "alpha beta gamma",
+        "score": "0.845110490",
+        "raw": -5.52603550295858,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          11,
+          12,
+          13,
+          14,
+          15
+        ]
+      }
+    ]
+  },
+  {
+    "name": "spaces-3",
+    "query": "c man",
+    "targets": [
+      "my documents/report final.pdf",
+      "src/my file.ts",
+      "alpha beta gamma",
+      "c man",
+      "CheatManager.h",
+      "Manifest.cpp",
+      "straw berry.txt",
+      "Cheat Manager.md"
+    ],
+    "results": [
+      {
+        "target": "c man",
+        "score": "1.000000000",
+        "raw": 0,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ]
+      },
+      {
+        "target": "CheatManager.h",
+        "score": "0.809490907",
+        "raw": -9.3025,
+        "indexes": [
+          0,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "Cheat Manager.md",
+        "score": "0.798944850",
+        "raw": -10.8185,
+        "indexes": [
+          0,
+          6,
+          7,
+          8
+        ]
+      },
+      {
+        "target": "Manifest.cpp",
+        "score": "0.718504076",
+        "raw": -33.8725,
+        "indexes": [
+          0,
+          1,
+          2,
+          9
+        ]
+      }
+    ]
+  },
+  {
+    "name": "spaces-4",
+    "query": "manifest",
+    "targets": [
+      "my documents/report final.pdf",
+      "src/my file.ts",
+      "alpha beta gamma",
+      "c man",
+      "CheatManager.h",
+      "Manifest.cpp",
+      "straw berry.txt",
+      "Cheat Manager.md"
+    ],
+    "results": [
+      {
+        "target": "Manifest.cpp",
+        "score": "0.907625557",
+        "raw": -2.000473372781065,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      }
+    ]
+  },
+  {
+    "name": "spaces-5",
+    "query": "CheatManager",
+    "targets": [
+      "my documents/report final.pdf",
+      "src/my file.ts",
+      "alpha beta gamma",
+      "c man",
+      "CheatManager.h",
+      "Manifest.cpp",
+      "straw berry.txt",
+      "Cheat Manager.md"
+    ],
+    "results": [
+      {
+        "target": "CheatManager.h",
+        "score": "0.941190236",
+        "raw": -1.0000475624256837,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ]
+      },
+      {
+        "target": "Cheat Manager.md",
+        "score": "0.745739994",
+        "raw": -23,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ]
+      }
+    ]
+  },
+  {
+    "name": "spaces-6",
+    "query": "src file",
+    "targets": [
+      "my documents/report final.pdf",
+      "src/my file.ts",
+      "alpha beta gamma",
+      "c man",
+      "CheatManager.h",
+      "Manifest.cpp",
+      "straw berry.txt",
+      "Cheat Manager.md"
+    ],
+    "results": [
+      {
+        "target": "src/my file.ts",
+        "score": "0.847856041",
+        "raw": -5.30310553633218,
+        "indexes": [
+          0,
+          1,
+          2,
+          7,
+          8,
+          9,
+          10
+        ]
+      }
+    ]
+  },
+  {
+    "name": "spaces-7",
+    "query": "documents report",
+    "targets": [
+      "my documents/report final.pdf",
+      "src/my file.ts",
+      "alpha beta gamma",
+      "c man",
+      "CheatManager.h",
+      "Manifest.cpp",
+      "straw berry.txt",
+      "Cheat Manager.md"
+    ],
+    "results": [
+      {
+        "target": "my documents/report final.pdf",
+        "score": "0.799276420",
+        "raw": -10.76742237719817,
+        "indexes": [
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18
+        ]
+      }
+    ]
+  },
+  {
+    "name": "spaces-8",
+    "query": "my documents",
+    "targets": [
+      "my documents/report final.pdf",
+      "src/my file.ts",
+      "alpha beta gamma",
+      "c man",
+      "CheatManager.h",
+      "Manifest.cpp",
+      "straw berry.txt",
+      "Cheat Manager.md"
+    ],
+    "results": [
+      {
+        "target": "my documents/report final.pdf",
+        "score": "0.815753092",
+        "raw": -8.500404280618312,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ]
+      }
+    ]
+  },
+  {
+    "name": "spaces-9",
+    "query": "straw berry",
+    "targets": [
+      "my documents/report final.pdf",
+      "src/my file.ts",
+      "alpha beta gamma",
+      "c man",
+      "CheatManager.h",
+      "Manifest.cpp",
+      "straw berry.txt",
+      "Cheat Manager.md"
+    ],
+    "results": [
+      {
+        "target": "straw berry.txt",
+        "score": "0.907634819",
+        "raw": -2.000134372480516,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10
+        ]
+      }
+    ]
+  },
+  {
+    "name": "ties-0",
+    "query": "a",
+    "targets": [
+      "src/a/b.ts",
+      "src/a/c.ts",
+      "src/b/a.ts",
+      "a/b/c",
+      "a/c/b",
+      "src/aa/bb.ts",
+      "src/ab/ab.ts"
+    ],
+    "results": [
+      {
+        "target": "a/c/b",
+        "score": "0.866273143",
+        "raw": -4,
+        "indexes": [
+          0
+        ]
+      },
+      {
+        "target": "a/b/c",
+        "score": "0.866273143",
+        "raw": -4,
+        "indexes": [
+          0
+        ]
+      },
+      {
+        "target": "src/a/b.ts",
+        "score": "0.790507434",
+        "raw": -12.2,
+        "indexes": [
+          4
+        ]
+      },
+      {
+        "target": "src/a/c.ts",
+        "score": "0.790507434",
+        "raw": -12.2,
+        "indexes": [
+          4
+        ]
+      },
+      {
+        "target": "src/ab/ab.ts",
+        "score": "0.779811948",
+        "raw": -14.2,
+        "indexes": [
+          4
+        ]
+      },
+      {
+        "target": "src/aa/bb.ts",
+        "score": "0.779811948",
+        "raw": -14.2,
+        "indexes": [
+          4
+        ]
+      },
+      {
+        "target": "src/b/a.ts",
+        "score": "0.770506938",
+        "raw": -16.2,
+        "indexes": [
+          6
+        ]
+      }
+    ]
+  },
+  {
+    "name": "ties-1",
+    "query": "b",
+    "targets": [
+      "src/a/b.ts",
+      "src/a/c.ts",
+      "src/b/a.ts",
+      "a/b/c",
+      "a/c/b",
+      "src/aa/bb.ts",
+      "src/ab/ab.ts"
+    ],
+    "results": [
+      {
+        "target": "a/b/c",
+        "score": "0.854446430",
+        "raw": -4.8,
+        "indexes": [
+          2
+        ]
+      },
+      {
+        "target": "a/c/b",
+        "score": "0.827193329",
+        "raw": -7.2,
+        "indexes": [
+          4
+        ]
+      },
+      {
+        "target": "src/b/a.ts",
+        "score": "0.790507434",
+        "raw": -12.2,
+        "indexes": [
+          4
+        ]
+      },
+      {
+        "target": "src/a/b.ts",
+        "score": "0.770506938",
+        "raw": -16.2,
+        "indexes": [
+          6
+        ]
+      },
+      {
+        "target": "src/aa/bb.ts",
+        "score": "0.752841005",
+        "raw": -20.8,
+        "indexes": [
+          7
+        ]
+      },
+      {
+        "target": "src/ab/ab.ts",
+        "score": "0.412046513",
+        "raw": -5011,
+        "indexes": [
+          5
+        ]
+      }
+    ]
+  },
+  {
+    "name": "ties-2",
+    "query": "ab",
+    "targets": [
+      "src/a/b.ts",
+      "src/a/c.ts",
+      "src/b/a.ts",
+      "a/b/c",
+      "a/c/b",
+      "src/aa/bb.ts",
+      "src/ab/ab.ts"
+    ],
+    "results": [
+      {
+        "target": "src/ab/ab.ts",
+        "score": "0.847544430",
+        "raw": -5.328,
+        "indexes": [
+          4,
+          5
+        ]
+      },
+      {
+        "target": "a/b/c",
+        "score": "0.763060101",
+        "raw": -18,
+        "indexes": [
+          0,
+          2
+        ]
+      },
+      {
+        "target": "a/c/b",
+        "score": "0.748878695",
+        "raw": -22,
+        "indexes": [
+          0,
+          4
+        ]
+      },
+      {
+        "target": "src/a/b.ts",
+        "score": "0.726555439",
+        "raw": -30.2,
+        "indexes": [
+          4,
+          6
+        ]
+      },
+      {
+        "target": "src/aa/bb.ts",
+        "score": "0.717830092",
+        "raw": -34.2,
+        "indexes": [
+          4,
+          7
+        ]
+      }
+    ]
+  },
+  {
+    "name": "ties-3",
+    "query": "a b",
+    "targets": [
+      "src/a/b.ts",
+      "src/a/c.ts",
+      "src/b/a.ts",
+      "a/b/c",
+      "a/c/b",
+      "src/aa/bb.ts",
+      "src/ab/ab.ts"
+    ],
+    "results": [
+      {
+        "target": "a/b/c",
+        "score": "0.860129716",
+        "raw": -4.4,
+        "indexes": [
+          0,
+          2
+        ]
+      },
+      {
+        "target": "a/c/b",
+        "score": "0.844221276",
+        "raw": -5.6,
+        "indexes": [
+          0,
+          4
+        ]
+      },
+      {
+        "target": "src/a/b.ts",
+        "score": "0.779811948",
+        "raw": -14.2,
+        "indexes": [
+          4,
+          6
+        ]
+      },
+      {
+        "target": "src/ab/ab.ts",
+        "score": "0.775474123",
+        "raw": -15.1,
+        "indexes": [
+          4,
+          5
+        ]
+      },
+      {
+        "target": "src/aa/bb.ts",
+        "score": "0.765051465",
+        "raw": -17.5,
+        "indexes": [
+          4,
+          7
+        ]
+      },
+      {
+        "target": "src/b/a.ts",
+        "score": "0.762278985",
+        "raw": -18.2,
+        "indexes": [
+          4,
+          6
+        ]
+      }
+    ]
+  },
+  {
+    "name": "ties-4",
+    "query": "c",
+    "targets": [
+      "src/a/b.ts",
+      "src/a/c.ts",
+      "src/b/a.ts",
+      "a/b/c",
+      "a/c/b",
+      "src/aa/bb.ts",
+      "src/ab/ab.ts"
+    ],
+    "results": [
+      {
+        "target": "a/c/b",
+        "score": "0.854446430",
+        "raw": -4.8,
+        "indexes": [
+          2
+        ]
+      },
+      {
+        "target": "a/b/c",
+        "score": "0.827193329",
+        "raw": -7.2,
+        "indexes": [
+          4
+        ]
+      },
+      {
+        "target": "src/a/c.ts",
+        "score": "0.770506938",
+        "raw": -16.2,
+        "indexes": [
+          6
+        ]
+      },
+      {
+        "target": "src/a/b.ts",
+        "score": "0.512378357",
+        "raw": -809,
+        "indexes": [
+          2
+        ]
+      },
+      {
+        "target": "src/b/a.ts",
+        "score": "0.512378357",
+        "raw": -809,
+        "indexes": [
+          2
+        ]
+      },
+      {
+        "target": "src/ab/ab.ts",
+        "score": "0.512233134",
+        "raw": -811,
+        "indexes": [
+          2
+        ]
+      },
+      {
+        "target": "src/aa/bb.ts",
+        "score": "0.512233134",
+        "raw": -811,
+        "indexes": [
+          2
+        ]
+      }
+    ]
+  },
+  {
+    "name": "ties-5",
+    "query": "a/b",
+    "targets": [
+      "src/a/b.ts",
+      "src/a/c.ts",
+      "src/b/a.ts",
+      "a/b/c",
+      "a/c/b",
+      "src/aa/bb.ts",
+      "src/ab/ab.ts"
+    ],
+    "results": [
+      {
+        "target": "a/b/c",
+        "score": "0.940775654",
+        "raw": -1.01,
+        "indexes": [
+          0,
+          1,
+          2
+        ]
+      },
+      {
+        "target": "src/a/b.ts",
+        "score": "0.873533702",
+        "raw": -3.567,
+        "indexes": [
+          4,
+          5,
+          6
+        ]
+      },
+      {
+        "target": "src/aa/bb.ts",
+        "score": "0.827479295",
+        "raw": -7.17,
+        "indexes": [
+          4,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "a/c/b",
+        "score": "0.755612607",
+        "raw": -20,
+        "indexes": [
+          0,
+          1,
+          4
+        ]
+      },
+      {
+        "target": "src/ab/ab.ts",
+        "score": "0.309299634",
+        "raw": -45209,
+        "indexes": [
+          4,
+          6,
+          8
+        ]
+      }
+    ]
+  },
+  {
+    "name": "ties-6",
+    "query": "aa",
+    "targets": [
+      "src/a/b.ts",
+      "src/a/c.ts",
+      "src/b/a.ts",
+      "a/b/c",
+      "a/c/b",
+      "src/aa/bb.ts",
+      "src/ab/ab.ts"
+    ],
+    "results": [
+      {
+        "target": "src/aa/bb.ts",
+        "score": "0.847544430",
+        "raw": -5.328,
+        "indexes": [
+          4,
+          5
+        ]
+      },
+      {
+        "target": "src/ab/ab.ts",
+        "score": "0.717830092",
+        "raw": -34.2,
+        "indexes": [
+          4,
+          7
+        ]
+      }
+    ]
+  },
+  {
+    "name": "generated-0",
+    "query": "file",
+    "targets": [
+      "src/file-0.ts",
+      "src/file-1.ts",
+      "src/file-2.ts",
+      "src/file-3.ts",
+      "src/file-4.ts",
+      "src/file-5.ts",
+      "src/file-6.ts",
+      "src/file-7.ts",
+      "src/file-8.ts",
+      "src/file-9.ts",
+      "src/file-a.ts",
+      "src/file-b.ts",
+      "src/file-c.ts",
+      "src/file-d.ts",
+      "src/file-e.ts",
+      "src/file-f.ts",
+      "src/file-g.ts",
+      "src/file-h.ts",
+      "src/file-i.ts",
+      "src/file-j.ts",
+      "src/file-k.ts",
+      "src/file-l.ts",
+      "src/file-m.ts",
+      "src/file-n.ts",
+      "src/file-o.ts",
+      "src/file-p.ts",
+      "src/file-q.ts",
+      "src/file-r.ts",
+      "src/file-s.ts",
+      "src/file-t.ts",
+      "src/file-u.ts",
+      "src/file-v.ts",
+      "src/file-w.ts",
+      "src/file-x.ts",
+      "src/file-y.ts",
+      "src/file-z.ts",
+      "src/file-10.ts",
+      "src/file-11.ts",
+      "src/file-12.ts",
+      "src/file-13.ts"
+    ],
+    "results": [
+      {
+        "target": "src/file-2.ts",
+        "score": "0.858283811",
+        "raw": -4.526643598615917,
+        "indexes": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-4.ts",
+        "score": "0.858283811",
+        "raw": -4.526643598615917,
+        "indexes": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-5.ts",
+        "score": "0.858283811",
+        "raw": -4.526643598615917,
+        "indexes": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-6.ts",
+        "score": "0.858283811",
+        "raw": -4.526643598615917,
+        "indexes": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-0.ts",
+        "score": "0.858283811",
+        "raw": -4.526643598615917,
+        "indexes": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-9.ts",
+        "score": "0.858283811",
+        "raw": -4.526643598615917,
+        "indexes": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-a.ts",
+        "score": "0.858283811",
+        "raw": -4.526643598615917,
+        "indexes": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-b.ts",
+        "score": "0.858283811",
+        "raw": -4.526643598615917,
+        "indexes": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-c.ts",
+        "score": "0.858283811",
+        "raw": -4.526643598615917,
+        "indexes": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-d.ts",
+        "score": "0.858283811",
+        "raw": -4.526643598615917,
+        "indexes": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-e.ts",
+        "score": "0.858283811",
+        "raw": -4.526643598615917,
+        "indexes": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-g.ts",
+        "score": "0.858283811",
+        "raw": -4.526643598615917,
+        "indexes": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-8.ts",
+        "score": "0.858283811",
+        "raw": -4.526643598615917,
+        "indexes": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-1.ts",
+        "score": "0.858283811",
+        "raw": -4.526643598615917,
+        "indexes": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-3.ts",
+        "score": "0.858283811",
+        "raw": -4.526643598615917,
+        "indexes": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-k.ts",
+        "score": "0.858283811",
+        "raw": -4.526643598615917,
+        "indexes": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-l.ts",
+        "score": "0.858283811",
+        "raw": -4.526643598615917,
+        "indexes": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-m.ts",
+        "score": "0.858283811",
+        "raw": -4.526643598615917,
+        "indexes": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-n.ts",
+        "score": "0.858283811",
+        "raw": -4.526643598615917,
+        "indexes": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-o.ts",
+        "score": "0.858283811",
+        "raw": -4.526643598615917,
+        "indexes": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-p.ts",
+        "score": "0.858283811",
+        "raw": -4.526643598615917,
+        "indexes": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-q.ts",
+        "score": "0.858283811",
+        "raw": -4.526643598615917,
+        "indexes": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-r.ts",
+        "score": "0.858283811",
+        "raw": -4.526643598615917,
+        "indexes": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-s.ts",
+        "score": "0.858283811",
+        "raw": -4.526643598615917,
+        "indexes": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-t.ts",
+        "score": "0.858283811",
+        "raw": -4.526643598615917,
+        "indexes": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-u.ts",
+        "score": "0.858283811",
+        "raw": -4.526643598615917,
+        "indexes": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-w.ts",
+        "score": "0.858283811",
+        "raw": -4.526643598615917,
+        "indexes": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-x.ts",
+        "score": "0.858283811",
+        "raw": -4.526643598615917,
+        "indexes": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-y.ts",
+        "score": "0.858283811",
+        "raw": -4.526643598615917,
+        "indexes": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-z.ts",
+        "score": "0.858283811",
+        "raw": -4.526643598615917,
+        "indexes": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-h.ts",
+        "score": "0.858283811",
+        "raw": -4.526643598615917,
+        "indexes": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-i.ts",
+        "score": "0.858283811",
+        "raw": -4.526643598615917,
+        "indexes": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-j.ts",
+        "score": "0.858283811",
+        "raw": -4.526643598615917,
+        "indexes": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-v.ts",
+        "score": "0.858283811",
+        "raw": -4.526643598615917,
+        "indexes": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-f.ts",
+        "score": "0.858283811",
+        "raw": -4.526643598615917,
+        "indexes": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-7.ts",
+        "score": "0.858283811",
+        "raw": -4.526643598615917,
+        "indexes": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-13.ts",
+        "score": "0.851383358",
+        "raw": -5.0283737024221455,
+        "indexes": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-12.ts",
+        "score": "0.851383358",
+        "raw": -5.0283737024221455,
+        "indexes": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-11.ts",
+        "score": "0.851383358",
+        "raw": -5.0283737024221455,
+        "indexes": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-10.ts",
+        "score": "0.851383358",
+        "raw": -5.0283737024221455,
+        "indexes": [
+          4,
+          5,
+          6,
+          7
+        ]
+      }
+    ]
+  },
+  {
+    "name": "generated-1",
+    "query": "f1",
+    "targets": [
+      "src/file-0.ts",
+      "src/file-1.ts",
+      "src/file-2.ts",
+      "src/file-3.ts",
+      "src/file-4.ts",
+      "src/file-5.ts",
+      "src/file-6.ts",
+      "src/file-7.ts",
+      "src/file-8.ts",
+      "src/file-9.ts",
+      "src/file-a.ts",
+      "src/file-b.ts",
+      "src/file-c.ts",
+      "src/file-d.ts",
+      "src/file-e.ts",
+      "src/file-f.ts",
+      "src/file-g.ts",
+      "src/file-h.ts",
+      "src/file-i.ts",
+      "src/file-j.ts",
+      "src/file-k.ts",
+      "src/file-l.ts",
+      "src/file-m.ts",
+      "src/file-n.ts",
+      "src/file-o.ts",
+      "src/file-p.ts",
+      "src/file-q.ts",
+      "src/file-r.ts",
+      "src/file-s.ts",
+      "src/file-t.ts",
+      "src/file-u.ts",
+      "src/file-v.ts",
+      "src/file-w.ts",
+      "src/file-x.ts",
+      "src/file-y.ts",
+      "src/file-z.ts",
+      "src/file-10.ts",
+      "src/file-11.ts",
+      "src/file-12.ts",
+      "src/file-13.ts"
+    ],
+    "results": [
+      {
+        "target": "src/file-1.ts",
+        "score": "0.708292383",
+        "raw": -39.2,
+        "indexes": [
+          4,
+          9
+        ]
+      },
+      {
+        "target": "src/file-11.ts",
+        "score": "0.706535958",
+        "raw": -40.2,
+        "indexes": [
+          4,
+          9
+        ]
+      },
+      {
+        "target": "src/file-13.ts",
+        "score": "0.706535958",
+        "raw": -40.2,
+        "indexes": [
+          4,
+          9
+        ]
+      },
+      {
+        "target": "src/file-12.ts",
+        "score": "0.706535958",
+        "raw": -40.2,
+        "indexes": [
+          4,
+          9
+        ]
+      },
+      {
+        "target": "src/file-10.ts",
+        "score": "0.706535958",
+        "raw": -40.2,
+        "indexes": [
+          4,
+          9
+        ]
+      }
+    ]
+  },
+  {
+    "name": "generated-2",
+    "query": "f2",
+    "targets": [
+      "src/file-0.ts",
+      "src/file-1.ts",
+      "src/file-2.ts",
+      "src/file-3.ts",
+      "src/file-4.ts",
+      "src/file-5.ts",
+      "src/file-6.ts",
+      "src/file-7.ts",
+      "src/file-8.ts",
+      "src/file-9.ts",
+      "src/file-a.ts",
+      "src/file-b.ts",
+      "src/file-c.ts",
+      "src/file-d.ts",
+      "src/file-e.ts",
+      "src/file-f.ts",
+      "src/file-g.ts",
+      "src/file-h.ts",
+      "src/file-i.ts",
+      "src/file-j.ts",
+      "src/file-k.ts",
+      "src/file-l.ts",
+      "src/file-m.ts",
+      "src/file-n.ts",
+      "src/file-o.ts",
+      "src/file-p.ts",
+      "src/file-q.ts",
+      "src/file-r.ts",
+      "src/file-s.ts",
+      "src/file-t.ts",
+      "src/file-u.ts",
+      "src/file-v.ts",
+      "src/file-w.ts",
+      "src/file-x.ts",
+      "src/file-y.ts",
+      "src/file-z.ts",
+      "src/file-10.ts",
+      "src/file-11.ts",
+      "src/file-12.ts",
+      "src/file-13.ts"
+    ],
+    "results": [
+      {
+        "target": "src/file-2.ts",
+        "score": "0.708292383",
+        "raw": -39.2,
+        "indexes": [
+          4,
+          9
+        ]
+      },
+      {
+        "target": "src/file-12.ts",
+        "score": "0.326661198",
+        "raw": -30212,
+        "indexes": [
+          4,
+          10
+        ]
+      }
+    ]
+  },
+  {
+    "name": "generated-3",
+    "query": "file-3",
+    "targets": [
+      "src/file-0.ts",
+      "src/file-1.ts",
+      "src/file-2.ts",
+      "src/file-3.ts",
+      "src/file-4.ts",
+      "src/file-5.ts",
+      "src/file-6.ts",
+      "src/file-7.ts",
+      "src/file-8.ts",
+      "src/file-9.ts",
+      "src/file-a.ts",
+      "src/file-b.ts",
+      "src/file-c.ts",
+      "src/file-d.ts",
+      "src/file-e.ts",
+      "src/file-f.ts",
+      "src/file-g.ts",
+      "src/file-h.ts",
+      "src/file-i.ts",
+      "src/file-j.ts",
+      "src/file-k.ts",
+      "src/file-l.ts",
+      "src/file-m.ts",
+      "src/file-n.ts",
+      "src/file-o.ts",
+      "src/file-p.ts",
+      "src/file-q.ts",
+      "src/file-r.ts",
+      "src/file-s.ts",
+      "src/file-t.ts",
+      "src/file-u.ts",
+      "src/file-v.ts",
+      "src/file-w.ts",
+      "src/file-x.ts",
+      "src/file-y.ts",
+      "src/file-z.ts",
+      "src/file-10.ts",
+      "src/file-11.ts",
+      "src/file-12.ts",
+      "src/file-13.ts"
+    ],
+    "results": [
+      {
+        "target": "src/file-3.ts",
+        "score": "0.874634004",
+        "raw": -3.5048940832724615,
+        "indexes": [
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ]
+      },
+      {
+        "target": "src/file-13.ts",
+        "score": "0.332940082",
+        "raw": -26208,
+        "indexes": [
+          4,
+          5,
+          6,
+          7,
+          8,
+          10
+        ]
+      }
+    ]
+  },
+  {
+    "name": "generated-4",
+    "query": "ts",
+    "targets": [
+      "src/file-0.ts",
+      "src/file-1.ts",
+      "src/file-2.ts",
+      "src/file-3.ts",
+      "src/file-4.ts",
+      "src/file-5.ts",
+      "src/file-6.ts",
+      "src/file-7.ts",
+      "src/file-8.ts",
+      "src/file-9.ts",
+      "src/file-a.ts",
+      "src/file-b.ts",
+      "src/file-c.ts",
+      "src/file-d.ts",
+      "src/file-e.ts",
+      "src/file-f.ts",
+      "src/file-g.ts",
+      "src/file-h.ts",
+      "src/file-i.ts",
+      "src/file-j.ts",
+      "src/file-k.ts",
+      "src/file-l.ts",
+      "src/file-m.ts",
+      "src/file-n.ts",
+      "src/file-o.ts",
+      "src/file-p.ts",
+      "src/file-q.ts",
+      "src/file-r.ts",
+      "src/file-s.ts",
+      "src/file-t.ts",
+      "src/file-u.ts",
+      "src/file-v.ts",
+      "src/file-w.ts",
+      "src/file-x.ts",
+      "src/file-y.ts",
+      "src/file-z.ts",
+      "src/file-10.ts",
+      "src/file-11.ts",
+      "src/file-12.ts",
+      "src/file-13.ts"
+    ],
+    "results": [
+      {
+        "target": "src/file-2.ts",
+        "score": "0.832231436",
+        "raw": -6.688000000000001,
+        "indexes": [
+          11,
+          12
+        ]
+      },
+      {
+        "target": "src/file-4.ts",
+        "score": "0.832231436",
+        "raw": -6.688000000000001,
+        "indexes": [
+          11,
+          12
+        ]
+      },
+      {
+        "target": "src/file-5.ts",
+        "score": "0.832231436",
+        "raw": -6.688000000000001,
+        "indexes": [
+          11,
+          12
+        ]
+      },
+      {
+        "target": "src/file-6.ts",
+        "score": "0.832231436",
+        "raw": -6.688000000000001,
+        "indexes": [
+          11,
+          12
+        ]
+      },
+      {
+        "target": "src/file-0.ts",
+        "score": "0.832231436",
+        "raw": -6.688000000000001,
+        "indexes": [
+          11,
+          12
+        ]
+      },
+      {
+        "target": "src/file-9.ts",
+        "score": "0.832231436",
+        "raw": -6.688000000000001,
+        "indexes": [
+          11,
+          12
+        ]
+      },
+      {
+        "target": "src/file-a.ts",
+        "score": "0.832231436",
+        "raw": -6.688000000000001,
+        "indexes": [
+          11,
+          12
+        ]
+      },
+      {
+        "target": "src/file-b.ts",
+        "score": "0.832231436",
+        "raw": -6.688000000000001,
+        "indexes": [
+          11,
+          12
+        ]
+      },
+      {
+        "target": "src/file-c.ts",
+        "score": "0.832231436",
+        "raw": -6.688000000000001,
+        "indexes": [
+          11,
+          12
+        ]
+      },
+      {
+        "target": "src/file-d.ts",
+        "score": "0.832231436",
+        "raw": -6.688000000000001,
+        "indexes": [
+          11,
+          12
+        ]
+      },
+      {
+        "target": "src/file-e.ts",
+        "score": "0.832231436",
+        "raw": -6.688000000000001,
+        "indexes": [
+          11,
+          12
+        ]
+      },
+      {
+        "target": "src/file-g.ts",
+        "score": "0.832231436",
+        "raw": -6.688000000000001,
+        "indexes": [
+          11,
+          12
+        ]
+      },
+      {
+        "target": "src/file-8.ts",
+        "score": "0.832231436",
+        "raw": -6.688000000000001,
+        "indexes": [
+          11,
+          12
+        ]
+      },
+      {
+        "target": "src/file-1.ts",
+        "score": "0.832231436",
+        "raw": -6.688000000000001,
+        "indexes": [
+          11,
+          12
+        ]
+      },
+      {
+        "target": "src/file-3.ts",
+        "score": "0.832231436",
+        "raw": -6.688000000000001,
+        "indexes": [
+          11,
+          12
+        ]
+      },
+      {
+        "target": "src/file-k.ts",
+        "score": "0.832231436",
+        "raw": -6.688000000000001,
+        "indexes": [
+          11,
+          12
+        ]
+      },
+      {
+        "target": "src/file-l.ts",
+        "score": "0.832231436",
+        "raw": -6.688000000000001,
+        "indexes": [
+          11,
+          12
+        ]
+      },
+      {
+        "target": "src/file-m.ts",
+        "score": "0.832231436",
+        "raw": -6.688000000000001,
+        "indexes": [
+          11,
+          12
+        ]
+      },
+      {
+        "target": "src/file-n.ts",
+        "score": "0.832231436",
+        "raw": -6.688000000000001,
+        "indexes": [
+          11,
+          12
+        ]
+      },
+      {
+        "target": "src/file-o.ts",
+        "score": "0.832231436",
+        "raw": -6.688000000000001,
+        "indexes": [
+          11,
+          12
+        ]
+      },
+      {
+        "target": "src/file-p.ts",
+        "score": "0.832231436",
+        "raw": -6.688000000000001,
+        "indexes": [
+          11,
+          12
+        ]
+      },
+      {
+        "target": "src/file-q.ts",
+        "score": "0.832231436",
+        "raw": -6.688000000000001,
+        "indexes": [
+          11,
+          12
+        ]
+      },
+      {
+        "target": "src/file-r.ts",
+        "score": "0.832231436",
+        "raw": -6.688000000000001,
+        "indexes": [
+          11,
+          12
+        ]
+      },
+      {
+        "target": "src/file-s.ts",
+        "score": "0.832231436",
+        "raw": -6.688000000000001,
+        "indexes": [
+          11,
+          12
+        ]
+      },
+      {
+        "target": "src/file-t.ts",
+        "score": "0.832231436",
+        "raw": -6.688000000000001,
+        "indexes": [
+          11,
+          12
+        ]
+      },
+      {
+        "target": "src/file-u.ts",
+        "score": "0.832231436",
+        "raw": -6.688000000000001,
+        "indexes": [
+          11,
+          12
+        ]
+      },
+      {
+        "target": "src/file-w.ts",
+        "score": "0.832231436",
+        "raw": -6.688000000000001,
+        "indexes": [
+          11,
+          12
+        ]
+      },
+      {
+        "target": "src/file-x.ts",
+        "score": "0.832231436",
+        "raw": -6.688000000000001,
+        "indexes": [
+          11,
+          12
+        ]
+      },
+      {
+        "target": "src/file-y.ts",
+        "score": "0.832231436",
+        "raw": -6.688000000000001,
+        "indexes": [
+          11,
+          12
+        ]
+      },
+      {
+        "target": "src/file-z.ts",
+        "score": "0.832231436",
+        "raw": -6.688000000000001,
+        "indexes": [
+          11,
+          12
+        ]
+      },
+      {
+        "target": "src/file-h.ts",
+        "score": "0.832231436",
+        "raw": -6.688000000000001,
+        "indexes": [
+          11,
+          12
+        ]
+      },
+      {
+        "target": "src/file-i.ts",
+        "score": "0.832231436",
+        "raw": -6.688000000000001,
+        "indexes": [
+          11,
+          12
+        ]
+      },
+      {
+        "target": "src/file-j.ts",
+        "score": "0.832231436",
+        "raw": -6.688000000000001,
+        "indexes": [
+          11,
+          12
+        ]
+      },
+      {
+        "target": "src/file-v.ts",
+        "score": "0.832231436",
+        "raw": -6.688000000000001,
+        "indexes": [
+          11,
+          12
+        ]
+      },
+      {
+        "target": "src/file-f.ts",
+        "score": "0.832231436",
+        "raw": -6.688000000000001,
+        "indexes": [
+          11,
+          12
+        ]
+      },
+      {
+        "target": "src/file-7.ts",
+        "score": "0.832231436",
+        "raw": -6.688000000000001,
+        "indexes": [
+          11,
+          12
+        ]
+      },
+      {
+        "target": "src/file-13.ts",
+        "score": "0.825388799",
+        "raw": -7.3919999999999995,
+        "indexes": [
+          12,
+          13
+        ]
+      },
+      {
+        "target": "src/file-12.ts",
+        "score": "0.825388799",
+        "raw": -7.3919999999999995,
+        "indexes": [
+          12,
+          13
+        ]
+      },
+      {
+        "target": "src/file-11.ts",
+        "score": "0.825388799",
+        "raw": -7.3919999999999995,
+        "indexes": [
+          12,
+          13
+        ]
+      },
+      {
+        "target": "src/file-10.ts",
+        "score": "0.825388799",
+        "raw": -7.3919999999999995,
+        "indexes": [
+          12,
+          13
+        ]
+      }
+    ]
+  },
+  {
+    "name": "generated-5",
+    "query": "1",
+    "targets": [
+      "src/file-0.ts",
+      "src/file-1.ts",
+      "src/file-2.ts",
+      "src/file-3.ts",
+      "src/file-4.ts",
+      "src/file-5.ts",
+      "src/file-6.ts",
+      "src/file-7.ts",
+      "src/file-8.ts",
+      "src/file-9.ts",
+      "src/file-a.ts",
+      "src/file-b.ts",
+      "src/file-c.ts",
+      "src/file-d.ts",
+      "src/file-e.ts",
+      "src/file-f.ts",
+      "src/file-g.ts",
+      "src/file-h.ts",
+      "src/file-i.ts",
+      "src/file-j.ts",
+      "src/file-k.ts",
+      "src/file-l.ts",
+      "src/file-m.ts",
+      "src/file-n.ts",
+      "src/file-o.ts",
+      "src/file-p.ts",
+      "src/file-q.ts",
+      "src/file-r.ts",
+      "src/file-s.ts",
+      "src/file-t.ts",
+      "src/file-u.ts",
+      "src/file-v.ts",
+      "src/file-w.ts",
+      "src/file-x.ts",
+      "src/file-y.ts",
+      "src/file-z.ts",
+      "src/file-10.ts",
+      "src/file-11.ts",
+      "src/file-12.ts",
+      "src/file-13.ts"
+    ],
+    "results": [
+      {
+        "target": "src/file-1.ts",
+        "score": "0.731372977",
+        "raw": -28.2,
+        "indexes": [
+          9
+        ]
+      },
+      {
+        "target": "src/file-11.ts",
+        "score": "0.728922060",
+        "raw": -29.2,
+        "indexes": [
+          9
+        ]
+      },
+      {
+        "target": "src/file-13.ts",
+        "score": "0.728922060",
+        "raw": -29.2,
+        "indexes": [
+          9
+        ]
+      },
+      {
+        "target": "src/file-12.ts",
+        "score": "0.728922060",
+        "raw": -29.2,
+        "indexes": [
+          9
+        ]
+      },
+      {
+        "target": "src/file-10.ts",
+        "score": "0.728922060",
+        "raw": -29.2,
+        "indexes": [
+          9
+        ]
+      }
+    ]
+  },
+  {
+    "name": "generated-6",
+    "query": "a",
+    "targets": [
+      "src/file-0.ts",
+      "src/file-1.ts",
+      "src/file-2.ts",
+      "src/file-3.ts",
+      "src/file-4.ts",
+      "src/file-5.ts",
+      "src/file-6.ts",
+      "src/file-7.ts",
+      "src/file-8.ts",
+      "src/file-9.ts",
+      "src/file-a.ts",
+      "src/file-b.ts",
+      "src/file-c.ts",
+      "src/file-d.ts",
+      "src/file-e.ts",
+      "src/file-f.ts",
+      "src/file-g.ts",
+      "src/file-h.ts",
+      "src/file-i.ts",
+      "src/file-j.ts",
+      "src/file-k.ts",
+      "src/file-l.ts",
+      "src/file-m.ts",
+      "src/file-n.ts",
+      "src/file-o.ts",
+      "src/file-p.ts",
+      "src/file-q.ts",
+      "src/file-r.ts",
+      "src/file-s.ts",
+      "src/file-t.ts",
+      "src/file-u.ts",
+      "src/file-v.ts",
+      "src/file-w.ts",
+      "src/file-x.ts",
+      "src/file-y.ts",
+      "src/file-z.ts",
+      "src/file-10.ts",
+      "src/file-11.ts",
+      "src/file-12.ts",
+      "src/file-13.ts"
+    ],
+    "results": [
+      {
+        "target": "src/file-a.ts",
+        "score": "0.731372977",
+        "raw": -28.2,
+        "indexes": [
+          9
+        ]
+      }
+    ]
+  },
+  {
+    "name": "generated-7",
+    "query": "file-a",
+    "targets": [
+      "src/file-0.ts",
+      "src/file-1.ts",
+      "src/file-2.ts",
+      "src/file-3.ts",
+      "src/file-4.ts",
+      "src/file-5.ts",
+      "src/file-6.ts",
+      "src/file-7.ts",
+      "src/file-8.ts",
+      "src/file-9.ts",
+      "src/file-a.ts",
+      "src/file-b.ts",
+      "src/file-c.ts",
+      "src/file-d.ts",
+      "src/file-e.ts",
+      "src/file-f.ts",
+      "src/file-g.ts",
+      "src/file-h.ts",
+      "src/file-i.ts",
+      "src/file-j.ts",
+      "src/file-k.ts",
+      "src/file-l.ts",
+      "src/file-m.ts",
+      "src/file-n.ts",
+      "src/file-o.ts",
+      "src/file-p.ts",
+      "src/file-q.ts",
+      "src/file-r.ts",
+      "src/file-s.ts",
+      "src/file-t.ts",
+      "src/file-u.ts",
+      "src/file-v.ts",
+      "src/file-w.ts",
+      "src/file-x.ts",
+      "src/file-y.ts",
+      "src/file-z.ts",
+      "src/file-10.ts",
+      "src/file-11.ts",
+      "src/file-12.ts",
+      "src/file-13.ts"
+    ],
+    "results": [
+      {
+        "target": "src/file-a.ts",
+        "score": "0.874634004",
+        "raw": -3.5048940832724615,
+        "indexes": [
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ]
+      }
+    ]
+  },
+  {
+    "name": "generated-8",
+    "query": "file-0",
+    "targets": [
+      "src/file-0.ts",
+      "src/file-1.ts",
+      "src/file-2.ts",
+      "src/file-3.ts",
+      "src/file-4.ts",
+      "src/file-5.ts",
+      "src/file-6.ts",
+      "src/file-7.ts",
+      "src/file-8.ts",
+      "src/file-9.ts",
+      "src/file-a.ts",
+      "src/file-b.ts",
+      "src/file-c.ts",
+      "src/file-d.ts",
+      "src/file-e.ts",
+      "src/file-f.ts",
+      "src/file-g.ts",
+      "src/file-h.ts",
+      "src/file-i.ts",
+      "src/file-j.ts",
+      "src/file-k.ts",
+      "src/file-l.ts",
+      "src/file-m.ts",
+      "src/file-n.ts",
+      "src/file-o.ts",
+      "src/file-p.ts",
+      "src/file-q.ts",
+      "src/file-r.ts",
+      "src/file-s.ts",
+      "src/file-t.ts",
+      "src/file-u.ts",
+      "src/file-v.ts",
+      "src/file-w.ts",
+      "src/file-x.ts",
+      "src/file-y.ts",
+      "src/file-z.ts",
+      "src/file-10.ts",
+      "src/file-11.ts",
+      "src/file-12.ts",
+      "src/file-13.ts"
+    ],
+    "results": [
+      {
+        "target": "src/file-0.ts",
+        "score": "0.874634004",
+        "raw": -3.5048940832724615,
+        "indexes": [
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ]
+      },
+      {
+        "target": "src/file-10.ts",
+        "score": "0.332940082",
+        "raw": -26208,
+        "indexes": [
+          4,
+          5,
+          6,
+          7,
+          8,
+          10
+        ]
+      }
+    ]
+  },
+  {
+    "name": "generated-9",
+    "query": "file-1",
+    "targets": [
+      "src/file-0.ts",
+      "src/file-1.ts",
+      "src/file-2.ts",
+      "src/file-3.ts",
+      "src/file-4.ts",
+      "src/file-5.ts",
+      "src/file-6.ts",
+      "src/file-7.ts",
+      "src/file-8.ts",
+      "src/file-9.ts",
+      "src/file-a.ts",
+      "src/file-b.ts",
+      "src/file-c.ts",
+      "src/file-d.ts",
+      "src/file-e.ts",
+      "src/file-f.ts",
+      "src/file-g.ts",
+      "src/file-h.ts",
+      "src/file-i.ts",
+      "src/file-j.ts",
+      "src/file-k.ts",
+      "src/file-l.ts",
+      "src/file-m.ts",
+      "src/file-n.ts",
+      "src/file-o.ts",
+      "src/file-p.ts",
+      "src/file-q.ts",
+      "src/file-r.ts",
+      "src/file-s.ts",
+      "src/file-t.ts",
+      "src/file-u.ts",
+      "src/file-v.ts",
+      "src/file-w.ts",
+      "src/file-x.ts",
+      "src/file-y.ts",
+      "src/file-z.ts",
+      "src/file-10.ts",
+      "src/file-11.ts",
+      "src/file-12.ts",
+      "src/file-13.ts"
+    ],
+    "results": [
+      {
+        "target": "src/file-1.ts",
+        "score": "0.874634004",
+        "raw": -3.5048940832724615,
+        "indexes": [
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ]
+      },
+      {
+        "target": "src/file-11.ts",
+        "score": "0.866189065",
+        "raw": -4.0052593133674215,
+        "indexes": [
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ]
+      },
+      {
+        "target": "src/file-13.ts",
+        "score": "0.866189065",
+        "raw": -4.0052593133674215,
+        "indexes": [
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ]
+      },
+      {
+        "target": "src/file-12.ts",
+        "score": "0.866189065",
+        "raw": -4.0052593133674215,
+        "indexes": [
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ]
+      },
+      {
+        "target": "src/file-10.ts",
+        "score": "0.866189065",
+        "raw": -4.0052593133674215,
+        "indexes": [
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ]
+      }
+    ]
+  },
+  {
+    "name": "generated-10",
+    "query": "file-z",
+    "targets": [
+      "src/file-0.ts",
+      "src/file-1.ts",
+      "src/file-2.ts",
+      "src/file-3.ts",
+      "src/file-4.ts",
+      "src/file-5.ts",
+      "src/file-6.ts",
+      "src/file-7.ts",
+      "src/file-8.ts",
+      "src/file-9.ts",
+      "src/file-a.ts",
+      "src/file-b.ts",
+      "src/file-c.ts",
+      "src/file-d.ts",
+      "src/file-e.ts",
+      "src/file-f.ts",
+      "src/file-g.ts",
+      "src/file-h.ts",
+      "src/file-i.ts",
+      "src/file-j.ts",
+      "src/file-k.ts",
+      "src/file-l.ts",
+      "src/file-m.ts",
+      "src/file-n.ts",
+      "src/file-o.ts",
+      "src/file-p.ts",
+      "src/file-q.ts",
+      "src/file-r.ts",
+      "src/file-s.ts",
+      "src/file-t.ts",
+      "src/file-u.ts",
+      "src/file-v.ts",
+      "src/file-w.ts",
+      "src/file-x.ts",
+      "src/file-y.ts",
+      "src/file-z.ts",
+      "src/file-10.ts",
+      "src/file-11.ts",
+      "src/file-12.ts",
+      "src/file-13.ts"
+    ],
+    "results": [
+      {
+        "target": "src/file-z.ts",
+        "score": "0.874634004",
+        "raw": -3.5048940832724615,
+        "indexes": [
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ]
+      }
+    ]
+  },
+  {
+    "name": "generated-11",
+    "query": "z",
+    "targets": [
+      "src/file-0.ts",
+      "src/file-1.ts",
+      "src/file-2.ts",
+      "src/file-3.ts",
+      "src/file-4.ts",
+      "src/file-5.ts",
+      "src/file-6.ts",
+      "src/file-7.ts",
+      "src/file-8.ts",
+      "src/file-9.ts",
+      "src/file-a.ts",
+      "src/file-b.ts",
+      "src/file-c.ts",
+      "src/file-d.ts",
+      "src/file-e.ts",
+      "src/file-f.ts",
+      "src/file-g.ts",
+      "src/file-h.ts",
+      "src/file-i.ts",
+      "src/file-j.ts",
+      "src/file-k.ts",
+      "src/file-l.ts",
+      "src/file-m.ts",
+      "src/file-n.ts",
+      "src/file-o.ts",
+      "src/file-p.ts",
+      "src/file-q.ts",
+      "src/file-r.ts",
+      "src/file-s.ts",
+      "src/file-t.ts",
+      "src/file-u.ts",
+      "src/file-v.ts",
+      "src/file-w.ts",
+      "src/file-x.ts",
+      "src/file-y.ts",
+      "src/file-z.ts",
+      "src/file-10.ts",
+      "src/file-11.ts",
+      "src/file-12.ts",
+      "src/file-13.ts"
+    ],
+    "results": [
+      {
+        "target": "src/file-z.ts",
+        "score": "0.731372977",
+        "raw": -28.2,
+        "indexes": [
+          9
+        ]
+      }
+    ]
+  },
+  {
+    "name": "generated-12",
+    "query": "f",
+    "targets": [
+      "src/file-0.ts",
+      "src/file-1.ts",
+      "src/file-2.ts",
+      "src/file-3.ts",
+      "src/file-4.ts",
+      "src/file-5.ts",
+      "src/file-6.ts",
+      "src/file-7.ts",
+      "src/file-8.ts",
+      "src/file-9.ts",
+      "src/file-a.ts",
+      "src/file-b.ts",
+      "src/file-c.ts",
+      "src/file-d.ts",
+      "src/file-e.ts",
+      "src/file-f.ts",
+      "src/file-g.ts",
+      "src/file-h.ts",
+      "src/file-i.ts",
+      "src/file-j.ts",
+      "src/file-k.ts",
+      "src/file-l.ts",
+      "src/file-m.ts",
+      "src/file-n.ts",
+      "src/file-o.ts",
+      "src/file-p.ts",
+      "src/file-q.ts",
+      "src/file-r.ts",
+      "src/file-s.ts",
+      "src/file-t.ts",
+      "src/file-u.ts",
+      "src/file-v.ts",
+      "src/file-w.ts",
+      "src/file-x.ts",
+      "src/file-y.ts",
+      "src/file-z.ts",
+      "src/file-10.ts",
+      "src/file-11.ts",
+      "src/file-12.ts",
+      "src/file-13.ts"
+    ],
+    "results": [
+      {
+        "target": "src/file-2.ts",
+        "score": "0.775007994",
+        "raw": -15.2,
+        "indexes": [
+          4
+        ]
+      },
+      {
+        "target": "src/file-4.ts",
+        "score": "0.775007994",
+        "raw": -15.2,
+        "indexes": [
+          4
+        ]
+      },
+      {
+        "target": "src/file-5.ts",
+        "score": "0.775007994",
+        "raw": -15.2,
+        "indexes": [
+          4
+        ]
+      },
+      {
+        "target": "src/file-6.ts",
+        "score": "0.775007994",
+        "raw": -15.2,
+        "indexes": [
+          4
+        ]
+      },
+      {
+        "target": "src/file-0.ts",
+        "score": "0.775007994",
+        "raw": -15.2,
+        "indexes": [
+          4
+        ]
+      },
+      {
+        "target": "src/file-9.ts",
+        "score": "0.775007994",
+        "raw": -15.2,
+        "indexes": [
+          4
+        ]
+      },
+      {
+        "target": "src/file-a.ts",
+        "score": "0.775007994",
+        "raw": -15.2,
+        "indexes": [
+          4
+        ]
+      },
+      {
+        "target": "src/file-b.ts",
+        "score": "0.775007994",
+        "raw": -15.2,
+        "indexes": [
+          4
+        ]
+      },
+      {
+        "target": "src/file-c.ts",
+        "score": "0.775007994",
+        "raw": -15.2,
+        "indexes": [
+          4
+        ]
+      },
+      {
+        "target": "src/file-d.ts",
+        "score": "0.775007994",
+        "raw": -15.2,
+        "indexes": [
+          4
+        ]
+      },
+      {
+        "target": "src/file-e.ts",
+        "score": "0.775007994",
+        "raw": -15.2,
+        "indexes": [
+          4
+        ]
+      },
+      {
+        "target": "src/file-g.ts",
+        "score": "0.775007994",
+        "raw": -15.2,
+        "indexes": [
+          4
+        ]
+      },
+      {
+        "target": "src/file-8.ts",
+        "score": "0.775007994",
+        "raw": -15.2,
+        "indexes": [
+          4
+        ]
+      },
+      {
+        "target": "src/file-1.ts",
+        "score": "0.775007994",
+        "raw": -15.2,
+        "indexes": [
+          4
+        ]
+      },
+      {
+        "target": "src/file-3.ts",
+        "score": "0.775007994",
+        "raw": -15.2,
+        "indexes": [
+          4
+        ]
+      },
+      {
+        "target": "src/file-k.ts",
+        "score": "0.775007994",
+        "raw": -15.2,
+        "indexes": [
+          4
+        ]
+      },
+      {
+        "target": "src/file-l.ts",
+        "score": "0.775007994",
+        "raw": -15.2,
+        "indexes": [
+          4
+        ]
+      },
+      {
+        "target": "src/file-m.ts",
+        "score": "0.775007994",
+        "raw": -15.2,
+        "indexes": [
+          4
+        ]
+      },
+      {
+        "target": "src/file-n.ts",
+        "score": "0.775007994",
+        "raw": -15.2,
+        "indexes": [
+          4
+        ]
+      },
+      {
+        "target": "src/file-o.ts",
+        "score": "0.775007994",
+        "raw": -15.2,
+        "indexes": [
+          4
+        ]
+      },
+      {
+        "target": "src/file-p.ts",
+        "score": "0.775007994",
+        "raw": -15.2,
+        "indexes": [
+          4
+        ]
+      },
+      {
+        "target": "src/file-q.ts",
+        "score": "0.775007994",
+        "raw": -15.2,
+        "indexes": [
+          4
+        ]
+      },
+      {
+        "target": "src/file-r.ts",
+        "score": "0.775007994",
+        "raw": -15.2,
+        "indexes": [
+          4
+        ]
+      },
+      {
+        "target": "src/file-s.ts",
+        "score": "0.775007994",
+        "raw": -15.2,
+        "indexes": [
+          4
+        ]
+      },
+      {
+        "target": "src/file-t.ts",
+        "score": "0.775007994",
+        "raw": -15.2,
+        "indexes": [
+          4
+        ]
+      },
+      {
+        "target": "src/file-u.ts",
+        "score": "0.775007994",
+        "raw": -15.2,
+        "indexes": [
+          4
+        ]
+      },
+      {
+        "target": "src/file-w.ts",
+        "score": "0.775007994",
+        "raw": -15.2,
+        "indexes": [
+          4
+        ]
+      },
+      {
+        "target": "src/file-x.ts",
+        "score": "0.775007994",
+        "raw": -15.2,
+        "indexes": [
+          4
+        ]
+      },
+      {
+        "target": "src/file-y.ts",
+        "score": "0.775007994",
+        "raw": -15.2,
+        "indexes": [
+          4
+        ]
+      },
+      {
+        "target": "src/file-z.ts",
+        "score": "0.775007994",
+        "raw": -15.2,
+        "indexes": [
+          4
+        ]
+      },
+      {
+        "target": "src/file-h.ts",
+        "score": "0.775007994",
+        "raw": -15.2,
+        "indexes": [
+          4
+        ]
+      },
+      {
+        "target": "src/file-i.ts",
+        "score": "0.775007994",
+        "raw": -15.2,
+        "indexes": [
+          4
+        ]
+      },
+      {
+        "target": "src/file-j.ts",
+        "score": "0.775007994",
+        "raw": -15.2,
+        "indexes": [
+          4
+        ]
+      },
+      {
+        "target": "src/file-v.ts",
+        "score": "0.775007994",
+        "raw": -15.2,
+        "indexes": [
+          4
+        ]
+      },
+      {
+        "target": "src/file-f.ts",
+        "score": "0.775007994",
+        "raw": -15.2,
+        "indexes": [
+          4
+        ]
+      },
+      {
+        "target": "src/file-7.ts",
+        "score": "0.775007994",
+        "raw": -15.2,
+        "indexes": [
+          4
+        ]
+      },
+      {
+        "target": "src/file-13.ts",
+        "score": "0.770506938",
+        "raw": -16.2,
+        "indexes": [
+          4
+        ]
+      },
+      {
+        "target": "src/file-12.ts",
+        "score": "0.770506938",
+        "raw": -16.2,
+        "indexes": [
+          4
+        ]
+      },
+      {
+        "target": "src/file-11.ts",
+        "score": "0.770506938",
+        "raw": -16.2,
+        "indexes": [
+          4
+        ]
+      },
+      {
+        "target": "src/file-10.ts",
+        "score": "0.770506938",
+        "raw": -16.2,
+        "indexes": [
+          4
+        ]
+      }
+    ]
+  },
+  {
+    "name": "generated-13",
+    "query": "-",
+    "targets": [
+      "src/file-0.ts",
+      "src/file-1.ts",
+      "src/file-2.ts",
+      "src/file-3.ts",
+      "src/file-4.ts",
+      "src/file-5.ts",
+      "src/file-6.ts",
+      "src/file-7.ts",
+      "src/file-8.ts",
+      "src/file-9.ts",
+      "src/file-a.ts",
+      "src/file-b.ts",
+      "src/file-c.ts",
+      "src/file-d.ts",
+      "src/file-e.ts",
+      "src/file-f.ts",
+      "src/file-g.ts",
+      "src/file-h.ts",
+      "src/file-i.ts",
+      "src/file-j.ts",
+      "src/file-k.ts",
+      "src/file-l.ts",
+      "src/file-m.ts",
+      "src/file-n.ts",
+      "src/file-o.ts",
+      "src/file-p.ts",
+      "src/file-q.ts",
+      "src/file-r.ts",
+      "src/file-s.ts",
+      "src/file-t.ts",
+      "src/file-u.ts",
+      "src/file-v.ts",
+      "src/file-w.ts",
+      "src/file-x.ts",
+      "src/file-y.ts",
+      "src/file-z.ts",
+      "src/file-10.ts",
+      "src/file-11.ts",
+      "src/file-12.ts",
+      "src/file-13.ts"
+    ],
+    "results": [
+      {
+        "target": "src/file-2.ts",
+        "score": "0.740423513",
+        "raw": -24.8,
+        "indexes": [
+          8
+        ]
+      },
+      {
+        "target": "src/file-4.ts",
+        "score": "0.740423513",
+        "raw": -24.8,
+        "indexes": [
+          8
+        ]
+      },
+      {
+        "target": "src/file-5.ts",
+        "score": "0.740423513",
+        "raw": -24.8,
+        "indexes": [
+          8
+        ]
+      },
+      {
+        "target": "src/file-6.ts",
+        "score": "0.740423513",
+        "raw": -24.8,
+        "indexes": [
+          8
+        ]
+      },
+      {
+        "target": "src/file-0.ts",
+        "score": "0.740423513",
+        "raw": -24.8,
+        "indexes": [
+          8
+        ]
+      },
+      {
+        "target": "src/file-9.ts",
+        "score": "0.740423513",
+        "raw": -24.8,
+        "indexes": [
+          8
+        ]
+      },
+      {
+        "target": "src/file-a.ts",
+        "score": "0.740423513",
+        "raw": -24.8,
+        "indexes": [
+          8
+        ]
+      },
+      {
+        "target": "src/file-b.ts",
+        "score": "0.740423513",
+        "raw": -24.8,
+        "indexes": [
+          8
+        ]
+      },
+      {
+        "target": "src/file-c.ts",
+        "score": "0.740423513",
+        "raw": -24.8,
+        "indexes": [
+          8
+        ]
+      },
+      {
+        "target": "src/file-d.ts",
+        "score": "0.740423513",
+        "raw": -24.8,
+        "indexes": [
+          8
+        ]
+      },
+      {
+        "target": "src/file-e.ts",
+        "score": "0.740423513",
+        "raw": -24.8,
+        "indexes": [
+          8
+        ]
+      },
+      {
+        "target": "src/file-g.ts",
+        "score": "0.740423513",
+        "raw": -24.8,
+        "indexes": [
+          8
+        ]
+      },
+      {
+        "target": "src/file-8.ts",
+        "score": "0.740423513",
+        "raw": -24.8,
+        "indexes": [
+          8
+        ]
+      },
+      {
+        "target": "src/file-1.ts",
+        "score": "0.740423513",
+        "raw": -24.8,
+        "indexes": [
+          8
+        ]
+      },
+      {
+        "target": "src/file-3.ts",
+        "score": "0.740423513",
+        "raw": -24.8,
+        "indexes": [
+          8
+        ]
+      },
+      {
+        "target": "src/file-k.ts",
+        "score": "0.740423513",
+        "raw": -24.8,
+        "indexes": [
+          8
+        ]
+      },
+      {
+        "target": "src/file-l.ts",
+        "score": "0.740423513",
+        "raw": -24.8,
+        "indexes": [
+          8
+        ]
+      },
+      {
+        "target": "src/file-m.ts",
+        "score": "0.740423513",
+        "raw": -24.8,
+        "indexes": [
+          8
+        ]
+      },
+      {
+        "target": "src/file-n.ts",
+        "score": "0.740423513",
+        "raw": -24.8,
+        "indexes": [
+          8
+        ]
+      },
+      {
+        "target": "src/file-o.ts",
+        "score": "0.740423513",
+        "raw": -24.8,
+        "indexes": [
+          8
+        ]
+      },
+      {
+        "target": "src/file-p.ts",
+        "score": "0.740423513",
+        "raw": -24.8,
+        "indexes": [
+          8
+        ]
+      },
+      {
+        "target": "src/file-q.ts",
+        "score": "0.740423513",
+        "raw": -24.8,
+        "indexes": [
+          8
+        ]
+      },
+      {
+        "target": "src/file-r.ts",
+        "score": "0.740423513",
+        "raw": -24.8,
+        "indexes": [
+          8
+        ]
+      },
+      {
+        "target": "src/file-s.ts",
+        "score": "0.740423513",
+        "raw": -24.8,
+        "indexes": [
+          8
+        ]
+      },
+      {
+        "target": "src/file-t.ts",
+        "score": "0.740423513",
+        "raw": -24.8,
+        "indexes": [
+          8
+        ]
+      },
+      {
+        "target": "src/file-u.ts",
+        "score": "0.740423513",
+        "raw": -24.8,
+        "indexes": [
+          8
+        ]
+      },
+      {
+        "target": "src/file-w.ts",
+        "score": "0.740423513",
+        "raw": -24.8,
+        "indexes": [
+          8
+        ]
+      },
+      {
+        "target": "src/file-x.ts",
+        "score": "0.740423513",
+        "raw": -24.8,
+        "indexes": [
+          8
+        ]
+      },
+      {
+        "target": "src/file-y.ts",
+        "score": "0.740423513",
+        "raw": -24.8,
+        "indexes": [
+          8
+        ]
+      },
+      {
+        "target": "src/file-z.ts",
+        "score": "0.740423513",
+        "raw": -24.8,
+        "indexes": [
+          8
+        ]
+      },
+      {
+        "target": "src/file-h.ts",
+        "score": "0.740423513",
+        "raw": -24.8,
+        "indexes": [
+          8
+        ]
+      },
+      {
+        "target": "src/file-i.ts",
+        "score": "0.740423513",
+        "raw": -24.8,
+        "indexes": [
+          8
+        ]
+      },
+      {
+        "target": "src/file-j.ts",
+        "score": "0.740423513",
+        "raw": -24.8,
+        "indexes": [
+          8
+        ]
+      },
+      {
+        "target": "src/file-v.ts",
+        "score": "0.740423513",
+        "raw": -24.8,
+        "indexes": [
+          8
+        ]
+      },
+      {
+        "target": "src/file-f.ts",
+        "score": "0.740423513",
+        "raw": -24.8,
+        "indexes": [
+          8
+        ]
+      },
+      {
+        "target": "src/file-7.ts",
+        "score": "0.740423513",
+        "raw": -24.8,
+        "indexes": [
+          8
+        ]
+      },
+      {
+        "target": "src/file-13.ts",
+        "score": "0.737636640",
+        "raw": -25.8,
+        "indexes": [
+          8
+        ]
+      },
+      {
+        "target": "src/file-12.ts",
+        "score": "0.737636640",
+        "raw": -25.8,
+        "indexes": [
+          8
+        ]
+      },
+      {
+        "target": "src/file-11.ts",
+        "score": "0.737636640",
+        "raw": -25.8,
+        "indexes": [
+          8
+        ]
+      },
+      {
+        "target": "src/file-10.ts",
+        "score": "0.737636640",
+        "raw": -25.8,
+        "indexes": [
+          8
+        ]
+      }
+    ]
+  },
+  {
+    "name": "generated-14",
+    "query": "a.",
+    "targets": [
+      "src/file-0.ts",
+      "src/file-1.ts",
+      "src/file-2.ts",
+      "src/file-3.ts",
+      "src/file-4.ts",
+      "src/file-5.ts",
+      "src/file-6.ts",
+      "src/file-7.ts",
+      "src/file-8.ts",
+      "src/file-9.ts",
+      "src/file-a.ts",
+      "src/file-b.ts",
+      "src/file-c.ts",
+      "src/file-d.ts",
+      "src/file-e.ts",
+      "src/file-f.ts",
+      "src/file-g.ts",
+      "src/file-h.ts",
+      "src/file-i.ts",
+      "src/file-j.ts",
+      "src/file-k.ts",
+      "src/file-l.ts",
+      "src/file-m.ts",
+      "src/file-n.ts",
+      "src/file-o.ts",
+      "src/file-p.ts",
+      "src/file-q.ts",
+      "src/file-r.ts",
+      "src/file-s.ts",
+      "src/file-t.ts",
+      "src/file-u.ts",
+      "src/file-v.ts",
+      "src/file-w.ts",
+      "src/file-x.ts",
+      "src/file-y.ts",
+      "src/file-z.ts",
+      "src/file-10.ts",
+      "src/file-11.ts",
+      "src/file-12.ts",
+      "src/file-13.ts"
+    ],
+    "results": [
+      {
+        "target": "src/file-a.ts",
+        "score": "0.835562683",
+        "raw": -6.368,
+        "indexes": [
+          9,
+          10
+        ]
+      }
+    ]
+  },
+  {
+    "name": "generated-15",
+    "query": "src/file",
+    "targets": [
+      "src/file-0.ts",
+      "src/file-1.ts",
+      "src/file-2.ts",
+      "src/file-3.ts",
+      "src/file-4.ts",
+      "src/file-5.ts",
+      "src/file-6.ts",
+      "src/file-7.ts",
+      "src/file-8.ts",
+      "src/file-9.ts",
+      "src/file-a.ts",
+      "src/file-b.ts",
+      "src/file-c.ts",
+      "src/file-d.ts",
+      "src/file-e.ts",
+      "src/file-f.ts",
+      "src/file-g.ts",
+      "src/file-h.ts",
+      "src/file-i.ts",
+      "src/file-j.ts",
+      "src/file-k.ts",
+      "src/file-l.ts",
+      "src/file-m.ts",
+      "src/file-n.ts",
+      "src/file-o.ts",
+      "src/file-p.ts",
+      "src/file-q.ts",
+      "src/file-r.ts",
+      "src/file-s.ts",
+      "src/file-t.ts",
+      "src/file-u.ts",
+      "src/file-v.ts",
+      "src/file-w.ts",
+      "src/file-x.ts",
+      "src/file-y.ts",
+      "src/file-z.ts",
+      "src/file-10.ts",
+      "src/file-11.ts",
+      "src/file-12.ts",
+      "src/file-13.ts"
+    ],
+    "results": [
+      {
+        "target": "src/file-2.ts",
+        "score": "0.895034736",
+        "raw": -2.5005917159763316,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-4.ts",
+        "score": "0.895034736",
+        "raw": -2.5005917159763316,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-5.ts",
+        "score": "0.895034736",
+        "raw": -2.5005917159763316,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-6.ts",
+        "score": "0.895034736",
+        "raw": -2.5005917159763316,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-0.ts",
+        "score": "0.895034736",
+        "raw": -2.5005917159763316,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-9.ts",
+        "score": "0.895034736",
+        "raw": -2.5005917159763316,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-a.ts",
+        "score": "0.895034736",
+        "raw": -2.5005917159763316,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-b.ts",
+        "score": "0.895034736",
+        "raw": -2.5005917159763316,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-c.ts",
+        "score": "0.895034736",
+        "raw": -2.5005917159763316,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-d.ts",
+        "score": "0.895034736",
+        "raw": -2.5005917159763316,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-e.ts",
+        "score": "0.895034736",
+        "raw": -2.5005917159763316,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-g.ts",
+        "score": "0.895034736",
+        "raw": -2.5005917159763316,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-8.ts",
+        "score": "0.895034736",
+        "raw": -2.5005917159763316,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-1.ts",
+        "score": "0.895034736",
+        "raw": -2.5005917159763316,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-3.ts",
+        "score": "0.895034736",
+        "raw": -2.5005917159763316,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-k.ts",
+        "score": "0.895034736",
+        "raw": -2.5005917159763316,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-l.ts",
+        "score": "0.895034736",
+        "raw": -2.5005917159763316,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-m.ts",
+        "score": "0.895034736",
+        "raw": -2.5005917159763316,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-n.ts",
+        "score": "0.895034736",
+        "raw": -2.5005917159763316,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-o.ts",
+        "score": "0.895034736",
+        "raw": -2.5005917159763316,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-p.ts",
+        "score": "0.895034736",
+        "raw": -2.5005917159763316,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-q.ts",
+        "score": "0.895034736",
+        "raw": -2.5005917159763316,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-r.ts",
+        "score": "0.895034736",
+        "raw": -2.5005917159763316,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-s.ts",
+        "score": "0.895034736",
+        "raw": -2.5005917159763316,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-t.ts",
+        "score": "0.895034736",
+        "raw": -2.5005917159763316,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-u.ts",
+        "score": "0.895034736",
+        "raw": -2.5005917159763316,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-w.ts",
+        "score": "0.895034736",
+        "raw": -2.5005917159763316,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-x.ts",
+        "score": "0.895034736",
+        "raw": -2.5005917159763316,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-y.ts",
+        "score": "0.895034736",
+        "raw": -2.5005917159763316,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-z.ts",
+        "score": "0.895034736",
+        "raw": -2.5005917159763316,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-h.ts",
+        "score": "0.895034736",
+        "raw": -2.5005917159763316,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-i.ts",
+        "score": "0.895034736",
+        "raw": -2.5005917159763316,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-j.ts",
+        "score": "0.895034736",
+        "raw": -2.5005917159763316,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-v.ts",
+        "score": "0.895034736",
+        "raw": -2.5005917159763316,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-f.ts",
+        "score": "0.895034736",
+        "raw": -2.5005917159763316,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-7.ts",
+        "score": "0.895034736",
+        "raw": -2.5005917159763316,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-13.ts",
+        "score": "0.884202950",
+        "raw": -3.0007100591715976,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-12.ts",
+        "score": "0.884202950",
+        "raw": -3.0007100591715976,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-11.ts",
+        "score": "0.884202950",
+        "raw": -3.0007100591715976,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "target": "src/file-10.ts",
+        "score": "0.884202950",
+        "raw": -3.0007100591715976,
+        "indexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      }
+    ]
+  },
+  {
+    "name": "generated-16",
+    "query": "b",
+    "targets": [
+      "src/file-0.ts",
+      "src/file-1.ts",
+      "src/file-2.ts",
+      "src/file-3.ts",
+      "src/file-4.ts",
+      "src/file-5.ts",
+      "src/file-6.ts",
+      "src/file-7.ts",
+      "src/file-8.ts",
+      "src/file-9.ts",
+      "src/file-a.ts",
+      "src/file-b.ts",
+      "src/file-c.ts",
+      "src/file-d.ts",
+      "src/file-e.ts",
+      "src/file-f.ts",
+      "src/file-g.ts",
+      "src/file-h.ts",
+      "src/file-i.ts",
+      "src/file-j.ts",
+      "src/file-k.ts",
+      "src/file-l.ts",
+      "src/file-m.ts",
+      "src/file-n.ts",
+      "src/file-o.ts",
+      "src/file-p.ts",
+      "src/file-q.ts",
+      "src/file-r.ts",
+      "src/file-s.ts",
+      "src/file-t.ts",
+      "src/file-u.ts",
+      "src/file-v.ts",
+      "src/file-w.ts",
+      "src/file-x.ts",
+      "src/file-y.ts",
+      "src/file-z.ts",
+      "src/file-10.ts",
+      "src/file-11.ts",
+      "src/file-12.ts",
+      "src/file-13.ts"
+    ],
+    "results": [
+      {
+        "target": "src/file-b.ts",
+        "score": "0.731372977",
+        "raw": -28.2,
+        "indexes": [
+          9
+        ]
+      }
+    ]
+  },
+  {
+    "name": "generated-17",
+    "query": "file-b",
+    "targets": [
+      "src/file-0.ts",
+      "src/file-1.ts",
+      "src/file-2.ts",
+      "src/file-3.ts",
+      "src/file-4.ts",
+      "src/file-5.ts",
+      "src/file-6.ts",
+      "src/file-7.ts",
+      "src/file-8.ts",
+      "src/file-9.ts",
+      "src/file-a.ts",
+      "src/file-b.ts",
+      "src/file-c.ts",
+      "src/file-d.ts",
+      "src/file-e.ts",
+      "src/file-f.ts",
+      "src/file-g.ts",
+      "src/file-h.ts",
+      "src/file-i.ts",
+      "src/file-j.ts",
+      "src/file-k.ts",
+      "src/file-l.ts",
+      "src/file-m.ts",
+      "src/file-n.ts",
+      "src/file-o.ts",
+      "src/file-p.ts",
+      "src/file-q.ts",
+      "src/file-r.ts",
+      "src/file-s.ts",
+      "src/file-t.ts",
+      "src/file-u.ts",
+      "src/file-v.ts",
+      "src/file-w.ts",
+      "src/file-x.ts",
+      "src/file-y.ts",
+      "src/file-z.ts",
+      "src/file-10.ts",
+      "src/file-11.ts",
+      "src/file-12.ts",
+      "src/file-13.ts"
+    ],
+    "results": [
+      {
+        "target": "src/file-b.ts",
+        "score": "0.874634004",
+        "raw": -3.5048940832724615,
+        "indexes": [
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ]
+      }
+    ]
+  },
+  {
+    "name": "files-limit-1",
+    "query": "file",
+    "targets": [
+      "src/index.ts",
+      "src/app.tsx",
+      "src/lib/utils.ts",
+      "test/index.test.ts",
+      "README.md",
+      "package.json",
+      "packages/core/src/filesystem/search.ts",
+      "packages/app/components/button.tsx",
+      "docs/guide.md",
+      "crates/fs/src/search/mod.rs",
+      "Makefile",
+      ".github/workflows/ci.yml",
+      "a",
+      "ab",
+      "abc",
+      "a-b-c",
+      "ABC",
+      "AbC",
+      "src/nested/deeply/placed/file.ts",
+      "src/nested/deeply/placed/file.tsx",
+      "src/nested/file.ts"
+    ],
+    "limit": 1,
+    "results": [
+      {
+        "target": "src/nested/file.ts",
+        "score": "0.828074204",
+        "raw": -7.10795847750865,
+        "indexes": [
+          11,
+          12,
+          13,
+          14
+        ]
+      }
+    ]
+  },
+  {
+    "name": "files-limit-2",
+    "query": "file",
+    "targets": [
+      "src/index.ts",
+      "src/app.tsx",
+      "src/lib/utils.ts",
+      "test/index.test.ts",
+      "README.md",
+      "package.json",
+      "packages/core/src/filesystem/search.ts",
+      "packages/app/components/button.tsx",
+      "docs/guide.md",
+      "crates/fs/src/search/mod.rs",
+      "Makefile",
+      ".github/workflows/ci.yml",
+      "a",
+      "ab",
+      "abc",
+      "a-b-c",
+      "ABC",
+      "AbC",
+      "src/nested/deeply/placed/file.ts",
+      "src/nested/deeply/placed/file.tsx",
+      "src/nested/file.ts"
+    ],
+    "limit": 2,
+    "results": [
+      {
+        "target": "src/nested/file.ts",
+        "score": "0.828074204",
+        "raw": -7.10795847750865,
+        "indexes": [
+          11,
+          12,
+          13,
+          14
+        ]
+      },
+      {
+        "target": "src/nested/deeply/placed/file.ts",
+        "score": "0.778429292",
+        "raw": -14.480968858131488,
+        "indexes": [
+          25,
+          26,
+          27,
+          28
+        ]
+      }
+    ]
+  },
+  {
+    "name": "files-limit-5",
+    "query": "file",
+    "targets": [
+      "src/index.ts",
+      "src/app.tsx",
+      "src/lib/utils.ts",
+      "test/index.test.ts",
+      "README.md",
+      "package.json",
+      "packages/core/src/filesystem/search.ts",
+      "packages/app/components/button.tsx",
+      "docs/guide.md",
+      "crates/fs/src/search/mod.rs",
+      "Makefile",
+      ".github/workflows/ci.yml",
+      "a",
+      "ab",
+      "abc",
+      "a-b-c",
+      "ABC",
+      "AbC",
+      "src/nested/deeply/placed/file.ts",
+      "src/nested/deeply/placed/file.tsx",
+      "src/nested/file.ts"
+    ],
+    "limit": 5,
+    "results": [
+      {
+        "target": "src/nested/file.ts",
+        "score": "0.828074204",
+        "raw": -7.10795847750865,
+        "indexes": [
+          11,
+          12,
+          13,
+          14
+        ]
+      },
+      {
+        "target": "src/nested/deeply/placed/file.ts",
+        "score": "0.778429292",
+        "raw": -14.480968858131488,
+        "indexes": [
+          25,
+          26,
+          27,
+          28
+        ]
+      },
+      {
+        "target": "src/nested/deeply/placed/file.tsx",
+        "score": "0.776024802",
+        "raw": -14.982698961937716,
+        "indexes": [
+          25,
+          26,
+          27,
+          28
+        ]
+      },
+      {
+        "target": "packages/core/src/filesystem/search.ts",
+        "score": "0.765933264",
+        "raw": -17.28304498269896,
+        "indexes": [
+          18,
+          19,
+          20,
+          21
+        ]
+      },
+      {
+        "target": "Makefile",
+        "score": "0.601763436",
+        "raw": -190.35294117647058,
+        "indexes": [
+          4,
+          5,
+          6,
+          7
+        ]
+      }
+    ]
+  },
+  {
+    "name": "files-limit-50",
+    "query": "file",
+    "targets": [
+      "src/index.ts",
+      "src/app.tsx",
+      "src/lib/utils.ts",
+      "test/index.test.ts",
+      "README.md",
+      "package.json",
+      "packages/core/src/filesystem/search.ts",
+      "packages/app/components/button.tsx",
+      "docs/guide.md",
+      "crates/fs/src/search/mod.rs",
+      "Makefile",
+      ".github/workflows/ci.yml",
+      "a",
+      "ab",
+      "abc",
+      "a-b-c",
+      "ABC",
+      "AbC",
+      "src/nested/deeply/placed/file.ts",
+      "src/nested/deeply/placed/file.tsx",
+      "src/nested/file.ts"
+    ],
+    "limit": 50,
+    "results": [
+      {
+        "target": "src/nested/file.ts",
+        "score": "0.828074204",
+        "raw": -7.10795847750865,
+        "indexes": [
+          11,
+          12,
+          13,
+          14
+        ]
+      },
+      {
+        "target": "src/nested/deeply/placed/file.ts",
+        "score": "0.778429292",
+        "raw": -14.480968858131488,
+        "indexes": [
+          25,
+          26,
+          27,
+          28
+        ]
+      },
+      {
+        "target": "src/nested/deeply/placed/file.tsx",
+        "score": "0.776024802",
+        "raw": -14.982698961937716,
+        "indexes": [
+          25,
+          26,
+          27,
+          28
+        ]
+      },
+      {
+        "target": "packages/core/src/filesystem/search.ts",
+        "score": "0.765933264",
+        "raw": -17.28304498269896,
+        "indexes": [
+          18,
+          19,
+          20,
+          21
+        ]
+      },
+      {
+        "target": "Makefile",
+        "score": "0.601763436",
+        "raw": -190.35294117647058,
+        "indexes": [
+          4,
+          5,
+          6,
+          7
+        ]
+      }
+    ]
+  },
+  {
+    "name": "empty-query",
+    "query": "",
+    "targets": [
+      "src/index.ts",
+      "src/app.tsx",
+      "src/lib/utils.ts",
+      "test/index.test.ts",
+      "README.md",
+      "package.json",
+      "packages/core/src/filesystem/search.ts",
+      "packages/app/components/button.tsx",
+      "docs/guide.md",
+      "crates/fs/src/search/mod.rs",
+      "Makefile",
+      ".github/workflows/ci.yml",
+      "a",
+      "ab",
+      "abc",
+      "a-b-c",
+      "ABC",
+      "AbC",
+      "src/nested/deeply/placed/file.ts",
+      "src/nested/deeply/placed/file.tsx",
+      "src/nested/file.ts"
+    ],
+    "results": []
+  },
+  {
+    "name": "empty-targets",
+    "query": "file",
+    "targets": [],
+    "results": []
+  }
+]

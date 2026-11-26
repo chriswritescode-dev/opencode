@@ -1,0 +1,1990 @@
+[
+  {
+    "name": "applies add, update, and delete hunks sequentially",
+    "fixtures": [
+      {
+        "path": "{{root}}/update.txt",
+        "parts": [
+          {
+            "text": "before\n"
+          }
+        ]
+      },
+      {
+        "path": "{{root}}/remove.txt",
+        "parts": [
+          {
+            "text": "remove\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "patchText": "*** Begin Patch\n*** Add File: nested/new.txt\n+created\n*** Update File: update.txt\n@@\n-before\n+after\n*** Delete File: remove.txt\n*** End Patch"
+    },
+    "expected": {
+      "status": "completed",
+      "output": {},
+      "content": [
+        {
+          "type": "text",
+          "text": "Success. Updated the following files:\nA nested/new.txt\nM update.txt\nD remove.txt"
+        }
+      ],
+      "metadata": {
+        "files": [
+          {
+            "file": "nested/new.txt",
+            "patch": "Index: {{root}}/nested/new.txt\n===================================================================\n--- {{root}}/nested/new.txt\n+++ {{root}}/nested/new.txt\n@@ -0,0 +1,1 @@\n+created\n",
+            "status": "added",
+            "additions": 1,
+            "deletions": 0
+          },
+          {
+            "file": "update.txt",
+            "patch": "Index: {{root}}/update.txt\n===================================================================\n--- {{root}}/update.txt\n+++ {{root}}/update.txt\n@@ -1,1 +1,1 @@\n-before\n+after\n",
+            "status": "modified",
+            "additions": 1,
+            "deletions": 1
+          },
+          {
+            "file": "remove.txt",
+            "patch": "Index: {{root}}/remove.txt\n===================================================================\n--- {{root}}/remove.txt\n+++ {{root}}/remove.txt\n@@ -1,1 +0,0 @@\n-remove\n",
+            "status": "deleted",
+            "additions": 0,
+            "deletions": 1
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "action": "edit",
+          "resources": [
+            "nested/new.txt",
+            "update.txt",
+            "remove.txt"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "filepath": "nested/new.txt, update.txt, remove.txt",
+            "diff": "Index: {{root}}/nested/new.txt\n===================================================================\n--- {{root}}/nested/new.txt\n+++ {{root}}/nested/new.txt\n@@ -0,0 +1,1 @@\n+created\n\nIndex: {{root}}/update.txt\n===================================================================\n--- {{root}}/update.txt\n+++ {{root}}/update.txt\n@@ -1,1 +1,1 @@\n-before\n+after\n\nIndex: {{root}}/remove.txt\n===================================================================\n--- {{root}}/remove.txt\n+++ {{root}}/remove.txt\n@@ -1,1 +0,0 @@\n-remove\n\n",
+            "files": [
+              {
+                "file": "nested/new.txt",
+                "patch": "Index: {{root}}/nested/new.txt\n===================================================================\n--- {{root}}/nested/new.txt\n+++ {{root}}/nested/new.txt\n@@ -0,0 +1,1 @@\n+created\n",
+                "status": "added",
+                "additions": 1,
+                "deletions": 0
+              },
+              {
+                "file": "update.txt",
+                "patch": "Index: {{root}}/update.txt\n===================================================================\n--- {{root}}/update.txt\n+++ {{root}}/update.txt\n@@ -1,1 +1,1 @@\n-before\n+after\n",
+                "status": "modified",
+                "additions": 1,
+                "deletions": 1
+              },
+              {
+                "file": "remove.txt",
+                "patch": "Index: {{root}}/remove.txt\n===================================================================\n--- {{root}}/remove.txt\n+++ {{root}}/remove.txt\n@@ -1,1 +0,0 @@\n-remove\n",
+                "status": "deleted",
+                "additions": 0,
+                "deletions": 1
+              }
+            ]
+          }
+        }
+      ],
+      "tree": {
+        "{{root}}/nested": null,
+        "{{root}}/nested/new.txt": "Y3JlYXRlZAo=",
+        "{{root}}/update.txt": "YWZ0ZXIK"
+      }
+    }
+  },
+  {
+    "name": "replaces a file with a directory containing an added file",
+    "fixtures": [
+      {
+        "path": "{{root}}/parent",
+        "parts": [
+          {
+            "text": "before\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "patchText": "*** Begin Patch\n*** Delete File: parent\n*** Add File: parent/child.txt\n+after\n*** End Patch"
+    },
+    "expected": {
+      "status": "completed",
+      "output": {},
+      "content": [
+        {
+          "type": "text",
+          "text": "Success. Updated the following files:\nD parent\nA parent/child.txt"
+        }
+      ],
+      "metadata": {
+        "files": [
+          {
+            "file": "parent",
+            "patch": "Index: {{root}}/parent\n===================================================================\n--- {{root}}/parent\n+++ {{root}}/parent\n@@ -1,1 +0,0 @@\n-before\n",
+            "status": "deleted",
+            "additions": 0,
+            "deletions": 1
+          },
+          {
+            "file": "parent/child.txt",
+            "patch": "Index: {{root}}/parent/child.txt\n===================================================================\n--- {{root}}/parent/child.txt\n+++ {{root}}/parent/child.txt\n@@ -0,0 +1,1 @@\n+after\n",
+            "status": "added",
+            "additions": 1,
+            "deletions": 0
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "action": "edit",
+          "resources": [
+            "parent",
+            "parent/child.txt"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "filepath": "parent, parent/child.txt",
+            "diff": "Index: {{root}}/parent\n===================================================================\n--- {{root}}/parent\n+++ {{root}}/parent\n@@ -1,1 +0,0 @@\n-before\n\nIndex: {{root}}/parent/child.txt\n===================================================================\n--- {{root}}/parent/child.txt\n+++ {{root}}/parent/child.txt\n@@ -0,0 +1,1 @@\n+after\n\n",
+            "files": [
+              {
+                "file": "parent",
+                "patch": "Index: {{root}}/parent\n===================================================================\n--- {{root}}/parent\n+++ {{root}}/parent\n@@ -1,1 +0,0 @@\n-before\n",
+                "status": "deleted",
+                "additions": 0,
+                "deletions": 1
+              },
+              {
+                "file": "parent/child.txt",
+                "patch": "Index: {{root}}/parent/child.txt\n===================================================================\n--- {{root}}/parent/child.txt\n+++ {{root}}/parent/child.txt\n@@ -0,0 +1,1 @@\n+after\n",
+                "status": "added",
+                "additions": 1,
+                "deletions": 0
+              }
+            ]
+          }
+        }
+      ],
+      "tree": {
+        "{{root}}/parent": null,
+        "{{root}}/parent/child.txt": "YWZ0ZXIK"
+      }
+    }
+  },
+  {
+    "name": "counts deleted lines with and without a trailing newline",
+    "fixtures": [
+      {
+        "path": "{{root}}/trailing.txt",
+        "parts": [
+          {
+            "text": "remove\n"
+          }
+        ]
+      },
+      {
+        "path": "{{root}}/unterminated.txt",
+        "parts": [
+          {
+            "text": "remove"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "patchText": "*** Begin Patch\n*** Delete File: trailing.txt\n*** Delete File: unterminated.txt\n*** End Patch"
+    },
+    "expected": {
+      "status": "completed",
+      "output": {},
+      "content": [
+        {
+          "type": "text",
+          "text": "Success. Updated the following files:\nD trailing.txt\nD unterminated.txt"
+        }
+      ],
+      "metadata": {
+        "files": [
+          {
+            "file": "trailing.txt",
+            "patch": "Index: {{root}}/trailing.txt\n===================================================================\n--- {{root}}/trailing.txt\n+++ {{root}}/trailing.txt\n@@ -1,1 +0,0 @@\n-remove\n",
+            "status": "deleted",
+            "additions": 0,
+            "deletions": 1
+          },
+          {
+            "file": "unterminated.txt",
+            "patch": "Index: {{root}}/unterminated.txt\n===================================================================\n--- {{root}}/unterminated.txt\n+++ {{root}}/unterminated.txt\n@@ -1,1 +0,0 @@\n-remove\n\\ No newline at end of file\n",
+            "status": "deleted",
+            "additions": 0,
+            "deletions": 1
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "action": "edit",
+          "resources": [
+            "trailing.txt",
+            "unterminated.txt"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "filepath": "trailing.txt, unterminated.txt",
+            "diff": "Index: {{root}}/trailing.txt\n===================================================================\n--- {{root}}/trailing.txt\n+++ {{root}}/trailing.txt\n@@ -1,1 +0,0 @@\n-remove\n\nIndex: {{root}}/unterminated.txt\n===================================================================\n--- {{root}}/unterminated.txt\n+++ {{root}}/unterminated.txt\n@@ -1,1 +0,0 @@\n-remove\n\\ No newline at end of file\n\n",
+            "files": [
+              {
+                "file": "trailing.txt",
+                "patch": "Index: {{root}}/trailing.txt\n===================================================================\n--- {{root}}/trailing.txt\n+++ {{root}}/trailing.txt\n@@ -1,1 +0,0 @@\n-remove\n",
+                "status": "deleted",
+                "additions": 0,
+                "deletions": 1
+              },
+              {
+                "file": "unterminated.txt",
+                "patch": "Index: {{root}}/unterminated.txt\n===================================================================\n--- {{root}}/unterminated.txt\n+++ {{root}}/unterminated.txt\n@@ -1,1 +0,0 @@\n-remove\n\\ No newline at end of file\n",
+                "status": "deleted",
+                "additions": 0,
+                "deletions": 1
+              }
+            ]
+          }
+        }
+      ],
+      "tree": {}
+    }
+  },
+  {
+    "name": "moves and updates a file",
+    "fixtures": [
+      {
+        "path": "{{root}}/old.txt",
+        "parts": [
+          {
+            "text": "before\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "patchText": "*** Begin Patch\n*** Add File: created.txt\n+created\n*** Update File: old.txt\n*** Move to: moved.txt\n@@\n-before\n+after\n*** End Patch"
+    },
+    "expected": {
+      "status": "completed",
+      "output": {},
+      "content": [
+        {
+          "type": "text",
+          "text": "Success. Updated the following files:\nA created.txt\nM moved.txt"
+        }
+      ],
+      "metadata": {
+        "files": [
+          {
+            "file": "created.txt",
+            "patch": "Index: {{root}}/created.txt\n===================================================================\n--- {{root}}/created.txt\n+++ {{root}}/created.txt\n@@ -0,0 +1,1 @@\n+created\n",
+            "status": "added",
+            "additions": 1,
+            "deletions": 0
+          },
+          {
+            "file": "moved.txt",
+            "patch": "Index: {{root}}/old.txt\n===================================================================\n--- {{root}}/old.txt\n+++ {{root}}/old.txt\n@@ -1,1 +1,1 @@\n-before\n+after\n",
+            "status": "modified",
+            "additions": 1,
+            "deletions": 1
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "action": "edit",
+          "resources": [
+            "created.txt",
+            "old.txt",
+            "moved.txt"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "filepath": "created.txt, old.txt, moved.txt",
+            "diff": "Index: {{root}}/created.txt\n===================================================================\n--- {{root}}/created.txt\n+++ {{root}}/created.txt\n@@ -0,0 +1,1 @@\n+created\n\nIndex: {{root}}/old.txt\n===================================================================\n--- {{root}}/old.txt\n+++ {{root}}/old.txt\n@@ -1,1 +1,1 @@\n-before\n+after\n\n",
+            "files": [
+              {
+                "file": "created.txt",
+                "patch": "Index: {{root}}/created.txt\n===================================================================\n--- {{root}}/created.txt\n+++ {{root}}/created.txt\n@@ -0,0 +1,1 @@\n+created\n",
+                "status": "added",
+                "additions": 1,
+                "deletions": 0
+              },
+              {
+                "file": "moved.txt",
+                "patch": "Index: {{root}}/old.txt\n===================================================================\n--- {{root}}/old.txt\n+++ {{root}}/old.txt\n@@ -1,1 +1,1 @@\n-before\n+after\n",
+                "status": "modified",
+                "additions": 1,
+                "deletions": 1
+              }
+            ]
+          }
+        }
+      ],
+      "tree": {
+        "{{root}}/created.txt": "Y3JlYXRlZAo=",
+        "{{root}}/moved.txt": "YWZ0ZXIK"
+      }
+    }
+  },
+  {
+    "name": "moves a file over an existing destination",
+    "fixtures": [
+      {
+        "path": "{{root}}/old.txt",
+        "parts": [
+          {
+            "text": "before\n"
+          }
+        ]
+      },
+      {
+        "path": "{{root}}/nested/moved.txt",
+        "parts": [
+          {
+            "text": "existing\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "patchText": "*** Begin Patch\n*** Update File: old.txt\n*** Move to: nested/moved.txt\n@@\n-before\n+after\n*** End Patch"
+    },
+    "expected": {
+      "status": "completed",
+      "output": {},
+      "content": [
+        {
+          "type": "text",
+          "text": "Success. Updated the following files:\nM nested/moved.txt"
+        }
+      ],
+      "metadata": {
+        "files": [
+          {
+            "file": "nested/moved.txt",
+            "patch": "Index: {{root}}/old.txt\n===================================================================\n--- {{root}}/old.txt\n+++ {{root}}/old.txt\n@@ -1,1 +1,1 @@\n-before\n+after\n",
+            "status": "modified",
+            "additions": 1,
+            "deletions": 1
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "action": "edit",
+          "resources": [
+            "old.txt",
+            "nested/moved.txt"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "filepath": "old.txt, nested/moved.txt",
+            "diff": "Index: {{root}}/old.txt\n===================================================================\n--- {{root}}/old.txt\n+++ {{root}}/old.txt\n@@ -1,1 +1,1 @@\n-before\n+after\n\n",
+            "files": [
+              {
+                "file": "nested/moved.txt",
+                "patch": "Index: {{root}}/old.txt\n===================================================================\n--- {{root}}/old.txt\n+++ {{root}}/old.txt\n@@ -1,1 +1,1 @@\n-before\n+after\n",
+                "status": "modified",
+                "additions": 1,
+                "deletions": 1
+              }
+            ]
+          }
+        }
+      ],
+      "tree": {
+        "{{root}}/nested": null,
+        "{{root}}/nested/moved.txt": "YWZ0ZXIK"
+      }
+    }
+  },
+  {
+    "name": "moves a file without changing its contents",
+    "fixtures": [
+      {
+        "path": "{{root}}/old.txt",
+        "parts": [
+          {
+            "text": "same\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "patchText": "*** Begin Patch\n*** Update File: old.txt\n*** Move to: moved.txt\n@@\n same\n*** End Patch"
+    },
+    "expected": {
+      "status": "completed",
+      "output": {},
+      "content": [
+        {
+          "type": "text",
+          "text": "Success. Updated the following files:\nM moved.txt"
+        }
+      ],
+      "metadata": {
+        "files": [
+          {
+            "file": "moved.txt",
+            "patch": "Index: {{root}}/old.txt\n===================================================================\n--- {{root}}/old.txt\n+++ {{root}}/old.txt\n",
+            "status": "modified",
+            "additions": 0,
+            "deletions": 0
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "action": "edit",
+          "resources": [
+            "old.txt",
+            "moved.txt"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "filepath": "old.txt, moved.txt",
+            "diff": "Index: {{root}}/old.txt\n===================================================================\n--- {{root}}/old.txt\n+++ {{root}}/old.txt\n\n",
+            "files": [
+              {
+                "file": "moved.txt",
+                "patch": "Index: {{root}}/old.txt\n===================================================================\n--- {{root}}/old.txt\n+++ {{root}}/old.txt\n",
+                "status": "modified",
+                "additions": 0,
+                "deletions": 0
+              }
+            ]
+          }
+        }
+      ],
+      "tree": {
+        "{{root}}/moved.txt": "c2FtZQo="
+      }
+    }
+  },
+  {
+    "name": "refuses to rewrite a file that is not valid UTF-8 and applies none of the patch",
+    "fixtures": [
+      {
+        "path": "{{root}}/a.txt",
+        "parts": [
+          {
+            "text": "before\n"
+          }
+        ]
+      },
+      {
+        "path": "{{root}}/Invoice.java",
+        "kind": "binary",
+        "base64": "Ly8gSm9z6QppbnQgTUFYID0gMTA7Cg=="
+      }
+    ],
+    "call": {
+      "patchText": "*** Begin Patch\n*** Update File: a.txt\n@@\n-before\n+after\n*** Update File: Invoice.java\n@@\n-int MAX = 10;\n+int MAX = 25;\n*** End Patch"
+    },
+    "expected": {
+      "status": "error",
+      "error": "patch verification failed: Failed to read file to update {{root}}/Invoice.java: file is not valid UTF-8. It was left unchanged because rewriting it as text would replace every byte that is not UTF-8 with U+FFFD; change it with a tool that preserves its bytes, or convert it to UTF-8 first",
+      "assertions": [],
+      "tree": {
+        "{{root}}/Invoice.java": "Ly8gSm9z6QppbnQgTUFYID0gMTA7Cg==",
+        "{{root}}/a.txt": "YmVmb3JlCg=="
+      }
+    }
+  },
+  {
+    "name": "deletes a file that is not valid UTF-8 without rewriting its bytes",
+    "fixtures": [
+      {
+        "path": "{{root}}/Old.java",
+        "kind": "binary",
+        "base64": "Ly8gSm9z6QppbnQgTUFYID0gMTA7Cg=="
+      }
+    ],
+    "call": {
+      "patchText": "*** Begin Patch\n*** Delete File: Old.java\n*** End Patch"
+    },
+    "expected": {
+      "status": "completed",
+      "output": {},
+      "content": [
+        {
+          "type": "text",
+          "text": "Success. Updated the following files:\nD Old.java"
+        }
+      ],
+      "metadata": {
+        "files": [
+          {
+            "file": "Old.java",
+            "patch": "Index: {{root}}/Old.java\n===================================================================\n--- {{root}}/Old.java\n+++ {{root}}/Old.java\n@@ -1,2 +0,0 @@\n-// Jos�\n-int MAX = 10;\n",
+            "status": "deleted",
+            "additions": 0,
+            "deletions": 2
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "action": "edit",
+          "resources": [
+            "Old.java"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "filepath": "Old.java",
+            "diff": "Index: {{root}}/Old.java\n===================================================================\n--- {{root}}/Old.java\n+++ {{root}}/Old.java\n@@ -1,2 +0,0 @@\n-// Jos�\n-int MAX = 10;\n\n",
+            "files": [
+              {
+                "file": "Old.java",
+                "patch": "Index: {{root}}/Old.java\n===================================================================\n--- {{root}}/Old.java\n+++ {{root}}/Old.java\n@@ -1,2 +0,0 @@\n-// Jos�\n-int MAX = 10;\n",
+                "status": "deleted",
+                "additions": 0,
+                "deletions": 2
+              }
+            ]
+          }
+        }
+      ],
+      "tree": {}
+    }
+  },
+  {
+    "name": "renames a file when the move only changes its case",
+    "fixtures": [
+      {
+        "path": "{{root}}/same.txt",
+        "parts": [
+          {
+            "text": "before\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "patchText": "*** Begin Patch\n*** Update File: same.txt\n*** Move to: Same.txt\n@@\n-before\n+after\n*** End Patch"
+    },
+    "expected": {
+      "status": "completed",
+      "output": {},
+      "content": [
+        {
+          "type": "text",
+          "text": "Success. Updated the following files:\nM Same.txt"
+        }
+      ],
+      "metadata": {
+        "files": [
+          {
+            "file": "Same.txt",
+            "patch": "Index: {{root}}/same.txt\n===================================================================\n--- {{root}}/same.txt\n+++ {{root}}/same.txt\n@@ -1,1 +1,1 @@\n-before\n+after\n",
+            "status": "modified",
+            "additions": 1,
+            "deletions": 1
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "action": "edit",
+          "resources": [
+            "same.txt",
+            "Same.txt"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "filepath": "same.txt, Same.txt",
+            "diff": "Index: {{root}}/same.txt\n===================================================================\n--- {{root}}/same.txt\n+++ {{root}}/same.txt\n@@ -1,1 +1,1 @@\n-before\n+after\n\n",
+            "files": [
+              {
+                "file": "Same.txt",
+                "patch": "Index: {{root}}/same.txt\n===================================================================\n--- {{root}}/same.txt\n+++ {{root}}/same.txt\n@@ -1,1 +1,1 @@\n-before\n+after\n",
+                "status": "modified",
+                "additions": 1,
+                "deletions": 1
+              }
+            ]
+          }
+        }
+      ],
+      "tree": {
+        "{{root}}/Same.txt": "YWZ0ZXIK"
+      }
+    }
+  },
+  {
+    "name": "moves into a directory whose name differs only in case",
+    "fixtures": [
+      {
+        "path": "{{root}}/Foo/a.txt",
+        "parts": [
+          {
+            "text": "before\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "patchText": "*** Begin Patch\n*** Update File: Foo/a.txt\n*** Move to: foo/a.txt\n@@\n-before\n+after\n*** End Patch"
+    },
+    "expected": {
+      "status": "completed",
+      "output": {},
+      "content": [
+        {
+          "type": "text",
+          "text": "Success. Updated the following files:\nM foo/a.txt"
+        }
+      ],
+      "metadata": {
+        "files": [
+          {
+            "file": "foo/a.txt",
+            "patch": "Index: {{root}}/Foo/a.txt\n===================================================================\n--- {{root}}/Foo/a.txt\n+++ {{root}}/Foo/a.txt\n@@ -1,1 +1,1 @@\n-before\n+after\n",
+            "status": "modified",
+            "additions": 1,
+            "deletions": 1
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "action": "edit",
+          "resources": [
+            "Foo/a.txt",
+            "foo/a.txt"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "filepath": "Foo/a.txt, foo/a.txt",
+            "diff": "Index: {{root}}/Foo/a.txt\n===================================================================\n--- {{root}}/Foo/a.txt\n+++ {{root}}/Foo/a.txt\n@@ -1,1 +1,1 @@\n-before\n+after\n\n",
+            "files": [
+              {
+                "file": "foo/a.txt",
+                "patch": "Index: {{root}}/Foo/a.txt\n===================================================================\n--- {{root}}/Foo/a.txt\n+++ {{root}}/Foo/a.txt\n@@ -1,1 +1,1 @@\n-before\n+after\n",
+                "status": "modified",
+                "additions": 1,
+                "deletions": 1
+              }
+            ]
+          }
+        }
+      ],
+      "tree": {
+        "{{root}}/Foo": null,
+        "{{root}}/foo": null,
+        "{{root}}/foo/a.txt": "YWZ0ZXIK"
+      }
+    }
+  },
+  {
+    "name": "moves a symlink without deleting its target",
+    "fixtures": [
+      {
+        "path": "{{root}}/target.txt",
+        "parts": [
+          {
+            "text": "before\n"
+          }
+        ]
+      },
+      {
+        "path": "{{root}}/link.txt",
+        "kind": "symlink",
+        "target": "{{root}}/target.txt"
+      }
+    ],
+    "call": {
+      "patchText": "*** Begin Patch\n*** Update File: link.txt\n*** Move to: moved.txt\n@@\n-before\n+after\n*** End Patch"
+    },
+    "expected": {
+      "status": "completed",
+      "output": {},
+      "content": [
+        {
+          "type": "text",
+          "text": "Success. Updated the following files:\nM moved.txt"
+        }
+      ],
+      "metadata": {
+        "files": [
+          {
+            "file": "moved.txt",
+            "patch": "Index: {{root}}/link.txt\n===================================================================\n--- {{root}}/link.txt\n+++ {{root}}/link.txt\n@@ -1,1 +1,1 @@\n-before\n+after\n",
+            "status": "modified",
+            "additions": 1,
+            "deletions": 1
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "action": "edit",
+          "resources": [
+            "link.txt",
+            "moved.txt"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "filepath": "link.txt, moved.txt",
+            "diff": "Index: {{root}}/link.txt\n===================================================================\n--- {{root}}/link.txt\n+++ {{root}}/link.txt\n@@ -1,1 +1,1 @@\n-before\n+after\n\n",
+            "files": [
+              {
+                "file": "moved.txt",
+                "patch": "Index: {{root}}/link.txt\n===================================================================\n--- {{root}}/link.txt\n+++ {{root}}/link.txt\n@@ -1,1 +1,1 @@\n-before\n+after\n",
+                "status": "modified",
+                "additions": 1,
+                "deletions": 1
+              }
+            ]
+          }
+        }
+      ],
+      "tree": {
+        "{{root}}/moved.txt": "YWZ0ZXIK",
+        "{{root}}/target.txt": "YmVmb3JlCg=="
+      }
+    }
+  },
+  {
+    "name": "includes move file info in metadata",
+    "fixtures": [
+      {
+        "path": "{{root}}/old/name.txt",
+        "parts": [
+          {
+            "text": "old content\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "patchText": "*** Begin Patch\n*** Update File: old/name.txt\n*** Move to: renamed/dir/name.txt\n@@\n-old content\n+new content\n*** End Patch"
+    },
+    "expected": {
+      "status": "completed",
+      "output": {},
+      "content": [
+        {
+          "type": "text",
+          "text": "Success. Updated the following files:\nM renamed/dir/name.txt"
+        }
+      ],
+      "metadata": {
+        "files": [
+          {
+            "file": "renamed/dir/name.txt",
+            "patch": "Index: {{root}}/old/name.txt\n===================================================================\n--- {{root}}/old/name.txt\n+++ {{root}}/old/name.txt\n@@ -1,1 +1,1 @@\n-old content\n+new content\n",
+            "status": "modified",
+            "additions": 1,
+            "deletions": 1
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "action": "edit",
+          "resources": [
+            "old/name.txt",
+            "renamed/dir/name.txt"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "filepath": "old/name.txt, renamed/dir/name.txt",
+            "diff": "Index: {{root}}/old/name.txt\n===================================================================\n--- {{root}}/old/name.txt\n+++ {{root}}/old/name.txt\n@@ -1,1 +1,1 @@\n-old content\n+new content\n\n",
+            "files": [
+              {
+                "file": "renamed/dir/name.txt",
+                "patch": "Index: {{root}}/old/name.txt\n===================================================================\n--- {{root}}/old/name.txt\n+++ {{root}}/old/name.txt\n@@ -1,1 +1,1 @@\n-old content\n+new content\n",
+                "status": "modified",
+                "additions": 1,
+                "deletions": 1
+              }
+            ]
+          }
+        }
+      ],
+      "tree": {
+        "{{root}}/old": null,
+        "{{root}}/renamed": null,
+        "{{root}}/renamed/dir": null,
+        "{{root}}/renamed/dir/name.txt": "bmV3IGNvbnRlbnQK"
+      }
+    }
+  },
+  {
+    "name": "uses Location-relative resources for move targets in a nested Location",
+    "location": {
+      "directory": "{{root}}/nested/location",
+      "projectDirectory": "{{root}}"
+    },
+    "fixtures": [
+      {
+        "path": "{{root}}/nested/location/old.txt",
+        "parts": [
+          {
+            "text": "before\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "patchText": "*** Begin Patch\n*** Update File: old.txt\n*** Move to: moved.txt\n@@\n-before\n+after\n*** End Patch"
+    },
+    "expected": {
+      "status": "completed",
+      "output": {},
+      "content": [
+        {
+          "type": "text",
+          "text": "Success. Updated the following files:\nM moved.txt"
+        }
+      ],
+      "metadata": {
+        "files": [
+          {
+            "file": "moved.txt",
+            "patch": "Index: {{root}}/nested/location/old.txt\n===================================================================\n--- {{root}}/nested/location/old.txt\n+++ {{root}}/nested/location/old.txt\n@@ -1,1 +1,1 @@\n-before\n+after\n",
+            "status": "modified",
+            "additions": 1,
+            "deletions": 1
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "action": "edit",
+          "resources": [
+            "old.txt",
+            "moved.txt"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "filepath": "old.txt, moved.txt",
+            "diff": "Index: {{root}}/nested/location/old.txt\n===================================================================\n--- {{root}}/nested/location/old.txt\n+++ {{root}}/nested/location/old.txt\n@@ -1,1 +1,1 @@\n-before\n+after\n\n",
+            "files": [
+              {
+                "file": "moved.txt",
+                "patch": "Index: {{root}}/nested/location/old.txt\n===================================================================\n--- {{root}}/nested/location/old.txt\n+++ {{root}}/nested/location/old.txt\n@@ -1,1 +1,1 @@\n-before\n+after\n",
+                "status": "modified",
+                "additions": 1,
+                "deletions": 1
+              }
+            ]
+          }
+        }
+      ],
+      "tree": {
+        "{{root}}/nested": null,
+        "{{root}}/nested/location": null,
+        "{{root}}/nested/location/moved.txt": "YWZ0ZXIK"
+      }
+    }
+  },
+  {
+    "name": "inserts lines with an insert-only hunk",
+    "fixtures": [
+      {
+        "path": "{{root}}/insert-only.txt",
+        "parts": [
+          {
+            "text": "alpha\nomega\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "patchText": "*** Begin Patch\n*** Update File: insert-only.txt\n@@\n alpha\n+beta\n omega\n*** End Patch"
+    },
+    "expected": {
+      "status": "completed",
+      "output": {},
+      "content": [
+        {
+          "type": "text",
+          "text": "Success. Updated the following files:\nM insert-only.txt"
+        }
+      ],
+      "metadata": {
+        "files": [
+          {
+            "file": "insert-only.txt",
+            "patch": "Index: {{root}}/insert-only.txt\n===================================================================\n--- {{root}}/insert-only.txt\n+++ {{root}}/insert-only.txt\n@@ -1,2 +1,3 @@\n alpha\n+beta\n omega\n",
+            "status": "modified",
+            "additions": 1,
+            "deletions": 0
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "action": "edit",
+          "resources": [
+            "insert-only.txt"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "filepath": "insert-only.txt",
+            "diff": "Index: {{root}}/insert-only.txt\n===================================================================\n--- {{root}}/insert-only.txt\n+++ {{root}}/insert-only.txt\n@@ -1,2 +1,3 @@\n alpha\n+beta\n omega\n\n",
+            "files": [
+              {
+                "file": "insert-only.txt",
+                "patch": "Index: {{root}}/insert-only.txt\n===================================================================\n--- {{root}}/insert-only.txt\n+++ {{root}}/insert-only.txt\n@@ -1,2 +1,3 @@\n alpha\n+beta\n omega\n",
+                "status": "modified",
+                "additions": 1,
+                "deletions": 0
+              }
+            ]
+          }
+        }
+      ],
+      "tree": {
+        "{{root}}/insert-only.txt": "YWxwaGEKYmV0YQpvbWVnYQo="
+      }
+    }
+  },
+  {
+    "name": "rejects deleting a directory",
+    "fixtures": [
+      {
+        "path": "{{root}}/dir",
+        "kind": "directory"
+      }
+    ],
+    "call": {
+      "patchText": "*** Begin Patch\n*** Delete File: dir\n*** End Patch"
+    },
+    "expected": {
+      "status": "error",
+      "error": "patch verification failed: Failed to delete dir: path is a directory",
+      "assertions": [],
+      "tree": {
+        "{{root}}/dir": null
+      }
+    }
+  },
+  {
+    "name": "rejects a missing second chunk context",
+    "fixtures": [
+      {
+        "path": "{{root}}/two-chunks.txt",
+        "parts": [
+          {
+            "text": "a\nb\nc\nd\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "patchText": "*** Begin Patch\n*** Update File: two-chunks.txt\n@@\n-b\n+B\n\n-d\n+D\n*** End Patch"
+    },
+    "expected": {
+      "status": "error",
+      "error": "patch verification failed: Failed to find expected lines in two-chunks.txt:\nb\n\nd",
+      "assertions": [],
+      "tree": {
+        "{{root}}/two-chunks.txt": "YQpiCmMKZAo="
+      }
+    }
+  },
+  {
+    "name": "requires patchText",
+    "call": {
+      "patchText": ""
+    },
+    "fixtures": [],
+    "expected": {
+      "status": "error",
+      "error": "patchText is required",
+      "assertions": [],
+      "tree": {}
+    }
+  },
+  {
+    "name": "rejects invalid patch format",
+    "call": {
+      "patchText": "invalid patch"
+    },
+    "fixtures": [],
+    "expected": {
+      "status": "error",
+      "error": "patch verification failed: The first line of the patch must be '*** Begin Patch'",
+      "assertions": [],
+      "tree": {}
+    }
+  },
+  {
+    "name": "rejects a patch without an end marker",
+    "call": {
+      "patchText": "*** Begin Patch\n*** Add File: foo\n+hello"
+    },
+    "fixtures": [],
+    "expected": {
+      "status": "error",
+      "error": "patch verification failed: The last line of the patch must be '*** End Patch'",
+      "assertions": [],
+      "tree": {}
+    }
+  },
+  {
+    "name": "rejects an empty patch",
+    "call": {
+      "patchText": "*** Begin Patch\n*** End Patch"
+    },
+    "fixtures": [],
+    "expected": {
+      "status": "error",
+      "error": "patch rejected: empty patch",
+      "assertions": [],
+      "tree": {}
+    }
+  },
+  {
+    "name": "rejects an empty patch with whitespace",
+    "call": {
+      "patchText": " *** Begin Patch \n *** End Patch "
+    },
+    "fixtures": [],
+    "expected": {
+      "status": "error",
+      "error": "patch rejected: empty patch",
+      "assertions": [],
+      "tree": {}
+    }
+  },
+  {
+    "name": "rejects a heredoc-wrapped empty patch",
+    "call": {
+      "patchText": "<<EOF\n*** Begin Patch\n*** End Patch\nEOF"
+    },
+    "fixtures": [],
+    "expected": {
+      "status": "error",
+      "error": "patch rejected: empty patch",
+      "assertions": [],
+      "tree": {}
+    }
+  },
+  {
+    "name": "rejects an empty patch with an environment preamble",
+    "call": {
+      "patchText": "*** Begin Patch\n*** Environment ID: remote\n*** End Patch"
+    },
+    "fixtures": [],
+    "expected": {
+      "status": "error",
+      "error": "patch rejected: empty patch",
+      "assertions": [],
+      "tree": {}
+    }
+  },
+  {
+    "name": "rejects an invalid hunk header",
+    "call": {
+      "patchText": "*** Begin Patch\n*** Frobnicate File: foo\n*** End Patch"
+    },
+    "fixtures": [],
+    "expected": {
+      "status": "error",
+      "error": "patch verification failed: Invalid hunk at line 2: '*** Frobnicate File: foo' is not a valid hunk header. Valid hunk headers: '*** Add File: {path}', '*** Delete File: {path}', '*** Update File: {path}'",
+      "assertions": [],
+      "tree": {}
+    }
+  },
+  {
+    "name": "applies successive update operations to one file",
+    "fixtures": [
+      {
+        "path": "{{root}}/successive.txt",
+        "parts": [
+          {
+            "text": "a\nb\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "patchText": "*** Begin Patch\n*** Update File: successive.txt\n@@\n-a\n+A\n*** Update File: successive.txt\n@@\n-b\n+B\n*** End Patch"
+    },
+    "expected": {
+      "status": "completed",
+      "output": {},
+      "content": [
+        {
+          "type": "text",
+          "text": "Success. Updated the following files:\nM successive.txt\nM successive.txt"
+        }
+      ],
+      "metadata": {
+        "files": [
+          {
+            "file": "successive.txt",
+            "patch": "Index: {{root}}/successive.txt\n===================================================================\n--- {{root}}/successive.txt\n+++ {{root}}/successive.txt\n@@ -1,2 +1,2 @@\n-a\n-b\n+A\n+B\n",
+            "status": "modified",
+            "additions": 2,
+            "deletions": 2
+          },
+          {
+            "file": "successive.txt",
+            "patch": "Index: {{root}}/successive.txt\n===================================================================\n--- {{root}}/successive.txt\n+++ {{root}}/successive.txt\n@@ -1,2 +1,2 @@\n A\n-b\n+B\n",
+            "status": "modified",
+            "additions": 1,
+            "deletions": 1
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "action": "edit",
+          "resources": [
+            "successive.txt"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "filepath": "successive.txt, successive.txt",
+            "diff": "Index: {{root}}/successive.txt\n===================================================================\n--- {{root}}/successive.txt\n+++ {{root}}/successive.txt\n@@ -1,2 +1,2 @@\n-a\n+A\n b\n\nIndex: {{root}}/successive.txt\n===================================================================\n--- {{root}}/successive.txt\n+++ {{root}}/successive.txt\n@@ -1,2 +1,2 @@\n A\n-b\n+B\n\n",
+            "files": [
+              {
+                "file": "successive.txt",
+                "patch": "Index: {{root}}/successive.txt\n===================================================================\n--- {{root}}/successive.txt\n+++ {{root}}/successive.txt\n@@ -1,2 +1,2 @@\n-a\n+A\n b\n",
+                "status": "modified",
+                "additions": 1,
+                "deletions": 1
+              },
+              {
+                "file": "successive.txt",
+                "patch": "Index: {{root}}/successive.txt\n===================================================================\n--- {{root}}/successive.txt\n+++ {{root}}/successive.txt\n@@ -1,2 +1,2 @@\n A\n-b\n+B\n",
+                "status": "modified",
+                "additions": 1,
+                "deletions": 1
+              }
+            ]
+          }
+        }
+      ],
+      "tree": {
+        "{{root}}/successive.txt": "QQpCCg=="
+      }
+    }
+  },
+  {
+    "name": "preserves files across self-moves and multi-hunk moves in one patch",
+    "fixtures": [
+      {
+        "path": "{{root}}/same.txt",
+        "parts": [
+          {
+            "text": "before\n"
+          }
+        ]
+      },
+      {
+        "path": "{{root}}/old.txt",
+        "parts": [
+          {
+            "text": "a\nb\nc\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "patchText": "*** Begin Patch\n*** Update File: same.txt\n*** Move to: ./same.txt\n@@\n-before\n+after\n*** Update File: old.txt\n@@\n-a\n+A\n*** Update File: old.txt\n*** Move to: moved.txt\n@@\n-b\n+B\n*** Update File: moved.txt\n@@\n-c\n+C\n*** End Patch"
+    },
+    "expected": {
+      "status": "completed",
+      "output": {},
+      "content": [
+        {
+          "type": "text",
+          "text": "Success. Updated the following files:\nM same.txt\nM old.txt\nM moved.txt\nM moved.txt"
+        }
+      ],
+      "metadata": {
+        "files": [
+          {
+            "file": "same.txt",
+            "patch": "Index: {{root}}/same.txt\n===================================================================\n--- {{root}}/same.txt\n+++ {{root}}/same.txt\n@@ -1,1 +1,1 @@\n-before\n+after\n",
+            "status": "modified",
+            "additions": 1,
+            "deletions": 1
+          },
+          {
+            "file": "old.txt",
+            "patch": "Index: {{root}}/old.txt\n===================================================================\n--- {{root}}/old.txt\n+++ {{root}}/old.txt\n@@ -1,3 +1,3 @@\n-a\n+A\n b\n c\n",
+            "status": "modified",
+            "additions": 1,
+            "deletions": 1
+          },
+          {
+            "file": "moved.txt",
+            "patch": "Index: {{root}}/old.txt\n===================================================================\n--- {{root}}/old.txt\n+++ {{root}}/old.txt\n@@ -1,3 +1,3 @@\n A\n-b\n-c\n+B\n+C\n",
+            "status": "modified",
+            "additions": 2,
+            "deletions": 2
+          },
+          {
+            "file": "moved.txt",
+            "patch": "Index: {{root}}/moved.txt\n===================================================================\n--- {{root}}/moved.txt\n+++ {{root}}/moved.txt\n@@ -1,3 +1,3 @@\n A\n B\n-c\n+C\n",
+            "status": "modified",
+            "additions": 1,
+            "deletions": 1
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "action": "edit",
+          "resources": [
+            "same.txt",
+            "old.txt",
+            "moved.txt"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "filepath": "same.txt, old.txt, old.txt, moved.txt, moved.txt",
+            "diff": "Index: {{root}}/same.txt\n===================================================================\n--- {{root}}/same.txt\n+++ {{root}}/same.txt\n@@ -1,1 +1,1 @@\n-before\n+after\n\nIndex: {{root}}/old.txt\n===================================================================\n--- {{root}}/old.txt\n+++ {{root}}/old.txt\n@@ -1,3 +1,3 @@\n-a\n+A\n b\n c\n\nIndex: {{root}}/old.txt\n===================================================================\n--- {{root}}/old.txt\n+++ {{root}}/old.txt\n@@ -1,3 +1,3 @@\n A\n-b\n+B\n c\n\nIndex: {{root}}/moved.txt\n===================================================================\n--- {{root}}/moved.txt\n+++ {{root}}/moved.txt\n@@ -1,3 +1,3 @@\n A\n B\n-c\n+C\n\n",
+            "files": [
+              {
+                "file": "same.txt",
+                "patch": "Index: {{root}}/same.txt\n===================================================================\n--- {{root}}/same.txt\n+++ {{root}}/same.txt\n@@ -1,1 +1,1 @@\n-before\n+after\n",
+                "status": "modified",
+                "additions": 1,
+                "deletions": 1
+              },
+              {
+                "file": "old.txt",
+                "patch": "Index: {{root}}/old.txt\n===================================================================\n--- {{root}}/old.txt\n+++ {{root}}/old.txt\n@@ -1,3 +1,3 @@\n-a\n+A\n b\n c\n",
+                "status": "modified",
+                "additions": 1,
+                "deletions": 1
+              },
+              {
+                "file": "moved.txt",
+                "patch": "Index: {{root}}/old.txt\n===================================================================\n--- {{root}}/old.txt\n+++ {{root}}/old.txt\n@@ -1,3 +1,3 @@\n A\n-b\n+B\n c\n",
+                "status": "modified",
+                "additions": 1,
+                "deletions": 1
+              },
+              {
+                "file": "moved.txt",
+                "patch": "Index: {{root}}/moved.txt\n===================================================================\n--- {{root}}/moved.txt\n+++ {{root}}/moved.txt\n@@ -1,3 +1,3 @@\n A\n B\n-c\n+C\n",
+                "status": "modified",
+                "additions": 1,
+                "deletions": 1
+              }
+            ]
+          }
+        }
+      ],
+      "tree": {
+        "{{root}}/moved.txt": "QQpCCkMK",
+        "{{root}}/same.txt": "YWZ0ZXIK"
+      }
+    }
+  },
+  {
+    "name": "rejects an update with missing context",
+    "fixtures": [
+      {
+        "path": "{{root}}/unchanged.txt",
+        "parts": [
+          {
+            "text": "line1\nline2\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "patchText": "*** Begin Patch\n*** Update File: unchanged.txt\n@@\n-missing\n+changed\n*** End Patch"
+    },
+    "expected": {
+      "status": "error",
+      "error": "patch verification failed: Failed to find expected lines in unchanged.txt:\nmissing",
+      "assertions": [],
+      "tree": {
+        "{{root}}/unchanged.txt": "bGluZTEKbGluZTIK"
+      }
+    }
+  },
+  {
+    "name": "rejects an update when the target file is missing",
+    "call": {
+      "patchText": "*** Begin Patch\n*** Update File: missing.txt\n@@\n-old\n+new\n*** End Patch"
+    },
+    "fixtures": [],
+    "expected": {
+      "status": "error",
+      "error": "patch verification failed: Failed to read file to update {{root}}/missing.txt: file does not exist",
+      "assertions": [],
+      "tree": {}
+    }
+  },
+  {
+    "name": "identifies a directory used as an update target",
+    "fixtures": [
+      {
+        "path": "{{root}}/nested",
+        "kind": "directory"
+      }
+    ],
+    "call": {
+      "patchText": "*** Begin Patch\n*** Update File: nested\n@@\n-old\n+new\n*** End Patch"
+    },
+    "expected": {
+      "status": "error",
+      "error": "patch verification failed: Failed to read file to update {{root}}/nested: path is a directory",
+      "assertions": [],
+      "tree": {
+        "{{root}}/nested": null
+      }
+    }
+  },
+  {
+    "name": "identifies a missing delete target",
+    "call": {
+      "patchText": "*** Begin Patch\n*** Delete File: missing.txt\n*** End Patch"
+    },
+    "fixtures": [],
+    "expected": {
+      "status": "error",
+      "error": "patch verification failed: Failed to delete missing.txt: file does not exist",
+      "assertions": [],
+      "tree": {}
+    }
+  },
+  {
+    "name": "approves an external directory before reading and requests edit permission afterward",
+    "fixtures": [
+      {
+        "path": "{{outside}}/repository/.git",
+        "kind": "directory"
+      },
+      {
+        "path": "{{outside}}/repository/nested/external.txt",
+        "parts": [
+          {
+            "text": "before\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "patchText": "*** Begin Patch\n*** Update File: {{outside}}/repository/nested/external.txt\n@@\n-before\n+after\n*** End Patch"
+    },
+    "expected": {
+      "status": "completed",
+      "output": {},
+      "content": [
+        {
+          "type": "text",
+          "text": "Success. Updated the following files:\nM {{outside}}/repository/nested/external.txt"
+        }
+      ],
+      "metadata": {
+        "files": [
+          {
+            "file": "{{outside}}/repository/nested/external.txt",
+            "patch": "Index: {{outside}}/repository/nested/external.txt\n===================================================================\n--- {{outside}}/repository/nested/external.txt\n+++ {{outside}}/repository/nested/external.txt\n@@ -1,1 +1,1 @@\n-before\n+after\n",
+            "status": "modified",
+            "additions": 1,
+            "deletions": 1
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "action": "external_directory",
+          "resources": [
+            "{{outside}}/repository/nested/*"
+          ],
+          "save": [
+            "{{outside}}/repository/*"
+          ],
+          "metadata": {
+            "filepath": "{{outside}}/repository/nested/external.txt",
+            "parentDir": "{{outside}}/repository/nested"
+          }
+        },
+        {
+          "action": "edit",
+          "resources": [
+            "{{outside}}/repository/nested/external.txt"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "filepath": "{{outside}}/repository/nested/external.txt",
+            "diff": "Index: {{outside}}/repository/nested/external.txt\n===================================================================\n--- {{outside}}/repository/nested/external.txt\n+++ {{outside}}/repository/nested/external.txt\n@@ -1,1 +1,1 @@\n-before\n+after\n\n",
+            "files": [
+              {
+                "file": "{{outside}}/repository/nested/external.txt",
+                "patch": "Index: {{outside}}/repository/nested/external.txt\n===================================================================\n--- {{outside}}/repository/nested/external.txt\n+++ {{outside}}/repository/nested/external.txt\n@@ -1,1 +1,1 @@\n-before\n+after\n",
+                "status": "modified",
+                "additions": 1,
+                "deletions": 1
+              }
+            ]
+          }
+        }
+      ],
+      "tree": {
+        "{{outside}}/repository": null,
+        "{{outside}}/repository/.git": null,
+        "{{outside}}/repository/nested": null,
+        "{{outside}}/repository/nested/external.txt": "YWZ0ZXIK"
+      }
+    }
+  },
+  {
+    "name": "does not inspect an external file when external permission is denied",
+    "fixtures": [
+      {
+        "path": "{{outside}}/external.txt",
+        "parts": [
+          {
+            "text": "before\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "patchText": "*** Begin Patch\n*** Update File: {{outside}}/external.txt\n@@\n-before\n+after\n*** End Patch"
+    },
+    "permission": {
+      "deniedActions": [
+        "external_directory"
+      ]
+    },
+    "expected": {
+      "status": "error",
+      "error": "Permission denied: external_directory",
+      "assertions": [
+        {
+          "action": "external_directory",
+          "resources": [
+            "{{outside}}/*"
+          ],
+          "save": [
+            "{{outside}}/*"
+          ],
+          "metadata": {
+            "filepath": "{{outside}}/external.txt",
+            "parentDir": "{{outside}}"
+          }
+        }
+      ],
+      "tree": {
+        "{{outside}}/external.txt": "YmVmb3JlCg=="
+      }
+    }
+  },
+  {
+    "name": "preserves edit permission rejection",
+    "fixtures": [
+      {
+        "path": "{{root}}/target.txt",
+        "parts": [
+          {
+            "text": "before\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "patchText": "*** Begin Patch\n*** Update File: target.txt\n@@\n-before\n+after\n*** End Patch"
+    },
+    "permission": {
+      "deniedActions": [
+        "edit"
+      ]
+    },
+    "expected": {
+      "status": "error",
+      "error": "Permission denied: edit",
+      "assertions": [
+        {
+          "action": "edit",
+          "resources": [
+            "target.txt"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "filepath": "target.txt",
+            "diff": "Index: {{root}}/target.txt\n===================================================================\n--- {{root}}/target.txt\n+++ {{root}}/target.txt\n@@ -1,1 +1,1 @@\n-before\n+after\n\n",
+            "files": [
+              {
+                "file": "target.txt",
+                "patch": "Index: {{root}}/target.txt\n===================================================================\n--- {{root}}/target.txt\n+++ {{root}}/target.txt\n@@ -1,1 +1,1 @@\n-before\n+after\n",
+                "status": "modified",
+                "additions": 1,
+                "deletions": 1
+              }
+            ]
+          }
+        }
+      ],
+      "tree": {
+        "{{root}}/target.txt": "YmVmb3JlCg=="
+      }
+    }
+  },
+  {
+    "name": "treats a sibling path inside the project worktree as internal",
+    "location": {
+      "directory": "{{root}}/active",
+      "projectDirectory": "{{root}}"
+    },
+    "fixtures": [
+      {
+        "path": "{{root}}/active",
+        "kind": "directory"
+      },
+      {
+        "path": "{{root}}/sibling.txt",
+        "parts": [
+          {
+            "text": "before\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "patchText": "*** Begin Patch\n*** Update File: ../sibling.txt\n@@\n-before\n+after\n*** End Patch"
+    },
+    "expected": {
+      "status": "completed",
+      "output": {},
+      "content": [
+        {
+          "type": "text",
+          "text": "Success. Updated the following files:\nM ../sibling.txt"
+        }
+      ],
+      "metadata": {
+        "files": [
+          {
+            "file": "../sibling.txt",
+            "patch": "Index: {{root}}/sibling.txt\n===================================================================\n--- {{root}}/sibling.txt\n+++ {{root}}/sibling.txt\n@@ -1,1 +1,1 @@\n-before\n+after\n",
+            "status": "modified",
+            "additions": 1,
+            "deletions": 1
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "action": "edit",
+          "resources": [
+            "../sibling.txt"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "filepath": "../sibling.txt",
+            "diff": "Index: {{root}}/sibling.txt\n===================================================================\n--- {{root}}/sibling.txt\n+++ {{root}}/sibling.txt\n@@ -1,1 +1,1 @@\n-before\n+after\n\n",
+            "files": [
+              {
+                "file": "../sibling.txt",
+                "patch": "Index: {{root}}/sibling.txt\n===================================================================\n--- {{root}}/sibling.txt\n+++ {{root}}/sibling.txt\n@@ -1,1 +1,1 @@\n-before\n+after\n",
+                "status": "modified",
+                "additions": 1,
+                "deletions": 1
+              }
+            ]
+          }
+        }
+      ],
+      "tree": {
+        "{{root}}/active": null,
+        "{{root}}/sibling.txt": "YWZ0ZXIK"
+      }
+    }
+  },
+  {
+    "name": "follows an internal symlink to an external file without external permission",
+    "fixtures": [
+      {
+        "path": "{{outside}}/external.txt",
+        "parts": [
+          {
+            "text": "before\n"
+          }
+        ]
+      },
+      {
+        "path": "{{root}}/link.txt",
+        "kind": "symlink",
+        "target": "{{outside}}/external.txt"
+      }
+    ],
+    "call": {
+      "patchText": "*** Begin Patch\n*** Update File: link.txt\n@@\n-before\n+after\n*** End Patch"
+    },
+    "expected": {
+      "status": "completed",
+      "output": {},
+      "content": [
+        {
+          "type": "text",
+          "text": "Success. Updated the following files:\nM link.txt"
+        }
+      ],
+      "metadata": {
+        "files": [
+          {
+            "file": "link.txt",
+            "patch": "Index: {{root}}/link.txt\n===================================================================\n--- {{root}}/link.txt\n+++ {{root}}/link.txt\n@@ -1,1 +1,1 @@\n-before\n+after\n",
+            "status": "modified",
+            "additions": 1,
+            "deletions": 1
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "action": "edit",
+          "resources": [
+            "link.txt"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "filepath": "link.txt",
+            "diff": "Index: {{root}}/link.txt\n===================================================================\n--- {{root}}/link.txt\n+++ {{root}}/link.txt\n@@ -1,1 +1,1 @@\n-before\n+after\n\n",
+            "files": [
+              {
+                "file": "link.txt",
+                "patch": "Index: {{root}}/link.txt\n===================================================================\n--- {{root}}/link.txt\n+++ {{root}}/link.txt\n@@ -1,1 +1,1 @@\n-before\n+after\n",
+                "status": "modified",
+                "additions": 1,
+                "deletions": 1
+              }
+            ]
+          }
+        }
+      ],
+      "tree": {
+        "{{root}}/link.txt": "symlink:{{outside}}/external.txt",
+        "{{outside}}/external.txt": "YWZ0ZXIK"
+      }
+    }
+  },
+  {
+    "name": "uses canonical external permissions and resources for a move destination",
+    "fixtures": [
+      {
+        "path": "{{root}}/source.txt",
+        "parts": [
+          {
+            "text": "before\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "patchText": "*** Begin Patch\n*** Update File: source.txt\n*** Move to: {{outside}}/moved.txt\n@@\n-before\n+after\n*** End Patch"
+    },
+    "expected": {
+      "status": "completed",
+      "output": {},
+      "content": [
+        {
+          "type": "text",
+          "text": "Success. Updated the following files:\nM {{outside}}/moved.txt"
+        }
+      ],
+      "metadata": {
+        "files": [
+          {
+            "file": "{{outside}}/moved.txt",
+            "patch": "Index: {{root}}/source.txt\n===================================================================\n--- {{root}}/source.txt\n+++ {{root}}/source.txt\n@@ -1,1 +1,1 @@\n-before\n+after\n",
+            "status": "modified",
+            "additions": 1,
+            "deletions": 1
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "action": "external_directory",
+          "resources": [
+            "{{outside}}/*"
+          ],
+          "save": [
+            "{{outside}}/*"
+          ],
+          "metadata": {
+            "filepath": "{{outside}}/moved.txt",
+            "parentDir": "{{outside}}"
+          }
+        },
+        {
+          "action": "edit",
+          "resources": [
+            "source.txt",
+            "{{outside}}/moved.txt"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "filepath": "source.txt, {{outside}}/moved.txt",
+            "diff": "Index: {{root}}/source.txt\n===================================================================\n--- {{root}}/source.txt\n+++ {{root}}/source.txt\n@@ -1,1 +1,1 @@\n-before\n+after\n\n",
+            "files": [
+              {
+                "file": "{{outside}}/moved.txt",
+                "patch": "Index: {{root}}/source.txt\n===================================================================\n--- {{root}}/source.txt\n+++ {{root}}/source.txt\n@@ -1,1 +1,1 @@\n-before\n+after\n",
+                "status": "modified",
+                "additions": 1,
+                "deletions": 1
+              }
+            ]
+          }
+        }
+      ],
+      "tree": {
+        "{{outside}}/moved.txt": "YWZ0ZXIK"
+      }
+    }
+  },
+  {
+    "name": "approves each external file under the same parent",
+    "fixtures": [
+      {
+        "path": "{{outside}}/first.txt",
+        "parts": [
+          {
+            "text": "before\n"
+          }
+        ]
+      },
+      {
+        "path": "{{outside}}/second.txt",
+        "parts": [
+          {
+            "text": "before\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "patchText": "*** Begin Patch\n*** Update File: {{outside}}/first.txt\n@@\n-before\n+after\n*** Update File: {{outside}}/second.txt\n@@\n-before\n+after\n*** End Patch"
+    },
+    "expected": {
+      "status": "completed",
+      "output": {},
+      "content": [
+        {
+          "type": "text",
+          "text": "Success. Updated the following files:\nM {{outside}}/first.txt\nM {{outside}}/second.txt"
+        }
+      ],
+      "metadata": {
+        "files": [
+          {
+            "file": "{{outside}}/first.txt",
+            "patch": "Index: {{outside}}/first.txt\n===================================================================\n--- {{outside}}/first.txt\n+++ {{outside}}/first.txt\n@@ -1,1 +1,1 @@\n-before\n+after\n",
+            "status": "modified",
+            "additions": 1,
+            "deletions": 1
+          },
+          {
+            "file": "{{outside}}/second.txt",
+            "patch": "Index: {{outside}}/second.txt\n===================================================================\n--- {{outside}}/second.txt\n+++ {{outside}}/second.txt\n@@ -1,1 +1,1 @@\n-before\n+after\n",
+            "status": "modified",
+            "additions": 1,
+            "deletions": 1
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "action": "external_directory",
+          "resources": [
+            "{{outside}}/*"
+          ],
+          "save": [
+            "{{outside}}/*"
+          ],
+          "metadata": {
+            "filepath": "{{outside}}/first.txt",
+            "parentDir": "{{outside}}"
+          }
+        },
+        {
+          "action": "external_directory",
+          "resources": [
+            "{{outside}}/*"
+          ],
+          "save": [
+            "{{outside}}/*"
+          ],
+          "metadata": {
+            "filepath": "{{outside}}/second.txt",
+            "parentDir": "{{outside}}"
+          }
+        },
+        {
+          "action": "edit",
+          "resources": [
+            "{{outside}}/first.txt",
+            "{{outside}}/second.txt"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "filepath": "{{outside}}/first.txt, {{outside}}/second.txt",
+            "diff": "Index: {{outside}}/first.txt\n===================================================================\n--- {{outside}}/first.txt\n+++ {{outside}}/first.txt\n@@ -1,1 +1,1 @@\n-before\n+after\n\nIndex: {{outside}}/second.txt\n===================================================================\n--- {{outside}}/second.txt\n+++ {{outside}}/second.txt\n@@ -1,1 +1,1 @@\n-before\n+after\n\n",
+            "files": [
+              {
+                "file": "{{outside}}/first.txt",
+                "patch": "Index: {{outside}}/first.txt\n===================================================================\n--- {{outside}}/first.txt\n+++ {{outside}}/first.txt\n@@ -1,1 +1,1 @@\n-before\n+after\n",
+                "status": "modified",
+                "additions": 1,
+                "deletions": 1
+              },
+              {
+                "file": "{{outside}}/second.txt",
+                "patch": "Index: {{outside}}/second.txt\n===================================================================\n--- {{outside}}/second.txt\n+++ {{outside}}/second.txt\n@@ -1,1 +1,1 @@\n-before\n+after\n",
+                "status": "modified",
+                "additions": 1,
+                "deletions": 1
+              }
+            ]
+          }
+        }
+      ],
+      "tree": {
+        "{{outside}}/first.txt": "YWZ0ZXIK",
+        "{{outside}}/second.txt": "YWZ0ZXIK"
+      }
+    }
+  },
+  {
+    "name": "rejects invalid later update before applying an earlier add",
+    "call": {
+      "patchText": "*** Begin Patch\n*** Add File: created.txt\n+created\n*** Update File: missing.txt\n@@\n-before\n+after\n*** End Patch"
+    },
+    "fixtures": [],
+    "expected": {
+      "status": "error",
+      "error": "patch verification failed: Failed to read file to update {{root}}/missing.txt: file does not exist",
+      "assertions": [],
+      "tree": {}
+    }
+  },
+  {
+    "name": "adds files by overwriting existing targets",
+    "fixtures": [
+      {
+        "path": "{{root}}/existing.txt",
+        "parts": [
+          {
+            "text": "sentinel\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "patchText": "*** Begin Patch\n*** Add File: existing.txt\n+replacement\n*** End Patch"
+    },
+    "expected": {
+      "status": "completed",
+      "output": {},
+      "content": [
+        {
+          "type": "text",
+          "text": "Success. Updated the following files:\nA existing.txt"
+        }
+      ],
+      "metadata": {
+        "files": [
+          {
+            "file": "existing.txt",
+            "patch": "Index: {{root}}/existing.txt\n===================================================================\n--- {{root}}/existing.txt\n+++ {{root}}/existing.txt\n@@ -0,0 +1,1 @@\n+replacement\n",
+            "status": "added",
+            "additions": 1,
+            "deletions": 0
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "action": "edit",
+          "resources": [
+            "existing.txt"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "filepath": "existing.txt",
+            "diff": "Index: {{root}}/existing.txt\n===================================================================\n--- {{root}}/existing.txt\n+++ {{root}}/existing.txt\n@@ -0,0 +1,1 @@\n+replacement\n\n",
+            "files": [
+              {
+                "file": "existing.txt",
+                "patch": "Index: {{root}}/existing.txt\n===================================================================\n--- {{root}}/existing.txt\n+++ {{root}}/existing.txt\n@@ -0,0 +1,1 @@\n+replacement\n",
+                "status": "added",
+                "additions": 1,
+                "deletions": 0
+              }
+            ]
+          }
+        }
+      ],
+      "tree": {
+        "{{root}}/existing.txt": "cmVwbGFjZW1lbnQK"
+      }
+    }
+  }
+]

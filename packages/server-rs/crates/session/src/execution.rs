@@ -76,6 +76,7 @@ pub trait Placed: Send + Sync {
     fn resolver(&self) -> &Resolver;
     fn agents(&self) -> &AgentService;
     fn builtins(&self) -> &BuiltinsInput;
+    fn tools(&self) -> &opencode_tool::LocationTools;
     fn location(&self) -> Option<&LocationRef>;
     fn is_closed(&self) -> bool;
 }

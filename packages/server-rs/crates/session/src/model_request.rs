@@ -1,5 +1,7 @@
-use opencode_ai::{CachePolicy, CachePolicyObject, GenerationOptions, LlmRequest, StringMap, SystemPart};
-use opencode_contract::generated::{ModelInfo, ModelInfoLimit};
+use opencode_ai::{
+    CachePolicy, CachePolicyObject, Freeform, GenerationOptions, LlmRequest, StringMap, SystemPart, ToolEntry,
+};
+use opencode_contract::generated::{ModelInfo, ModelInfoLimit, ToolFreeformFormat};
 use serde_json::{Value, json};
 
 use crate::context::Loaded;
@@ -36,7 +38,9 @@ pub fn output_limit(limit: &ModelInfoLimit, input: Option<&InputTokens>, headroo
 pub fn prepare(loaded: &Loaded, app: &AppInfo) -> LlmRequest {
     let provider_metadata_key =
         loaded.runtime.route.provider_metadata_key.as_deref().unwrap_or(loaded.runtime.provider.as_str());
-    let first = loaded.agent.system.clone().filter(|system| !system.is_empty()).unwrap_or_else(|| system_prompt(&[]));
+    let names = loaded.snapshot.definitions.iter().map(|definition| definition.name.clone()).collect::<Vec<_>>();
+    let first =
+        loaded.agent.system.clone().filter(|system| !system.is_empty()).unwrap_or_else(|| system_prompt(&names));
     let instructions = crate::instructions::join(&loaded.initial);
     let mut system = Vec::new();
     if !first.is_empty() {
@@ -54,9 +58,22 @@ pub fn prepare(loaded: &Loaded, app: &AppInfo) -> LlmRequest {
     );
     let messages = crate::to_llm_message::to_llm_messages(&loaded.messages, &loaded.model_ref(), provider_metadata_key);
     let affinity = session_affinity(loaded);
+    let tools = loaded
+        .snapshot
+        .definitions
+        .iter()
+        .map(|definition| {
+            let mut definition = definition.clone();
+            if definition.freeform.as_ref().is_some_and(|freeform| !supports_freeform(&loaded.model, freeform)) {
+                definition.freeform = None;
+            }
+            ToolEntry::Tool(definition)
+        })
+        .collect();
     LlmRequest {
         system,
         messages,
+        tools,
         generation: GenerationOptions {
             max_tokens: Some(serde_json::Number::from(output_limit(&loaded.model.limit, None, WINDOW_HEADROOM))),
             ..Default::default()
@@ -66,6 +83,18 @@ pub fn prepare(loaded: &Loaded, app: &AppInfo) -> LlmRequest {
         headers: Some(headers(loaded, app, affinity)),
         ..Default::default()
     }
+}
+
+fn supports_freeform(model: &ModelInfo, freeform: &Freeform) -> bool {
+    let Some(formats) = &model.capabilities.freeform else { return false };
+    formats.iter().any(|format| {
+        matches!(
+            (freeform, format),
+            (Freeform::Text, ToolFreeformFormat::Text)
+                | (Freeform::Regex { .. }, ToolFreeformFormat::Regex)
+                | (Freeform::Lark { .. }, ToolFreeformFormat::Lark)
+        )
+    })
 }
 
 fn system_prompt(tools: &[String]) -> String {

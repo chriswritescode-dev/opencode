@@ -135,6 +135,16 @@ A deviation that excepts a recorded cassette from the replay gate also has a `Ca
 - `OR-50-references.md`: reference parsing, refresh scheduling and ordering differ from the TypeScript registry
 - `OR-50-skill-sources.md`: skill URL caches and files created after a scan are read and watched differently
 - `OR-50-form-pattern.md`: form patterns and date-time parsing use Rust regexes and an ISO date subset
+- `OR-51-formatter.md`: formatter package binaries come from `node_modules/.bin` instead of an npm install
+- `OR-51-fs-routes.md`: fs routes parse HTTP dates only, take any write content type, and probe workspace directories at boot
+- `OR-51-fuzzy-find.md`: fuzzy file search always uses the ripgrep index instead of the native fff picker
+- `OR-51-image-encoding.md`: re-encoded and resized images match photon's dimensions and MIME type, not its bytes
+- `OR-51-read-tool.md`: missing-path suggestions fold Unicode without NFC and sort equally ranked names by byte order
+- `OR-51-patch-tool.md`: patch targets one local environment, and its line matching and preparation errors follow Rust whitespace and error text
+- `OR-51-write-edit.md`: edit hints truncate by Unicode scalar instead of UTF-16 unit, and a non-directory wrong kind is reported as an edit failure
+- `OR-51-tool-output.md`: the output store reports Rust IO errors and validates inputs from JSON Schema
+- `OR-51-tool-runtime.md`: the session step aborts interrupted tools immediately and does not merge progress metadata into failures
+- `OR-51-watcher.md`: recursive watcher ignore patterns support `*`, `**` and `?` only, and access events are filtered
 - `OR-53-snapshot-changed-file-retry.md`: a snapshot capture retries when a file changes while Git indexes it
 - `OR-53-worktree-resolved-commit.md`: a resolved worktree row and its durable `worktree.resolved` event commit separately
 - `OR-61-sidecar-environment.md`: plugins run in a sidecar with an allowlisted environment instead of inside the server

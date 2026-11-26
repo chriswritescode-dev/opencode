@@ -1,0 +1,1753 @@
+[
+  {
+    "name": "replaces relative exact text through FileMutation once",
+    "fixtures": [
+      {
+        "path": "{{root}}/hello.txt",
+        "parts": [
+          {
+            "text": "before\nrest\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "hello.txt",
+      "oldString": "before",
+      "newString": "after"
+    },
+    "expected": {
+      "status": "completed",
+      "output": "Edited hello.txt (1 replacement)",
+      "content": [
+        {
+          "type": "text",
+          "text": "Edited hello.txt (1 replacement)"
+        }
+      ],
+      "metadata": {
+        "files": [
+          {
+            "file": "hello.txt",
+            "patch": "Index: hello.txt\n===================================================================\n--- hello.txt\n+++ hello.txt\n@@ -1,2 +1,2 @@\n-before\n+after\n rest\n",
+            "status": "modified",
+            "additions": 1,
+            "deletions": 1
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "action": "edit",
+          "resources": [
+            "hello.txt"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "files": [
+              {
+                "file": "hello.txt",
+                "patch": "Index: hello.txt\n===================================================================\n--- hello.txt\n+++ hello.txt\n@@ -1,2 +1,2 @@\n-before\n+after\n rest\n",
+                "status": "modified",
+                "additions": 1,
+                "deletions": 1
+              }
+            ]
+          }
+        }
+      ],
+      "tree": {
+        "{{root}}/hello.txt": "YWZ0ZXIKcmVzdAo="
+      }
+    }
+  },
+  {
+    "name": "accepts an absolute file path inside the active Location",
+    "fixtures": [
+      {
+        "path": "{{root}}/absolute.txt",
+        "parts": [
+          {
+            "text": "before"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "{{root}}/absolute.txt",
+      "oldString": "before",
+      "newString": "after"
+    },
+    "expected": {
+      "status": "completed",
+      "output": "Edited absolute.txt (1 replacement)",
+      "content": [
+        {
+          "type": "text",
+          "text": "Edited absolute.txt (1 replacement)"
+        }
+      ],
+      "metadata": {
+        "files": [
+          {
+            "file": "absolute.txt",
+            "patch": "Index: absolute.txt\n===================================================================\n--- absolute.txt\n+++ absolute.txt\n@@ -1,1 +1,1 @@\n-before\n\\ No newline at end of file\n+after\n\\ No newline at end of file\n",
+            "status": "modified",
+            "additions": 1,
+            "deletions": 1
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "action": "edit",
+          "resources": [
+            "absolute.txt"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "files": [
+              {
+                "file": "absolute.txt",
+                "patch": "Index: absolute.txt\n===================================================================\n--- absolute.txt\n+++ absolute.txt\n@@ -1,1 +1,1 @@\n-before\n\\ No newline at end of file\n+after\n\\ No newline at end of file\n",
+                "status": "modified",
+                "additions": 1,
+                "deletions": 1
+              }
+            ]
+          }
+        }
+      ],
+      "tree": {
+        "{{root}}/absolute.txt": "YWZ0ZXI="
+      }
+    }
+  },
+  {
+    "name": "edits an external symlink target with only its in-location permission",
+    "fixtures": [
+      {
+        "path": "{{outside}}/external.txt",
+        "parts": [
+          {
+            "text": "before"
+          }
+        ]
+      },
+      {
+        "path": "{{root}}/link.txt",
+        "kind": "symlink",
+        "target": "{{outside}}/external.txt"
+      }
+    ],
+    "call": {
+      "path": "link.txt",
+      "oldString": "before",
+      "newString": "after"
+    },
+    "expected": {
+      "status": "completed",
+      "output": "Edited link.txt (1 replacement)",
+      "content": [
+        {
+          "type": "text",
+          "text": "Edited link.txt (1 replacement)"
+        }
+      ],
+      "metadata": {
+        "files": [
+          {
+            "file": "link.txt",
+            "patch": "Index: link.txt\n===================================================================\n--- link.txt\n+++ link.txt\n@@ -1,1 +1,1 @@\n-before\n\\ No newline at end of file\n+after\n\\ No newline at end of file\n",
+            "status": "modified",
+            "additions": 1,
+            "deletions": 1
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "action": "edit",
+          "resources": [
+            "link.txt"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "files": [
+              {
+                "file": "link.txt",
+                "patch": "Index: link.txt\n===================================================================\n--- link.txt\n+++ link.txt\n@@ -1,1 +1,1 @@\n-before\n\\ No newline at end of file\n+after\n\\ No newline at end of file\n",
+                "status": "modified",
+                "additions": 1,
+                "deletions": 1
+              }
+            ]
+          }
+        }
+      ],
+      "tree": {
+        "{{root}}/link.txt": "symlink:{{outside}}/external.txt",
+        "{{outside}}/external.txt": "YWZ0ZXI="
+      }
+    }
+  },
+  {
+    "name": "approves an explicit external absolute path before edit",
+    "fixtures": [
+      {
+        "path": "{{outside}}/external.txt",
+        "parts": [
+          {
+            "text": "before"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "{{outside}}/external.txt",
+      "oldString": "before",
+      "newString": "after"
+    },
+    "expected": {
+      "status": "completed",
+      "output": "Edited {{outside}}/external.txt (1 replacement)",
+      "content": [
+        {
+          "type": "text",
+          "text": "Edited {{outside}}/external.txt (1 replacement)"
+        }
+      ],
+      "metadata": {
+        "files": [
+          {
+            "file": "{{outside}}/external.txt",
+            "patch": "Index: {{outside}}/external.txt\n===================================================================\n--- {{outside}}/external.txt\n+++ {{outside}}/external.txt\n@@ -1,1 +1,1 @@\n-before\n\\ No newline at end of file\n+after\n\\ No newline at end of file\n",
+            "status": "modified",
+            "additions": 1,
+            "deletions": 1
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "action": "external_directory",
+          "resources": [
+            "{{outside}}/*"
+          ],
+          "save": [
+            "{{outside}}/*"
+          ]
+        },
+        {
+          "action": "edit",
+          "resources": [
+            "{{outside}}/external.txt"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "files": [
+              {
+                "file": "{{outside}}/external.txt",
+                "patch": "Index: {{outside}}/external.txt\n===================================================================\n--- {{outside}}/external.txt\n+++ {{outside}}/external.txt\n@@ -1,1 +1,1 @@\n-before\n\\ No newline at end of file\n+after\n\\ No newline at end of file\n",
+                "status": "modified",
+                "additions": 1,
+                "deletions": 1
+              }
+            ]
+          }
+        }
+      ],
+      "tree": {
+        "{{outside}}/external.txt": "YWZ0ZXI="
+      }
+    }
+  },
+  {
+    "name": "does not write when external_directory approval is denied",
+    "fixtures": [
+      {
+        "path": "{{outside}}/denied.txt",
+        "parts": [
+          {
+            "text": "before"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "{{outside}}/denied.txt",
+      "oldString": "before",
+      "newString": "after"
+    },
+    "permission": {
+      "deniedActions": [
+        "external_directory"
+      ]
+    },
+    "expected": {
+      "status": "error",
+      "error": "Permission denied: external_directory",
+      "assertions": [
+        {
+          "action": "external_directory",
+          "resources": [
+            "{{outside}}/*"
+          ],
+          "save": [
+            "{{outside}}/*"
+          ]
+        }
+      ],
+      "tree": {
+        "{{outside}}/denied.txt": "YmVmb3Jl"
+      }
+    }
+  },
+  {
+    "name": "does not write when edit approval is denied",
+    "fixtures": [
+      {
+        "path": "{{outside}}/denied.txt",
+        "parts": [
+          {
+            "text": "before"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "{{outside}}/denied.txt",
+      "oldString": "before",
+      "newString": "after"
+    },
+    "permission": {
+      "deniedActions": [
+        "edit"
+      ]
+    },
+    "expected": {
+      "status": "error",
+      "error": "Permission denied: edit",
+      "assertions": [
+        {
+          "action": "external_directory",
+          "resources": [
+            "{{outside}}/*"
+          ],
+          "save": [
+            "{{outside}}/*"
+          ]
+        },
+        {
+          "action": "edit",
+          "resources": [
+            "{{outside}}/denied.txt"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "files": [
+              {
+                "file": "{{outside}}/denied.txt",
+                "patch": "Index: {{outside}}/denied.txt\n===================================================================\n--- {{outside}}/denied.txt\n+++ {{outside}}/denied.txt\n@@ -1,1 +1,1 @@\n-before\n\\ No newline at end of file\n+after\n\\ No newline at end of file\n",
+                "status": "modified",
+                "additions": 1,
+                "deletions": 1
+              }
+            ]
+          }
+        }
+      ],
+      "tree": {
+        "{{outside}}/denied.txt": "YmVmb3Jl"
+      }
+    }
+  },
+  {
+    "name": "denied edit does not disclose whether oldString matches",
+    "fixtures": [
+      {
+        "path": "{{root}}/secret.txt",
+        "parts": [
+          {
+            "text": "secret content"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "secret.txt",
+      "oldString": "secret content",
+      "newString": "replacement"
+    },
+    "permission": {
+      "deniedActions": [
+        "edit"
+      ]
+    },
+    "expected": {
+      "status": "error",
+      "error": "Permission denied: edit",
+      "assertions": [
+        {
+          "action": "edit",
+          "resources": [
+            "secret.txt"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "files": [
+              {
+                "file": "secret.txt",
+                "patch": "Index: secret.txt\n===================================================================\n--- secret.txt\n+++ secret.txt\n@@ -1,1 +1,1 @@\n-secret content\n\\ No newline at end of file\n+replacement\n\\ No newline at end of file\n",
+                "status": "modified",
+                "additions": 1,
+                "deletions": 1
+              }
+            ]
+          }
+        }
+      ],
+      "tree": {
+        "{{root}}/secret.txt": "c2VjcmV0IGNvbnRlbnQ="
+      }
+    }
+  },
+  {
+    "name": "denied edit does not disclose whether oldString is missing",
+    "fixtures": [
+      {
+        "path": "{{root}}/secret.txt",
+        "parts": [
+          {
+            "text": "secret content"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "secret.txt",
+      "oldString": "not present",
+      "newString": "replacement"
+    },
+    "permission": {
+      "deniedActions": [
+        "edit"
+      ]
+    },
+    "expected": {
+      "status": "error",
+      "error": "Permission denied: edit",
+      "assertions": [
+        {
+          "action": "edit",
+          "resources": [
+            "secret.txt"
+          ],
+          "save": [
+            "*"
+          ]
+        }
+      ],
+      "tree": {
+        "{{root}}/secret.txt": "c2VjcmV0IGNvbnRlbnQ="
+      }
+    }
+  },
+  {
+    "name": "rejects an identical oldString and newString",
+    "fixtures": [
+      {
+        "path": "{{root}}/matches.txt",
+        "parts": [
+          {
+            "text": "same same"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "matches.txt",
+      "oldString": "same",
+      "newString": "same"
+    },
+    "expected": {
+      "status": "error",
+      "error": "No changes to apply: oldString and newString are identical.",
+      "assertions": [],
+      "tree": {
+        "{{root}}/matches.txt": "c2FtZSBzYW1l"
+      }
+    }
+  },
+  {
+    "name": "rejects an empty oldString",
+    "fixtures": [
+      {
+        "path": "{{root}}/matches.txt",
+        "parts": [
+          {
+            "text": "same same"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "matches.txt",
+      "oldString": "",
+      "newString": "after"
+    },
+    "expected": {
+      "status": "error",
+      "error": "oldString must not be empty. Use write to create or overwrite a file.",
+      "assertions": [],
+      "tree": {
+        "{{root}}/matches.txt": "c2FtZSBzYW1l"
+      }
+    }
+  },
+  {
+    "name": "rejects a missing oldString",
+    "fixtures": [
+      {
+        "path": "{{root}}/matches.txt",
+        "parts": [
+          {
+            "text": "same same"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "matches.txt",
+      "oldString": "missing",
+      "newString": "after"
+    },
+    "expected": {
+      "status": "error",
+      "error": "Could not find oldString in matches.txt. It must match exactly, including whitespace and indentation.",
+      "assertions": [
+        {
+          "action": "edit",
+          "resources": [
+            "matches.txt"
+          ],
+          "save": [
+            "*"
+          ]
+        }
+      ],
+      "tree": {
+        "{{root}}/matches.txt": "c2FtZSBzYW1l"
+      }
+    }
+  },
+  {
+    "name": "rejects an ambiguous oldString",
+    "fixtures": [
+      {
+        "path": "{{root}}/matches.txt",
+        "parts": [
+          {
+            "text": "same same"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "matches.txt",
+      "oldString": "same",
+      "newString": "after"
+    },
+    "expected": {
+      "status": "error",
+      "error": "Found 2 matches for oldString, but expected exactly one. Add more surrounding context to make oldString unique, or set replaceAll to true to replace every occurrence.",
+      "assertions": [
+        {
+          "action": "edit",
+          "resources": [
+            "matches.txt"
+          ],
+          "save": [
+            "*"
+          ]
+        }
+      ],
+      "tree": {
+        "{{root}}/matches.txt": "c2FtZSBzYW1l"
+      }
+    }
+  },
+  {
+    "name": "points a missed oldString at the closest lines",
+    "fixtures": [
+      {
+        "path": "{{root}}/miss.ts",
+        "parts": [
+          {
+            "text": "import { a } from './a'\n\nexport function run() {\n  const value = a()\n  return value + 1\n}\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "miss.ts",
+      "oldString": "export function run() {\n\tconst value = a()\n\treturn value + 2\n}",
+      "newString": "x"
+    },
+    "expected": {
+      "status": "error",
+      "error": "Could not find oldString in miss.ts. It must match exactly, including whitespace and indentation.\n\nThe closest lines in the file:\n3: export function run() {\n4:   const value = a()\n5:   return value + 1\n6: }",
+      "assertions": [
+        {
+          "action": "edit",
+          "resources": [
+            "miss.ts"
+          ],
+          "save": [
+            "*"
+          ]
+        }
+      ],
+      "tree": {
+        "{{root}}/miss.ts": "aW1wb3J0IHsgYSB9IGZyb20gJy4vYScKCmV4cG9ydCBmdW5jdGlvbiBydW4oKSB7CiAgY29uc3QgdmFsdWUgPSBhKCkKICByZXR1cm4gdmFsdWUgKyAxCn0K"
+      }
+    }
+  },
+  {
+    "name": "points a missed oldString at newString already applied",
+    "fixtures": [
+      {
+        "path": "{{root}}/miss.ts",
+        "parts": [
+          {
+            "text": "import { a } from './a'\n\nexport function run() {\n  const value = a()\n  return value + 1\n}\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "miss.ts",
+      "oldString": "const value = b()",
+      "newString": "  const value = a()\n  return value + 1"
+    },
+    "expected": {
+      "status": "error",
+      "error": "Could not find oldString in miss.ts. It must match exactly, including whitespace and indentation.\n\nnewString is already in the file, so this edit may already be applied.",
+      "assertions": [
+        {
+          "action": "edit",
+          "resources": [
+            "miss.ts"
+          ],
+          "save": [
+            "*"
+          ]
+        }
+      ],
+      "tree": {
+        "{{root}}/miss.ts": "aW1wb3J0IHsgYSB9IGZyb20gJy4vYScKCmV4cG9ydCBmdW5jdGlvbiBydW4oKSB7CiAgY29uc3QgdmFsdWUgPSBhKCkKICByZXR1cm4gdmFsdWUgKyAxCn0K"
+      }
+    }
+  },
+  {
+    "name": "does not hint when no line matches",
+    "fixtures": [
+      {
+        "path": "{{root}}/miss.ts",
+        "parts": [
+          {
+            "text": "import { a } from './a'\n\nexport function run() {\n  const value = a()\n  return value + 1\n}\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "miss.ts",
+      "oldString": "nothing like it",
+      "newString": "anything"
+    },
+    "expected": {
+      "status": "error",
+      "error": "Could not find oldString in miss.ts. It must match exactly, including whitespace and indentation.",
+      "assertions": [
+        {
+          "action": "edit",
+          "resources": [
+            "miss.ts"
+          ],
+          "save": [
+            "*"
+          ]
+        }
+      ],
+      "tree": {
+        "{{root}}/miss.ts": "aW1wb3J0IHsgYSB9IGZyb20gJy4vYScKCmV4cG9ydCBmdW5jdGlvbiBydW4oKSB7CiAgY29uc3QgdmFsdWUgPSBhKCkKICByZXR1cm4gdmFsdWUgKyAxCn0K"
+      }
+    }
+  },
+  {
+    "name": "does not hint past the matched span",
+    "fixtures": [
+      {
+        "path": "{{root}}/miss.ts",
+        "parts": [
+          {
+            "text": "import { a } from './a'\n\nexport function run() {\n  const value = a()\n  return value + 1\n}\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "miss.ts",
+      "oldString": "import { a } from './a'\n\n\n\n\n\n",
+      "newString": "x"
+    },
+    "expected": {
+      "status": "error",
+      "error": "Could not find oldString in miss.ts. It must match exactly, including whitespace and indentation.\n\nThe closest lines in the file:\n1: import { a } from './a'",
+      "assertions": [
+        {
+          "action": "edit",
+          "resources": [
+            "miss.ts"
+          ],
+          "save": [
+            "*"
+          ]
+        }
+      ],
+      "tree": {
+        "{{root}}/miss.ts": "aW1wb3J0IHsgYSB9IGZyb20gJy4vYScKCmV4cG9ydCBmdW5jdGlvbiBydW4oKSB7CiAgY29uc3QgdmFsdWUgPSBhKCkKICByZXR1cm4gdmFsdWUgKyAxCn0K"
+      }
+    }
+  },
+  {
+    "name": "does not hint when reading the file is not allowed",
+    "fixtures": [
+      {
+        "path": "{{root}}/miss.ts",
+        "parts": [
+          {
+            "text": "import { a } from './a'\n\nexport function run() {\n  const value = a()\n  return value + 1\n}\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "miss.ts",
+      "oldString": "export function run() {\n\tconst value = a()\n\treturn value + 2\n}",
+      "newString": "x"
+    },
+    "permission": {
+      "readAllowed": false
+    },
+    "expected": {
+      "status": "error",
+      "error": "Could not find oldString in miss.ts. It must match exactly, including whitespace and indentation.",
+      "assertions": [
+        {
+          "action": "edit",
+          "resources": [
+            "miss.ts"
+          ],
+          "save": [
+            "*"
+          ]
+        }
+      ],
+      "tree": {
+        "{{root}}/miss.ts": "aW1wb3J0IHsgYSB9IGZyb20gJy4vYScKCmV4cG9ydCBmdW5jdGlvbiBydW4oKSB7CiAgY29uc3QgdmFsdWUgPSBhKCkKICByZXR1cm4gdmFsdWUgKyAxCn0K"
+      }
+    }
+  },
+  {
+    "name": "returns a missing file error",
+    "call": {
+      "path": "missing.ts",
+      "oldString": "before",
+      "newString": "after"
+    },
+    "fixtures": [],
+    "expected": {
+      "status": "error",
+      "error": "File not found: missing.ts",
+      "assertions": [],
+      "tree": {}
+    }
+  },
+  {
+    "name": "returns a directory error",
+    "fixtures": [
+      {
+        "path": "{{root}}/src",
+        "kind": "directory"
+      }
+    ],
+    "call": {
+      "path": "src",
+      "oldString": "before",
+      "newString": "after"
+    },
+    "expected": {
+      "status": "error",
+      "error": "Path is a directory, not a file: src",
+      "assertions": [],
+      "tree": {
+        "{{root}}/src": null
+      }
+    }
+  },
+  {
+    "name": "replaces every exact occurrence when replaceAll is true",
+    "fixtures": [
+      {
+        "path": "{{root}}/all.txt",
+        "parts": [
+          {
+            "text": "same same same"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "all.txt",
+      "oldString": "same",
+      "newString": "after",
+      "replaceAll": true
+    },
+    "expected": {
+      "status": "completed",
+      "output": "Edited all.txt (3 replacements)",
+      "content": [
+        {
+          "type": "text",
+          "text": "Edited all.txt (3 replacements)"
+        }
+      ],
+      "metadata": {
+        "files": [
+          {
+            "file": "all.txt",
+            "patch": "Index: all.txt\n===================================================================\n--- all.txt\n+++ all.txt\n@@ -1,1 +1,1 @@\n-same same same\n\\ No newline at end of file\n+after after after\n\\ No newline at end of file\n",
+            "status": "modified",
+            "additions": 1,
+            "deletions": 1
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "action": "edit",
+          "resources": [
+            "all.txt"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "files": [
+              {
+                "file": "all.txt",
+                "patch": "Index: all.txt\n===================================================================\n--- all.txt\n+++ all.txt\n@@ -1,1 +1,1 @@\n-same same same\n\\ No newline at end of file\n+after after after\n\\ No newline at end of file\n",
+                "status": "modified",
+                "additions": 1,
+                "deletions": 1
+              }
+            ]
+          }
+        }
+      ],
+      "tree": {
+        "{{root}}/all.txt": "YWZ0ZXIgYWZ0ZXIgYWZ0ZXI="
+      }
+    }
+  },
+  {
+    "name": "normalizes Unicode typography only after exact matching fails",
+    "fixtures": [
+      {
+        "path": "{{root}}/unicode.txt",
+        "parts": [
+          {
+            "text": "exact - match\ncurly “quotes”\nminus − one\nspace here\nexact − match\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "unicode.txt",
+      "oldString": "curly \"quotes\"\nminus - one\nspace here",
+      "newString": "normalized"
+    },
+    "expected": {
+      "status": "completed",
+      "output": "Edited unicode.txt (1 replacement)",
+      "content": [
+        {
+          "type": "text",
+          "text": "Edited unicode.txt (1 replacement)"
+        }
+      ],
+      "metadata": {
+        "files": [
+          {
+            "file": "unicode.txt",
+            "patch": "Index: unicode.txt\n===================================================================\n--- unicode.txt\n+++ unicode.txt\n@@ -1,5 +1,3 @@\n exact - match\n-curly “quotes”\n-minus − one\n-space here\n+normalized\n exact − match\n",
+            "status": "modified",
+            "additions": 1,
+            "deletions": 3
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "action": "edit",
+          "resources": [
+            "unicode.txt"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "files": [
+              {
+                "file": "unicode.txt",
+                "patch": "Index: unicode.txt\n===================================================================\n--- unicode.txt\n+++ unicode.txt\n@@ -1,5 +1,3 @@\n exact - match\n-curly “quotes”\n-minus − one\n-space here\n+normalized\n exact − match\n",
+                "status": "modified",
+                "additions": 1,
+                "deletions": 3
+              }
+            ]
+          }
+        }
+      ],
+      "tree": {
+        "{{root}}/unicode.txt": "ZXhhY3QgLSBtYXRjaApub3JtYWxpemVkCmV4YWN0IOKIkiBtYXRjaAo="
+      }
+    }
+  },
+  {
+    "name": "ignores trailing whitespace while preserving untouched lines",
+    "fixtures": [
+      {
+        "path": "{{root}}/whitespace.txt",
+        "parts": [
+          {
+            "text": "before  \nmatch  \nnext\t\nafter  \n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "whitespace.txt",
+      "oldString": "match\nnext",
+      "newString": "changed"
+    },
+    "expected": {
+      "status": "completed",
+      "output": "Edited whitespace.txt (1 replacement)",
+      "content": [
+        {
+          "type": "text",
+          "text": "Edited whitespace.txt (1 replacement)"
+        }
+      ],
+      "metadata": {
+        "files": [
+          {
+            "file": "whitespace.txt",
+            "patch": "Index: whitespace.txt\n===================================================================\n--- whitespace.txt\n+++ whitespace.txt\n@@ -1,4 +1,3 @@\n before  \n-match  \n-next\t\n+changed\n after  \n",
+            "status": "modified",
+            "additions": 1,
+            "deletions": 2
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "action": "edit",
+          "resources": [
+            "whitespace.txt"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "files": [
+              {
+                "file": "whitespace.txt",
+                "patch": "Index: whitespace.txt\n===================================================================\n--- whitespace.txt\n+++ whitespace.txt\n@@ -1,4 +1,3 @@\n before  \n-match  \n-next\t\n+changed\n after  \n",
+                "status": "modified",
+                "additions": 1,
+                "deletions": 2
+              }
+            ]
+          }
+        }
+      ],
+      "tree": {
+        "{{root}}/whitespace.txt": "YmVmb3JlICAKY2hhbmdlZAphZnRlciAgCg=="
+      }
+    }
+  },
+  {
+    "name": "uses non-overlapping trailing-whitespace matches",
+    "fixtures": [
+      {
+        "path": "{{root}}/overlap.txt",
+        "parts": [
+          {
+            "text": "a  \na  \na  \n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "overlap.txt",
+      "oldString": "a\na",
+      "newString": "x",
+      "replaceAll": true
+    },
+    "expected": {
+      "status": "completed",
+      "output": "Edited overlap.txt (1 replacement)",
+      "content": [
+        {
+          "type": "text",
+          "text": "Edited overlap.txt (1 replacement)"
+        }
+      ],
+      "metadata": {
+        "files": [
+          {
+            "file": "overlap.txt",
+            "patch": "Index: overlap.txt\n===================================================================\n--- overlap.txt\n+++ overlap.txt\n@@ -1,3 +1,2 @@\n+x\n a  \n-a  \n-a  \n",
+            "status": "modified",
+            "additions": 1,
+            "deletions": 2
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "action": "edit",
+          "resources": [
+            "overlap.txt"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "files": [
+              {
+                "file": "overlap.txt",
+                "patch": "Index: overlap.txt\n===================================================================\n--- overlap.txt\n+++ overlap.txt\n@@ -1,3 +1,2 @@\n+x\n a  \n-a  \n-a  \n",
+                "status": "modified",
+                "additions": 1,
+                "deletions": 2
+              }
+            ]
+          }
+        }
+      ],
+      "tree": {
+        "{{root}}/overlap.txt": "eAphICAK"
+      }
+    }
+  },
+  {
+    "name": "preserves CRLF during a trailing-whitespace match",
+    "fixtures": [
+      {
+        "path": "{{root}}/windows.txt",
+        "parts": [
+          {
+            "text": "a  \r\nb\t\r\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "windows.txt",
+      "oldString": "a\nb",
+      "newString": "x"
+    },
+    "expected": {
+      "status": "completed",
+      "output": "Edited windows.txt (1 replacement)",
+      "content": [
+        {
+          "type": "text",
+          "text": "Edited windows.txt (1 replacement)"
+        }
+      ],
+      "metadata": {
+        "files": [
+          {
+            "file": "windows.txt",
+            "patch": "Index: windows.txt\n===================================================================\n--- windows.txt\n+++ windows.txt\n@@ -1,2 +1,1 @@\n-a  \r\n-b\t\r\n+x\r\n",
+            "status": "modified",
+            "additions": 1,
+            "deletions": 2
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "action": "edit",
+          "resources": [
+            "windows.txt"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "files": [
+              {
+                "file": "windows.txt",
+                "patch": "Index: windows.txt\n===================================================================\n--- windows.txt\n+++ windows.txt\n@@ -1,2 +1,1 @@\n-a  \r\n-b\t\r\n+x\r\n",
+                "status": "modified",
+                "additions": 1,
+                "deletions": 2
+              }
+            ]
+          }
+        }
+      ],
+      "tree": {
+        "{{root}}/windows.txt": "eA0K"
+      }
+    }
+  },
+  {
+    "name": "refuses to rewrite a file that is not valid UTF-8",
+    "fixtures": [
+      {
+        "path": "{{root}}/Invoice.java",
+        "kind": "binary",
+        "base64": "Ly8gSm9z6QppbnQgTUFYID0gMTA7Cg=="
+      }
+    ],
+    "call": {
+      "path": "Invoice.java",
+      "oldString": "MAX = 10",
+      "newString": "MAX = 25"
+    },
+    "expected": {
+      "status": "error",
+      "error": "Unable to edit Invoice.java: file is not valid UTF-8. It was left unchanged because rewriting it as text would replace every byte that is not UTF-8 with U+FFFD; change it with a tool that preserves its bytes, or convert it to UTF-8 first",
+      "assertions": [],
+      "tree": {
+        "{{root}}/Invoice.java": "Ly8gSm9z6QppbnQgTUFYID0gMTA7Cg=="
+      }
+    }
+  },
+  {
+    "name": "matches across mixed line endings and keeps each region's endings",
+    "fixtures": [
+      {
+        "path": "{{root}}/mostly-lf.txt",
+        "parts": [
+          {
+            "text": "head\r\nAAA OLD BBB\ntail\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "mostly-lf.txt",
+      "oldString": "AAA OLD BBB",
+      "newString": "AAA NEW\nLINE2"
+    },
+    "expected": {
+      "status": "completed",
+      "output": "Edited mostly-lf.txt (1 replacement)",
+      "content": [
+        {
+          "type": "text",
+          "text": "Edited mostly-lf.txt (1 replacement)"
+        }
+      ],
+      "metadata": {
+        "files": [
+          {
+            "file": "mostly-lf.txt",
+            "patch": "Index: mostly-lf.txt\n===================================================================\n--- mostly-lf.txt\n+++ mostly-lf.txt\n@@ -1,3 +1,4 @@\n head\r\n-AAA OLD BBB\n+AAA NEW\n+LINE2\n tail\n",
+            "status": "modified",
+            "additions": 2,
+            "deletions": 1
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "action": "edit",
+          "resources": [
+            "mostly-lf.txt"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "files": [
+              {
+                "file": "mostly-lf.txt",
+                "patch": "Index: mostly-lf.txt\n===================================================================\n--- mostly-lf.txt\n+++ mostly-lf.txt\n@@ -1,3 +1,4 @@\n head\r\n-AAA OLD BBB\n+AAA NEW\n+LINE2\n tail\n",
+                "status": "modified",
+                "additions": 2,
+                "deletions": 1
+              }
+            ]
+          }
+        }
+      ],
+      "tree": {
+        "{{root}}/mostly-lf.txt": "aGVhZA0KQUFBIE5FVwpMSU5FMgp0YWlsCg=="
+      }
+    }
+  },
+  {
+    "name": "keeps endings while spanning lines in a mostly LF file",
+    "fixtures": [
+      {
+        "path": "{{root}}/mostly-lf.txt",
+        "parts": [
+          {
+            "text": "head\r\nAAA NEW\nLINE2\ntail\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "mostly-lf.txt",
+      "oldString": "LINE2\ntail",
+      "newString": "LINE2\nTAIL"
+    },
+    "expected": {
+      "status": "completed",
+      "output": "Edited mostly-lf.txt (1 replacement)",
+      "content": [
+        {
+          "type": "text",
+          "text": "Edited mostly-lf.txt (1 replacement)"
+        }
+      ],
+      "metadata": {
+        "files": [
+          {
+            "file": "mostly-lf.txt",
+            "patch": "Index: mostly-lf.txt\n===================================================================\n--- mostly-lf.txt\n+++ mostly-lf.txt\n@@ -1,4 +1,4 @@\n head\r\n AAA NEW\n LINE2\n-tail\n+TAIL\n",
+            "status": "modified",
+            "additions": 1,
+            "deletions": 1
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "action": "edit",
+          "resources": [
+            "mostly-lf.txt"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "files": [
+              {
+                "file": "mostly-lf.txt",
+                "patch": "Index: mostly-lf.txt\n===================================================================\n--- mostly-lf.txt\n+++ mostly-lf.txt\n@@ -1,4 +1,4 @@\n head\r\n AAA NEW\n LINE2\n-tail\n+TAIL\n",
+                "status": "modified",
+                "additions": 1,
+                "deletions": 1
+              }
+            ]
+          }
+        }
+      ],
+      "tree": {
+        "{{root}}/mostly-lf.txt": "aGVhZA0KQUFBIE5FVwpMSU5FMgpUQUlMCg=="
+      }
+    }
+  },
+  {
+    "name": "keeps endings when a match crosses a mixed-ending region",
+    "fixtures": [
+      {
+        "path": "{{root}}/mostly-crlf.txt",
+        "parts": [
+          {
+            "text": "one\r\ntwo\r\nthree\nfour\r\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "mostly-crlf.txt",
+      "oldString": "o\nthree\nfo",
+      "newString": "O\nTHREE\nFO"
+    },
+    "expected": {
+      "status": "completed",
+      "output": "Edited mostly-crlf.txt (1 replacement)",
+      "content": [
+        {
+          "type": "text",
+          "text": "Edited mostly-crlf.txt (1 replacement)"
+        }
+      ],
+      "metadata": {
+        "files": [
+          {
+            "file": "mostly-crlf.txt",
+            "patch": "Index: mostly-crlf.txt\n===================================================================\n--- mostly-crlf.txt\n+++ mostly-crlf.txt\n@@ -1,4 +1,4 @@\n one\r\n-two\r\n-three\n-four\r\n+twO\r\n+THREE\n+FOur\r\n",
+            "status": "modified",
+            "additions": 3,
+            "deletions": 3
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "action": "edit",
+          "resources": [
+            "mostly-crlf.txt"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "files": [
+              {
+                "file": "mostly-crlf.txt",
+                "patch": "Index: mostly-crlf.txt\n===================================================================\n--- mostly-crlf.txt\n+++ mostly-crlf.txt\n@@ -1,4 +1,4 @@\n one\r\n-two\r\n-three\n-four\r\n+twO\r\n+THREE\n+FOur\r\n",
+                "status": "modified",
+                "additions": 3,
+                "deletions": 3
+              }
+            ]
+          }
+        }
+      ],
+      "tree": {
+        "{{root}}/mostly-crlf.txt": "b25lDQp0d08NClRIUkVFCkZPdXINCg=="
+      }
+    }
+  },
+  {
+    "name": "keeps endings for a single-line match in a mostly CRLF file",
+    "fixtures": [
+      {
+        "path": "{{root}}/mostly-crlf.txt",
+        "parts": [
+          {
+            "text": "one\r\ntwo\r\nthree\nfour\r\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "mostly-crlf.txt",
+      "oldString": "one",
+      "newString": "ONE\nUNO"
+    },
+    "expected": {
+      "status": "completed",
+      "output": "Edited mostly-crlf.txt (1 replacement)",
+      "content": [
+        {
+          "type": "text",
+          "text": "Edited mostly-crlf.txt (1 replacement)"
+        }
+      ],
+      "metadata": {
+        "files": [
+          {
+            "file": "mostly-crlf.txt",
+            "patch": "Index: mostly-crlf.txt\n===================================================================\n--- mostly-crlf.txt\n+++ mostly-crlf.txt\n@@ -1,4 +1,5 @@\n-one\r\n+ONE\r\n+UNO\r\n two\r\n three\n four\r\n",
+            "status": "modified",
+            "additions": 2,
+            "deletions": 1
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "action": "edit",
+          "resources": [
+            "mostly-crlf.txt"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "files": [
+              {
+                "file": "mostly-crlf.txt",
+                "patch": "Index: mostly-crlf.txt\n===================================================================\n--- mostly-crlf.txt\n+++ mostly-crlf.txt\n@@ -1,4 +1,5 @@\n-one\r\n+ONE\r\n+UNO\r\n two\r\n three\n four\r\n",
+                "status": "modified",
+                "additions": 2,
+                "deletions": 1
+              }
+            ]
+          }
+        }
+      ],
+      "tree": {
+        "{{root}}/mostly-crlf.txt": "T05FDQpVTk8NCnR3bw0KdGhyZWUKZm91cg0K"
+      }
+    }
+  },
+  {
+    "name": "keeps the endings of unchanged and in-place lines inside a multi-line match",
+    "fixtures": [
+      {
+        "path": "{{root}}/store.cs",
+        "parts": [
+          {
+            "text": "All(item.Sku);\r\n\r\nFind(sku);\r\n\r\nvoid Add()\n{\n  _items[item.Sku] = item;\n}\r\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "store.cs",
+      "oldString": "All(item.Sku);\n\nFind(sku);\n\nvoid Add()\n{\n  _items[item.Sku] = item;\n}",
+      "newString": "All(item.Code);\n\nFind(code);\n\nvoid Add()\n{\n  _items[item.Code] = item;\n}\n\nbool Remove(string code)\n{\n}"
+    },
+    "expected": {
+      "status": "completed",
+      "output": "Edited store.cs (1 replacement)",
+      "content": [
+        {
+          "type": "text",
+          "text": "Edited store.cs (1 replacement)"
+        }
+      ],
+      "metadata": {
+        "files": [
+          {
+            "file": "store.cs",
+            "patch": "Index: store.cs\n===================================================================\n--- store.cs\n+++ store.cs\n@@ -1,8 +1,12 @@\n-All(item.Sku);\r\n+All(item.Code);\r\n \r\n-Find(sku);\r\n+Find(code);\r\n \r\n void Add()\n {\n-  _items[item.Sku] = item;\n+  _items[item.Code] = item;\n }\r\n+\r\n+bool Remove(string code)\r\n+{\r\n+}\r\n",
+            "status": "modified",
+            "additions": 7,
+            "deletions": 3
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "action": "edit",
+          "resources": [
+            "store.cs"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "files": [
+              {
+                "file": "store.cs",
+                "patch": "Index: store.cs\n===================================================================\n--- store.cs\n+++ store.cs\n@@ -1,8 +1,12 @@\n-All(item.Sku);\r\n+All(item.Code);\r\n \r\n-Find(sku);\r\n+Find(code);\r\n \r\n void Add()\n {\n-  _items[item.Sku] = item;\n+  _items[item.Code] = item;\n }\r\n+\r\n+bool Remove(string code)\r\n+{\r\n+}\r\n",
+                "status": "modified",
+                "additions": 7,
+                "deletions": 3
+              }
+            ]
+          }
+        }
+      ],
+      "tree": {
+        "{{root}}/store.cs": "QWxsKGl0ZW0uQ29kZSk7DQoNCkZpbmQoY29kZSk7DQoNCnZvaWQgQWRkKCkKewogIF9pdGVtc1tpdGVtLkNvZGVdID0gaXRlbTsKfQ0KDQpib29sIFJlbW92ZShzdHJpbmcgY29kZSkNCnsNCn0NCg=="
+      }
+    }
+  },
+  {
+    "name": "strips line endings when oldString and newString differ only in \\r",
+    "fixtures": [
+      {
+        "path": "{{root}}/strip.sh",
+        "parts": [
+          {
+            "text": "a\r\nb\r\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "strip.sh",
+      "oldString": "\r",
+      "newString": "",
+      "replaceAll": true
+    },
+    "expected": {
+      "status": "completed",
+      "output": "Edited strip.sh (2 replacements)",
+      "content": [
+        {
+          "type": "text",
+          "text": "Edited strip.sh (2 replacements)"
+        }
+      ],
+      "metadata": {
+        "files": [
+          {
+            "file": "strip.sh",
+            "patch": "Index: strip.sh\n===================================================================\n--- strip.sh\n+++ strip.sh\n@@ -1,2 +1,2 @@\n-a\r\n-b\r\n+a\n+b\n",
+            "status": "modified",
+            "additions": 2,
+            "deletions": 2
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "action": "edit",
+          "resources": [
+            "strip.sh"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "files": [
+              {
+                "file": "strip.sh",
+                "patch": "Index: strip.sh\n===================================================================\n--- strip.sh\n+++ strip.sh\n@@ -1,2 +1,2 @@\n-a\r\n-b\r\n+a\n+b\n",
+                "status": "modified",
+                "additions": 2,
+                "deletions": 2
+              }
+            ]
+          }
+        }
+      ],
+      "tree": {
+        "{{root}}/strip.sh": "YQpiCg=="
+      }
+    }
+  },
+  {
+    "name": "converts every line ending to LF",
+    "fixtures": [
+      {
+        "path": "{{root}}/whole.sh",
+        "parts": [
+          {
+            "text": "x\r\ny\r\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "whole.sh",
+      "oldString": "x\r\ny\r\n",
+      "newString": "x\ny\n"
+    },
+    "expected": {
+      "status": "completed",
+      "output": "Edited whole.sh (1 replacement)",
+      "content": [
+        {
+          "type": "text",
+          "text": "Edited whole.sh (1 replacement)"
+        }
+      ],
+      "metadata": {
+        "files": [
+          {
+            "file": "whole.sh",
+            "patch": "Index: whole.sh\n===================================================================\n--- whole.sh\n+++ whole.sh\n@@ -1,2 +1,2 @@\n-x\r\n-y\r\n+x\n+y\n",
+            "status": "modified",
+            "additions": 2,
+            "deletions": 2
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "action": "edit",
+          "resources": [
+            "whole.sh"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "files": [
+              {
+                "file": "whole.sh",
+                "patch": "Index: whole.sh\n===================================================================\n--- whole.sh\n+++ whole.sh\n@@ -1,2 +1,2 @@\n-x\r\n-y\r\n+x\n+y\n",
+                "status": "modified",
+                "additions": 2,
+                "deletions": 2
+              }
+            ]
+          }
+        }
+      ],
+      "tree": {
+        "{{root}}/whole.sh": "eAp5Cg=="
+      }
+    }
+  },
+  {
+    "name": "adds CR line endings",
+    "fixtures": [
+      {
+        "path": "{{root}}/add.bat",
+        "parts": [
+          {
+            "text": "p\nq\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "add.bat",
+      "oldString": "p\nq",
+      "newString": "p\r\nq"
+    },
+    "expected": {
+      "status": "completed",
+      "output": "Edited add.bat (1 replacement)",
+      "content": [
+        {
+          "type": "text",
+          "text": "Edited add.bat (1 replacement)"
+        }
+      ],
+      "metadata": {
+        "files": [
+          {
+            "file": "add.bat",
+            "patch": "Index: add.bat\n===================================================================\n--- add.bat\n+++ add.bat\n@@ -1,2 +1,2 @@\n-p\n+p\r\n q\n",
+            "status": "modified",
+            "additions": 1,
+            "deletions": 1
+          }
+        ]
+      },
+      "assertions": [
+        {
+          "action": "edit",
+          "resources": [
+            "add.bat"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "files": [
+              {
+                "file": "add.bat",
+                "patch": "Index: add.bat\n===================================================================\n--- add.bat\n+++ add.bat\n@@ -1,2 +1,2 @@\n-p\n+p\r\n q\n",
+                "status": "modified",
+                "additions": 1,
+                "deletions": 1
+              }
+            ]
+          }
+        }
+      ],
+      "tree": {
+        "{{root}}/add.bat": "cA0KcQo="
+      }
+    }
+  },
+  {
+    "name": "rejects an endings-only edit that is already applied",
+    "fixtures": [
+      {
+        "path": "{{root}}/add.bat",
+        "parts": [
+          {
+            "text": "p\r\nq\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "add.bat",
+      "oldString": "p\nq",
+      "newString": "p\r\nq"
+    },
+    "expected": {
+      "status": "error",
+      "error": "Could not find oldString in add.bat. It must match exactly, including whitespace and indentation.\n\nThe closest lines in the file:\n1: p\n2: q",
+      "assertions": [
+        {
+          "action": "edit",
+          "resources": [
+            "add.bat"
+          ],
+          "save": [
+            "*"
+          ]
+        }
+      ],
+      "tree": {
+        "{{root}}/add.bat": "cA0KcQo="
+      }
+    }
+  },
+  {
+    "name": "fails instead of reporting success when the edit leaves the file unchanged",
+    "fixtures": [
+      {
+        "path": "{{root}}/quote.txt",
+        "parts": [
+          {
+            "text": "it’s here\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "quote.txt",
+      "oldString": "it's here",
+      "newString": "it’s here"
+    },
+    "expected": {
+      "status": "error",
+      "error": "No changes to apply: the edit leaves quote.txt unchanged. Line endings follow the file; to change them, write \\r explicitly in oldString or newString.",
+      "assertions": [
+        {
+          "action": "edit",
+          "resources": [
+            "quote.txt"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "files": [
+              {
+                "file": "quote.txt",
+                "patch": "Index: quote.txt\n===================================================================\n--- quote.txt\n+++ quote.txt\n",
+                "status": "modified",
+                "additions": 0,
+                "deletions": 0
+              }
+            ]
+          }
+        }
+      ],
+      "tree": {
+        "{{root}}/quote.txt": "aXTigJlzIGhlcmUK"
+      }
+    }
+  }
+]

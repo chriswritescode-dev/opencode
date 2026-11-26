@@ -1,0 +1,575 @@
+[
+  {
+    "name": "finds a pattern in an explicit file path",
+    "fixtures": [
+      {
+        "path": "{{root}}/target.txt",
+        "parts": [
+          {
+            "text": "needle\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "target.txt",
+      "pattern": "needle"
+    },
+    "expected": {
+      "status": "completed",
+      "output": [
+        {
+          "entry": {
+            "path": "target.txt",
+            "type": "file"
+          },
+          "line": 1,
+          "offset": 0,
+          "text": "needle\n",
+          "submatches": [
+            {
+              "text": "needle",
+              "start": 0,
+              "end": 6
+            }
+          ]
+        }
+      ],
+      "content": [
+        {
+          "type": "text",
+          "text": "Found 1 matches\n{{root}}/target.txt:\n  Line 1: needle\n"
+        }
+      ],
+      "metadata": {
+        "matches": 1,
+        "truncated": false
+      },
+      "assertions": [
+        {
+          "action": "grep",
+          "resources": [
+            "needle"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "root": ".",
+            "path": "target.txt"
+          }
+        }
+      ],
+      "tree": {
+        "{{root}}/target.txt": "bmVlZGxlCg=="
+      }
+    }
+  },
+  {
+    "name": "searches an explicit directory path",
+    "fixtures": [
+      {
+        "path": "{{root}}/target.txt",
+        "parts": [
+          {
+            "text": "needle\n"
+          }
+        ]
+      },
+      {
+        "path": "{{root}}/other.txt",
+        "parts": [
+          {
+            "text": "haystack\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": ".",
+      "pattern": "needle"
+    },
+    "expected": {
+      "status": "completed",
+      "output": [
+        {
+          "entry": {
+            "path": "target.txt",
+            "type": "file"
+          },
+          "line": 1,
+          "offset": 0,
+          "text": "needle\n",
+          "submatches": [
+            {
+              "text": "needle",
+              "start": 0,
+              "end": 6
+            }
+          ]
+        }
+      ],
+      "content": [
+        {
+          "type": "text",
+          "text": "Found 1 matches\n{{root}}/target.txt:\n  Line 1: needle\n"
+        }
+      ],
+      "metadata": {
+        "matches": 1,
+        "truncated": false
+      },
+      "assertions": [
+        {
+          "action": "grep",
+          "resources": [
+            "needle"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "root": ".",
+            "path": "."
+          }
+        }
+      ],
+      "tree": {
+        "{{root}}/other.txt": "aGF5c3RhY2sK",
+        "{{root}}/target.txt": "bmVlZGxlCg=="
+      }
+    }
+  },
+  {
+    "name": "reports no grep matches",
+    "fixtures": [
+      {
+        "path": "{{root}}/file.txt",
+        "parts": [
+          {
+            "text": "haystack\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "pattern": "needle"
+    },
+    "expected": {
+      "status": "completed",
+      "output": [],
+      "content": [
+        {
+          "type": "text",
+          "text": "No matches found"
+        }
+      ],
+      "metadata": {
+        "matches": 0,
+        "truncated": false
+      },
+      "assertions": [
+        {
+          "action": "grep",
+          "resources": [
+            "needle"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "root": "."
+          }
+        }
+      ],
+      "tree": {
+        "{{root}}/file.txt": "aGF5c3RhY2sK"
+      }
+    }
+  },
+  {
+    "name": "reports invalid grep regex details",
+    "fixtures": [
+      {
+        "path": "{{root}}/visible.ts",
+        "parts": [
+          {
+            "text": "needle\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "pattern": "["
+    },
+    "expected": {
+      "status": "error",
+      "error": "Invalid regex pattern: rg: regex parse error:\n    (?:[)\n       ^\nerror: unclosed character class",
+      "assertions": [
+        {
+          "action": "grep",
+          "resources": [
+            "["
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "root": "."
+          }
+        }
+      ],
+      "tree": {
+        "{{root}}/visible.ts": "bmVlZGxlCg=="
+      }
+    }
+  },
+  {
+    "name": "reports an invalid include glob",
+    "fixtures": [
+      {
+        "path": "{{root}}/visible.ts",
+        "parts": [
+          {
+            "text": "needle\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "pattern": "needle",
+      "include": "["
+    },
+    "expected": {
+      "status": "error",
+      "error": "Invalid glob in include '[': unclosed character class; missing ']'",
+      "assertions": [
+        {
+          "action": "grep",
+          "resources": [
+            "needle"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "root": ".",
+            "include": "["
+          }
+        }
+      ],
+      "tree": {
+        "{{root}}/visible.ts": "bmVlZGxlCg=="
+      }
+    }
+  },
+  {
+    "name": "filters through a valid include glob",
+    "fixtures": [
+      {
+        "path": "{{root}}/visible.ts",
+        "parts": [
+          {
+            "text": "needle\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "pattern": "needle",
+      "include": "*.txt"
+    },
+    "expected": {
+      "status": "completed",
+      "output": [],
+      "content": [
+        {
+          "type": "text",
+          "text": "No matches found"
+        }
+      ],
+      "metadata": {
+        "matches": 0,
+        "truncated": false
+      },
+      "assertions": [
+        {
+          "action": "grep",
+          "resources": [
+            "needle"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "root": ".",
+            "include": "*.txt"
+          }
+        }
+      ],
+      "tree": {
+        "{{root}}/visible.ts": "bmVlZGxlCg=="
+      }
+    }
+  },
+  {
+    "name": "bounds an explicit limit and reports truncation",
+    "fixtures": [
+      {
+        "path": "{{root}}/file.txt",
+        "parts": [
+          {
+            "text": "needle\nneedle\nneedle\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "pattern": "needle",
+      "limit": 2
+    },
+    "expected": {
+      "status": "completed",
+      "output": [
+        {
+          "entry": {
+            "path": "file.txt",
+            "type": "file"
+          },
+          "line": 1,
+          "offset": 0,
+          "text": "needle\n",
+          "submatches": [
+            {
+              "text": "needle",
+              "start": 0,
+              "end": 6
+            }
+          ]
+        },
+        {
+          "entry": {
+            "path": "file.txt",
+            "type": "file"
+          },
+          "line": 2,
+          "offset": 7,
+          "text": "needle\n",
+          "submatches": [
+            {
+              "text": "needle",
+              "start": 0,
+              "end": 6
+            }
+          ]
+        }
+      ],
+      "content": [
+        {
+          "type": "text",
+          "text": "Found 2 matches\n{{root}}/file.txt:\n  Line 1: needle\n\n  Line 2: needle\n\n\n(Results are truncated: showing first 2 results. Consider using a more specific path or pattern.)"
+        }
+      ],
+      "metadata": {
+        "matches": 2,
+        "truncated": true
+      },
+      "assertions": [
+        {
+          "action": "grep",
+          "resources": [
+            "needle"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "root": ".",
+            "limit": 2
+          }
+        }
+      ],
+      "tree": {
+        "{{root}}/file.txt": "bmVlZGxlCm5lZWRsZQpuZWVkbGUK"
+      }
+    }
+  },
+  {
+    "name": "reports a missing search path",
+    "call": {
+      "path": "missing",
+      "pattern": "needle"
+    },
+    "fixtures": [],
+    "expected": {
+      "status": "error",
+      "error": "Search path does not exist: missing",
+      "assertions": [
+        {
+          "action": "grep",
+          "resources": [
+            "needle"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "root": ".",
+            "path": "missing"
+          }
+        }
+      ],
+      "tree": {}
+    }
+  },
+  {
+    "name": "requires external approval for an external grep directory",
+    "fixtures": [
+      {
+        "path": "{{outside}}/outside.txt",
+        "parts": [
+          {
+            "text": "needle\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "{{outside}}",
+      "pattern": "needle"
+    },
+    "expected": {
+      "status": "completed",
+      "output": [
+        {
+          "entry": {
+            "path": "{{outside_relative}}/outside.txt",
+            "type": "file"
+          },
+          "line": 1,
+          "offset": 0,
+          "text": "needle\n",
+          "submatches": [
+            {
+              "text": "needle",
+              "start": 0,
+              "end": 6
+            }
+          ]
+        }
+      ],
+      "content": [
+        {
+          "type": "text",
+          "text": "Found 1 matches\n{{outside}}/outside.txt:\n  Line 1: needle\n"
+        }
+      ],
+      "metadata": {
+        "matches": 1,
+        "truncated": false
+      },
+      "assertions": [
+        {
+          "action": "external_directory",
+          "resources": [
+            "{{outside}}/*"
+          ],
+          "save": [
+            "{{outside}}/*"
+          ]
+        },
+        {
+          "action": "grep",
+          "resources": [
+            "needle"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "root": ".",
+            "path": "{{outside}}"
+          }
+        }
+      ],
+      "tree": {
+        "{{outside}}/outside.txt": "bmVlZGxlCg=="
+      }
+    }
+  },
+  {
+    "name": "requires external approval for an external grep file",
+    "fixtures": [
+      {
+        "path": "{{outside}}/outside.txt",
+        "parts": [
+          {
+            "text": "needle\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "{{outside}}/outside.txt",
+      "pattern": "needle"
+    },
+    "expected": {
+      "status": "completed",
+      "output": [
+        {
+          "entry": {
+            "path": "{{outside_relative}}/outside.txt",
+            "type": "file"
+          },
+          "line": 1,
+          "offset": 0,
+          "text": "needle\n",
+          "submatches": [
+            {
+              "text": "needle",
+              "start": 0,
+              "end": 6
+            }
+          ]
+        }
+      ],
+      "content": [
+        {
+          "type": "text",
+          "text": "Found 1 matches\n{{outside}}/outside.txt:\n  Line 1: needle\n"
+        }
+      ],
+      "metadata": {
+        "matches": 1,
+        "truncated": false
+      },
+      "assertions": [
+        {
+          "action": "external_directory",
+          "resources": [
+            "{{outside}}/*"
+          ],
+          "save": [
+            "{{outside}}/*"
+          ]
+        },
+        {
+          "action": "grep",
+          "resources": [
+            "needle"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "root": ".",
+            "path": "{{outside}}/outside.txt"
+          }
+        }
+      ],
+      "tree": {
+        "{{outside}}/outside.txt": "bmVlZGxlCg=="
+      }
+    }
+  }
+]

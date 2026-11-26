@@ -37,6 +37,17 @@ use opencode_contract::generated::{
     PermissionAskedData, PermissionID, PermissionRepliedData, PermissionReply, PermissionRequest, PermissionRule,
     ServiceUnavailableError, ServiceUnavailableErrorTag, SessionID, WorkspaceID,
 };
+use opencode_fs::LocationFiles;
+use opencode_fs::access::Access;
+use opencode_fs::file_watch::FileWatch;
+use opencode_fs::filesystem::LocationFileSystem;
+use opencode_fs::formatter::Formatter;
+use opencode_fs::mutation::Mutation;
+use opencode_fs::ripgrep::Ripgrep;
+use opencode_fs::ripgrep::binary::Binary;
+use opencode_fs::search::{Search, SearchOptions};
+use opencode_fs::watcher::Watcher;
+use opencode_fs::write::FileWriter;
 use opencode_location::activity::{Activity, ActivityOptions, IdleTimeout};
 use opencode_location::environment::{Environment, local::LocalEnvironment};
 use opencode_location::events::LocationEvent;
@@ -65,6 +76,9 @@ use opencode_session::execution::{Placed, Placement};
 use opencode_session::instructions::BuiltinsInput;
 use opencode_session::search_build::SessionSearchBuild;
 use opencode_storage::Database;
+use opencode_tool::image::Image as ToolImage;
+use opencode_tool::output::OutputStore as ToolOutputStore;
+use opencode_tool::{LocationFilesParts, LocationToolDeps, LocationTools};
 use opencode_vcs::git_provider::GitProvider;
 use opencode_vcs::hg_provider::HgProvider;
 use opencode_vcs::repository_cache::RepositoryCache;
@@ -148,6 +162,10 @@ impl Placed for PlacedLocation {
         &self.builtins
     }
 
+    fn tools(&self) -> &LocationTools {
+        &self.lease.services().tools
+    }
+
     fn location(&self) -> Option<&LocationRef> {
         Some(&self.location)
     }
@@ -176,7 +194,11 @@ pub struct GlobalServices {
     pub store: SessionStore,
     pub plugins: Arc<GlobalPlugins>,
     pub saved: Arc<PermissionSaved>,
+    pub watcher: Arc<Watcher>,
+    pub file_watch: Arc<FileWatch>,
+    pub ripgrep: Arc<Ripgrep>,
     sweep: JoinHandle<()>,
+    tool_output_cleanup: JoinHandle<()>,
     credentials_task: JoinHandle<()>,
 }
 
@@ -196,7 +218,7 @@ pub struct LocationServices {
     pub skills: SkillService,
     pub references: ReferenceService,
     pub instructions: LocationInstructions,
-    pub permissions: PermissionService,
+    pub permissions: Arc<PermissionService>,
     pub forms: FormService,
     pub activation: Activation,
     pub integrations: Arc<IntegrationService>,
@@ -207,6 +229,8 @@ pub struct LocationServices {
     pub console: Arc<ConsoleHandle>,
     pub resolver: Arc<Resolver>,
     pub plugins: LocationPlugins,
+    pub files: LocationFiles,
+    pub tools: Arc<LocationTools>,
     registrations: Mutex<Option<Builtin>>,
     _config_observer: ObserverHandle,
 }
@@ -258,6 +282,17 @@ impl GlobalServices {
         let saved = Arc::new(PermissionSaved::new(database.clone()));
         let store = SessionStore::new(database.clone());
         let search = Arc::new(SessionSearchBuild::new(database.clone()));
+        let watcher_enabled =
+            !opencode_local::watch::disabled(|name| config_env(name).map(|value| value.to_string_lossy().into_owned()));
+        let watcher = Arc::new(Watcher::new(watcher_enabled));
+        let file_watch = Arc::new(FileWatch::new(watcher.clone(), bus.clone(), watcher_enabled));
+        let ripgrep_env = config_env.clone();
+        let ripgrep = Arc::new(Ripgrep::new(Binary::new(
+            paths.clone(),
+            move |name| ripgrep_env(name),
+            opencode_fs::ripgrep::binary::releases(),
+        )));
+        let boot_ripgrep = ripgrep.clone();
         let build_channel = flag::build_channel().to_owned();
         let flag_overrides = config_env("OPENCODE_FLAGS").map(|value| value.to_string_lossy().into_owned());
         let http: Arc<dyn HttpSender> = Arc::new(ReqwestSender::new());
@@ -309,6 +344,7 @@ impl GlobalServices {
             let boot_repository_cache = boot_repository_cache.clone();
             let bus = boot_bus.clone();
             let plugins = boot_plugins.clone();
+            let ripgrep = boot_ripgrep.clone();
             Box::pin(async move {
                 let info = boot_location(&reference, &projects, environment.as_ref()).await?;
                 let location = LocationRef {
@@ -327,6 +363,9 @@ impl GlobalServices {
                 let repos = paths.repos.clone();
                 let config_directory = paths.config.clone();
                 let tmp = paths.tmp.clone();
+                let bin = paths.bin.clone();
+                let home_text = home.to_string_lossy().into_owned();
+                let data = paths.data.clone();
                 let config = ConfigService::start(
                     ConfigOptions::from_vars(|name| config_env(name)),
                     ConfigLocation { directory: PathBuf::from(&info.directory), project_id: info.project.id.clone() },
@@ -375,8 +414,9 @@ impl GlobalServices {
                     let config_env = config_env.clone();
                     Arc::new(move |name: &str| config_env(name).map(|value| value.to_string_lossy().into_owned()))
                 };
-                let discovery =
-                    InstructionDiscovery::new(events.clone(), InstructionOptions::from_vars(|name| string_env(name)));
+                let instruction_options = InstructionOptions::from_vars(|name| string_env(name));
+                let claude = instruction_options.claude;
+                let discovery = InstructionDiscovery::new(events.clone(), instruction_options);
                 let app =
                     AppInfo { name: "opencode".to_owned(), version: version.clone(), channel: channel_name.clone() };
                 let activation = builtin::activate(builtin::Deps {
@@ -392,7 +432,7 @@ impl GlobalServices {
                     config_directory,
                     cache,
                     app: opencode_registry::builtin::skill::AppInfo { version, channel: channel_name },
-                    env: string_env,
+                    env: string_env.clone(),
                 })
                 .await;
                 let sources = opencode_registry::instructions::combine([
@@ -407,14 +447,60 @@ impl GlobalServices {
                     vec![opencode_registry::reference::instructions::source(references.clone())],
                 ])
                 .expect("the built-in instruction keys are distinct");
-                let permissions = PermissionService::new(PermissionDeps {
-                    sessions: Arc::new(StoreSessionRules { store }),
+                let permissions = Arc::new(PermissionService::new(PermissionDeps {
+                    sessions: Arc::new(StoreSessionRules { store: store.clone() }),
                     agents: Arc::new(RegistryAgents { agents: agents.clone() }),
                     saved: saved.clone(),
                     events: events.clone(),
                     project_id: info.project.id.clone(),
-                });
+                }));
                 let forms = FormService::new(events.clone(), Arc::new(SystemClock));
+                let access = Access::new(info.directory.clone(), info.project.directory.clone(), home_text.clone());
+                let mutation = Mutation::new();
+                let formatter = Arc::new(Formatter::new(
+                    PathBuf::from(&info.directory),
+                    PathBuf::from(&info.project.directory),
+                    bin,
+                    move |name| string_env(name).map(OsString::from),
+                ));
+                formatter.observe_config(&config);
+                let files = LocationFiles {
+                    filesystem: LocationFileSystem::new(info.directory.clone()).await.map_err(boot_files_error)?,
+                    write: FileWriter::new(access.clone(), mutation.clone(), permissions.clone(), formatter.clone()),
+                    access,
+                    mutation,
+                    formatter,
+                    search: Search::new(
+                        ripgrep.clone(),
+                        SearchOptions {
+                            directory: info.directory.clone(),
+                            home: home_text,
+                            version_controlled: info.vcs.is_some(),
+                        },
+                    ),
+                };
+                let full_codemode =
+                    config.flags().into_iter().any(|(key, state)| key == "full_codemode" && state.enabled);
+                let tools = Arc::new(
+                    LocationTools::new(LocationToolDeps {
+                        files: LocationFilesParts::new(&files),
+                        ripgrep,
+                        skills: skills.clone(),
+                        instructions: opencode_session::nearby_instructions::NearbyInstructions::new(
+                            store,
+                            bus.clone(),
+                            Some(location.clone()),
+                            info.project.directory.clone(),
+                        ),
+                        authorizer: permissions.clone(),
+                        output: ToolOutputStore::new(data),
+                        image: Arc::new(ToolImage::new()),
+                        claude,
+                        full_codemode,
+                    })
+                    .await,
+                );
+                tools.configure(&config.entries());
                 let integrations = IntegrationService::new(
                     credentials.clone(),
                     bus.clone(),
@@ -470,10 +556,12 @@ impl GlobalServices {
                 let observer_workspace_id = info.workspace_id.clone();
                 let flags = config.clone();
                 let build = search.clone();
-                let _config_observer = observe(&config, move |_| {
+                let observer_tools = tools.clone();
+                let _config_observer = observe(&config, move |entries| {
                     if sqlite_fts_enabled(&flags) {
                         build.start();
                     }
+                    observer_tools.configure(entries);
                     observer_projects.publish(LocationEvent::ConfigUpdated {
                         directory: observer_directory.clone(),
                         workspace_id: observer_workspace_id.clone(),
@@ -520,6 +608,8 @@ impl GlobalServices {
                     console,
                     resolver,
                     plugins,
+                    files,
+                    tools,
                     registrations: Mutex::new(Some(registrations)),
                     _config_observer,
                 }))
@@ -562,6 +652,21 @@ impl GlobalServices {
                 }
             }
         });
+        let cleanup_data = paths.data.clone();
+        let mut cleanup_shutdown = locations.shutdown_signal();
+        let tool_output_cleanup = tokio::spawn(async move {
+            if *cleanup_shutdown.borrow() {
+                return;
+            }
+            let directory = opencode_tool::output::directory(&cleanup_data);
+            loop {
+                opencode_tool::output::cleanup(directory.clone()).await;
+                tokio::select! {
+                    _ = tokio::time::sleep(Duration::from_secs(60 * 60)) => {}
+                    _ = cleanup_shutdown.changed() => return,
+                }
+            }
+        });
         let mut credential_switched = bus.subscribe(&["credential.switched"], None);
         let credentials_locations = locations.clone();
         let credentials_task = tokio::spawn(async move {
@@ -595,7 +700,11 @@ impl GlobalServices {
             store,
             plugins,
             saved,
+            watcher,
+            file_watch,
+            ripgrep,
             sweep,
+            tool_output_cleanup,
             credentials_task,
         }
     }
@@ -706,6 +815,7 @@ fn publish_event(bus: &Bus, definition: Definition, data: Value, options: Publis
 impl Drop for GlobalServices {
     fn drop(&mut self) {
         self.sweep.abort();
+        self.tool_output_cleanup.abort();
         self.credentials_task.abort();
     }
 }
@@ -921,6 +1031,16 @@ fn timeout_from_string(text: &str) -> Option<IdleTimeout> {
         "millis" => Duration::try_from_secs_f64(value / 1000.0).ok().map(IdleTimeout::After),
         "nanos" => Duration::try_from_secs_f64(value / 1_000_000_000.0).ok().map(IdleTimeout::After),
         _ => None,
+    }
+}
+
+fn boot_files_error(error: opencode_fs::FsError) -> BootError {
+    match error {
+        opencode_fs::FsError::DirectoryNotFound { directory } => BootError::DirectoryNotFound(directory),
+        error => {
+            log::error!("Failed to boot the location filesystem: {error}");
+            BootError::Panicked
+        }
     }
 }
 

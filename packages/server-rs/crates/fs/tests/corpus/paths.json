@@ -1,0 +1,172 @@
+[
+  {
+    "name": "contains-same",
+    "kind": "contains",
+    "parent": "{{root}}",
+    "child": "{{root}}",
+    "expected": true
+  },
+  {
+    "name": "contains-child",
+    "kind": "contains",
+    "parent": "{{root}}",
+    "child": "{{root}}/src/app.ts",
+    "expected": true
+  },
+  {
+    "name": "contains-parent-trailing-separator",
+    "kind": "contains",
+    "parent": "{{root}}/",
+    "child": "{{root}}/src",
+    "expected": true
+  },
+  {
+    "name": "contains-relative-child",
+    "kind": "contains",
+    "parent": "{{root}}",
+    "child": "src/app.ts",
+    "expected": false
+  },
+  {
+    "name": "contains-sibling",
+    "kind": "contains",
+    "parent": "{{root}}/src",
+    "child": "{{root}}/test",
+    "expected": false
+  },
+  {
+    "name": "contains-parent",
+    "kind": "contains",
+    "parent": "{{root}}/src",
+    "child": "{{root}}",
+    "expected": false
+  },
+  {
+    "name": "contains-escape",
+    "kind": "contains",
+    "parent": "{{root}}/src",
+    "child": "{{root}}/src/../test",
+    "expected": false
+  },
+  {
+    "name": "contains-lookalike",
+    "kind": "contains",
+    "parent": "{{root}}/src",
+    "child": "{{root}}/src2/app.ts",
+    "expected": false
+  },
+  {
+    "name": "resolve-dots",
+    "path": "{{root}}/./packages/../packages/app",
+    "kind": "resolve",
+    "expected": "{{root}}/packages/app"
+  },
+  {
+    "name": "resolve-empty-segments",
+    "path": "{{root}}//packages///app",
+    "kind": "resolve",
+    "expected": "{{root}}/packages/app"
+  },
+  {
+    "name": "resolve-root",
+    "path": "/",
+    "kind": "resolve",
+    "expected": "/"
+  },
+  {
+    "name": "resolve-missing",
+    "path": "{{root}}/missing-opencode-rs/path",
+    "kind": "resolve",
+    "expected": "{{root}}/missing-opencode-rs/path"
+  },
+  {
+    "name": "resolve-msys-drive-looking",
+    "path": "/c/Users/me/project",
+    "kind": "resolve",
+    "expected": "/c/Users/me/project"
+  },
+  {
+    "name": "resolve-wsl-drive-looking",
+    "path": "/mnt/c/Users/me/project",
+    "kind": "resolve",
+    "expected": "/mnt/c/Users/me/project"
+  },
+  {
+    "name": "resolve-cygdrive-looking",
+    "path": "/cygdrive/d/work",
+    "kind": "resolve",
+    "expected": "/cygdrive/d/work"
+  },
+  {
+    "name": "resolve-path-relative",
+    "input": "src/app.ts",
+    "kind": "resolvePath",
+    "directory": "{{root}}/packages/app",
+    "home": "{{home}}",
+    "expected": "{{root}}/packages/app/src/app.ts"
+  },
+  {
+    "name": "resolve-path-parent",
+    "input": "../shared/app.ts",
+    "kind": "resolvePath",
+    "directory": "{{root}}/packages/app",
+    "home": "{{home}}",
+    "expected": "{{root}}/packages/shared/app.ts"
+  },
+  {
+    "name": "resolve-path-absolute",
+    "input": "{{root}}/absolute.ts",
+    "kind": "resolvePath",
+    "directory": "{{root}}/packages/app",
+    "home": "{{home}}",
+    "expected": "{{root}}/absolute.ts"
+  },
+  {
+    "name": "resolve-path-home",
+    "input": "~/notes.md",
+    "kind": "resolvePath",
+    "directory": "{{root}}/packages/app",
+    "home": "{{home}}",
+    "expected": "{{home}}/notes.md"
+  },
+  {
+    "name": "resolve-path-home-only",
+    "input": "~",
+    "kind": "resolvePath",
+    "directory": "{{root}}/packages/app",
+    "home": "{{home}}",
+    "expected": "{{home}}"
+  },
+  {
+    "name": "resolve-path-home-nested",
+    "input": "~/projects/app/./src",
+    "kind": "resolvePath",
+    "directory": "{{root}}/packages/app",
+    "home": "{{home}}",
+    "expected": "{{home}}/projects/app/src"
+  },
+  {
+    "name": "resolve-path-msys",
+    "input": "/c/Users/me/project",
+    "kind": "resolvePath",
+    "directory": "{{root}}/packages/app",
+    "home": "{{home}}",
+    "expected": "/c/Users/me/project"
+  },
+  {
+    "name": "resolve-path-wsl",
+    "input": "/mnt/c/Users/me/project",
+    "kind": "resolvePath",
+    "directory": "{{root}}/packages/app",
+    "home": "{{home}}",
+    "expected": "/mnt/c/Users/me/project"
+  },
+  {
+    "name": "resolve-path-cygdrive",
+    "input": "/cygdrive/d/work",
+    "kind": "resolvePath",
+    "directory": "{{root}}/packages/app",
+    "home": "{{home}}",
+    "expected": "/cygdrive/d/work"
+  }
+]

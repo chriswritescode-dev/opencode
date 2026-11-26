@@ -26,6 +26,7 @@ opencode-bus = { path = "crates/bus" }
 opencode-catalog = { path = "crates/catalog" }
 opencode-config = { path = "crates/config" }
 opencode-contract = { path = "crates/contract" }
+opencode-fs = { path = "crates/fs" }
 opencode-git = { path = "crates/git" }
 opencode-http = { path = "crates/http" }
 opencode-location = { path = "crates/location" }
@@ -36,6 +37,7 @@ opencode-server = { path = "crates/server" }
 opencode-sidecar = { path = "crates/sidecar" }
 opencode-session = { path = "crates/session" }
 opencode-storage = { path = "crates/storage" }
+opencode-tool = { path = "crates/tool" }
 opencode-vcs = { path = "crates/vcs" }
 opencode-api-types = { path = "../cli-rs/crates/api-types" }
 opencode-api = { path = "../cli-rs/crates/api" }
@@ -49,9 +51,11 @@ flate2 = "1"
 futures-util = { version = "0.3", default-features = false, features = ["std", "sink"] }
 http = "1"
 http-body = "1"
+httpdate = "1"
 http-body-util = "0.1"
 hyper = { version = "1", features = ["server", "client", "http1"] }
 hyper-util = { version = "0.1", features = ["tokio"] }
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "webp"] }
 indexmap = "2"
 log = { version = "0.4", features = ["std"] }
 notify = "8"
@@ -72,6 +76,7 @@ tokio = { version = "1.53", features = ["macros", "rt", "rt-multi-thread", "net"
 tokio-tungstenite = { version = "0.30", features = ["rustls-tls-native-roots"] }
 tokio-util = "0.7"
 ts-rs = { version = "12", default-features = false, features = ["serde-compat", "serde-json-impl", "no-serde-warnings"] }
+unicode-segmentation = "1"
 url = "2"
 yaml-rust2 = "0.13"
 
