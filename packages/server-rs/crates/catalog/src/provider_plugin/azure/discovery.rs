@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -79,6 +80,8 @@ pub struct Discovery {
     management: String,
     program: String,
     tokens: Mutex<HashMap<String, Token>>,
+    token_locks: Mutex<HashMap<String, Arc<tokio::sync::Mutex<()>>>>,
+    token_generation: AtomicU64,
     resource_ids: Mutex<HashMap<String, String>>,
 }
 
@@ -97,11 +100,14 @@ impl Discovery {
             management,
             program,
             tokens: Mutex::new(HashMap::new()),
+            token_locks: Mutex::new(HashMap::new()),
+            token_generation: AtomicU64::new(0),
             resource_ids: Mutex::new(HashMap::new()),
         }
     }
 
     pub fn clear_tokens(&self) {
+        self.token_generation.fetch_add(1, Ordering::SeqCst);
         self.tokens.lock().expect("lock the Azure tokens").clear();
     }
 
@@ -124,12 +130,21 @@ impl Discovery {
     }
 
     pub(crate) async fn token(&self, scope: &str) -> Result<Token, LoadError> {
-        let now = opencode_util::time::now_ms() as f64;
-        if let Some(cached) = self.tokens.lock().expect("lock the Azure tokens").get(scope).cloned()
-            && cached.expires - now > TOKEN_MARGIN_MS
-        {
+        if let Some(cached) = self.cached(scope, opencode_util::time::now_ms() as f64) {
             return Ok(cached);
         }
+        let lock = self
+            .token_locks
+            .lock()
+            .expect("lock the Azure token locks")
+            .entry(scope.to_owned())
+            .or_insert_with(|| Arc::new(tokio::sync::Mutex::new(())))
+            .clone();
+        let _permit = lock.lock().await;
+        if let Some(cached) = self.cached(scope, opencode_util::time::now_ms() as f64) {
+            return Ok(cached);
+        }
+        let generation = self.token_generation.load(Ordering::SeqCst);
         let args: Vec<String> = ["account", "get-access-token", "--scope", scope, "--output", "json"]
             .into_iter()
             .map(str::to_owned)
@@ -144,8 +159,19 @@ impl Discovery {
             return Err(LoadError::Message("Azure CLI returned an invalid token expiration".to_owned()));
         }
         let token = Token { access: response.access_token, expires };
-        self.tokens.lock().expect("lock the Azure tokens").insert(scope.to_owned(), token.clone());
+        if self.token_generation.load(Ordering::SeqCst) == generation {
+            self.tokens.lock().expect("lock the Azure tokens").insert(scope.to_owned(), token.clone());
+        }
         Ok(token)
+    }
+
+    fn cached(&self, scope: &str, now: f64) -> Option<Token> {
+        self.tokens
+            .lock()
+            .expect("lock the Azure tokens")
+            .get(scope)
+            .filter(|cached| cached.expires - now > TOKEN_MARGIN_MS)
+            .cloned()
     }
 
     async fn command(&self, args: &[String]) -> Result<TokenResponse, LoadError> {

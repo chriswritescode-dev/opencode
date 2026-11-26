@@ -569,3 +569,42 @@ async fn refreshes_expired_oauth_during_native_model_resolution_and_persists_rot
     );
     assert!(matches!(resolved, CredentialValue::Oauth(_)));
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn concurrent_retries_share_one_token_refresh() {
+    let test = setup(Input::new(Vec::new())).await;
+    test.harness
+        .services
+        .credentials
+        .create(CreateInput {
+            id: None,
+            integration_id: integration_id(),
+            value: expired_oauth(ENDPOINT, "refresh"),
+            label: None,
+            activate: Some(true),
+        })
+        .expect("create the expired Snowflake credential");
+    test.routes.route_json(
+        "POST",
+        TOKEN,
+        json!({ "access_token": "renewed", "refresh_token": "", "expires_in": 3600 }),
+    );
+    test.routes.hold("POST", TOKEN);
+    let before = test.routes.count("POST", TOKEN);
+    let spawn = || {
+        let hooks = test.hooks.clone();
+        tokio::spawn(async move { hooks.trigger_retry(retry_event(2, RetryDecision::Retry { delay_ms: 1000 })).await })
+    };
+    let first = spawn();
+    let second = spawn();
+    test.routes.arrived().await;
+    tokio::time::sleep(Duration::from_millis(25)).await;
+    test.routes.release();
+    test.routes.release();
+
+    let first = first.await.expect("the first Snowflake retry");
+    let second = second.await.expect("the second Snowflake retry");
+    assert_eq!(first.decision, RetryDecision::Retry { delay_ms: 0 });
+    assert_eq!(second.decision, RetryDecision::Retry { delay_ms: 0 });
+    assert_eq!(test.routes.count("POST", TOKEN) - before, 1);
+}

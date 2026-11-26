@@ -11,7 +11,7 @@ use opencode_bus::{Definition, PublishOptions};
 use opencode_catalog::builtin::Builtin;
 use opencode_catalog::credential::{CreateInput, Update};
 use opencode_catalog::integration::ExternalInput;
-use opencode_catalog::provider_plugin::azure::discovery::Endpoints;
+use opencode_catalog::provider_plugin::azure::discovery::{Deployment, Discovery, Endpoints};
 use opencode_catalog::provider_plugin::azure::{self, Options};
 use opencode_catalog::provider_plugin::hooks::{HttpRequest, ProviderHooks, RequestKind, WsHandshake};
 use opencode_catalog::provider_plugin::{BoxFuture, CommandOutput, CommandRunner};
@@ -1168,4 +1168,87 @@ async fn uses_the_cognitive_scope_for_models_endpoints_and_leaves_api_key_reques
         .await;
     assert_eq!(header(&request.request, "api-key"), Some("stored-token"));
     assert_eq!(header(&request.request, "authorization"), None);
+}
+
+struct GatedRunner {
+    calls: AtomicUsize,
+    started: Arc<tokio::sync::Notify>,
+    release: tokio::sync::watch::Receiver<bool>,
+}
+
+impl CommandRunner for GatedRunner {
+    fn run(
+        &self,
+        _program: String,
+        args: Vec<String>,
+        _env: Vec<(OsString, OsString)>,
+    ) -> BoxFuture<io::Result<CommandOutput>> {
+        self.calls.fetch_add(1, Ordering::SeqCst);
+        self.started.notify_one();
+        let mut release = self.release.clone();
+        let output = cli_token(&args);
+        Box::pin(async move {
+            loop {
+                let released = { *release.borrow() };
+                if released {
+                    break;
+                }
+                release.changed().await.map_err(io::Error::other)?;
+            }
+            let value = output.ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "no az token"))?;
+            Ok(CommandOutput {
+                status: std::process::ExitStatus::default(),
+                stdout: serde_json::to_vec(&value).expect("the az output serializes"),
+                stderr: Vec::new(),
+            })
+        })
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn concurrent_azure_cli_token_requests_spawn_one_command_per_scope() {
+    let routes = Routes::new();
+    let origin = "http://azure.test";
+    routes.route_json(
+        "POST",
+        &format!("{origin}/providers/Microsoft.ResourceGraph/resources?api-version=2022-10-01"),
+        json!({ "data": [] }),
+    );
+    let url = format!("{origin}/resource/test/openai/deployments?api-version=2022-12-01");
+    routes.route_json("GET", &url, json!({ "data": [listed("gpt-5", "gpt-5", "succeeded")] }));
+
+    let (sender, receiver) = tokio::sync::watch::channel(false);
+    let started = Arc::new(tokio::sync::Notify::new());
+    let runner = Arc::new(GatedRunner { calls: AtomicUsize::new(0), started: started.clone(), release: receiver });
+    let discovery = Arc::new(Discovery::new(
+        routes.clone(),
+        runner.clone(),
+        "opencode/test/test/opencode".to_owned(),
+        origin.to_owned(),
+        "az".to_owned(),
+    ));
+    let credential = cli_credential("test");
+    let barrier = Arc::new(tokio::sync::Barrier::new(2));
+    let spawn = || {
+        let discovery = discovery.clone();
+        let credential = credential.clone();
+        let url = url.clone();
+        let barrier = barrier.clone();
+        tokio::spawn(async move {
+            barrier.wait().await;
+            discovery.deployments(&url, "test", &credential).await
+        })
+    };
+    let first = spawn();
+    let second = spawn();
+
+    tokio::time::timeout(Duration::from_secs(5), started.notified()).await.expect("the first az call starts");
+    tokio::time::sleep(Duration::from_millis(25)).await;
+    sender.send(true).expect("release the az commands");
+
+    let first = first.await.expect("the first Azure discovery").expect("the first deployments");
+    let second = second.await.expect("the second Azure discovery").expect("the second deployments");
+    assert_eq!(first, second);
+    assert_eq!(first, vec![Deployment { name: "gpt-5".to_owned(), model: "gpt-5".to_owned() }]);
+    assert_eq!(runner.calls.load(Ordering::SeqCst), 2);
 }

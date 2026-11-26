@@ -20,7 +20,7 @@ use serde_json::Value;
 use tokio::sync::oneshot;
 
 use crate::builtin::{Builtin, Services};
-use crate::credential::{CredentialService, Update};
+use crate::credential::CredentialService;
 use crate::integration::{
     AuthorizationError, AutoCallback, ConfigEnv, Implementation, IntegrationService, LabelCallback, OAuthAuthorization,
     OAuthFuture, OAuthImplementation, OAuthMode, RefreshCallback, SubmitCallback,
@@ -356,28 +356,31 @@ pub async fn register(services: &Services, context: &PluginContext, builtin: &mu
                 if value.method_id.0 != METHOD_ID {
                     return event;
                 }
-                let account = normalize_account(account_metadata(value.metadata.as_ref()).and_then(Value::as_str));
-                let refreshed = token(
-                    http.as_ref(),
-                    &user_agent,
-                    &account,
-                    &[("grant_type", "refresh_token"), ("refresh_token", value.refresh.as_str())],
-                )
-                .await;
-                let refreshed = match refreshed {
-                    Ok(refreshed) => refreshed,
+                let failed_access = value.access.clone();
+                let refreshed = credentials
+                    .refresh(&connection.id, move |current, _now| current.access == failed_access, {
+                        move |current| async move {
+                            let account =
+                                normalize_account(account_metadata(current.metadata.as_ref()).and_then(Value::as_str));
+                            token(
+                                http.as_ref(),
+                                &user_agent,
+                                &account,
+                                &[("grant_type", "refresh_token"), ("refresh_token", current.refresh.as_str())],
+                            )
+                            .await
+                            .map_err(|error| Arc::new(error) as crate::credential::RefreshError)
+                        }
+                    })
+                    .await;
+                match refreshed {
+                    Ok(Some(_)) => event.decision = RetryDecision::Retry { delay_ms: 0 },
+                    Ok(None) => return event,
                     Err(error) => {
                         log::warn!("Snowflake Cortex token refresh failed: {error}");
                         return event;
                     }
-                };
-                if let Err(error) = credentials
-                    .update(&connection.id, Update { label: None, value: Some(CredentialValue::Oauth(refreshed)) })
-                {
-                    log::warn!("Snowflake Cortex credential update failed: {error}");
-                    return event;
                 }
-                event.decision = RetryDecision::Retry { delay_ms: 0 };
                 event
             })
         }

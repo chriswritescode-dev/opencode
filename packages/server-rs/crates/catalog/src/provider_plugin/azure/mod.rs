@@ -61,6 +61,7 @@ struct Loaded {
 
 struct Found {
     connection: ConnectionInfo,
+    url: String,
     deployments: Vec<Deployment>,
 }
 
@@ -439,7 +440,7 @@ impl Azure {
             })
             .await
             .ok()?;
-        Some(Found { connection, deployments: found })
+        Some(Found { connection, url, deployments: found })
     }
 
     async fn publish(self: &Arc<Self>, found: Found) {
@@ -447,6 +448,9 @@ impl Azure {
         {
             let state = self.state.lock().expect("lock the Azure state");
             if connection_key(state.connection.as_ref()) != connection_key(Some(&found.connection)) {
+                return;
+            }
+            if state.url.as_deref() != Some(found.url.as_str()) {
                 return;
             }
             if state.deployments.as_ref() == Some(&found.deployments) {
