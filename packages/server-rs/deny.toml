@@ -21,7 +21,9 @@ allow = [
     # Most crates, the workspace's own, tokio, serde, flate2, crc32fast, adler2, simd-adler32, the brotli crates, the
     # hyper/tower stack behind reqwest, ts-rs and ts-rs-macros, and termcolor (its `Unlicense OR MIT` is satisfied by
     # MIT). rusqlite, libsqlite3-sys (which vendors the bundled SQLite) and hashlink are MIT too. yaml-rust2, arraydeque,
-    # core_detect, multiversion_no_op and scopeguard (through yaml-rust2 for opencode-registry) are MIT too.
+    # core_detect, multiversion_no_op and scopeguard (through yaml-rust2 for opencode-registry) are MIT too. opencode-tool's
+    # image stack (image, image-webp, png, fdeflate, color_quant, num-traits, zune-core, zune-jpeg, bytemuck, byteorder-lite
+    # and quick-error) offers MIT too, and moxcms offers Apache-2.0 below.
     "MIT",
     # ring (with ISC) and sync_wrapper; reqwest, rustls, tokio-tungstenite, flate2, crc32fast and most others offer it
     # beside MIT. yaml-rust2, arraydeque, core_detect, multiversion_no_op, scopeguard and encoding_rs (through

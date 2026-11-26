@@ -2,6 +2,7 @@ pub mod builtin;
 pub mod context;
 pub mod definition;
 pub mod generated;
+pub mod image;
 pub mod input;
 pub mod output;
 pub mod policy;

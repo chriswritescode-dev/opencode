@@ -55,6 +55,7 @@ httpdate = "1"
 http-body-util = "0.1"
 hyper = { version = "1", features = ["server", "client", "http1"] }
 hyper-util = { version = "0.1", features = ["tokio"] }
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "webp"] }
 indexmap = "2"
 log = { version = "0.4", features = ["std"] }
 notify = "8"

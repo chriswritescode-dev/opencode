@@ -7,6 +7,7 @@ use serde_json::Value;
 
 use crate::context::{ToolContext, ToolError, ToolOutput};
 use crate::definition::ToolDefinition;
+use crate::image::Image;
 use crate::registry::{RegisteredTool, ToolData};
 use crate::runtime::{self, NoHooks, ToolHooks};
 
@@ -27,6 +28,7 @@ pub struct Snapshot {
     pub definitions: Vec<ToolDefinition>,
     pub entries: BTreeMap<String, RegisteredTool>,
     pub hooks: Arc<dyn ToolHooks>,
+    pub image: Image,
 }
 
 impl Snapshot {
@@ -51,7 +53,7 @@ impl Snapshot {
             )));
         };
         let context = ToolContext { call_id: call.id, ..context.clone() };
-        runtime::run(tool, &name, call.input, &context, &self.entries, self.hooks.as_ref()).await
+        runtime::run(tool, &name, call.input, &context, &self.entries, self.hooks.as_ref(), &self.image).await
     }
 }
 
@@ -68,7 +70,7 @@ pub fn snapshot(data: &ToolData, permissions: &[PermissionRule], options: &Snaps
         direct.insert(key.clone(), tool.clone());
     }
     let definitions = direct.keys().filter_map(|key| data.definitions.get(key).cloned()).collect();
-    Snapshot { definitions, entries: direct, hooks: Arc::new(NoHooks) }
+    Snapshot { definitions, entries: direct, hooks: Arc::new(NoHooks), image: Image::new() }
 }
 
 pub fn wholly_disabled(action: &str, rules: &[PermissionRule]) -> bool {
