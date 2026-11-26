@@ -1,0 +1,476 @@
+[
+  {
+    "name": "returns no files for a non-matching glob",
+    "fixtures": [
+      {
+        "path": "{{root}}/visible.ts",
+        "parts": [
+          {
+            "text": "needle\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "pattern": "*.txt"
+    },
+    "expected": {
+      "status": "completed",
+      "output": [],
+      "content": [
+        {
+          "type": "text",
+          "text": "No files found"
+        }
+      ],
+      "metadata": {
+        "count": 0,
+        "truncated": false
+      },
+      "assertions": [
+        {
+          "action": "glob",
+          "resources": [
+            "*.txt"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "root": "."
+          }
+        }
+      ],
+      "tree": {
+        "{{root}}/visible.ts": "bmVlZGxlCg=="
+      }
+    }
+  },
+  {
+    "name": "reports an invalid glob",
+    "fixtures": [
+      {
+        "path": "{{root}}/visible.ts",
+        "parts": [
+          {
+            "text": "needle\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "pattern": "["
+    },
+    "expected": {
+      "status": "error",
+      "error": "Invalid glob in pattern '[': unclosed character class; missing ']'",
+      "assertions": [
+        {
+          "action": "glob",
+          "resources": [
+            "["
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "root": "."
+          }
+        }
+      ],
+      "tree": {
+        "{{root}}/visible.ts": "bmVlZGxlCg=="
+      }
+    }
+  },
+  {
+    "name": "honors hidden false by default",
+    "fixtures": [
+      {
+        "path": "{{root}}/src/visible.ts",
+        "parts": [
+          {
+            "text": "needle\n"
+          }
+        ]
+      },
+      {
+        "path": "{{root}}/.hidden.ts",
+        "parts": [
+          {
+            "text": "needle\n"
+          }
+        ]
+      },
+      {
+        "path": "{{root}}/src/.hidden.ts",
+        "parts": [
+          {
+            "text": "needle\n"
+          }
+        ]
+      },
+      {
+        "path": "{{root}}/.hidden/nested.ts",
+        "parts": [
+          {
+            "text": "needle\n"
+          }
+        ]
+      },
+      {
+        "path": "{{root}}/.git/config.ts",
+        "parts": [
+          {
+            "text": "needle\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "pattern": "**/*.ts",
+      "limit": 10
+    },
+    "expected": {
+      "status": "completed",
+      "output": [
+        {
+          "path": "src/visible.ts",
+          "type": "file"
+        }
+      ],
+      "content": [
+        {
+          "type": "text",
+          "text": "{{root}}/src/visible.ts"
+        }
+      ],
+      "metadata": {
+        "count": 1,
+        "truncated": false
+      },
+      "assertions": [
+        {
+          "action": "glob",
+          "resources": [
+            "**/*.ts"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "root": ".",
+            "limit": 10
+          }
+        }
+      ],
+      "tree": {
+        "{{root}}/.git": null,
+        "{{root}}/.git/config.ts": "bmVlZGxlCg==",
+        "{{root}}/.hidden.ts": "bmVlZGxlCg==",
+        "{{root}}/.hidden": null,
+        "{{root}}/.hidden/nested.ts": "bmVlZGxlCg==",
+        "{{root}}/src": null,
+        "{{root}}/src/visible.ts": "bmVlZGxlCg==",
+        "{{root}}/src/.hidden.ts": "bmVlZGxlCg=="
+      }
+    }
+  },
+  {
+    "name": "honors hidden true",
+    "fixtures": [
+      {
+        "path": "{{root}}/src/visible.ts",
+        "parts": [
+          {
+            "text": "needle\n"
+          }
+        ]
+      },
+      {
+        "path": "{{root}}/.hidden.ts",
+        "parts": [
+          {
+            "text": "needle\n"
+          }
+        ]
+      },
+      {
+        "path": "{{root}}/src/.hidden.ts",
+        "parts": [
+          {
+            "text": "needle\n"
+          }
+        ]
+      },
+      {
+        "path": "{{root}}/.hidden/nested.ts",
+        "parts": [
+          {
+            "text": "needle\n"
+          }
+        ]
+      },
+      {
+        "path": "{{root}}/.git/config.ts",
+        "parts": [
+          {
+            "text": "needle\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "pattern": "**/*.ts",
+      "hidden": true,
+      "limit": 10
+    },
+    "expected": {
+      "status": "completed",
+      "output": [
+        {
+          "path": "src/.hidden.ts",
+          "type": "file"
+        },
+        {
+          "path": "src/visible.ts",
+          "type": "file"
+        },
+        {
+          "path": ".hidden/nested.ts",
+          "type": "file"
+        },
+        {
+          "path": ".hidden.ts",
+          "type": "file"
+        }
+      ],
+      "content": [
+        {
+          "type": "text",
+          "text": "{{root}}/src/.hidden.ts\n{{root}}/src/visible.ts\n{{root}}/.hidden/nested.ts\n{{root}}/.hidden.ts"
+        }
+      ],
+      "metadata": {
+        "count": 4,
+        "truncated": false
+      },
+      "assertions": [
+        {
+          "action": "glob",
+          "resources": [
+            "**/*.ts"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "root": ".",
+            "hidden": true,
+            "limit": 10
+          }
+        }
+      ],
+      "tree": {
+        "{{root}}/.git": null,
+        "{{root}}/.git/config.ts": "bmVlZGxlCg==",
+        "{{root}}/.hidden.ts": "bmVlZGxlCg==",
+        "{{root}}/.hidden": null,
+        "{{root}}/.hidden/nested.ts": "bmVlZGxlCg==",
+        "{{root}}/src": null,
+        "{{root}}/src/visible.ts": "bmVlZGxlCg==",
+        "{{root}}/src/.hidden.ts": "bmVlZGxlCg=="
+      }
+    }
+  },
+  {
+    "name": "reports a missing search path",
+    "call": {
+      "path": "missing",
+      "pattern": "*"
+    },
+    "fixtures": [],
+    "expected": {
+      "status": "error",
+      "error": "Search path does not exist: missing",
+      "assertions": [
+        {
+          "action": "glob",
+          "resources": [
+            "*"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "root": "missing",
+            "path": "missing"
+          }
+        }
+      ],
+      "tree": {}
+    }
+  },
+  {
+    "name": "reports a file used as the glob search path",
+    "fixtures": [
+      {
+        "path": "{{root}}/file.txt",
+        "parts": [
+          {
+            "text": "content\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "file.txt",
+      "pattern": "*"
+    },
+    "expected": {
+      "status": "error",
+      "error": "Search path is not a directory: file.txt",
+      "assertions": [
+        {
+          "action": "glob",
+          "resources": [
+            "*"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "root": "file.txt",
+            "path": "file.txt"
+          }
+        }
+      ],
+      "tree": {
+        "{{root}}/file.txt": "Y29udGVudAo="
+      }
+    }
+  },
+  {
+    "name": "requires external approval for an explicit external glob path",
+    "fixtures": [
+      {
+        "path": "{{outside}}/outside.txt",
+        "parts": [
+          {
+            "text": "outside\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "{{outside}}",
+      "pattern": "*.txt"
+    },
+    "expected": {
+      "status": "completed",
+      "output": [
+        {
+          "path": "{{outside_relative}}/outside.txt",
+          "type": "file"
+        }
+      ],
+      "content": [
+        {
+          "type": "text",
+          "text": "{{outside}}/outside.txt"
+        }
+      ],
+      "metadata": {
+        "count": 1,
+        "truncated": false
+      },
+      "assertions": [
+        {
+          "action": "external_directory",
+          "resources": [
+            "{{outside}}/*"
+          ],
+          "save": [
+            "{{outside}}/*"
+          ]
+        },
+        {
+          "action": "glob",
+          "resources": [
+            "*.txt"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "root": "{{outside}}",
+            "path": "{{outside}}"
+          }
+        }
+      ],
+      "tree": {
+        "{{outside}}/outside.txt": "b3V0c2lkZQo="
+      }
+    }
+  },
+  {
+    "name": "globs through an in-location external symlink without external approval",
+    "fixtures": [
+      {
+        "path": "{{outside}}/outside.txt",
+        "parts": [
+          {
+            "text": "outside\n"
+          }
+        ]
+      },
+      {
+        "path": "{{root}}/linked",
+        "kind": "symlink",
+        "target": "{{outside}}"
+      }
+    ],
+    "call": {
+      "path": "linked",
+      "pattern": "*.txt"
+    },
+    "expected": {
+      "status": "completed",
+      "output": [
+        {
+          "path": "linked/outside.txt",
+          "type": "file"
+        }
+      ],
+      "content": [
+        {
+          "type": "text",
+          "text": "{{root}}/linked/outside.txt"
+        }
+      ],
+      "metadata": {
+        "count": 1,
+        "truncated": false
+      },
+      "assertions": [
+        {
+          "action": "glob",
+          "resources": [
+            "*.txt"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "root": "linked",
+            "path": "linked"
+          }
+        }
+      ],
+      "tree": {
+        "{{root}}/linked": "symlink:{{outside}}",
+        "{{outside}}/outside.txt": "b3V0c2lkZQo="
+      }
+    }
+  }
+]

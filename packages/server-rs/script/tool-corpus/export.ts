@@ -20,6 +20,8 @@ import { SessionMessage } from "@opencode/core/session/message"
 import { Tool } from "@opencode/core/tool"
 import { modelTools } from "@opencode/core/tool/model-policy"
 import { EditTool } from "@opencode/core/tool/plugin/edit"
+import { GlobTool } from "@opencode/core/tool/plugin/glob"
+import { GrepTool } from "@opencode/core/tool/plugin/grep"
 import { PatchTool } from "@opencode/core/tool/plugin/patch"
 import { ReadTool } from "@opencode/core/tool/plugin/read"
 import { WriteTool } from "@opencode/core/tool/plugin/write"
@@ -49,6 +51,7 @@ import { Formatter } from "@opencode/core/formatter"
 import { Image } from "@opencode/core/image"
 import { InstructionDiscovery } from "@opencode/core/instruction-discovery"
 import { Permission } from "@opencode/core/permission"
+import { Ripgrep } from "@opencode/core/ripgrep"
 import { Skill } from "@opencode/core/skill"
 import { SessionInstructions } from "@opencode/core/session/instructions"
 import { toSessionError } from "@opencode/core/session/to-session-error"
@@ -1779,6 +1782,239 @@ async function exportToolCases(tool: "write" | "edit" | "patch", specs: ToolCase
   console.log(`__TOOL_CORPUS__${JSON.stringify(exported)}`)
 }
 
+const searchToolsNode = makeLocationNode({
+  name: "corpus/search-tool-plugins",
+  layer: Layer.effectDiscard(Effect.all([registerToolPlugin(GlobTool.Plugin), registerToolPlugin(GrepTool.Plugin)])),
+  deps: [
+    Config.node,
+    Environment.node,
+    FileAccess.node,
+    Flag.node,
+    Location.node,
+    Permission.node,
+    Ripgrep.node,
+    Tool.node,
+  ],
+})
+
+function searchLayerFor(root: string, permission: Layer.Layer<Permission.Service>) {
+  return AppNodeBuilder.build(
+    LayerNode.group([Tool.node, searchToolsNode]),
+    [
+      Environment.node.replace(hostEnvironmentLayer),
+      Permission.node.replace(permission),
+      Config.node.replace(corpusConfig),
+      Location.node.replace(
+        Layer.succeed(Location.Service, Location.Service.of(location({ directory: AbsolutePath.make(root) }))),
+      ),
+    ],
+  ).pipe(Layer.provide(Layer.succeed(Flag.Overrides, undefined)))
+}
+
+interface SearchCase {
+  name: string
+  fixtures?: Fixture[]
+  call: Record<string, unknown>
+  permission?: ToolPermission
+}
+
+async function exportSearchCases(tool: "glob" | "grep", specs: SearchCase[]) {
+  const base = await fs.mkdtemp(path.join(os.tmpdir(), "opencode-tool-corpus-"))
+  const exported: Array<Record<string, unknown>> = []
+  try {
+    for (const [index, spec] of specs.entries()) {
+      const root = path.join(base, `${index}-${spec.name.replace(/[^a-zA-Z0-9]+/g, "-").slice(0, 40)}`)
+      const outside = `${root}-outside`
+      await fs.mkdir(root, { recursive: true })
+      await fs.mkdir(outside, { recursive: true })
+      await materializeFixtures(root, outside, spec.fixtures ?? [])
+      const assertions: Assertion[] = []
+      const allow = spec.permission?.allow ?? true
+      const deniedResources = spec.permission?.deniedResources ?? []
+      const deniedActions = spec.permission?.deniedActions ?? []
+      const allowed = (input: { action: string; resources: readonly string[] }) =>
+        allow &&
+        !deniedActions.includes(input.action) &&
+        !input.resources.some((resource) => deniedResources.includes(resource))
+      const permission = permissionLayer({
+        assert: (input) =>
+          Effect.sync(() => {
+            assertions.push({
+              action: input.action,
+              resources: [...input.resources],
+              ...(input.save === undefined ? {} : { save: [...input.save] }),
+              ...(input.metadata === undefined ? {} : { metadata: input.metadata }),
+            })
+          }).pipe(
+            Effect.andThen(
+              allowed(input)
+                ? Effect.void
+                : Effect.fail(
+                    new Permission.BlockedError({
+                      rules: [],
+                      permission: input.action,
+                      resources: input.resources,
+                    }),
+                  ),
+            ),
+          ),
+        allows: (input) => Effect.succeed(allowed(input)),
+      })
+      const call = Object.fromEntries(
+        Object.entries(spec.call).map(([key, value]) => [
+          key,
+          typeof value === "string" ? value.replaceAll("{{root}}", root).replaceAll("{{outside}}", outside) : value,
+        ]),
+      )
+      const program = Effect.gen(function* () {
+        const registry = yield* Tool.Service
+        return yield* (yield* registry.snapshot()).execute({
+          sessionID: Session.ID.make(`ses_${tool}_tool_test`),
+          ...toolIdentity,
+          call: { type: "tool-call", id: `call-${index}`, name: tool, input: call },
+        }).pipe(
+          Effect.map((result) => ({ status: "completed" as const, ...result })),
+          Effect.catchTag("Tool.Error", (error) =>
+            Effect.succeed({ status: "error" as const, error: toSessionError(error) }),
+          ),
+        )
+      }).pipe(Effect.scoped, Effect.provide(searchLayerFor(root, permission)))
+      const exit = await Effect.runPromiseExit(program)
+      if (Exit.isFailure(exit)) {
+        console.error(`corpus: ${tool} ${spec.name} failed`)
+        console.error(exit.cause)
+        process.exit(1)
+      }
+      const execution = exit.value
+      const tree = await fileTree(root, outside)
+      const expected: Record<string, unknown> = { status: execution.status }
+      if (execution.status === "completed") {
+        expected.output = execution.output
+        expected.content = execution.content
+        if (execution.metadata !== undefined) expected.metadata = execution.metadata
+      } else expected.error = execution.error?.message
+      expected.assertions = assertions
+      expected.tree = tree
+      const normalized = JSON.stringify({ ...spec, fixtures: spec.fixtures ?? [], call, expected })
+        .replaceAll(outside, "{{outside}}")
+        .replaceAll(root, "{{root}}")
+        .replaceAll(`${path.relative(root, outside)}/`, "{{outside_relative}}/")
+      exported.push(JSON.parse(normalized))
+      await fs.rm(root, { recursive: true, force: true })
+      await fs.rm(outside, { recursive: true, force: true })
+    }
+  } finally {
+    await fs.rm(base, { recursive: true, force: true })
+  }
+  console.log(`__TOOL_CORPUS__${JSON.stringify(exported)}`)
+}
+
+const globSpecs = (): SearchCase[] => [
+  {
+    name: "returns no files for a non-matching glob",
+    fixtures: [{ path: "{{root}}/visible.ts", parts: [{ text: "needle\n" }] }],
+    call: { pattern: "*.txt" },
+  },
+  {
+    name: "reports an invalid glob",
+    fixtures: [{ path: "{{root}}/visible.ts", parts: [{ text: "needle\n" }] }],
+    call: { pattern: "[" },
+  },
+  {
+    name: "honors hidden false by default",
+    fixtures: [
+      { path: "{{root}}/src/visible.ts", parts: [{ text: "needle\n" }] },
+      { path: "{{root}}/.hidden.ts", parts: [{ text: "needle\n" }] },
+      { path: "{{root}}/src/.hidden.ts", parts: [{ text: "needle\n" }] },
+      { path: "{{root}}/.hidden/nested.ts", parts: [{ text: "needle\n" }] },
+      { path: "{{root}}/.git/config.ts", parts: [{ text: "needle\n" }] },
+    ],
+    call: { pattern: "**/*.ts", limit: 10 },
+  },
+  {
+    name: "honors hidden true",
+    fixtures: [
+      { path: "{{root}}/src/visible.ts", parts: [{ text: "needle\n" }] },
+      { path: "{{root}}/.hidden.ts", parts: [{ text: "needle\n" }] },
+      { path: "{{root}}/src/.hidden.ts", parts: [{ text: "needle\n" }] },
+      { path: "{{root}}/.hidden/nested.ts", parts: [{ text: "needle\n" }] },
+      { path: "{{root}}/.git/config.ts", parts: [{ text: "needle\n" }] },
+    ],
+    call: { pattern: "**/*.ts", hidden: true, limit: 10 },
+  },
+  { name: "reports a missing search path", call: { path: "missing", pattern: "*" } },
+  {
+    name: "reports a file used as the glob search path",
+    fixtures: [{ path: "{{root}}/file.txt", parts: [{ text: "content\n" }] }],
+    call: { path: "file.txt", pattern: "*" },
+  },
+  {
+    name: "requires external approval for an explicit external glob path",
+    fixtures: [{ path: "{{outside}}/outside.txt", parts: [{ text: "outside\n" }] }],
+    call: { path: "{{outside}}", pattern: "*.txt" },
+  },
+  {
+    name: "globs through an in-location external symlink without external approval",
+    fixtures: [
+      { path: "{{outside}}/outside.txt", parts: [{ text: "outside\n" }] },
+      { path: "{{root}}/linked", kind: "symlink", target: "{{outside}}" },
+    ],
+    call: { path: "linked", pattern: "*.txt" },
+  },
+]
+
+const grepSpecs = (): SearchCase[] => [
+  {
+    name: "finds a pattern in an explicit file path",
+    fixtures: [{ path: "{{root}}/target.txt", parts: [{ text: "needle\n" }] }],
+    call: { path: "target.txt", pattern: "needle" },
+  },
+  {
+    name: "searches an explicit directory path",
+    fixtures: [
+      { path: "{{root}}/target.txt", parts: [{ text: "needle\n" }] },
+      { path: "{{root}}/other.txt", parts: [{ text: "haystack\n" }] },
+    ],
+    call: { path: ".", pattern: "needle" },
+  },
+  {
+    name: "reports no grep matches",
+    fixtures: [{ path: "{{root}}/file.txt", parts: [{ text: "haystack\n" }] }],
+    call: { pattern: "needle" },
+  },
+  {
+    name: "reports invalid grep regex details",
+    fixtures: [{ path: "{{root}}/visible.ts", parts: [{ text: "needle\n" }] }],
+    call: { pattern: "[" },
+  },
+  {
+    name: "reports an invalid include glob",
+    fixtures: [{ path: "{{root}}/visible.ts", parts: [{ text: "needle\n" }] }],
+    call: { pattern: "needle", include: "[" },
+  },
+  {
+    name: "filters through a valid include glob",
+    fixtures: [{ path: "{{root}}/visible.ts", parts: [{ text: "needle\n" }] }],
+    call: { pattern: "needle", include: "*.txt" },
+  },
+  {
+    name: "bounds an explicit limit and reports truncation",
+    fixtures: [{ path: "{{root}}/file.txt", parts: [{ text: "needle\nneedle\nneedle\n" }] }],
+    call: { pattern: "needle", limit: 2 },
+  },
+  { name: "reports a missing search path", call: { path: "missing", pattern: "needle" } },
+  {
+    name: "requires external approval for an external grep directory",
+    fixtures: [{ path: "{{outside}}/outside.txt", parts: [{ text: "needle\n" }] }],
+    call: { path: "{{outside}}", pattern: "needle" },
+  },
+  {
+    name: "requires external approval for an external grep file",
+    fixtures: [{ path: "{{outside}}/outside.txt", parts: [{ text: "needle\n" }] }],
+    call: { path: "{{outside}}/outside.txt", pattern: "needle" },
+  },
+]
+
 const writeSpecs = (): ToolCase[] => [
   { name: "creates a relative file through FileMutation once", call: { path: "src/new.txt", content: "created" } },
   {
@@ -2605,6 +2841,8 @@ else if (area === "write") await exportToolCases("write", writeSpecs())
 else if (area === "edit") await exportToolCases("edit", editSpecs())
 else if (area === "patch_parse") exportPatchParse()
 else if (area === "patch") await exportToolCases("patch", patchSpecs())
+else if (area === "glob") await exportSearchCases("glob", globSpecs())
+else if (area === "grep") await exportSearchCases("grep", grepSpecs())
 else {
   console.error(`corpus: unknown area ${area ?? ""}`)
   process.exit(1)

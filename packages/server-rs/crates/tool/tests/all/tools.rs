@@ -85,7 +85,10 @@ pub fn part_text(parts: &[Part]) -> String {
 }
 
 pub fn substitute(value: &str, root: &Path, outside: &Path) -> String {
-    value.replace("{{root}}", &root.to_string_lossy()).replace("{{outside}}", &outside.to_string_lossy())
+    let root = root.to_string_lossy();
+    let outside = outside.to_string_lossy();
+    let relative = opencode_util::path::Flavor::NATIVE.relative(&root, &outside);
+    value.replace("{{root}}", &root).replace("{{outside}}", &outside).replace("{{outside_relative}}", &relative)
 }
 
 pub fn replace_placeholders(value: serde_json::Value, root: &Path, outside: &Path) -> serde_json::Value {
