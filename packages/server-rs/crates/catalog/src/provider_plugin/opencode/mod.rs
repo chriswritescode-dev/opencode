@@ -9,12 +9,14 @@ use opencode_config::entry::{Entry, Origin};
 use opencode_contract::codec::encode_json;
 use opencode_contract::generated::{
     ConnectionInfo, ConnectionStatus, CredentialValue, IntegrationID, IntegrationKeyMethod, IntegrationKeyMethodType,
-    IntegrationMethod,
+    IntegrationMethod, ProviderID, ProviderInfoActivation,
 };
 
 use crate::builtin::{Builtin, Services};
 use crate::integration::{Implementation, StatusInput};
 use crate::provider_plugin::PluginContext;
+
+use super::{env_value, setting};
 
 pub use self::handle::{Allowed, ConsoleHandle};
 
@@ -86,6 +88,79 @@ pub async fn register(services: &Services, context: &PluginContext, builtin: &mu
         })
         .await;
     builtin.registrations.push(provider_registration);
+
+    let disable_free = {
+        let value = (context.env)("OPENCODE_DISABLE_FREE_MODELS");
+        opencode_config::options::truthy(value.as_deref())
+    };
+    let public_provider_registration = services
+        .provider
+        .transform({
+            let env = context.env.clone();
+            let console = context.console.clone();
+            move |editor| {
+                let provider_id = ProviderID(INTEGRATION_ID.to_owned());
+                let has_key = {
+                    let Some(item) = editor.get(&provider_id) else {
+                        return Ok(());
+                    };
+                    env_value(&env, "OPENCODE_API_KEY").is_some()
+                        || console.snapshot().connection.is_some()
+                        || setting(item.provider.settings.as_ref(), "apiKey").is_some_and(|key| !key.is_empty())
+                };
+                if has_key || disable_free {
+                    return Ok(());
+                }
+                editor.update(&provider_id, |provider| {
+                    provider.activation = ProviderInfoActivation::Enabled;
+                    let settings = provider.settings.get_or_insert_with(|| {
+                        opencode_contract::codec::decode_json("{}").expect("empty provider settings")
+                    });
+                    match settings.rest.0.iter_mut().find(|(key, _)| key == "apiKey") {
+                        Some((_, value)) => *value = serde_json::json!("public"),
+                        None => settings.rest.0.push(("apiKey".to_owned(), serde_json::json!("public"))),
+                    }
+                });
+                Ok(())
+            }
+        })
+        .await;
+    builtin.registrations.push(public_provider_registration);
+
+    let public_model_registration = services
+        .model
+        .transform({
+            let env = context.env.clone();
+            let console = context.console.clone();
+            move |editor| {
+                let provider_id = ProviderID(INTEGRATION_ID.to_owned());
+                let has_key = {
+                    let Some(item) = editor.provider(&provider_id) else {
+                        return Ok(());
+                    };
+                    let configured = setting(item.provider.settings.as_ref(), "apiKey")
+                        .is_some_and(|key| !key.is_empty() && key != "public");
+                    env_value(&env, "OPENCODE_API_KEY").is_some()
+                        || console.snapshot().connection.is_some()
+                        || configured
+                };
+                if has_key {
+                    return Ok(());
+                }
+                let paid: Vec<String> = editor
+                    .list(Some(&provider_id))
+                    .into_iter()
+                    .filter(|model| model.cost.iter().any(|cost| cost.input.0 > 0.0))
+                    .map(|model| model.id.clone())
+                    .collect();
+                for model_id in paid {
+                    editor.update(&provider_id, &model_id, |model| model.enabled = false);
+                }
+                Ok(())
+            }
+        })
+        .await;
+    builtin.registrations.push(public_model_registration);
 }
 
 pub async fn refresh(services: &Services, context: &PluginContext, max_age: Duration) {

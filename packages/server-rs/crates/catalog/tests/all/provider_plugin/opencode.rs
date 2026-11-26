@@ -12,7 +12,7 @@ use opencode_ai::route::executor::RequestExecutor;
 use opencode_ai::schema::{ContentPart, LlmRequest, Message, TextPart, UserMessage};
 use opencode_catalog::builtin::Builtin;
 use opencode_catalog::credential::CreateInput;
-use opencode_catalog::integration::{Attempt, AttemptError, AttemptStatus, OAuthConnectInput};
+use opencode_catalog::integration::{Attempt, AttemptError, AttemptStatus, Implementation, OAuthConnectInput};
 use opencode_catalog::provider_plugin::PluginContext;
 use opencode_catalog::provider_plugin::opencode;
 use opencode_catalog::resolver::{self, Resolver};
@@ -20,15 +20,16 @@ use opencode_config::entry::{Document, Entry, Origin};
 use opencode_contract::codec::JsonMap;
 use opencode_contract::generated::{
     ConnectionInfo, ConnectionStatus, CredentialKey, CredentialKeyType, CredentialOAuth, CredentialOAuthType,
-    CredentialValue, FormAnswer, FormField1, FormStringField1Format, FormStringField1Type, FormValue, IntegrationID,
-    IntegrationKeyMethodType, IntegrationMethod, IntegrationMethodID, IntegrationOAuthMethodType, ModelSettings,
-    ModelVariant, ProviderID,
+    CredentialValue, FormAnswer, FormField1, FormStringField1Format, FormStringField1Type, FormValue,
+    IntegrationEnvMethod, IntegrationEnvMethodType, IntegrationID, IntegrationKeyMethodType, IntegrationMethod,
+    IntegrationMethodID, IntegrationOAuthMethodType, ModelCost, ModelCostCache, ModelSettings, ModelVariant,
+    MoneyUSDPerMillionTokens, ProviderID, ProviderInfo, ProviderInfoActivation,
 };
 use serde_json::{Value, json};
 
 use crate::builtin::{Harness, Input, start};
 use crate::provider_plugin::support::{
-    Exchange, RecordedSender, Reply, Routes, headers, plugin_context_with, settings_json,
+    Exchange, RecordedSender, Reply, Routes, headers, plugin_context_with, provider_settings_from, settings_json,
 };
 
 const ORIGIN: &str = "https://console.example.com";
@@ -176,6 +177,222 @@ fn header(request: &opencode_ai::route::executor::PreparedHttp, name: &str) -> O
 
 fn metadata<'a>(value: &'a CredentialOAuth, key: &str) -> Option<&'a Value> {
     value.metadata.as_ref()?.0.iter().find(|(name, _)| name == key).map(|(_, value)| value)
+}
+
+fn cost(input: f64, output: f64) -> ModelCost {
+    ModelCost {
+        tier: None,
+        input: MoneyUSDPerMillionTokens(input),
+        output: MoneyUSDPerMillionTokens(output),
+        cache: ModelCostCache { read: MoneyUSDPerMillionTokens(0.0), write: MoneyUSDPerMillionTokens(0.0) },
+    }
+}
+
+fn opencode_id() -> ProviderID {
+    ProviderID("opencode".to_owned())
+}
+
+fn api_key(provider: &ProviderInfo) -> Option<String> {
+    settings_json(provider).and_then(|settings| settings.get("apiKey").and_then(Value::as_str).map(str::to_owned))
+}
+
+async fn seed_provider(
+    harness: &Harness,
+    provider_id: ProviderID,
+    configure: impl Fn(&mut ProviderInfo) + Send + Sync + 'static,
+    models: Vec<(&str, f64, f64)>,
+) -> opencode_location::state::Registration {
+    let models: Vec<(String, f64, f64)> =
+        models.into_iter().map(|(id, input, output)| (id.to_owned(), input, output)).collect();
+    harness
+        .services
+        .provider
+        .transform(move |editor| {
+            editor.update(&provider_id, &configure);
+            for (id, input, output) in &models {
+                editor.models_update(&provider_id, id, |model| model.cost = vec![cost(*input, *output)]);
+            }
+            Ok(())
+        })
+        .await
+}
+
+async fn register_env_method(harness: &Harness, names: &[&str]) -> opencode_location::state::Registration {
+    let names: Vec<String> = names.iter().map(|name| (*name).to_owned()).collect();
+    harness
+        .services
+        .integration
+        .transform(move |editor| {
+            editor.method_update(Implementation::Method {
+                integration_id: integration_id(),
+                method: IntegrationMethod::Env(IntegrationEnvMethod {
+                    r#type: IntegrationEnvMethodType::Env,
+                    names: names.clone(),
+                }),
+            });
+            Ok(())
+        })
+        .await
+}
+
+fn no_remote_config() -> Arc<Routes> {
+    let routes = Routes::new();
+    routes.route_with("GET", &config_url(opencode_catalog::console_access::DEFAULT_SERVER), |_| {
+        Reply::json_status(json!(null), 404)
+    });
+    routes
+}
+
+fn fresh_oauth() -> CredentialValue {
+    CredentialValue::Oauth(CredentialOAuth {
+        r#type: CredentialOAuthType::Oauth,
+        method_id: method_id(),
+        access: "access".to_owned(),
+        refresh: "refresh".to_owned(),
+        expires: 9_007_199_254_740_991.0,
+        metadata: None,
+    })
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn uses_a_public_key_and_disables_paid_models_without_credentials() {
+    let mut harness = start(Input::new(Vec::new())).await;
+    let _seeded = seed_provider(&harness, opencode_id(), |_| {}, vec![("paid", 1.0, 0.0)]).await;
+    add_plugin(&mut harness, Routes::new()).await;
+
+    let provider = harness.services.provider.get(&opencode_id()).await.unwrap().expect("the opencode provider");
+    assert_eq!(api_key(&provider).as_deref(), Some("public"));
+    let model = harness.services.model.get(&opencode_id(), "paid").await.unwrap().expect("the paid model");
+    assert!(!model.enabled);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn keeps_free_models_without_credentials() {
+    let mut harness = start(Input::new(Vec::new())).await;
+    let _seeded = seed_provider(&harness, opencode_id(), |_| {}, vec![("free", 0.0, 0.0)]).await;
+    add_plugin(&mut harness, Routes::new()).await;
+
+    let provider = harness.services.provider.get(&opencode_id()).await.unwrap().expect("the opencode provider");
+    assert_eq!(api_key(&provider).as_deref(), Some("public"));
+    assert_eq!(provider.activation, ProviderInfoActivation::Enabled);
+    assert!(harness.services.provider.available().await.unwrap().iter().any(|item| item.id == opencode_id()));
+    let model = harness.services.model.get(&opencode_id(), "free").await.unwrap().expect("the free model");
+    assert!(model.enabled);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn treats_output_only_cost_as_free_without_credentials() {
+    let mut harness = start(Input::new(Vec::new())).await;
+    let _seeded = seed_provider(&harness, opencode_id(), |_| {}, vec![("output-only", 0.0, 1.0)]).await;
+    add_plugin(&mut harness, Routes::new()).await;
+
+    let provider = harness.services.provider.get(&opencode_id()).await.unwrap().expect("the opencode provider");
+    assert_eq!(api_key(&provider).as_deref(), Some("public"));
+    let model = harness.services.model.get(&opencode_id(), "output-only").await.unwrap().expect("the model");
+    assert!(model.enabled);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn uses_opencode_api_key_as_credentials() {
+    let mut harness = start(Input::new(Vec::new()).environment("OPENCODE_API_KEY", "secret")).await;
+    let _method = register_env_method(&harness, &["OPENCODE_API_KEY"]).await;
+    let _seeded = seed_provider(&harness, opencode_id(), |_| {}, vec![("paid", 1.0, 0.0)]).await;
+    add_plugin(&mut harness, no_remote_config()).await;
+
+    let provider = harness.services.provider.get(&opencode_id()).await.unwrap().expect("the opencode provider");
+    assert_eq!(api_key(&provider), None);
+    let model = harness.services.model.get(&opencode_id(), "paid").await.unwrap().expect("the paid model");
+    assert!(model.enabled);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn uses_configured_provider_env_vars_as_credentials() {
+    let mut harness = start(Input::new(Vec::new()).environment("CUSTOM_OPENCODE_API_KEY", "secret")).await;
+    let _method = register_env_method(&harness, &["CUSTOM_OPENCODE_API_KEY"]).await;
+    let _seeded = seed_provider(&harness, opencode_id(), |_| {}, vec![("paid", 1.0, 0.0)]).await;
+    add_plugin(&mut harness, no_remote_config()).await;
+
+    let provider = harness.services.provider.get(&opencode_id()).await.unwrap().expect("the opencode provider");
+    assert_eq!(api_key(&provider), None);
+    let model = harness.services.model.get(&opencode_id(), "paid").await.unwrap().expect("the paid model");
+    assert!(model.enabled);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn uses_configured_api_key_as_credentials() {
+    let mut harness = start(Input::new(Vec::new())).await;
+    let _seeded = seed_provider(
+        &harness,
+        opencode_id(),
+        |provider| {
+            provider.package = "aisdk:test-provider".to_owned();
+            provider.settings = Some(provider_settings_from(json!({ "apiKey": "configured" })));
+            provider.activation = ProviderInfoActivation::Enabled;
+        },
+        vec![("paid", 1.0, 0.0)],
+    )
+    .await;
+    add_plugin(&mut harness, Routes::new()).await;
+
+    let provider = harness.services.provider.get(&opencode_id()).await.unwrap().expect("the opencode provider");
+    assert_eq!(api_key(&provider).as_deref(), Some("configured"));
+    let model = harness.services.model.get(&opencode_id(), "paid").await.unwrap().expect("the paid model");
+    assert!(model.enabled);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn ignores_non_opencode_providers_and_models() {
+    let mut harness = start(Input::new(Vec::new())).await;
+    let openai = ProviderID("openai".to_owned());
+    let _seeded = seed_provider(&harness, openai.clone(), |_| {}, vec![("paid", 1.0, 0.0)]).await;
+    add_plugin(&mut harness, Routes::new()).await;
+
+    let provider = harness.services.provider.get(&openai).await.unwrap().expect("the openai provider");
+    assert_eq!(api_key(&provider), None);
+    let model = harness.services.model.get(&openai, "paid").await.unwrap().expect("the paid model");
+    assert!(model.enabled);
+}
+
+async fn disabled_free_models(api_key: Option<&str>) {
+    let mut input = Input::new(Vec::new()).environment("OPENCODE_DISABLE_FREE_MODELS", "true");
+    if let Some(api_key) = api_key {
+        input = input.environment("OPENCODE_API_KEY", api_key);
+    }
+    let mut harness = start(input).await;
+    let _method = register_env_method(&harness, &["OPENCODE_API_KEY"]).await;
+    let _seeded = seed_provider(&harness, opencode_id(), |_| {}, vec![("free", 0.0, 0.0), ("paid", 1.0, 0.0)]).await;
+    let context = add_plugin(&mut harness, no_remote_config()).await;
+
+    if api_key.is_none() {
+        assert!(harness.services.provider.available().await.unwrap().is_empty());
+        assert!(harness.services.model.available(None).await.unwrap().is_empty());
+        assert!(harness.services.model.all().await.unwrap().is_empty());
+        assert!(harness.services.model.default_model().await.unwrap().is_none());
+        let integration =
+            harness.services.integration.get(&integration_id()).await.unwrap().expect("the OpenCode integration");
+        assert!(!integration.methods.is_empty());
+        harness.credential("opencode", fresh_oauth()).await;
+        opencode::refresh(&harness.services, &context, Duration::ZERO).await;
+        harness.services.provider.reload().await;
+        harness.services.model.reload().await.expect("reload the models");
+    }
+
+    let available = harness.services.model.available(None).await.unwrap();
+    assert!(harness.services.provider.available().await.unwrap().iter().any(|item| item.id == opencode_id()));
+    assert_eq!(available.iter().map(|model| model.id.as_str()).collect::<Vec<_>>(), ["paid"]);
+    assert_eq!(harness.services.model.all().await.unwrap().len(), 1);
+    assert_eq!(harness.services.model.default_model().await.unwrap().map(|model| model.id), Some("paid".to_owned()));
+    assert!(harness.services.model.get(&opencode_id(), "free").await.unwrap().is_none());
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn disabled_free_models_with_an_api_key() {
+    disabled_free_models(Some("secret")).await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn disabled_free_models_with_a_console_login_after_startup() {
+    disabled_free_models(None).await;
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
