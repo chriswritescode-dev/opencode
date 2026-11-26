@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+use futures_util::future::BoxFuture;
 use opencode_config::entry::{Document, Entry, Origin};
 use opencode_config::options::{ConfigLocation, ConfigOptions, SystemOption};
 use opencode_config::paths::GlobalPaths;
@@ -19,9 +20,9 @@ use opencode_registry::events::RegistryEvents;
 use opencode_registry::instructions::Observed;
 use opencode_registry::reference::instructions::{self, Summary};
 use opencode_registry::reference::{
-    EVENT, GitSource, LocalSource, NoRefresh, ReferenceRefresh, ReferenceService, Source,
+    CacheRefresh, EVENT, GitSource, LocalSource, NoRefresh, ReferenceRefresh, ReferenceService, Source,
 };
-use opencode_registry::repository::{self, Reference};
+use opencode_vcs::repository_cache::{EnsureInput, EnsureResult, Error, Materializer, Refresh, Status};
 use serde_json::Value;
 
 use crate::TempDir;
@@ -54,8 +55,30 @@ impl ReferenceRefresh for RecordingRefresh {
     }
 }
 
+#[derive(Default)]
+struct RecordingCache {
+    inputs: Mutex<Vec<EnsureInput>>,
+}
+
+impl Materializer for RecordingCache {
+    fn ensure(&self, input: EnsureInput) -> BoxFuture<'_, Result<EnsureResult, Error>> {
+        Box::pin(async move {
+            self.inputs.lock().expect("the cache lock is not poisoned").push(input.clone());
+            Ok(EnsureResult {
+                repository: input.reference.label,
+                host: input.reference.host,
+                remote: input.reference.remote,
+                local_path: String::new(),
+                status: Status::Cached,
+                head: None,
+                branch: input.branch,
+            })
+        })
+    }
+}
+
 fn service(root: &Path, events: Arc<dyn RegistryEvents>, refresh: Arc<dyn ReferenceRefresh>) -> ReferenceService {
-    ReferenceService::new(events, root.join("repos"), refresh)
+    ReferenceService::new(events, root.join("repos"), Arc::new(|_: &str| None), refresh)
 }
 
 fn local(path: &str) -> Source {
@@ -74,118 +97,6 @@ fn git(repository: &str, branch: Option<&str>) -> Source {
 fn write(path: &Path, content: &str) {
     fs::create_dir_all(path.parent().expect("the file has a parent")).expect("create the file directory");
     fs::write(path, content).expect("write the file");
-}
-
-fn remote(input: &str) -> repository::RemoteReference {
-    repository::parse_remote(input).expect("the reference parses")
-}
-
-#[test]
-fn parses_github_shorthand_and_builds_cache_paths() {
-    let reference = remote("owner/repo");
-    assert_eq!(reference.host, "github.com");
-    assert_eq!(reference.path, "owner/repo");
-    assert_eq!(reference.segments, ["owner", "repo"]);
-    assert_eq!(reference.owner.as_deref(), Some("owner"));
-    assert_eq!(reference.repo, "repo");
-    assert_eq!(reference.remote, "https://github.com/owner/repo.git");
-    assert_eq!(reference.label, "owner/repo");
-
-    let parsed = Reference::Remote(reference);
-    assert_eq!(
-        repository::cache_path(Path::new("/cache"), &parsed, None),
-        PathBuf::from("/cache/github.com/owner/repo")
-    );
-    assert_eq!(
-        repository::cache_path(Path::new("/cache"), &parsed, Some("main")),
-        PathBuf::from("/cache/github.com/owner/repo@main")
-    );
-    assert_eq!(
-        repository::cache_path(Path::new("/cache"), &parsed, Some("feature/x")),
-        PathBuf::from("/cache/github.com/owner/repo@feature%2Fx")
-    );
-    assert_eq!(repository::cache_identity(&parsed), "github.com/owner/repo");
-}
-
-#[test]
-fn parses_host_paths_and_scp_remotes() {
-    let host_path = remote("gitlab.com/group/repo");
-    assert_eq!(host_path.host, "gitlab.com");
-    assert_eq!(host_path.path, "group/repo");
-    assert_eq!(host_path.remote, "https://gitlab.com/group/repo.git");
-    assert_eq!(host_path.label, "gitlab.com/group/repo");
-
-    let scp = remote("git@github.com:owner/repo.git");
-    assert_eq!(scp.host, "github.com");
-    assert_eq!(scp.path, "owner/repo");
-    assert_eq!(scp.remote, "git@github.com:owner/repo.git");
-    assert_eq!(scp.label, "owner/repo");
-
-    let credentialed = remote("user:pass@example.com:owner/repo");
-    assert_eq!(credentialed.host, "example.com");
-    assert_eq!(credentialed.segments, ["owner", "repo"]);
-    assert_eq!(credentialed.remote, "user:pass@example.com:owner/repo");
-    assert_eq!(credentialed.label, "example.com/owner/repo");
-}
-
-#[test]
-fn caches_a_host_with_a_port_under_a_directory_per_host_part() {
-    let reference = remote("ssh://git@example.com:2222/owner/repo");
-    assert_eq!(
-        repository::cache_path(Path::new("/cache"), &Reference::Remote(reference), None),
-        PathBuf::from("/cache/example.com/2222/owner/repo")
-    );
-}
-
-#[test]
-fn keeps_local_file_repositories_distinct_from_remote_repositories() {
-    let path = std::env::temp_dir().join("repo.git");
-    let url = url::Url::from_file_path(&path).expect("the file URL builds");
-    let parsed = repository::parse(url.as_str()).expect("the file reference parses");
-    let Reference::File(file) = &parsed else {
-        panic!("a file URL parses as a file reference");
-    };
-    assert_eq!(file.path, path.to_string_lossy());
-    assert_eq!(file.label, path.to_string_lossy());
-    assert_eq!(file.repo, "repo");
-    assert!(!repository::is_remote(&parsed));
-    assert!(matches!(repository::parse_remote(url.as_str()), Err(repository::ParseRemoteError::UnsupportedLocal(_))));
-}
-
-#[test]
-fn rejects_unsafe_references_and_branches() {
-    assert!(matches!(repository::parse_remote("not-a-repo"), Err(repository::ParseRemoteError::Invalid(_))));
-    assert!(matches!(
-        repository::parse_remote("git@github.com:../../../etc/passwd"),
-        Err(repository::ParseRemoteError::Invalid(_))
-    ));
-    assert!(repository::validate_branch("feature/docs.v1").is_ok());
-    assert!(repository::validate_branch("-bad").is_err());
-    assert!(repository::validate_branch("bad..branch").is_err());
-    assert!(repository::validate_branch("bad branch").is_err());
-
-    for input in [
-        "..:repo",
-        "git@..:repo",
-        "../owner/repo",
-        "ssh://../repo",
-        "ssh://..:22/repo",
-        "https://%2e%2e/owner/repo",
-        ".:repo",
-    ] {
-        assert!(
-            matches!(repository::parse_remote(input), Err(repository::ParseRemoteError::Invalid(_))),
-            "rejects {input}"
-        );
-    }
-}
-
-#[test]
-fn compares_cache_identity_independent_of_input_spelling() {
-    let shorthand = Reference::Remote(remote("owner/repo"));
-    for input in ["https://github.com/owner/repo.git", "github.com/owner/repo", "github:owner/repo"] {
-        assert!(repository::same(&shorthand, &Reference::Remote(remote(input))), "matches {input}");
-    }
 }
 
 #[tokio::test]
@@ -316,6 +227,42 @@ async fn publishes_updates_and_refreshes_valid_git_sources() {
             description: None,
             hidden: None,
         }]]
+    );
+}
+
+#[tokio::test]
+async fn cache_refresh_materializes_valid_git_sources_daily() {
+    let temp = TempDir::new();
+    let cache = Arc::new(RecordingCache::default());
+    let refresh = Arc::new(CacheRefresh::new(cache.clone(), Arc::new(|_: &str| None)));
+    let service = service(temp.path(), Arc::new(NoEvents), refresh);
+    let _registration = service
+        .transform(|editor| {
+            editor.add("docs".to_string(), local("/docs"));
+            editor.add("sdk".to_string(), git("owner/repo", Some("main")));
+            editor.add("plain".to_string(), git("gitlab.com/group/repo", Some("")));
+            editor.add("invalid".to_string(), git("invalid", None));
+        })
+        .await;
+
+    tokio::time::timeout(Duration::from_secs(5), async {
+        while cache.inputs.lock().expect("the cache lock is not poisoned").len() < 2 {
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .expect("the git sources materialize");
+    let mut inputs: Vec<(String, Option<String>, bool)> = cache
+        .inputs
+        .lock()
+        .expect("the cache lock is not poisoned")
+        .iter()
+        .map(|input| (input.reference.label.clone(), input.branch.clone(), input.refresh == Some(Refresh::Daily)))
+        .collect();
+    inputs.sort();
+    assert_eq!(
+        inputs,
+        [("gitlab.com/group/repo".to_string(), None, true), ("owner/repo".to_string(), Some("main".to_string()), true),]
     );
 }
 

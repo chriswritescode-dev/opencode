@@ -5,7 +5,7 @@ import type { RequestRecord } from "./coverage"
 import type { ModelEndpoint } from "./model"
 import { resolveSide, startServer, stopServer } from "./server"
 import { sandboxEnv, type Sandbox } from "./sandbox"
-import type { HttpStep, Scenario, Step, WaitEventStep, WsStep } from "./scenario"
+import type { GitStep, HttpStep, Scenario, Step, WaitEventStep, WsStep } from "./scenario"
 
 const credentials = Buffer.from("opencode:parity").toString("base64")
 const droppedHeaders = new Set([
@@ -51,9 +51,16 @@ export async function runSide(
   endpoint: ModelEndpoint,
   options?: { events?: boolean; env?: Record<string, string> },
 ): Promise<{ capture: Capture; requests: RequestRecord[] }> {
-  const env = { ...(await sandboxEnv(sandbox.root, scenario.env, scenario.config, endpoint.url)), ...options?.env }
+  const scenarioEnv = Object.fromEntries(
+    Object.entries(scenario.env ?? {}).map(([name, value]) => [name, interpolate(value, { sandbox, saved: {} })]),
+  )
+  const env = { ...(await sandboxEnv(sandbox.root, scenarioEnv, scenario.config, endpoint.url)), ...options?.env }
   const captureEvents = options?.events ?? true
   await writeFiles(sandbox, scenario.files ?? {})
+  for (const step of scenario.setup ?? []) {
+    if ("files" in step) await writeFiles(sandbox, step.files)
+    else await runGitStep(step.git, sandbox, {})
+  }
   const server = await startServer(resolveSide(side), env, sandbox.work, side)
   const saved: Record<string, unknown> = {}
   const steps: (StepCapture | WsCapture)[] = []
@@ -66,7 +73,7 @@ export async function runSide(
   let succeeded = false
   try {
     const warmupEvents: unknown[] = []
-    if (captureEvents) warmup = await openEventStream(server.url, side, warmupEvents)
+    warmup = await openWarmupStream(server.url, side, warmupEvents, captureEvents)
     const response = await fetch(new URL("/api/config", server.url), {
       headers: { authorization: `Basic ${credentials}`, "x-opencode-directory": sandbox.work },
       signal: AbortSignal.timeout(eventTimeout),
@@ -78,6 +85,9 @@ export async function runSide(
       await warmup?.close()
       warmup = undefined
       stream = await openEventStream(server.url, side, events)
+    } else if (warmup !== undefined) {
+      await settleWarmup(warmup, warmupEvents)
+      warmup = undefined
     }
     for (const step of scenario.steps) {
       const captured = await runStep(
@@ -203,6 +213,20 @@ async function settleEvents(events: unknown[]) {
   throw new Error("scenario: event stream did not go quiet within 5 s")
 }
 
+async function openWarmupStream(base: string, side: string, events: unknown[], required: boolean) {
+  try {
+    return await openEventStream(base, side, events)
+  } catch (error) {
+    if (required) throw error
+    return undefined
+  }
+}
+
+async function settleWarmup(warmup: EventStream, events: unknown[]) {
+  await settleEvents(events).catch(() => undefined)
+  await warmup.close().catch(() => undefined)
+}
+
 async function waitForFirstEvent(events: unknown[], state: StreamState, side: string) {
   const deadline = Date.now() + eventTimeout
   while (events.length === 0) {
@@ -225,6 +249,10 @@ async function runStep(
 ): Promise<StepCapture | WsCapture | undefined> {
   if ("files" in step) {
     await writeFiles(sandbox, step.files)
+    return undefined
+  }
+  if ("git" in step) {
+    await runGitStep(step.git, sandbox, saved)
     return undefined
   }
   if ("ws" in step) return runWsStep(step.ws, base, sandbox, saved, requests)
@@ -346,6 +374,48 @@ async function writeFiles(sandbox: Sandbox, files: Record<string, string>) {
       await Bun.write(target, contents)
     }),
   )
+}
+
+async function runGitStep(step: GitStep, sandbox: Sandbox, saved: Record<string, unknown>) {
+  const template = { sandbox, saved }
+  const args = step.args.map((arg) => interpolate(arg, template))
+  const cwd = await resolveGitCwd(step.cwd === undefined ? undefined : interpolate(step.cwd, template), sandbox)
+  const child = Bun.spawn(["git", ...args], {
+    cwd,
+    stdin: "ignore",
+    stdout: "pipe",
+    stderr: "pipe",
+    env: {
+      ...process.env,
+      HOME: path.join(sandbox.root, "home"),
+      GIT_CONFIG_NOSYSTEM: "1",
+      GIT_ALLOW_PROTOCOL: "file",
+      GIT_TERMINAL_PROMPT: "0",
+      TZ: "UTC",
+      GIT_AUTHOR_NAME: "Parity",
+      GIT_AUTHOR_EMAIL: "parity@opencode.test",
+      GIT_COMMITTER_NAME: "Parity",
+      GIT_COMMITTER_EMAIL: "parity@opencode.test",
+      GIT_AUTHOR_DATE: "2026-01-01T00:00:00Z",
+      GIT_COMMITTER_DATE: "2026-01-01T00:00:00Z",
+    },
+  })
+  const [exitCode, stderr] = await Promise.all([
+    child.exited,
+    new Response(child.stderr).text(),
+    new Response(child.stdout).arrayBuffer(),
+  ])
+  if (exitCode !== 0)
+    throw new Error(`scenario: git ${args.join(" ")} failed with exit ${exitCode}: ${stderr.trim()}`)
+}
+
+async function resolveGitCwd(cwd: string | undefined, sandbox: Sandbox) {
+  const target = cwd === undefined ? sandbox.work : path.resolve(sandbox.work, cwd)
+  const work = await fs.realpath(sandbox.work)
+  const resolved = await fs.realpath(target).catch(() => path.resolve(target))
+  if (resolved !== work && !resolved.startsWith(`${work}${path.sep}`))
+    throw new Error(`scenario: git cwd is outside the sandbox work directory: ${cwd ?? target}`)
+  return target
 }
 
 async function waitForEvent(

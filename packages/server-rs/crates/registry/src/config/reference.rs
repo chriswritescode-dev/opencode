@@ -7,9 +7,9 @@ use opencode_config::service::ConfigService;
 use opencode_contract::generated::ConfigEntryDocumentInfoReferencesValue;
 use opencode_location::state::Registration;
 use opencode_util::path::Flavor;
+use opencode_vcs::repository::is_js_whitespace;
 
 use crate::reference::{GitSource, LocalSource, ReferenceEditor, ReferenceService, Source};
-use crate::repository::is_js_whitespace;
 
 #[derive(Clone, Debug)]
 pub struct ReferenceEnvironment {

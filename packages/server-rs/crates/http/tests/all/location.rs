@@ -21,6 +21,10 @@ async fn body_json(response: opencode_http::response::Response) -> Value {
     serde_json::from_str(&text(response).await).expect("a JSON body")
 }
 
+async fn hg_available() -> bool {
+    tokio::process::Command::new("hg").arg("--version").output().await.is_ok_and(|output| output.status.success())
+}
+
 #[tokio::test]
 async fn location_get_resolves_the_header_query_and_start_directory() {
     let start = temp_directory("location-start");
@@ -122,6 +126,18 @@ async fn location_list_reports_loaded_locations_in_order() {
 }
 
 #[tokio::test]
+async fn every_location_exposes_one_snapshot_service() {
+    let start = temp_directory("location-snapshot");
+    let services = services_at(&start);
+    let reference = LocationRef::new(start.to_string_lossy().into_owned(), None);
+    let lease = services.locations.get(&reference).await.expect("boot the location");
+    let snapshot = lease.services().snapshot.clone();
+    let loaded = services.locations.services(&reference).await.expect("the loaded location");
+    assert!(Arc::ptr_eq(&snapshot, &loaded.snapshot));
+    drop(lease);
+}
+
+#[tokio::test]
 async fn evicting_an_unloaded_location_is_a_no_op() {
     let start = temp_directory("location-evict-start");
     let unloaded = temp_directory("location-evict-unloaded");
@@ -154,4 +170,49 @@ async fn evicting_a_leased_location_keeps_the_lease_and_reboots_the_next_get() {
 
     let response = app.handle(authorized("GET", &directory_uri(&root))).await;
     assert_eq!(response.status(), StatusCode::OK);
+}
+
+#[tokio::test]
+async fn hg_locations_expose_the_mercurial_provider() {
+    if !hg_available().await {
+        eprintln!("mercurial is not installed; skipping");
+        return;
+    }
+    let start = temp_directory("location-hg-provider");
+    let init = tokio::process::Command::new("hg")
+        .arg("init")
+        .current_dir(&start)
+        .env("HGPLAIN", "1")
+        .status()
+        .await
+        .expect("run hg init");
+    assert!(init.success());
+
+    let services = services_at(&start);
+    let reference = LocationRef::new(start.to_string_lossy().into_owned(), None);
+    let lease = services.locations.get(&reference).await.expect("boots the location");
+
+    assert_eq!(lease.services().info.vcs.as_ref().map(|vcs| vcs.kind()), Some("hg"));
+    let info = lease.services().vcs.info().await;
+    assert_eq!(info.provider.as_deref(), Some("hg"));
+    assert_eq!(info.branch.current.as_deref(), Some("default"));
+    assert_eq!(info.branch.default.as_deref(), Some("default"));
+    drop(lease);
+}
+
+#[tokio::test]
+async fn markerless_locations_can_initialize_mercurial() {
+    if !hg_available().await {
+        eprintln!("mercurial is not installed; skipping");
+        return;
+    }
+    let start = temp_directory("location-hg-init");
+    let services = services_at(&start);
+    let reference = LocationRef::new(start.to_string_lossy().into_owned(), None);
+    let lease = services.locations.get(&reference).await.expect("boots the location");
+
+    assert!(lease.services().info.vcs.is_none());
+    lease.services().vcs.initialize("hg").await.expect("initializes Mercurial");
+    assert!(start.join(".hg").is_dir());
+    drop(lease);
 }

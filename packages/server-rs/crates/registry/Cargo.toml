@@ -11,6 +11,7 @@ autotests = false
 workspace = true
 
 [dependencies]
+futures-util.workspace = true
 indexmap.workspace = true
 log.workspace = true
 notify.workspace = true
@@ -20,6 +21,7 @@ opencode-contract.workspace = true
 opencode-location.workspace = true
 opencode-permission.workspace = true
 opencode-util.workspace = true
+opencode-vcs.workspace = true
 rand.workspace = true
 regex-lite.workspace = true
 reqwest.workspace = true
