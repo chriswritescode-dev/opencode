@@ -207,7 +207,11 @@ impl ConsoleArtifacts {
                         Some(text) => Bytes::from(text.clone()),
                         None => {
                             let path = format!("/api/artifacts/{slug}/blobs/{}?revision={revision}", file.sha256);
-                            self.request(credential, "GET", &path, None, slug).await?.body
+                            let body = self.request(credential, "GET", &path, None, slug).await?.body;
+                            if !opencode_util::hash::sha256_hex(&body).eq_ignore_ascii_case(&file.sha256) {
+                                return Err(format!("OpenCode Console artifact digest mismatch for {}", file.path));
+                            }
+                            body
                         }
                     };
                     Ok::<_, String>((file.path.clone(), bytes))
@@ -343,7 +347,7 @@ fn slug_base(title: &str) -> String {
 }
 
 fn id_suffix(id: &str) -> String {
-    let characters: Vec<char> = id.chars().collect();
+    let characters: Vec<char> = id.chars().filter(char::is_ascii_alphanumeric).collect();
     let start = characters.len().saturating_sub(6);
     characters[start..].iter().collect::<String>().to_lowercase()
 }
