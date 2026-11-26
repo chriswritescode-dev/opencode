@@ -1,0 +1,22 @@
+[package]
+name = "opencode-shell"
+description = "Shell selection, scanning and command backgrounding."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+autotests = false
+
+[lints]
+workspace = true
+
+[dependencies]
+regress = { workspace = true, features = ["utf16"] }
+serde.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
+
+[[test]]
+name = "all"
+path = "tests/all/main.rs"

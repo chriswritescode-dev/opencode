@@ -34,6 +34,7 @@ opencode-permission = { path = "crates/permission" }
 opencode-plugin = { path = "crates/plugin" }
 opencode-registry = { path = "crates/registry" }
 opencode-server = { path = "crates/server" }
+opencode-shell = { path = "crates/shell" }
 opencode-sidecar = { path = "crates/sidecar" }
 opencode-session = { path = "crates/session" }
 opencode-storage = { path = "crates/storage" }
@@ -61,6 +62,7 @@ log = { version = "0.4", features = ["std"] }
 notify = "8"
 percent-encoding = "2"
 rand = "0.10"
+regress = "0.12"
 regex-lite = "0.1"
 reqwest = { version = "0.13", default-features = false, features = ["rustls-no-provider", "stream"] }
 ring = "0.17"

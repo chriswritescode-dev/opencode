@@ -1,5 +1,6 @@
-import { chmodSync, mkdirSync, writeFileSync } from "node:fs"
+import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import path from "node:path"
+import { ShellScan } from "@opencode/core/shell/scan"
 import { ShellSelect } from "@opencode/core/shell/select"
 
 const area = process.argv[2]
@@ -122,7 +123,77 @@ function executable(file: string) {
   chmodSync(file, 0o755)
 }
 
+function exportScanBash() {
+  const root = process.env.OPENCODE_CORPUS_ROOT ?? ""
+  const calls = path.join(root, "scan-calls.jsonl")
+  rmSync(calls, { force: true })
+
+  const files = [
+    "scan",
+    "bash-syntax",
+    "bash-safety",
+    "adversarial",
+    "arithmetic",
+    "closure",
+    "compound-parity",
+    "generated",
+    "mutation",
+    "parity-regressions",
+    "redirect",
+  ]
+  const run = (names: string[], extra: string[] = []) =>
+    Bun.spawnSync(
+      [
+        "bun",
+        "test",
+        ...names.map((name) => `test/shell-scan/${name}.test.ts`),
+        "--preload",
+        "./test/opencode-rs-shell-corpus-record.ts",
+        ...extra,
+      ],
+      { env: { ...process.env, OPENCODE_SHELL_CORPUS_OUT: calls }, stdout: "ignore", stderr: "inherit" },
+    )
+  const primary = run(files)
+  if (primary.exitCode !== 0) {
+    console.error("corpus: scanning shell fixtures failed")
+    process.exit(1)
+  }
+  const oracle = run(["oracle"], ["-t", "reports or rejects"])
+  if (oracle.exitCode !== 0) {
+    console.error("corpus: scanning the shell oracle fixtures failed")
+    process.exit(1)
+  }
+
+  if (!existsSync(calls)) {
+    console.error("corpus: scanning recorded no fixtures")
+    process.exit(1)
+  }
+  const contributors = new Set<string>()
+  const cases: Case[] = []
+  let index = 0
+  for (const line of readFileSync(calls, "utf8").split("\n")) {
+    if (!line) continue
+    const call = JSON.parse(line) as { input: string; dialect: ShellScan.Dialect; source: string }
+    contributors.add(call.source.split(":")[0] ?? "")
+    index++
+    cases.push({
+      name: `scan-bash-${index}`,
+      source: call.source,
+      dialect: call.dialect,
+      input: call.input,
+      expected: ShellScan.scan(call.input, call.dialect),
+    })
+  }
+  for (const name of [...files, "oracle"])
+    if (!contributors.has(`test/shell-scan/${name}.test.ts`)) {
+      console.error(`corpus: ${name}.test.ts contributed no fixtures`)
+      process.exit(1)
+    }
+  console.log(`__SHELL_CORPUS__${JSON.stringify(cases)}`)
+}
+
 if (area === "select") exportSelect()
+else if (area === "scan-bash") exportScanBash()
 else {
   console.error(`corpus: unknown area ${area ?? ""}`)
   process.exit(1)

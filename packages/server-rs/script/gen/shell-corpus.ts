@@ -2,7 +2,10 @@ import { mkdir, rm } from "node:fs/promises"
 import { upstreamCoreTree } from "../upstream"
 
 const root = new URL("../..", import.meta.url).pathname
-const areas = new Map([["select", { crate: "config", file: "shell-select" }]])
+const areas = new Map([
+  ["select", { crate: "config", file: "shell-select" }],
+  ["scan-bash", { crate: "shell", file: "scan-bash" }],
+])
 const requested = process.argv[2]
 const selected = requested === undefined ? [...areas.keys()] : [requested]
 
@@ -21,6 +24,10 @@ const temp = `${corpusRoot}/tmp`
 await mkdir(corpusHome, { recursive: true })
 await mkdir(temp, { recursive: true })
 await Bun.write(`${tree}/packages/core/test/opencode-rs-shell-corpus.ts`, await Bun.file(source).text())
+await Bun.write(
+  `${tree}/packages/core/test/opencode-rs-shell-corpus-record.ts`,
+  await Bun.file(`${root}script/shell-corpus/record.ts`).text(),
+)
 
 for (const area of selected) {
   const target = areas.get(area)!
