@@ -3,9 +3,12 @@ import os from "node:os"
 import path from "node:path"
 import { createTwoFilesPatch, diffLines } from "diff"
 import { Cause, Effect, Exit, Layer, Option, Stream } from "effect"
+import fuzzysort from "fuzzysort"
 import { Agent } from "@opencode/core/agent"
+import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
 import { FileAccess, resolvePath } from "@opencode/core/file-access"
 import { FileSystem } from "@opencode/core/filesystem"
+import { FileSystemSearch } from "@opencode/core/filesystem/search"
 import { fileDiff } from "@opencode/core/tool/plugin/file-diff"
 import { Location } from "@opencode/core/location"
 import { Mime } from "@opencode/core/mime"
@@ -28,7 +31,7 @@ const invocation = {
 }
 
 const area = process.argv[2]
-if (area === "filesystem" || area === "access") {
+if (area === "filesystem" || area === "access" || area === "search") {
   console.log = console.error
   console.info = console.error
   console.debug = console.error
@@ -39,6 +42,8 @@ else if (area === "bom") exportBom()
 else if (area === "diff") exportDiff()
 else if (area === "filesystem") await exportFilesystem()
 else if (area === "access") await exportAccess()
+else if (area === "fuzzysort") exportFuzzysort()
+else if (area === "search") await exportSearch()
 else {
   console.error(`corpus: unknown area ${area ?? ""}`)
   process.exit(1)
@@ -521,10 +526,7 @@ function filesystemProvider(directory: string) {
   return LayerNode.compile(FileSystem.node, {
     replacements: [
       Location.node.replace(
-        Layer.succeed(
-          Location.Service,
-          Location.Service.of(location({ directory: AbsolutePath.make(directory) })),
-        ),
+        Layer.succeed(Location.Service, Location.Service.of(location({ directory: AbsolutePath.make(directory) }))),
       ),
     ],
   })
@@ -547,7 +549,9 @@ function filesystemProgram(spec: Record<string, any>) {
   if (spec.kind === "list") {
     return Effect.gen(function* () {
       const service = yield* FileSystem.Service
-      const entries = yield* service.list(spec.input === undefined ? undefined : { path: RelativePath.make(spec.input) })
+      const entries = yield* service.list(
+        spec.input === undefined ? undefined : { path: RelativePath.make(spec.input) },
+      )
       return entries.map((entry) => ({ path: entry.path, type: entry.type }))
     })
   }
@@ -839,6 +843,219 @@ async function materialize(directory: string, fixture: Record<string, any>) {
   }
 }
 
+function exportFuzzysort() {
+  const lists: Record<string, string[]> = {
+    files: [
+      "src/index.ts",
+      "src/app.tsx",
+      "src/lib/utils.ts",
+      "test/index.test.ts",
+      "README.md",
+      "package.json",
+      "packages/core/src/filesystem/search.ts",
+      "packages/app/components/button.tsx",
+      "docs/guide.md",
+      "crates/fs/src/search/mod.rs",
+      "Makefile",
+      ".github/workflows/ci.yml",
+      "a",
+      "ab",
+      "abc",
+      "a-b-c",
+      "ABC",
+      "AbC",
+      "src/nested/deeply/placed/file.ts",
+      "src/nested/deeply/placed/file.tsx",
+      "src/nested/file.ts",
+    ],
+    accents: ["café", "naïve", "über", "résumé", "coöperate", "Ångström", "façade", "São Paulo", "plain", "smørrebrød"],
+    unicode: ["日本語/ファイル.ts", "src/日本語.ts", "emoji/🙂.txt", "Ω/omega.ts", "src/Привет.ts"],
+    spaces: [
+      "my documents/report final.pdf",
+      "src/my file.ts",
+      "alpha beta gamma",
+      "c man",
+      "CheatManager.h",
+      "Manifest.cpp",
+      "straw berry.txt",
+      "Cheat Manager.md",
+    ],
+    ties: ["src/a/b.ts", "src/a/c.ts", "src/b/a.ts", "a/b/c", "a/c/b", "src/aa/bb.ts", "src/ab/ab.ts"],
+    generated: Array.from({ length: 40 }, (_, index) => `src/file-${index.toString(36)}.ts`),
+  }
+  const queries: Record<string, string[]> = {
+    files: [
+      "src",
+      "index",
+      "file",
+      "fs",
+      "rs",
+      "SEARCH",
+      "s/i",
+      "test",
+      "a",
+      "ab",
+      "abc",
+      "app",
+      "nested",
+      "deep",
+      ".ts",
+      "json",
+      "src index",
+      "index src",
+      "crate mod",
+      "packages core",
+    ],
+    accents: ["cafe", "café", "resume", "uber", "angstrom", "facade", "sao", "naive", "plain", "ö", "smorrebrod"],
+    unicode: ["日本語", "ファイル", "emoji", "omega", "Ω", "ts", "🙂", "Привет", ""],
+    spaces: [
+      "my file",
+      "report final",
+      "alpha gamma",
+      "c man",
+      "manifest",
+      "CheatManager",
+      "src file",
+      "documents report",
+      "my documents",
+      "straw berry",
+    ],
+    ties: ["a", "b", "ab", "a b", "c", "a/b", "aa"],
+    generated: [
+      "file",
+      "f1",
+      "f2",
+      "file-3",
+      "ts",
+      "1",
+      "a",
+      "file-a",
+      "file-0",
+      "file-1",
+      "file-z",
+      "z",
+      "f",
+      "-",
+      "a.",
+      "src/file",
+      "b",
+      "file-b",
+    ],
+  }
+  const cases: Array<Record<string, unknown>> = []
+  for (const [list, targets] of Object.entries(lists)) {
+    queries[list].forEach((query, index) => {
+      cases.push(fuzzysortCase(`${list}-${index}`, query, targets))
+    })
+  }
+  for (const limit of [1, 2, 5, 50]) cases.push(fuzzysortCase(`files-limit-${limit}`, "file", lists.files, limit))
+  cases.push(fuzzysortCase("empty-query", "", lists.files))
+  cases.push(fuzzysortCase("empty-targets", "file", []))
+  writeVerbatim(cases)
+}
+
+function fuzzysortCase(name: string, query: string, targets: string[], limit?: number) {
+  const prepared = targets.map((target) => fuzzysort.prepare(target))
+  const results = fuzzysort.go(query, prepared, limit === undefined ? undefined : { limit })
+  return {
+    name,
+    query,
+    targets,
+    ...(limit === undefined ? {} : { limit }),
+    results: results.map((result) => ({
+      target: result.target,
+      score: result.score.toFixed(9),
+      raw: (result as unknown as { _score: number })._score,
+      indexes: result.indexes,
+    })),
+  }
+}
+
+type SearchQuery = { query: string; type?: "file" | "directory"; limit?: number }
+
+async function exportSearch() {
+  const base = await fs.mkdtemp(path.join(os.tmpdir(), "opencode-search-corpus-"))
+  const tree = {
+    dirs: ["src/nested/deep", "docs", "empty", "packages/app", "packages/core/src", "café"],
+    files: [
+      { path: "README.md", text: "# readme" },
+      { path: "package.json", text: "{}" },
+      { path: "src/index.ts", text: "" },
+      { path: "src/app.tsx", text: "" },
+      { path: "src/nested/file.ts", text: "" },
+      { path: "src/nested/deep/placed.ts", text: "" },
+      { path: "src/my file.ts", text: "" },
+      { path: "src/.hidden.ts", text: "" },
+      { path: "docs/guide.md", text: "" },
+      { path: "packages/app/button.tsx", text: "" },
+      { path: "packages/core/src/search.ts", text: "" },
+      { path: "café/résumé.md", text: "" },
+      { path: ".github/workflows/ci.yml", text: "" },
+      { path: ".gitignore", text: "ignored/\n" },
+      { path: "ignored/secret.ts", text: "" },
+    ],
+  }
+  const specs: Array<{ name: string; fixture: Record<string, unknown>; queries: SearchQuery[] }> = [
+    {
+      name: "tree",
+      fixture: tree,
+      queries: [
+        { query: "index", type: "file" },
+        { query: "index", type: "directory" },
+        { query: "src", type: "directory" },
+        { query: "src", type: "file" },
+        { query: "guide" },
+        { query: "ts" },
+        { query: "ts", limit: 3 },
+        { query: "ts", limit: 1 },
+        { query: "nested", type: "directory" },
+        { query: "" },
+        { query: "zzz" },
+        { query: "my file" },
+        { query: "cafe" },
+        { query: "resume" },
+        { query: "README", type: "file" },
+        { query: "packages core" },
+        { query: "workflows" },
+        { query: "hidden", type: "file" },
+        { query: "ignored", type: "file" },
+        { query: "src index", type: "file" },
+      ],
+    },
+  ]
+  const cases: Array<Record<string, unknown>> = []
+  for (const spec of specs) {
+    const directory = path.join(base, spec.name)
+    await fs.mkdir(directory, { recursive: true })
+    await materialize(directory, spec.fixture)
+    const layer = AppNodeBuilder.build(FileSystemSearch.configured({ fff: false }), [
+      Location.node.replace(
+        Layer.succeed(Location.Service, Location.Service.of(location({ directory: AbsolutePath.make(directory) }))),
+      ),
+    ])
+    const results = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* FileSystemSearch.Service
+        const output: Array<Record<string, unknown>> = []
+        for (const query of spec.queries) {
+          const input: SearchQuery = { query: query.query }
+          if (query.type !== undefined) input.type = query.type
+          if (query.limit !== undefined) input.limit = query.limit
+          const entries = yield* service.find(input)
+          output.push({
+            ...input,
+            entries: entries.map((entry) => ({ path: entry.path, type: entry.type })),
+          })
+        }
+        return output
+      }).pipe(Effect.provide(layer)),
+    )
+    cases.push({ name: spec.name, fixture: spec.fixture, queries: results })
+  }
+  writeVerbatim(cases)
+  await fs.rm(base, { recursive: true, force: true })
+}
+
 function errorTag(exit: Exit.Exit<unknown, unknown>) {
   if (Exit.isSuccess(exit)) return undefined
   const found = Cause.findErrorOption(exit.cause)
@@ -850,4 +1067,8 @@ function errorTag(exit: Exit.Exit<unknown, unknown>) {
 function write(cases: Array<Record<string, unknown>>, root: string, home: string) {
   const output = JSON.stringify(cases, null, 2).replaceAll(root, "{{root}}").replaceAll(home, "{{home}}")
   process.stdout.write(`${output}\n`)
+}
+
+function writeVerbatim(cases: Array<Record<string, unknown>>) {
+  process.stdout.write(`${JSON.stringify(cases, null, 2)}\n`)
 }

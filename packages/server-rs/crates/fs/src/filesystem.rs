@@ -141,6 +141,17 @@ impl LocationFileSystem {
         Ok(PathBuf::from(target))
     }
 
+    pub async fn find(
+        &self,
+        search: &crate::search::Search,
+        input: crate::search::FindInput,
+    ) -> Result<Vec<Entry>, FsError> {
+        search
+            .find(input)
+            .await
+            .map_err(|error| FsError::Failed { path: self.directory.clone(), cause: error.to_string() })
+    }
+
     async fn resolve(&self, input: &str) -> Result<(String, String), FsError> {
         if input.contains('\u{0}') {
             return Err(FsError::NotFound { path: input.to_owned() });

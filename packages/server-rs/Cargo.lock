@@ -875,6 +875,7 @@ dependencies = [
  "http-body-util",
  "hyper",
  "hyper-util",
+ "indexmap",
  "opencode-config",
  "opencode-contract",
  "opencode-permission",

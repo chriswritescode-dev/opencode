@@ -4,7 +4,7 @@ import { upstreamCoreTree } from "../upstream"
 const root = new URL("../..", import.meta.url).pathname
 const source = `${root}script/fs-corpus/export.ts`
 const tree = await upstreamCoreTree()
-const areas = ["paths", "mime", "bom", "diff", "filesystem", "access"]
+const areas = ["paths", "mime", "bom", "diff", "filesystem", "access", "fuzzysort", "search"]
 
 for (const area of areas) {
   await Bun.write(`${tree}/packages/core/test/opencode-rs-fs-corpus.ts`, Bun.file(source))

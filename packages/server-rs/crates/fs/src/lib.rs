@@ -10,6 +10,7 @@ pub mod path;
 pub mod protected;
 pub mod retention;
 pub mod ripgrep;
+pub mod search;
 pub mod write;
 
 #[derive(Clone, Debug, thiserror::Error)]

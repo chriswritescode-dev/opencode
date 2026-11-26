@@ -7,4 +7,5 @@ mod mutation;
 mod mutex;
 mod retention;
 mod ripgrep;
+mod search;
 mod write;
