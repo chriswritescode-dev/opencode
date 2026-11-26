@@ -107,7 +107,13 @@ impl ConsoleArtifacts {
         session_id: Option<String>,
         replace: bool,
     ) -> Result<String, String> {
-        let slug = if replace { self.slug_of(id).await? } else { format!("{}-{}", slug_base(title), id_suffix(id)) };
+        let slug = if replace {
+            self.slug_of(id).await?
+        } else {
+            let base = slug_base(title);
+            let suffix = id_suffix(id);
+            if suffix.is_empty() { base } else { format!("{base}-{suffix}") }
+        };
         let credential = self.credential().await?;
         let files: Vec<(String, Bytes, String)> = files
             .into_iter()

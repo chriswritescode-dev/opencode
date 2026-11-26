@@ -56,7 +56,8 @@ impl UsageLimits {
             return Ok(None);
         };
         let workspace_id = workspace_id.to_owned();
-        let server = console_access::server(&credential);
+        let server =
+            console_access::normalize_server(&console_access::server(&credential)).map_err(UnavailableError)?;
         let (budgets, go) = tokio::time::timeout(TIMEOUT, async {
             tokio::try_join!(
                 read_budgets(self.http.as_ref(), &server, &credential),
