@@ -27,6 +27,7 @@ mod session_log;
 mod status;
 mod ticket;
 mod vcs;
+mod websocket;
 mod worktree;
 
 use std::ffi::OsString;

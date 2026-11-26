@@ -1040,6 +1040,7 @@ dependencies = [
  "serde_json",
  "subtle",
  "tokio",
+ "tokio-tungstenite",
  "url",
 ]
 

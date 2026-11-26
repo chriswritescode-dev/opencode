@@ -198,6 +198,46 @@ export default defineScenario({
 )
 
 test(
+  "passes a WebSocket step with headers, binary sends and until",
+  async () => {
+    await withTempDir("parity-out-", async (outDir) => {
+      await withTempRoot(async (root) => {
+        const scenario = path.join(root, "ws-extras.scenario.ts")
+        const scenarioModule = path.join(import.meta.dir, "../lib/scenario")
+        const source = `import { defineScenario } from ${JSON.stringify(scenarioModule)}
+
+export default defineScenario({
+  steps: [
+    {
+      ws: {
+        path: "/echo",
+        headers: { "x-opencode-directory": "/tmp/parity-ws" },
+        send: ["header:directory", { binary: "AQID" }, "done"],
+        delay: 5,
+        until: "done",
+      },
+    },
+  ],
+})
+`
+        await Bun.write(scenario, source)
+        const result = await runParity(outDir, ["--reference", fakeServer, "--candidate", fakeServer, scenario])
+        expect(result.exitCode).toBe(0)
+        expect(result.output).toContain("PASS ws-extras")
+        const capture = (await Bun.file(path.join(outDir, "ws-extras/reference.json")).json()) as {
+          steps: { opened: boolean; frames: string[]; text: string; close: { code: number } }[]
+        }
+        expect(capture.steps[0].opened).toBe(true)
+        expect(capture.steps[0].frames).toEqual(["/tmp/parity-ws", "base64:AQID", "done"])
+        expect(capture.steps[0].text).toBe("/tmp/parity-wsdone")
+        expect(capture.steps[0].close.code).toBe(1000)
+      })
+    })
+  },
+  60_000,
+)
+
+test(
   "templates scenario env values",
   async () => {
     await withTempDir("parity-out-", async (outDir) => {

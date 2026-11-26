@@ -17,6 +17,18 @@ use crate::app::App;
 const MAX_REQUEST_BODY: usize = 128 * 1024 * 1024;
 
 pub async fn serve(listener: TcpListener, app: Arc<App>, shutdown: impl Future<Output = ()>) {
+    serve_with(listener, shutdown, move |request| {
+        let app = app.clone();
+        async move { dispatch(&app, request).await }
+    })
+    .await;
+}
+
+pub async fn serve_with<K, F>(listener: TcpListener, shutdown: impl Future<Output = ()>, handle: K)
+where
+    K: Fn(http::Request<Incoming>) -> F + Clone + Send + 'static,
+    F: Future<Output = crate::response::Response> + Send + 'static,
+{
     let mut connections = JoinSet::new();
     tokio::pin!(shutdown);
     loop {
@@ -32,13 +44,14 @@ pub async fn serve(listener: TcpListener, app: Arc<App>, shutdown: impl Future<O
                         continue;
                     }
                 };
-                let app = app.clone();
+                let handle = handle.clone();
                 connections.spawn(async move {
                     let service = service_fn(move |request| {
-                        let app = app.clone();
-                        async move { Ok::<_, Infallible>(dispatch(&app, request).await) }
+                        let handle = handle.clone();
+                        async move { Ok::<_, Infallible>(handle(request).await) }
                     });
-                    let _ = http1::Builder::new().serve_connection(TokioIo::new(stream), service).await;
+                    let connection = http1::Builder::new().serve_connection(TokioIo::new(stream), service);
+                    let _ = connection.with_upgrades().await;
                 });
             }
             () = &mut shutdown => break,
@@ -48,11 +61,12 @@ pub async fn serve(listener: TcpListener, app: Arc<App>, shutdown: impl Future<O
     while connections.join_next().await.is_some() {}
 }
 
-async fn dispatch(app: &App, request: http::Request<Incoming>) -> crate::response::Response {
+async fn dispatch(app: &App, mut request: http::Request<Incoming>) -> crate::response::Response {
+    let upgrade = crate::websocket::upgrade(&mut request);
     let admitted = app.admits(&request);
     let (parts, body) = request.into_parts();
     if !admitted {
-        return app.handle(http::Request::from_parts(parts, bytes::Bytes::new())).await;
+        return app.handle_upgrade(http::Request::from_parts(parts, bytes::Bytes::new()), upgrade).await;
     }
     let declared = parts
         .headers
@@ -69,7 +83,7 @@ async fn dispatch(app: &App, request: http::Request<Incoming>) -> crate::respons
         }
         Err(_) => return crate::response::empty(http::StatusCode::BAD_REQUEST),
     };
-    app.handle(http::Request::from_parts(parts, bytes)).await
+    app.handle_upgrade(http::Request::from_parts(parts, bytes), upgrade).await
 }
 
 fn exhausted(error: &std::io::Error) -> bool {

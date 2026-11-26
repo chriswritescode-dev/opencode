@@ -46,6 +46,7 @@ rustix = { workspace = true, features = ["param"] }
 serde_json.workspace = true
 subtle.workspace = true
 tokio.workspace = true
+tokio-tungstenite.workspace = true
 url.workspace = true
 
 [[test]]

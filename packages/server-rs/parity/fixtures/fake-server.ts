@@ -2,13 +2,13 @@
 const encoder = new TextEncoder()
 const subscribers = new Set<ReadableStreamDefaultController<Uint8Array>>()
 
-const server = Bun.serve({
+const server = Bun.serve<{ directory: string | null }>({
   hostname: "127.0.0.1",
   port: 0,
   fetch(request, server) {
     const url = new URL(request.url)
     if (request.method === "GET" && url.pathname === "/echo") {
-      if (server.upgrade(request)) return
+      if (server.upgrade(request, { data: { directory: request.headers.get("x-opencode-directory") } })) return
       return new Response(null, { status: 400 })
     }
     if (request.method === "GET" && url.pathname === "/api/info")
@@ -25,6 +25,10 @@ const server = Bun.serve({
   },
   websocket: {
     message(socket, message) {
+      if (message === "header:directory") {
+        socket.send(socket.data.directory ?? "none")
+        return
+      }
       socket.send(message)
     },
   },

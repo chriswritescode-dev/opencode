@@ -52,11 +52,13 @@ Each scenario runs its `steps` in order. `http` and `ws` steps add an entry to `
 - `files`: writes a `{ path: contents }` map below `work` mid-scenario, unlike the scenario-level `files` written before the server starts.
 - `git`: runs `git` with `args` in `cwd`, both templated. `cwd` defaults to `work`, a relative value resolves below `work`, and an absolute value must resolve inside `work`; anything else fails the scenario. Each command runs with `HOME=<root>/home`, `GIT_CONFIG_NOSYSTEM=1`, `GIT_ALLOW_PROTOCOL=file`, `GIT_TERMINAL_PROMPT=0`, `TZ=UTC`, the fixed author and committer `Parity <parity@opencode.test>` and the fixed date `2026-01-01T00:00:00Z`, merged over the harness process environment. A non-zero exit is a scenario error and the run exits with code `2`.
 - `ws`: `path` is required, and the URL is the server base with the HTTP scheme replaced by `ws` (`wss` for `https`);
-  `query` behaves as it does for `http`, with string or array values and arrays repeating the key. `auth` is `basic`
-  (default), `query` or `none`, as for `http`. After the socket opens, each string in `send` is sent in order. Text
-  frames are collected until `receive` frames have arrived or the socket closes, then the harness closes the socket
-  with code 1000. `timeout` is in milliseconds and defaults to `10000`. `as` saves the capture for later placeholders.
-  Templating (`{{work}}`, `{{root}}`, `{{<as>.<path>}}`) applies to `path`, query values and `send`.
+  `query` behaves as it does for `http`, with string or array values and arrays repeating the key. `headers` are sent
+  as written. `auth` is `basic` (default), `query` or `none`, as for `http`. After the socket opens, each item in
+  `send` is sent in order, either a text frame or `{ binary: "<base64>" }` for a binary frame, with `delay`
+  milliseconds between sends. Frames are collected until `receive` frames have arrived, the joined text frames
+  contain `until`, or the socket closes, then the harness closes the socket with code 1000. `timeout` is in
+  milliseconds and defaults to `10000`. `as` saves the capture for later placeholders. Templating applies to `path`,
+  query values, header values, `send` strings and `until`.
 - Templating: `{{work}}`, `{{root}}` and `{{<as>.<dotted.path>}}` are replaced in paths, query values, header values, the string leaves of request bodies and `match` objects, and `git` args and `cwd`. An unresolved placeholder fails the scenario. Scenario-level `env` values are templated with `{{work}}` and `{{root}}` only, before either side starts.
 
 ## Adding a scenario
@@ -93,7 +95,7 @@ Every step kind has a field reference in [Steps](#steps). In short:
 - `{ files: { path: contents } }` writes files below `work` during the run without adding a captured step.
 - `{ git: { args, cwd? } }` runs one `git` command in `work` or `cwd` without adding a captured step.
 - `setup: SetupStep[]` runs `{ files }` and `{ git }` entries before the server starts, once per side.
-- `{ ws: { path, send?, receive, ... } }` opens a WebSocket, sends text frames and captures `receive` frames.
+- `{ ws: { path, send?, receive?, until?, ... } }` opens a WebSocket, sends text or binary frames and captures frames until `receive` or `until` is reached.
 
 Templating resolves `{{work}}`, `{{root}}` and `{{<as>.<dotted.path>}}` in paths, query values, header values and the string leaves of request bodies and `match` objects; an unresolved placeholder fails the scenario.
 
@@ -186,7 +188,7 @@ Strings that look like JSON objects or arrays are parsed only when the value re-
 
 A capture is `{ steps, events, logs, model, database, files }`.
 
-- `steps`: one entry per `http` or `ws` step. An `http` entry is `{ status, headers, body }`. `status` is the numeric response status. `headers` contains lower-cased header names sorted alphabetically, dropping `date`, `connection`, `keep-alive`, `content-length`, `transfer-encoding`, `etag` and `last-modified`. `body` is parsed as JSON when the response content type contains `json` and kept as text otherwise, and a JSON-typed body that is empty or invalid is also kept as text, so a 401 error body is captured but never asserted by the scenario itself. A `ws` entry is `{ opened, frames, close }`, where `opened` is whether the socket opened, `frames` holds text frames in arrival order with binary frames encoded as `base64:<data>`, and `close` is `{ code, reason }` or `null`. If the receive count is not reached before the timeout the entry also has `timedOut: true`; a timeout is captured for comparison and is not a scenario error.
+- `steps`: one entry per `http` or `ws` step. An `http` entry is `{ status, headers, body }`. `status` is the numeric response status. `headers` contains lower-cased header names sorted alphabetically, dropping `date`, `connection`, `keep-alive`, `content-length`, `transfer-encoding`, `etag` and `last-modified`. `body` is parsed as JSON when the response content type contains `json` and kept as text otherwise, and a JSON-typed body that is empty or invalid is also kept as text, so a 401 error body is captured but never asserted by the scenario itself. A `ws` entry is `{ opened, frames, text, close }`, where `opened` is whether the socket opened, `frames` holds text frames in arrival order with binary frames encoded as `base64:<data>`, `text` is the joined text frames, and `close` is `{ code, reason }` or `null`. If neither the receive count nor `until` is reached before the timeout the entry also has `timedOut: true`; a timeout is captured for comparison and is not a scenario error.
 - `events`: every `/api/event` frame collected in arrival order. The stream opens before the first step and closes after the last, so it starts with `server.connected`. A frame whose data is not JSON is kept as `{ "invalid": "<raw>" }`.
 - `logs`: for each session created in the run, the parsed frames of `GET /api/experimental/session/<id>/log`, keyed by the raw session id. A non-OK response is captured as `[{ status, body }]`.
 - `model`: outbound model requests, one `{ method, path, body }` entry per request the scripted endpoint received, holding the pathname only and the parsed JSON body. Both sides are compared.

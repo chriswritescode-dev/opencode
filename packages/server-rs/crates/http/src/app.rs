@@ -3,6 +3,7 @@ use std::sync::Arc;
 
 use bytes::Bytes;
 use http::{HeaderValue, Request, StatusCode, header};
+use hyper::upgrade::OnUpgrade;
 use opencode_contract::generated::{PairingSession, ServerInfo, ServerInfoCapabilities, ServerInfoPaths};
 use opencode_contract::request::RawRequest;
 
@@ -119,13 +120,17 @@ impl App {
     }
 
     pub async fn handle(&self, request: Request<Bytes>) -> response::Response {
+        self.handle_upgrade(request, None).await
+    }
+
+    pub async fn handle_upgrade(&self, request: Request<Bytes>, upgrade: Option<OnUpgrade>) -> response::Response {
         if request.method() == http::Method::OPTIONS {
             return cors::preflight(&request, &self.options.cors);
         }
         let response = if request_site::rejected(&request, &self.options.cors) {
             forbidden()
         } else {
-            self.dispatch(&request).await
+            self.dispatch(&request, upgrade).await
         };
         let response = cors::apply(&request, response, &self.options.cors);
         let accept_encoding = request.headers().get(header::ACCEPT_ENCODING).and_then(|value| value.to_str().ok());
@@ -156,7 +161,7 @@ impl App {
         None
     }
 
-    async fn dispatch(&self, request: &Request<Bytes>) -> response::Response {
+    async fn dispatch(&self, request: &Request<Bytes>, _upgrade: Option<OnUpgrade>) -> response::Response {
         if let Some(response) = self.gate(request) {
             return response;
         }

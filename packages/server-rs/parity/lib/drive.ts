@@ -25,6 +25,7 @@ export type StepCapture = { status: number; headers: Record<string, string>; bod
 export type WsCapture = {
   opened: boolean
   frames: string[]
+  text: string
   close: { code: number; reason: string } | null
   timedOut?: true
 }
@@ -328,13 +329,24 @@ function runWsStep(
   const auth = step.auth ?? "basic"
   if (auth === "basic") headers.authorization = `Basic ${credentials}`
   if (auth === "query") url.searchParams.append("auth_token", credentials)
-  const messages = (step.send ?? []).map((message) => interpolate(message, template))
+  for (const [name, value] of Object.entries(step.headers ?? {})) headers[name] = interpolate(value, template)
+  const messages = (step.send ?? []).map((message) =>
+    typeof message === "string"
+      ? { text: interpolate(message, template), binary: undefined }
+      : { text: undefined, binary: Buffer.from(interpolate(message.binary, template), "base64") },
+  )
+  const until = step.until === undefined ? undefined : interpolate(step.until, template)
   return new Promise((resolve) => {
     const frames: string[] = []
+    const text: string[] = []
     let opened = false
     let settled = false
+    let closing = false
     const socket = new WebSocket(url, { headers })
     socket.binaryType = "arraybuffer"
+    const done = () =>
+      (step.receive !== undefined && frames.length >= step.receive) ||
+      (until !== undefined && text.join("").includes(until))
     const finish = (capture: WsCapture) => {
       if (settled) return
       settled = true
@@ -344,24 +356,42 @@ function runWsStep(
     }
     const timer = setTimeout(() => {
       socket.close(1000)
-      finish({ opened, frames, close: null, timedOut: true })
+      finish({ opened, frames, text: text.join(""), close: null, timedOut: true })
     }, step.timeout ?? 10_000)
-    socket.addEventListener("open", () => {
+    socket.addEventListener("open", async () => {
       opened = true
-      for (const message of messages) socket.send(message)
-      if (step.receive === 0) socket.close(1000)
+      for (const [index, message] of messages.entries()) {
+        if (settled) return
+        if (index > 0 && step.delay !== undefined && step.delay > 0)
+          await new Promise((resolve) => setTimeout(resolve, step.delay))
+        if (message.text !== undefined) socket.send(message.text)
+        else if (message.binary !== undefined) socket.send(message.binary)
+      }
+      if (step.receive === 0) {
+        closing = true
+        socket.close(1000)
+      }
     })
     socket.addEventListener("message", (event) => {
-      if (settled || frames.length >= step.receive) return
+      if (settled || closing) return
+      if (step.receive !== undefined && frames.length >= step.receive) return
       const data = event.data
-      frames.push(typeof data === "string" ? data : `base64:${Buffer.from(data).toString("base64")}`)
-      if (frames.length >= step.receive) socket.close(1000)
+      if (typeof data === "string") {
+        frames.push(data)
+        text.push(data)
+      } else {
+        frames.push(`base64:${Buffer.from(data).toString("base64")}`)
+      }
+      if (done()) {
+        closing = true
+        socket.close(1000)
+      }
     })
     socket.addEventListener("close", (event) => {
-      finish({ opened, frames, close: { code: event.code, reason: event.reason } })
+      finish({ opened, frames, text: text.join(""), close: { code: event.code, reason: event.reason } })
     })
     socket.addEventListener("error", () => {
-      if (!opened) finish({ opened: false, frames, close: null })
+      if (!opened) finish({ opened: false, frames, text: text.join(""), close: null })
     })
   })
 }

@@ -16,6 +16,7 @@ pub mod services;
 pub mod state;
 pub mod status;
 pub mod ticket;
+pub mod websocket;
 
 pub type Clock = Arc<dyn Fn() -> u64 + Send + Sync>;
 

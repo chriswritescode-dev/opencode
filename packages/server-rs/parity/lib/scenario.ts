@@ -9,11 +9,16 @@ export type HttpStep = {
   as?: string
 }
 
+export type WsSend = string | { binary: string }
+
 export type WsStep = {
   path: string
   query?: Record<string, string | string[]>
-  send?: string[]
-  receive: number
+  headers?: Record<string, string>
+  send?: WsSend[]
+  delay?: number
+  until?: string
+  receive?: number
   auth?: "basic" | "query" | "none"
   timeout?: number
   as?: string
