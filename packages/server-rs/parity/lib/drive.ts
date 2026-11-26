@@ -33,12 +33,12 @@ export type Capture = {
   steps: (StepCapture | WsCapture)[]
   events: unknown[]
   logs: Record<string, unknown[]>
-  model: unknown[]
+  model: { requests: unknown[]; console: unknown[] }
   database: Record<string, DatabaseCapture>
   files: Record<string, string>
 }
 
-type Template = { sandbox: Sandbox; saved: Record<string, unknown> }
+type Template = { sandbox: Sandbox; saved: Record<string, unknown>; endpoint: string }
 type Cursor = { index: number }
 type StreamState = { ended: boolean; failure?: Error }
 
@@ -93,6 +93,7 @@ export async function runSide(
         requests,
         stream?.state ?? absentStream,
         captureEvents,
+        endpoint.url,
       )
       if (captured !== undefined) steps.push(captured)
     }
@@ -112,7 +113,8 @@ export async function runSide(
   }
   const database = await dumpDatabases(sandbox.root)
   const files = await listFiles(sandbox.root)
-  return { capture: { steps, events, logs, model: endpoint.requests(), database, files }, requests }
+  const model = { requests: endpoint.requests(), console: endpoint.console() }
+  return { capture: { steps, events, logs, model, database, files }, requests }
 }
 
 export function parseSseFrames(text: string): unknown[] {
@@ -227,6 +229,7 @@ async function runStep(
   requests: RequestRecord[],
   state: StreamState,
   captureEvents: boolean,
+  endpoint: string,
 ): Promise<StepCapture | WsCapture | undefined> {
   if ("files" in step) {
     await writeFiles(sandbox, step.files)
@@ -236,19 +239,19 @@ async function runStep(
     if (captureEvents) await settleEvents(events)
     return undefined
   }
-  if ("ws" in step) return runWsStep(step.ws, base, sandbox, saved, requests)
+  if ("ws" in step) return runWsStep(step.ws, base, sandbox, saved, requests, endpoint)
   if ("waitEvent" in step) {
     cursor.index = await waitForEvent(
       step.waitEvent,
       events,
       cursor.index,
       step.timeout ?? eventTimeout,
-      { sandbox, saved },
+      { sandbox, saved, endpoint },
       state,
     )
     return undefined
   }
-  return runHttpStep(step.http, base, sandbox, saved, requests)
+  return runHttpStep(step.http, base, sandbox, saved, requests, endpoint)
 }
 
 async function runHttpStep(
@@ -257,8 +260,9 @@ async function runHttpStep(
   sandbox: Sandbox,
   saved: Record<string, unknown>,
   requests: RequestRecord[],
+  endpoint: string,
 ) {
-  const template = { sandbox, saved }
+  const template = { sandbox, saved, endpoint }
   const url = new URL(base + interpolate(step.path, template))
   requests.push({ protocol: "http", method: step.method.toUpperCase(), path: url.pathname })
   for (const [name, values] of Object.entries(step.query ?? {}))
@@ -297,8 +301,9 @@ function runWsStep(
   sandbox: Sandbox,
   saved: Record<string, unknown>,
   requests: RequestRecord[],
+  endpoint: string,
 ): Promise<WsCapture> {
-  const template = { sandbox, saved }
+  const template = { sandbox, saved, endpoint }
   const url = new URL(base + interpolate(step.path, template))
   requests.push({ protocol: "ws", method: "GET", path: url.pathname })
   for (const [name, values] of Object.entries(step.query ?? {}))
@@ -463,6 +468,7 @@ function templateBody(value: unknown, template: Template): unknown {
 function resolvePlaceholder(name: string, template: Template): unknown {
   if (name === "work") return template.sandbox.work
   if (name === "root") return template.sandbox.root
+  if (name === "endpoint") return template.endpoint
   const [alias, ...segments] = name.split(".")
   if (segments.length === 0 || !(alias in template.saved)) throw unresolved(name)
   return segments.reduce<unknown>((value, segment) => {

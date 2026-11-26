@@ -1,26 +1,61 @@
 import path from "node:path"
-import type { Reply } from "./scenario"
+import type { ConsoleRoute, Reply } from "./scenario"
 
 export type ModelRequest = { method: string; path: string; body: unknown }
 
+export type ConsoleRequest = {
+  method: string
+  path: string
+  authorization: string | null
+  xOrgID: string | null
+  xOpencodeOrgID: string | null
+}
+
 export type ModelEndpoint = {
   url: string
-  load(replies: Reply[], template: { work: string; root: string }): void
+  load(replies: Reply[], template: { work: string; root: string }, console?: Record<string, ConsoleRoute>): void
   requests(): ModelRequest[]
+  console(): ConsoleRequest[]
   unused(): number
   failures(): string[]
   stop(): Promise<void>
 }
 
 type Template = { work: string; root: string }
-type State = { replies: Reply[]; consumed: number; log: ModelRequest[]; failures: string[]; template: Template }
+type State = {
+  replies: Reply[]
+  consumed: number
+  log: ModelRequest[]
+  consoleLog: ConsoleRequest[]
+  consoleRoutes: Record<string, ConsoleRoute>
+  barrierSeen: Set<string>
+  barrierWaiters: (() => void)[]
+  barrierReleased: boolean
+  barrierTimer: ReturnType<typeof setTimeout> | undefined
+  failures: string[]
+  template: Template
+}
+
+const barrierTimeout = 5_000
 
 const repository = path.resolve(import.meta.dir, "../../../..")
 const placeholder = /\{\{(work|root)\}\}/g
 const routes = new Set(["/v1/chat/completions", "/v1/messages"])
 
 export async function startModelEndpoint(): Promise<ModelEndpoint> {
-  const state: State = { replies: [], consumed: 0, log: [], failures: [], template: { work: "", root: "" } }
+  const state: State = {
+    replies: [],
+    consumed: 0,
+    log: [],
+    consoleLog: [],
+    consoleRoutes: {},
+    barrierSeen: new Set(),
+    barrierWaiters: [],
+    barrierReleased: false,
+    barrierTimer: undefined,
+    failures: [],
+    template: { work: "", root: "" },
+  }
   const server = Bun.serve({
     hostname: "127.0.0.1",
     port: 0,
@@ -28,17 +63,27 @@ export async function startModelEndpoint(): Promise<ModelEndpoint> {
   })
   return {
     url: `http://127.0.0.1:${server.port}`,
-    load: (replies, template) => {
+    load: (replies, template, console) => {
+      releaseBarrier(state)
       state.replies = [...replies]
       state.consumed = 0
       state.log = []
+      state.consoleLog = []
+      state.consoleRoutes = console ?? {}
+      state.barrierSeen.clear()
+      state.barrierReleased = false
       state.failures = []
       state.template = template
     },
     requests: () => [...state.log],
+    console: () =>
+      [...state.consoleLog].sort((left, right) =>
+        left.method === right.method ? compare(left.path, right.path) : compare(left.method, right.method),
+      ),
     unused: () => state.replies.length - state.consumed,
     failures: () => [...state.failures],
     stop: async () => {
+      releaseBarrier(state)
       await server.stop(true)
     },
   }
@@ -46,6 +91,23 @@ export async function startModelEndpoint(): Promise<ModelEndpoint> {
 
 async function respond(request: Request, state: State): Promise<Response> {
   const pathname = new URL(request.url).pathname
+  const consoleRoute = state.consoleRoutes[`${request.method} ${pathname}`]
+  if (consoleRoute !== undefined) {
+    await readBody(request)
+    state.consoleLog.push({
+      method: request.method,
+      path: pathname,
+      authorization: request.headers.get("authorization"),
+      xOrgID: request.headers.get("x-org-id"),
+      xOpencodeOrgID: request.headers.get("x-opencode-org-id"),
+    })
+    if (consoleRoute.barrier === true) await waitForBarrier(state, `${request.method} ${pathname}`)
+    return consoleResponse(consoleRoute)
+  }
+  if (pathname.startsWith("/console/") || pathname.startsWith("/zen/")) {
+    await readBody(request)
+    return error(404, "not found")
+  }
   const accepted = request.method === "POST" && routes.has(pathname)
   const reply = accepted ? state.replies[state.consumed] : undefined
   if (reply !== undefined) state.consumed += 1
@@ -184,6 +246,45 @@ function stream(body: string) {
 
 function error(status: number, reason: string) {
   return Response.json({ error: reason }, { status })
+}
+
+function consoleResponse(route: ConsoleRoute) {
+  if (route.body === undefined) return new Response(null, { status: route.status })
+  if (typeof route.body === "string")
+    return new Response(route.body, { status: route.status, headers: { "content-type": "text/plain" } })
+  return new Response(JSON.stringify(route.body), {
+    status: route.status,
+    headers: { "content-type": "application/json" },
+  })
+}
+
+function waitForBarrier(state: State, key: string): Promise<void> {
+  const barrierKeys = Object.entries(state.consoleRoutes)
+    .filter(([, route]) => route.barrier === true)
+    .map(([barrierKey]) => barrierKey)
+  state.barrierSeen.add(key)
+  if (barrierKeys.every((barrierKey) => state.barrierSeen.has(barrierKey))) {
+    releaseBarrier(state)
+    return Promise.resolve()
+  }
+  return new Promise((resolve) => {
+    state.barrierWaiters.push(resolve)
+    state.barrierTimer ??= setTimeout(() => releaseBarrier(state), barrierTimeout)
+  })
+}
+
+function releaseBarrier(state: State) {
+  if (state.barrierReleased) return
+  state.barrierReleased = true
+  if (state.barrierTimer !== undefined) {
+    clearTimeout(state.barrierTimer)
+    state.barrierTimer = undefined
+  }
+  for (const resolve of state.barrierWaiters.splice(0)) resolve()
+}
+
+function compare(left: string, right: string) {
+  return left < right ? -1 : left > right ? 1 : 0
 }
 
 async function readBody(request: Request): Promise<unknown> {

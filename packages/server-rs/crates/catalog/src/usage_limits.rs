@@ -82,10 +82,10 @@ async fn read_budgets(
     let mut headers = console_access::headers(credential);
     headers.push(("accept".to_owned(), "application/json".to_owned()));
     let url = format!("{server}/api/policies/current-budgets");
-    let response = match http::send(http, http::get(url, headers), None).await {
+    let response = match http::send(http, http::get(&url, headers), None).await {
         Ok(response) => response,
         Err(HttpError::Status(response)) if response.status == 403 => return Ok(Vec::new()),
-        Err(error) => return Err(budgets_unavailable(error)),
+        Err(error) => return Err(budgets_unavailable(http_error_message(&error, "GET", &url))),
     };
     let budgets: Vec<ConsoleBudget> = serde_json::from_slice(&response.body).map_err(budgets_unavailable)?;
     budgets.into_iter().map(map_budget).collect::<Result<_, _>>().map_err(budgets_unavailable)
@@ -105,10 +105,10 @@ async fn read_go(
         ("x-opencode-org-id".to_owned(), workspace_id.to_owned()),
     ];
     let url = format!("{origin}/zen/go/v1/usage");
-    let response = match http::send(http, http::get(url, headers), None).await {
+    let response = match http::send(http, http::get(&url, headers), None).await {
         Ok(response) => response,
         Err(HttpError::Status(response)) if response.status == 403 => return Ok(None),
-        Err(error) => return Err(go_unavailable(error)),
+        Err(error) => return Err(go_unavailable(http_error_message(&error, "GET", &url))),
     };
     let usage: GoUsage = serde_json::from_slice(&response.body).map_err(go_unavailable)?;
     let go = UsageLimitsGo {
@@ -125,6 +125,15 @@ fn budgets_unavailable(error: impl std::fmt::Display) -> UnavailableError {
 
 fn go_unavailable(error: impl std::fmt::Display) -> UnavailableError {
     UnavailableError(format!("OpenCode Go usage is unavailable: {error}"))
+}
+
+fn http_error_message(error: &HttpError, method: &str, url: &str) -> String {
+    match error {
+        HttpError::Status(response) => {
+            format!("StatusCode: non 2xx status code ({} {method} {url})", response.status)
+        }
+        HttpError::Transport(_) | HttpError::Timeout => error.to_string(),
+    }
 }
 
 fn map_budget(budget: ConsoleBudget) -> Result<UsageLimitsBudget, String> {

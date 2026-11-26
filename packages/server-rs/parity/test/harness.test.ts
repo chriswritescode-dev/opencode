@@ -232,6 +232,50 @@ export default defineScenario({
   60_000,
 )
 
+test(
+  "templates the scripted endpoint into step bodies",
+  async () => {
+    await withTempDir("parity-out-", async (outDir) => {
+      await withTempRoot(async (root) => {
+        const scenario = path.join(root, "endpoint-parity.scenario.ts")
+        const scenarioModule = path.join(import.meta.dir, "../lib/scenario")
+        const source = `import { defineScenario } from ${JSON.stringify(scenarioModule)}
+
+export default defineScenario({
+  steps: [{
+    http: {
+      method: "POST",
+      path: "/api/echo",
+      body: { endpoint: "{{endpoint}}", server: "{{endpoint}}/console" },
+    },
+  }],
+})
+`
+        await Bun.write(scenario, source)
+        const result = await runParity(outDir, [
+          "--reference",
+          fakeServer,
+          "--candidate",
+          fakeServer,
+          "--only",
+          "steps",
+          scenario,
+        ])
+        expect(result.exitCode).toBe(0)
+        expect(result.output).toContain("PASS endpoint-parity")
+        const capture = (await Bun.file(path.join(outDir, "endpoint-parity/reference.json")).json()) as {
+          steps: { body: unknown }[]
+        }
+        expect(capture.steps[0].body).toEqual({
+          endpoint: "http://<host>:<port>",
+          server: "http://<host>:<port>/console",
+        })
+      })
+    })
+  },
+  60_000,
+)
+
 async function withTempDir(prefix: string, run: (directory: string) => Promise<void>) {
   await fs.mkdir("/tmp/opencode", { recursive: true })
   const directory = await fs.mkdtemp(path.join("/tmp/opencode", prefix))

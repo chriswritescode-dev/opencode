@@ -314,7 +314,7 @@ async function captureScenario(scenario: Scenario, options: Options, candidateEn
     try {
       const template = { work: box.work, root: box.root }
       const replies = scenario.model ?? []
-      endpoint.load(replies, template)
+      endpoint.load(replies, template, scenario.console)
       const referenceStarted = Date.now()
       const referenceRun = await withModelFailure(
         endpoint,
@@ -329,7 +329,7 @@ async function captureScenario(scenario: Scenario, options: Options, candidateEn
       }) as Record<string, unknown>
       requireMatchedTables(referenceCapture, options)
       await resetSandbox(box.root)
-      endpoint.load(replies, template)
+      endpoint.load(replies, template, scenario.console)
       const candidateStarted = Date.now()
       const candidateRun = await withModelFailure(
         endpoint,

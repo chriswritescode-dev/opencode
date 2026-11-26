@@ -33,12 +33,15 @@ export type Reply =
   | { tool: { id: string; name: string; input: unknown } }
   | { cassette: string; interaction?: number }
 
+export type ConsoleRoute = { status: number; body?: unknown; barrier?: true }
+
 export type Scenario = {
   files?: Record<string, string>
   config?: Record<string, unknown>
   env?: Record<string, string>
   models?: unknown
   model?: Reply[]
+  console?: Record<string, ConsoleRoute>
   steps: Step[]
 }
 

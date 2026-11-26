@@ -1,4 +1,6 @@
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
+use std::time::Duration;
 
 use opencode_catalog::credential::CreateInput;
 use opencode_catalog::provider_plugin::http::PreparedHttp;
@@ -189,5 +191,25 @@ async fn reports_a_console_that_cant_answer_as_unavailable() {
 
     let error = limits.get().await.expect_err("the console cannot answer");
 
-    assert_eq!(error.to_string(), "OpenCode Console budgets are unavailable: HTTP status 502");
+    assert_eq!(
+        error.to_string(),
+        format!("OpenCode Console budgets are unavailable: StatusCode: non 2xx status code (502 GET {BUDGETS})")
+    );
+}
+
+#[tokio::test]
+async fn reports_the_budgets_failure_without_waiting_for_go() {
+    let (_directory, routes, limits) = read(Some(signed_in()));
+    routes.set_status("GET", BUDGETS, 502);
+    routes.route_hanging("GET", GO, 403, Arc::new(AtomicBool::new(false)));
+
+    let outcome = tokio::time::timeout(Duration::from_secs(1), limits.get())
+        .await
+        .expect("fail-fast returns before the shared timeout");
+    let error = outcome.expect_err("the console cannot answer");
+
+    assert_eq!(
+        error.to_string(),
+        format!("OpenCode Console budgets are unavailable: StatusCode: non 2xx status code (502 GET {BUDGETS})")
+    );
 }

@@ -5,7 +5,7 @@ const subscribers = new Set<ReadableStreamDefaultController<Uint8Array>>()
 const server = Bun.serve({
   hostname: "127.0.0.1",
   port: 0,
-  fetch(request, server) {
+  async fetch(request, server) {
     const url = new URL(request.url)
     if (request.method === "GET" && url.pathname === "/echo") {
       if (server.upgrade(request)) return
@@ -13,6 +13,7 @@ const server = Bun.serve({
     }
     if (request.method === "GET" && url.pathname === "/api/info")
       return Response.json({ version: process.env.FAKE_VERSION ?? "fake" })
+    if (request.method === "POST" && url.pathname === "/api/echo") return Response.json(await request.json())
     if (request.method === "GET" && url.pathname === "/api/event")
       return process.env.FAKE_REJECT_EVENTS === "1" ? new Response(null, { status: 503 }) : eventStream()
     if (request.method === "GET" && url.pathname === "/api/config") {

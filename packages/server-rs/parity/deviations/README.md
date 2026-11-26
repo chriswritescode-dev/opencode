@@ -25,7 +25,7 @@ fenced `parity` block with one rule per line, or the run exits 2.
 
 Each rule is `<scenario glob> <difference-path glob>`, matched with `Bun.Glob` semantics. The scenario name is its
 path under `parity/scenarios` without `.scenario.ts`. The difference path uses the capture paths
-(`steps/<i>/body/...`, `events/<i>/...`, `logs/<name>/...`, `model/<i>/...`,
+(`steps/<i>/body/...`, `events/<i>/...`, `logs/<name>/...`, `model/requests/<i>/...`, `model/console/<i>/...`,
 `database/<file>/tables/<table>/...`, `files/<path>`), and a `ws` step's paths start with `steps/<i>/opened`,
 `steps/<i>/frames` or `steps/<i>/close`.
 
