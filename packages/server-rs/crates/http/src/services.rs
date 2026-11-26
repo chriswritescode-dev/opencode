@@ -5,6 +5,8 @@ use std::time::Duration;
 
 use futures_util::future::BoxFuture;
 use http::StatusCode;
+use opencode_ai::HttpSender;
+use opencode_ai::route::executor::ReqwestSender;
 use opencode_bus::{Bus, Definition, PublishOptions};
 use opencode_catalog::builtin::Builtin;
 use opencode_catalog::credential::CredentialService;
@@ -12,7 +14,11 @@ use opencode_catalog::integration::{CommandEnv, IntegrationService};
 use opencode_catalog::model::ModelService;
 use opencode_catalog::models_dev::{ModelsDevService, Options};
 use opencode_catalog::provider::ProviderService;
+use opencode_catalog::provider_plugin::gitlab::NoDiscovery;
+use opencode_catalog::provider_plugin::hooks::ProviderHooks;
+use opencode_catalog::provider_plugin::{AppInfo, CommandRunner, NoSessions, PluginContext, TokioCommandRunner};
 use opencode_catalog::resolver::{NoBridge, Resolver};
+use opencode_catalog::shared_cache::SharedCache;
 use opencode_config::entry::Entry;
 use opencode_config::flag;
 use opencode_config::observer::{ObserverHandle, observe};
@@ -194,6 +200,7 @@ pub struct LocationServices {
     pub integrations: Arc<IntegrationService>,
     pub providers: Arc<ProviderService>,
     pub models: Arc<ModelService>,
+    pub provider_hooks: Arc<ProviderHooks>,
     pub resolver: Arc<Resolver>,
     pub plugins: LocationPlugins,
     registrations: Mutex<Option<Builtin>>,
@@ -249,6 +256,9 @@ impl GlobalServices {
         let search = Arc::new(SessionSearchBuild::new(database.clone()));
         let build_channel = flag::build_channel().to_owned();
         let flag_overrides = config_env("OPENCODE_FLAGS").map(|value| value.to_string_lossy().into_owned());
+        let http: Arc<dyn HttpSender> = Arc::new(ReqwestSender::new());
+        let commands: Arc<dyn CommandRunner> = Arc::new(TokioCommandRunner);
+        let shared_cache = SharedCache::new();
         let boot_projects = projects.clone();
         let boot_environment = environment.clone();
         let boot_config_env = config_env.clone();
@@ -257,6 +267,10 @@ impl GlobalServices {
         let boot_credentials = credentials.clone();
         let boot_models_dev = models_dev.clone();
         let boot_command_env = command_env.clone();
+        let boot_http = http.clone();
+        let boot_commands = commands.clone();
+        let boot_shared_cache = shared_cache.clone();
+        let boot_database = database.clone();
         let boot_search = search.clone();
         let boot_bus = bus.clone();
         let boot_plugins = plugins.clone();
@@ -273,6 +287,10 @@ impl GlobalServices {
             let credentials = boot_credentials.clone();
             let models_dev = boot_models_dev.clone();
             let command_env = boot_command_env.clone();
+            let http = boot_http.clone();
+            let command_runner = boot_commands.clone();
+            let shared_cache = boot_shared_cache.clone();
+            let database = boot_database.clone();
             let search = boot_search.clone();
             let saved = boot_saved.clone();
             let store = boot_store.clone();
@@ -352,6 +370,8 @@ impl GlobalServices {
                 };
                 let discovery =
                     InstructionDiscovery::new(events.clone(), InstructionOptions::from_vars(|name| string_env(name)));
+                let app =
+                    AppInfo { name: "opencode".to_owned(), version: version.clone(), channel: channel_name.clone() };
                 let activation = builtin::activate(builtin::Deps {
                     config: config.clone(),
                     agents: agents.clone(),
@@ -397,6 +417,7 @@ impl GlobalServices {
                 );
                 let providers = ProviderService::new(integrations.clone(), bus.clone(), location.clone());
                 let models = ModelService::new(providers.clone(), bus.clone(), location.clone(), config_env.clone());
+                let provider_hooks = Arc::new(ProviderHooks::default());
                 let registrations = opencode_catalog::builtin::register(
                     opencode_catalog::builtin::Services {
                         bus: bus.clone(),
@@ -408,7 +429,21 @@ impl GlobalServices {
                         provider: providers.clone(),
                         model: models.clone(),
                     },
-                    opencode_catalog::builtin::Deps::default(),
+                    opencode_catalog::builtin::Deps {
+                        provider_plugins: Some(PluginContext {
+                            http,
+                            app,
+                            env: config_env.clone(),
+                            kv: Arc::new(StorageKv { database }),
+                            commands: command_runner,
+                            sessions: Arc::new(NoSessions),
+                            hooks: provider_hooks.clone(),
+                            location: location.clone(),
+                            shared_cache,
+                            gitlab_discovery: Arc::new(NoDiscovery),
+                        }),
+                        external: None,
+                    },
                 )
                 .await;
                 let resolver = Resolver::new(
@@ -468,6 +503,7 @@ impl GlobalServices {
                     integrations,
                     providers,
                     models,
+                    provider_hooks,
                     resolver,
                     plugins,
                     registrations: Mutex::new(Some(registrations)),

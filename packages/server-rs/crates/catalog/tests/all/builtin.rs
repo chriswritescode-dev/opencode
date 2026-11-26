@@ -10,6 +10,7 @@ use opencode_catalog::integration::{ConfigEnv, IntegrationService};
 use opencode_catalog::model::ModelService;
 use opencode_catalog::models_dev::service::{ModelsDevService, Options};
 use opencode_catalog::provider::ProviderService;
+use opencode_catalog::provider_plugin::PluginContext;
 use opencode_config::options::{ConfigLocation, ConfigOptions, SystemOption};
 use opencode_config::paths::GlobalPaths;
 use opencode_config::seams::{BoxFuture, KvStore};
@@ -51,6 +52,7 @@ pub struct Harness {
     _temp: TempDir,
     pub services: Services,
     pub registrations: Builtin,
+    pub environment: HashMap<String, String>,
 }
 
 pub struct Input {
@@ -166,7 +168,7 @@ impl Harness {
         );
         let services =
             Services { bus, config: config_service, credentials, models_dev, wellknown, integration, provider, model };
-        Self { _temp: temp, services, registrations: builtin::Builtin::default() }
+        Self { _temp: temp, services, registrations: builtin::Builtin::default(), environment: input.environment }
     }
 
     pub async fn credential(&self, integration_id: &str, value: CredentialValue) {
@@ -198,6 +200,125 @@ impl Harness {
                 "config_provider" => builtin::config_provider::register(&self.services, &mut builtin).await,
                 "config_policy" => builtin::config_policy::register(&self.services, &mut builtin).await,
                 _ => unreachable!(),
+            }
+        }
+        self.record(builtin);
+    }
+
+    pub async fn register_provider_plugins(&mut self, names: &[&str], context: PluginContext) {
+        let mut builtin = Builtin::default();
+        for name in names {
+            match *name {
+                "amazon_bedrock" => {
+                    opencode_catalog::provider_plugin::amazon_bedrock::register(&self.services, &context, &mut builtin)
+                        .await
+                }
+                "azure" => {
+                    opencode_catalog::provider_plugin::azure::register(&self.services, &context, &mut builtin).await
+                }
+                "cloudflare_ai_gateway" => {
+                    opencode_catalog::provider_plugin::cloudflare_ai_gateway::register(
+                        &self.services,
+                        &context,
+                        &mut builtin,
+                    )
+                    .await
+                }
+                "cloudflare_workers_ai" => {
+                    opencode_catalog::provider_plugin::cloudflare_workers_ai::register(
+                        &self.services,
+                        &context,
+                        &mut builtin,
+                    )
+                    .await
+                }
+                "cerebras" => {
+                    opencode_catalog::provider_plugin::cerebras::register(&self.services, &context, &mut builtin).await
+                }
+                "chatgpt" => {
+                    opencode_catalog::provider_plugin::chatgpt::register(&self.services, &context, &mut builtin).await
+                }
+                "prompt_cache_key" => {
+                    opencode_catalog::provider_plugin::prompt_cache_key::register(
+                        &self.services,
+                        &context,
+                        &mut builtin,
+                    )
+                    .await
+                }
+                "neon" => {
+                    opencode_catalog::provider_plugin::neon::register(&self.services, &context, &mut builtin).await
+                }
+                "kilo" => {
+                    opencode_catalog::provider_plugin::kilo::register(&self.services, &context, &mut builtin).await
+                }
+                "llmgateway" => {
+                    opencode_catalog::provider_plugin::llmgateway::register(&self.services, &context, &mut builtin)
+                        .await
+                }
+                "lmstudio" => {
+                    opencode_catalog::provider_plugin::lmstudio::register(&self.services, &context, &mut builtin).await
+                }
+                "modal" => {
+                    opencode_catalog::provider_plugin::modal::register(&self.services, &context, &mut builtin).await
+                }
+                "nvidia" => {
+                    opencode_catalog::provider_plugin::nvidia::register(&self.services, &context, &mut builtin).await
+                }
+                "ollama" => {
+                    opencode_catalog::provider_plugin::ollama::register(&self.services, &context, &mut builtin).await
+                }
+                "vllm" => {
+                    opencode_catalog::provider_plugin::vllm::register(&self.services, &context, &mut builtin).await
+                }
+                "openrouter" => {
+                    opencode_catalog::provider_plugin::openrouter::register(&self.services, &context, &mut builtin)
+                        .await
+                }
+                "zenmux" => {
+                    opencode_catalog::provider_plugin::zenmux::register(&self.services, &context, &mut builtin).await
+                }
+                "databricks" => {
+                    opencode_catalog::provider_plugin::databricks::register(&self.services, &context, &mut builtin)
+                        .await
+                }
+                "digitalocean" => {
+                    opencode_catalog::provider_plugin::digitalocean::register(&self.services, &context, &mut builtin)
+                        .await
+                }
+                "github_copilot" => {
+                    opencode_catalog::provider_plugin::github_copilot::register(&self.services, &context, &mut builtin)
+                        .await
+                }
+                "gitlab" => {
+                    opencode_catalog::provider_plugin::gitlab::register(&self.services, &context, &mut builtin).await
+                }
+                "google_vertex" => {
+                    opencode_catalog::provider_plugin::google_vertex::register(&self.services, &context, &mut builtin)
+                        .await
+                }
+                "openai" => {
+                    opencode_catalog::provider_plugin::openai::register(&self.services, &context, &mut builtin).await
+                }
+                "openai_context_caps" => {
+                    opencode_catalog::provider_plugin::openai_context_caps::register(
+                        &self.services,
+                        &context,
+                        &mut builtin,
+                    )
+                    .await
+                }
+                "poe" => opencode_catalog::provider_plugin::poe::register(&self.services, &context, &mut builtin).await,
+                "snowflake_cortex" => {
+                    opencode_catalog::provider_plugin::snowflake_cortex::register(
+                        &self.services,
+                        &context,
+                        &mut builtin,
+                    )
+                    .await
+                }
+                "xai" => opencode_catalog::provider_plugin::xai::register(&self.services, &context, &mut builtin).await,
+                _ => panic!("unknown provider plugin: {name}"),
             }
         }
         self.record(builtin);
@@ -443,6 +564,28 @@ async fn builtin_register_composes_every_transform_in_order() {
     let ids: Vec<String> =
         harness.services.provider.all().await.unwrap().into_iter().map(|provider| provider.id.0).collect();
     assert_eq!(ids, ["acme", "custom"]);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn builtin_register_inserts_provider_plugins_at_the_provider_slot() {
+    let mut harness = start(Input::new(vec![providers_config()]).models(acme_catalog("Acme"))).await;
+    let context = crate::provider_plugin::support::plugin_context(&harness);
+    let builtin = builtin::register(
+        Services {
+            bus: harness.services.bus.clone(),
+            config: harness.services.config.clone(),
+            credentials: harness.services.credentials.clone(),
+            models_dev: harness.services.models_dev.clone(),
+            wellknown: harness.services.wellknown.clone(),
+            integration: harness.services.integration.clone(),
+            provider: harness.services.provider.clone(),
+            model: harness.services.model.clone(),
+        },
+        builtin::Deps { provider_plugins: Some(context), external: None },
+    )
+    .await;
+    harness.record(builtin);
+    assert_eq!(harness.registrations.registrations.len(), 59);
 }
 
 pub async fn seed(

@@ -1,12 +1,14 @@
 use opencode_catalog::builtin::{self, Builtin, Services};
-use opencode_contract::codec::encode_json;
+use opencode_catalog::credential::CreateInput;
+use opencode_contract::codec::{decode_json, encode_json};
+use opencode_contract::generated::requests::CredentialCreateInput;
 use opencode_contract::generated::{
-    ModelType, ModelTypeString, ModelTypeString2, ModelTypeString3, ModelTypeString4, ProviderID,
-    ProviderInfoActivation,
+    CredentialID, CredentialValue, IntegrationID, ModelType, ModelTypeString, ModelTypeString2, ModelTypeString3,
+    ModelTypeString4, ProviderID, ProviderInfoActivation,
 };
 use serde_json::{Map, Value};
 
-use crate::builtin::{Input, start};
+use crate::builtin::{Harness, Input, start};
 use crate::corpus::area;
 
 const PLUGINS: [&str; 4] = ["wellknown", "models_dev", "config_provider", "config_policy"];
@@ -19,21 +21,29 @@ fn values<T: opencode_contract::codec::Encode>(input: &[T]) -> Value {
     Value::Array(input.iter().map(value).collect())
 }
 
-async fn register(services: &Services, plugins: &[String]) -> Builtin {
+async fn register(harness: &mut Harness, plugins: &[String]) {
     let mut builtin = Builtin::default();
     for name in PLUGINS {
         if !plugins.iter().any(|plugin| plugin == name) {
             continue;
         }
         match name {
-            "wellknown" => builtin::wellknown::register(services, &mut builtin).await,
-            "models_dev" => builtin::models_dev::register(services, &mut builtin).await,
-            "config_provider" => builtin::config_provider::register(services, &mut builtin).await,
-            "config_policy" => builtin::config_policy::register(services, &mut builtin).await,
+            "wellknown" => builtin::wellknown::register(&harness.services, &mut builtin).await,
+            "models_dev" => builtin::models_dev::register(&harness.services, &mut builtin).await,
+            "config_provider" => builtin::config_provider::register(&harness.services, &mut builtin).await,
+            "config_policy" => builtin::config_policy::register(&harness.services, &mut builtin).await,
             _ => unreachable!(),
         }
     }
-    builtin
+    harness.record(builtin);
+
+    let provider_plugins: Vec<&str> =
+        plugins.iter().map(String::as_str).filter(|name| !PLUGINS.contains(name)).collect();
+    if provider_plugins.is_empty() {
+        return;
+    }
+    let context = crate::provider_plugin::support::plugin_context(harness);
+    harness.register_provider_plugins(&provider_plugins, context).await;
 }
 
 async fn observe(services: &Services, activate: bool) -> Value {
@@ -135,7 +145,7 @@ async fn observe_registries(services: &Services) -> Value {
 #[tokio::test]
 async fn catalog_corpus_matches_the_pinned_typescript() {
     let cases = area("catalog");
-    assert_eq!(cases.len(), 12, "the corpus holds every catalog case");
+    assert_eq!(cases.len(), 39, "the corpus holds every catalog case");
 
     for (name, case) in &cases {
         let input = &case["input"];
@@ -150,14 +160,32 @@ async fn catalog_corpus_matches_the_pinned_typescript() {
             }
         }
         let mut harness = start(prepared).await;
+        if let Some(credentials) = input["credentials"].as_array() {
+            for credential in credentials {
+                let create: CredentialCreateInput =
+                    decode_json(&credential.to_string()).expect("the corpus credential decodes");
+                let value: CredentialValue =
+                    decode_json(&encode_json(&create.value)).expect("the corpus credential value decodes");
+                harness
+                    .services
+                    .credentials
+                    .create(CreateInput {
+                        id: create.id.map(|id| CredentialID(id.0)),
+                        integration_id: IntegrationID(create.integration_id.0),
+                        value,
+                        label: create.label,
+                        activate: create.activate,
+                    })
+                    .expect("create the corpus credential");
+            }
+        }
         let plugins: Vec<String> = input["plugins"]
             .as_array()
             .expect("plugins")
             .iter()
             .map(|value| value.as_str().expect("a plugin").to_owned())
             .collect();
-        let builtin = register(&harness.services, &plugins).await;
-        harness.record(builtin);
+        register(&mut harness, &plugins).await;
         let actual = observe(&harness.services, input["activate"].as_bool().unwrap_or(false)).await;
         assert_eq!(actual, case["expected"], "case {name}");
     }

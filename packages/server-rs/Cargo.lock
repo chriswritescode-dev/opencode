@@ -826,7 +826,13 @@ dependencies = [
 name = "opencode-catalog"
 version = "0.1.0"
 dependencies = [
+ "base64",
+ "bytes",
  "flate2",
+ "futures-util",
+ "http-body-util",
+ "hyper",
+ "hyper-util",
  "indexmap",
  "log",
  "opencode-ai",
@@ -837,6 +843,7 @@ dependencies = [
  "opencode-location",
  "opencode-storage",
  "opencode-util",
+ "percent-encoding",
  "rand",
  "regex-lite",
  "reqwest",

@@ -9,7 +9,7 @@ use opencode_bus::Bus;
 use opencode_config::observer::ObserverHandle;
 use opencode_config::service::ConfigService;
 use opencode_config::wellknown::WellKnown;
-use opencode_location::state::{BoxFuture, ExternalBlock, Registration};
+use opencode_location::state::{ExternalBlock, Registration};
 use tokio::task::JoinHandle;
 
 use crate::credential::CredentialService;
@@ -29,11 +29,9 @@ pub struct Services {
     pub model: Arc<ModelService>,
 }
 
-pub type ProviderTransform = Arc<dyn Fn(Arc<ProviderService>) -> BoxFuture<'static, Registration> + Send + Sync>;
-
 #[derive(Default)]
 pub struct Deps {
-    pub provider_plugins: Vec<ProviderTransform>,
+    pub provider_plugins: Option<crate::provider_plugin::PluginContext>,
     pub external: Option<Arc<dyn ExternalBlock<ProviderRegistry>>>,
 }
 
@@ -41,6 +39,7 @@ pub struct Deps {
 pub struct Builtin {
     pub registrations: Vec<Registration>,
     pub observers: Vec<ObserverHandle>,
+    pub hooks: Vec<crate::provider_plugin::hooks::HookRegistration>,
     pub tasks: Vec<JoinHandle<()>>,
 }
 
@@ -48,8 +47,8 @@ pub async fn register(services: Services, deps: Deps) -> Builtin {
     let mut builtin = Builtin::default();
     wellknown::register(&services, &mut builtin).await;
     models_dev::register(&services, &mut builtin).await;
-    for transform in deps.provider_plugins {
-        builtin.registrations.push(transform(services.provider.clone()).await);
+    if let Some(context) = deps.provider_plugins.as_ref() {
+        let _ = crate::provider_plugin::register(&services, context, &mut builtin).await;
     }
     if let Some(block) = deps.external {
         builtin.registrations.push(services.provider.block(block).await);
@@ -63,6 +62,7 @@ impl Builtin {
     pub fn record(&mut self, mut other: Builtin) {
         self.registrations.append(&mut other.registrations);
         self.observers.append(&mut other.observers);
+        self.hooks.append(&mut other.hooks);
         self.tasks.append(&mut other.tasks);
     }
 }

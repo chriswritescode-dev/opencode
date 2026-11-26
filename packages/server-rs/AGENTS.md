@@ -73,8 +73,20 @@ The Rust replacement for the TypeScript OpenCode server process, the `opencode-s
   `crates/catalog/src/builtin.rs` fixes the production transform order
   (wellknown, models_dev, the OR-47 provider-plugins slot, the OR-62 external block, config_provider, config_policy)
   through `Deps.provider_plugins` and `Deps.external`, and `builtin::config_provider::integrate()` is exported for
-  OR-48. `crates/catalog/src/lock.rs` is the crate's only lock wrapper: it uses `opencode_local::lock`, maps its
-  errors to `LockError`, and a credential refresh holds `credential-refresh:<id>` across processes. The generated
+  OR-48. `crates/catalog/src/provider_plugin` ports `packages/core/src/plugin/provider`: one module per native plugin,
+  dispatched by `provider_plugin::register` in the order of `ORDER`, whose 27 native slots all live in Rust and whose
+  three `Elsewhere` slots belong to OR-48 (`opencode.provider.opencode`) and OR-64 (`opencode.provider.sap.ai.core` and
+  `opencode.provider.claude-agent`). A plugin reaches the outside world only through `PluginContext` (`http`, `app`,
+  `env`, `kv`, `commands`, `sessions`, `hooks`, `location`, `shared_cache`, `gitlab_discovery`): `SessionAccess`
+  supplies session affinity and the last user message, `provider_plugin::gitlab::Discovery` is the OR-64 seam on
+  `gitlab_discovery` that ships as `NoDiscovery` today, `which` locates the Azure CLI through `PluginContext.env`, and
+  `CommandRunner` runs it. `ProviderHooks` holds the typed plugin events and each plugin registers its handlers, but
+  OR-54 is the task that triggers them from a session, so today they run only in tests (`OR-47-provider-hooks-unwired`).
+  `crates/catalog/src/shared_cache.rs` is the single owner of the shared, deduplicated and retried provider loaders, and
+  `crates/catalog/src/oauth/callback.rs` with `oauth/pkce.rs` are the single owners of the loopback OAuth listener and
+  the PKCE challenge and state helpers; a plugin opens no listener of its own.
+  `crates/catalog/src/lock.rs` is the crate's only lock wrapper: it uses `opencode_local::lock`, maps its errors to
+  `LockError`, and a credential refresh holds `credential-refresh:<id>` across processes. The generated
   `src/generated/models-dev-snapshot.json.gz` comes from `script/gen/catalog.ts` and `tests/corpus/*.json` from
   `script/gen/catalog-corpus.ts`; both are never edited by hand, and `check:drift` runs the generators. `AisdkBridge`
   in `src/resolver.rs` is the seam OR-64 fills, and its default `NoBridge` reports a Load-phase initialization error
@@ -91,8 +103,21 @@ The Rust replacement for the TypeScript OpenCode server process, the `opencode-s
   `ModelResolver.fromCatalogModel`, because they need an injected AISDK loader; `provider.test.ts` "bundles
   every native provider entrypoint that exports model()", because there is no npm manifest or package import path and
   the builtin set is checked against the models.dev snapshot instead; `config/provider.test.ts` "configured provider
-  transport overrides ${builtin.id} defaults" and the `plugin/provider-*.test.ts` "is registered ..." cases, because
-  built-in provider plugins activate through an SDK registry that OR-47 has not added; and `models.test.ts` "get()
+  transport overrides ${builtin.id} defaults", because no Rust test combines a config provider document with a ported
+  plugin's transport default, so the plugin default and `config_provider` are tested apart; the
+  `plugin/provider-opencode*.test.ts` files, because they cover the OR-48 OpenCode Console provider, and
+  `provider-dynamic.test.ts` with `provider-sap-ai-core.test.ts`, because they cover the OR-64 sidecar and AISDK seams
+  (`dynamic.ts`, `sdk-factory.ts` and `sap-ai-core.ts`) rather than a native plugin module, together with the eight
+  GitLab `aisdk` cases of `provider-gitlab.test.ts` and their trailing `runLanguage` assertion, for the same OR-64
+  reason (`OR-47-gitlab-discovery`); the interrupt half of `shared-cache.test.ts` "never keeps interrupts or defects,
+  and an interrupted caller leaves the load to the others", because Rust futures have no interrupt cause, while its
+  defect and dropped-caller halves are ported; the `provider-openai.test.ts` and `provider-chatgpt.test.ts` "selects
+  WebSocket only from explicit policy" cases, because transport selection belongs to core, not the plugin; the
+  `hasHttpHooks` and `hooks.has` assertions of the ported plugin cases, because the Rust registry has no `has()` query;
+  `provider-chatgpt.test.ts` "loads only visible API-supported ChatGPT models", because the pinned plugin's
+  `fetchModels` call is commented out; the "logs nothing" half of `provider-digitalocean.test.ts` "loads nothing and
+  logs nothing at startup when the access token has expired" and the warning assertion of the vLLM replaced-endpoint
+  case, because there is no injectable log sink; and `models.test.ts` "get()
   still populates the catalog when the KV cache write fails", because there is no injectable KV write-failure seam.
 - `opencode-git` (`crates/git`) is the package's single owner of git execution: repository discovery and metadata
   fingerprinting, remotes and history, the shared `patch` model, clone/fetch/checkout/reset, linked worktrees, the

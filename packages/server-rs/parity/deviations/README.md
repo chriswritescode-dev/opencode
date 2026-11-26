@@ -105,6 +105,12 @@ A deviation that excepts a recorded cassette from the replay gate also has a `Ca
 - `OR-46-resolver-errors.md`: bridge absence and construction failures report different error kinds and timing
 - `OR-46-route-failures.md`: integration and credential routes answer typed errors where TypeScript dies
 - `OR-46-transform-timing.md`: config observers spawn their catalog reload instead of awaiting it
+- `OR-47-azure-pagination-guard.md`: Azure deployment discovery stops when a page link repeats
+- `OR-47-deferred-provider-plugins.md`: the OpenCode Console, SAP AI Core and Claude Agent provider plugins are left to OR-48 and OR-64
+- `OR-47-gitlab-discovery.md`: GitLab workflow models are not discovered until OR-64 supplies the sidecar seam
+- `OR-47-oauth-callback-state-first.md`: loopback OAuth callbacks reject a bad state without ending the pending sign-in
+- `OR-47-provider-hooks-unwired.md`: the provider-plugin hooks are registered but no Rust session triggers them until OR-54
+- `OR-47-provider-request-timeouts.md`: provider sign-in, token and JWKS requests are bounded in time
 - `OR-49-registry-events.md`: plugin and catalog registries publish no updated events
 - `OR-49-prompt-attachments.md`: prompt file attachments and skills are rejected instead of materialized
 - `OR-49-title-generation.md`: an empty title does not regenerate the session title

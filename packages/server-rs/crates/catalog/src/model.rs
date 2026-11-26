@@ -467,6 +467,6 @@ fn type_key(model_type: &ModelType) -> &str {
     }
 }
 
-fn type_of(model: &ModelInfo) -> &str {
+pub(crate) fn type_of(model: &ModelInfo) -> &str {
     model.r#type.as_ref().map(type_key).unwrap_or("chat")
 }
