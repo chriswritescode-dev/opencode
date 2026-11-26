@@ -12,8 +12,7 @@ use opencode_vcs::snapshot::{DiffInput, RepositoryFuture, RestoreInput, Snapshot
 use tokio::io::AsyncWriteExt;
 use tokio::sync::watch;
 
-const REPOSITORY_CONFIG: &str =
-    "\n[core]\n\tfsmonitor = false\n[commit]\n\tgpgsign = false\n[user]\n\temail = test@opencode.test\n\tname = Test\n";
+const REPOSITORY_CONFIG: &str = "\n[core]\n\tfsmonitor = false\n[commit]\n\tgpgsign = false\n[gc]\n\tauto = 0\n[maintenance]\n\tauto = false\n[user]\n\temail = test@opencode.test\n\tname = Test\n";
 
 #[tokio::test]
 async fn keeps_lazy_repository_discovery_after_the_first_caller_is_interrupted() {

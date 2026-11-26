@@ -1,0 +1,9 @@
+# OR-47: provider-plugin hooks are registered but no Rust session triggers them
+
+TypeScript: the session pipeline triggers every provider-plugin session hook: `packages/core/src/session/model-request.ts:364` (`model.request`), `:379` (`hooks.has` for `http.request`/`http.response`), `:385` (`http.request`), `:399` (`http.response`), `:419` (`experimental.ws.handshake`), `:443` (`retry`), `:470` (`context` and `compaction` through `prepare`) and `:476` (`title`), plus `packages/core/src/session/runner/model.ts:117` (`experimental.model.resolve`). The plugins this task ports register those hooks (for example `packages/core/src/plugin/provider/openai.ts:311`, `github-copilot.ts:310` and `:425`, `azure.ts:448`, `snowflake-cortex.ts:207`), so a TypeScript session running an OpenAI, GitHub Copilot, Azure or Snowflake Cortex model has its request headers, transport, Auto routing, titles and retries rewritten by them.
+
+Rust: `crates/catalog/src/provider_plugin/hooks.rs` defines the typed events and `ProviderHooks` with a `trigger_*` method per event, the provider plugins register their handlers in `Builtin::record`, and `crates/http/src/services.rs:174` builds the per-Location `ProviderHooks` that `LocationServices::provider_hooks` exposes. Nothing outside the catalog tests calls `trigger_*`: `crates/session` and `crates/ai` do not take a `ProviderHooks`, so a Rust session ignores every provider-plugin hook.
+
+Reason: the session runner that would call the hooks belongs to OR-54, which wires `ProviderHooks` into model resolution, request compilation, retries, context/compaction and title generation. Until then the ported handlers are exercised only by the catalog tests. The `provider-plugin-integrations` parity scenario compares the registered integrations, not a session, so it does not observe the difference; a parity scenario that prompts a model through one of these providers would differ in request headers and transport.
+
+Accepted: pending owner

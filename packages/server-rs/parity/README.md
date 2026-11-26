@@ -45,11 +45,12 @@ allow-all rule still authorizes the file tools inside `work`, so the scenarios n
 
 ## Steps
 
-Each scenario runs its `steps` in order. `http` and `ws` steps add an entry to `steps`; `waitEvent`, `files` and `git` steps do not.
+Each scenario runs its `steps` in order. `http` and `ws` steps add an entry to `steps`; `waitEvent`, `files`, `settle` and `git` steps do not.
 
 - `http`: `method` and `path` are required. `query` values are strings or arrays, and array values repeat the key. `headers` are sent as written and `body` is JSON. `auth` is `basic` (default), `query` or `none`. `location` defaults to `true` and sends `x-opencode-directory: <work>`. `as` saves the parsed response body for later placeholders.
 - `waitEvent`: waits for an event of `type`. `match` is an optional deep-partial match against the event's `data` after templating: every object key must match and arrays compare as a prefix. `timeout` is in milliseconds and defaults to `30000`. The next wait starts after the previously matched event.
 - `files`: writes a `{ path: contents }` map below `work` mid-scenario, unlike the scenario-level `files` written before the server starts.
+- `settle`: waits until the event stream has been quiet for one second, so events published asynchronously by earlier steps are captured before the next step. It adds no capture entry. When `events` is not compared there is no stream and it returns immediately.
 - `git`: runs `git` with `args` in `cwd`, both templated. `cwd` defaults to `work`, a relative value resolves below `work`, and an absolute value must resolve inside `work`; anything else fails the scenario. Each command runs with `HOME=<root>/home`, `GIT_CONFIG_NOSYSTEM=1`, `GIT_ALLOW_PROTOCOL=file`, `GIT_TERMINAL_PROMPT=0`, `TZ=UTC`, the fixed author and committer `Parity <parity@opencode.test>` and the fixed date `2026-01-01T00:00:00Z`, merged over the harness process environment. A non-zero exit is a scenario error and the run exits with code `2`.
 - `ws`: `path` is required, and the URL is the server base with the HTTP scheme replaced by `ws` (`wss` for `https`);
   `query` behaves as it does for `http`, with string or array values and arrays repeating the key. `auth` is `basic`
@@ -61,7 +62,7 @@ Each scenario runs its `steps` in order. `http` and `ws` steps add an entry to `
 
 ## Adding a scenario
 
-A scenario is a `.scenario.ts` file under `parity/scenarios` that default-exports `defineScenario({ ... })`. Because the output directory and the deviation rules key off the file path, name it `<name>.scenario.ts`; the scenario name is that path below `parity/scenarios` without the suffix. `files`, `setup`, `config`, `env` and `model` are optional and `steps` is required. Top-level `files` are written under `work` before the server starts, `config` deep-merges over the sandbox base config, and `env` adds string variables to both sides after templating `{{work}}` and `{{root}}`; an unresolved placeholder fails the scenario.
+A scenario is a `.scenario.ts` file under `parity/scenarios` that default-exports `defineScenario({ ... })`. Because the output directory and the deviation rules key off the file path, name it `<name>.scenario.ts`; the scenario name is that path below `parity/scenarios` without the suffix. `files`, `setup`, `config`, `env`, `models` and `model` are optional and `steps` is required. Top-level `files` are written under `work` before the server starts, `config` deep-merges over the sandbox base config, and `env` adds string variables to both sides after templating `{{work}}` and `{{root}}`; an unresolved placeholder fails the scenario. `models` is any JSON value written verbatim to `root/models.json`, which the harness exposes as `OPENCODE_MODELS_PATH`; it defaults to `{}`.
 
 `setup` is an optional ordered list of `SetupStep` entries and accepts only `{ files: { path: contents } }` and `{ git: { args, cwd? } }`. Each entry runs once per side after the scenario-level `files` and before the server starts. `git` entries use the same environment, fixed author and committer identity and date, templating and `cwd` rules as the `git` step in [Steps](#steps); a non-zero exit or an unresolved placeholder fails the scenario with exit code `2`. Create a repository in `setup` when a scenario needs one: a Location whose repository already exists when the server warms it up settles deterministically, while a repository created after boot requires invalidating and re-booting the Location, whose first requests can race a partly loaded VCS service and return empty data.
 
@@ -132,7 +133,7 @@ Every variable is set for both sides:
 - `OPENCODE_PASSWORD`: `parity`, a fixed credential both sides accept through Basic auth and `auth_token`.
 - `OPENCODE_DISABLE_AUTOUPDATE`: `1` prevents an upgrade check from contacting the network.
 - `OPENCODE_DISABLE_MODELS_FETCH`: `1` prevents the model catalog from being downloaded.
-- `OPENCODE_MODELS_PATH`: `root/models.json`, an empty catalog file used instead of a fetch.
+- `OPENCODE_MODELS_PATH`: `root/models.json`, an empty catalog file used instead of a fetch; a scenario's `models` overrides its contents.
 - `OPENCODE_DISABLE_FILEWATCHER`: `1` avoids filesystem watchers in a throwaway directory.
 - `OPENCODE_DISABLE_CHANNEL_DB`: `1` avoids a channel-specific database path.
 - `OPENCODE_FLAGS`: `-full_codemode` keeps optional codemode behavior out of the comparison.
@@ -207,7 +208,7 @@ Coverage is measured per reference-side scenario. An `http` step covers the oper
 
 By default every part of the capture is compared: `steps`, `events`, `database`, `files`, `logs` and `model`.
 
-`--only <parts>` restricts what is compared to a comma list of those parts; omitting it selects all six, and repeated names are collapsed. It never changes what a scenario runs: every step, including `http`, `ws`, `files` and templating, still executes exactly as before. When `events` is not selected, the capture contains no events and the per-session log fetch is skipped so `logs` stays `{}`, and a scenario that contains a `waitEvent` step is refused before any sandbox is created with `FAIL <scenario>: scenario needs events` and exit 2. `logs` requires `events` because the log keys come from sessions discovered on the event stream, and selecting `logs` without `events` fails with exit 2.
+`--only <parts>` restricts what is compared to a comma list of those parts; omitting it selects all six, and repeated names are collapsed. It never changes what a scenario runs, apart from `settle` steps, which have no captured stream to wait on: every other step, including `http`, `ws`, `files`, `git` and templating, still executes exactly as before. When `events` is not selected, the capture contains no events, the per-session log fetch is skipped so `logs` stays `{}`, and a scenario that contains a `waitEvent` step is refused before any sandbox is created with `FAIL <scenario>: scenario needs events` and exit 2; `settle` steps are allowed and become no-ops. `logs` requires `events` because the log keys come from sessions discovered on the event stream, and selecting `logs` without `events` fails with exit 2.
 
 Each side still opens one throwaway event stream before the first step in this mode and waits for it to go quiet, even though those frames are discarded, because a Location finishes loading its services asynchronously and the first step must not race that load. In this mode the throwaway stream is best effort: a side whose event stream cannot be opened, fails, or does not go quiet is not failed for that reason, since events are not compared.
 

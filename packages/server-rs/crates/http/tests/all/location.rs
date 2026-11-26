@@ -2,6 +2,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 use http::StatusCode;
+use opencode_contract::generated::{ProviderID, ProviderInfoActivation};
 use opencode_location::location::LocationRef;
 use serde_json::Value;
 
@@ -49,6 +50,24 @@ async fn location_get_resolves_the_header_query_and_start_directory() {
     assert_eq!(response.status(), StatusCode::OK);
     let body = body_json(response).await;
     assert_eq!(body["directory"], query.to_string_lossy().as_ref());
+}
+
+#[tokio::test]
+async fn booting_a_location_loads_the_configured_providers() {
+    let start = temp_directory("location-providers");
+    std::fs::write(
+        start.join("opencode.json"),
+        r#"{"providers":{"litellm":{"package":"aisdk:@ai-sdk/openai-compatible","models":{"chat":{}}}}}"#,
+    )
+    .expect("write the project config");
+    let services = services_at(&start);
+    let reference = LocationRef::new(start.to_string_lossy().into_owned(), None);
+
+    let lease = services.locations.get(&reference).await.expect("boot the location");
+    let providers = lease.providers.available().await.expect("the available providers");
+    let provider = providers.iter().find(|provider| provider.id == ProviderID("litellm".to_owned())).expect("litellm");
+    assert_eq!(provider.package, "@opencode/ai/providers/openai-compatible");
+    assert_eq!(provider.activation, ProviderInfoActivation::Enabled);
 }
 
 #[tokio::test]

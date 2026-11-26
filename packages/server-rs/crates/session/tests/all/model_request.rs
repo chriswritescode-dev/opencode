@@ -3,13 +3,13 @@ use std::sync::Arc;
 
 use opencode_ai::{ExecutionContext, MapEnv, StreamOptions, SystemPart, ToolEntry};
 use opencode_bus::{Bus, BusOptions, Definition, PublishOptions};
-use opencode_catalog::Catalog;
+use opencode_catalog::resolver::Error;
 use opencode_config::entry::{Document, Entry, Origin};
 use opencode_contract::codec::decode_json;
 use opencode_contract::generated::{ConfigEntryDocumentInfo, SessionInboxDelivery};
 use opencode_location::environment::local::LocalEnvironment;
 use opencode_location::project::ProjectService;
-use opencode_session::context::{self, LoadInput};
+use opencode_session::context::{self, ContextError, LoadInput};
 use opencode_session::instruction_state;
 use opencode_session::instructions::{self, BuiltinsInput, List};
 use opencode_session::model_request::{self, AppInfo};
@@ -18,7 +18,7 @@ use opencode_storage::{Database, DatabaseLocation};
 use opencode_util::time::Zone;
 use serde_json::{Value, json};
 
-use crate::{TempDir, TestAgents, test_agents};
+use crate::{TempDir, TestAgents, TestCatalog, test_agents, test_catalog};
 
 const FIXED_NOW: i64 = 1_800_000_000_000;
 
@@ -27,7 +27,7 @@ struct Setup {
     database: Arc<Database>,
     bus: Arc<Bus>,
     store: SessionStore,
-    catalog: Catalog,
+    catalog: TestCatalog,
     agents: TestAgents,
     list: List,
     work: String,
@@ -54,6 +54,10 @@ fn builtins_input(work: &str, root: &Path) -> BuiltinsInput {
 }
 
 fn config_value(build_system: Option<&str>) -> Value {
+    config_with_base_url(build_system, "http://127.0.0.1:9/v1")
+}
+
+fn config_with_base_url(build_system: Option<&str>, base_url: &str) -> Value {
     let mut agents = json!({ "title": { "disabled": true } });
     if let Some(system) = build_system {
         agents["build"] = json!({ "system": system });
@@ -65,7 +69,7 @@ fn config_value(build_system: Option<&str>) -> Value {
             "anthropic-test": {
                 "name": "Anthropic Test",
                 "package": "@ai-sdk/anthropic",
-                "settings": { "apiKey": "parity", "baseURL": "http://127.0.0.1:9/v1" },
+                "settings": { "apiKey": "parity", "baseURL": base_url },
                 "models": {
                     "test-model": {
                         "name": "Test Model",
@@ -120,7 +124,7 @@ async fn setup_with(value: Value, full_codemode: bool) -> Setup {
         info: decode_json::<ConfigEntryDocumentInfo>(&value.to_string()).expect("decode the config document"),
         origin: Origin::File,
     });
-    let catalog = Catalog::from_entries(std::slice::from_ref(&entry));
+    let catalog = test_catalog(&value, MapEnv::default()).await;
     let agents = test_agents(std::slice::from_ref(&entry), "/home/test").await;
     let tools = crate::test_tools(&work, dir.path(), Arc::new(crate::AllowAll), full_codemode).await;
 
@@ -173,14 +177,13 @@ async fn prepared_request_matches_the_typescript_body() {
     let setup = setup(None).await;
     instruction_state::prepare(&setup.database, &setup.bus, &setup.list, "ses_1")
         .expect("prepare the builtin instructions");
-    let env = MapEnv::default();
     let loaded = context::load_with(
         &LoadInput {
             database: &setup.database,
             store: &setup.store,
-            catalog: &setup.catalog,
+            models: &setup.catalog.models,
+            resolver: &setup.catalog.resolver,
             agents: &setup.agents.service,
-            env: &env,
             builtins: setup.builtins(),
             tools: &setup.tools,
         },
@@ -246,14 +249,13 @@ async fn configured_agent_system_replaces_the_default_prompt() {
     let setup = setup(Some("You are a test agent.")).await;
     instruction_state::prepare(&setup.database, &setup.bus, &setup.list, "ses_1")
         .expect("prepare the builtin instructions");
-    let env = MapEnv::default();
     let loaded = context::load_with(
         &LoadInput {
             database: &setup.database,
             store: &setup.store,
-            catalog: &setup.catalog,
+            models: &setup.catalog.models,
+            resolver: &setup.catalog.resolver,
             agents: &setup.agents.service,
-            env: &env,
             builtins: setup.builtins(),
             tools: &setup.tools,
         },
@@ -267,6 +269,32 @@ async fn configured_agent_system_replaces_the_default_prompt() {
     assert_eq!(text.as_str(), "You are a test agent.");
 }
 
+#[tokio::test]
+async fn unresolved_provider_variables_report_the_resolver_error() {
+    let setup = setup_with(config_with_base_url(None, "https://${MISSING_HOST}/v1"), false).await;
+    let error = context::load_with(
+        &LoadInput {
+            database: &setup.database,
+            store: &setup.store,
+            models: &setup.catalog.models,
+            resolver: &setup.catalog.resolver,
+            agents: &setup.agents.service,
+            builtins: setup.builtins(),
+            tools: &setup.tools,
+        },
+        "ses_1",
+        setup.list,
+    )
+    .await
+    .err()
+    .expect("the model does not resolve");
+    assert!(matches!(error, ContextError::ModelResolution(Error::UnresolvedProviderVariables { .. })));
+    assert_eq!(
+        error.to_string(),
+        "Cannot initialize anthropic-test/test-model: MISSING_HOST is required to resolve the provider endpoint"
+    );
+}
+
 fn with_denied_execute(mut value: Value) -> Value {
     value["agents"]["build"] = json!({ "permissions": [{ "action": "execute", "resource": "*", "effect": "deny" }] });
     value
@@ -276,14 +304,13 @@ async fn prepared_tool_names(value: Value, full_codemode: bool) -> (Vec<String>,
     let setup = setup_with(value, full_codemode).await;
     instruction_state::prepare(&setup.database, &setup.bus, &setup.list, "ses_1")
         .expect("prepare the builtin instructions");
-    let env = MapEnv::default();
     let loaded = context::load_with(
         &LoadInput {
             database: &setup.database,
             store: &setup.store,
-            catalog: &setup.catalog,
+            models: &setup.catalog.models,
+            resolver: &setup.catalog.resolver,
             agents: &setup.agents.service,
-            env: &env,
             builtins: setup.builtins(),
             tools: &setup.tools,
         },

@@ -150,6 +150,8 @@ pub(crate) async fn start(
             let start_directory = opencode_local::paths::current_dir()?.to_string_lossy().into_owned();
             let vars: HashMap<OsString, OsString> =
                 env.vars().map(|(name, value)| (name.to_os_string(), value.to_os_string())).collect();
+            let command_env: Arc<Vec<(OsString, OsString)>> =
+                Arc::new(vars.iter().map(|(name, value)| (name.clone(), value.clone())).collect());
             let config_env: opencode_http::services::ConfigEnv =
                 Arc::new(move |name: &str| vars.get(OsStr::new(name)).cloned());
             let npm_paths = opencode_plugin::NpmPaths::from(&paths);
@@ -174,6 +176,7 @@ pub(crate) async fn start(
                 plugins,
                 crate::VERSION.to_owned(),
                 crate::CHANNEL.to_owned(),
+                command_env,
             );
             services.attach_sessions(state.bus.clone(), state.store.clone(), crate::VERSION.to_owned());
             Some(Arc::new(services))

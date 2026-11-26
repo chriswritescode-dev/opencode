@@ -6,8 +6,7 @@ use tokio::io::AsyncWriteExt;
 
 use crate::text;
 
-const REPOSITORY_CONFIG: &str =
-    "\n[core]\n\tfsmonitor = false\n[commit]\n\tgpgsign = false\n[user]\n\temail = test@opencode.test\n\tname = Test\n";
+const REPOSITORY_CONFIG: &str = "\n[core]\n\tfsmonitor = false\n[commit]\n\tgpgsign = false\n[gc]\n\tauto = 0\n[maintenance]\n\tauto = false\n[user]\n\temail = test@opencode.test\n\tname = Test\n";
 
 const GIT_IDENTITY: [(&str, &str); 4] = [
     ("GIT_AUTHOR_NAME", "Test"),

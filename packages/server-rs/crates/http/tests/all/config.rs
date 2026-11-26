@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 use bytes::Bytes;
 use http::{Request, StatusCode};
+use opencode_bus::{Bus, BusOptions};
 use opencode_config::paths::GlobalPaths;
 use opencode_http::services::GlobalServices;
 use opencode_storage::{Database, DatabaseLocation};
@@ -66,10 +67,14 @@ async fn shells_uses_the_server_path() {
     let path = "/nonexistent-opencode-test-path";
     let (database, _) = Database::open(DatabaseLocation::Memory, &std::env::temp_dir()).expect("open the database");
     let database = Arc::new(database);
+    let bus = Bus::new(database.clone(), BusOptions::default());
     let paths =
         GlobalPaths::from_vars(|name| (name == "HOME").then(|| home.clone().into_os_string())).expect("global paths");
-    let env = move |name: &str| (name == "PATH").then(|| OsString::from(path));
-    let bus = opencode_bus::Bus::new(database.clone(), opencode_bus::BusOptions::default());
+    let env = move |name: &str| match name {
+        "PATH" => Some(OsString::from(path)),
+        "OPENCODE_DISABLE_MODELS_FETCH" => Some(OsString::from("1")),
+        _ => None,
+    };
     let services = Arc::new(GlobalServices::new(
         database,
         paths,
@@ -79,6 +84,7 @@ async fn shells_uses_the_server_path() {
         crate::global_plugins(),
         "test-version".to_owned(),
         "test".to_owned(),
+        Arc::new(Vec::new()),
     ));
     let app = ready_app_with_services(services.clone());
 

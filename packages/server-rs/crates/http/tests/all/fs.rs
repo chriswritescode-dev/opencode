@@ -440,5 +440,6 @@ fn disabled_services(start: &Path) -> Arc<GlobalServices> {
         crate::global_plugins(),
         "test-version".to_owned(),
         "test".to_owned(),
+        Arc::new(Vec::new()),
     ))
 }

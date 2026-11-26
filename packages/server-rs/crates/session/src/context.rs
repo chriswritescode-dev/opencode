@@ -1,8 +1,9 @@
 use std::fmt;
 use std::sync::Arc;
 
-use opencode_ai::{Env, Model, RuntimeModel};
-use opencode_catalog::Catalog;
+use opencode_ai::Model;
+use opencode_catalog::model::ModelService;
+use opencode_catalog::resolver::{self, Resolver};
 use opencode_contract::generated::{AgentInfo, ModelInfo, ModelRef, SessionInfo, SessionMessageInfo};
 use opencode_registry::agent::AgentService;
 use opencode_storage::Database;
@@ -16,6 +17,7 @@ pub struct Loaded {
     pub session: SessionInfo,
     pub agent: AgentInfo,
     pub model: ModelInfo,
+    pub variant: Option<String>,
     pub runtime: Model,
     pub initial: Vec<Rendered>,
     pub messages: Vec<SessionMessageInfo>,
@@ -24,16 +26,20 @@ pub struct Loaded {
 
 impl Loaded {
     pub fn model_ref(&self) -> ModelRef {
-        ModelRef { id: self.model.id.clone(), provider_id: self.model.provider_id.clone(), variant: None }
+        ModelRef {
+            id: self.model.id.clone(),
+            provider_id: self.model.provider_id.clone(),
+            variant: self.variant.clone(),
+        }
     }
 }
 
 pub struct LoadInput<'a> {
     pub database: &'a Database,
     pub store: &'a SessionStore,
-    pub catalog: &'a Catalog,
+    pub models: &'a ModelService,
+    pub resolver: &'a Resolver,
     pub agents: &'a AgentService,
-    pub env: &'a dyn Env,
     pub builtins: BuiltinsInput,
     pub tools: &'a LocationTools,
 }
@@ -45,7 +51,7 @@ pub enum ContextError {
     Agents(String),
     ModelNotSelected { session_id: String },
     ModelUnavailable { provider_id: String, model_id: String },
-    ModelResolution(String),
+    ModelResolution(resolver::Error),
     Instructions(String),
     History(String),
     Database(String),
@@ -64,7 +70,7 @@ impl fmt::Display for ContextError {
             Self::ModelUnavailable { provider_id, model_id } => {
                 write!(formatter, "Model unavailable: {provider_id}/{model_id}")
             }
-            Self::ModelResolution(message) => write!(formatter, "{message}"),
+            Self::ModelResolution(error) => write!(formatter, "{error}"),
             Self::Instructions(message) => write!(formatter, "Instructions unavailable: {message}"),
             Self::History(message) => write!(formatter, "Session history unavailable: {message}"),
             Self::Database(message) => write!(formatter, "Session store unavailable: {message}"),
@@ -84,8 +90,9 @@ pub async fn load(input: &LoadInput<'_>, session_id: &str) -> Result<Loaded, Con
 pub async fn load_with(input: &LoadInput<'_>, session_id: &str, list: List) -> Result<Loaded, ContextError> {
     let session = require_session(input.store, session_id)?;
     let agent = require_agent(input.agents, &session).await?;
-    let model = require_model(input.catalog, &session, &agent, session_id)?;
-    let runtime = resolve_runtime(input.catalog, input.env, &model)?;
+    let (model, variant) = select_model(input, &session, &agent, session_id).await?;
+    let runtime =
+        input.resolver.resolve_model(&model, variant.as_deref()).await.map_err(ContextError::ModelResolution)?.model;
     let initial = instruction_state::initial(input.database, session_id, &list)
         .map_err(|error| ContextError::Instructions(error.to_string()))?;
     let messages = input
@@ -103,7 +110,7 @@ pub async fn load_with(input: &LoadInput<'_>, session_id: &str, list: List) -> R
             .await
             .map_err(|error| ContextError::Tools(error.to_string()))?,
     );
-    Ok(Loaded { session, agent, model, runtime, initial, messages, snapshot })
+    Ok(Loaded { session, agent, model, variant, runtime, initial, messages, snapshot })
 }
 
 async fn snapshot(
@@ -143,40 +150,31 @@ async fn require_agent(agents: &AgentService, session: &SessionInfo) -> Result<A
     Ok(info)
 }
 
-fn require_model(
-    catalog: &Catalog,
+async fn select_model(
+    input: &LoadInput<'_>,
     session: &SessionInfo,
     agent: &AgentInfo,
     session_id: &str,
-) -> Result<ModelInfo, ContextError> {
-    let models = catalog.models(None);
+) -> Result<(ModelInfo, Option<String>), ContextError> {
     if let Some(reference) = &session.model {
-        return find_model(&models, reference).ok_or_else(|| ContextError::ModelUnavailable {
+        let model = find_model(input.models, reference).await?.ok_or_else(|| ContextError::ModelUnavailable {
             provider_id: reference.provider_id.0.clone(),
             model_id: reference.id.clone(),
-        });
+        })?;
+        return Ok((model, reference.variant.clone()));
     }
     if let Some(reference) = &agent.model
-        && let Some(model) = find_model(&models, reference)
+        && let Some(model) = find_model(input.models, reference).await?
     {
-        return Ok(model);
+        return Ok((model, reference.variant.clone()));
     }
-    catalog.default_model().ok_or_else(|| ContextError::ModelNotSelected { session_id: session_id.to_owned() })
+    let fallback = input.resolver.fallback().await.map_err(ContextError::ModelResolution)?;
+    fallback
+        .map(|model| (model, None))
+        .ok_or_else(|| ContextError::ModelNotSelected { session_id: session_id.to_owned() })
 }
 
-fn find_model(models: &[ModelInfo], reference: &ModelRef) -> Option<ModelInfo> {
-    models.iter().find(|model| model.provider_id.0 == reference.provider_id.0 && model.id == reference.id).cloned()
-}
-
-fn resolve_runtime(catalog: &Catalog, env: &dyn Env, model: &ModelInfo) -> Result<Model, ContextError> {
-    let reference = ModelRef { id: model.id.clone(), provider_id: model.provider_id.clone(), variant: None };
-    match catalog.runtime_model(&reference, env) {
-        Ok(RuntimeModel::Language(runtime)) => Ok(runtime),
-        Ok(_) => Err(model_unavailable(model)),
-        Err(error) => Err(ContextError::ModelResolution(error.to_string())),
-    }
-}
-
-fn model_unavailable(model: &ModelInfo) -> ContextError {
-    ContextError::ModelUnavailable { provider_id: model.provider_id.0.clone(), model_id: model.id.clone() }
+async fn find_model(models: &ModelService, reference: &ModelRef) -> Result<Option<ModelInfo>, ContextError> {
+    let available = models.available(None).await.map_err(|error| ContextError::ModelResolution(error.into()))?;
+    Ok(available.into_iter().find(|model| model.provider_id == reference.provider_id && model.id == reference.id))
 }

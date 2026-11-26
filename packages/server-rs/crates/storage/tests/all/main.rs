@@ -1,4 +1,5 @@
 mod corpus;
+mod credential;
 mod id;
 mod kv;
 mod migration;

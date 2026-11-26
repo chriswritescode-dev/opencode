@@ -1,488 +1,472 @@
-use std::collections::BTreeSet;
+use std::sync::{Arc, Mutex, Weak};
 
-use serde_json::{Map, Value, json};
+use indexmap::IndexMap;
+use opencode_bus::{Bus, Definition, PublishOptions, Subscription};
+use opencode_contract::generated::{
+    LocationRef, ModelCompatibility, ModelInfo, ModelInfoStatus, ModelType, ProviderID, ProviderInfo,
+};
+use opencode_location::state::{self, Options, Registration, State, TransformError};
 
-use crate::aisdk_native::{Context, merge_headers, merge_overlay, options, resolve};
+use crate::aisdk_native;
+use crate::integration::ConfigEnv;
+use crate::provider::{self, ProviderError, ProviderService, Snapshot};
 
-const PROVIDER_ONLY_SETTINGS: [&str; 5] = ["timeout", "headerTimeout", "chunkTimeout", "transport", "tls"];
+const UPDATED: &str = "model.updated";
 
-#[derive(Clone, Debug)]
-pub(crate) struct ModelState {
-    pub id: String,
-    pub model_id: String,
-    pub r#type: Option<String>,
-    pub family: Option<String>,
-    pub name: String,
-    pub compatibility: Option<Value>,
-    pub package: Option<String>,
-    pub settings: Option<Map<String, Value>>,
-    pub headers: Option<Vec<(String, String)>>,
-    pub body: Option<Map<String, Value>>,
-    pub capabilities: Value,
-    pub variants: Vec<Value>,
-    pub released: f64,
-    pub cost: Vec<Value>,
-    pub enabled: bool,
-    pub limit: Value,
+pub const PREFERRED_FREE: [&str; 3] = ["big-pickle", "deepseek-v4.1-flash-free", "muse-spark-1.3-contributor-free"];
+
+#[derive(Debug, Default)]
+pub struct ModelRegistry {
+    pub(crate) models: IndexMap<String, IndexMap<String, ModelInfo>>,
+    pub(crate) default_model: Option<(ProviderID, String)>,
 }
 
-impl ModelState {
-    pub(crate) fn new(id: &str) -> Self {
-        Self {
-            id: id.to_string(),
-            model_id: id.to_string(),
-            r#type: None,
-            family: None,
-            name: id.to_string(),
-            compatibility: None,
-            package: None,
-            settings: None,
-            headers: None,
-            body: None,
-            capabilities: default_capabilities(),
-            variants: Vec::new(),
-            released: 0.0,
-            cost: Vec::new(),
-            enabled: true,
-            limit: json!({ "context": 200_000, "output": 32_000 }),
+pub struct Editor<'a> {
+    pub(crate) data: &'a mut ModelRegistry,
+    pub(crate) input: Option<&'a Snapshot>,
+}
+
+impl Editor<'_> {
+    pub fn list(&mut self, provider_id: Option<&ProviderID>) -> Vec<&mut ModelInfo> {
+        match provider_id {
+            Some(provider_id) => match self.data.models.get_mut(&provider_id.0) {
+                Some(models) => models.values_mut().collect(),
+                None => Vec::new(),
+            },
+            None => self.data.models.values_mut().flat_map(|models| models.values_mut()).collect(),
         }
     }
-}
 
-pub(crate) fn default_capabilities() -> Value {
-    json!({ "tools": true, "input": ["text", "image"], "output": ["text"] })
-}
+    pub fn get(&mut self, provider_id: &ProviderID, model_id: &str) -> Option<&mut ModelInfo> {
+        self.data.models.get_mut(&provider_id.0).and_then(|models| models.get_mut(model_id))
+    }
 
-pub(crate) fn model_settings(settings: Option<&Map<String, Value>>) -> Option<Map<String, Value>> {
-    let mut settings = settings?.clone();
-    for key in PROVIDER_ONLY_SETTINGS {
-        settings.remove(key);
-    }
-    Some(settings)
-}
-
-pub(crate) fn merge_objects(base: Option<&Value>, overlay: &Map<String, Value>) -> Value {
-    let mut merged = base.and_then(Value::as_object).cloned().unwrap_or_default();
-    for (key, value) in overlay {
-        merged.insert(key.clone(), value.clone());
-    }
-    Value::Object(merged)
-}
-
-pub(crate) struct Overlay<'a> {
-    pub provider_id: &'a str,
-    pub provider_package: Option<&'a str>,
-    pub provider_canonical: Option<&'a str>,
-    pub id: &'a str,
-    pub config: &'a Map<String, Value>,
-    pub base: Option<&'a ModelState>,
-    pub existing: Option<&'a ModelState>,
-    pub inherit: bool,
-    pub builtins: &'a BTreeSet<&'static str>,
-}
-
-pub(crate) fn overlay_model(input: Overlay<'_>) -> ModelState {
-    let start = if input.inherit { input.base } else { input.existing };
-    let mut model = start.cloned().unwrap_or_else(|| ModelState::new(input.id));
-    model.id = input.id.to_string();
-    let config = input.config;
-    if input.inherit && config.contains_key("package") {
-        model.package = None;
-    }
-    if let Some(value) = config.get("type").and_then(Value::as_str) {
-        model.r#type = Some(value.to_string());
-    }
-    if let Some(value) = config.get("family").and_then(Value::as_str) {
-        model.family = Some(value.to_string());
-    }
-    if let Some(value) = config.get("name").and_then(Value::as_str)
-        && !value.is_empty()
-    {
-        model.name = value.to_string();
-    }
-    if let Some(value) = config.get("modelID").and_then(Value::as_str) {
-        model.model_id = value.to_string();
-    }
-    if let Some(value) = config.get("releaseDate").and_then(Value::as_str)
-        && let Some(released) = parse_release(value)
-    {
-        model.released = released;
-    }
-    if let Some(value) = config.get("compatibility").and_then(Value::as_object) {
-        model.compatibility = Some(merge_objects(model.compatibility.as_ref(), value));
-    }
-    if let Some(value) = config.get("package").and_then(Value::as_str) {
-        model.package = Some(value.to_string());
-    }
-    if let Some(value) = config.get("settings").and_then(Value::as_object) {
-        model.settings = merge_overlay(model.settings.as_ref(), Some(value));
-    }
-    if let Some(value) = config.get("headers").and_then(Value::as_object) {
-        model.headers = merge_headers(model.headers.as_deref(), Some(&pairs(value)));
-    }
-    if let Some(value) = config.get("body").and_then(Value::as_object) {
-        model.body = merge_overlay(model.body.as_ref(), Some(value));
-    }
-    let capabilities = config.get("capabilities").and_then(Value::as_object);
-    if let Some(capabilities) = capabilities {
-        model.capabilities = merge_capabilities(capabilities, &model.capabilities);
-    }
-    if let Some(value) = config.get("limit").and_then(Value::as_object) {
-        model.limit = merge_objects(Some(&model.limit), value);
-    }
-    rewrite_model(&mut model, input.provider_id, input.provider_package, input.provider_canonical, input.builtins);
-    if let Some(reasoning) = capabilities.and_then(|capabilities| capabilities.get("reasoning")) {
-        model.variants = resolve_variants(&model, input.provider_package, &supports(reasoning));
-    }
-    if let Some(variants) = config.get("variants").and_then(Value::as_array) {
-        overlay_variants(&mut model.variants, variants);
-    }
-    if let Some(cost) = config.get("cost") {
-        model.cost = convert_cost(cost);
-    }
-    if let Some(disabled) = config.get("disabled").and_then(Value::as_bool) {
-        model.enabled = !disabled;
-    }
-    let had_variants = input.existing.is_some_and(|existing| !existing.variants.is_empty());
-    let repackaged =
-        input.base.is_some_and(|base| !base.variants.is_empty() && model.package.as_deref() != base.package.as_deref());
-    if !config.contains_key("variants")
-        && capabilities.and_then(|capabilities| capabilities.get("reasoning")).is_none()
-        && ((input.base.is_none() && !had_variants) || repackaged)
-    {
-        model.variants = resolve_variants(&model, input.provider_package, &[Support::Effort { values: None }]);
-    }
-    rewrite_model(&mut model, input.provider_id, input.provider_package, input.provider_canonical, input.builtins);
-    model
-}
-
-fn rewrite_model(
-    model: &mut ModelState,
-    provider_id: &str,
-    provider_package: Option<&str>,
-    provider_canonical: Option<&str>,
-    builtins: &BTreeSet<&'static str>,
-) {
-    let Some(specifier) = model.package.as_deref().or(provider_package).map(str::to_string) else {
-        return;
-    };
-    let settings = model.settings.clone().unwrap_or_default();
-    let context =
-        Context { provider_id, model_id: Some(&model.model_id), shape: None, settings: Some(&settings), builtins };
-    let Some(replacement) = resolve(&specifier, &context) else {
-        return;
-    };
-    let translated = options(&settings);
-    if model.package.is_some() || replacement != specifier {
-        model.package = Some(replacement.clone());
-    }
-    let identity = (replacement == "@opencode/ai/providers/openai-compatible"
-        && !builtins.contains(specifier.as_str()))
-    .then(|| provider_canonical.unwrap_or(provider_id).to_string());
-    if model.settings.is_some() {
-        let mut merged = translated.settings;
-        if let Some(identity) = identity {
-            merged.insert("provider".to_string(), Value::String(identity));
-        }
-        model.settings = Some(merged);
-    }
-    model.headers = merge_headers(translated.headers.as_deref(), model.headers.as_deref());
-    model.body = merge_overlay(translated.body.as_ref(), model.body.as_ref());
-}
-
-fn merge_capabilities(config: &Map<String, Value>, base: &Value) -> Value {
-    let default = default_capabilities();
-    let fallback = if base.is_object() { base } else { &default };
-    let tools = config
-        .get("tools")
-        .and_then(Value::as_bool)
-        .or_else(|| fallback.get("tools").and_then(Value::as_bool))
-        .unwrap_or(true);
-    let freeform = config.get("freeform").or_else(|| fallback.get("freeform")).cloned();
-    let input =
-        config.get("input").or_else(|| fallback.get("input")).cloned().unwrap_or_else(|| json!(["text", "image"]));
-    let output = config.get("output").or_else(|| fallback.get("output")).cloned().unwrap_or_else(|| json!(["text"]));
-    let temperature = config.get("temperature").or_else(|| fallback.get("temperature")).cloned();
-    let mut capabilities = Map::new();
-    capabilities.insert("tools".to_string(), Value::Bool(tools));
-    if let Some(freeform) = freeform {
-        capabilities.insert("freeform".to_string(), freeform);
-    }
-    capabilities.insert("input".to_string(), input);
-    capabilities.insert("output".to_string(), output);
-    if let Some(temperature) = temperature {
-        capabilities.insert("temperature".to_string(), temperature);
-    }
-    Value::Object(capabilities)
-}
-
-fn pairs(value: &Map<String, Value>) -> Vec<(String, String)> {
-    value.iter().filter_map(|(key, value)| value.as_str().map(|value| (key.clone(), value.to_string()))).collect()
-}
-
-fn overlay_variants(variants: &mut Vec<Value>, overlay: &[Value]) {
-    for item in overlay {
-        let Some(config) = item.as_object() else {
-            continue;
+    pub fn update(&mut self, provider_id: &ProviderID, model_id: &str, update: impl FnOnce(&mut ModelInfo)) {
+        let Some(models) = self.data.models.get_mut(&provider_id.0) else {
+            return;
         };
-        let Some(id) = config.get("id").and_then(Value::as_str) else {
-            continue;
+        let mut model = models.get(model_id).cloned().unwrap_or_else(|| provider::default_model(provider_id, model_id));
+        update(&mut model);
+        model.id = model_id.to_owned();
+        model.provider_id = provider_id.clone();
+        let provider =
+            self.input.and_then(|snapshot| snapshot.records.get(&provider_id.0)).map(|definition| &definition.provider);
+        provider::rewrite_model(&mut model, provider_id, provider);
+        models.insert(model_id.to_owned(), model);
+    }
+
+    pub fn remove(&mut self, provider_id: &ProviderID, model_id: &str) {
+        let Some(models) = self.data.models.get_mut(&provider_id.0) else {
+            return;
         };
-        let position = variants.iter().position(|variant| variant.get("id").and_then(Value::as_str) == Some(id));
-        let mut variant = position.map(|position| variants[position].clone()).unwrap_or_else(|| json!({ "id": id }));
-        if let Some(settings) = config.get("settings").and_then(Value::as_object) {
-            let merged = merge_overlay(variant.get("settings").and_then(Value::as_object), Some(settings));
-            if let Some(merged) = merged {
-                variant["settings"] = Value::Object(merged);
-            }
-        }
-        if let Some(headers) = config.get("headers").and_then(Value::as_object) {
-            let existing = variant.get("headers").and_then(Value::as_object).map(pairs).unwrap_or_default();
-            let merged = merge_headers(Some(&existing), Some(&pairs(headers)));
-            if let Some(merged) = merged {
-                variant["headers"] =
-                    Value::Object(merged.into_iter().map(|(key, value)| (key, Value::String(value))).collect());
-            }
-        }
-        if let Some(body) = config.get("body").and_then(Value::as_object) {
-            let merged = merge_overlay(variant.get("body").and_then(Value::as_object), Some(body));
-            if let Some(merged) = merged {
-                variant["body"] = Value::Object(merged);
-            }
-        }
-        match position {
-            Some(position) => variants[position] = variant,
-            None => variants.push(variant),
-        }
+        models.shift_remove(model_id);
+    }
+
+    pub fn default_selection(&self) -> Option<(ProviderID, String)> {
+        self.data.default_model.clone()
+    }
+
+    pub fn set_default_selection(&mut self, provider_id: &ProviderID, model_id: &str) {
+        self.data.default_model = Some((provider_id.clone(), model_id.to_owned()));
+    }
+
+    pub fn provider_list(&self) -> Vec<provider::Definition> {
+        self.input.map(|snapshot| snapshot.records.entries.values().cloned().collect()).unwrap_or_default()
+    }
+
+    pub fn provider(&self, provider_id: &ProviderID) -> Option<&provider::Definition> {
+        self.input.and_then(|snapshot| snapshot.records.get(&provider_id.0))
     }
 }
 
-fn convert_cost(cost: &Value) -> Vec<Value> {
-    let entries = match cost {
-        Value::Array(entries) => entries.clone(),
-        Value::Object(_) => vec![cost.clone()],
-        _ => Vec::new(),
-    };
-    entries
-        .into_iter()
-        .filter_map(|entry| {
-            let entry = entry.as_object()?;
-            let mut converted = Map::new();
-            if let Some(tier) = entry.get("tier").filter(|tier| !tier.is_null()) {
-                converted.insert("tier".to_string(), tier.clone());
-            }
-            converted.insert("input".to_string(), entry.get("input").cloned().unwrap_or_else(|| json!(0)));
-            converted.insert("output".to_string(), entry.get("output").cloned().unwrap_or_else(|| json!(0)));
-            let cache = entry.get("cache").and_then(Value::as_object);
-            converted.insert(
-                "cache".to_string(),
-                json!({
-                    "read": cache.and_then(|cache| cache.get("read")).cloned().unwrap_or_else(|| json!(0)),
-                    "write": cache.and_then(|cache| cache.get("write")).cloned().unwrap_or_else(|| json!(0)),
-                }),
-            );
-            Some(Value::Object(converted))
-        })
-        .collect()
+#[derive(Debug)]
+pub struct ModelSnapshot {
+    pub default_model: Option<(ProviderID, String)>,
+    pub all: Vec<ModelInfo>,
+    pub available: Vec<ModelInfo>,
+    pub other: IndexMap<String, Vec<ModelInfo>>,
+    pub by_provider: IndexMap<String, IndexMap<String, ModelInfo>>,
 }
 
-pub(crate) fn parse_release(value: &str) -> Option<f64> {
-    let mut parts = value.split('-');
-    let year = parts.next()?.parse::<i64>().ok()?;
-    let month = parts.next()?.parse::<i64>().ok()?;
-    let day = parts.next().map_or(Some(1), |day| day.parse::<i64>().ok())?;
-    Some(days_from_civil(year, month, day) as f64 * 86_400_000.0)
+#[derive(Debug, thiserror::Error)]
+pub enum ModelError {
+    #[error(transparent)]
+    State(#[from] opencode_location::state::StateError),
+    #[error(transparent)]
+    Provider(#[from] ProviderError),
 }
 
-fn days_from_civil(year: i64, month: i64, day: i64) -> i64 {
-    let year = if month <= 2 { year - 1 } else { year };
-    let era = year.div_euclid(400);
-    let year_of_era = year - era * 400;
-    let month_index = (month + 9) % 12;
-    let day_of_year = (153 * month_index + 2) / 5 + day - 1;
-    let day_of_era = year_of_era * 365 + year_of_era / 4 - year_of_era / 100 + day_of_year;
-    era * 146_097 + day_of_era - 719_468
+pub struct ModelService {
+    providers: Arc<ProviderService>,
+    state: State<ModelRegistry>,
+    bus: Arc<Bus>,
+    location: LocationRef,
+    input: Arc<Mutex<Option<Arc<Snapshot>>>>,
+    cached: Mutex<Option<Cached>>,
+    published: Mutex<Option<Arc<ModelSnapshot>>>,
+    disable_free: bool,
+    subscription: Mutex<Option<tokio::task::JoinHandle<()>>>,
 }
 
-pub(crate) enum Support {
-    Effort { values: Option<Vec<String>> },
+struct Cached {
+    data: Arc<ModelRegistry>,
+    value: Arc<ModelSnapshot>,
 }
 
-pub(crate) fn supports(reasoning: &Value) -> Vec<Support> {
-    if reasoning.get("supported").and_then(Value::as_bool) != Some(true) {
-        return Vec::new();
-    }
-    match reasoning.get("effort").and_then(Value::as_array) {
-        Some(values) => vec![Support::Effort {
-            values: Some(
-                values
-                    .iter()
-                    .filter_map(Value::as_str)
-                    .filter(|value| *value != "default")
-                    .map(str::to_string)
-                    .collect(),
-            ),
-        }],
-        None => Vec::new(),
-    }
-}
-
-const EFFORTS: [&str; 3] = ["low", "medium", "high"];
-const ANTHROPIC_OUTPUT_TOKEN_MAX: f64 = 32_000.0;
-
-fn resolve_variants(model: &ModelState, provider_package: Option<&str>, supports: &[Support]) -> Vec<Value> {
-    let package = model.package.as_deref().or(provider_package);
-    let Some(Support::Effort { values }) = supports.first() else {
-        return Vec::new();
-    };
-    match package {
-        Some("@opencode/ai/providers/openai-compatible") => openai_chat(values.as_deref()),
-        Some("@opencode/ai/providers/anthropic") => {
-            anthropic_messages(&model.model_id, &model.limit, values.as_deref())
-        }
-        _ => Vec::new(),
-    }
-}
-
-fn efforts(values: &[String], spell: impl Fn(&str) -> Value) -> Vec<Value> {
-    values.iter().map(|effort| json!({ "id": effort, "settings": spell(effort) })).collect()
-}
-
-fn openai_chat(values: Option<&[String]>) -> Vec<Value> {
-    let defaults = EFFORTS.map(str::to_string);
-    let values = values.unwrap_or(&defaults);
-    efforts(values, |effort| json!({ "reasoningEffort": effort }))
-}
-
-fn anthropic_messages(model_id: &str, limit: &Value, values: Option<&[String]>) -> Vec<Value> {
-    let info = claude_info(model_id);
-    let opus45 = info.family == Some("opus") && info.major == 4 && info.minor == 5;
-    let output = limit.get("output").and_then(Value::as_f64).unwrap_or(32_000.0);
-    if info.manual && !opus45 {
-        return budget_variants(
-            output,
-            1024.0,
-            ANTHROPIC_OUTPUT_TOKEN_MAX,
-            |tokens| json!({ "thinking": { "type": "enabled", "budgetTokens": tokens } }),
-        );
-    }
-    let thinking = if opus45 {
-        manual_thinking(output)
-    } else {
-        Some(json!({ "thinking": { "type": "adaptive", "display": "summarized" } }))
-    };
-    let Some(thinking) = thinking else {
-        return Vec::new();
-    };
-    let defaults: Vec<String> = if info.major == 4 && info.minor == 6 {
-        ["low", "medium", "high", "max"].iter().map(|value| value.to_string()).collect()
-    } else {
-        ["low", "medium", "high", "xhigh", "max"].iter().map(|value| value.to_string()).collect()
-    };
-    let values = values.unwrap_or(&defaults);
-    values
-        .iter()
-        .filter(|effort| !info.always || *effort != "none")
-        .map(|effort| {
-            let settings = if effort == "none" {
-                json!({ "thinking": { "type": "disabled" } })
-            } else {
-                let mut settings = thinking.as_object().cloned().unwrap_or_default();
-                settings.insert("effort".to_string(), Value::String(effort.to_string()));
-                Value::Object(settings)
-            };
-            json!({ "id": effort, "settings": settings })
-        })
-        .collect()
-}
-
-fn manual_thinking(output: f64) -> Option<Value> {
-    let tokens = 16_000.0_f64.min(output - 1.0);
-    if tokens < 1024.0 {
-        return None;
-    }
-    Some(json!({ "thinking": { "type": "enabled", "budgetTokens": tokens } }))
-}
-
-fn budget_variants(output: f64, minimum: f64, ceiling: f64, spell: impl Fn(f64) -> Value) -> Vec<Value> {
-    let maximum = (ceiling - 1.0).min(output - 1.0);
-    if maximum <= 0.0 {
-        return Vec::new();
-    }
-    let high = minimum.max(((maximum + 1.0) / 2.0).floor()).min(maximum);
-    vec![json!({ "id": "high", "settings": spell(high) }), json!({ "id": "max", "settings": spell(maximum) })]
-}
-
-struct ClaudeInfo {
-    family: Option<&'static str>,
-    major: i32,
-    minor: i32,
-    manual: bool,
-    always: bool,
-}
-
-fn claude_info(model_id: &str) -> ClaudeInfo {
-    let lower = model_id.to_lowercase();
-    let bytes = lower.as_bytes();
-    let families = ["opus", "sonnet", "haiku", "fable", "mythos"];
-    let mut family = None;
-    let mut major = -1;
-    let mut minor = 0;
-    'families: for candidate in families {
-        let mut offset = 0;
-        while let Some(relative) = lower[offset..].find(candidate) {
-            let start = offset + relative;
-            let mut index = start + candidate.len();
-            if index < bytes.len() && bytes[index] == b'-' {
-                index += 1;
-                if let Some((value, next)) = read_number(bytes, index) {
-                    family = Some(candidate);
-                    major = value;
-                    if next < bytes.len()
-                        && (bytes[next] == b'.' || bytes[next] == b'-')
-                        && let Some((value, _)) = read_number(bytes, next + 1)
-                    {
-                        minor = value;
+impl ModelService {
+    pub fn new(
+        providers: Arc<ProviderService>,
+        bus: Arc<Bus>,
+        location: LocationRef,
+        environment: ConfigEnv,
+    ) -> Arc<Self> {
+        let disable_free = opencode_config::options::truthy(environment("OPENCODE_DISABLE_FREE_MODELS").as_deref());
+        let input: Arc<Mutex<Option<Arc<Snapshot>>>> = Arc::new(Mutex::new(None));
+        let initial_input = input.clone();
+        Arc::new_cyclic(|weak: &Weak<ModelService>| {
+            let notify_weak = weak.clone();
+            let notify: state::NotifyFn<ModelRegistry> = Box::new(move |_| {
+                let weak = notify_weak.clone();
+                Box::pin(async move {
+                    let Some(service) = weak.upgrade() else {
+                        return;
+                    };
+                    service.notify().await;
+                })
+            });
+            let initial = initial_input.clone();
+            let options = Options {
+                name: Some("model".to_owned()),
+                initial: Box::new(move || {
+                    let current = initial.lock().expect("lock the model input").clone();
+                    ModelRegistry {
+                        models: current
+                            .as_ref()
+                            .map(|snapshot| {
+                                snapshot
+                                    .available
+                                    .iter()
+                                    .map(|definition| (definition.provider.id.0.clone(), definition.models.clone()))
+                                    .collect()
+                            })
+                            .unwrap_or_default(),
+                        default_model: None,
                     }
-                    break 'families;
-                }
+                }),
+                notify: Some(notify),
+            };
+            let subscription = bus.subscribe(&[provider::UPDATED], None);
+            let subscription = tokio::spawn(subscription_task(subscription, weak.clone()));
+            Self {
+                providers,
+                state: State::new(options),
+                bus,
+                location,
+                input,
+                cached: Mutex::new(None),
+                published: Mutex::new(None),
+                disable_free,
+                subscription: Mutex::new(Some(subscription)),
             }
-            offset = start + candidate.len();
-        }
+        })
     }
-    if family.is_none()
-        && let Some(version) = lower.find("claude-")
+
+    pub async fn transform<F>(&self, f: F) -> Registration
+    where
+        F: for<'a> Fn(&mut Editor<'a>) -> Result<(), TransformError> + Send + Sync + 'static,
     {
-        let mut index = version + "claude-".len();
-        if let Some((value, next)) = read_number(bytes, index) {
-            major = value;
-            index = next;
-            minor = 0;
-            if index < bytes.len()
-                && (bytes[index] == b'.' || bytes[index] == b'-')
-                && let Some((value, next)) = read_number(bytes, index + 1)
-            {
-                minor = value;
-                index = next;
+        if let Err(error) = self.prepare().await {
+            log::warn!("model transform was not prepared: {error}");
+        }
+        let input = self.input.clone();
+        self.state
+            .transform(move |data| {
+                let current = input.lock().expect("lock the model input").clone();
+                f(&mut Editor { data, input: current.as_deref() })
+            })
+            .await
+    }
+
+    pub async fn reload(&self) -> Result<(), ModelError> {
+        self.prepare().await?;
+        self.state.reload().await;
+        Ok(())
+    }
+
+    pub async fn snapshot(&self) -> Result<Arc<ModelSnapshot>, ModelError> {
+        self.read().await
+    }
+
+    pub async fn get(&self, provider_id: &ProviderID, model_id: &str) -> Result<Option<ModelInfo>, ModelError> {
+        let value = self.read().await?;
+        Ok(value.by_provider.get(&provider_id.0).and_then(|models| models.get(model_id)).cloned())
+    }
+
+    pub async fn all(&self) -> Result<Vec<ModelInfo>, ModelError> {
+        Ok(self.read().await?.all.clone())
+    }
+
+    pub async fn available(&self, types: Option<&[ModelType]>) -> Result<Vec<ModelInfo>, ModelError> {
+        let value = self.read().await?;
+        let Some(types) = types.filter(|types| !types.is_empty()) else {
+            return Ok(value.available.clone());
+        };
+        let mut seen: Vec<&str> = Vec::new();
+        let mut models = Vec::new();
+        for model_type in types {
+            let key = type_key(model_type);
+            if seen.contains(&key) {
+                continue;
             }
-            if index < bytes.len() && bytes[index] == b'-' {
-                let rest = &lower[index + 1..];
-                family = families.into_iter().find(|candidate| rest.starts_with(candidate));
+            seen.push(key);
+            if key == "chat" {
+                models.extend(value.available.iter().cloned());
+            } else if let Some(typed) = value.other.get(key) {
+                models.extend(typed.iter().cloned());
             }
         }
+        Ok(models)
     }
-    let manual = (major == 3 && minor == 7) || (major == 4 && minor < 6);
-    let always = matches!(family, Some("fable") | Some("mythos")) || lower.contains("mythos-preview");
-    ClaudeInfo { family, major, minor, manual, always }
+
+    pub async fn default_model(&self) -> Result<Option<ModelInfo>, ModelError> {
+        let value = self.read().await?;
+        if let Some((provider_id, model_id)) = &value.default_model
+            && let Some(model) = value.by_provider.get(&provider_id.0).and_then(|models| models.get(model_id))
+            && model.enabled
+        {
+            return Ok(Some(model.clone()));
+        }
+        Ok(value.available.iter().find(|model| supports_text(model)).cloned())
+    }
+
+    pub async fn small(&self, provider_id: &ProviderID) -> Result<Option<ModelInfo>, ModelError> {
+        let value = self.read().await?;
+        let candidates: Vec<&ModelInfo> = value
+            .available
+            .iter()
+            .filter(|model| {
+                model.provider_id == *provider_id
+                    && model.status == ModelInfoStatus::Active
+                    && model.capabilities.input.iter().any(|item| item.starts_with("text"))
+                    && model.capabilities.output.iter().any(|item| item.starts_with("text"))
+            })
+            .collect();
+        for family in ["gpt-luna", "gemini-flash-lite", "gemini-flash", "claude-haiku"] {
+            if let Some(model) = candidates.iter().find(|model| model.family.as_deref() == Some(family)) {
+                return Ok(Some((*model).clone()));
+            }
+        }
+        Ok(None)
+    }
+
+    async fn prepare(&self) -> Result<(), ModelError> {
+        let current = self.providers.snapshot().await?;
+        self.observe(&current);
+        Ok(())
+    }
+
+    fn observe(&self, current: &Arc<Snapshot>) {
+        {
+            let mut input = self.input.lock().expect("lock the model input");
+            if input.as_ref().is_some_and(|value| Arc::ptr_eq(value, current)) {
+                return;
+            }
+            *input = Some(current.clone());
+        }
+        self.state.invalidate();
+    }
+
+    async fn read(&self) -> Result<Arc<ModelSnapshot>, ModelError> {
+        loop {
+            let current = self.providers.snapshot().await?;
+            self.observe(&current);
+            let data = self.state.get().await?;
+            if let Some(value) = self.cached_value(&data) {
+                return Ok(value);
+            }
+            if !Arc::ptr_eq(&current, &self.providers.snapshot().await?) {
+                continue;
+            }
+            let value = Arc::new(build(&data, &current, self.disable_free));
+            *self.cached.lock().expect("lock the model snapshot cache") = Some(Cached { data, value: value.clone() });
+            return Ok(value);
+        }
+    }
+
+    fn cached_value(&self, data: &Arc<ModelRegistry>) -> Option<Arc<ModelSnapshot>> {
+        let cached = self.cached.lock().expect("lock the model snapshot cache");
+        cached.as_ref().filter(|entry| Arc::ptr_eq(&entry.data, data)).map(|entry| entry.value.clone())
+    }
+
+    async fn notify(&self) {
+        let value = match self.read().await {
+            Ok(value) => value,
+            Err(error) => {
+                log::warn!("model update event was not prepared: {error}");
+                return;
+            }
+        };
+        {
+            let mut published = self.published.lock().expect("lock the published model snapshot");
+            if published.as_ref().is_some_and(|current| Arc::ptr_eq(current, &value)) {
+                return;
+            }
+            *published = Some(value);
+        }
+        let definition = Definition::ephemeral(UPDATED);
+        let options = PublishOptions { location: Some(self.location.clone()), ..Default::default() };
+        if let Err(error) = self.bus.publish(&definition, serde_json::json!({}), options) {
+            log::warn!("model update event was not published: {error}");
+        }
+    }
 }
 
-fn read_number(bytes: &[u8], start: usize) -> Option<(i32, usize)> {
-    let mut end = start;
-    while end < bytes.len() && bytes[end].is_ascii_digit() {
-        end += 1;
+impl Drop for ModelService {
+    fn drop(&mut self) {
+        if let Ok(mut subscription) = self.subscription.lock()
+            && let Some(task) = subscription.take()
+        {
+            task.abort();
+        }
     }
-    if end == start {
+}
+
+async fn subscription_task(mut subscription: Subscription, weak: Weak<ModelService>) {
+    while subscription.recv().await.is_some() {
+        let Some(service) = weak.upgrade() else {
+            break;
+        };
+        service.notify().await;
+    }
+}
+
+fn build(data: &ModelRegistry, input: &Snapshot, disable_free: bool) -> ModelSnapshot {
+    let mut by_provider: IndexMap<String, IndexMap<String, ModelInfo>> = IndexMap::new();
+    for (provider_id, models) in &data.models {
+        let provider = input.records.get(provider_id).map(|definition| &definition.provider);
+        let merged: IndexMap<String, ModelInfo> =
+            models.iter().map(|(id, model)| (id.clone(), merge_model(model, provider))).collect();
+        by_provider.insert(provider_id.clone(), merged);
+    }
+    if disable_free {
+        for provider_id in ["opencode", "opencode-go"] {
+            if let Some(models) = by_provider.get_mut(provider_id) {
+                models.retain(|_, model| model.cost.iter().any(|cost| cost.input.0 > 0.0));
+            }
+        }
+    }
+    let mut other: IndexMap<String, Vec<ModelInfo>> = IndexMap::new();
+    for models in by_provider.values_mut() {
+        let keys: Vec<String> =
+            models.iter().filter(|(_, model)| type_of(model) != "chat").map(|(id, _)| id.clone()).collect();
+        for key in keys {
+            let model = models.shift_remove(&key).expect("a non-chat model");
+            if model.enabled {
+                let name = type_of(&model).to_owned();
+                other.entry(name).or_default().push(model);
+            }
+        }
+    }
+    let mut all: Vec<ModelInfo> = by_provider.values().flat_map(|models| models.values().cloned()).collect();
+    all.sort_by(|left, right| right.time.released.total_cmp(&left.time.released));
+    for models in other.values_mut() {
+        models.sort_by(|left, right| right.time.released.total_cmp(&left.time.released));
+    }
+    let available = prefer_free(all.iter().filter(|model| model.enabled).cloned().collect());
+    ModelSnapshot { default_model: data.default_model.clone(), all, available, other, by_provider }
+}
+
+fn merge_model(model: &ModelInfo, provider: Option<&ProviderInfo>) -> ModelInfo {
+    let provider_headers = provider.and_then(|provider| provider.headers.as_ref()).map(provider::headers_to_native);
+    let model_headers = model.headers.as_ref().map(provider::headers_to_native);
+    let provider_body = provider.and_then(|provider| provider.body.as_ref()).map(provider::body_to_native);
+    let model_body = model.body.as_ref().map(provider::body_to_native);
+    let canonical = provider.and_then(|provider| provider.canonical.clone()).or_else(|| model.canonical.clone());
+    let compatibility = resolve_compatibility(provider, model);
+    let package = model.package.clone().or_else(|| provider.map(|provider| provider.package.clone()));
+    let settings = provider::merge_model_settings(
+        provider.and_then(|provider| provider.settings.as_ref()),
+        model.settings.as_ref(),
+    );
+    let headers = aisdk_native::merge_headers(provider_headers.as_ref(), model_headers.as_ref())
+        .map(provider::headers_from_native);
+    let body = aisdk_native::merge_overlay(provider_body.as_ref(), model_body.as_ref()).map(provider::body_from_native);
+    ModelInfo { canonical, compatibility, package, settings, headers, body, ..model.clone() }
+}
+
+fn resolve_compatibility(provider: Option<&ProviderInfo>, model: &ModelInfo) -> Option<ModelCompatibility> {
+    let Some(provider) = provider.and_then(|provider| provider.compatibility.as_ref()) else {
+        return model.compatibility.clone();
+    };
+    let overlay = model.compatibility.as_ref();
+    Some(ModelCompatibility {
+        reasoning_field: overlay
+            .and_then(|value| value.reasoning_field.clone())
+            .or_else(|| provider.reasoning_field.clone()),
+        require_reasoning: overlay.and_then(|value| value.require_reasoning).or(provider.require_reasoning),
+        max_tokens_field: overlay.and_then(|value| value.max_tokens_field).or(provider.max_tokens_field),
+        require_finish_reason: overlay.and_then(|value| value.require_finish_reason).or(provider.require_finish_reason),
+        require_assistant_after_tool: overlay
+            .and_then(|value| value.require_assistant_after_tool)
+            .or(provider.require_assistant_after_tool),
+        supports_prompt_cache_key: overlay
+            .and_then(|value| value.supports_prompt_cache_key)
+            .or(provider.supports_prompt_cache_key),
+        stream_usage: overlay.and_then(|value| value.stream_usage).or(provider.stream_usage),
+        cache_format: overlay.and_then(|value| value.cache_format).or(provider.cache_format),
+        supports_thinking_block_binding: overlay.and_then(|value| value.supports_thinking_block_binding),
+        supports_effort_updates: overlay.and_then(|value| value.supports_effort_updates),
+        media_input: overlay.and_then(|value| value.media_input).or(provider.media_input),
+    })
+}
+
+fn prefer_free(models: Vec<ModelInfo>) -> Vec<ModelInfo> {
+    let free_only = models
+        .iter()
+        .all(|model| model.provider_id.0 == "opencode" && !model.cost.iter().any(|cost| cost.input.0 > 0.0));
+    if !free_only {
+        return models;
+    }
+    let mut picks: Vec<ModelInfo> = Vec::new();
+    for id in PREFERRED_FREE {
+        if let Some(model) = models.iter().find(|model| model.id == id) {
+            picks.push(model.clone());
+        }
+    }
+    let picked: Vec<String> = picks.iter().map(|model| model.id.clone()).collect();
+    picks.extend(models.into_iter().filter(|model| !picked.contains(&model.id)));
+    picks
+}
+
+pub fn supports_text(model: &ModelInfo) -> bool {
+    (model.capabilities.input.is_empty() || model.capabilities.input.iter().any(|item| item.starts_with("text")))
+        && (model.capabilities.output.is_empty()
+            || model.capabilities.output.iter().any(|item| item.starts_with("text")))
+}
+
+pub fn parse(input: &str) -> Option<(ProviderID, String)> {
+    let (provider_id, rest) = input.split_once('/')?;
+    let (model_id, variant) = match rest.split_once('#') {
+        Some((model_id, variant)) => (model_id, Some(variant)),
+        None => (rest, None),
+    };
+    if provider_id.is_empty() || provider_id.contains('#') || model_id.is_empty() || variant.is_some_and(str::is_empty)
+    {
         return None;
     }
-    std::str::from_utf8(&bytes[start..end]).ok()?.parse().ok().map(|value| (value, end))
+    Some((ProviderID(provider_id.to_owned()), model_id.to_owned()))
+}
+
+fn type_key(model_type: &ModelType) -> &str {
+    match model_type {
+        ModelType::String(_) => "chat",
+        ModelType::String2(_) => "decision",
+        ModelType::String3(_) => "image",
+        ModelType::String4(_) => "video",
+        ModelType::String5(value) => value,
+    }
+}
+
+pub(crate) fn type_of(model: &ModelInfo) -> &str {
+    model.r#type.as_ref().map(type_key).unwrap_or("chat")
 }

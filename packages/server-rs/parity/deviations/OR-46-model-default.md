@@ -1,0 +1,9 @@
+# OR-46: model.default omits data when no default model is available
+
+TypeScript: `Model.Service.default` returns `Model.Info | undefined` (`packages/core/src/model.ts:302-307`), and the model handler wraps the result with `response` (`packages/server/src/handlers/model.ts:18-22`), which always builds `location` and `data` (`packages/server/src/location.ts:35-46`, `data` at `:43`). The endpoint declares `success: Location.response(Schema.UndefinedOr(Model.Info))` (`packages/protocol/src/groups/model.ts:33-37`), so the encoder keeps `data: undefined` and `JSON.stringify` drops the key, and a 200 body for the no-default case carries `location` only. The pinned document still marks `data` required, as an `anyOf` of `Model.Info` or `null` (`packages/protocol/openapi.json:5069-5080`).
+
+Rust: `crates/http/src/handlers/model.rs` `default` hand-writes the body with `write_value` for `location` and `write_optional` for `data` (`:37-42`), and `write_optional` emits nothing for `None` (`crates/contract/src/codec.rs:210-214`), so the key is absent for the same case. The generated `ModelDefaultResponse` is not used by the handler; it requires `data` when decoding and encodes `None` as `null` (`crates/contract/src/generated/types.rs:29171-29195`, `crates/contract/src/codec.rs:234-250`, `:387-394`).
+
+Reason: the route matches the TypeScript wire output rather than the generated contract, which requires `data` and admits `null`, so a body built from the contract type would carry `data: null`. `catalog-routes` requests `/api/model/default` as `defaultModel` and compares the body (`parity/scenarios/catalog-routes.scenario.ts:11`), but the sandbox config always provides `openai-test/test-model` with a text-capable model (`parity/lib/sandbox.ts:62-71`, `:90-95`), so the recorded body has `data` present and no scenario reaches the absent case.
+
+Accepted: pending owner

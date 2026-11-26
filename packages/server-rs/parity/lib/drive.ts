@@ -54,7 +54,10 @@ export async function runSide(
   const scenarioEnv = Object.fromEntries(
     Object.entries(scenario.env ?? {}).map(([name, value]) => [name, interpolate(value, { sandbox, saved: {} })]),
   )
-  const env = { ...(await sandboxEnv(sandbox.root, scenarioEnv, scenario.config, endpoint.url)), ...options?.env }
+  const env = {
+    ...(await sandboxEnv(sandbox.root, scenarioEnv, scenario.config, endpoint.url, scenario.models ?? {})),
+    ...options?.env,
+  }
   const captureEvents = options?.events ?? true
   await writeFiles(sandbox, scenario.files ?? {})
   for (const step of scenario.setup ?? []) {
@@ -99,6 +102,7 @@ export async function runSide(
         cursor,
         requests,
         stream?.state ?? absentStream,
+        captureEvents,
       )
       if (captured !== undefined) steps.push(captured)
     }
@@ -246,9 +250,14 @@ async function runStep(
   cursor: Cursor,
   requests: RequestRecord[],
   state: StreamState,
+  captureEvents: boolean,
 ): Promise<StepCapture | WsCapture | undefined> {
   if ("files" in step) {
     await writeFiles(sandbox, step.files)
+    return undefined
+  }
+  if ("settle" in step) {
+    if (captureEvents) await settleEvents(events)
     return undefined
   }
   if ("git" in step) {

@@ -22,11 +22,12 @@ fn ready_app_with_state() -> Arc<App> {
         state.db.clone(),
         paths,
         "/tmp/opencode-http-test".to_owned(),
-        Arc::new(|_: &str| None),
+        crate::offline_env(),
         state.bus.clone(),
         crate::global_plugins(),
         "test-version".to_owned(),
         "test".to_owned(),
+        Arc::new(Vec::new()),
     );
     services.attach_sessions(state.bus.clone(), state.store.clone(), "test-version".to_owned());
     let app = App::new(Options {
@@ -158,6 +159,27 @@ fn sample_request(operation: &str) -> Option<(&'static str, &'static str)> {
         "config.get" => Some(("GET", "/api/config")),
         "config.shells" => Some(("GET", "/api/config/shell")),
         "experimental.config.update" => Some(("PATCH", "/api/experimental/config")),
+        "model.list" => Some(("GET", "/api/model")),
+        "model.default" => Some(("GET", "/api/model/default")),
+        "provider.list" => Some(("GET", "/api/provider")),
+        "provider.get" => Some(("GET", "/api/provider/unknown")),
+        "credential.list" => Some(("GET", "/api/credential")),
+        "credential.create" => Some(("POST", "/api/credential")),
+        "credential.update" => Some(("PATCH", "/api/credential/x")),
+        "credential.remove" => Some(("DELETE", "/api/credential/x")),
+        "credential.activate" => Some(("POST", "/api/credential/x/activate")),
+        "integration.list" => Some(("GET", "/api/integration")),
+        "integration.get" => Some(("GET", "/api/integration/unknown")),
+        "experimental.integration.wellknown.add" => Some(("POST", "/api/experimental/integration/wellknown")),
+        "integration.connect.key" => Some(("POST", "/api/integration/unknown/connect/key")),
+        "integration.connect.external" => Some(("POST", "/api/integration/unknown/connect/external")),
+        "integration.oauth.connect" => Some(("POST", "/api/integration/unknown/connect/oauth")),
+        "integration.oauth.status" => Some(("GET", "/api/integration/unknown/connect/oauth/con_missing")),
+        "integration.oauth.complete" => Some(("POST", "/api/integration/unknown/connect/oauth/con_missing/complete")),
+        "integration.oauth.cancel" => Some(("DELETE", "/api/integration/unknown/connect/oauth/con_missing")),
+        "integration.command.connect" => Some(("POST", "/api/integration/unknown/connect/command")),
+        "integration.command.status" => Some(("GET", "/api/integration/unknown/connect/command/con_missing")),
+        "integration.command.cancel" => Some(("DELETE", "/api/integration/unknown/connect/command/con_missing")),
         "agent.list" => Some(("GET", "/api/agent")),
         "agent.get" => Some(("GET", "/api/agent/build")),
         "command.list" => Some(("GET", "/api/command")),
@@ -184,7 +206,6 @@ fn sample_request(operation: &str) -> Option<(&'static str, &'static str)> {
         "session.prompt" => Some(("POST", "/api/session/ses_test/prompt")),
         "session.message.list" => Some(("GET", "/api/session/ses_test/message")),
         "session.inbox.list" => Some(("GET", "/api/session/ses_test/inbox")),
-        "model.list" => Some(("GET", "/api/model")),
         "session.switchAgent" => Some(("POST", "/api/session/ses_test/agent")),
         "session.switchModel" => Some(("POST", "/api/session/ses_test/model")),
         "session.active" => Some(("GET", "/api/session/active")),
@@ -252,6 +273,27 @@ fn implemented_lists_the_ported_operations() {
     assert!(opencode_http::app::IMPLEMENTED.contains(&"config.get"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"config.shells"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"experimental.config.update"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"model.list"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"model.default"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"provider.list"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"provider.get"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"credential.list"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"credential.create"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"credential.update"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"credential.remove"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"credential.activate"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"integration.list"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"integration.get"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"experimental.integration.wellknown.add"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"integration.connect.key"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"integration.connect.external"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"integration.oauth.connect"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"integration.oauth.status"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"integration.oauth.complete"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"integration.oauth.cancel"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"integration.command.connect"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"integration.command.status"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"integration.command.cancel"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"agent.list"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"agent.get"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"command.list"));
@@ -282,7 +324,6 @@ fn implemented_lists_the_ported_operations() {
     assert!(opencode_http::app::IMPLEMENTED.contains(&"session.prompt"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"session.message.list"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"session.inbox.list"));
-    assert!(opencode_http::app::IMPLEMENTED.contains(&"model.list"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"session.switchAgent"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"session.switchModel"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"session.active"));
@@ -292,5 +333,5 @@ fn implemented_lists_the_ported_operations() {
     assert!(opencode_http::app::IMPLEMENTED.contains(&"plugin.gui"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"plugin.check"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"plugin.update"));
-    assert_eq!(opencode_http::app::IMPLEMENTED.len(), 68);
+    assert_eq!(opencode_http::app::IMPLEMENTED.len(), 88);
 }
