@@ -5,10 +5,11 @@ use std::time::Duration;
 #[cfg(unix)]
 use std::collections::HashMap;
 
+use opencode_catalog::credential::CreateInput;
 use opencode_catalog::integration::{
     AttemptError, AttemptMode, AttemptStatus, AuthorizationError, AutoCallback, CodeCallback, CommandAttemptStatus,
     CommandConnectInput, CommandError, ExternalInput, Implementation, KeyInput, LabelCallback, OAuthAuthorization,
-    OAuthConnectInput, OAuthFuture, OAuthImplementation, OAuthMode, SubmitCallback,
+    OAuthConnectInput, OAuthFuture, OAuthImplementation, OAuthMode, RevokeCallback, SubmitCallback,
 };
 use opencode_contract::codec::JsonMap;
 use opencode_contract::generated::{
@@ -30,12 +31,14 @@ use crate::integration::{integration_id, setup};
 
 type AuthorizeFn = Arc<dyn Fn(FormAnswer) -> OAuthFuture<OAuthAuthorization> + Send + Sync>;
 type LabelFn = Arc<dyn Fn(&CredentialOAuth) -> Option<String> + Send + Sync>;
+type RevokeFn = Arc<dyn Fn(CredentialOAuth) -> OAuthFuture<()> + Send + Sync>;
 
 struct ScriptedOAuth {
     integration_id: IntegrationID,
     method: IntegrationOAuthMethod,
     authorize: AuthorizeFn,
     label: Option<LabelFn>,
+    revoke: Option<RevokeFn>,
 }
 
 impl OAuthImplementation for ScriptedOAuth {
@@ -54,6 +57,11 @@ impl OAuthImplementation for ScriptedOAuth {
     fn label(&self) -> Option<LabelCallback> {
         let label = self.label.clone()?;
         Some(Box::new(move |value| label(value)))
+    }
+
+    fn revoke(&self) -> Option<RevokeCallback> {
+        let revoke = self.revoke.clone()?;
+        Some(Box::new(move |value| revoke(value)))
     }
 }
 
@@ -76,6 +84,7 @@ fn scripted(
         method,
         authorize: Arc::new(authorize),
         label,
+        revoke: None,
     }))
 }
 
@@ -1078,6 +1087,106 @@ async fn code_completion_settles_when_the_caller_is_dropped_before_the_callback_
     .await;
     assert_eq!(status, AttemptStatus::Complete { time: attempt.time });
     assert_eq!(credentials.list(&integration).expect("list the credentials").len(), 1);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn cancelling_a_code_attempt_interrupts_the_callback_and_reports_it_missing() {
+    let (_dir, _database, _bus, credentials, service) = setup();
+    let integration = integration_id("openai");
+    let method_id = IntegrationMethodID("chatgpt".to_owned());
+    let entered = Arc::new(AtomicBool::new(false));
+    let _registration = service
+        .transform({
+            let integration = integration.clone();
+            let entered = entered.clone();
+            move |editor| {
+                let entered = entered.clone();
+                editor.method_update(scripted(
+                    &integration,
+                    oauth_method("chatgpt", "ChatGPT"),
+                    move |_| {
+                        let entered = entered.clone();
+                        Box::pin(async move {
+                            Ok(OAuthAuthorization {
+                                url: "https://example.com/authorize".to_owned(),
+                                instructions: "Paste the code".to_owned(),
+                                expires_at: None,
+                                mode: OAuthMode::Code {
+                                    callback: Box::new(move |_| {
+                                        let entered = entered.clone();
+                                        Box::pin(async move {
+                                            entered.store(true, Ordering::SeqCst);
+                                            std::future::pending::<Result<CredentialOAuth, AuthorizationError>>().await
+                                        })
+                                    }),
+                                },
+                            })
+                        })
+                    },
+                    None,
+                ));
+                Ok(())
+            }
+        })
+        .await;
+
+    let attempt = service
+        .oauth()
+        .connect(OAuthConnectInput { integration_id: integration.clone(), method_id, answer: None, label: None })
+        .await
+        .expect("connect the oauth method");
+
+    let completion = tokio::spawn({
+        let service = service.clone();
+        let integration = integration.clone();
+        let attempt_id = attempt.attempt_id.clone();
+        async move { service.oauth().complete(&integration, &attempt_id, Some("1234")).await }
+    });
+    while !entered.load(Ordering::SeqCst) {
+        tokio::time::sleep(Duration::from_millis(1)).await;
+    }
+    service.oauth().cancel(&integration, &attempt.attempt_id).await;
+
+    let error = completion.await.expect("join the completion").expect_err("the attempt was removed");
+    assert!(matches!(error, AttemptError::AttemptNotFound { .. }));
+    assert!(credentials.list(&integration).expect("list the credentials").is_empty());
+}
+
+#[tokio::test(start_paused = true)]
+async fn times_out_a_hung_revoke_and_removes_the_local_credential() {
+    let (_dir, _database, _bus, credentials, service) = setup();
+    settle_runtime().await;
+    let integration = integration_id("openai");
+    let method_id = IntegrationMethodID("chatgpt".to_owned());
+    let _registration = service
+        .transform({
+            let integration = integration.clone();
+            move |editor| {
+                editor.method_update(Implementation::OAuth(Arc::new(ScriptedOAuth {
+                    integration_id: integration.clone(),
+                    method: oauth_method("chatgpt", "ChatGPT"),
+                    authorize: Arc::new(|_| -> OAuthFuture<OAuthAuthorization> { Box::pin(std::future::pending()) }),
+                    label: None,
+                    revoke: Some(Arc::new(|_| -> OAuthFuture<()> { Box::pin(std::future::pending()) })),
+                })));
+                Ok(())
+            }
+        })
+        .await;
+    let credential = credentials
+        .create(CreateInput {
+            id: None,
+            integration_id: integration.clone(),
+            value: CredentialValue::Oauth(oauth_value(&method_id, "access")),
+            label: None,
+            activate: None,
+        })
+        .expect("create the credential");
+
+    let started = tokio::time::Instant::now();
+    service.connection().remove(&credential.id).await.expect("remove the credential");
+    assert!(started.elapsed() >= Duration::from_secs(10));
+    assert!(credentials.list(&integration).expect("list the credentials").is_empty());
 }
 
 #[cfg(unix)]
