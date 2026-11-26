@@ -18,10 +18,9 @@ lease exists, and the shell-hook create is a `tokio::spawn` (`tools.rs:343`) tha
 `WatchTools` methods (`tools.rs:98-192`) return only the content string, `minutes` is checked with an invented
 `minutes must be between 1 and 8640` message (`tools.rs:115-119`) instead of the tool's input schema, and the 403 notice
 stores `description: ""` (`tools.rs:366`) where TypeScript omits it. In production `SessionAccess::synthetic` defaults to
-`Unavailable` (`provider_plugin/mod.rs:163-165`) and `crates/http/src/services.rs:204` uses `NoSessions`, so watched
-sessions cannot be woken until OR-54. The watch connection still starts when the workspace advertises watches and the
-`console_watches` flag is on (the default in dev builds): every event is left unacknowledged, and the long-poll cursor
-still advances past it.
+`Unavailable` (`provider_plugin/mod.rs:163-165`), `NoSessions::supports_watches` returns `false`, and
+`crates/http/src/services.rs` uses `NoSessions`, so `ConsoleHandle::sync_watches` keeps watches dormant in production
+until OR-54 wires a real `SessionAccess`.
 
 Reason: OR-54 supplies the real session and tool seams, and the plugin context has no lease. The ported
 watch tests drive the seam through a recording `SessionAccess` and a memory KV, so the wake policy, labels and shell

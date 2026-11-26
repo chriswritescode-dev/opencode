@@ -186,6 +186,9 @@ impl ConsoleArtifacts {
         let credential = self.credential().await?;
         let listing: Listing =
             self.send_json(&credential, "GET", &format!("/api/artifacts/{slug}/files"), None, &slug).await?;
+        if let Some(file) = listing.files.iter().find(|file| !super::content::is_safe_relative_path(&file.path)) {
+            return Err(format!("Unsafe OpenCode Console artifact path: {}", file.path));
+        }
         let revision = encode_json(&listing.revision);
         let mut output = BTreeMap::new();
         for chunk in listing.files.chunks(CONCURRENCY) {
