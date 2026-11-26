@@ -78,20 +78,28 @@ pub async fn reload_if_changed(
     }
 }
 
+struct AbortOnDrop<T>(JoinHandle<T>);
+
+impl<T> Drop for AbortOnDrop<T> {
+    fn drop(&mut self) {
+        self.0.abort();
+    }
+}
+
 pub fn switched<T, E>(load: Load<T, E>, apply: Apply<T>) -> BoxFuture<()>
 where
     T: Send + 'static,
     E: Send + 'static,
 {
     async move {
-        let forced = {
+        let mut forced = AbortOnDrop({
             let load = load.clone();
             tokio::spawn(load(Options { force: true, ..Options::default() }))
-        };
+        });
         if let Ok(value) = load(Options { interval: Some(Duration::MAX), ..Options::default() }).await {
             apply(value).await;
         }
-        if let Ok(Ok(value)) = forced.await {
+        if let Ok(Ok(value)) = (&mut forced.0).await {
             apply(value).await;
         }
     }
