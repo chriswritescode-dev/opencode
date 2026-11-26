@@ -7,6 +7,7 @@ mod observer;
 mod paths;
 mod policy;
 mod service;
+mod shell;
 mod substitute;
 mod support;
 mod update;

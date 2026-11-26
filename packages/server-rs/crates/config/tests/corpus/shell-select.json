@@ -1,0 +1,854 @@
+[
+  {
+    "name": "resolve-config-bash",
+    "kind": "resolve",
+    "priority": "config",
+    "configured": null,
+    "shell": "{{root}}/bin/bash",
+    "path": "{{root}}/bin",
+    "bin": null,
+    "expected": "{{root}}/bin/bash"
+  },
+  {
+    "name": "resolve-compat-bash",
+    "kind": "resolve",
+    "priority": "compat",
+    "configured": null,
+    "shell": "{{root}}/bin/bash",
+    "path": "{{root}}/bin",
+    "bin": null,
+    "expected": "{{root}}/bin/bash"
+  },
+  {
+    "kind": "login",
+    "shell": "{{root}}/bin/bash",
+    "expected": true,
+    "name": "login-bash"
+  },
+  {
+    "kind": "ps",
+    "shell": "{{root}}/bin/bash",
+    "expected": false,
+    "name": "ps-bash"
+  },
+  {
+    "kind": "name",
+    "shell": "{{root}}/bin/bash",
+    "expected": "bash",
+    "name": "name-bash"
+  },
+  {
+    "kind": "args",
+    "shell": "{{root}}/bin/bash",
+    "command": "echo *",
+    "expected": [
+      "-c",
+      "echo *"
+    ],
+    "name": "args-bash"
+  },
+  {
+    "name": "resolve-config-zsh",
+    "kind": "resolve",
+    "priority": "config",
+    "configured": null,
+    "shell": "{{root}}/bin/zsh",
+    "path": "{{root}}/bin",
+    "bin": null,
+    "expected": "{{root}}/bin/zsh"
+  },
+  {
+    "name": "resolve-compat-zsh",
+    "kind": "resolve",
+    "priority": "compat",
+    "configured": null,
+    "shell": "{{root}}/bin/zsh",
+    "path": "{{root}}/bin",
+    "bin": null,
+    "expected": "{{root}}/bin/zsh"
+  },
+  {
+    "kind": "login",
+    "shell": "{{root}}/bin/zsh",
+    "expected": true,
+    "name": "login-zsh"
+  },
+  {
+    "kind": "ps",
+    "shell": "{{root}}/bin/zsh",
+    "expected": false,
+    "name": "ps-zsh"
+  },
+  {
+    "kind": "name",
+    "shell": "{{root}}/bin/zsh",
+    "expected": "zsh",
+    "name": "name-zsh"
+  },
+  {
+    "kind": "args",
+    "shell": "{{root}}/bin/zsh",
+    "command": "echo *",
+    "expected": [
+      "+o",
+      "nomatch",
+      "-c",
+      "echo *"
+    ],
+    "name": "args-zsh"
+  },
+  {
+    "name": "resolve-config-sh",
+    "kind": "resolve",
+    "priority": "config",
+    "configured": null,
+    "shell": "{{root}}/bin/sh",
+    "path": "{{root}}/bin",
+    "bin": null,
+    "expected": "{{root}}/bin/sh"
+  },
+  {
+    "name": "resolve-compat-sh",
+    "kind": "resolve",
+    "priority": "compat",
+    "configured": null,
+    "shell": "{{root}}/bin/sh",
+    "path": "{{root}}/bin",
+    "bin": null,
+    "expected": "{{root}}/bin/sh"
+  },
+  {
+    "kind": "login",
+    "shell": "{{root}}/bin/sh",
+    "expected": true,
+    "name": "login-sh"
+  },
+  {
+    "kind": "ps",
+    "shell": "{{root}}/bin/sh",
+    "expected": false,
+    "name": "ps-sh"
+  },
+  {
+    "kind": "name",
+    "shell": "{{root}}/bin/sh",
+    "expected": "sh",
+    "name": "name-sh"
+  },
+  {
+    "kind": "args",
+    "shell": "{{root}}/bin/sh",
+    "command": "echo *",
+    "expected": [
+      "-c",
+      "echo *"
+    ],
+    "name": "args-sh"
+  },
+  {
+    "name": "resolve-config-dash",
+    "kind": "resolve",
+    "priority": "config",
+    "configured": null,
+    "shell": "{{root}}/bin/dash",
+    "path": "{{root}}/bin",
+    "bin": null,
+    "expected": "{{root}}/bin/dash"
+  },
+  {
+    "name": "resolve-compat-dash",
+    "kind": "resolve",
+    "priority": "compat",
+    "configured": null,
+    "shell": "{{root}}/bin/dash",
+    "path": "{{root}}/bin",
+    "bin": null,
+    "expected": "{{root}}/bin/dash"
+  },
+  {
+    "kind": "login",
+    "shell": "{{root}}/bin/dash",
+    "expected": true,
+    "name": "login-dash"
+  },
+  {
+    "kind": "ps",
+    "shell": "{{root}}/bin/dash",
+    "expected": false,
+    "name": "ps-dash"
+  },
+  {
+    "kind": "name",
+    "shell": "{{root}}/bin/dash",
+    "expected": "dash",
+    "name": "name-dash"
+  },
+  {
+    "kind": "args",
+    "shell": "{{root}}/bin/dash",
+    "command": "echo *",
+    "expected": [
+      "-c",
+      "echo *"
+    ],
+    "name": "args-dash"
+  },
+  {
+    "name": "resolve-config-fish",
+    "kind": "resolve",
+    "priority": "config",
+    "configured": null,
+    "shell": "{{root}}/bin/fish",
+    "path": "{{root}}/bin",
+    "bin": null,
+    "expected": "{{root}}/bin/fish"
+  },
+  {
+    "name": "resolve-compat-fish",
+    "kind": "resolve",
+    "priority": "compat",
+    "configured": null,
+    "shell": "{{root}}/bin/fish",
+    "path": "{{root}}/bin",
+    "bin": null,
+    "expected": "{{root}}/bin/bash"
+  },
+  {
+    "kind": "login",
+    "shell": "{{root}}/bin/fish",
+    "expected": true,
+    "name": "login-fish"
+  },
+  {
+    "kind": "ps",
+    "shell": "{{root}}/bin/fish",
+    "expected": false,
+    "name": "ps-fish"
+  },
+  {
+    "kind": "name",
+    "shell": "{{root}}/bin/fish",
+    "expected": "fish",
+    "name": "name-fish"
+  },
+  {
+    "kind": "args",
+    "shell": "{{root}}/bin/fish",
+    "command": "echo *",
+    "expected": [
+      "-c",
+      "echo *"
+    ],
+    "name": "args-fish"
+  },
+  {
+    "name": "resolve-config-nu",
+    "kind": "resolve",
+    "priority": "config",
+    "configured": null,
+    "shell": "{{root}}/bin/nu",
+    "path": "{{root}}/bin",
+    "bin": null,
+    "expected": "{{root}}/bin/nu"
+  },
+  {
+    "name": "resolve-compat-nu",
+    "kind": "resolve",
+    "priority": "compat",
+    "configured": null,
+    "shell": "{{root}}/bin/nu",
+    "path": "{{root}}/bin",
+    "bin": null,
+    "expected": "{{root}}/bin/bash"
+  },
+  {
+    "kind": "login",
+    "shell": "{{root}}/bin/nu",
+    "expected": false,
+    "name": "login-nu"
+  },
+  {
+    "kind": "ps",
+    "shell": "{{root}}/bin/nu",
+    "expected": false,
+    "name": "ps-nu"
+  },
+  {
+    "kind": "name",
+    "shell": "{{root}}/bin/nu",
+    "expected": "nu",
+    "name": "name-nu"
+  },
+  {
+    "kind": "args",
+    "shell": "{{root}}/bin/nu",
+    "command": "echo *",
+    "expected": [
+      "-c",
+      "echo *"
+    ],
+    "name": "args-nu"
+  },
+  {
+    "name": "resolve-config-pwsh",
+    "kind": "resolve",
+    "priority": "config",
+    "configured": null,
+    "shell": "{{root}}/bin/pwsh",
+    "path": "{{root}}/bin",
+    "bin": null,
+    "expected": "{{root}}/bin/pwsh"
+  },
+  {
+    "name": "resolve-compat-pwsh",
+    "kind": "resolve",
+    "priority": "compat",
+    "configured": null,
+    "shell": "{{root}}/bin/pwsh",
+    "path": "{{root}}/bin",
+    "bin": null,
+    "expected": "{{root}}/bin/pwsh"
+  },
+  {
+    "kind": "login",
+    "shell": "{{root}}/bin/pwsh",
+    "expected": false,
+    "name": "login-pwsh"
+  },
+  {
+    "kind": "ps",
+    "shell": "{{root}}/bin/pwsh",
+    "expected": true,
+    "name": "ps-pwsh"
+  },
+  {
+    "kind": "name",
+    "shell": "{{root}}/bin/pwsh",
+    "expected": "pwsh",
+    "name": "name-pwsh"
+  },
+  {
+    "kind": "args",
+    "shell": "{{root}}/bin/pwsh",
+    "command": "echo *",
+    "expected": [
+      "-NoLogo",
+      "-NoProfile",
+      "-NonInteractive",
+      "-Command",
+      "echo *"
+    ],
+    "name": "args-pwsh"
+  },
+  {
+    "name": "resolve-config-powershell",
+    "kind": "resolve",
+    "priority": "config",
+    "configured": null,
+    "shell": "{{root}}/bin/powershell",
+    "path": "{{root}}/bin",
+    "bin": null,
+    "expected": "{{root}}/bin/powershell"
+  },
+  {
+    "name": "resolve-compat-powershell",
+    "kind": "resolve",
+    "priority": "compat",
+    "configured": null,
+    "shell": "{{root}}/bin/powershell",
+    "path": "{{root}}/bin",
+    "bin": null,
+    "expected": "{{root}}/bin/powershell"
+  },
+  {
+    "kind": "login",
+    "shell": "{{root}}/bin/powershell",
+    "expected": false,
+    "name": "login-powershell"
+  },
+  {
+    "kind": "ps",
+    "shell": "{{root}}/bin/powershell",
+    "expected": true,
+    "name": "ps-powershell"
+  },
+  {
+    "kind": "name",
+    "shell": "{{root}}/bin/powershell",
+    "expected": "powershell",
+    "name": "name-powershell"
+  },
+  {
+    "kind": "args",
+    "shell": "{{root}}/bin/powershell",
+    "command": "echo *",
+    "expected": [
+      "-NoLogo",
+      "-NoProfile",
+      "-NonInteractive",
+      "-Command",
+      "echo *"
+    ],
+    "name": "args-powershell"
+  },
+  {
+    "name": "resolve-config-cmd",
+    "kind": "resolve",
+    "priority": "config",
+    "configured": null,
+    "shell": "{{root}}/bin/cmd",
+    "path": "{{root}}/bin",
+    "bin": null,
+    "expected": "{{root}}/bin/cmd"
+  },
+  {
+    "name": "resolve-compat-cmd",
+    "kind": "resolve",
+    "priority": "compat",
+    "configured": null,
+    "shell": "{{root}}/bin/cmd",
+    "path": "{{root}}/bin",
+    "bin": null,
+    "expected": "{{root}}/bin/cmd"
+  },
+  {
+    "kind": "login",
+    "shell": "{{root}}/bin/cmd",
+    "expected": false,
+    "name": "login-cmd"
+  },
+  {
+    "kind": "ps",
+    "shell": "{{root}}/bin/cmd",
+    "expected": false,
+    "name": "ps-cmd"
+  },
+  {
+    "kind": "name",
+    "shell": "{{root}}/bin/cmd",
+    "expected": "cmd",
+    "name": "name-cmd"
+  },
+  {
+    "kind": "args",
+    "shell": "{{root}}/bin/cmd",
+    "command": "echo *",
+    "expected": [
+      "/c",
+      "echo *"
+    ],
+    "name": "args-cmd"
+  },
+  {
+    "name": "resolve-config-cmd.exe",
+    "kind": "resolve",
+    "priority": "config",
+    "configured": null,
+    "shell": "{{root}}/bin/cmd.exe",
+    "path": "{{root}}/bin",
+    "bin": null,
+    "expected": "{{root}}/bin/cmd.exe"
+  },
+  {
+    "name": "resolve-compat-cmd.exe",
+    "kind": "resolve",
+    "priority": "compat",
+    "configured": null,
+    "shell": "{{root}}/bin/cmd.exe",
+    "path": "{{root}}/bin",
+    "bin": null,
+    "expected": "{{root}}/bin/cmd.exe"
+  },
+  {
+    "kind": "login",
+    "shell": "{{root}}/bin/cmd.exe",
+    "expected": false,
+    "name": "login-cmd.exe"
+  },
+  {
+    "kind": "ps",
+    "shell": "{{root}}/bin/cmd.exe",
+    "expected": false,
+    "name": "ps-cmd.exe"
+  },
+  {
+    "kind": "name",
+    "shell": "{{root}}/bin/cmd.exe",
+    "expected": "cmd.exe",
+    "name": "name-cmd.exe"
+  },
+  {
+    "kind": "args",
+    "shell": "{{root}}/bin/cmd.exe",
+    "command": "echo *",
+    "expected": [
+      "-c",
+      "echo *"
+    ],
+    "name": "args-cmd.exe"
+  },
+  {
+    "kind": "name",
+    "shell": "/usr/bin/bash",
+    "expected": "bash",
+    "name": "name-/usr/bin/bash"
+  },
+  {
+    "kind": "name",
+    "shell": "/usr/bin/env bash",
+    "expected": "env bash",
+    "name": "name-/usr/bin/env bash"
+  },
+  {
+    "kind": "name",
+    "shell": "/bin/zsh",
+    "expected": "zsh",
+    "name": "name-/bin/zsh"
+  },
+  {
+    "kind": "name",
+    "shell": "/opt/homebrew/bin/pwsh",
+    "expected": "pwsh",
+    "name": "name-/opt/homebrew/bin/pwsh"
+  },
+  {
+    "kind": "name",
+    "shell": "C:\\Windows\\System32\\cmd.exe",
+    "expected": "c:\\windows\\system32\\cmd.exe",
+    "name": "name-C:\\Windows\\System32\\cmd.exe"
+  },
+  {
+    "kind": "name",
+    "shell": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+    "expected": "c:\\program files\\powershell\\7\\pwsh.exe",
+    "name": "name-C:\\Program Files\\PowerShell\\7\\pwsh.exe"
+  },
+  {
+    "kind": "name",
+    "shell": "C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe",
+    "expected": "powershell.exe",
+    "name": "name-C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe"
+  },
+  {
+    "kind": "name",
+    "shell": ".\\bash.exe",
+    "expected": ".\\bash.exe",
+    "name": "name-.\\bash.exe"
+  },
+  {
+    "kind": "name",
+    "shell": "bash.exe",
+    "expected": "bash.exe",
+    "name": "name-bash.exe"
+  },
+  {
+    "kind": "name",
+    "shell": "powershell.exe",
+    "expected": "powershell.exe",
+    "name": "name-powershell.exe"
+  },
+  {
+    "kind": "name",
+    "shell": "nu.exe",
+    "expected": "nu.exe",
+    "name": "name-nu.exe"
+  },
+  {
+    "kind": "args",
+    "shell": "/bin/bash",
+    "command": "printf '%s\\n' hi",
+    "expected": [
+      "-c",
+      "printf '%s\\n' hi"
+    ],
+    "name": "args-/bin/bash"
+  },
+  {
+    "kind": "args",
+    "shell": "/bin/zsh",
+    "command": "echo *",
+    "expected": [
+      "+o",
+      "nomatch",
+      "-c",
+      "echo *"
+    ],
+    "name": "args-/bin/zsh"
+  },
+  {
+    "kind": "args",
+    "shell": "/bin/dash",
+    "command": "echo hi",
+    "expected": [
+      "-c",
+      "echo hi"
+    ],
+    "name": "args-/bin/dash"
+  },
+  {
+    "kind": "args",
+    "shell": "/bin/sh",
+    "command": "echo hi",
+    "expected": [
+      "-c",
+      "echo hi"
+    ],
+    "name": "args-/bin/sh"
+  },
+  {
+    "kind": "args",
+    "shell": "/usr/bin/fish",
+    "command": "echo hi",
+    "expected": [
+      "-c",
+      "echo hi"
+    ],
+    "name": "args-/usr/bin/fish"
+  },
+  {
+    "kind": "args",
+    "shell": "/usr/bin/nu",
+    "command": "echo hi",
+    "expected": [
+      "-c",
+      "echo hi"
+    ],
+    "name": "args-/usr/bin/nu"
+  },
+  {
+    "kind": "args",
+    "shell": "/usr/bin/env bash",
+    "command": "echo hi",
+    "expected": [
+      "-c",
+      "echo hi"
+    ],
+    "name": "args-/usr/bin/env bash"
+  },
+  {
+    "kind": "args",
+    "shell": "pwsh",
+    "command": "Get-Location",
+    "expected": [
+      "-NoLogo",
+      "-NoProfile",
+      "-NonInteractive",
+      "-Command",
+      "Get-Location"
+    ],
+    "name": "args-pwsh"
+  },
+  {
+    "kind": "args",
+    "shell": "powershell",
+    "command": "Get-Location",
+    "expected": [
+      "-NoLogo",
+      "-NoProfile",
+      "-NonInteractive",
+      "-Command",
+      "Get-Location"
+    ],
+    "name": "args-powershell"
+  },
+  {
+    "kind": "args",
+    "shell": "cmd",
+    "command": "dir",
+    "expected": [
+      "/c",
+      "dir"
+    ],
+    "name": "args-cmd"
+  },
+  {
+    "kind": "args",
+    "shell": "C:\\Windows\\System32\\cmd.exe",
+    "command": "dir",
+    "expected": [
+      "-c",
+      "dir"
+    ],
+    "name": "args-C:\\Windows\\System32\\cmd.exe"
+  },
+  {
+    "kind": "args",
+    "shell": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+    "command": "Get-Location",
+    "expected": [
+      "-c",
+      "Get-Location"
+    ],
+    "name": "args-C:\\Program Files\\PowerShell\\7\\pwsh.exe"
+  },
+  {
+    "name": "resolve-config-directory-bash",
+    "kind": "resolve",
+    "priority": "config",
+    "configured": "{{root}}/bin/bash",
+    "shell": null,
+    "path": "{{root}}/bin",
+    "bin": null,
+    "expected": "{{root}}/bin/bash"
+  },
+  {
+    "name": "resolve-config-denied-fish",
+    "kind": "resolve",
+    "priority": "config",
+    "configured": "{{root}}/bin/fish",
+    "shell": null,
+    "path": "{{root}}/bin",
+    "bin": null,
+    "expected": "{{root}}/bin/fish"
+  },
+  {
+    "name": "resolve-compat-denied-fish",
+    "kind": "resolve",
+    "priority": "compat",
+    "configured": "{{root}}/bin/fish",
+    "shell": null,
+    "path": "{{root}}/bin",
+    "bin": null,
+    "expected": "{{root}}/bin/bash"
+  },
+  {
+    "name": "resolve-compat-denied-nu",
+    "kind": "resolve",
+    "priority": "compat",
+    "configured": "{{root}}/bin/nu",
+    "shell": null,
+    "path": "{{root}}/bin",
+    "bin": null,
+    "expected": "{{root}}/bin/bash"
+  },
+  {
+    "name": "resolve-config-missing-path",
+    "kind": "resolve",
+    "priority": "config",
+    "configured": "{{root}}/missing",
+    "shell": null,
+    "path": "{{root}}/bin",
+    "bin": null,
+    "expected": "{{root}}/bin/bash"
+  },
+  {
+    "name": "resolve-config-bare-name",
+    "kind": "resolve",
+    "priority": "config",
+    "configured": "zsh",
+    "shell": null,
+    "path": "{{root}}/bin",
+    "bin": null,
+    "expected": "{{root}}/bin/zsh"
+  },
+  {
+    "name": "resolve-config-windows-path",
+    "kind": "resolve",
+    "priority": "config",
+    "configured": "C:\\Windows\\System32\\cmd.exe",
+    "shell": null,
+    "path": "{{root}}/bin",
+    "bin": null,
+    "expected": "{{root}}/bin/bash"
+  },
+  {
+    "name": "resolve-config-missing-without-bash",
+    "kind": "resolve",
+    "priority": "config",
+    "configured": "{{root}}/missing",
+    "shell": null,
+    "path": "{{root}}/empty",
+    "bin": null,
+    "expected": "/bin/sh"
+  },
+  {
+    "name": "resolve-environment-dash",
+    "kind": "resolve",
+    "priority": "config",
+    "configured": null,
+    "shell": "{{root}}/bin/dash",
+    "path": "{{root}}/bin",
+    "bin": null,
+    "expected": "{{root}}/bin/dash"
+  },
+  {
+    "name": "resolve-environment-fish",
+    "kind": "resolve",
+    "priority": "config",
+    "configured": null,
+    "shell": "{{root}}/bin/fish",
+    "path": "{{root}}/bin",
+    "bin": null,
+    "expected": "{{root}}/bin/fish"
+  },
+  {
+    "name": "resolve-environment-fish-compat",
+    "kind": "resolve",
+    "priority": "compat",
+    "configured": null,
+    "shell": "{{root}}/bin/fish",
+    "path": "{{root}}/bin",
+    "bin": null,
+    "expected": "{{root}}/bin/bash"
+  },
+  {
+    "name": "resolve-environment-unset",
+    "kind": "resolve",
+    "priority": "config",
+    "configured": null,
+    "shell": null,
+    "path": "{{root}}/bin",
+    "bin": null,
+    "expected": "{{root}}/bin/bash"
+  },
+  {
+    "name": "resolve-environment-unset-compat",
+    "kind": "resolve",
+    "priority": "compat",
+    "configured": null,
+    "shell": null,
+    "path": "{{root}}/bin",
+    "bin": null,
+    "expected": "{{root}}/bin/bash"
+  },
+  {
+    "name": "resolve-environment-unset-without-bash",
+    "kind": "resolve",
+    "priority": "config",
+    "configured": null,
+    "shell": null,
+    "path": "{{root}}/empty",
+    "bin": null,
+    "expected": "/bin/sh"
+  },
+  {
+    "name": "resolve-environment-unset-from-bin",
+    "kind": "resolve",
+    "priority": "config",
+    "configured": null,
+    "shell": null,
+    "path": "{{root}}/empty",
+    "bin": "{{root}}/global",
+    "expected": "{{root}}/global/bash"
+  },
+  {
+    "name": "resolve-environment-absolute-without-bash",
+    "kind": "resolve",
+    "priority": "config",
+    "configured": null,
+    "shell": "{{root}}/bin/zsh",
+    "path": "{{root}}/empty",
+    "bin": null,
+    "expected": "{{root}}/bin/zsh"
+  },
+  {
+    "name": "resolve-environment-missing",
+    "kind": "resolve",
+    "priority": "config",
+    "configured": null,
+    "shell": "{{root}}/missing",
+    "path": "{{root}}/bin",
+    "bin": null,
+    "expected": "{{root}}/bin/bash"
+  }
+]

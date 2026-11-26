@@ -11,6 +11,7 @@
     "script/config-corpus",
     "script/fs-corpus",
     "script/registry-corpus",
+    "script/shell-corpus",
     "script/tool-corpus",
     "script/tool-definitions",
     "script/vcs-corpus"

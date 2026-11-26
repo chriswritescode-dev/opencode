@@ -1,8 +1,13 @@
-use std::ffi::OsStr;
+use std::ffi::{OsStr, OsString};
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex, RwLock};
 
 use opencode_util::path::{Flavor, windows_path};
+
+use crate::entry::{self, Entry};
+use crate::observer::{self, ObserverHandle};
+use crate::service::ConfigService;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Item {
@@ -20,7 +25,7 @@ pub fn list(shells: &Path, path: Option<&OsStr>, bin: &Path, gitbash: Option<&Pa
         .collect()
 }
 
-fn name(file: &str) -> String {
+pub fn name(file: &str) -> String {
     if !cfg!(windows) {
         return Flavor::Posix.basename(file).to_lowercase();
     }
@@ -35,8 +40,48 @@ fn stem(base: &str) -> &str {
     }
 }
 
-fn compatible(file: &str) -> bool {
-    !matches!(name(file).as_str(), "fish" | "nu")
+#[derive(Clone, Copy, Debug)]
+struct Meta {
+    acceptable: bool,
+    login: bool,
+    ps: bool,
+}
+
+fn meta(file: &str) -> Meta {
+    match name(file).as_str() {
+        "fish" => Meta { acceptable: false, login: true, ps: false },
+        "nu" => Meta { acceptable: false, login: false, ps: false },
+        "powershell" | "pwsh" => Meta { acceptable: true, login: false, ps: true },
+        "bash" | "dash" | "ksh" | "sh" | "zsh" => Meta { acceptable: true, login: true, ps: false },
+        _ => Meta { acceptable: true, login: false, ps: false },
+    }
+}
+
+pub fn compatible(file: &str) -> bool {
+    meta(file).acceptable
+}
+
+pub fn login(file: &str) -> bool {
+    meta(file).login
+}
+
+pub fn ps(file: &str) -> bool {
+    meta(file).ps
+}
+
+pub fn args(file: &str, command: &str) -> Vec<String> {
+    let n = name(file);
+    if n == "cmd" {
+        return vec!["/c".to_owned(), command.to_owned()];
+    }
+    if ps(file) {
+        return ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command", command].map(str::to_owned).to_vec();
+    }
+    // zsh aborts the whole line on an unmatched glob; pass it through literally as bash does.
+    if n == "zsh" {
+        return ["+o", "nomatch", "-c", command].map(str::to_owned).to_vec();
+    }
+    ["-c", command].map(str::to_owned).to_vec()
 }
 
 fn full(file: &str, gitbash: Option<&str>, path: Option<&OsStr>, bin: &Path) -> String {
@@ -274,4 +319,134 @@ fn resolve_gitbash(config: Option<&Path>, path: Option<&OsStr>, bin: &Path) -> O
 #[cfg(not(windows))]
 fn resolve_gitbash(_config: Option<&Path>, _path: Option<&OsStr>, _bin: &Path) -> Option<String> {
     None
+}
+
+#[derive(Clone, Debug)]
+pub struct Search {
+    pub bin: PathBuf,
+    pub path: Option<OsString>,
+    pub gitbash: Option<PathBuf>,
+}
+
+pub fn select(file: Option<&str>, compatible_only: bool, search: &Search) -> String {
+    let gitbash = resolve_gitbash(search.gitbash.as_deref(), search.path.as_deref(), &search.bin);
+    if let Some(file) = file.filter(|file| !file.is_empty())
+        && (!compatible_only || compatible(file))
+        && let Some(shell) = executable(file, gitbash.as_deref(), search.path.as_deref(), &search.bin)
+    {
+        return shell;
+    }
+    if let Some(first) = window_candidates(search, gitbash.as_deref()).into_iter().next() {
+        return first;
+    }
+    fallback(search)
+}
+
+pub fn fallback(search: &Search) -> String {
+    if cfg!(target_os = "macos") {
+        return "/bin/zsh".to_owned();
+    }
+    find_executable("bash", search.path.as_deref(), &search.bin).unwrap_or_else(|| "/bin/sh".to_owned())
+}
+
+pub type Vars = dyn Fn(&str) -> Option<OsString> + Send + Sync;
+
+pub fn environment(vars: &Vars, compatible_only: bool, path: Option<&OsStr>, bin: &Path) -> String {
+    let search = Search { bin: bin.to_owned(), path: path.map(OsStr::to_os_string), gitbash: None };
+    select(shell_variable(vars).as_deref(), compatible_only, &search)
+}
+
+#[cfg(windows)]
+fn window_candidates(search: &Search, gitbash: Option<&str>) -> Vec<String> {
+    win(search.path.as_deref(), &search.bin, gitbash)
+}
+
+#[cfg(not(windows))]
+fn window_candidates(_search: &Search, _gitbash: Option<&str>) -> Vec<String> {
+    Vec::new()
+}
+
+fn shell_variable(vars: &Vars) -> Option<String> {
+    vars("SHELL").map(|value| value.to_string_lossy().into_owned()).filter(|value| !value.is_empty())
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Priority {
+    Config,
+    Compat,
+}
+
+#[derive(Default)]
+struct Cache {
+    config: Option<String>,
+    compat: Option<String>,
+}
+
+pub struct ShellSelect {
+    search: Search,
+    vars: Box<Vars>,
+    configured: RwLock<Option<String>>,
+    cache: Mutex<Cache>,
+    observer: Mutex<Option<ObserverHandle>>,
+}
+
+impl ShellSelect {
+    pub fn new(search: Search, vars: impl Fn(&str) -> Option<OsString> + Send + Sync + 'static) -> Self {
+        Self {
+            search,
+            vars: Box::new(vars),
+            configured: RwLock::new(None),
+            cache: Mutex::new(Cache::default()),
+            observer: Mutex::new(None),
+        }
+    }
+
+    pub fn configure(&self, shell: Option<&str>) {
+        *self.configured.write().expect("the shell selection lock is never poisoned") =
+            shell.filter(|shell| !shell.is_empty()).map(str::to_owned);
+        let mut cache = self.cache.lock().expect("the shell cache lock is never poisoned");
+        cache.config = None;
+        cache.compat = None;
+    }
+
+    pub fn resolve(&self, priority: Priority) -> String {
+        let compatible_only = priority == Priority::Compat;
+        if let Some(shell) = self.configured.read().expect("the shell selection lock is never poisoned").clone() {
+            return select(Some(&shell), compatible_only, &self.search);
+        }
+        if self.search.gitbash.is_some() {
+            let shell = shell_variable(&*self.vars);
+            return select(shell.as_deref(), compatible_only, &self.search);
+        }
+        let cached = {
+            let cache = self.cache.lock().expect("the shell cache lock is never poisoned");
+            match priority {
+                Priority::Config => cache.config.clone(),
+                Priority::Compat => cache.compat.clone(),
+            }
+        };
+        if let Some(value) = cached {
+            return value;
+        }
+        let value = environment(&*self.vars, compatible_only, self.search.path.as_deref(), &self.search.bin);
+        let mut cache = self.cache.lock().expect("the shell cache lock is never poisoned");
+        match priority {
+            Priority::Config => cache.config = Some(value.clone()),
+            Priority::Compat => cache.compat = Some(value.clone()),
+        }
+        value
+    }
+
+    pub fn observe_config(self: &Arc<Self>, config: &ConfigService) {
+        self.configure(configured_shell(&config.entries()).as_deref());
+        let select = Arc::clone(self);
+        let observer = observer::observe(config, move |entries| {
+            select.configure(configured_shell(entries).as_deref());
+        });
+        *self.observer.lock().expect("the shell observer lock is never poisoned") = Some(observer);
+    }
+}
+
+fn configured_shell(entries: &[Entry]) -> Option<String> {
+    entry::latest(entries, |info| info.shell.clone())
 }
