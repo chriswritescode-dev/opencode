@@ -14,8 +14,8 @@ use crate::provider::ProviderService;
 const SUBSCRIBED: [&str; 2] = ["credential.updated", "credential.switched"];
 
 pub async fn register(services: &Services, builtin: &mut Builtin) {
-    let entries = Arc::new(RwLock::new(services.config.entries()));
-    builtin.observers.push(observe(&services.config, {
+    let entries = Arc::new(RwLock::new(Vec::new()));
+    let handle = observe(&services.config, {
         let entries = entries.clone();
         let provider = services.provider.clone();
         move |fresh| {
@@ -23,7 +23,9 @@ pub async fn register(services: &Services, builtin: &mut Builtin) {
             let provider = provider.clone();
             tokio::spawn(async move { provider.reload().await });
         }
-    }));
+    });
+    *entries.write().expect("the config policy entry lock is never poisoned") = handle.entries();
+    builtin.observers.push(handle);
 
     let subscription = services.bus.subscribe(&SUBSCRIBED, None);
     let accounts = Arc::new(RwLock::new(read_accounts(&services.credentials)));
