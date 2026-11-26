@@ -57,7 +57,11 @@ enum Cached {
 
 pub async fn register(services: &Services, context: &PluginContext, builtin: &mut Builtin) {
     context.console.set_web_search_dependencies(services.integration.clone(), context.http_manual_redirects.clone());
-    context.console.set_artifact_dependencies(services.integration.clone(), context.http.clone(), storage(context));
+    context.console.set_artifact_dependencies(
+        services.integration.clone(),
+        context.http_manual_redirects.clone(),
+        storage(context),
+    );
     let registration = services
         .integration
         .transform({

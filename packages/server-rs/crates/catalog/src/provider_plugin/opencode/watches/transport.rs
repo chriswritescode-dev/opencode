@@ -31,6 +31,8 @@ const POLL_TIMEOUT: Duration = Duration::from_secs(POLL_WAIT + 10);
 
 const MAX_BACKOFF: Duration = Duration::from_secs(60);
 
+const HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(30);
+
 pub(crate) type Headers = Arc<dyn Fn() -> BoxFuture<Result<Vec<(String, String)>, String>> + Send + Sync>;
 
 pub(crate) type Deliver = Arc<dyn Fn(Vec<WatchEvent>) -> BoxFuture<Vec<String>> + Send + Sync>;
@@ -226,13 +228,13 @@ async fn stream(state: &Mutex<HubState>) -> Outcome {
         };
         request.headers_mut().insert(name, value);
     }
-    let socket = match tokio_tungstenite::connect_async(request).await {
-        Ok((socket, _)) => socket,
-        Err(tokio_tungstenite::tungstenite::Error::Http(_))
-        | Err(tokio_tungstenite::tungstenite::Error::Protocol(
+    let socket = match tokio::time::timeout(HANDSHAKE_TIMEOUT, tokio_tungstenite::connect_async(request)).await {
+        Ok(Ok((socket, _))) => socket,
+        Ok(Err(tokio_tungstenite::tungstenite::Error::Http(_)))
+        | Ok(Err(tokio_tungstenite::tungstenite::Error::Protocol(
             tokio_tungstenite::tungstenite::error::ProtocolError::HandshakeIncomplete,
-        )) => return Outcome::Refused,
-        Err(_) => return Outcome::Failed,
+        ))) => return Outcome::Refused,
+        Ok(Err(_)) | Err(_) => return Outcome::Failed,
     };
     let mut socket = socket;
     loop {
