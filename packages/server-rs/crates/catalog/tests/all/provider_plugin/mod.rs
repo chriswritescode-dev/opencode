@@ -22,6 +22,7 @@ pub mod ollama;
 pub mod openai;
 pub mod openai_context_caps;
 pub mod opencode;
+pub mod opencode_artifacts;
 pub mod opencode_watches;
 pub mod openrouter;
 pub mod poe;

@@ -2,14 +2,16 @@ use std::future::Future;
 use std::sync::{Arc, RwLock};
 
 use opencode_ai::route::executor::HttpSender;
+use opencode_config::seams::KvStore;
 use opencode_contract::generated::{
     ConfigEntryDocumentInfo, ConfigEntryDocumentInfoWebsearch, ConfigEntryDocumentInfoWebsearchObjectProvider,
-    ConnectionStatus, WebSearchID,
+    ConnectionInfo, ConnectionStatus, WebSearchID,
 };
 use tokio::sync::{Mutex, watch};
 use tokio::task::JoinHandle;
 
 use super::Snapshot;
+use super::artifacts::ConsoleArtifacts;
 use super::content::{ConsoleInstruction, ConsoleSkill};
 use super::watches::{WatchEvent, WatchTarget, WatchTools, Watches};
 use super::websearch::ConsoleWebSearch;
@@ -37,6 +39,19 @@ struct WebSearchDependencies {
     http: Arc<dyn HttpSender>,
 }
 
+#[derive(Clone)]
+struct ArtifactDependencies {
+    integration: Arc<IntegrationService>,
+    http: Arc<dyn HttpSender>,
+    kv: Arc<dyn KvStore>,
+}
+
+#[derive(Clone)]
+struct ArtifactsCurrent {
+    connection: ConnectionInfo,
+    wakes: bool,
+}
+
 pub struct ConsoleHandle {
     pub(crate) snapshot: RwLock<Snapshot>,
     pub(crate) integrated: RwLock<Option<ConfigEntryDocumentInfo>>,
@@ -48,6 +63,8 @@ pub struct ConsoleHandle {
     console_skills: RwLock<ConsoleSkills>,
     skill_download: std::sync::Mutex<Option<JoinHandle<()>>>,
     websearch: RwLock<Option<WebSearchDependencies>>,
+    artifact_dependencies: RwLock<Option<ArtifactDependencies>>,
+    artifacts: RwLock<Option<ArtifactsCurrent>>,
     pub(crate) watches: Watches,
     revision: watch::Sender<u64>,
 }
@@ -65,6 +82,8 @@ impl Default for ConsoleHandle {
             console_skills: RwLock::new(ConsoleSkills::default()),
             skill_download: std::sync::Mutex::new(None),
             websearch: RwLock::new(None),
+            artifact_dependencies: RwLock::new(None),
+            artifacts: RwLock::new(None),
             watches: Watches::default(),
             revision: watch::channel(0).0,
         }
@@ -101,6 +120,49 @@ impl ConsoleHandle {
     pub(crate) fn set_web_search_dependencies(&self, integration: Arc<IntegrationService>, http: Arc<dyn HttpSender>) {
         *self.websearch.write().expect("lock the Console web search dependencies") =
             Some(WebSearchDependencies { integration, http });
+    }
+
+    pub fn artifacts(&self) -> Option<ConsoleArtifacts> {
+        let current = self.artifacts.read().expect("lock the Console artifacts").clone()?;
+        let dependencies =
+            self.artifact_dependencies.read().expect("lock the Console artifact dependencies").clone()?;
+        Some(ConsoleArtifacts::new(
+            dependencies.integration,
+            dependencies.http,
+            dependencies.kv,
+            current.connection,
+            current.wakes,
+        ))
+    }
+
+    pub(crate) fn set_artifact_dependencies(
+        &self,
+        integration: Arc<IntegrationService>,
+        http: Arc<dyn HttpSender>,
+        kv: Arc<dyn KvStore>,
+    ) {
+        *self.artifact_dependencies.write().expect("lock the Console artifact dependencies") =
+            Some(ArtifactDependencies { integration, http, kv });
+    }
+
+    /// Offers the artifact provider through `connection`, or removes it when it is undefined.
+    pub(crate) fn sync_artifacts(&self, connection: Option<ConnectionInfo>, wakes: bool) {
+        let next = connection.map(|connection| ArtifactsCurrent { connection, wakes });
+        {
+            let current = self.artifacts.read().expect("lock the Console artifacts");
+            let same = match (current.as_ref(), next.as_ref()) {
+                (Some(current), Some(next)) => {
+                    crate::integration::key(&current.connection) == crate::integration::key(&next.connection)
+                        && current.wakes == next.wakes
+                }
+                (None, None) => true,
+                _ => false,
+            };
+            if same {
+                return;
+            }
+        }
+        *self.artifacts.write().expect("lock the Console artifacts") = next;
     }
 
     pub fn allowed(&self) -> Allowed {

@@ -1,3 +1,4 @@
+pub mod artifacts;
 pub mod content;
 pub mod follow;
 pub mod handle;
@@ -26,6 +27,7 @@ use crate::provider_plugin::http::BufferedResponse;
 
 use super::{env_value, setting};
 
+pub use self::artifacts::ConsoleArtifacts;
 pub use self::content::{ConsoleInstruction, ConsoleSkill};
 pub use self::handle::{Allowed, ConsoleHandle};
 pub use self::websearch::ConsoleWebSearch;
@@ -55,6 +57,7 @@ enum Cached {
 
 pub async fn register(services: &Services, context: &PluginContext, builtin: &mut Builtin) {
     context.console.set_web_search_dependencies(services.integration.clone(), context.http_manual_redirects.clone());
+    context.console.set_artifact_dependencies(services.integration.clone(), context.http.clone(), context.kv.clone());
     let registration = services
         .integration
         .transform({
@@ -499,13 +502,15 @@ async fn publish(services: &Services, context: &PluginContext, next: &Snapshot) 
         artifacts: allowed && remote.is_some_and(|remote| remote.artifacts),
     });
     sync_instructions_and_skills(services, context, next, allowed);
-    sync_watches(services, context, next, allowed).await;
+    let watching = allowed
+        && remote.is_some_and(|remote| remote.watches)
+        && services.config.flags().into_iter().any(|(key, state)| key == "console_watches" && state.enabled);
+    sync_watches(services, context, next, watching).await;
+    let artifacts = next.connection.clone().filter(|_| allowed && remote.is_some_and(|remote| remote.artifacts));
+    context.console.sync_artifacts(artifacts, watching);
 }
 
-async fn sync_watches(services: &Services, context: &PluginContext, next: &Snapshot, allowed: bool) {
-    let watching = allowed
-        && next.remote.as_ref().is_some_and(|remote| remote.watches)
-        && services.config.flags().into_iter().any(|(key, state)| key == "console_watches" && state.enabled);
+async fn sync_watches(services: &Services, context: &PluginContext, next: &Snapshot, watching: bool) {
     let target = match next.connection.clone().filter(|_| watching) {
         Some(connection) => watch_target(services, context, &connection).await,
         None => None,
