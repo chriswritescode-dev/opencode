@@ -1,7 +1,8 @@
 import { mkdir } from "node:fs/promises"
+import { fileURLToPath } from "node:url"
 import { upstreamCoreTree } from "../upstream"
 
-const root = new URL("../..", import.meta.url).pathname
+const root = fileURLToPath(new URL("../..", import.meta.url))
 const source = `${root}script/tool-definitions/export.ts`
 const tree = await upstreamCoreTree()
 

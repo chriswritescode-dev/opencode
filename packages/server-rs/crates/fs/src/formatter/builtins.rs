@@ -21,7 +21,7 @@ pub struct Info {
     pub extensions: Vec<String>,
     pub environment: Vec<(String, String)>,
     pub(crate) check: Check,
-    cached: Mutex<Option<Vec<String>>>,
+    cached: Mutex<Option<Option<Vec<String>>>>,
 }
 
 impl Info {
@@ -36,11 +36,11 @@ impl Info {
 
     pub async fn command(&self) -> Option<Vec<String>> {
         if let Some(command) = self.cached.lock().expect("the formatter cache is not poisoned").clone() {
-            return Some(command);
+            return command;
         }
-        let command = (self.check)().await?;
+        let command = (self.check)().await;
         *self.cached.lock().expect("the formatter cache is not poisoned") = Some(command.clone());
-        Some(command)
+        command
     }
 }
 
@@ -149,7 +149,9 @@ fn oxfmt(context: &Arc<Context>) -> Info {
             let context = context.clone();
             Box::pin(async move {
                 for file in find_up(&context, "package.json") {
-                    let json = read_json(&file)?;
+                    let Some(json) = read_json(&file) else {
+                        continue;
+                    };
                     if !has_dependency(&json, "oxfmt") {
                         continue;
                     }
@@ -173,7 +175,9 @@ fn prettier(context: &Arc<Context>) -> Info {
             let context = context.clone();
             Box::pin(async move {
                 for file in find_up(&context, "package.json") {
-                    let json = read_json(&file)?;
+                    let Some(json) = read_json(&file) else {
+                        continue;
+                    };
                     if !has_dependency(&json, "prettier") {
                         continue;
                     }
@@ -332,7 +336,9 @@ fn pint(context: &Arc<Context>) -> Info {
             let context = context.clone();
             Box::pin(async move {
                 for file in find_up(&context, "composer.json") {
-                    let json = read_json(&file)?;
+                    let Some(json) = read_json(&file) else {
+                        continue;
+                    };
                     if has_record_key(&json, "require", "laravel/pint")
                         || has_record_key(&json, "require-dev", "laravel/pint")
                     {

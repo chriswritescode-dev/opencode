@@ -1,4 +1,5 @@
 import { mkdir, realpath } from "node:fs/promises"
+import { fileURLToPath } from "node:url"
 import { upstreamCoreTree } from "../upstream"
 
 type MimeEntry = { source?: string; extensions?: string[] }
@@ -7,7 +8,7 @@ const FACET_SCORES: Record<string, number> = { "prs.": 100, "x-": 200, "x.": 300
 const SOURCE_SCORES: Record<string, number> = { nginx: 10, apache: 20, iana: 40, default: 30 }
 const TYPE_SCORES: Record<string, number> = { application: 1, font: 2, audio: 2, video: 3, default: 0 }
 
-const root = new URL("../..", import.meta.url).pathname
+const root = fileURLToPath(new URL("../..", import.meta.url))
 const tree = await upstreamCoreTree()
 const packageRoot = `${tree}/packages/core/node_modules/mime-types`
 const manifest = (await Bun.file(`${packageRoot}/package.json`).json()) as { version?: string }

@@ -519,7 +519,7 @@ async function exportFilesystem() {
         expected: Exit.isSuccess(exit) ? exit.value : { error: errorTag(exit) },
       })
     }
-    write(cases, base, os.homedir())
+    write(cases, base)
   } finally {
     await fs.rm(base, { recursive: true, force: true })
   }
@@ -765,7 +765,7 @@ async function exportAccess() {
       if (Exit.isFailure(exit)) expected.error = errorTag(exit)
       cases.push({ ...spec, metadata: caseMetadata, expected })
     }
-    write(cases, base, os.homedir())
+    write(cases, base)
   } finally {
     await fs.rm(base, { recursive: true, force: true })
   }
@@ -1073,8 +1073,9 @@ function errorTag(exit: Exit.Exit<unknown, unknown>) {
   return "Die"
 }
 
-function write(cases: Array<Record<string, unknown>>, root: string, home: string) {
-  const output = JSON.stringify(cases, null, 2).replaceAll(root, "{{root}}").replaceAll(home, "{{home}}")
+function write(cases: Array<Record<string, unknown>>, root: string, home?: string) {
+  const withRoot = JSON.stringify(cases, null, 2).replaceAll(root, "{{root}}")
+  const output = home === undefined ? withRoot : withRoot.replaceAll(home, "{{home}}")
   process.stdout.write(`${output}\n`)
 }
 
