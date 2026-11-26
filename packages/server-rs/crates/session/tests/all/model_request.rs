@@ -1,7 +1,7 @@
 use std::path::Path;
 use std::sync::Arc;
 
-use opencode_ai::{ExecutionContext, MapEnv, StreamOptions, SystemPart};
+use opencode_ai::{ExecutionContext, MapEnv, StreamOptions, SystemPart, ToolEntry};
 use opencode_bus::{Bus, BusOptions, Definition, PublishOptions};
 use opencode_catalog::Catalog;
 use opencode_config::entry::{Document, Entry, Origin};
@@ -31,6 +31,7 @@ struct Setup {
     agents: TestAgents,
     list: List,
     work: String,
+    tools: Arc<opencode_tool::LocationTools>,
 }
 
 impl Setup {
@@ -79,6 +80,10 @@ fn config_value(build_system: Option<&str>) -> Value {
 }
 
 async fn setup(build_system: Option<&str>) -> Setup {
+    setup_with(config_value(build_system), false).await
+}
+
+async fn setup_with(value: Value, full_codemode: bool) -> Setup {
     let dir = TempDir::new();
     let work_path = dir.path().join("work");
     std::fs::create_dir_all(&work_path).expect("create the work directory");
@@ -110,7 +115,6 @@ async fn setup(build_system: Option<&str>) -> Setup {
     let list = instructions::builtins_at(builtins_input(&work, dir.path()), FIXED_NOW)
         .expect("build the builtin instructions");
 
-    let value = config_value(build_system);
     let entry = Entry::Document(Document {
         path: None,
         info: decode_json::<ConfigEntryDocumentInfo>(&value.to_string()).expect("decode the config document"),
@@ -118,6 +122,7 @@ async fn setup(build_system: Option<&str>) -> Setup {
     });
     let catalog = Catalog::from_entries(std::slice::from_ref(&entry));
     let agents = test_agents(std::slice::from_ref(&entry), "/home/test").await;
+    let tools = crate::test_tools(&work, dir.path(), Arc::new(crate::AllowAll), full_codemode).await;
 
     let sessions = Sessions::new(
         store.clone(),
@@ -146,7 +151,7 @@ async fn setup(build_system: Option<&str>) -> Setup {
     bus.publish(&definition, json!({ "sessionID": "ses_1", "inboxID": inbox.id.0 }), PublishOptions::default())
         .expect("deliver the prompt");
 
-    Setup { dir, database, bus, store, catalog, agents, list, work }
+    Setup { dir, database, bus, store, catalog, agents, list, work, tools }
 }
 
 fn substitute(value: &mut Value, root: &str, date: &str, platform: &str) {
@@ -177,6 +182,7 @@ async fn prepared_request_matches_the_typescript_body() {
             agents: &setup.agents.service,
             env: &env,
             builtins: setup.builtins(),
+            tools: &setup.tools,
         },
         "ses_1",
         setup.list,
@@ -203,9 +209,35 @@ async fn prepared_request_matches_the_typescript_body() {
     let mut expected = serde_json::from_str::<Value>(include_str!("../fixtures/prompt-text-only-request.json"))
         .expect("parse the captured request");
     substitute(&mut expected, &root, &date, platform);
-    let tools = expected.as_object_mut().expect("the captured request is an object").remove("tools");
-    assert!(tools.is_some(), "the captured request carries tools");
-    assert!(actual.get("tools").is_none(), "the text-only request omits tools");
+    let expected_tools = expected.as_object_mut().expect("the captured request is an object").remove("tools");
+    assert!(expected_tools.is_some(), "the captured request carries tools");
+    expected.as_object_mut().expect("the captured request is an object").remove("system");
+    let mut actual = actual;
+    let actual_tools = actual.as_object_mut().expect("the request is an object").remove("tools");
+    let actual_tools = actual_tools.expect("the request advertises tools");
+    let names = actual_tools
+        .as_array()
+        .expect("the tools are an array")
+        .iter()
+        .filter_map(|tool| tool.get("name").and_then(Value::as_str))
+        .collect::<Vec<_>>();
+    for tool in ["read", "write", "edit", "glob", "grep", "skill"] {
+        assert!(names.contains(&tool), "the request advertises {tool}");
+    }
+    let system = actual
+        .as_object_mut()
+        .expect("the request is an object")
+        .remove("system")
+        .expect("the request carries a system prompt");
+    let text = system
+        .as_array()
+        .expect("the system prompt is an array")
+        .iter()
+        .filter_map(|part| part.get("text").and_then(Value::as_str))
+        .collect::<Vec<_>>()
+        .join("");
+    assert!(text.contains("Use the write tool to create files"));
+    assert!(text.contains("Use the edit tool for targeted changes"));
     assert_eq!(actual, expected);
 }
 
@@ -223,6 +255,7 @@ async fn configured_agent_system_replaces_the_default_prompt() {
             agents: &setup.agents.service,
             env: &env,
             builtins: setup.builtins(),
+            tools: &setup.tools,
         },
         "ses_1",
         setup.list,
@@ -232,4 +265,59 @@ async fn configured_agent_system_replaces_the_default_prompt() {
     let request = model_request::prepare(&loaded, &app());
     let SystemPart::Text { text, .. } = request.system.first().expect("the request carries a system prompt");
     assert_eq!(text.as_str(), "You are a test agent.");
+}
+
+fn with_denied_execute(mut value: Value) -> Value {
+    value["agents"]["build"] = json!({ "permissions": [{ "action": "execute", "resource": "*", "effect": "deny" }] });
+    value
+}
+
+async fn prepared_tool_names(value: Value, full_codemode: bool) -> (Vec<String>, Vec<String>) {
+    let setup = setup_with(value, full_codemode).await;
+    instruction_state::prepare(&setup.database, &setup.bus, &setup.list, "ses_1")
+        .expect("prepare the builtin instructions");
+    let env = MapEnv::default();
+    let loaded = context::load_with(
+        &LoadInput {
+            database: &setup.database,
+            store: &setup.store,
+            catalog: &setup.catalog,
+            agents: &setup.agents.service,
+            env: &env,
+            builtins: setup.builtins(),
+            tools: &setup.tools,
+        },
+        "ses_1",
+        setup.list,
+    )
+    .await
+    .expect("load the session context");
+    let snapshot = loaded.snapshot.definitions.iter().map(|definition| definition.name.clone()).collect();
+    let request = model_request::prepare(&loaded, &app())
+        .tools
+        .iter()
+        .filter_map(|entry| match entry {
+            ToolEntry::Tool(definition) => Some(definition.name.clone()),
+            ToolEntry::Namespace(_) => None,
+        })
+        .collect();
+    (snapshot, request)
+}
+
+#[tokio::test]
+async fn a_denied_execute_permission_exposes_glob_and_grep_directly() {
+    let (snapshot, request) = prepared_tool_names(with_denied_execute(config_value(None)), true).await;
+    for tool in ["glob", "grep"] {
+        assert!(snapshot.iter().any(|name| name == tool), "the snapshot exposes {tool}");
+        assert!(request.iter().any(|name| name == tool), "the request advertises {tool}");
+    }
+}
+
+#[tokio::test]
+async fn full_code_mode_hides_glob_and_grep_without_an_execute_denial() {
+    let (snapshot, request) = prepared_tool_names(config_value(None), true).await;
+    for tool in ["glob", "grep"] {
+        assert!(!snapshot.iter().any(|name| name == tool), "the snapshot hides {tool}");
+        assert!(!request.iter().any(|name| name == tool), "the request hides {tool}");
+    }
 }

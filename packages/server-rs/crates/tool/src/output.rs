@@ -19,6 +19,7 @@ pub fn directory(data: &Path) -> PathBuf {
     data.join(DIRECTORY)
 }
 
+#[derive(Clone)]
 pub struct OutputStore {
     directory: PathBuf,
     max_lines: usize,

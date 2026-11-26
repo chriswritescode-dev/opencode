@@ -93,12 +93,12 @@ impl ReadRuntime {
             .authorizer
             .assert(permission_input(context, "skill", vec![skill.id.0.clone()], vec![skill.id.0.clone()]))
             .await
-            .map_err(|error| ToolError::new(error.to_string()))?;
+            .map_err(|error| ToolError::permission(&error))?;
         context
             .authorizer
             .assert(permission_input(context, "read", vec![parsed.uri.clone()], vec!["*".to_owned()]))
             .await
-            .map_err(|error| ToolError::new(error.to_string()))?;
+            .map_err(|error| ToolError::permission(&error))?;
         let files = VirtualFiles::new(&skill.content, &extra);
         let output = read_filesystem::read(&files, &parsed.target, file, page).await.map_err(|error| match error {
             ReadError::File(ReadFileError::NotFound { .. }) => not_found(),
@@ -225,7 +225,7 @@ async fn read_target(
 
 fn access_error(error: AccessError, file: &str) -> ToolError {
     match error {
-        AccessError::Permission(error) => ToolError::new(error.to_string()),
+        AccessError::Permission(error) => ToolError::permission(error),
         AccessError::Failed { .. } => ToolError::new(format!("Unable to read {file}")),
     }
 }

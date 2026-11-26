@@ -3,7 +3,7 @@ use std::time::Duration;
 
 use futures_util::StreamExt;
 use opencode_ai::route::executor::ReqwestSender;
-use opencode_ai::{ExecutionContext, LlmClient, RequestExecutor, StreamOptions, Usage};
+use opencode_ai::{ExecutionContext, LlmClient, LlmEvent, RequestExecutor, StreamOptions, Usage};
 use opencode_bus::{Bus, BusError, Definition, PublishOptions};
 use opencode_contract::codec::{Encode, encode_json};
 use opencode_contract::generated::{
@@ -12,15 +12,17 @@ use opencode_contract::generated::{
     SessionStepFailedDataFinish, SessionStructuredError, SessionSyntheticData, TokenUsageInfo, TokenUsageInfoCache,
 };
 use opencode_storage::Database;
+use opencode_tool::{LocationTools, ToolCall, ToolContext, ToolError, ToolErrorKind, ToolOutput};
 use serde_json::Value;
 use tokio::sync::watch;
+use tokio::task::JoinHandle;
 
 use crate::context::{self, LoadInput, Loaded};
 use crate::execution::{ExecutionError, Placement};
 use crate::instruction_state;
 use crate::instructions;
 use crate::model_request::{self, AppInfo};
-use crate::publish_llm_event::Publisher;
+use crate::publish_llm_event::{Publisher, ToolProgress};
 use crate::retry::{RetryPolicy, structured};
 use crate::store::SessionStore;
 
@@ -31,8 +33,14 @@ const MAX_CONSECUTIVE_LENGTH: u32 = 3;
 const DELTA_FLUSH_MS: u64 = 100;
 
 enum StepOutcome {
-    Done,
+    Done { needs_continuation: bool },
     Length,
+}
+
+struct ToolRun {
+    id: String,
+    name: String,
+    handle: JoinHandle<Result<ToolOutput, ToolError>>,
 }
 
 pub struct Runner {
@@ -111,6 +119,7 @@ impl Runner {
                     agents: placed.agents(),
                     env: placed.env(),
                     builtins: placed.builtins().clone(),
+                    tools: placed.tools(),
                 },
                 session_id,
                 list,
@@ -119,12 +128,17 @@ impl Runner {
             .map_err(ExecutionError::Context)?;
             let assistant_id = format!("msg_{}", opencode_storage::id::ascending());
             log::debug!("running session step {step} for {session_id}");
-            let outcome = self.step(session_id, &loaded, &assistant_id, location.clone(), &mut cancel).await?;
+            let outcome =
+                self.step(session_id, &loaded, placed.tools(), &assistant_id, location.clone(), &mut cancel).await?;
             match outcome {
-                StepOutcome::Done => {
+                StepOutcome::Done { needs_continuation } => {
                     consecutive_lengths = 0;
-                    continuation = false;
                     step += 1;
+                    if needs_continuation {
+                        continuation = true;
+                        continue;
+                    }
+                    continuation = false;
                     if self.store.promotable(session_id, true).map_err(bus_error)?.is_empty() {
                         return Ok(());
                     }
@@ -154,6 +168,7 @@ impl Runner {
         &self,
         session_id: &str,
         loaded: &Loaded,
+        tools: &LocationTools,
         assistant_id: &str,
         location: Option<LocationRef>,
         cancel: &mut watch::Receiver<bool>,
@@ -175,6 +190,7 @@ impl Runner {
         let mut policy = RetryPolicy::new();
         let mut delta_deadline: Option<tokio::time::Instant> = None;
         let mut cancelled = *cancel.borrow();
+        let mut tool_runs: Vec<ToolRun> = Vec::new();
         'stream: loop {
             if cancelled {
                 break;
@@ -211,7 +227,24 @@ impl Runner {
                     break 'stream;
                 }
                 match next {
-                    Some(Ok(event)) => publisher.publish(&event).map_err(bus_error)?,
+                    Some(Ok(event)) => {
+                        publisher.publish(&event).map_err(bus_error)?;
+                        if let LlmEvent::ToolCall { id, name, input, provider_executed, .. } = &event
+                            && provider_executed != &Some(true)
+                        {
+                            tool_runs.push(self.spawn_tool(
+                                loaded,
+                                tools,
+                                session_id,
+                                assistant_id,
+                                location.clone(),
+                                cancel,
+                                id,
+                                name,
+                                input,
+                            ));
+                        }
+                    }
                     Some(Err(error)) => {
                         failure = Some(error);
                         break;
@@ -247,6 +280,15 @@ impl Runner {
                 }
                 continue;
             }
+            if publisher.has_started() {
+                publisher.streamed().map_err(bus_error)?;
+            }
+            if self.finish_tools(&mut publisher, tools, &mut tool_runs, cancel).await? {
+                return self.interrupted(session_id, assistant_id, &mut publisher, location);
+            }
+            if *cancel.borrow() {
+                return self.interrupted(session_id, assistant_id, &mut publisher, location);
+            }
             publisher.start().map_err(bus_error)?;
             self.publish_durable(
                 "session.step.failed",
@@ -268,9 +310,22 @@ impl Runner {
         }
         if cancelled {
             publisher.flush().map_err(bus_error)?;
+            for run in tool_runs.drain(..) {
+                run.handle.abort();
+            }
+            publisher
+                .fail_unsettled_tools(&structured_error("aborted", "Tool execution interrupted"))
+                .map_err(bus_error)?;
             return self.interrupted(session_id, assistant_id, &mut publisher, location);
         }
         publisher.streamed().map_err(bus_error)?;
+        if self.finish_tools(&mut publisher, tools, &mut tool_runs, cancel).await? {
+            return self.interrupted(session_id, assistant_id, &mut publisher, location);
+        }
+        if *cancel.borrow() {
+            return self.interrupted(session_id, assistant_id, &mut publisher, location);
+        }
+        publisher.fail_incomplete_tools().map_err(bus_error)?;
         let record = publisher.record();
         if record.provider_failed {
             let (cost, tokens) = record.finish.as_ref().map_or((None, None), |finish| {
@@ -333,8 +388,104 @@ impl Runner {
         }
         match record.finish.as_ref().map(|finish| finish.normalized) {
             Some(SessionStepEndedDataFinish::Length) => Ok(StepOutcome::Length),
-            _ => Ok(StepOutcome::Done),
+            _ => Ok(StepOutcome::Done { needs_continuation: record.needs_continuation }),
         }
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn spawn_tool(
+        &self,
+        loaded: &Loaded,
+        tools: &LocationTools,
+        session_id: &str,
+        assistant_id: &str,
+        location: Option<LocationRef>,
+        cancel: &watch::Receiver<bool>,
+        id: &str,
+        name: &str,
+        input: &Value,
+    ) -> ToolRun {
+        let progress_publisher = ToolProgress::new(self.bus.clone(), session_id, assistant_id, location);
+        let progress_id = id.to_owned();
+        let progress: opencode_tool::context::Progress = Arc::new(move |metadata| {
+            if let Err(error) = progress_publisher.publish(&progress_id, metadata) {
+                log::warn!("failed to publish session.tool.progress: {error}");
+            }
+        });
+        let context = ToolContext {
+            session_id: session_id.to_owned(),
+            agent: loaded.agent.id.0.clone(),
+            message_id: assistant_id.to_owned(),
+            call_id: id.to_owned(),
+            progress,
+            cancel: Some(cancel.clone()),
+            authorizer: tools.authorizer(),
+        };
+        let call = ToolCall { id: id.to_owned(), name: name.to_owned(), input: input.clone() };
+        let snapshot = loaded.snapshot.clone();
+        let handle = tokio::spawn(async move { snapshot.execute(call, &context).await });
+        ToolRun { id: id.to_owned(), name: name.to_owned(), handle }
+    }
+
+    async fn finish_tools(
+        &self,
+        publisher: &mut Publisher,
+        tools: &LocationTools,
+        runs: &mut Vec<ToolRun>,
+        cancel: &mut watch::Receiver<bool>,
+    ) -> Result<bool, ExecutionError> {
+        let output = tools.output();
+        let mut declined = false;
+        while !runs.is_empty() {
+            let run = runs.remove(0);
+            if *cancel.borrow() {
+                run.handle.abort();
+                for rest in runs.drain(..) {
+                    rest.handle.abort();
+                }
+                publisher
+                    .fail_unsettled_tools(&structured_error("aborted", "Tool execution interrupted"))
+                    .map_err(bus_error)?;
+                return Ok(declined);
+            }
+            let abort = run.handle.abort_handle();
+            let joined = tokio::select! {
+                _ = cancel.changed() => {
+                    abort.abort();
+                    for rest in runs.drain(..) {
+                        rest.handle.abort();
+                    }
+                    publisher
+                        .fail_unsettled_tools(&structured_error("aborted", "Tool execution interrupted"))
+                        .map_err(bus_error)?;
+                    return Ok(declined);
+                }
+                joined = run.handle => joined,
+            };
+            match joined {
+                Ok(Ok(result)) => {
+                    let result = output.truncate(result).await;
+                    publisher.tool_execution(&run.id, &run.name, result).map_err(bus_error)?;
+                }
+                Ok(Err(error)) => {
+                    let error = match error.kind {
+                        ToolErrorKind::Declined => {
+                            declined = true;
+                            structured_error("aborted", "The user declined this tool call")
+                        }
+                        ToolErrorKind::Rejected => structured_error("permission.rejected", &error.message),
+                        ToolErrorKind::Execution => structured_error("tool.execution", &error.message),
+                    };
+                    publisher.fail_tool(&run.id, error, None).map_err(bus_error)?;
+                }
+                Err(error) => {
+                    publisher
+                        .fail_tool(&run.id, structured_error("tool.execution", &error.to_string()), None)
+                        .map_err(bus_error)?;
+                }
+            }
+        }
+        Ok(declined)
     }
 
     fn interrupted(
@@ -432,6 +583,16 @@ fn tier_size(cost: &ModelCost) -> f64 {
 
 fn token_value(value: Option<u64>) -> f64 {
     value.map_or(0.0, |value| value as f64)
+}
+
+fn structured_error(r#type: &str, message: &str) -> SessionStructuredError {
+    SessionStructuredError {
+        r#type: r#type.to_owned(),
+        message: message.to_owned(),
+        status: None,
+        response: None,
+        retry_after_ms: None,
+    }
 }
 
 fn bus_error(error: BusError) -> ExecutionError {

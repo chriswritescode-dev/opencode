@@ -68,7 +68,7 @@ impl GrepRuntime {
             .authorizer
             .assert(search::permission(context, "grep", &pattern, metadata))
             .await
-            .map_err(|error| ToolError::new(error.to_string()))?;
+            .map_err(|error| ToolError::permission(&error))?;
 
         let root = target.absolute.clone();
         let kind = search::path_kind(&root).await.map_err(|error| path_error(error, &display, &pattern))?;
@@ -170,7 +170,7 @@ fn model_content(directory: &str, matches: &[Match], truncated: bool) -> String 
 
 fn access_error(error: AccessError, pattern: &str) -> ToolError {
     match error {
-        AccessError::Permission(error) => ToolError::new(error.to_string()),
+        AccessError::Permission(error) => ToolError::permission(error),
         AccessError::Failed { .. } => ToolError::new(format!("Unable to grep for {pattern}")),
     }
 }

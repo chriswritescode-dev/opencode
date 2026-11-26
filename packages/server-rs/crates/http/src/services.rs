@@ -62,6 +62,9 @@ use opencode_session::execution::{Placed, Placement};
 use opencode_session::instructions::BuiltinsInput;
 use opencode_session::search_build::SessionSearchBuild;
 use opencode_storage::Database;
+use opencode_tool::image::Image as ToolImage;
+use opencode_tool::output::OutputStore as ToolOutputStore;
+use opencode_tool::{LocationFilesParts, LocationToolDeps, LocationTools};
 use opencode_vcs::git_provider::GitProvider;
 use opencode_vcs::hg_provider::HgProvider;
 use opencode_vcs::repository_cache::RepositoryCache;
@@ -149,6 +152,10 @@ impl Placed for PlacedLocation {
         &self.builtins
     }
 
+    fn tools(&self) -> &LocationTools {
+        &self.lease.services().tools
+    }
+
     fn env(&self) -> &dyn opencode_ai::Env {
         self.env.as_ref()
     }
@@ -208,6 +215,7 @@ pub struct LocationServices {
     pub catalog: Arc<RwLock<Catalog>>,
     pub plugins: LocationPlugins,
     pub files: LocationFiles,
+    pub tools: Arc<LocationTools>,
     _config_observer: ObserverHandle,
 }
 
@@ -307,6 +315,7 @@ impl GlobalServices {
                 let tmp = paths.tmp.clone();
                 let bin = paths.bin.clone();
                 let home_text = home.to_string_lossy().into_owned();
+                let data = paths.data.clone();
                 let config = ConfigService::start(
                     ConfigOptions::from_vars(|name| config_env(name)),
                     ConfigLocation { directory: PathBuf::from(&info.directory), project_id: info.project.id.clone() },
@@ -381,7 +390,7 @@ impl GlobalServices {
                 ])
                 .expect("the built-in instruction keys are distinct");
                 let permissions = Arc::new(PermissionService::new(PermissionDeps {
-                    sessions: Arc::new(StoreSessionRules { store }),
+                    sessions: Arc::new(StoreSessionRules { store: store.clone() }),
                     agents: Arc::new(RegistryAgents { agents: agents.clone() }),
                     saved: saved.clone(),
                     events: events.clone(),
@@ -404,7 +413,7 @@ impl GlobalServices {
                     mutation,
                     formatter,
                     search: Search::new(
-                        ripgrep,
+                        ripgrep.clone(),
                         SearchOptions {
                             directory: info.directory.clone(),
                             home: home_text,
@@ -412,6 +421,28 @@ impl GlobalServices {
                         },
                     ),
                 };
+                let full_codemode =
+                    config.flags().into_iter().any(|(key, state)| key == "full_codemode" && state.enabled);
+                let tools = Arc::new(
+                    LocationTools::new(LocationToolDeps {
+                        files: LocationFilesParts::new(&files),
+                        ripgrep,
+                        skills: skills.clone(),
+                        instructions: opencode_session::nearby_instructions::NearbyInstructions::new(
+                            store,
+                            bus.clone(),
+                            Some(location.clone()),
+                            info.project.directory.clone(),
+                        ),
+                        authorizer: permissions.clone(),
+                        output: ToolOutputStore::new(data),
+                        image: Arc::new(ToolImage::new()),
+                        claude: true,
+                        full_codemode,
+                    })
+                    .await,
+                );
+                tools.configure(&config.entries());
                 let entries = config.entries();
                 let catalog = Arc::new(RwLock::new(Catalog::from_entries(&entries)));
                 let observer_projects = projects.clone();
@@ -420,10 +451,12 @@ impl GlobalServices {
                 let observer_catalog = catalog.clone();
                 let flags = config.clone();
                 let build = search.clone();
-                let _config_observer = observe(&config, move |_| {
+                let observer_tools = tools.clone();
+                let _config_observer = observe(&config, move |entries| {
                     if sqlite_fts_enabled(&flags) {
                         build.start();
                     }
+                    observer_tools.configure(entries);
                     let entries = flags.entries();
                     *observer_catalog.write().expect("the catalog lock is never poisoned") =
                         Catalog::from_entries(&entries);
@@ -468,6 +501,7 @@ impl GlobalServices {
                     catalog,
                     plugins,
                     files,
+                    tools,
                     _config_observer,
                 }))
             })

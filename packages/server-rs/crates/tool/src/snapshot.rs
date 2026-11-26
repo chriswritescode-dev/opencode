@@ -28,7 +28,7 @@ pub struct Snapshot {
     pub definitions: Vec<ToolDefinition>,
     pub entries: BTreeMap<String, RegisteredTool>,
     pub hooks: Arc<dyn ToolHooks>,
-    pub image: Image,
+    pub image: Arc<Image>,
 }
 
 impl Snapshot {
@@ -53,7 +53,7 @@ impl Snapshot {
             )));
         };
         let context = ToolContext { call_id: call.id, ..context.clone() };
-        runtime::run(tool, &name, call.input, &context, &self.entries, self.hooks.as_ref(), &self.image).await
+        runtime::run(tool, &name, call.input, &context, &self.entries, self.hooks.as_ref(), self.image.as_ref()).await
     }
 }
 
@@ -70,7 +70,7 @@ pub fn snapshot(data: &ToolData, permissions: &[PermissionRule], options: &Snaps
         direct.insert(key.clone(), tool.clone());
     }
     let definitions = direct.keys().filter_map(|key| data.definitions.get(key).cloned()).collect();
-    Snapshot { definitions, entries: direct, hooks: Arc::new(NoHooks), image: Image::new() }
+    Snapshot { definitions, entries: direct, hooks: Arc::new(NoHooks), image: Arc::new(Image::new()) }
 }
 
 pub fn wholly_disabled(action: &str, rules: &[PermissionRule]) -> bool {

@@ -42,7 +42,7 @@ impl ToolRuntime for WriteRuntime {
 
 fn write_error(error: WriteError, path: &str) -> ToolError {
     match error {
-        WriteError::Access(AccessError::Permission(error)) => ToolError::new(error.to_string()),
+        WriteError::Access(AccessError::Permission(error)) => ToolError::permission(error),
         WriteError::Access(AccessError::Failed { .. }) | WriteError::Fs(_) => {
             ToolError::new(format!("Unable to write {path}"))
         }

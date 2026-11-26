@@ -3,6 +3,7 @@ pub mod execution;
 pub mod instruction_state;
 pub mod instructions;
 pub mod model_request;
+pub mod nearby_instructions;
 pub mod publish_llm_event;
 pub mod retry;
 pub mod runner;

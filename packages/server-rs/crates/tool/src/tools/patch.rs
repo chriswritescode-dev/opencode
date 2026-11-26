@@ -185,7 +185,7 @@ impl PatchRuntime {
             ("diff".to_owned(), Value::String(patch_files.iter().map(|file| format!("{}\n", file.patch)).collect())),
             ("files".to_owned(), json!(patch_files)),
         ]));
-        self.deps.authorizer.assert(metadata).await.map_err(|error| ToolError::new(error.to_string()))?;
+        self.deps.authorizer.assert(metadata).await.map_err(|error| ToolError::permission(&error))?;
 
         for change in &prepared {
             self.apply_change(change, &mut completed).await?;
@@ -524,7 +524,7 @@ fn failed(completed: &[String], message: &str, error: &FsError) -> ToolError {
 
 fn access_error(error: AccessError) -> ToolError {
     match &error {
-        AccessError::Permission(error) => ToolError::new(error.to_string()),
+        AccessError::Permission(error) => ToolError::permission(error),
         AccessError::Failed { .. } => ToolError::new(error.to_string()),
     }
 }

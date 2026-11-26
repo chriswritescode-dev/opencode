@@ -123,15 +123,36 @@ pub struct ToolOutput {
     pub metadata: Option<Value>,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ToolErrorKind {
+    Execution,
+    Rejected,
+    Declined,
+}
+
 #[derive(Clone, Debug, thiserror::Error)]
 #[error("{message}")]
 pub struct ToolError {
     pub message: String,
+    pub kind: ToolErrorKind,
 }
 
 impl ToolError {
     pub fn new(message: impl Into<String>) -> Self {
-        ToolError { message: message.into() }
+        ToolError { message: message.into(), kind: ToolErrorKind::Execution }
+    }
+
+    pub fn permission(error: impl std::borrow::Borrow<opencode_permission::service::PermissionError>) -> Self {
+        match error.borrow() {
+            error @ (opencode_permission::service::PermissionError::Blocked { .. }
+            | opencode_permission::service::PermissionError::Corrected { .. }) => {
+                ToolError { message: error.to_string(), kind: ToolErrorKind::Rejected }
+            }
+            opencode_permission::service::PermissionError::Declined => {
+                ToolError { message: "Permission declined".to_owned(), kind: ToolErrorKind::Declined }
+            }
+            error => ToolError::new(error.to_string()),
+        }
     }
 }
 

@@ -59,7 +59,7 @@ impl GlobRuntime {
             .authorizer
             .assert(search::permission(context, "glob", &pattern, metadata))
             .await
-            .map_err(|error| ToolError::new(error.to_string()))?;
+            .map_err(|error| ToolError::permission(&error))?;
 
         let kind =
             search::path_kind(&target.absolute).await.map_err(|error| path_error(error, &root_display, &pattern))?;
@@ -128,7 +128,7 @@ fn model_content(directory: &str, entries: &[Entry], truncated: bool) -> String 
 
 fn access_error(error: AccessError, pattern: &str) -> ToolError {
     match error {
-        AccessError::Permission(error) => ToolError::new(error.to_string()),
+        AccessError::Permission(error) => ToolError::permission(error),
         AccessError::Failed { .. } => ToolError::new(format!("Unable to find files matching {pattern}")),
     }
 }

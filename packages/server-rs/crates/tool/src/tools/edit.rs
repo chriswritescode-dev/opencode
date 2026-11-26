@@ -502,7 +502,7 @@ fn miss_hint(source: &str, old: &str, new: &str) -> Option<String> {
 
 fn access_error(error: AccessError, path: &str) -> ToolError {
     match error {
-        AccessError::Permission(error) => ToolError::new(error.to_string()),
+        AccessError::Permission(error) => ToolError::permission(error),
         AccessError::Failed { .. } => ToolError::new(format!("Unable to edit {path}")),
     }
 }
@@ -517,7 +517,7 @@ fn read_error(error: FsError, path: &str) -> ToolError {
 
 fn commit_error(error: WriteError, path: &str) -> ToolError {
     match error {
-        WriteError::Access(AccessError::Permission(error)) => ToolError::new(error.to_string()),
+        WriteError::Access(AccessError::Permission(error)) => ToolError::permission(error),
         WriteError::Access(AccessError::Failed { .. }) | WriteError::Fs(_) => {
             ToolError::new(format!("Unable to edit {path}"))
         }

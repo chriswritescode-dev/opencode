@@ -26,7 +26,7 @@ impl SkillRuntime {
             .authorizer
             .assert(permission_input(context, "skill", vec![skill.id.0.clone()], vec![skill.id.0.clone()]))
             .await
-            .map_err(|error| ToolError::new(error.to_string()))?;
+            .map_err(|error| ToolError::permission(&error))?;
         let files = self.deps.skills.files(&skill.id.0).await.map_err(|_| unable(&id))?;
         let prepared = skill::prepare(&skill, files.as_ref());
         let directory = prepared.directory;

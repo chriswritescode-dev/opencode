@@ -113,6 +113,7 @@ A deviation that excepts a recorded cassette from the replay gate also has a `Ca
 - `OR-51-read-tool.md`: missing-path suggestions fold Unicode without NFC and sort equally ranked names by byte order
 - `OR-51-patch-tool.md`: patch targets one local environment, and its line matching and preparation errors follow Rust whitespace and error text
 - `OR-51-write-edit.md`: edit hints truncate by Unicode scalar instead of UTF-16 unit, and a non-directory wrong kind is reported as an edit failure
+- `OR-51-tool-runtime.md`: the session step aborts interrupted tools immediately and does not merge progress metadata into failures
 - `OR-51-watcher.md`: recursive watcher ignore patterns support `*`, `**` and `?` only, and access events are filtered
 - `OR-53-snapshot-changed-file-retry.md`: a snapshot capture retries when a file changes while Git indexes it
 - `OR-53-worktree-resolved-commit.md`: a resolved worktree row and its durable `worktree.resolved` event commit separately
