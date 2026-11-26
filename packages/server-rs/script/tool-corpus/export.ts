@@ -1254,7 +1254,7 @@ async function exportReadFilesystem() {
       if (Exit.isFailure(exit)) {
         console.error(`corpus: read_filesystem ${spec.name} failed`)
         console.error(exit.cause)
-        process.exit(1)
+        throw new Error(`corpus: read_filesystem ${spec.name} failed`)
       }
       const normalized = JSON.stringify({ ...spec, expected: exit.value })
         .replaceAll(outside, "{{outside}}")
@@ -1612,7 +1612,7 @@ async function exportRead() {
       if (Exit.isFailure(exit)) {
         console.error(`corpus: read ${spec.name} failed`)
         console.error(exit.cause)
-        process.exit(1)
+        throw new Error(`corpus: read ${spec.name} failed`)
       }
       const execution = exit.value
       const tree = await fileTree(root, outside)
@@ -1773,7 +1773,7 @@ async function exportSkill() {
       if (Exit.isFailure(exit)) {
         console.error(`corpus: skill ${spec.name} failed`)
         console.error(exit.cause)
-        process.exit(1)
+        throw new Error(`corpus: skill ${spec.name} failed`)
       }
       const execution = exit.value
       const tree = await fileTree(root, outside)
@@ -1950,7 +1950,7 @@ async function exportToolCases(tool: "write" | "edit" | "patch", specs: ToolCase
       if (Exit.isFailure(exit)) {
         console.error(`corpus: ${tool} ${spec.name} failed`)
         console.error(exit.cause)
-        process.exit(1)
+        throw new Error(`corpus: ${tool} ${spec.name} failed`)
       }
       const execution = exit.value
       const tree = await fileTree(root, outside)
@@ -2076,7 +2076,7 @@ async function exportSearchCases(tool: "glob" | "grep", specs: SearchCase[]) {
       if (Exit.isFailure(exit)) {
         console.error(`corpus: ${tool} ${spec.name} failed`)
         console.error(exit.cause)
-        process.exit(1)
+        throw new Error(`corpus: ${tool} ${spec.name} failed`)
       }
       const execution = exit.value
       const tree = await fileTree(root, outside)

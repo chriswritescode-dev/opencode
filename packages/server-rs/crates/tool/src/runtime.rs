@@ -68,27 +68,24 @@ pub async fn run(
             input,
         })
         .await;
-    let selected = if before.tool == name {
-        tool
-    } else {
-        entries
-            .get(&before.tool)
-            .ok_or_else(|| ToolError::new(format!("Tool is not available for this request: {}", before.tool)))?
-    };
+    let selected = if before.tool == name { Some(tool) } else { entries.get(&before.tool) };
     execute_tool(selected, &before.tool, before.input, context, hooks, image).await
 }
 
 async fn execute_tool(
-    tool: &RegisteredTool,
+    tool: Option<&RegisteredTool>,
     name: &str,
     input: Value,
     context: &ToolContext,
     hooks: &dyn ToolHooks,
     image: &Image,
 ) -> Result<ToolOutput, ToolError> {
-    let mut result = match input::decode(name, &tool.definition.input_schema, &input) {
-        Ok(decoded) => tool.runtime.execute(decoded, context).await,
-        Err(error) => Err(error),
+    let mut result = match tool {
+        Some(tool) => match input::decode(name, &tool.definition.input_schema, &input) {
+            Ok(decoded) => tool.runtime.execute(decoded, context).await,
+            Err(error) => Err(error),
+        },
+        None => Err(ToolError::new(format!("Tool is not available for this request: {name}"))),
     };
     if let Ok(output) = &mut result {
         normalize_content(output);

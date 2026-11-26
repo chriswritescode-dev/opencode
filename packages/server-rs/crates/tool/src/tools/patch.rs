@@ -52,7 +52,10 @@ impl PatchFiles for HostFiles {
             match tokio::fs::remove_file(absolute).await {
                 Ok(()) => Ok(()),
                 Err(error) if error.kind() == ErrorKind::NotFound => Ok(()),
-                Err(error) if error.kind() == ErrorKind::IsADirectory => {
+                Err(error)
+                    if error.kind() == ErrorKind::IsADirectory
+                        || tokio::fs::symlink_metadata(absolute).await.is_ok_and(|metadata| metadata.is_dir()) =>
+                {
                     Err(FsError::Failed { path: absolute.to_owned(), cause: "path is a directory".to_owned() })
                 }
                 Err(error) => Err(io_error(absolute, &error)),
