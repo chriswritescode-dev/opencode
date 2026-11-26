@@ -1,5 +1,6 @@
 mod access;
 mod corpus;
+mod diff;
 mod filesystem;
 mod fixture;
 mod mutation;

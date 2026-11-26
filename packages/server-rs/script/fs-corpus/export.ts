@@ -1,10 +1,12 @@
 import fs from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
+import { createTwoFilesPatch, diffLines } from "diff"
 import { Cause, Effect, Exit, Layer, Option, Stream } from "effect"
 import { Agent } from "@opencode/core/agent"
 import { FileAccess, resolvePath } from "@opencode/core/file-access"
 import { FileSystem } from "@opencode/core/filesystem"
+import { fileDiff } from "@opencode/core/tool/plugin/file-diff"
 import { Location } from "@opencode/core/location"
 import { Mime } from "@opencode/core/mime"
 import { Permission } from "@opencode/core/permission"
@@ -34,6 +36,7 @@ if (area === "filesystem" || area === "access") {
 if (area === "paths") exportPaths()
 else if (area === "mime") exportMime()
 else if (area === "bom") exportBom()
+else if (area === "diff") exportDiff()
 else if (area === "filesystem") await exportFilesystem()
 else if (area === "access") await exportAccess()
 else {
@@ -227,6 +230,150 @@ function exportBom() {
       })
   }
   write(cases, "/repo", "/home/agent")
+}
+
+function exportDiff() {
+  const cases: Array<Record<string, unknown>> = []
+  const add = (
+    name: string,
+    before: string,
+    after: string,
+    file = "file.txt",
+    status: "added" | "deleted" | "modified" = "modified",
+  ) => {
+    const diff = fileDiff(file, before, after, status)
+    cases.push({
+      name,
+      file,
+      before,
+      after,
+      status,
+      patch: diff.patch,
+      twoFilesPatch: createTwoFilesPatch("old.txt", "new.txt", before, after),
+      trimmed: trimDiff(diff.patch),
+      additions: diff.additions,
+      deletions: diff.deletions,
+      changes: diffLines(before, after).map((item) => ({
+        value: item.value,
+        count: item.count ?? 0,
+        added: item.added ?? false,
+        removed: item.removed ?? false,
+      })),
+    })
+  }
+  const rows = (count: number, prefix = "line") => Array.from({ length: count }, (_, index) => `${prefix} ${index + 1}`)
+  const text = (lines: string[]) => lines.join("\n") + "\n"
+
+  add("empty-empty", "", "")
+  add("empty-to-line", "", "a\n")
+  add("empty-to-no-newline", "", "a")
+  add("line-to-empty", "a\n", "")
+  add("line-to-empty-no-newline", "a", "")
+  add("identical", "a\nb\n", "a\nb\n")
+  add("identical-no-newline", "a\nb", "a\nb")
+  add("identical-blank-lines", "\n\n\n", "\n\n\n")
+  add("identical-empty-line", "\n", "\n")
+  add("append-line", "a\n", "a\nb\n")
+  add("append-no-final-newline", "a", "a\nb")
+  add("append-to-no-final", "a\nb", "a\nb\nc")
+  add("remove-tail", "a\nb\n", "a\n")
+  add("remove-tail-no-final", "a\nb", "a")
+  add("replace-last", "a\nb\n", "a\nc\n")
+  add("replace-first", "a\nb\n", "c\nb\n")
+  add("replace-middle", "a\nb\nc\n", "a\nx\nc\n")
+  add("insert-middle", "a\nc\n", "a\nb\nc\n")
+  add("insert-two-middle", "a\nd\n", "a\nb\nc\nd\n")
+  add("delete-middle", "a\nb\nc\n", "a\nc\n")
+  add("delete-two-middle", "a\nb\nc\nd\n", "a\nd\n")
+  add("insert-at-start", "b\n", "a\nb\n")
+  add("insert-at-start-no-final", "b", "a\nb")
+  add("delete-first", "a\nb\n", "b\n")
+  add(
+    "two-changes-close",
+    text(rows(20)),
+    text(rows(20).map((line, index) => (index === 4 || index === 12 ? `${line} changed` : line))),
+  )
+  add(
+    "two-changes-far",
+    text(rows(30)),
+    text(rows(30).map((line, index) => (index === 2 || index === 22 ? `${line} changed` : line))),
+  )
+  add(
+    "three-hunks-long",
+    text(rows(40)),
+    text(rows(40).map((line, index) => (index === 4 || index === 19 || index === 34 ? `${line} changed` : line))),
+  )
+  add(
+    "change-at-start-and-end",
+    text(rows(15)),
+    text(rows(15).map((line, index) => (index === 0 || index === 14 ? `${line} changed` : line))),
+  )
+  add("long-append", text(rows(30)), text([...rows(30), ...rows(5, "extra")]))
+  add("long-delete-tail", text(rows(30)), text(rows(25)))
+  add("long-rewrite", text(rows(20)), text(rows(20, "rewritten")))
+  add("crlf-identical", "a\r\nb\r\n", "a\r\nb\r\n")
+  add("crlf-append", "a\r\n", "a\r\nb\r\n")
+  add("crlf-edit", "a\r\nb\r\nc\r\n", "a\r\nx\r\nc\r\n")
+  add("crlf-no-final", "a\r\nb", "a\r\nc")
+  add("crlf-mixed", "a\r\nb\nc\r\n", "a\r\nx\nc\r\n")
+  add("crlf-to-lf", "a\r\nb\r\n", "a\nb\n")
+  add("lone-cr", "a\rb\r", "a\rc\r")
+  add("add-newline-at-eof", "a\nb", "a\nb\n")
+  add("remove-newline-at-eof", "a\nb\n", "a\nb")
+  add("no-newline-mid-change", "a\nb", "a\nc")
+  add("empty-to-blank-line", "", "\n")
+  add("blank-line-to-empty", "\n", "")
+  add("repeated-lines", "x\ny\nx\ny\nx\n", "x\ny\nx\nz\nx\n")
+  add("repeated-lines-shift", "a\na\na\nb\n", "a\na\nb\na\n")
+  add("moved-block", "a\nb\nc\nd\ne\nf\n", "a\ne\nf\nb\nc\nd\n")
+  add("swap-adjacent", "a\nb\nc\nd\n", "a\nc\nb\nd\n")
+  add("alternating", "a\nb\na\nb\na\nb\n", "b\na\nb\na\nb\na\n")
+  add("unicode", "héllo\n世界\n", "héllo\nwörld\n")
+  add("emoji", "one\n🙂\nthree\n", "one\n🙃\nthree\n")
+  add("whitespace-only-lines", "a\n   \nb\n", "a\n\t\nb\n")
+  add("indented", "function {\n  a\n  b\n}\n", "function {\n  a\n  c\n}\n")
+  add("tabs", "if {\n\ta\n\tb\n}\n", "if {\n\ta\n\tc\n}\n")
+  add("uniform-indent", "  a\n  b\n", "  a\n  c\n")
+  add("nonuniform-indent", "    a\n  b\n", "    a\n  c\n")
+  add("indent-with-blank-line", "  a\n\n  b\n", "  a\n\n  c\n")
+  add("no-indent", "a\nb\n", "a\nc\n")
+  add("trailing-spaces", "a  \nb\n", "a\nb\n")
+  add("status-added", "", "new\n", "new.txt", "added")
+  add("status-deleted", "old\n", "", "old.txt", "deleted")
+  add("status-modified", "one\n", "two\n", "file.txt", "modified")
+  add("one-line-change", "hello", "world")
+  add("one-line-identical", "hello", "hello")
+
+  write(cases, "/repo", "/home/agent")
+}
+
+function trimDiff(diff: string) {
+  const lines = diff.split("\n")
+  const content = lines.filter(
+    (line) =>
+      (line.startsWith("+") || line.startsWith("-") || line.startsWith(" ")) &&
+      !line.startsWith("---") &&
+      !line.startsWith("+++"),
+  )
+  if (content.length === 0) return diff
+  const indent = content.reduce((result, line) => {
+    const value = line.slice(1)
+    if (value.trim().length === 0) return result
+    return Math.min(result, value.match(/^(\s*)/)?.[1].length ?? result)
+  }, Infinity)
+  if (indent === Infinity || indent === 0) return diff
+  return lines
+    .map((line) => {
+      if (
+        (line.startsWith("+") || line.startsWith("-") || line.startsWith(" ")) &&
+        !line.startsWith("---") &&
+        !line.startsWith("+++")
+      ) {
+        return line[0] + line.slice(1 + indent)
+      }
+      return line
+    })
+    .join("\n")
 }
 
 async function exportFilesystem() {

@@ -1,5 +1,6 @@
 pub mod access;
 pub mod bom;
+pub mod diff;
 pub mod filesystem;
 pub mod generated;
 pub mod mime;

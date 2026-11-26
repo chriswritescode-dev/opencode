@@ -76,7 +76,7 @@ fn bom_corpus_matches_expected_output() {
     }
 }
 
-fn cases(area: &str) -> Vec<Value> {
+pub(crate) fn cases(area: &str) -> Vec<Value> {
     let path = format!("{}/tests/corpus/{area}.json", env!("CARGO_MANIFEST_DIR"));
     let text = fs::read_to_string(&path).unwrap_or_else(|error| panic!("read {path}: {error}"));
     let cases: Vec<Value> = serde_json::from_str(&text).unwrap_or_else(|error| panic!("parse {path}: {error}"));
@@ -84,7 +84,7 @@ fn cases(area: &str) -> Vec<Value> {
     cases
 }
 
-fn field<'a>(case: &'a Value, key: &str) -> &'a str {
+pub(crate) fn field<'a>(case: &'a Value, key: &str) -> &'a str {
     case[key].as_str().unwrap_or_else(|| panic!("case {}: {key} is a string", case["name"]))
 }
 

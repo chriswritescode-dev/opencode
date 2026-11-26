@@ -1,0 +1,1915 @@
+[
+  {
+    "name": "empty-empty",
+    "file": "file.txt",
+    "before": "",
+    "after": "",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n",
+    "additions": 0,
+    "deletions": 0,
+    "changes": []
+  },
+  {
+    "name": "empty-to-line",
+    "file": "file.txt",
+    "before": "",
+    "after": "a\n",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -0,0 +1,1 @@\n+a\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -0,0 +1,1 @@\n+a\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -0,0 +1,1 @@\n+a\n",
+    "additions": 1,
+    "deletions": 0,
+    "changes": [
+      {
+        "value": "a\n",
+        "count": 1,
+        "added": true,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "empty-to-no-newline",
+    "file": "file.txt",
+    "before": "",
+    "after": "a",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -0,0 +1,1 @@\n+a\n\\ No newline at end of file\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -0,0 +1,1 @@\n+a\n\\ No newline at end of file\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -0,0 +1,1 @@\n+a\n\\ No newline at end of file\n",
+    "additions": 1,
+    "deletions": 0,
+    "changes": [
+      {
+        "value": "a",
+        "count": 1,
+        "added": true,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "line-to-empty",
+    "file": "file.txt",
+    "before": "a\n",
+    "after": "",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,1 +0,0 @@\n-a\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -1,1 +0,0 @@\n-a\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,1 +0,0 @@\n-a\n",
+    "additions": 0,
+    "deletions": 1,
+    "changes": [
+      {
+        "value": "a\n",
+        "count": 1,
+        "added": false,
+        "removed": true
+      }
+    ]
+  },
+  {
+    "name": "line-to-empty-no-newline",
+    "file": "file.txt",
+    "before": "a",
+    "after": "",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,1 +0,0 @@\n-a\n\\ No newline at end of file\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -1,1 +0,0 @@\n-a\n\\ No newline at end of file\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,1 +0,0 @@\n-a\n\\ No newline at end of file\n",
+    "additions": 0,
+    "deletions": 1,
+    "changes": [
+      {
+        "value": "a",
+        "count": 1,
+        "added": false,
+        "removed": true
+      }
+    ]
+  },
+  {
+    "name": "identical",
+    "file": "file.txt",
+    "before": "a\nb\n",
+    "after": "a\nb\n",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n",
+    "additions": 0,
+    "deletions": 0,
+    "changes": [
+      {
+        "value": "a\nb\n",
+        "count": 2,
+        "added": false,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "identical-no-newline",
+    "file": "file.txt",
+    "before": "a\nb",
+    "after": "a\nb",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n",
+    "additions": 0,
+    "deletions": 0,
+    "changes": [
+      {
+        "value": "a\nb",
+        "count": 2,
+        "added": false,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "identical-blank-lines",
+    "file": "file.txt",
+    "before": "\n\n\n",
+    "after": "\n\n\n",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n",
+    "additions": 0,
+    "deletions": 0,
+    "changes": [
+      {
+        "value": "\n\n\n",
+        "count": 3,
+        "added": false,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "identical-empty-line",
+    "file": "file.txt",
+    "before": "\n",
+    "after": "\n",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n",
+    "additions": 0,
+    "deletions": 0,
+    "changes": [
+      {
+        "value": "\n",
+        "count": 1,
+        "added": false,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "append-line",
+    "file": "file.txt",
+    "before": "a\n",
+    "after": "a\nb\n",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,1 +1,2 @@\n a\n+b\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -1,1 +1,2 @@\n a\n+b\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,1 +1,2 @@\n a\n+b\n",
+    "additions": 1,
+    "deletions": 0,
+    "changes": [
+      {
+        "value": "a\n",
+        "count": 1,
+        "added": false,
+        "removed": false
+      },
+      {
+        "value": "b\n",
+        "count": 1,
+        "added": true,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "append-no-final-newline",
+    "file": "file.txt",
+    "before": "a",
+    "after": "a\nb",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,1 +1,2 @@\n-a\n\\ No newline at end of file\n+a\n+b\n\\ No newline at end of file\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -1,1 +1,2 @@\n-a\n\\ No newline at end of file\n+a\n+b\n\\ No newline at end of file\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,1 +1,2 @@\n-a\n\\ No newline at end of file\n+a\n+b\n\\ No newline at end of file\n",
+    "additions": 2,
+    "deletions": 1,
+    "changes": [
+      {
+        "value": "a",
+        "count": 1,
+        "added": false,
+        "removed": true
+      },
+      {
+        "value": "a\nb",
+        "count": 2,
+        "added": true,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "append-to-no-final",
+    "file": "file.txt",
+    "before": "a\nb",
+    "after": "a\nb\nc",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,2 +1,3 @@\n a\n-b\n\\ No newline at end of file\n+b\n+c\n\\ No newline at end of file\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -1,2 +1,3 @@\n a\n-b\n\\ No newline at end of file\n+b\n+c\n\\ No newline at end of file\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,2 +1,3 @@\n a\n-b\n\\ No newline at end of file\n+b\n+c\n\\ No newline at end of file\n",
+    "additions": 2,
+    "deletions": 1,
+    "changes": [
+      {
+        "value": "a\n",
+        "count": 1,
+        "added": false,
+        "removed": false
+      },
+      {
+        "value": "b",
+        "count": 1,
+        "added": false,
+        "removed": true
+      },
+      {
+        "value": "b\nc",
+        "count": 2,
+        "added": true,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "remove-tail",
+    "file": "file.txt",
+    "before": "a\nb\n",
+    "after": "a\n",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,2 +1,1 @@\n a\n-b\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -1,2 +1,1 @@\n a\n-b\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,2 +1,1 @@\n a\n-b\n",
+    "additions": 0,
+    "deletions": 1,
+    "changes": [
+      {
+        "value": "a\n",
+        "count": 1,
+        "added": false,
+        "removed": false
+      },
+      {
+        "value": "b\n",
+        "count": 1,
+        "added": false,
+        "removed": true
+      }
+    ]
+  },
+  {
+    "name": "remove-tail-no-final",
+    "file": "file.txt",
+    "before": "a\nb",
+    "after": "a",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,2 +1,1 @@\n-a\n-b\n\\ No newline at end of file\n+a\n\\ No newline at end of file\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -1,2 +1,1 @@\n-a\n-b\n\\ No newline at end of file\n+a\n\\ No newline at end of file\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,2 +1,1 @@\n-a\n-b\n\\ No newline at end of file\n+a\n\\ No newline at end of file\n",
+    "additions": 1,
+    "deletions": 2,
+    "changes": [
+      {
+        "value": "a\nb",
+        "count": 2,
+        "added": false,
+        "removed": true
+      },
+      {
+        "value": "a",
+        "count": 1,
+        "added": true,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "replace-last",
+    "file": "file.txt",
+    "before": "a\nb\n",
+    "after": "a\nc\n",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,2 +1,2 @@\n a\n-b\n+c\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -1,2 +1,2 @@\n a\n-b\n+c\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,2 +1,2 @@\n a\n-b\n+c\n",
+    "additions": 1,
+    "deletions": 1,
+    "changes": [
+      {
+        "value": "a\n",
+        "count": 1,
+        "added": false,
+        "removed": false
+      },
+      {
+        "value": "b\n",
+        "count": 1,
+        "added": false,
+        "removed": true
+      },
+      {
+        "value": "c\n",
+        "count": 1,
+        "added": true,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "replace-first",
+    "file": "file.txt",
+    "before": "a\nb\n",
+    "after": "c\nb\n",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,2 +1,2 @@\n-a\n+c\n b\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -1,2 +1,2 @@\n-a\n+c\n b\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,2 +1,2 @@\n-a\n+c\n b\n",
+    "additions": 1,
+    "deletions": 1,
+    "changes": [
+      {
+        "value": "a\n",
+        "count": 1,
+        "added": false,
+        "removed": true
+      },
+      {
+        "value": "c\n",
+        "count": 1,
+        "added": true,
+        "removed": false
+      },
+      {
+        "value": "b\n",
+        "count": 1,
+        "added": false,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "replace-middle",
+    "file": "file.txt",
+    "before": "a\nb\nc\n",
+    "after": "a\nx\nc\n",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,3 +1,3 @@\n a\n-b\n+x\n c\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -1,3 +1,3 @@\n a\n-b\n+x\n c\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,3 +1,3 @@\n a\n-b\n+x\n c\n",
+    "additions": 1,
+    "deletions": 1,
+    "changes": [
+      {
+        "value": "a\n",
+        "count": 1,
+        "added": false,
+        "removed": false
+      },
+      {
+        "value": "b\n",
+        "count": 1,
+        "added": false,
+        "removed": true
+      },
+      {
+        "value": "x\n",
+        "count": 1,
+        "added": true,
+        "removed": false
+      },
+      {
+        "value": "c\n",
+        "count": 1,
+        "added": false,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "insert-middle",
+    "file": "file.txt",
+    "before": "a\nc\n",
+    "after": "a\nb\nc\n",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,2 +1,3 @@\n a\n+b\n c\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -1,2 +1,3 @@\n a\n+b\n c\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,2 +1,3 @@\n a\n+b\n c\n",
+    "additions": 1,
+    "deletions": 0,
+    "changes": [
+      {
+        "value": "a\n",
+        "count": 1,
+        "added": false,
+        "removed": false
+      },
+      {
+        "value": "b\n",
+        "count": 1,
+        "added": true,
+        "removed": false
+      },
+      {
+        "value": "c\n",
+        "count": 1,
+        "added": false,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "insert-two-middle",
+    "file": "file.txt",
+    "before": "a\nd\n",
+    "after": "a\nb\nc\nd\n",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,2 +1,4 @@\n a\n+b\n+c\n d\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -1,2 +1,4 @@\n a\n+b\n+c\n d\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,2 +1,4 @@\n a\n+b\n+c\n d\n",
+    "additions": 2,
+    "deletions": 0,
+    "changes": [
+      {
+        "value": "a\n",
+        "count": 1,
+        "added": false,
+        "removed": false
+      },
+      {
+        "value": "b\nc\n",
+        "count": 2,
+        "added": true,
+        "removed": false
+      },
+      {
+        "value": "d\n",
+        "count": 1,
+        "added": false,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "delete-middle",
+    "file": "file.txt",
+    "before": "a\nb\nc\n",
+    "after": "a\nc\n",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,3 +1,2 @@\n a\n-b\n c\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -1,3 +1,2 @@\n a\n-b\n c\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,3 +1,2 @@\n a\n-b\n c\n",
+    "additions": 0,
+    "deletions": 1,
+    "changes": [
+      {
+        "value": "a\n",
+        "count": 1,
+        "added": false,
+        "removed": false
+      },
+      {
+        "value": "b\n",
+        "count": 1,
+        "added": false,
+        "removed": true
+      },
+      {
+        "value": "c\n",
+        "count": 1,
+        "added": false,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "delete-two-middle",
+    "file": "file.txt",
+    "before": "a\nb\nc\nd\n",
+    "after": "a\nd\n",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,4 +1,2 @@\n a\n-b\n-c\n d\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -1,4 +1,2 @@\n a\n-b\n-c\n d\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,4 +1,2 @@\n a\n-b\n-c\n d\n",
+    "additions": 0,
+    "deletions": 2,
+    "changes": [
+      {
+        "value": "a\n",
+        "count": 1,
+        "added": false,
+        "removed": false
+      },
+      {
+        "value": "b\nc\n",
+        "count": 2,
+        "added": false,
+        "removed": true
+      },
+      {
+        "value": "d\n",
+        "count": 1,
+        "added": false,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "insert-at-start",
+    "file": "file.txt",
+    "before": "b\n",
+    "after": "a\nb\n",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,1 +1,2 @@\n+a\n b\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -1,1 +1,2 @@\n+a\n b\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,1 +1,2 @@\n+a\n b\n",
+    "additions": 1,
+    "deletions": 0,
+    "changes": [
+      {
+        "value": "a\n",
+        "count": 1,
+        "added": true,
+        "removed": false
+      },
+      {
+        "value": "b\n",
+        "count": 1,
+        "added": false,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "insert-at-start-no-final",
+    "file": "file.txt",
+    "before": "b",
+    "after": "a\nb",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,1 +1,2 @@\n+a\n b\n\\ No newline at end of file\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -1,1 +1,2 @@\n+a\n b\n\\ No newline at end of file\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,1 +1,2 @@\n+a\n b\n\\ No newline at end of file\n",
+    "additions": 1,
+    "deletions": 0,
+    "changes": [
+      {
+        "value": "a\n",
+        "count": 1,
+        "added": true,
+        "removed": false
+      },
+      {
+        "value": "b",
+        "count": 1,
+        "added": false,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "delete-first",
+    "file": "file.txt",
+    "before": "a\nb\n",
+    "after": "b\n",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,2 +1,1 @@\n-a\n b\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -1,2 +1,1 @@\n-a\n b\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,2 +1,1 @@\n-a\n b\n",
+    "additions": 0,
+    "deletions": 1,
+    "changes": [
+      {
+        "value": "a\n",
+        "count": 1,
+        "added": false,
+        "removed": true
+      },
+      {
+        "value": "b\n",
+        "count": 1,
+        "added": false,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "two-changes-close",
+    "file": "file.txt",
+    "before": "line 1\nline 2\nline 3\nline 4\nline 5\nline 6\nline 7\nline 8\nline 9\nline 10\nline 11\nline 12\nline 13\nline 14\nline 15\nline 16\nline 17\nline 18\nline 19\nline 20\n",
+    "after": "line 1\nline 2\nline 3\nline 4\nline 5 changed\nline 6\nline 7\nline 8\nline 9\nline 10\nline 11\nline 12\nline 13 changed\nline 14\nline 15\nline 16\nline 17\nline 18\nline 19\nline 20\n",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,17 +1,17 @@\n line 1\n line 2\n line 3\n line 4\n-line 5\n+line 5 changed\n line 6\n line 7\n line 8\n line 9\n line 10\n line 11\n line 12\n-line 13\n+line 13 changed\n line 14\n line 15\n line 16\n line 17\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -1,17 +1,17 @@\n line 1\n line 2\n line 3\n line 4\n-line 5\n+line 5 changed\n line 6\n line 7\n line 8\n line 9\n line 10\n line 11\n line 12\n-line 13\n+line 13 changed\n line 14\n line 15\n line 16\n line 17\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,17 +1,17 @@\n line 1\n line 2\n line 3\n line 4\n-line 5\n+line 5 changed\n line 6\n line 7\n line 8\n line 9\n line 10\n line 11\n line 12\n-line 13\n+line 13 changed\n line 14\n line 15\n line 16\n line 17\n",
+    "additions": 2,
+    "deletions": 2,
+    "changes": [
+      {
+        "value": "line 1\nline 2\nline 3\nline 4\n",
+        "count": 4,
+        "added": false,
+        "removed": false
+      },
+      {
+        "value": "line 5\n",
+        "count": 1,
+        "added": false,
+        "removed": true
+      },
+      {
+        "value": "line 5 changed\n",
+        "count": 1,
+        "added": true,
+        "removed": false
+      },
+      {
+        "value": "line 6\nline 7\nline 8\nline 9\nline 10\nline 11\nline 12\n",
+        "count": 7,
+        "added": false,
+        "removed": false
+      },
+      {
+        "value": "line 13\n",
+        "count": 1,
+        "added": false,
+        "removed": true
+      },
+      {
+        "value": "line 13 changed\n",
+        "count": 1,
+        "added": true,
+        "removed": false
+      },
+      {
+        "value": "line 14\nline 15\nline 16\nline 17\nline 18\nline 19\nline 20\n",
+        "count": 7,
+        "added": false,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "two-changes-far",
+    "file": "file.txt",
+    "before": "line 1\nline 2\nline 3\nline 4\nline 5\nline 6\nline 7\nline 8\nline 9\nline 10\nline 11\nline 12\nline 13\nline 14\nline 15\nline 16\nline 17\nline 18\nline 19\nline 20\nline 21\nline 22\nline 23\nline 24\nline 25\nline 26\nline 27\nline 28\nline 29\nline 30\n",
+    "after": "line 1\nline 2\nline 3 changed\nline 4\nline 5\nline 6\nline 7\nline 8\nline 9\nline 10\nline 11\nline 12\nline 13\nline 14\nline 15\nline 16\nline 17\nline 18\nline 19\nline 20\nline 21\nline 22\nline 23 changed\nline 24\nline 25\nline 26\nline 27\nline 28\nline 29\nline 30\n",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,7 +1,7 @@\n line 1\n line 2\n-line 3\n+line 3 changed\n line 4\n line 5\n line 6\n line 7\n@@ -19,9 +19,9 @@\n line 19\n line 20\n line 21\n line 22\n-line 23\n+line 23 changed\n line 24\n line 25\n line 26\n line 27\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -1,7 +1,7 @@\n line 1\n line 2\n-line 3\n+line 3 changed\n line 4\n line 5\n line 6\n line 7\n@@ -19,9 +19,9 @@\n line 19\n line 20\n line 21\n line 22\n-line 23\n+line 23 changed\n line 24\n line 25\n line 26\n line 27\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,7 +1,7 @@\n line 1\n line 2\n-line 3\n+line 3 changed\n line 4\n line 5\n line 6\n line 7\n@@ -19,9 +19,9 @@\n line 19\n line 20\n line 21\n line 22\n-line 23\n+line 23 changed\n line 24\n line 25\n line 26\n line 27\n",
+    "additions": 2,
+    "deletions": 2,
+    "changes": [
+      {
+        "value": "line 1\nline 2\n",
+        "count": 2,
+        "added": false,
+        "removed": false
+      },
+      {
+        "value": "line 3\n",
+        "count": 1,
+        "added": false,
+        "removed": true
+      },
+      {
+        "value": "line 3 changed\n",
+        "count": 1,
+        "added": true,
+        "removed": false
+      },
+      {
+        "value": "line 4\nline 5\nline 6\nline 7\nline 8\nline 9\nline 10\nline 11\nline 12\nline 13\nline 14\nline 15\nline 16\nline 17\nline 18\nline 19\nline 20\nline 21\nline 22\n",
+        "count": 19,
+        "added": false,
+        "removed": false
+      },
+      {
+        "value": "line 23\n",
+        "count": 1,
+        "added": false,
+        "removed": true
+      },
+      {
+        "value": "line 23 changed\n",
+        "count": 1,
+        "added": true,
+        "removed": false
+      },
+      {
+        "value": "line 24\nline 25\nline 26\nline 27\nline 28\nline 29\nline 30\n",
+        "count": 7,
+        "added": false,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "three-hunks-long",
+    "file": "file.txt",
+    "before": "line 1\nline 2\nline 3\nline 4\nline 5\nline 6\nline 7\nline 8\nline 9\nline 10\nline 11\nline 12\nline 13\nline 14\nline 15\nline 16\nline 17\nline 18\nline 19\nline 20\nline 21\nline 22\nline 23\nline 24\nline 25\nline 26\nline 27\nline 28\nline 29\nline 30\nline 31\nline 32\nline 33\nline 34\nline 35\nline 36\nline 37\nline 38\nline 39\nline 40\n",
+    "after": "line 1\nline 2\nline 3\nline 4\nline 5 changed\nline 6\nline 7\nline 8\nline 9\nline 10\nline 11\nline 12\nline 13\nline 14\nline 15\nline 16\nline 17\nline 18\nline 19\nline 20 changed\nline 21\nline 22\nline 23\nline 24\nline 25\nline 26\nline 27\nline 28\nline 29\nline 30\nline 31\nline 32\nline 33\nline 34\nline 35 changed\nline 36\nline 37\nline 38\nline 39\nline 40\n",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,9 +1,9 @@\n line 1\n line 2\n line 3\n line 4\n-line 5\n+line 5 changed\n line 6\n line 7\n line 8\n line 9\n@@ -16,9 +16,9 @@\n line 16\n line 17\n line 18\n line 19\n-line 20\n+line 20 changed\n line 21\n line 22\n line 23\n line 24\n@@ -31,9 +31,9 @@\n line 31\n line 32\n line 33\n line 34\n-line 35\n+line 35 changed\n line 36\n line 37\n line 38\n line 39\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -1,9 +1,9 @@\n line 1\n line 2\n line 3\n line 4\n-line 5\n+line 5 changed\n line 6\n line 7\n line 8\n line 9\n@@ -16,9 +16,9 @@\n line 16\n line 17\n line 18\n line 19\n-line 20\n+line 20 changed\n line 21\n line 22\n line 23\n line 24\n@@ -31,9 +31,9 @@\n line 31\n line 32\n line 33\n line 34\n-line 35\n+line 35 changed\n line 36\n line 37\n line 38\n line 39\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,9 +1,9 @@\n line 1\n line 2\n line 3\n line 4\n-line 5\n+line 5 changed\n line 6\n line 7\n line 8\n line 9\n@@ -16,9 +16,9 @@\n line 16\n line 17\n line 18\n line 19\n-line 20\n+line 20 changed\n line 21\n line 22\n line 23\n line 24\n@@ -31,9 +31,9 @@\n line 31\n line 32\n line 33\n line 34\n-line 35\n+line 35 changed\n line 36\n line 37\n line 38\n line 39\n",
+    "additions": 3,
+    "deletions": 3,
+    "changes": [
+      {
+        "value": "line 1\nline 2\nline 3\nline 4\n",
+        "count": 4,
+        "added": false,
+        "removed": false
+      },
+      {
+        "value": "line 5\n",
+        "count": 1,
+        "added": false,
+        "removed": true
+      },
+      {
+        "value": "line 5 changed\n",
+        "count": 1,
+        "added": true,
+        "removed": false
+      },
+      {
+        "value": "line 6\nline 7\nline 8\nline 9\nline 10\nline 11\nline 12\nline 13\nline 14\nline 15\nline 16\nline 17\nline 18\nline 19\n",
+        "count": 14,
+        "added": false,
+        "removed": false
+      },
+      {
+        "value": "line 20\n",
+        "count": 1,
+        "added": false,
+        "removed": true
+      },
+      {
+        "value": "line 20 changed\n",
+        "count": 1,
+        "added": true,
+        "removed": false
+      },
+      {
+        "value": "line 21\nline 22\nline 23\nline 24\nline 25\nline 26\nline 27\nline 28\nline 29\nline 30\nline 31\nline 32\nline 33\nline 34\n",
+        "count": 14,
+        "added": false,
+        "removed": false
+      },
+      {
+        "value": "line 35\n",
+        "count": 1,
+        "added": false,
+        "removed": true
+      },
+      {
+        "value": "line 35 changed\n",
+        "count": 1,
+        "added": true,
+        "removed": false
+      },
+      {
+        "value": "line 36\nline 37\nline 38\nline 39\nline 40\n",
+        "count": 5,
+        "added": false,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "change-at-start-and-end",
+    "file": "file.txt",
+    "before": "line 1\nline 2\nline 3\nline 4\nline 5\nline 6\nline 7\nline 8\nline 9\nline 10\nline 11\nline 12\nline 13\nline 14\nline 15\n",
+    "after": "line 1 changed\nline 2\nline 3\nline 4\nline 5\nline 6\nline 7\nline 8\nline 9\nline 10\nline 11\nline 12\nline 13\nline 14\nline 15 changed\n",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,5 +1,5 @@\n-line 1\n+line 1 changed\n line 2\n line 3\n line 4\n line 5\n@@ -11,5 +11,5 @@\n line 11\n line 12\n line 13\n line 14\n-line 15\n+line 15 changed\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -1,5 +1,5 @@\n-line 1\n+line 1 changed\n line 2\n line 3\n line 4\n line 5\n@@ -11,5 +11,5 @@\n line 11\n line 12\n line 13\n line 14\n-line 15\n+line 15 changed\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,5 +1,5 @@\n-line 1\n+line 1 changed\n line 2\n line 3\n line 4\n line 5\n@@ -11,5 +11,5 @@\n line 11\n line 12\n line 13\n line 14\n-line 15\n+line 15 changed\n",
+    "additions": 2,
+    "deletions": 2,
+    "changes": [
+      {
+        "value": "line 1\n",
+        "count": 1,
+        "added": false,
+        "removed": true
+      },
+      {
+        "value": "line 1 changed\n",
+        "count": 1,
+        "added": true,
+        "removed": false
+      },
+      {
+        "value": "line 2\nline 3\nline 4\nline 5\nline 6\nline 7\nline 8\nline 9\nline 10\nline 11\nline 12\nline 13\nline 14\n",
+        "count": 13,
+        "added": false,
+        "removed": false
+      },
+      {
+        "value": "line 15\n",
+        "count": 1,
+        "added": false,
+        "removed": true
+      },
+      {
+        "value": "line 15 changed\n",
+        "count": 1,
+        "added": true,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "long-append",
+    "file": "file.txt",
+    "before": "line 1\nline 2\nline 3\nline 4\nline 5\nline 6\nline 7\nline 8\nline 9\nline 10\nline 11\nline 12\nline 13\nline 14\nline 15\nline 16\nline 17\nline 18\nline 19\nline 20\nline 21\nline 22\nline 23\nline 24\nline 25\nline 26\nline 27\nline 28\nline 29\nline 30\n",
+    "after": "line 1\nline 2\nline 3\nline 4\nline 5\nline 6\nline 7\nline 8\nline 9\nline 10\nline 11\nline 12\nline 13\nline 14\nline 15\nline 16\nline 17\nline 18\nline 19\nline 20\nline 21\nline 22\nline 23\nline 24\nline 25\nline 26\nline 27\nline 28\nline 29\nline 30\nextra 1\nextra 2\nextra 3\nextra 4\nextra 5\n",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -27,4 +27,9 @@\n line 27\n line 28\n line 29\n line 30\n+extra 1\n+extra 2\n+extra 3\n+extra 4\n+extra 5\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -27,4 +27,9 @@\n line 27\n line 28\n line 29\n line 30\n+extra 1\n+extra 2\n+extra 3\n+extra 4\n+extra 5\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -27,4 +27,9 @@\n line 27\n line 28\n line 29\n line 30\n+extra 1\n+extra 2\n+extra 3\n+extra 4\n+extra 5\n",
+    "additions": 5,
+    "deletions": 0,
+    "changes": [
+      {
+        "value": "line 1\nline 2\nline 3\nline 4\nline 5\nline 6\nline 7\nline 8\nline 9\nline 10\nline 11\nline 12\nline 13\nline 14\nline 15\nline 16\nline 17\nline 18\nline 19\nline 20\nline 21\nline 22\nline 23\nline 24\nline 25\nline 26\nline 27\nline 28\nline 29\nline 30\n",
+        "count": 30,
+        "added": false,
+        "removed": false
+      },
+      {
+        "value": "extra 1\nextra 2\nextra 3\nextra 4\nextra 5\n",
+        "count": 5,
+        "added": true,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "long-delete-tail",
+    "file": "file.txt",
+    "before": "line 1\nline 2\nline 3\nline 4\nline 5\nline 6\nline 7\nline 8\nline 9\nline 10\nline 11\nline 12\nline 13\nline 14\nline 15\nline 16\nline 17\nline 18\nline 19\nline 20\nline 21\nline 22\nline 23\nline 24\nline 25\nline 26\nline 27\nline 28\nline 29\nline 30\n",
+    "after": "line 1\nline 2\nline 3\nline 4\nline 5\nline 6\nline 7\nline 8\nline 9\nline 10\nline 11\nline 12\nline 13\nline 14\nline 15\nline 16\nline 17\nline 18\nline 19\nline 20\nline 21\nline 22\nline 23\nline 24\nline 25\n",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -22,9 +22,4 @@\n line 22\n line 23\n line 24\n line 25\n-line 26\n-line 27\n-line 28\n-line 29\n-line 30\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -22,9 +22,4 @@\n line 22\n line 23\n line 24\n line 25\n-line 26\n-line 27\n-line 28\n-line 29\n-line 30\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -22,9 +22,4 @@\n line 22\n line 23\n line 24\n line 25\n-line 26\n-line 27\n-line 28\n-line 29\n-line 30\n",
+    "additions": 0,
+    "deletions": 5,
+    "changes": [
+      {
+        "value": "line 1\nline 2\nline 3\nline 4\nline 5\nline 6\nline 7\nline 8\nline 9\nline 10\nline 11\nline 12\nline 13\nline 14\nline 15\nline 16\nline 17\nline 18\nline 19\nline 20\nline 21\nline 22\nline 23\nline 24\nline 25\n",
+        "count": 25,
+        "added": false,
+        "removed": false
+      },
+      {
+        "value": "line 26\nline 27\nline 28\nline 29\nline 30\n",
+        "count": 5,
+        "added": false,
+        "removed": true
+      }
+    ]
+  },
+  {
+    "name": "long-rewrite",
+    "file": "file.txt",
+    "before": "line 1\nline 2\nline 3\nline 4\nline 5\nline 6\nline 7\nline 8\nline 9\nline 10\nline 11\nline 12\nline 13\nline 14\nline 15\nline 16\nline 17\nline 18\nline 19\nline 20\n",
+    "after": "rewritten 1\nrewritten 2\nrewritten 3\nrewritten 4\nrewritten 5\nrewritten 6\nrewritten 7\nrewritten 8\nrewritten 9\nrewritten 10\nrewritten 11\nrewritten 12\nrewritten 13\nrewritten 14\nrewritten 15\nrewritten 16\nrewritten 17\nrewritten 18\nrewritten 19\nrewritten 20\n",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,20 +1,20 @@\n-line 1\n-line 2\n-line 3\n-line 4\n-line 5\n-line 6\n-line 7\n-line 8\n-line 9\n-line 10\n-line 11\n-line 12\n-line 13\n-line 14\n-line 15\n-line 16\n-line 17\n-line 18\n-line 19\n-line 20\n+rewritten 1\n+rewritten 2\n+rewritten 3\n+rewritten 4\n+rewritten 5\n+rewritten 6\n+rewritten 7\n+rewritten 8\n+rewritten 9\n+rewritten 10\n+rewritten 11\n+rewritten 12\n+rewritten 13\n+rewritten 14\n+rewritten 15\n+rewritten 16\n+rewritten 17\n+rewritten 18\n+rewritten 19\n+rewritten 20\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -1,20 +1,20 @@\n-line 1\n-line 2\n-line 3\n-line 4\n-line 5\n-line 6\n-line 7\n-line 8\n-line 9\n-line 10\n-line 11\n-line 12\n-line 13\n-line 14\n-line 15\n-line 16\n-line 17\n-line 18\n-line 19\n-line 20\n+rewritten 1\n+rewritten 2\n+rewritten 3\n+rewritten 4\n+rewritten 5\n+rewritten 6\n+rewritten 7\n+rewritten 8\n+rewritten 9\n+rewritten 10\n+rewritten 11\n+rewritten 12\n+rewritten 13\n+rewritten 14\n+rewritten 15\n+rewritten 16\n+rewritten 17\n+rewritten 18\n+rewritten 19\n+rewritten 20\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,20 +1,20 @@\n-line 1\n-line 2\n-line 3\n-line 4\n-line 5\n-line 6\n-line 7\n-line 8\n-line 9\n-line 10\n-line 11\n-line 12\n-line 13\n-line 14\n-line 15\n-line 16\n-line 17\n-line 18\n-line 19\n-line 20\n+rewritten 1\n+rewritten 2\n+rewritten 3\n+rewritten 4\n+rewritten 5\n+rewritten 6\n+rewritten 7\n+rewritten 8\n+rewritten 9\n+rewritten 10\n+rewritten 11\n+rewritten 12\n+rewritten 13\n+rewritten 14\n+rewritten 15\n+rewritten 16\n+rewritten 17\n+rewritten 18\n+rewritten 19\n+rewritten 20\n",
+    "additions": 20,
+    "deletions": 20,
+    "changes": [
+      {
+        "value": "line 1\nline 2\nline 3\nline 4\nline 5\nline 6\nline 7\nline 8\nline 9\nline 10\nline 11\nline 12\nline 13\nline 14\nline 15\nline 16\nline 17\nline 18\nline 19\nline 20\n",
+        "count": 20,
+        "added": false,
+        "removed": true
+      },
+      {
+        "value": "rewritten 1\nrewritten 2\nrewritten 3\nrewritten 4\nrewritten 5\nrewritten 6\nrewritten 7\nrewritten 8\nrewritten 9\nrewritten 10\nrewritten 11\nrewritten 12\nrewritten 13\nrewritten 14\nrewritten 15\nrewritten 16\nrewritten 17\nrewritten 18\nrewritten 19\nrewritten 20\n",
+        "count": 20,
+        "added": true,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "crlf-identical",
+    "file": "file.txt",
+    "before": "a\r\nb\r\n",
+    "after": "a\r\nb\r\n",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n",
+    "additions": 0,
+    "deletions": 0,
+    "changes": [
+      {
+        "value": "a\r\nb\r\n",
+        "count": 2,
+        "added": false,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "crlf-append",
+    "file": "file.txt",
+    "before": "a\r\n",
+    "after": "a\r\nb\r\n",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,1 +1,2 @@\n a\r\n+b\r\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -1,1 +1,2 @@\n a\r\n+b\r\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,1 +1,2 @@\n a\r\n+b\r\n",
+    "additions": 1,
+    "deletions": 0,
+    "changes": [
+      {
+        "value": "a\r\n",
+        "count": 1,
+        "added": false,
+        "removed": false
+      },
+      {
+        "value": "b\r\n",
+        "count": 1,
+        "added": true,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "crlf-edit",
+    "file": "file.txt",
+    "before": "a\r\nb\r\nc\r\n",
+    "after": "a\r\nx\r\nc\r\n",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,3 +1,3 @@\n a\r\n-b\r\n+x\r\n c\r\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -1,3 +1,3 @@\n a\r\n-b\r\n+x\r\n c\r\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,3 +1,3 @@\n a\r\n-b\r\n+x\r\n c\r\n",
+    "additions": 1,
+    "deletions": 1,
+    "changes": [
+      {
+        "value": "a\r\n",
+        "count": 1,
+        "added": false,
+        "removed": false
+      },
+      {
+        "value": "b\r\n",
+        "count": 1,
+        "added": false,
+        "removed": true
+      },
+      {
+        "value": "x\r\n",
+        "count": 1,
+        "added": true,
+        "removed": false
+      },
+      {
+        "value": "c\r\n",
+        "count": 1,
+        "added": false,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "crlf-no-final",
+    "file": "file.txt",
+    "before": "a\r\nb",
+    "after": "a\r\nc",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,2 +1,2 @@\n a\r\n-b\n\\ No newline at end of file\n+c\n\\ No newline at end of file\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -1,2 +1,2 @@\n a\r\n-b\n\\ No newline at end of file\n+c\n\\ No newline at end of file\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,2 +1,2 @@\n a\r\n-b\n\\ No newline at end of file\n+c\n\\ No newline at end of file\n",
+    "additions": 1,
+    "deletions": 1,
+    "changes": [
+      {
+        "value": "a\r\n",
+        "count": 1,
+        "added": false,
+        "removed": false
+      },
+      {
+        "value": "b",
+        "count": 1,
+        "added": false,
+        "removed": true
+      },
+      {
+        "value": "c",
+        "count": 1,
+        "added": true,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "crlf-mixed",
+    "file": "file.txt",
+    "before": "a\r\nb\nc\r\n",
+    "after": "a\r\nx\nc\r\n",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,3 +1,3 @@\n a\r\n-b\n+x\n c\r\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -1,3 +1,3 @@\n a\r\n-b\n+x\n c\r\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,3 +1,3 @@\n a\r\n-b\n+x\n c\r\n",
+    "additions": 1,
+    "deletions": 1,
+    "changes": [
+      {
+        "value": "a\r\n",
+        "count": 1,
+        "added": false,
+        "removed": false
+      },
+      {
+        "value": "b\n",
+        "count": 1,
+        "added": false,
+        "removed": true
+      },
+      {
+        "value": "x\n",
+        "count": 1,
+        "added": true,
+        "removed": false
+      },
+      {
+        "value": "c\r\n",
+        "count": 1,
+        "added": false,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "crlf-to-lf",
+    "file": "file.txt",
+    "before": "a\r\nb\r\n",
+    "after": "a\nb\n",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,2 +1,2 @@\n-a\r\n-b\r\n+a\n+b\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -1,2 +1,2 @@\n-a\r\n-b\r\n+a\n+b\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,2 +1,2 @@\n-a\r\n-b\r\n+a\n+b\n",
+    "additions": 2,
+    "deletions": 2,
+    "changes": [
+      {
+        "value": "a\r\nb\r\n",
+        "count": 2,
+        "added": false,
+        "removed": true
+      },
+      {
+        "value": "a\nb\n",
+        "count": 2,
+        "added": true,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "lone-cr",
+    "file": "file.txt",
+    "before": "a\rb\r",
+    "after": "a\rc\r",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,1 +1,1 @@\n-a\rb\r\n\\ No newline at end of file\n+a\rc\r\n\\ No newline at end of file\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -1,1 +1,1 @@\n-a\rb\r\n\\ No newline at end of file\n+a\rc\r\n\\ No newline at end of file\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,1 +1,1 @@\n-a\rb\r\n\\ No newline at end of file\n+a\rc\r\n\\ No newline at end of file\n",
+    "additions": 1,
+    "deletions": 1,
+    "changes": [
+      {
+        "value": "a\rb\r",
+        "count": 1,
+        "added": false,
+        "removed": true
+      },
+      {
+        "value": "a\rc\r",
+        "count": 1,
+        "added": true,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "add-newline-at-eof",
+    "file": "file.txt",
+    "before": "a\nb",
+    "after": "a\nb\n",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,2 +1,2 @@\n a\n-b\n\\ No newline at end of file\n+b\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -1,2 +1,2 @@\n a\n-b\n\\ No newline at end of file\n+b\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,2 +1,2 @@\n a\n-b\n\\ No newline at end of file\n+b\n",
+    "additions": 1,
+    "deletions": 1,
+    "changes": [
+      {
+        "value": "a\n",
+        "count": 1,
+        "added": false,
+        "removed": false
+      },
+      {
+        "value": "b",
+        "count": 1,
+        "added": false,
+        "removed": true
+      },
+      {
+        "value": "b\n",
+        "count": 1,
+        "added": true,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "remove-newline-at-eof",
+    "file": "file.txt",
+    "before": "a\nb\n",
+    "after": "a\nb",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,2 +1,2 @@\n a\n-b\n+b\n\\ No newline at end of file\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -1,2 +1,2 @@\n a\n-b\n+b\n\\ No newline at end of file\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,2 +1,2 @@\n a\n-b\n+b\n\\ No newline at end of file\n",
+    "additions": 1,
+    "deletions": 1,
+    "changes": [
+      {
+        "value": "a\n",
+        "count": 1,
+        "added": false,
+        "removed": false
+      },
+      {
+        "value": "b\n",
+        "count": 1,
+        "added": false,
+        "removed": true
+      },
+      {
+        "value": "b",
+        "count": 1,
+        "added": true,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "no-newline-mid-change",
+    "file": "file.txt",
+    "before": "a\nb",
+    "after": "a\nc",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,2 +1,2 @@\n a\n-b\n\\ No newline at end of file\n+c\n\\ No newline at end of file\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -1,2 +1,2 @@\n a\n-b\n\\ No newline at end of file\n+c\n\\ No newline at end of file\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,2 +1,2 @@\n a\n-b\n\\ No newline at end of file\n+c\n\\ No newline at end of file\n",
+    "additions": 1,
+    "deletions": 1,
+    "changes": [
+      {
+        "value": "a\n",
+        "count": 1,
+        "added": false,
+        "removed": false
+      },
+      {
+        "value": "b",
+        "count": 1,
+        "added": false,
+        "removed": true
+      },
+      {
+        "value": "c",
+        "count": 1,
+        "added": true,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "empty-to-blank-line",
+    "file": "file.txt",
+    "before": "",
+    "after": "\n",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -0,0 +1,1 @@\n+\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -0,0 +1,1 @@\n+\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -0,0 +1,1 @@\n+\n",
+    "additions": 1,
+    "deletions": 0,
+    "changes": [
+      {
+        "value": "\n",
+        "count": 1,
+        "added": true,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "blank-line-to-empty",
+    "file": "file.txt",
+    "before": "\n",
+    "after": "",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,1 +0,0 @@\n-\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -1,1 +0,0 @@\n-\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,1 +0,0 @@\n-\n",
+    "additions": 0,
+    "deletions": 1,
+    "changes": [
+      {
+        "value": "\n",
+        "count": 1,
+        "added": false,
+        "removed": true
+      }
+    ]
+  },
+  {
+    "name": "repeated-lines",
+    "file": "file.txt",
+    "before": "x\ny\nx\ny\nx\n",
+    "after": "x\ny\nx\nz\nx\n",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,5 +1,5 @@\n x\n y\n x\n-y\n+z\n x\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -1,5 +1,5 @@\n x\n y\n x\n-y\n+z\n x\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,5 +1,5 @@\n x\n y\n x\n-y\n+z\n x\n",
+    "additions": 1,
+    "deletions": 1,
+    "changes": [
+      {
+        "value": "x\ny\nx\n",
+        "count": 3,
+        "added": false,
+        "removed": false
+      },
+      {
+        "value": "y\n",
+        "count": 1,
+        "added": false,
+        "removed": true
+      },
+      {
+        "value": "z\n",
+        "count": 1,
+        "added": true,
+        "removed": false
+      },
+      {
+        "value": "x\n",
+        "count": 1,
+        "added": false,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "repeated-lines-shift",
+    "file": "file.txt",
+    "before": "a\na\na\nb\n",
+    "after": "a\na\nb\na\n",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,4 +1,4 @@\n a\n a\n-a\n b\n+a\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -1,4 +1,4 @@\n a\n a\n-a\n b\n+a\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,4 +1,4 @@\n a\n a\n-a\n b\n+a\n",
+    "additions": 1,
+    "deletions": 1,
+    "changes": [
+      {
+        "value": "a\na\n",
+        "count": 2,
+        "added": false,
+        "removed": false
+      },
+      {
+        "value": "a\n",
+        "count": 1,
+        "added": false,
+        "removed": true
+      },
+      {
+        "value": "b\n",
+        "count": 1,
+        "added": false,
+        "removed": false
+      },
+      {
+        "value": "a\n",
+        "count": 1,
+        "added": true,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "moved-block",
+    "file": "file.txt",
+    "before": "a\nb\nc\nd\ne\nf\n",
+    "after": "a\ne\nf\nb\nc\nd\n",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,6 +1,6 @@\n a\n+e\n+f\n b\n c\n d\n-e\n-f\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -1,6 +1,6 @@\n a\n+e\n+f\n b\n c\n d\n-e\n-f\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,6 +1,6 @@\n a\n+e\n+f\n b\n c\n d\n-e\n-f\n",
+    "additions": 2,
+    "deletions": 2,
+    "changes": [
+      {
+        "value": "a\n",
+        "count": 1,
+        "added": false,
+        "removed": false
+      },
+      {
+        "value": "e\nf\n",
+        "count": 2,
+        "added": true,
+        "removed": false
+      },
+      {
+        "value": "b\nc\nd\n",
+        "count": 3,
+        "added": false,
+        "removed": false
+      },
+      {
+        "value": "e\nf\n",
+        "count": 2,
+        "added": false,
+        "removed": true
+      }
+    ]
+  },
+  {
+    "name": "swap-adjacent",
+    "file": "file.txt",
+    "before": "a\nb\nc\nd\n",
+    "after": "a\nc\nb\nd\n",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,4 +1,4 @@\n a\n-b\n c\n+b\n d\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -1,4 +1,4 @@\n a\n-b\n c\n+b\n d\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,4 +1,4 @@\n a\n-b\n c\n+b\n d\n",
+    "additions": 1,
+    "deletions": 1,
+    "changes": [
+      {
+        "value": "a\n",
+        "count": 1,
+        "added": false,
+        "removed": false
+      },
+      {
+        "value": "b\n",
+        "count": 1,
+        "added": false,
+        "removed": true
+      },
+      {
+        "value": "c\n",
+        "count": 1,
+        "added": false,
+        "removed": false
+      },
+      {
+        "value": "b\n",
+        "count": 1,
+        "added": true,
+        "removed": false
+      },
+      {
+        "value": "d\n",
+        "count": 1,
+        "added": false,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "alternating",
+    "file": "file.txt",
+    "before": "a\nb\na\nb\na\nb\n",
+    "after": "b\na\nb\na\nb\na\n",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,6 +1,6 @@\n-a\n b\n a\n b\n a\n b\n+a\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -1,6 +1,6 @@\n-a\n b\n a\n b\n a\n b\n+a\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,6 +1,6 @@\n-a\n b\n a\n b\n a\n b\n+a\n",
+    "additions": 1,
+    "deletions": 1,
+    "changes": [
+      {
+        "value": "a\n",
+        "count": 1,
+        "added": false,
+        "removed": true
+      },
+      {
+        "value": "b\na\nb\na\nb\n",
+        "count": 5,
+        "added": false,
+        "removed": false
+      },
+      {
+        "value": "a\n",
+        "count": 1,
+        "added": true,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "unicode",
+    "file": "file.txt",
+    "before": "héllo\n世界\n",
+    "after": "héllo\nwörld\n",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,2 +1,2 @@\n héllo\n-世界\n+wörld\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -1,2 +1,2 @@\n héllo\n-世界\n+wörld\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,2 +1,2 @@\n héllo\n-世界\n+wörld\n",
+    "additions": 1,
+    "deletions": 1,
+    "changes": [
+      {
+        "value": "héllo\n",
+        "count": 1,
+        "added": false,
+        "removed": false
+      },
+      {
+        "value": "世界\n",
+        "count": 1,
+        "added": false,
+        "removed": true
+      },
+      {
+        "value": "wörld\n",
+        "count": 1,
+        "added": true,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "emoji",
+    "file": "file.txt",
+    "before": "one\n🙂\nthree\n",
+    "after": "one\n🙃\nthree\n",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,3 +1,3 @@\n one\n-🙂\n+🙃\n three\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -1,3 +1,3 @@\n one\n-🙂\n+🙃\n three\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,3 +1,3 @@\n one\n-🙂\n+🙃\n three\n",
+    "additions": 1,
+    "deletions": 1,
+    "changes": [
+      {
+        "value": "one\n",
+        "count": 1,
+        "added": false,
+        "removed": false
+      },
+      {
+        "value": "🙂\n",
+        "count": 1,
+        "added": false,
+        "removed": true
+      },
+      {
+        "value": "🙃\n",
+        "count": 1,
+        "added": true,
+        "removed": false
+      },
+      {
+        "value": "three\n",
+        "count": 1,
+        "added": false,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "whitespace-only-lines",
+    "file": "file.txt",
+    "before": "a\n   \nb\n",
+    "after": "a\n\t\nb\n",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,3 +1,3 @@\n a\n-   \n+\t\n b\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -1,3 +1,3 @@\n a\n-   \n+\t\n b\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,3 +1,3 @@\n a\n-   \n+\t\n b\n",
+    "additions": 1,
+    "deletions": 1,
+    "changes": [
+      {
+        "value": "a\n",
+        "count": 1,
+        "added": false,
+        "removed": false
+      },
+      {
+        "value": "   \n",
+        "count": 1,
+        "added": false,
+        "removed": true
+      },
+      {
+        "value": "\t\n",
+        "count": 1,
+        "added": true,
+        "removed": false
+      },
+      {
+        "value": "b\n",
+        "count": 1,
+        "added": false,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "indented",
+    "file": "file.txt",
+    "before": "function {\n  a\n  b\n}\n",
+    "after": "function {\n  a\n  c\n}\n",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,4 +1,4 @@\n function {\n   a\n-  b\n+  c\n }\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -1,4 +1,4 @@\n function {\n   a\n-  b\n+  c\n }\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,4 +1,4 @@\n function {\n   a\n-  b\n+  c\n }\n",
+    "additions": 1,
+    "deletions": 1,
+    "changes": [
+      {
+        "value": "function {\n  a\n",
+        "count": 2,
+        "added": false,
+        "removed": false
+      },
+      {
+        "value": "  b\n",
+        "count": 1,
+        "added": false,
+        "removed": true
+      },
+      {
+        "value": "  c\n",
+        "count": 1,
+        "added": true,
+        "removed": false
+      },
+      {
+        "value": "}\n",
+        "count": 1,
+        "added": false,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "tabs",
+    "file": "file.txt",
+    "before": "if {\n\ta\n\tb\n}\n",
+    "after": "if {\n\ta\n\tc\n}\n",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,4 +1,4 @@\n if {\n \ta\n-\tb\n+\tc\n }\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -1,4 +1,4 @@\n if {\n \ta\n-\tb\n+\tc\n }\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,4 +1,4 @@\n if {\n \ta\n-\tb\n+\tc\n }\n",
+    "additions": 1,
+    "deletions": 1,
+    "changes": [
+      {
+        "value": "if {\n\ta\n",
+        "count": 2,
+        "added": false,
+        "removed": false
+      },
+      {
+        "value": "\tb\n",
+        "count": 1,
+        "added": false,
+        "removed": true
+      },
+      {
+        "value": "\tc\n",
+        "count": 1,
+        "added": true,
+        "removed": false
+      },
+      {
+        "value": "}\n",
+        "count": 1,
+        "added": false,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "uniform-indent",
+    "file": "file.txt",
+    "before": "  a\n  b\n",
+    "after": "  a\n  c\n",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,2 +1,2 @@\n   a\n-  b\n+  c\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -1,2 +1,2 @@\n   a\n-  b\n+  c\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,2 +1,2 @@\n a\n-b\n+c\n",
+    "additions": 1,
+    "deletions": 1,
+    "changes": [
+      {
+        "value": "  a\n",
+        "count": 1,
+        "added": false,
+        "removed": false
+      },
+      {
+        "value": "  b\n",
+        "count": 1,
+        "added": false,
+        "removed": true
+      },
+      {
+        "value": "  c\n",
+        "count": 1,
+        "added": true,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "nonuniform-indent",
+    "file": "file.txt",
+    "before": "    a\n  b\n",
+    "after": "    a\n  c\n",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,2 +1,2 @@\n     a\n-  b\n+  c\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -1,2 +1,2 @@\n     a\n-  b\n+  c\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,2 +1,2 @@\n   a\n-b\n+c\n",
+    "additions": 1,
+    "deletions": 1,
+    "changes": [
+      {
+        "value": "    a\n",
+        "count": 1,
+        "added": false,
+        "removed": false
+      },
+      {
+        "value": "  b\n",
+        "count": 1,
+        "added": false,
+        "removed": true
+      },
+      {
+        "value": "  c\n",
+        "count": 1,
+        "added": true,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "indent-with-blank-line",
+    "file": "file.txt",
+    "before": "  a\n\n  b\n",
+    "after": "  a\n\n  c\n",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,3 +1,3 @@\n   a\n \n-  b\n+  c\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -1,3 +1,3 @@\n   a\n \n-  b\n+  c\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,3 +1,3 @@\n a\n \n-b\n+c\n",
+    "additions": 1,
+    "deletions": 1,
+    "changes": [
+      {
+        "value": "  a\n\n",
+        "count": 2,
+        "added": false,
+        "removed": false
+      },
+      {
+        "value": "  b\n",
+        "count": 1,
+        "added": false,
+        "removed": true
+      },
+      {
+        "value": "  c\n",
+        "count": 1,
+        "added": true,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "no-indent",
+    "file": "file.txt",
+    "before": "a\nb\n",
+    "after": "a\nc\n",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,2 +1,2 @@\n a\n-b\n+c\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -1,2 +1,2 @@\n a\n-b\n+c\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,2 +1,2 @@\n a\n-b\n+c\n",
+    "additions": 1,
+    "deletions": 1,
+    "changes": [
+      {
+        "value": "a\n",
+        "count": 1,
+        "added": false,
+        "removed": false
+      },
+      {
+        "value": "b\n",
+        "count": 1,
+        "added": false,
+        "removed": true
+      },
+      {
+        "value": "c\n",
+        "count": 1,
+        "added": true,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "trailing-spaces",
+    "file": "file.txt",
+    "before": "a  \nb\n",
+    "after": "a\nb\n",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,2 +1,2 @@\n-a  \n+a\n b\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -1,2 +1,2 @@\n-a  \n+a\n b\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,2 +1,2 @@\n-a  \n+a\n b\n",
+    "additions": 1,
+    "deletions": 1,
+    "changes": [
+      {
+        "value": "a  \n",
+        "count": 1,
+        "added": false,
+        "removed": true
+      },
+      {
+        "value": "a\n",
+        "count": 1,
+        "added": true,
+        "removed": false
+      },
+      {
+        "value": "b\n",
+        "count": 1,
+        "added": false,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "status-added",
+    "file": "new.txt",
+    "before": "",
+    "after": "new\n",
+    "status": "added",
+    "patch": "Index: new.txt\n===================================================================\n--- new.txt\n+++ new.txt\n@@ -0,0 +1,1 @@\n+new\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -0,0 +1,1 @@\n+new\n",
+    "trimmed": "Index: new.txt\n===================================================================\n--- new.txt\n+++ new.txt\n@@ -0,0 +1,1 @@\n+new\n",
+    "additions": 1,
+    "deletions": 0,
+    "changes": [
+      {
+        "value": "new\n",
+        "count": 1,
+        "added": true,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "status-deleted",
+    "file": "old.txt",
+    "before": "old\n",
+    "after": "",
+    "status": "deleted",
+    "patch": "Index: old.txt\n===================================================================\n--- old.txt\n+++ old.txt\n@@ -1,1 +0,0 @@\n-old\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -1,1 +0,0 @@\n-old\n",
+    "trimmed": "Index: old.txt\n===================================================================\n--- old.txt\n+++ old.txt\n@@ -1,1 +0,0 @@\n-old\n",
+    "additions": 0,
+    "deletions": 1,
+    "changes": [
+      {
+        "value": "old\n",
+        "count": 1,
+        "added": false,
+        "removed": true
+      }
+    ]
+  },
+  {
+    "name": "status-modified",
+    "file": "file.txt",
+    "before": "one\n",
+    "after": "two\n",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,1 +1,1 @@\n-one\n+two\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -1,1 +1,1 @@\n-one\n+two\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,1 +1,1 @@\n-one\n+two\n",
+    "additions": 1,
+    "deletions": 1,
+    "changes": [
+      {
+        "value": "one\n",
+        "count": 1,
+        "added": false,
+        "removed": true
+      },
+      {
+        "value": "two\n",
+        "count": 1,
+        "added": true,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "one-line-change",
+    "file": "file.txt",
+    "before": "hello",
+    "after": "world",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,1 +1,1 @@\n-hello\n\\ No newline at end of file\n+world\n\\ No newline at end of file\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n@@ -1,1 +1,1 @@\n-hello\n\\ No newline at end of file\n+world\n\\ No newline at end of file\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n@@ -1,1 +1,1 @@\n-hello\n\\ No newline at end of file\n+world\n\\ No newline at end of file\n",
+    "additions": 1,
+    "deletions": 1,
+    "changes": [
+      {
+        "value": "hello",
+        "count": 1,
+        "added": false,
+        "removed": true
+      },
+      {
+        "value": "world",
+        "count": 1,
+        "added": true,
+        "removed": false
+      }
+    ]
+  },
+  {
+    "name": "one-line-identical",
+    "file": "file.txt",
+    "before": "hello",
+    "after": "hello",
+    "status": "modified",
+    "patch": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n",
+    "twoFilesPatch": "===================================================================\n--- old.txt\n+++ new.txt\n",
+    "trimmed": "Index: file.txt\n===================================================================\n--- file.txt\n+++ file.txt\n",
+    "additions": 0,
+    "deletions": 0,
+    "changes": [
+      {
+        "value": "hello",
+        "count": 1,
+        "added": false,
+        "removed": false
+      }
+    ]
+  }
+]
