@@ -1,6 +1,8 @@
+pub mod follow;
 pub mod handle;
 pub mod remote;
 pub mod sign_in;
+pub mod websearch;
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -23,6 +25,7 @@ use crate::provider_plugin::http::BufferedResponse;
 use super::{env_value, setting};
 
 pub use self::handle::{Allowed, ConsoleHandle};
+pub use self::websearch::ConsoleWebSearch;
 
 pub const ID: &str = "opencode.provider.opencode";
 
@@ -48,6 +51,7 @@ enum Cached {
 }
 
 pub async fn register(services: &Services, context: &PluginContext, builtin: &mut Builtin) {
+    context.console.set_web_search_dependencies(services.integration.clone(), context.http_manual_redirects.clone());
     let registration = services
         .integration
         .transform({

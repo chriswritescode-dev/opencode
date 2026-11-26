@@ -107,6 +107,7 @@ impl GlobalServices {
         let channel = flag::build_channel().to_owned();
         let flag_overrides = config_env("OPENCODE_FLAGS").map(|value| value.to_string_lossy().into_owned());
         let http: Arc<dyn HttpSender> = Arc::new(ReqwestSender::new());
+        let http_manual_redirects: Arc<dyn HttpSender> = Arc::new(ReqwestSender::manual_redirects());
         let app = AppInfo {
             name: "opencode".to_owned(),
             version: option_env!("OPENCODE_VERSION").unwrap_or("local").to_owned(),
@@ -124,6 +125,7 @@ impl GlobalServices {
         let boot_bus = bus.clone();
         let boot_command_env = command_env.clone();
         let boot_http = http.clone();
+        let boot_http_manual_redirects = http_manual_redirects.clone();
         let boot_app = app.clone();
         let boot_commands = commands.clone();
         let boot_shared_cache = shared_cache.clone();
@@ -139,6 +141,7 @@ impl GlobalServices {
             let bus = boot_bus.clone();
             let command_env = boot_command_env.clone();
             let http = boot_http.clone();
+            let http_manual_redirects = boot_http_manual_redirects.clone();
             let app = boot_app.clone();
             let commands = boot_commands.clone();
             let shared_cache = boot_shared_cache.clone();
@@ -189,6 +192,7 @@ impl GlobalServices {
                     builtin::Deps {
                         provider_plugins: Some(PluginContext {
                             http,
+                            http_manual_redirects,
                             app,
                             env: config_env.clone(),
                             kv: Arc::new(StorageKv { database }),

@@ -63,8 +63,19 @@ pub struct ReqwestSender {
 
 impl ReqwestSender {
     pub fn new() -> Self {
-        let client =
-            reqwest::Client::builder().use_preconfigured_tls(tls_config()).build().expect("reqwest client builds");
+        Self::with_redirects(reqwest::redirect::Policy::default())
+    }
+
+    pub fn manual_redirects() -> Self {
+        Self::with_redirects(reqwest::redirect::Policy::none())
+    }
+
+    fn with_redirects(redirect: reqwest::redirect::Policy) -> Self {
+        let client = reqwest::Client::builder()
+            .redirect(redirect)
+            .use_preconfigured_tls(tls_config())
+            .build()
+            .expect("reqwest client builds");
         Self { client }
     }
 }

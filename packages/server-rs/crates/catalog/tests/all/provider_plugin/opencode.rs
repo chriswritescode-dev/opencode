@@ -1,3 +1,4 @@
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -12,7 +13,7 @@ use opencode_ai::route::compile::StreamOptions;
 use opencode_ai::route::executor::{PreparedHttp, RequestExecutor};
 use opencode_ai::schema::{ContentPart, LlmRequest, Message, TextPart, UserMessage};
 use opencode_catalog::builtin::Builtin;
-use opencode_catalog::credential::CreateInput;
+use opencode_catalog::credential::{CreateInput, Update};
 use opencode_catalog::integration::{Attempt, AttemptError, AttemptStatus, Implementation, OAuthConnectInput};
 use opencode_catalog::provider_plugin::PluginContext;
 use opencode_catalog::provider_plugin::hooks::{HttpResponse, RequestKind};
@@ -83,6 +84,10 @@ async fn integration_status(harness: &Harness) -> Option<ConnectionStatus> {
 }
 
 fn console_key(server: &str, organization: Option<(&str, &str)>) -> CredentialValue {
+    console_key_with(server, "secret", organization)
+}
+
+fn console_key_with(server: &str, token: &str, organization: Option<(&str, &str)>) -> CredentialValue {
     let mut metadata = vec![("server".to_owned(), json!(server))];
     if let Some((id, name)) = organization {
         metadata.push(("orgID".to_owned(), json!(id)));
@@ -90,7 +95,7 @@ fn console_key(server: &str, organization: Option<(&str, &str)>) -> CredentialVa
     }
     CredentialValue::Key(CredentialKey {
         r#type: CredentialKeyType::Key,
-        key: "secret".to_owned(),
+        key: token.to_owned(),
         metadata: Some(JsonMap(metadata)),
     })
 }
@@ -1962,4 +1967,355 @@ async fn reports_a_console_session_rejected_before_its_token_expires_as_signed_o
     opencode::refresh(&harness.services, &context, Duration::ZERO).await;
     assert!(integration_status(&harness).await.is_none());
     assert_eq!(routes.count("POST", &format!("{ORIGIN}/auth/device/token")), 0);
+}
+
+fn search_results() -> Value {
+    json!([{
+        "url": "https://github.com/anomalyco/opencode",
+        "title": "OpenCode",
+        "content": "Open source AI coding agent.",
+        "time": { "published": 1_700_000_000_000i64 },
+    }])
+}
+
+fn console_web_search_reply(state: &Mutex<Value>) -> Reply {
+    let state = state.lock().expect("the hosted search state lock is never poisoned");
+    Reply::json(json!({ "providerID": state["providerID"], "results": search_results() }))
+}
+
+fn advertised_web_search(advertised: bool) -> Value {
+    if advertised {
+        json!({ "providers": {}, "websearch": { "provider": "opencode" } })
+    } else {
+        json!({ "providers": {} })
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn loads_and_executes_hosted_web_search_from_the_connected_opencode_server() {
+    let state = Arc::new(Mutex::new(json!({ "advertised": true, "providerID": "opencode" })));
+    let routes = Routes::new();
+    routes.route_with("GET", &config_url(ORIGIN), {
+        let state = state.clone();
+        move |_| {
+            let state = state.lock().expect("the hosted search state lock is never poisoned");
+            Reply::json(advertised_web_search(state["advertised"].as_bool().unwrap_or(false)))
+        }
+    });
+    for url in [format!("{ORIGIN}/api/websearch"), format!("{ORIGIN}/other/api/websearch")] {
+        routes.route_with("POST", &url, {
+            let state = state.clone();
+            move |_| console_web_search_reply(&state)
+        });
+    }
+    let mut harness = start(Input::new(Vec::new())).await;
+    let stored = harness
+        .services
+        .credentials
+        .create(CreateInput {
+            id: None,
+            integration_id: integration_id(),
+            value: console_key(ORIGIN, Some(("org_test", "Test"))),
+            label: None,
+            activate: None,
+        })
+        .expect("create the OpenCode credential");
+    let context = add_plugin(&mut harness, routes.clone()).await;
+
+    let search = context.console.web_search().expect("the Console offers hosted web search");
+    assert_eq!(search.provider_id.0, "opencode");
+    assert_eq!(search.name, "OpenCode Web Search");
+    assert_eq!(json!(search.execute("effect web search").await.expect("the hosted search")), search_results());
+
+    let sent = routes.requests();
+    assert_eq!(sent.len(), 2);
+    assert_eq!(sent[0].method, "GET");
+    assert_eq!(sent[0].url, config_url(ORIGIN));
+    assert_eq!(header(&sent[0], "authorization").as_deref(), Some("Bearer secret"));
+    assert_eq!(header(&sent[0], "x-org-id").as_deref(), Some("org_test"));
+    assert_eq!(sent[1].method, "POST");
+    assert_eq!(sent[1].url, format!("{ORIGIN}/api/websearch"));
+    assert_eq!(header(&sent[1], "authorization").as_deref(), Some("Bearer secret"));
+    assert_eq!(header(&sent[1], "x-org-id").as_deref(), Some("org_test"));
+    assert_eq!(json_body(&sent[1]), json!({ "query": "effect web search", "providerID": "opencode" }));
+
+    harness
+        .services
+        .credentials
+        .update(
+            &stored.id,
+            Update { label: None, value: Some(console_key_with(ORIGIN, "replacement", Some(("org_test", "Test")))) },
+        )
+        .expect("update the OpenCode credential");
+    search.execute("fresh credential").await.expect("the hosted search with a fresh credential");
+    let last = routes.requests().last().cloned().expect("the fresh credential request");
+    assert_eq!(header(&last, "authorization").as_deref(), Some("Bearer replacement"));
+    assert_eq!(json_body(&last), json!({ "query": "fresh credential", "providerID": "opencode" }));
+
+    harness
+        .services
+        .credentials
+        .update(
+            &stored.id,
+            Update {
+                label: None,
+                value: Some(console_key_with(
+                    &format!("{ORIGIN}/other///?ignored=true#ignored"),
+                    "moved",
+                    Some(("org_test", "Test")),
+                )),
+            },
+        )
+        .expect("move the OpenCode server");
+    search.execute("updated server").await.expect("the hosted search on the updated server");
+    let last = routes.requests().last().cloned().expect("the updated server request");
+    assert_eq!(last.method, "POST");
+    assert_eq!(last.url, format!("{ORIGIN}/other/api/websearch"));
+    assert_eq!(header(&last, "authorization").as_deref(), Some("Bearer moved"));
+    assert_eq!(header(&last, "x-org-id").as_deref(), Some("org_test"));
+
+    state.lock().expect("lock the hosted search state")["providerID"] = json!("unexpected");
+    assert_eq!(
+        search.execute("wrong provider").await.expect_err("the provider mismatch fails"),
+        "OpenCode web search returned provider unexpected instead of opencode"
+    );
+
+    state.lock().expect("lock the hosted search state")["advertised"] = json!(false);
+    routes.hold("GET", &config_url(ORIGIN));
+    harness
+        .services
+        .credentials
+        .create(CreateInput {
+            id: None,
+            integration_id: integration_id(),
+            value: console_key_with(ORIGIN, "switched", Some(("org_switched", "Switched"))),
+            label: None,
+            activate: None,
+        })
+        .expect("switch the OpenCode account");
+    routes.arrived().await;
+    let searches = routes.count("POST", &format!("{ORIGIN}/api/websearch"));
+    assert_eq!(
+        search.execute("switch race").await.expect_err("the switched connection fails"),
+        "OpenCode Console connection changed"
+    );
+    assert_eq!(routes.count("POST", &format!("{ORIGIN}/api/websearch")), searches);
+    routes.release();
+    for _ in 0..2000 {
+        if context.console.web_search().is_none() {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(1)).await;
+    }
+    assert!(context.console.web_search().is_none());
+    let last = routes.requests().last().cloned().expect("the switched account request");
+    assert_eq!(last.url, config_url(ORIGIN));
+    assert_eq!(header(&last, "authorization").as_deref(), Some("Bearer switched"));
+    assert_eq!(header(&last, "x-org-id").as_deref(), Some("org_switched"));
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn sends_hosted_search_to_the_default_console_when_the_credential_names_none() {
+    let console = opencode_catalog::console_access::DEFAULT_SERVER;
+    let routes = Routes::new();
+    routes.route_json("GET", &config_url(console), advertised_web_search(true));
+    routes.route_json("POST", &format!("{console}/api/websearch"), json!({ "providerID": "opencode", "results": [] }));
+    let mut harness = start(Input::new(Vec::new())).await;
+    harness
+        .credential(
+            "opencode",
+            CredentialValue::Key(CredentialKey {
+                r#type: CredentialKeyType::Key,
+                key: "secret".to_owned(),
+                metadata: None,
+            }),
+        )
+        .await;
+    let context = add_plugin(&mut harness, routes.clone()).await;
+
+    let search = context.console.web_search().expect("the Console offers hosted web search");
+    assert_eq!(search.execute("default Console").await.expect("the hosted search"), Vec::<Value>::new());
+    assert_eq!(
+        routes.requests().into_iter().map(|request| request.url).collect::<Vec<_>>(),
+        [config_url(console), format!("{console}/api/websearch")]
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn follows_a_hosted_search_redirect_without_sending_credentials_to_another_origin() {
+    let server = format!("{ORIGIN}/console");
+    let routes = Routes::new();
+    routes.route_json("GET", &config_url(&server), advertised_web_search(true));
+    routes.route_redirect("POST", &format!("{server}/api/websearch"), 307, &format!("{ORIGIN}/outside-console"));
+    for url in [format!("{ORIGIN}/outside-console"), "http://127.0.0.1:9/outside-console".to_owned()] {
+        routes.route_json("POST", &url, json!({ "providerID": "opencode", "results": [] }));
+    }
+    let mut harness = start(Input::new(Vec::new())).await;
+    harness.credential("opencode", console_key(&server, Some(("org_test", "Test")))).await;
+    let context = add_plugin(&mut harness, routes.clone()).await;
+
+    let search = context.console.web_search().expect("the Console offers hosted web search");
+    assert_eq!(search.execute("private search").await.expect("the same-origin search"), Vec::<Value>::new());
+    let last = routes.requests().last().cloned().expect("the same-origin redirect request");
+    assert_eq!(last.url, format!("{ORIGIN}/outside-console"));
+    assert_eq!(last.method, "POST");
+    assert_eq!(header(&last, "authorization").as_deref(), Some("Bearer secret"));
+    assert_eq!(json_body(&last), json!({ "query": "private search", "providerID": "opencode" }));
+
+    routes.set_redirect("POST", &format!("{server}/api/websearch"), 307, "http://127.0.0.1:9/outside-console");
+    assert_eq!(search.execute("private search").await.expect("the cross-origin search"), Vec::<Value>::new());
+    let last = routes.requests().last().cloned().expect("the cross-origin redirect request");
+    assert_eq!(last.url, "http://127.0.0.1:9/outside-console");
+    assert_eq!(last.method, "POST");
+    assert_eq!(header(&last, "authorization"), None);
+    assert_eq!(header(&last, "x-org-id"), None);
+    assert_eq!(json_body(&last), json!({ "query": "private search", "providerID": "opencode" }));
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn follows_a_302_hosted_search_redirect_as_a_get() {
+    let routes = Routes::new();
+    routes.route_json("GET", &config_url(ORIGIN), advertised_web_search(true));
+    routes.route_redirect("POST", &format!("{ORIGIN}/api/websearch"), 302, &format!("{ORIGIN}/gateway/search"));
+    routes.route_json("GET", &format!("{ORIGIN}/gateway/search"), json!({ "providerID": "opencode", "results": [] }));
+    let mut harness = start(Input::new(Vec::new())).await;
+    harness.credential("opencode", console_key(ORIGIN, Some(("org_test", "Test")))).await;
+    let context = add_plugin(&mut harness, routes.clone()).await;
+
+    let search = context.console.web_search().expect("the Console offers hosted web search");
+    assert_eq!(search.execute("gateway search").await.expect("the redirected search"), Vec::<Value>::new());
+    let last = routes.requests().last().cloned().expect("the gateway request");
+    assert_eq!(last.url, format!("{ORIGIN}/gateway/search"));
+    assert_eq!(last.method, "GET");
+    assert_eq!(header(&last, "authorization").as_deref(), Some("Bearer secret"));
+    assert!(last.body.is_empty());
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn stops_following_a_hosted_search_redirect_loop_at_the_hop_limit() {
+    let routes = Routes::new();
+    routes.route_json("GET", &config_url(ORIGIN), advertised_web_search(true));
+    routes.route_redirect("POST", &format!("{ORIGIN}/api/websearch"), 302, &format!("{ORIGIN}/loop"));
+    routes.route_redirect("GET", &format!("{ORIGIN}/loop"), 302, &format!("{ORIGIN}/loop"));
+    let mut harness = start(Input::new(Vec::new())).await;
+    harness.credential("opencode", console_key(ORIGIN, Some(("org_test", "Test")))).await;
+    let context = add_plugin(&mut harness, routes.clone()).await;
+
+    let search = context.console.web_search().expect("the Console offers hosted web search");
+    assert_eq!(
+        search.execute("looping search").await.expect_err("the redirect loop fails"),
+        "Too many redirects (more than 5)"
+    );
+    assert_eq!(routes.count("GET", &format!("{ORIGIN}/loop")), 5);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn closes_a_rejected_hosted_search_response_without_waiting_for_its_body() {
+    let cancelled = Arc::new(AtomicBool::new(false));
+    let routes = Routes::new();
+    routes.route_json("GET", &config_url(ORIGIN), advertised_web_search(true));
+    routes.route_hanging("POST", &format!("{ORIGIN}/api/websearch"), 503, cancelled.clone());
+    let mut harness = start(Input::new(Vec::new())).await;
+    harness.credential("opencode", console_key(ORIGIN, Some(("org_test", "Test")))).await;
+    let context = add_plugin(&mut harness, routes.clone()).await;
+
+    let search = context.console.web_search().expect("the Console offers hosted web search");
+    let error = tokio::time::timeout(Duration::from_secs(5), search.execute("rejected search"))
+        .await
+        .expect("the rejected search returns without reading its body")
+        .expect_err("the rejected search fails");
+    assert_eq!(error, "HTTP status 503");
+    assert!(cancelled.load(Ordering::SeqCst));
+}
+
+#[tokio::test(start_paused = true)]
+async fn refreshes_hosted_search_with_console_config_retains_it_on_failure_and_skips_unchanged_snapshots() {
+    let state = Arc::new(Mutex::new(json!({ "advertised": false, "failing": false, "requests": 0 })));
+    let routes = Routes::new();
+    routes.route_with("GET", &config_url(ORIGIN), {
+        let state = state.clone();
+        move |_| {
+            let mut state = state.lock().expect("the hosted search state lock is never poisoned");
+            state["requests"] = json!(state["requests"].as_u64().unwrap_or(0) + 1);
+            if state["failing"].as_bool().unwrap_or(false) {
+                return Reply::status(502);
+            }
+            Reply::json(advertised_web_search(state["advertised"].as_bool().unwrap_or(false)))
+        }
+    });
+    let mut harness = start(Input::new(Vec::new())).await;
+    harness.credential("opencode", console_key(ORIGIN, None)).await;
+    let context = add_plugin(&mut harness, routes.clone()).await;
+    let requests =
+        || state.lock().expect("the hosted search state lock is never poisoned")["requests"].as_u64().unwrap_or(0);
+
+    assert_eq!(requests(), 1);
+    assert!(context.console.web_search().is_none());
+
+    state.lock().expect("lock the hosted search state")["advertised"] = json!(true);
+    advance_for(Duration::from_secs(50)).await;
+    assert_eq!(requests(), 1);
+    assert!(context.console.web_search().is_none());
+
+    advance_for(Duration::from_secs(10)).await;
+    advance_until(|| context.console.web_search().is_some()).await;
+    assert_eq!(requests(), 2);
+    assert!(context.console.web_search().is_some());
+
+    advance_for(Duration::from_secs(60)).await;
+    advance_until(|| requests() == 3).await;
+    assert!(context.console.web_search().is_some());
+
+    state.lock().expect("lock the hosted search state")["failing"] = json!(true);
+    advance_for(Duration::from_secs(60)).await;
+    advance_until(|| requests() == 7).await;
+    assert!(context.console.web_search().is_some());
+
+    {
+        let mut state = state.lock().expect("lock the hosted search state");
+        state["failing"] = json!(false);
+        state["advertised"] = json!(false);
+    }
+    advance_for(Duration::from_secs(60)).await;
+    advance_until(|| context.console.web_search().is_none()).await;
+    assert_eq!(requests(), 8);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn offers_console_web_search_only_when_the_console_selects_it_and_user_config_still_wins() {
+    let selected = Arc::new(AtomicBool::new(false));
+    let routes = Routes::new();
+    routes.route_with("GET", &config_url(ORIGIN), {
+        let selected = selected.clone();
+        move |_| Reply::json(advertised_web_search(selected.load(Ordering::SeqCst)))
+    });
+    routes.route_json("POST", &format!("{ORIGIN}/api/websearch"), json!({ "providerID": "opencode", "results": [] }));
+    let user = json!({ "websearch": { "provider": "mine" } });
+    let mut harness = start(Input::new(vec![user])).await;
+    harness.credential("opencode", console_key(ORIGIN, None)).await;
+    let context = add_plugin(&mut harness, routes.clone()).await;
+
+    assert!(context.console.web_search().is_none());
+
+    selected.store(true, Ordering::SeqCst);
+    opencode::refresh(&harness.services, &context, Duration::ZERO).await;
+    let search = context.console.web_search().expect("the Console offers hosted web search");
+    assert_eq!(search.provider_id.0, "opencode");
+    assert_eq!(search.name, "OpenCode Web Search");
+
+    let selected_providers: Vec<String> = harness
+        .services
+        .config
+        .entries()
+        .into_iter()
+        .filter_map(|entry| match entry {
+            Entry::Document(document) => document_json(&document)
+                .get("websearch")
+                .and_then(|websearch| websearch.get("provider"))
+                .and_then(Value::as_str)
+                .map(str::to_owned),
+            Entry::Directory { .. } => None,
+        })
+        .collect();
+    assert_eq!(selected_providers, ["opencode".to_owned(), "mine".to_owned()]);
 }

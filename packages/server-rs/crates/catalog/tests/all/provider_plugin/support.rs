@@ -130,6 +130,8 @@ struct Route {
     url: String,
     body_contains: Option<String>,
     respond: Box<dyn Fn(&PreparedHttp) -> Reply + Send + Sync>,
+    headers: Vec<(String, String)>,
+    hanging: Option<Arc<std::sync::atomic::AtomicBool>>,
 }
 
 pub struct Routes {
@@ -161,6 +163,8 @@ impl Routes {
             url: url.to_owned(),
             body_contains: Some(body_contains.to_owned()),
             respond: Box::new(move |_| Reply::json(value.clone())),
+            headers: Vec::new(),
+            hanging: None,
         });
     }
 
@@ -170,6 +174,8 @@ impl Routes {
             url: url.to_owned(),
             body_contains: Some(body_contains.to_owned()),
             respond: Box::new(move |_| Reply::status(status)),
+            headers: Vec::new(),
+            hanging: None,
         });
     }
 
@@ -184,7 +190,36 @@ impl Routes {
             url: url.to_owned(),
             body_contains: None,
             respond: Box::new(respond),
+            headers: Vec::new(),
+            hanging: None,
         });
+    }
+
+    pub fn route_redirect(&self, method: &str, url: &str, status: u16, location: &str) {
+        self.routes.lock().expect("the routed replies lock is never poisoned").push(Route {
+            method: method.to_owned(),
+            url: url.to_owned(),
+            body_contains: None,
+            respond: Box::new(move |_| Reply::status(status)),
+            headers: vec![("location".to_owned(), location.to_owned())],
+            hanging: None,
+        });
+    }
+
+    pub fn route_hanging(&self, method: &str, url: &str, status: u16, cancelled: Arc<std::sync::atomic::AtomicBool>) {
+        self.routes.lock().expect("the routed replies lock is never poisoned").push(Route {
+            method: method.to_owned(),
+            url: url.to_owned(),
+            body_contains: None,
+            respond: Box::new(move |_| Reply::status(status)),
+            headers: Vec::new(),
+            hanging: Some(cancelled),
+        });
+    }
+
+    pub fn set_redirect(&self, method: &str, url: &str, status: u16, location: &str) {
+        self.remove(method, url);
+        self.route_redirect(method, url, status, location);
     }
 
     pub fn set_json(&self, method: &str, url: &str, value: Value) {
@@ -257,9 +292,9 @@ impl HttpSender for Routes {
                                 .as_ref()
                                 .is_none_or(|needle| String::from_utf8_lossy(&request.body).contains(needle.as_str()))
                     })
-                    .map(|route| (route.respond)(&request))
+                    .map(|route| ((route.respond)(&request), route.headers.clone(), route.hanging.clone()))
             };
-            let Some(reply) = reply else {
+            let Some((reply, extra, hanging)) = reply else {
                 return Err(AiError {
                     reason: AiErrorReason::Transport {
                         message: format!("no route for {}", request.url),
@@ -275,12 +310,36 @@ impl HttpSender for Routes {
                     },
                 });
             };
-            Ok(HttpResponse {
-                status: reply.status,
-                headers: vec![("content-type".to_owned(), "application/json".to_owned())],
-                body: Box::pin(futures_util::stream::once(async move { Ok(bytes::Bytes::from(reply.body)) })),
-            })
+            let Reply { status, body } = reply;
+            let mut headers = vec![("content-type".to_owned(), "application/json".to_owned())];
+            headers.extend(extra);
+            let body: opencode_ai::route::executor::ByteStream = match hanging {
+                Some(cancelled) => Box::pin(HangingBody { cancelled }),
+                None => Box::pin(futures_util::stream::once(async move { Ok(bytes::Bytes::from(body)) })),
+            };
+            Ok(HttpResponse { status, headers, body })
         })
+    }
+}
+
+struct HangingBody {
+    cancelled: Arc<std::sync::atomic::AtomicBool>,
+}
+
+impl futures_util::Stream for HangingBody {
+    type Item = Result<bytes::Bytes, AiError>;
+
+    fn poll_next(
+        self: std::pin::Pin<&mut Self>,
+        _: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        std::task::Poll::Pending
+    }
+}
+
+impl Drop for HangingBody {
+    fn drop(&mut self) {
+        self.cancelled.store(true, std::sync::atomic::Ordering::SeqCst);
     }
 }
 
@@ -363,7 +422,8 @@ pub fn plugin_context_with_runner(
 ) -> PluginContext {
     let environment = harness.environment.clone();
     PluginContext {
-        http,
+        http: http.clone(),
+        http_manual_redirects: http,
         app: AppInfo { name: "opencode".to_owned(), version: "test".to_owned(), channel: "test".to_owned() },
         env: Arc::new(move |name| environment.get(name).map(OsString::from)),
         kv: Arc::new(NoKv),

@@ -1,16 +1,30 @@
-use std::sync::RwLock;
+use std::sync::{Arc, RwLock};
 
-use opencode_contract::generated::{ConfigEntryDocumentInfo, ConnectionStatus};
+use opencode_ai::route::executor::HttpSender;
+use opencode_contract::generated::{
+    ConfigEntryDocumentInfo, ConfigEntryDocumentInfoWebsearch, ConfigEntryDocumentInfoWebsearchObjectProvider,
+    ConnectionStatus, WebSearchID,
+};
 use tokio::sync::{Mutex, watch};
 
 use super::Snapshot;
+use super::websearch::ConsoleWebSearch;
+use crate::integration::IntegrationService;
 use crate::provider_plugin::hooks::HookRegistration;
+
+const WEB_SEARCH_PROVIDER: &str = "opencode";
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Allowed {
     pub watches: bool,
     pub lists: bool,
     pub artifacts: bool,
+}
+
+#[derive(Clone)]
+struct WebSearchDependencies {
+    integration: Arc<IntegrationService>,
+    http: Arc<dyn HttpSender>,
 }
 
 pub struct ConsoleHandle {
@@ -20,6 +34,7 @@ pub struct ConsoleHandle {
     pub(crate) reported: RwLock<Option<ConnectionStatus>>,
     pub(crate) explainers: std::sync::Mutex<Vec<HookRegistration>>,
     pub(crate) loading: Mutex<()>,
+    websearch: RwLock<Option<WebSearchDependencies>>,
     revision: watch::Sender<u64>,
 }
 
@@ -32,6 +47,7 @@ impl Default for ConsoleHandle {
             reported: RwLock::new(None),
             explainers: std::sync::Mutex::new(Vec::new()),
             loading: Mutex::new(()),
+            websearch: RwLock::new(None),
             revision: watch::channel(0).0,
         }
     }
@@ -40,6 +56,27 @@ impl Default for ConsoleHandle {
 impl ConsoleHandle {
     pub fn changes(&self) -> watch::Receiver<u64> {
         self.revision.subscribe()
+    }
+
+    pub fn web_search(&self) -> Option<ConsoleWebSearch> {
+        let snapshot = self.snapshot();
+        let connection = snapshot.connection?;
+        let selected = match snapshot.remote.as_ref()?.info.websearch.as_ref()? {
+            ConfigEntryDocumentInfoWebsearch::Object(websearch) => &websearch.provider,
+            ConfigEntryDocumentInfoWebsearch::Bool(_) => return None,
+        };
+        let expected =
+            ConfigEntryDocumentInfoWebsearchObjectProvider::String2(WebSearchID(WEB_SEARCH_PROVIDER.to_owned()));
+        if *selected != expected {
+            return None;
+        }
+        let dependencies = self.websearch.read().expect("lock the Console web search dependencies").clone()?;
+        Some(ConsoleWebSearch::new(dependencies.integration, dependencies.http, connection))
+    }
+
+    pub(crate) fn set_web_search_dependencies(&self, integration: Arc<IntegrationService>, http: Arc<dyn HttpSender>) {
+        *self.websearch.write().expect("lock the Console web search dependencies") =
+            Some(WebSearchDependencies { integration, http });
     }
 
     pub fn allowed(&self) -> Allowed {

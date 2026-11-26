@@ -163,6 +163,7 @@ impl SessionAccess for NoSessions {
 #[derive(Clone)]
 pub struct PluginContext {
     pub http: Arc<dyn opencode_ai::HttpSender>,
+    pub http_manual_redirects: Arc<dyn opencode_ai::HttpSender>,
     pub app: AppInfo,
     pub env: crate::integration::ConfigEnv,
     pub kv: Arc<dyn opencode_config::seams::KvStore>,
