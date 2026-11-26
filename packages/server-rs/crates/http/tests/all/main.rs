@@ -4,10 +4,12 @@ mod compression;
 mod config;
 mod cors;
 mod coverage;
+mod credential;
 mod debug;
 mod event;
 mod form;
 mod info;
+mod integration;
 mod location;
 mod model;
 mod pairing;
@@ -15,6 +17,7 @@ mod permission;
 mod permission_oracle;
 mod plugin;
 mod project;
+mod provider;
 mod reference;
 mod registry;
 mod request_site;
@@ -35,6 +38,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use bytes::Bytes;
 use http::Request;
+use opencode_bus::{Bus, BusOptions};
 use opencode_config::paths::GlobalPaths;
 use opencode_http::app::{App, Options};
 use opencode_http::services::GlobalServices;
@@ -50,21 +54,37 @@ fn services_at(start_directory: &Path) -> Arc<GlobalServices> {
     services_with(start_directory, temp_directory("services-home"))
 }
 
+fn services_at_with_env(start_directory: &Path, vars: &[(&str, String)]) -> Arc<GlobalServices> {
+    services_with_env(start_directory, temp_directory("services-home"), vars)
+}
+
 fn services_with(start_directory: &Path, home: PathBuf) -> Arc<GlobalServices> {
+    services_with_env(start_directory, home, &[])
+}
+
+fn services_with_env(start_directory: &Path, home: PathBuf, vars: &[(&str, String)]) -> Arc<GlobalServices> {
     let (database, _) = Database::open(DatabaseLocation::Memory, &std::env::temp_dir()).expect("open the database");
     let database = Arc::new(database);
+    let bus = Bus::new(database.clone(), BusOptions::default());
     let paths =
         GlobalPaths::from_vars(|name| (name == "HOME").then(|| home.clone().into_os_string())).expect("global paths");
-    let bus = opencode_bus::Bus::new(database.clone(), opencode_bus::BusOptions::default());
+    let vars = vars.iter().map(|(key, value)| ((*key).to_owned(), OsString::from(value))).collect::<Vec<_>>();
+    let environment = move |name: &str| {
+        if name == "OPENCODE_DISABLE_MODELS_FETCH" {
+            return Some(OsString::from("1"));
+        }
+        vars.iter().find(|(key, _)| key == name).map(|(_, value)| value.clone())
+    };
     Arc::new(GlobalServices::new(
         database,
         paths,
         start_directory.to_string_lossy().into_owned(),
-        Arc::new(|_: &str| None),
+        Arc::new(environment),
         bus,
         global_plugins(),
         "test-version".to_owned(),
         "test".to_owned(),
+        Arc::new(Vec::new()),
     ))
 }
 
@@ -80,12 +100,21 @@ fn services_with_config(start_directory: &Path, config: &str) -> Arc<GlobalServi
         database,
         paths,
         start_directory.to_string_lossy().into_owned(),
-        Arc::new(move |name: &str| (name == "OPENCODE_CONFIG_CONTENT").then(|| OsString::from(&config))),
+        Arc::new(move |name: &str| match name {
+            "OPENCODE_CONFIG_CONTENT" => Some(OsString::from(&config)),
+            "OPENCODE_DISABLE_MODELS_FETCH" => Some(OsString::from("1")),
+            _ => None,
+        }),
         bus,
         global_plugins(),
         "test-version".to_owned(),
         "test".to_owned(),
+        Arc::new(Vec::new()),
     ))
+}
+
+fn offline_env() -> opencode_http::services::ConfigEnv {
+    Arc::new(|name: &str| (name == "OPENCODE_DISABLE_MODELS_FETCH").then(|| OsString::from("1")))
 }
 
 fn session_app(start_directory: &Path) -> (Arc<App>, Arc<opencode_http::state::ServerState>) {
@@ -99,11 +128,12 @@ fn session_app(start_directory: &Path) -> (Arc<App>, Arc<opencode_http::state::S
         state.db.clone(),
         paths,
         start_directory.to_string_lossy().into_owned(),
-        Arc::new(|_: &str| None),
+        offline_env(),
         state.bus.clone(),
         global_plugins(),
         "test-version".to_owned(),
         "test".to_owned(),
+        Arc::new(Vec::new()),
     );
     services.attach_sessions(state.bus.clone(), state.store.clone(), "test-version".to_owned());
     let app = App::new(Options {

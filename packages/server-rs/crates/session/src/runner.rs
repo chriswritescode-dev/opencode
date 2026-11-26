@@ -107,9 +107,9 @@ impl Runner {
                 &LoadInput {
                     database: &self.database,
                     store: &self.store,
-                    catalog: placed.catalog(),
+                    models: placed.models(),
+                    resolver: placed.resolver(),
                     agents: placed.agents(),
-                    env: placed.env(),
                     builtins: placed.builtins().clone(),
                 },
                 session_id,

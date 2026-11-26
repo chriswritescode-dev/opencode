@@ -1,0 +1,9 @@
+# OR-46: a date-time form field accepts only RFC 3339, not every string Date parses
+
+TypeScript: `isDateTime` accepts any string for which `new Date(value).getTime()` is not `NaN` (`packages/core/src/form.ts:368-370`), so a date-only value such as `2020-01-01`, a zone-less timestamp such as `2020-01-01T12:00:00`, a non-ISO form such as `March 5, 2020`, and an out-of-range day such as `2021-02-30T00:00:00Z` all pass, and a form field with `format: "date-time"` accepts them (`:328`). The `date` format is stricter: `isDate` requires the `YYYY-MM-DD` shape and a `Date` round-trip that reproduces it (`:362-366`, used at `:327`).
+
+Rust: `validate_string` accepts a `DateTime` field only when `opencode_util::time::parse_rfc3339` returns `Some` (`crates/catalog/src/integration/connect.rs:391-395`), the shared helper the crate also uses for model release dates (`crates/catalog/src/models_dev/normalize.rs:491`, `crates/catalog/src/builtin/config_provider.rs:610`). That parser requires a `T` or space separator, a full time, and a `Z` or signed `HH:MM` offset, and validates the calendar day (`packages/cli-rs/crates/util/src/time.rs:259-280`). For the `date` format `is_date` checks the same shape and calendar validity as `isDate` (`crates/catalog/src/integration/connect.rs:472-490`, used at `:386-390`), so only `date-time` differs.
+
+Reason: the Rust check reuses the shared RFC 3339 helper instead of JavaScript's parser, so the accepted sets differ in both directions: Rust rejects the date-only, zone-less and non-ISO values above, and it accepts a leap second (`2020-01-01T23:59:60Z`) and a U+2212 minus in the offset, which `new Date` rejects (`packages/cli-rs/crates/util/src/time.rs:270`, `:364-381`). `integration-routes` connects a key with no answer and never supplies an answer containing a `date-time` field, and no crate test does either, so neither accepted set is exercised.
+
+Accepted: pending owner

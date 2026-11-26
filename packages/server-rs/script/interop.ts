@@ -2,6 +2,7 @@ import { Database as BunDatabase } from "bun:sqlite"
 import { access, mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
+import { runLockInterop } from "./interop/lock"
 import { startRegistry } from "./npm/registry"
 import { dump, openTypescript } from "./storage/typescript"
 
@@ -22,29 +23,13 @@ const root = new URL("..", import.meta.url).pathname
 class InteropDifference extends Error {}
 
 const binary = `${root}target/debug/examples/storage`
+const lockBinary = `${root}target/debug/examples/lock`
+const npmBinary = `${root}target/debug/examples/npm`
 const corpus = (await Bun.file(`${root}crates/storage/tests/corpus/migrations.json`).json()) as Corpus
 
-const build = Bun.spawnSync(
-  [
-    "bun",
-    "run",
-    "cargo",
-    "build",
-    "--locked",
-    "-q",
-    "--target-dir",
-    `${root}target`,
-    "-p",
-    "opencode-storage",
-    "--example",
-    "storage",
-  ],
-  { cwd: root },
-)
-if (build.exitCode !== 0) {
-  process.stderr.write(build.stderr)
-  process.exit(1)
-}
+buildExample("opencode-storage", "storage")
+buildExample("opencode-catalog", "lock")
+buildExample("opencode-plugin", "npm")
 
 const directory = await mkdtemp(join(tmpdir(), "opencode-interop-"))
 try {
@@ -91,34 +76,12 @@ try {
     databaseDump(rustFixture, corpus.masks),
     databaseDump(typescriptFixture, corpus.masks),
   )
+  await runLockInterop({ binary: lockBinary, directory: join(directory, "locks"), fail })
 } catch (caught) {
   console.error(caught instanceof InteropDifference ? caught.message : caught)
   process.exitCode = 1
 } finally {
   await rm(directory, { recursive: true, force: true })
-}
-
-const npmBinary = `${root}target/debug/examples/npm`
-const npmBuild = Bun.spawnSync(
-  [
-    "bun",
-    "run",
-    "cargo",
-    "build",
-    "--locked",
-    "-q",
-    "--target-dir",
-    `${root}target`,
-    "-p",
-    "opencode-plugin",
-    "--example",
-    "npm",
-  ],
-  { cwd: root },
-)
-if (npmBuild.exitCode !== 0) {
-  process.stderr.write(npmBuild.stderr)
-  process.exit(1)
 }
 
 const npmDirectory = await mkdtemp(join(tmpdir(), "opencode-npm-interop-"))
@@ -217,6 +180,30 @@ try {
 } finally {
   await registry.stop()
   await rm(npmDirectory, { recursive: true, force: true })
+}
+
+function buildExample(packageName: string, example: string) {
+  const build = Bun.spawnSync(
+    [
+      "bun",
+      "run",
+      "cargo",
+      "build",
+      "--locked",
+      "-q",
+      "--target-dir",
+      `${root}target`,
+      "-p",
+      packageName,
+      "--example",
+      example,
+    ],
+    { cwd: root },
+  )
+  if (build.exitCode !== 0) {
+    process.stderr.write(build.stderr)
+    process.exit(1)
+  }
 }
 
 function run(command: string, file: string, data?: string) {

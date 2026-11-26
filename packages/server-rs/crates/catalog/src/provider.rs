@@ -1,273 +1,538 @@
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap};
+use std::sync::{Arc, LazyLock, Mutex, Weak};
 
-use opencode_contract::codec::{JsonMap, decode_json, encode_json};
+use indexmap::IndexMap;
+use opencode_ai::ProviderPackages;
+use opencode_bus::{Bus, PublishOptions, Subscription};
+use opencode_contract::codec::{self, Decode, Encode, encode_json};
 use opencode_contract::generated::{
-    ModelCapabilities, ModelCompatibility, ModelCost, ModelInfo, ModelInfoLimit, ModelInfoStatus, ModelInfoTime,
-    ModelSettings, ModelType, ModelVariant, ProviderID, ProviderInfoActivation,
+    ConnectionInfo, IntegrationID, IntegrationInfo, LocationRef, ModelCapabilities, ModelInfo, ModelInfoLimit,
+    ModelInfoStatus, ModelInfoTime, ModelSettings, ModelVariant, ProviderEncoding, ProviderID, ProviderInfo,
+    ProviderInfoActivation, ProviderSettings, ProviderSettingsChunkTimeout, ProviderSettingsHeaderTimeout,
+    ProviderSettingsTimeout, ProviderTls,
 };
-use serde_json::{Map, Value};
+use opencode_location::state::{self, Options, Registration, State, TransformError};
+use serde_json::Value;
 
-use crate::aisdk_native::{Context, merge_headers, merge_overlay, options, resolve};
-use crate::model::{self, ModelState};
+use crate::aisdk_native::{self, Context, Target};
+use crate::integration::{IntegrationError, IntegrationService};
 
-#[derive(Clone, Debug)]
-pub(crate) struct ProviderState {
-    pub id: String,
-    pub name: String,
-    pub activation: ProviderInfoActivation,
-    pub canonical: Option<String>,
-    pub package: Option<String>,
-    pub settings: Option<Map<String, Value>>,
-    pub headers: Option<Vec<(String, String)>>,
-    pub body: Option<Map<String, Value>>,
-    pub compatibility: Option<Value>,
-    pub models: Vec<ModelState>,
+pub(crate) const UPDATED: &str = "provider.updated";
+
+const SUBSCRIBED: [&str; 2] = [crate::integration::UPDATED, "credential.switched"];
+
+pub const DEFAULT_TIMEOUT_MS: f64 = 300_000.0;
+
+pub const DEFAULT_CHUNK_TIMEOUT_MS: f64 = 900_000.0;
+
+static BUILTIN_PACKAGES: LazyLock<BTreeSet<&'static str>> = LazyLock::new(|| ProviderPackages::builtin().specifiers());
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Definition {
+    pub provider: ProviderInfo,
+    pub models: IndexMap<String, ModelInfo>,
+    pub source_connection: Option<ConnectionInfo>,
 }
 
-impl ProviderState {
-    pub(crate) fn new(id: &str) -> Self {
-        Self {
-            id: id.to_string(),
-            name: id.to_string(),
-            activation: ProviderInfoActivation::Auto,
-            canonical: None,
-            package: None,
-            settings: None,
-            headers: None,
-            body: None,
-            compatibility: None,
-            models: Vec::new(),
-        }
-    }
+#[derive(Default, Debug)]
+pub struct ProviderRegistry {
+    pub(crate) entries: IndexMap<String, Definition>,
+}
 
-    pub(crate) fn find_model(&self, id: &str) -> Option<&ModelState> {
-        self.models.iter().find(|model| model.id == id)
-    }
-
-    fn upsert_model(&mut self, model: ModelState) {
-        match self.models.iter().position(|existing| existing.id == model.id) {
-            Some(position) => self.models[position] = model,
-            None => self.models.push(model),
-        }
-    }
-
-    pub(crate) fn runtime_settings(&self, model: &ModelState) -> Option<Map<String, Value>> {
-        let settings = model::model_settings(model.settings.as_ref());
-        merge_overlay(self.settings.as_ref(), settings.as_ref())
-    }
-
-    pub(crate) fn info(&self, model: &ModelState) -> ModelInfo {
-        let compatibility = merge_compatibility(self.compatibility.as_ref(), model.compatibility.as_ref());
-        let package = model.package.clone().or_else(|| self.package.clone());
-        let provider_settings = model::model_settings(self.settings.as_ref());
-        let model_settings = model::model_settings(model.settings.as_ref());
-        let settings = merge_overlay(provider_settings.as_ref(), model_settings.as_ref());
-        let headers = merge_headers(self.headers.as_deref(), model.headers.as_deref()).map(JsonMap);
-        let body =
-            merge_overlay(self.body.as_ref(), model.body.as_ref()).map(|body| JsonMap(body.into_iter().collect()));
-        ModelInfo {
-            id: model.id.clone(),
-            model_id: model.model_id.clone(),
-            provider_id: ProviderID(self.id.clone()),
-            canonical: self.canonical.clone().map(ProviderID),
-            r#type: model.r#type.as_deref().map(decode_type),
-            family: model.family.clone(),
-            name: model.name.clone(),
-            compatibility: compatibility.as_ref().map(decode_compatibility),
-            package,
-            settings: settings.as_ref().map(decode_settings),
-            headers,
-            body,
-            capabilities: decode_capabilities(&model.capabilities),
-            variants: model.variants.iter().map(decode_variant).collect(),
-            time: ModelInfoTime { released: model.released },
-            cost: model.cost.iter().map(decode_cost).collect(),
-            status: ModelInfoStatus::Active,
-            enabled: model.enabled,
-            limit: decode_limit(&model.limit),
-        }
+impl ProviderRegistry {
+    pub fn get(&self, id: &str) -> Option<&Definition> {
+        self.entries.get(id)
     }
 }
 
-pub(crate) fn apply_provider(
-    providers: &mut Vec<ProviderState>,
-    provider_id: &str,
-    item: &Value,
-    builtins: &BTreeSet<&'static str>,
-) -> Vec<(String, Value)> {
-    let current = providers.iter().find(|provider| provider.id == provider_id).cloned();
-    let configured_canonical = item.get("canonical").and_then(Value::as_str);
-    let current_canonical = current.as_ref().and_then(|provider| provider.canonical.as_deref());
-    let source_id = configured_canonical.or(current_canonical).unwrap_or(provider_id);
-    let source = if source_id == provider_id {
-        current.clone()
-    } else {
-        providers.iter().find(|provider| provider.id == source_id).cloned()
-    };
-    let changed = configured_canonical.is_some() && configured_canonical != current_canonical;
-    let mut provider = current.clone().unwrap_or_else(|| ProviderState::new(provider_id));
-    if changed
-        && let Some(source) = &source
-        && source.id != provider_id
-    {
-        let id = provider.id.clone();
-        let models = provider.models.clone();
-        provider = source.clone();
-        provider.id = id;
-        provider.models = models;
+pub struct Editor<'a> {
+    pub(crate) registry: &'a mut ProviderRegistry,
+}
+
+impl Editor<'_> {
+    pub fn list(&self) -> Vec<Definition> {
+        self.registry.entries.values().cloned().collect()
     }
-    provider.activation = ProviderInfoActivation::Enabled;
-    if let Some(canonical) = configured_canonical {
-        provider.canonical = Some(canonical.to_string());
+
+    pub fn get(&self, id: &ProviderID) -> Option<&Definition> {
+        self.registry.entries.get(&id.0)
     }
-    if let Some(name) = item.get("name").and_then(Value::as_str)
-        && !name.is_empty()
-    {
-        provider.name = name.to_string();
+
+    pub fn add(&mut self, info: ProviderInfo, models: &[ModelInfo], source_connection: Option<ConnectionInfo>) {
+        let definition = Definition { provider: info.clone(), models: index(&info.id, models), source_connection };
+        self.registry.entries.insert(info.id.0.clone(), definition);
     }
-    if let Some(package) = item.get("package").and_then(Value::as_str) {
-        provider.package = Some(package.to_string());
+
+    pub fn update(&mut self, id: &ProviderID, update: impl FnOnce(&mut ProviderInfo)) {
+        let entry = self.ensure(id);
+        update(&mut entry.provider);
+        entry.provider.id = id.clone();
+        rewrite_provider(&mut entry.provider);
     }
-    if let Some(compatibility) = item.get("compatibility").and_then(Value::as_object) {
-        provider.compatibility = Some(model::merge_objects(provider.compatibility.as_ref(), compatibility));
+
+    pub fn remove(&mut self, id: &ProviderID) {
+        self.registry.entries.shift_remove(&id.0);
     }
-    if let Some(settings) = item.get("settings").and_then(Value::as_object) {
-        provider.settings = merge_overlay(provider.settings.as_ref(), Some(settings));
+
+    pub fn models_set(&mut self, id: &ProviderID, models: &[ModelInfo]) {
+        self.ensure(id).models = index(id, models);
     }
-    if let Some(headers) = item.get("headers").and_then(Value::as_object) {
-        provider.headers = merge_headers(provider.headers.as_deref(), Some(&pairs(headers)));
+
+    pub fn models_update(&mut self, provider_id: &ProviderID, model_id: &str, update: impl FnOnce(&mut ModelInfo)) {
+        let entry = self.ensure(provider_id);
+        let provider = entry.provider.clone();
+        let mut model = entry.models.get(model_id).cloned().unwrap_or_else(|| default_model(provider_id, model_id));
+        update(&mut model);
+        model.id = model_id.to_owned();
+        model.provider_id = provider_id.clone();
+        rewrite_model(&mut model, provider_id, Some(&provider));
+        entry.models.insert(model_id.to_owned(), model);
     }
-    if let Some(body) = item.get("body").and_then(Value::as_object) {
-        provider.body = merge_overlay(provider.body.as_ref(), Some(body));
+
+    pub fn models_remove(&mut self, provider_id: &ProviderID, model_id: &str) {
+        let Some(entry) = self.registry.entries.get_mut(&provider_id.0) else {
+            return;
+        };
+        entry.models.shift_remove(model_id);
     }
-    rewrite_provider(&mut provider, builtins);
-    let mut limits = Vec::new();
-    if let Some(models) = item.get("models").and_then(Value::as_object) {
-        for (id, config) in models {
-            let Some(config) = config.as_object() else {
-                continue;
-            };
-            let bound_id = config.get("modelID").and_then(Value::as_str).unwrap_or(id);
-            let base = source.as_ref().and_then(|source| source.find_model(bound_id).or_else(|| source.find_model(id)));
-            let existing = current.as_ref().and_then(|provider| provider.find_model(id));
-            let inherit = changed || existing.is_none();
-            let overlay = model::overlay_model(model::Overlay {
-                provider_id,
-                provider_package: provider.package.as_deref(),
-                provider_canonical: provider.canonical.as_deref(),
-                id,
-                config,
-                base,
-                existing,
-                inherit,
-                builtins,
+
+    fn ensure(&mut self, id: &ProviderID) -> &mut Definition {
+        self.registry.entries.entry(id.0.clone()).or_insert_with(|| Definition {
+            provider: ProviderInfo {
+                id: id.clone(),
+                canonical: None,
+                integration_id: None,
+                name: id.0.clone(),
+                activation: ProviderInfoActivation::Auto,
+                package: String::new(),
+                compatibility: None,
+                settings: None,
+                headers: None,
+                body: None,
+            },
+            models: IndexMap::new(),
+            source_connection: None,
+        })
+    }
+}
+
+pub struct Snapshot {
+    pub records: Arc<ProviderRegistry>,
+    pub available: Vec<Definition>,
+    pub providers: Vec<ProviderInfo>,
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum ProviderError {
+    #[error(transparent)]
+    State(#[from] opencode_location::state::StateError),
+    #[error(transparent)]
+    Integration(#[from] IntegrationError),
+}
+
+pub struct ProviderService {
+    state: State<ProviderRegistry>,
+    integrations: Arc<IntegrationService>,
+    bus: Arc<Bus>,
+    location: LocationRef,
+    cached: Mutex<Option<Cached>>,
+    published: Mutex<Option<Arc<Snapshot>>>,
+    subscription: Mutex<Option<tokio::task::JoinHandle<()>>>,
+}
+
+struct Cached {
+    records: Arc<ProviderRegistry>,
+    value: Arc<Snapshot>,
+}
+
+impl ProviderService {
+    pub fn new(integrations: Arc<IntegrationService>, bus: Arc<Bus>, location: LocationRef) -> Arc<Self> {
+        Arc::new_cyclic(|weak: &Weak<ProviderService>| {
+            let notify_weak = weak.clone();
+            let notify: state::NotifyFn<ProviderRegistry> = Box::new(move |_| {
+                let weak = notify_weak.clone();
+                Box::pin(async move {
+                    let Some(service) = weak.upgrade() else {
+                        return;
+                    };
+                    service.notify().await;
+                })
             });
-            provider.upsert_model(overlay);
-            if let Some(limit) = config.get("limit").and_then(Value::as_object) {
-                limits.push((id.clone(), Value::Object(limit.clone())));
+            let options = Options {
+                name: Some("provider".to_owned()),
+                initial: Box::new(ProviderRegistry::default),
+                notify: Some(notify),
+            };
+            let subscription = bus.subscribe(&SUBSCRIBED, None);
+            let subscription = tokio::spawn(subscription_task(subscription, weak.clone()));
+            Self {
+                state: State::new(options),
+                integrations,
+                bus,
+                location,
+                cached: Mutex::new(None),
+                published: Mutex::new(None),
+                subscription: Mutex::new(Some(subscription)),
             }
-        }
+        })
     }
-    if item.get("settings").and_then(Value::as_object).is_some_and(|settings| settings.contains_key("baseURL")) {
-        for model in &mut provider.models {
-            if let Some(settings) = &mut model.settings {
-                settings.remove("baseURL");
+
+    pub async fn transform<F>(&self, f: F) -> Registration
+    where
+        F: for<'a> Fn(&mut Editor<'a>) -> Result<(), TransformError> + Send + Sync + 'static,
+    {
+        self.state.transform(move |registry| f(&mut Editor { registry })).await
+    }
+
+    pub async fn block(
+        &self,
+        block: Arc<dyn opencode_location::state::ExternalBlock<ProviderRegistry>>,
+    ) -> Registration {
+        self.state.block(block).await
+    }
+
+    pub async fn reload(&self) {
+        self.state.reload().await;
+    }
+
+    pub async fn get(&self, id: &ProviderID) -> Result<Option<ProviderInfo>, ProviderError> {
+        let registry = self.state.get().await?;
+        Ok(registry.get(&id.0).map(|definition| definition.provider.clone()))
+    }
+
+    pub async fn all(&self) -> Result<Vec<ProviderInfo>, ProviderError> {
+        let registry = self.state.get().await?;
+        Ok(registry.entries.values().map(|definition| definition.provider.clone()).collect())
+    }
+
+    pub async fn available(&self) -> Result<Vec<ProviderInfo>, ProviderError> {
+        Ok(self.snapshot().await?.providers.clone())
+    }
+
+    pub async fn snapshot(&self) -> Result<Arc<Snapshot>, ProviderError> {
+        loop {
+            let revision = self.integrations.revision();
+            let records = self.state.get().await?;
+            let connections = self.integrations.list().await?;
+            if revision != self.integrations.revision() || !Arc::ptr_eq(&records, &self.state.get().await?) {
+                continue;
             }
+            let by_id: HashMap<String, IntegrationInfo> =
+                connections.into_iter().map(|integration| (integration.id.0.clone(), integration)).collect();
+            let available: Vec<&Definition> =
+                records.entries.values().filter(|definition| is_available(definition, &by_id)).collect();
+            let mut cached = self.cached.lock().expect("lock the provider snapshot cache");
+            if let Some(entry) = cached.as_ref()
+                && Arc::ptr_eq(&entry.records, &records)
+                && entry.value.available.len() == available.len()
+                && entry
+                    .value
+                    .available
+                    .iter()
+                    .zip(&available)
+                    .all(|(left, right)| left.provider.id == right.provider.id)
+            {
+                return Ok(entry.value.clone());
+            }
+            let providers = available.iter().map(|definition| definition.provider.clone()).collect();
+            let available = available.into_iter().cloned().collect();
+            let value = Arc::new(Snapshot { records: records.clone(), available, providers });
+            *cached = Some(Cached { records, value: value.clone() });
+            return Ok(value);
         }
     }
-    match providers.iter_mut().find(|existing| existing.id == provider_id) {
-        Some(existing) => *existing = provider,
-        None => providers.push(provider),
-    }
-    limits
-}
 
-pub(crate) fn apply_limit(providers: &mut [ProviderState], provider_id: &str, model_id: &str, limit: &Value) {
-    let Some(model) = providers
-        .iter_mut()
-        .find(|provider| provider.id == provider_id)
-        .and_then(|provider| provider.models.iter_mut().find(|model| model.id == model_id))
-    else {
-        return;
-    };
-    let Some(limit) = limit.as_object() else {
-        return;
-    };
-    model.limit = model::merge_objects(Some(&model.limit), limit);
-}
-
-fn rewrite_provider(provider: &mut ProviderState, builtins: &BTreeSet<&'static str>) {
-    let Some(specifier) = provider.package.clone() else {
-        return;
-    };
-    let settings = provider.settings.clone().unwrap_or_default();
-    let context =
-        Context { provider_id: &provider.id, model_id: None, shape: None, settings: Some(&settings), builtins };
-    let Some(replacement) = resolve(&specifier, &context) else {
-        return;
-    };
-    let translated = options(&settings);
-    if provider.package.is_some() || replacement != specifier {
-        provider.package = Some(replacement.clone());
-    }
-    let identity = (replacement == "@opencode/ai/providers/openai-compatible"
-        && !builtins.contains(specifier.as_str()))
-    .then(|| provider.canonical.clone().unwrap_or_else(|| provider.id.clone()));
-    if provider.settings.is_some() {
-        let mut merged = translated.settings;
-        if let Some(identity) = identity {
-            merged.insert("provider".to_string(), Value::String(identity));
+    async fn notify(&self) {
+        let value = match self.snapshot().await {
+            Ok(value) => value,
+            Err(error) => {
+                log::warn!("provider update event was not prepared: {error}");
+                return;
+            }
+        };
+        {
+            let mut published = self.published.lock().expect("lock the published provider snapshot");
+            if published.as_ref().is_some_and(|current| Arc::ptr_eq(current, &value)) {
+                return;
+            }
+            *published = Some(value);
         }
-        provider.settings = Some(merged);
+        let definition = opencode_bus::Definition::ephemeral(UPDATED);
+        let options = PublishOptions { location: Some(self.location.clone()), ..Default::default() };
+        if let Err(error) = self.bus.publish(&definition, serde_json::json!({}), options) {
+            log::warn!("provider update event was not published: {error}");
+        }
     }
-    provider.headers = merge_headers(translated.headers.as_deref(), provider.headers.as_deref());
-    provider.body = merge_overlay(translated.body.as_ref(), provider.body.as_ref());
 }
 
-fn merge_compatibility(provider: Option<&Value>, model: Option<&Value>) -> Option<Value> {
-    match (provider, model) {
-        (None, None) => None,
-        (Some(provider), None) => Some(provider.clone()),
-        (None, Some(model)) => Some(model.clone()),
-        (Some(provider), Some(model)) => match model.as_object() {
-            Some(model) => Some(model::merge_objects(Some(provider), model)),
-            None => Some(model.clone()),
+impl Drop for ProviderService {
+    fn drop(&mut self) {
+        if let Ok(mut subscription) = self.subscription.lock()
+            && let Some(task) = subscription.take()
+        {
+            task.abort();
+        }
+    }
+}
+
+async fn subscription_task(mut subscription: Subscription, weak: Weak<ProviderService>) {
+    while subscription.recv().await.is_some() {
+        let Some(service) = weak.upgrade() else {
+            break;
+        };
+        service.notify().await;
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum HttpTimeout {
+    Millis(f64),
+    Disabled,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Timeouts {
+    pub timeout: Option<HttpTimeout>,
+    pub header_timeout: HttpTimeout,
+    pub chunk_timeout: HttpTimeout,
+}
+
+pub fn native_settings(settings: &ProviderSettings) -> aisdk_native::JsonMap {
+    settings.rest.0.iter().cloned().collect()
+}
+
+pub fn model_settings(settings: Option<&ProviderSettings>) -> Option<ModelSettings> {
+    settings.map(|settings| ModelSettings {
+        compaction: settings.compaction.clone(),
+        cache: settings.cache.clone(),
+        encoding: settings.encoding,
+        rest: settings.rest.clone(),
+    })
+}
+
+pub(crate) fn merge_model_settings(
+    provider: Option<&ProviderSettings>,
+    model: Option<&ModelSettings>,
+) -> Option<ModelSettings> {
+    let inherited = model_settings(provider);
+    let base = inherited.as_ref().map(json_object);
+    let overlay = model.map(json_object);
+    let merged = aisdk_native::merge_overlay(base.as_ref(), overlay.as_ref())?;
+    decode_object(merged).or(inherited)
+}
+
+pub fn timeout(value: Option<&ProviderSettingsTimeout>) -> Option<HttpTimeout> {
+    match value? {
+        ProviderSettingsTimeout::Number(number) => millis(number.0),
+        ProviderSettingsTimeout::Bool(_) => Some(HttpTimeout::Disabled),
+    }
+}
+
+pub fn timeouts(settings: &ProviderSettings) -> Timeouts {
+    let header_timeout = match settings.header_timeout.as_ref() {
+        Some(ProviderSettingsHeaderTimeout::Number(number)) => millis(number.0),
+        Some(ProviderSettingsHeaderTimeout::Bool(_)) => Some(HttpTimeout::Disabled),
+        None => None,
+    }
+    .unwrap_or(HttpTimeout::Millis(DEFAULT_TIMEOUT_MS));
+    let chunk_timeout = match settings.chunk_timeout.as_ref() {
+        Some(ProviderSettingsChunkTimeout::Number(number)) => millis(number.0),
+        Some(ProviderSettingsChunkTimeout::Bool(_)) => Some(HttpTimeout::Disabled),
+        None => None,
+    }
+    .unwrap_or(HttpTimeout::Millis(DEFAULT_CHUNK_TIMEOUT_MS));
+    Timeouts { timeout: timeout(settings.timeout.as_ref()), header_timeout, chunk_timeout }
+}
+
+pub fn encoding(settings: &ProviderSettings) -> Option<ProviderEncoding> {
+    settings.encoding
+}
+
+pub fn tls(settings: &ProviderSettings) -> Option<ProviderTls> {
+    settings.tls.clone().filter(|tls| !tls.cert.is_empty() && !tls.key.is_empty())
+}
+
+pub(crate) fn builtin_packages() -> &'static BTreeSet<&'static str> {
+    &BUILTIN_PACKAGES
+}
+
+pub(crate) fn default_model(provider_id: &ProviderID, model_id: &str) -> ModelInfo {
+    ModelInfo {
+        id: model_id.to_owned(),
+        model_id: model_id.to_owned(),
+        provider_id: provider_id.clone(),
+        canonical: None,
+        r#type: None,
+        family: None,
+        name: model_id.to_owned(),
+        compatibility: None,
+        package: None,
+        settings: None,
+        headers: None,
+        body: None,
+        capabilities: ModelCapabilities {
+            tools: true,
+            freeform: None,
+            input: vec!["text".to_owned(), "image".to_owned()],
+            output: vec!["text".to_owned()],
+            temperature: None,
         },
+        variants: Vec::new(),
+        time: ModelInfoTime { released: 0.0 },
+        cost: Vec::new(),
+        status: ModelInfoStatus::Active,
+        enabled: true,
+        limit: ModelInfoLimit { context: 200_000.0, input: None, output: 32_000.0 },
     }
 }
 
-fn pairs(value: &Map<String, Value>) -> Vec<(String, String)> {
-    value.iter().filter_map(|(key, value)| value.as_str().map(|value| (key.clone(), value.to_string()))).collect()
+fn millis(value: f64) -> Option<HttpTimeout> {
+    (value.is_finite() && value > 0.0).then_some(HttpTimeout::Millis(value))
 }
 
-fn decode<T: opencode_contract::codec::Decode>(value: &Value) -> T {
-    decode_json(&encode_json(value)).expect("catalog value decodes")
+fn index(provider_id: &ProviderID, models: &[ModelInfo]) -> IndexMap<String, ModelInfo> {
+    models
+        .iter()
+        .map(|model| {
+            let owned = if model.provider_id == *provider_id {
+                model.clone()
+            } else {
+                ModelInfo { provider_id: provider_id.clone(), ..model.clone() }
+            };
+            (owned.id.clone(), owned)
+        })
+        .collect()
 }
 
-fn decode_type(value: &str) -> ModelType {
-    decode(&Value::String(value.to_string()))
+fn rewrite_provider(provider: &mut ProviderInfo) {
+    let mut target = Target {
+        settings: provider.settings.as_ref().map(json_object),
+        headers: provider.headers.as_ref().map(headers_to_native),
+        body: provider.body.as_ref().map(body_to_native),
+        package: Some(provider.package.clone()),
+        variants: None,
+    };
+    let context = Context {
+        provider_id: provider.id.0.clone(),
+        canonical: provider.canonical.as_ref().map(|canonical| canonical.0.clone()),
+        model_id: None,
+        shape: None,
+        settings: None,
+        specifier: Some(provider.package.clone()),
+    };
+    aisdk_native::rewrite(&mut target, &context, builtin_packages());
+    provider.package = target.package.unwrap_or_default();
+    let settings = provider.settings.clone();
+    provider.settings = target.settings.and_then(decode_object).or(settings);
+    provider.headers = target.headers.map(headers_from_native);
+    provider.body = target.body.map(body_from_native);
 }
 
-fn decode_capabilities(value: &Value) -> ModelCapabilities {
-    decode(value)
+pub(crate) fn rewrite_model(model: &mut ModelInfo, provider_id: &ProviderID, provider: Option<&ProviderInfo>) {
+    let mut target = Target {
+        settings: model.settings.as_ref().map(json_object),
+        headers: model.headers.as_ref().map(headers_to_native),
+        body: model.body.as_ref().map(body_to_native),
+        package: model.package.clone(),
+        variants: Some(model.variants.iter().map(native_variant).collect()),
+    };
+    let context = Context {
+        provider_id: provider_id.0.clone(),
+        canonical: model
+            .canonical
+            .clone()
+            .or_else(|| provider.and_then(|provider| provider.canonical.clone()))
+            .map(|canonical| canonical.0),
+        model_id: Some(model.model_id.clone()),
+        shape: None,
+        settings: None,
+        specifier: model.package.clone().or_else(|| provider.map(|provider| provider.package.clone())),
+    };
+    aisdk_native::rewrite(&mut target, &context, builtin_packages());
+    model.package = target.package;
+    let settings = model.settings.clone();
+    model.settings = target.settings.and_then(decode_object).or(settings);
+    model.headers = target.headers.map(headers_from_native);
+    model.body = target.body.map(body_from_native);
+    if let Some(variants) = target.variants {
+        model.variants = variants.into_iter().map(contract_variant).collect();
+    }
 }
 
-fn decode_compatibility(value: &Value) -> ModelCompatibility {
-    decode(value)
+fn native_variant(variant: &ModelVariant) -> aisdk_native::Variant {
+    aisdk_native::Variant {
+        id: variant.id.clone(),
+        settings: variant.settings.as_ref().map(json_object),
+        headers: variant.headers.as_ref().map(headers_to_native),
+        body: variant.body.as_ref().map(body_to_native),
+    }
 }
 
-fn decode_settings(value: &Map<String, Value>) -> ModelSettings {
-    decode(&Value::Object(value.clone()))
+fn contract_variant(variant: aisdk_native::Variant) -> ModelVariant {
+    ModelVariant {
+        id: variant.id,
+        settings: variant.settings.and_then(decode_object),
+        headers: variant.headers.map(headers_from_native),
+        body: variant.body.map(body_from_native),
+    }
 }
 
-fn decode_variant(value: &Value) -> ModelVariant {
-    decode(value)
+fn is_available(definition: &Definition, by_id: &HashMap<String, IntegrationInfo>) -> bool {
+    if definition.provider.activation == ProviderInfoActivation::Disabled {
+        return false;
+    }
+    let integration_id =
+        definition.provider.integration_id.clone().unwrap_or_else(|| IntegrationID(definition.provider.id.0.clone()));
+    let integration = by_id.get(&integration_id.0);
+    if let Some(source) = &definition.source_connection
+        && Some(crate::integration::key(source))
+            != integration.and_then(|integration| integration.connections.first()).map(crate::integration::key)
+    {
+        return false;
+    }
+    if definition.provider.activation == ProviderInfoActivation::Enabled {
+        return true;
+    }
+    if integration.is_some_and(|integration| !integration.connections.is_empty()) {
+        return true;
+    }
+    definition.provider.integration_id.is_none() && integration.is_none()
 }
 
-fn decode_cost(value: &Value) -> ModelCost {
-    decode(value)
+pub(crate) fn json_object(value: &impl Encode) -> aisdk_native::JsonMap {
+    let Ok(Value::Object(map)) = serde_json::from_str::<Value>(&encode_json(value)) else {
+        return aisdk_native::JsonMap::new();
+    };
+    map
 }
 
-fn decode_limit(value: &Value) -> ModelInfoLimit {
-    decode(value)
+pub(crate) fn decode_object<T: Decode>(mut map: aisdk_native::JsonMap) -> Option<T> {
+    loop {
+        match T::decode(&Value::Object(map.clone()), &mut codec::Path::new()) {
+            Ok(value) => return Some(value),
+            Err(_) => {
+                let invalid = map.iter().find_map(|(key, value)| {
+                    let single = aisdk_native::JsonMap::from_iter([(key.clone(), value.clone())]);
+                    T::decode(&Value::Object(single), &mut codec::Path::new()).is_err().then(|| key.clone())
+                })?;
+                map.remove(&invalid);
+            }
+        }
+    }
+}
+
+pub(crate) fn headers_to_native(headers: &codec::JsonMap<String>) -> aisdk_native::Headers {
+    headers.0.iter().cloned().collect()
+}
+
+pub(crate) fn headers_from_native(headers: aisdk_native::Headers) -> codec::JsonMap<String> {
+    codec::JsonMap(headers.into_iter().collect())
+}
+
+pub(crate) fn body_to_native(body: &codec::JsonMap<Value>) -> aisdk_native::JsonMap {
+    body.0.iter().cloned().collect()
+}
+
+pub(crate) fn body_from_native(body: aisdk_native::JsonMap) -> codec::JsonMap<Value> {
+    codec::JsonMap(body.into_iter().collect())
 }

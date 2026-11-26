@@ -28,6 +28,7 @@ export type Step =
   | { ws: WsStep }
   | { waitEvent: WaitEventStep; timeout?: number }
   | { files: Record<string, string> }
+  | { settle: true }
   | { git: GitStep }
 
 export type SetupStep = { files: Record<string, string> } | { git: GitStep }
@@ -42,6 +43,7 @@ export type Scenario = {
   setup?: SetupStep[]
   config?: Record<string, unknown>
   env?: Record<string, string>
+  models?: unknown
   model?: Reply[]
   steps: Step[]
 }

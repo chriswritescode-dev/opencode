@@ -1,6 +1,6 @@
 [package]
 name = "opencode-catalog"
-description = "Provider and model resolution from a Location's config entries."
+description = "Credential storage service for catalog integrations."
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -11,12 +11,35 @@ autotests = false
 workspace = true
 
 [dependencies]
+flate2.workspace = true
+indexmap = { workspace = true, features = ["serde"] }
+log.workspace = true
 opencode-ai.workspace = true
+opencode-bus.workspace = true
 opencode-config.workspace = true
 opencode-contract.workspace = true
+opencode-local.workspace = true
+opencode-location.workspace = true
+opencode-storage.workspace = true
+opencode-util = { workspace = true, features = ["ring"] }
+rand.workspace = true
+regex-lite.workspace = true
+reqwest.workspace = true
+ring.workspace = true
+rusqlite.workspace = true
+serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
+tokio.workspace = true
+tokio-util.workspace = true
+url.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }
 
 [[test]]
 name = "all"
 path = "tests/all/main.rs"
+
+[target.'cfg(unix)'.dependencies]
+rustix.workspace = true

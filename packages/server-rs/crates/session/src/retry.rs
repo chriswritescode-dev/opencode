@@ -1,6 +1,7 @@
 use std::time::Duration;
 
 use opencode_ai::{AiError, AiErrorReason};
+use opencode_catalog::resolver;
 use opencode_contract::generated::{SessionStructuredError, SessionStructuredErrorResponse};
 
 use crate::context::ContextError;
@@ -113,15 +114,29 @@ pub fn structured(error: &ExecutionError) -> SessionStructuredError {
         ExecutionError::Ai(error) => structured_ai(error),
         ExecutionError::OutputLimit => plain("output-limit", error.to_string()),
         ExecutionError::Interrupted => plain("aborted", error.to_string()),
-        ExecutionError::Context(
-            ContextError::ModelNotSelected { .. }
-            | ContextError::ModelUnavailable { .. }
-            | ContextError::ModelResolution(_),
-        ) => plain("provider.no-route", error.to_string()),
+        ExecutionError::Context(ContextError::ModelNotSelected { .. } | ContextError::ModelUnavailable { .. }) => {
+            plain("provider.no-route", error.to_string())
+        }
+        ExecutionError::Context(ContextError::ModelResolution(cause)) => {
+            plain(resolution_type(cause), error.to_string())
+        }
         ExecutionError::Context(_)
         | ExecutionError::Placement(_)
         | ExecutionError::Message(_)
         | ExecutionError::Bus(_) => plain("unknown", error.to_string()),
+    }
+}
+
+fn resolution_type(error: &resolver::Error) -> &'static str {
+    match error {
+        resolver::Error::UnsupportedCompaction { .. } => "provider.unsupported-operation",
+        resolver::Error::Authorization(_) => "provider.auth",
+        resolver::Error::VariantUnavailable { .. }
+        | resolver::Error::UnsupportedPackage { .. }
+        | resolver::Error::ModelConfiguration { .. }
+        | resolver::Error::ModelInitialization { .. }
+        | resolver::Error::UnresolvedProviderVariables { .. } => "provider.no-route",
+        resolver::Error::Model(_) | resolver::Error::Provider(_) | resolver::Error::Integration(_) => "unknown",
     }
 }
 

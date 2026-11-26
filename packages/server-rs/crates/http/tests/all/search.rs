@@ -27,6 +27,7 @@ fn services_with_flags(
     let flags = flags.map(str::to_owned);
     let environment = move |name: &str| match name {
         "OPENCODE_FLAGS" => flags.clone().map(OsString::from),
+        "OPENCODE_DISABLE_MODELS_FETCH" => Some(OsString::from("1")),
         _ => None,
     };
     let bus = opencode_bus::Bus::new(database.clone(), opencode_bus::BusOptions::default());
@@ -39,6 +40,7 @@ fn services_with_flags(
         crate::global_plugins(),
         "test-version".to_owned(),
         "test".to_owned(),
+        Arc::new(Vec::new()),
     ));
     (services, database)
 }

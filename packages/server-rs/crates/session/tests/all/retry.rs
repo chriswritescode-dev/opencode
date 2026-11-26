@@ -2,7 +2,9 @@ use std::collections::BTreeMap;
 use std::time::Duration;
 
 use opencode_ai::{AiError, AiErrorReason, HttpContext, TransportKind, TransportOperation};
-use opencode_contract::generated::SessionStructuredErrorResponse;
+use opencode_catalog::resolver::Error;
+use opencode_contract::generated::{ProviderID, SessionStructuredErrorResponse};
+use opencode_session::context::ContextError;
 use opencode_session::execution::ExecutionError;
 use opencode_session::retry::{RetryPolicy, structured};
 
@@ -107,4 +109,39 @@ fn structured_error_maps_the_output_limit() {
     assert_eq!(structured.status, None);
     assert_eq!(structured.response, None);
     assert_eq!(structured.retry_after_ms, None);
+}
+
+#[test]
+fn structured_error_maps_model_resolution_failures() {
+    let provider_id = ProviderID("test-provider".to_owned());
+    let cases = [
+        (
+            Error::UnresolvedProviderVariables {
+                provider_id: provider_id.clone(),
+                model_id: "test-model".to_owned(),
+                variables: vec!["MISSING_HOST".to_owned()],
+            },
+            "provider.no-route",
+            "Cannot initialize test-provider/test-model: MISSING_HOST is required to resolve the provider endpoint",
+        ),
+        (
+            Error::UnsupportedCompaction {
+                provider_id: provider_id.clone(),
+                model_id: "test-model".to_owned(),
+                route: "anthropic-messages".to_owned(),
+            },
+            "provider.unsupported-operation",
+            "Provider compaction is not supported by test-provider/test-model (anthropic-messages)",
+        ),
+        (
+            Error::VariantUnavailable { provider_id, model_id: "test-model".to_owned(), variant: "max".to_owned() },
+            "provider.no-route",
+            "Variant unavailable for test-provider/test-model: max",
+        ),
+    ];
+    for (error, kind, message) in cases {
+        let structured = structured(&ExecutionError::Context(ContextError::ModelResolution(error)));
+        assert_eq!(structured.r#type, kind);
+        assert_eq!(structured.message, message);
+    }
 }

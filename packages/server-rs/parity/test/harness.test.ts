@@ -6,6 +6,7 @@ import { dumpDatabases, listFiles } from "../lib/capture"
 import { compareCaptures } from "../lib/compare"
 import { parseSseFrames } from "../lib/drive"
 import { normalizeCapture } from "../lib/normalize"
+import { sandboxEnv } from "../lib/sandbox"
 
 const root = "/tmp/opencode-parity-test"
 const context = { root, start: 1_700_000_000_000, end: 1_700_000_100_000 }
@@ -191,6 +192,40 @@ export default defineScenario({
         expect(capture.steps[0].opened).toBe(true)
         expect(capture.steps[0].frames).toEqual(["first", "second"])
         expect(capture.steps[0].close.code).toBe(1000)
+      })
+    })
+  },
+  60_000,
+)
+
+test(
+  "settles the event stream without adding a captured step",
+  async () => {
+    await withTempDir("parity-out-", async (outDir) => {
+      await withTempRoot(async (root) => {
+        const scenario = path.join(root, "settle-parity.scenario.ts")
+        const scenarioModule = path.join(import.meta.dir, "../lib/scenario")
+        const source = `import { defineScenario } from ${JSON.stringify(scenarioModule)}
+
+export default defineScenario({
+  steps: [{ http: { method: "GET", path: "/api/info" } }, { settle: true }],
+})
+`
+        await Bun.write(scenario, source)
+        const partial = await runParity(outDir, [
+          "--reference",
+          fakeServer,
+          "--candidate",
+          fakeServer,
+          "--only",
+          "steps",
+          scenario,
+        ])
+        expect(partial.exitCode).toBe(0)
+        expect(partial.output).toContain("PASS settle-parity")
+        const full = await runParity(outDir, ["--reference", fakeServer, "--candidate", fakeServer, scenario])
+        expect(full.exitCode).toBe(0)
+        expect(full.output).toContain("PASS settle-parity")
       })
     })
   },
@@ -418,6 +453,16 @@ test("lists text and hashed files but skips databases, siblings, models and logs
     expect(files["binary.bin"]).toBe(
       "sha256:ba778c0261008c8f71ae4061ad0162ffcbe63b52c91f89f236738131d1217ec7",
     )
+  })
+})
+
+test("writes a scenario models value to the sandbox catalog", async () => {
+  await withTempRoot(async (root) => {
+    const models = { providers: [{ id: "parity", models: [{ id: "test-model" }] }] }
+    await sandboxEnv(root, {}, {}, "http://127.0.0.1:1", models)
+    expect(await Bun.file(path.join(root, "models.json")).text()).toBe(JSON.stringify(models))
+    await sandboxEnv(root, {}, {}, "http://127.0.0.1:1")
+    expect(await Bun.file(path.join(root, "models.json")).text()).toBe("{}")
   })
 })
 
