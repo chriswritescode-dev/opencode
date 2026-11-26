@@ -1239,7 +1239,7 @@ function readFilesystemSpecs(): ReadFilesystemSpec[] {
 }
 
 async function exportReadFilesystem() {
-  const base = await fs.mkdtemp(path.join(os.tmpdir(), "opencode-tool-corpus-"))
+  const base = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), "opencode-tool-corpus-")))
   const exported: Array<Record<string, unknown>> = []
   try {
     for (const spec of readFilesystemSpecs()) {
@@ -1530,7 +1530,7 @@ function sortTextLines(text: string) {
 }
 
 async function exportRead() {
-  const base = await fs.mkdtemp(path.join(os.tmpdir(), "opencode-tool-corpus-"))
+  const base = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), "opencode-tool-corpus-")))
   const exported: Array<Record<string, unknown>> = []
   try {
     for (const [index, spec] of readSpecs().entries()) {
@@ -1704,7 +1704,7 @@ function skillLayerFor(root: string, permission: Layer.Layer<Permission.Service>
 }
 
 async function exportSkill() {
-  const base = await fs.mkdtemp(path.join(os.tmpdir(), "opencode-tool-corpus-"))
+  const base = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), "opencode-tool-corpus-")))
   const exported: Array<Record<string, unknown>> = []
   try {
     for (const [index, spec] of skillSpecs().entries()) {
@@ -1885,7 +1885,7 @@ interface ToolCase {
 }
 
 async function exportToolCases(tool: "write" | "edit" | "patch", specs: ToolCase[]) {
-  const base = await fs.mkdtemp(path.join(os.tmpdir(), "opencode-tool-corpus-"))
+  const base = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), "opencode-tool-corpus-")))
   const exported: Array<Record<string, unknown>> = []
   try {
     for (const [index, spec] of specs.entries()) {
@@ -2012,7 +2012,7 @@ interface SearchCase {
 }
 
 async function exportSearchCases(tool: "glob" | "grep", specs: SearchCase[]) {
-  const base = await fs.mkdtemp(path.join(os.tmpdir(), "opencode-tool-corpus-"))
+  const base = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), "opencode-tool-corpus-")))
   const exported: Array<Record<string, unknown>> = []
   try {
     for (const [index, spec] of specs.entries()) {

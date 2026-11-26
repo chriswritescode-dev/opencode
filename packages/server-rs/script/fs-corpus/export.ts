@@ -382,7 +382,7 @@ function trimDiff(diff: string) {
 }
 
 async function exportFilesystem() {
-  const base = await fs.mkdtemp(path.join(os.tmpdir(), "opencode-fs-corpus-"))
+  const base = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), "opencode-fs-corpus-")))
   try {
     const specs: Array<Record<string, any>> = [
       {
@@ -570,7 +570,7 @@ function filesystemProgram(spec: Record<string, any>) {
 }
 
 async function exportAccess() {
-  const base = await fs.mkdtemp(path.join(os.tmpdir(), "opencode-fs-corpus-"))
+  const base = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), "opencode-fs-corpus-")))
   try {
     const specs: Array<Record<string, any>> = [
       {
@@ -980,7 +980,7 @@ function fuzzysortCase(name: string, query: string, targets: string[], limit?: n
 type SearchQuery = { query: string; type?: "file" | "directory"; limit?: number }
 
 async function exportSearch() {
-  const base = await fs.mkdtemp(path.join(os.tmpdir(), "opencode-search-corpus-"))
+  const base = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), "opencode-search-corpus-")))
   try {
     const tree = {
       dirs: ["src/nested/deep", "docs", "empty", "packages/app", "packages/core/src", "café"],

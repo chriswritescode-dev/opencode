@@ -23,8 +23,16 @@ pub fn join(text: &str, bom: bool) -> String {
 
 /// Decodes `content`, reporting the text without a BOM and the bytes to write when they differ.
 pub fn sync_bytes(content: &[u8], bom: bool) -> Synced {
-    let decoded = String::from_utf8_lossy(content).into_owned();
-    let (_, text) = split(&decoded);
-    let canonical = join(text, bom);
-    Synced { text: text.to_owned(), bytes: (decoded != canonical).then(|| canonical.into_bytes()) }
+    match std::str::from_utf8(content) {
+        Ok(decoded) => {
+            let (_, text) = split(decoded);
+            let canonical = join(text, bom);
+            Synced { text: text.to_owned(), bytes: (decoded != canonical).then(|| canonical.into_bytes()) }
+        }
+        Err(_) => {
+            let decoded = String::from_utf8_lossy(content);
+            let (_, text) = split(&decoded);
+            Synced { text: text.to_owned(), bytes: None }
+        }
+    }
 }
