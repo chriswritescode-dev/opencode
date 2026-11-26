@@ -1,6 +1,6 @@
 use std::ffi::OsString;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use futures_util::future::BoxFuture;
@@ -9,10 +9,10 @@ use opencode_bus::{Bus, Definition, PublishOptions};
 use opencode_catalog::builtin::Builtin;
 use opencode_catalog::credential::CredentialService;
 use opencode_catalog::integration::{CommandEnv, IntegrationService};
-use opencode_catalog::legacy::Catalog;
 use opencode_catalog::model::ModelService;
 use opencode_catalog::models_dev::{ModelsDevService, Options};
 use opencode_catalog::provider::ProviderService;
+use opencode_catalog::resolver::{NoBridge, Resolver};
 use opencode_config::entry::Entry;
 use opencode_config::flag;
 use opencode_config::observer::{ObserverHandle, observe};
@@ -78,14 +78,11 @@ struct LocationPlacement {
     locations: LocationMap<LocationServices>,
     store: opencode_session::SessionStore,
     paths: GlobalPaths,
-    env: Arc<dyn opencode_ai::Env>,
 }
 
 struct PlacedLocation {
     lease: Lease<LocationServices>,
-    catalog: Catalog,
     builtins: BuiltinsInput,
-    env: Arc<dyn opencode_ai::Env>,
     location: LocationRef,
 }
 
@@ -94,15 +91,12 @@ impl Placement for LocationPlacement {
         let locations = self.locations.clone();
         let store = self.store.clone();
         let paths = self.paths.clone();
-        let env = self.env.clone();
         Box::pin(async move {
             let reference = store
                 .session_location(&session_id)
                 .map_err(|error| error.to_string())?
                 .ok_or_else(|| format!("Session not found: {session_id}"))?;
             let lease = locations.get(&reference).await.map_err(|error| error.to_string())?;
-            let entries = lease.services().config.entries();
-            let catalog = Catalog::from_entries(&entries);
             let tmp = std::fs::canonicalize(&paths.tmp).unwrap_or_else(|_| paths.tmp.clone());
             let builtins = BuiltinsInput {
                 directory: lease.services().info.directory.clone(),
@@ -111,9 +105,7 @@ impl Placement for LocationPlacement {
                 tmp: tmp.to_string_lossy().into_owned(),
             };
             let placed = PlacedLocation {
-                catalog,
                 builtins,
-                env,
                 location: opencode_session::execution::contract_location(&reference),
                 lease,
             };
@@ -123,8 +115,12 @@ impl Placement for LocationPlacement {
 }
 
 impl Placed for PlacedLocation {
-    fn catalog(&self) -> &Catalog {
-        &self.catalog
+    fn models(&self) -> &ModelService {
+        &self.lease.services().models
+    }
+
+    fn resolver(&self) -> &Resolver {
+        &self.lease.services().resolver
     }
 
     fn agents(&self) -> &AgentService {
@@ -133,10 +129,6 @@ impl Placed for PlacedLocation {
 
     fn builtins(&self) -> &BuiltinsInput {
         &self.builtins
-    }
-
-    fn env(&self) -> &dyn opencode_ai::Env {
-        self.env.as_ref()
     }
 
     fn location(&self) -> Option<&LocationRef> {
@@ -183,10 +175,10 @@ pub struct LocationServices {
     pub permissions: PermissionService,
     pub forms: FormService,
     pub activation: Activation,
-    pub catalog: Arc<RwLock<Catalog>>,
     pub integrations: Arc<IntegrationService>,
     pub providers: Arc<ProviderService>,
     pub models: Arc<ModelService>,
+    pub resolver: Arc<Resolver>,
     pub plugins: LocationPlugins,
     registrations: Mutex<Option<Builtin>>,
     _config_observer: ObserverHandle,
@@ -361,21 +353,22 @@ impl GlobalServices {
                     opencode_catalog::builtin::Deps::default(),
                 )
                 .await;
-                let entries = config.entries();
-                let catalog = Arc::new(RwLock::new(Catalog::from_entries(&entries)));
+                let resolver = Resolver::new(
+                    providers.clone(),
+                    models.clone(),
+                    integrations.clone(),
+                    Arc::new(ConfigAiEnv(config_env.clone())),
+                    Arc::new(NoBridge),
+                );
                 let observer_projects = projects.clone();
                 let observer_directory = info.directory.clone();
                 let observer_workspace_id = info.workspace_id.clone();
-                let observer_catalog = catalog.clone();
                 let flags = config.clone();
                 let build = search.clone();
                 let _config_observer = observe(&config, move |_| {
                     if sqlite_fts_enabled(&flags) {
                         build.start();
                     }
-                    let entries = flags.entries();
-                    *observer_catalog.write().expect("the catalog lock is never poisoned") =
-                        Catalog::from_entries(&entries);
                     observer_projects.publish(LocationEvent::ConfigUpdated {
                         directory: observer_directory.clone(),
                         workspace_id: observer_workspace_id.clone(),
@@ -408,10 +401,10 @@ impl GlobalServices {
                     permissions,
                     forms,
                     activation,
-                    catalog,
                     integrations,
                     providers,
                     models,
+                    resolver,
                     plugins,
                     registrations: Mutex::new(Some(registrations)),
                     _config_observer,
@@ -484,7 +477,6 @@ impl GlobalServices {
             locations: self.locations.clone(),
             store: store.clone(),
             paths: self.paths.clone(),
-            env: Arc::new(ConfigAiEnv(self.environment.clone())),
         });
         let runner = Arc::new(opencode_session::runner::Runner::new(
             store.clone(),

@@ -1429,6 +1429,30 @@ async fn uses_no_auth_for_an_enabled_provider_without_credentials() {
 }
 
 #[tokio::test]
+async fn keeps_environment_auth_for_a_provider_that_is_not_explicitly_enabled() {
+    let harness = crate::provider::setup();
+    let provider_id = ProviderID("anthropic-test".to_owned());
+    let model = catalog_model("anthropic-test", "test-model", "test-model", json!({}));
+    let mut info = provider("anthropic-test", "@ai-sdk/anthropic", Some(json!({"baseURL": "http://127.0.0.1:9/v1"})));
+    info.activation = ProviderInfoActivation::Auto;
+    let _registration = register(&harness, info, std::slice::from_ref(&model)).await;
+    let models = models(&harness);
+    let resolver = Resolver::new(
+        harness.providers.clone(),
+        models.clone(),
+        harness.integrations.clone(),
+        Arc::new(env(&[("ANTHROPIC_API_KEY", "env-key")])),
+        Arc::new(resolver::NoBridge),
+    );
+    let reference = ModelRef { id: "test-model".to_owned(), provider_id, variant: None };
+    let resolved = resolver.resolve(Some(&reference)).await.expect("resolves").expect("a resolved model");
+    let headers = auth_headers(&resolved.model, &env(&[("ANTHROPIC_API_KEY", "env-key")]), "http://127.0.0.1:9/v1");
+
+    assert!(!matches!(&resolved.model.route.auth, Auth::None));
+    assert_eq!(header(&headers, "x-api-key"), Some("env-key"));
+}
+
+#[tokio::test]
 async fn drops_invalid_model_provider_settings_instead_of_panicking() {
     let harness = crate::provider::setup();
     let provider_id = ProviderID("test-provider".to_owned());

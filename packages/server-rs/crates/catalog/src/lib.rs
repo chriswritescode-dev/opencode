@@ -2,7 +2,6 @@ pub mod aisdk_native;
 pub mod builtin;
 pub mod credential;
 pub mod integration;
-pub mod legacy;
 pub mod lock;
 pub mod model;
 pub mod models_dev;

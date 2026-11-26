@@ -4,9 +4,10 @@ use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::time::Duration;
 
 use futures_util::future::BoxFuture;
-use opencode_ai::{Env, MapEnv};
+use opencode_ai::MapEnv;
 use opencode_bus::{Bus, BusOptions, Event, Subscription};
-use opencode_catalog::legacy::Catalog;
+use opencode_catalog::model::ModelService;
+use opencode_catalog::resolver::Resolver;
 use opencode_config::entry::{Document, Entry, Origin};
 use opencode_contract::codec::{decode_json, encode_json};
 use opencode_contract::generated::{
@@ -27,7 +28,7 @@ use serde_json::{Value, json};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 
-use crate::{TempDir, TestAgents, test_agents};
+use crate::{TempDir, TestAgents, TestCatalog, test_agents, test_catalog};
 
 const FIXED_NOW: i64 = 1_800_000_000_000;
 const CASSETTE: &str = include_str!(
@@ -83,16 +84,19 @@ fn config_value(port: u16) -> Value {
 }
 
 struct TestPlaced {
-    catalog: Catalog,
+    catalog: TestCatalog,
     agents: TestAgents,
     builtins: BuiltinsInput,
-    env: MapEnv,
     closed: AtomicBool,
 }
 
 impl Placed for TestPlaced {
-    fn catalog(&self) -> &Catalog {
-        &self.catalog
+    fn models(&self) -> &ModelService {
+        &self.catalog.models
+    }
+
+    fn resolver(&self) -> &Resolver {
+        &self.catalog.resolver
     }
 
     fn agents(&self) -> &AgentService {
@@ -101,10 +105,6 @@ impl Placed for TestPlaced {
 
     fn builtins(&self) -> &BuiltinsInput {
         &self.builtins
-    }
-
-    fn env(&self) -> &dyn Env {
-        &self.env
     }
 
     fn location(&self) -> Option<&LocationRef> {
@@ -129,12 +129,11 @@ impl Placement for TestPlacement {
     }
 }
 
-async fn test_placed(entry: &Entry, work: &str, root: &Path, closed: bool) -> TestPlaced {
+async fn test_placed(config: &Value, entry: &Entry, work: &str, root: &Path, closed: bool) -> TestPlaced {
     TestPlaced {
-        catalog: Catalog::from_entries(std::slice::from_ref(entry)),
+        catalog: test_catalog(config, MapEnv::new([("ANTHROPIC_API_KEY".to_owned(), "parity".to_owned())])).await,
         agents: test_agents(std::slice::from_ref(entry), "/home/test").await,
         builtins: builtins_input(work, root),
-        env: MapEnv::new([("ANTHROPIC_API_KEY".to_owned(), "parity".to_owned())]),
         closed: AtomicBool::new(closed),
     }
 }
@@ -172,19 +171,19 @@ async fn setup_placements(port: u16, closed_first: bool) -> Setup {
         .expect("seed the session");
 
     let store = SessionStore::new(database.clone());
+    let config = config_value(port);
     let entry = Entry::Document(Document {
         path: None,
-        info: decode_json::<ConfigEntryDocumentInfo>(&config_value(port).to_string())
-            .expect("decode the config document"),
+        info: decode_json::<ConfigEntryDocumentInfo>(&config.to_string()).expect("decode the config document"),
         origin: Origin::File,
     });
     let placements = if closed_first {
         vec![
-            Arc::new(test_placed(&entry, &work, dir.path(), true).await),
-            Arc::new(test_placed(&entry, &work, dir.path(), false).await),
+            Arc::new(test_placed(&config, &entry, &work, dir.path(), true).await),
+            Arc::new(test_placed(&config, &entry, &work, dir.path(), false).await),
         ]
     } else {
-        vec![Arc::new(test_placed(&entry, &work, dir.path(), false).await)]
+        vec![Arc::new(test_placed(&config, &entry, &work, dir.path(), false).await)]
     };
     let placement = TestPlacement { placements, calls: AtomicUsize::new(0) };
     let runner = Runner::new(store.clone(), bus.clone(), database.clone(), Arc::new(placement), app());

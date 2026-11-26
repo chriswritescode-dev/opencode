@@ -3,13 +3,13 @@ use std::sync::Arc;
 
 use opencode_ai::{ExecutionContext, MapEnv, StreamOptions, SystemPart};
 use opencode_bus::{Bus, BusOptions, Definition, PublishOptions};
-use opencode_catalog::legacy::Catalog;
+use opencode_catalog::resolver::Error;
 use opencode_config::entry::{Document, Entry, Origin};
 use opencode_contract::codec::decode_json;
 use opencode_contract::generated::{ConfigEntryDocumentInfo, SessionInboxDelivery};
 use opencode_location::environment::local::LocalEnvironment;
 use opencode_location::project::ProjectService;
-use opencode_session::context::{self, LoadInput};
+use opencode_session::context::{self, ContextError, LoadInput};
 use opencode_session::instruction_state;
 use opencode_session::instructions::{self, BuiltinsInput, List};
 use opencode_session::model_request::{self, AppInfo};
@@ -18,7 +18,7 @@ use opencode_storage::{Database, DatabaseLocation};
 use opencode_util::time::Zone;
 use serde_json::{Value, json};
 
-use crate::{TempDir, TestAgents, test_agents};
+use crate::{TempDir, TestAgents, TestCatalog, test_agents, test_catalog};
 
 const FIXED_NOW: i64 = 1_800_000_000_000;
 
@@ -27,7 +27,7 @@ struct Setup {
     database: Arc<Database>,
     bus: Arc<Bus>,
     store: SessionStore,
-    catalog: Catalog,
+    catalog: TestCatalog,
     agents: TestAgents,
     list: List,
     work: String,
@@ -53,6 +53,10 @@ fn builtins_input(work: &str, root: &Path) -> BuiltinsInput {
 }
 
 fn config_value(build_system: Option<&str>) -> Value {
+    config_with_base_url(build_system, "http://127.0.0.1:9/v1")
+}
+
+fn config_with_base_url(build_system: Option<&str>, base_url: &str) -> Value {
     let mut agents = json!({ "title": { "disabled": true } });
     if let Some(system) = build_system {
         agents["build"] = json!({ "system": system });
@@ -64,7 +68,7 @@ fn config_value(build_system: Option<&str>) -> Value {
             "anthropic-test": {
                 "name": "Anthropic Test",
                 "package": "@ai-sdk/anthropic",
-                "settings": { "apiKey": "parity", "baseURL": "http://127.0.0.1:9/v1" },
+                "settings": { "apiKey": "parity", "baseURL": base_url },
                 "models": {
                     "test-model": {
                         "name": "Test Model",
@@ -79,6 +83,10 @@ fn config_value(build_system: Option<&str>) -> Value {
 }
 
 async fn setup(build_system: Option<&str>) -> Setup {
+    setup_with(config_value(build_system)).await
+}
+
+async fn setup_with(value: Value) -> Setup {
     let dir = TempDir::new();
     let work_path = dir.path().join("work");
     std::fs::create_dir_all(&work_path).expect("create the work directory");
@@ -110,13 +118,12 @@ async fn setup(build_system: Option<&str>) -> Setup {
     let list = instructions::builtins_at(builtins_input(&work, dir.path()), FIXED_NOW)
         .expect("build the builtin instructions");
 
-    let value = config_value(build_system);
     let entry = Entry::Document(Document {
         path: None,
         info: decode_json::<ConfigEntryDocumentInfo>(&value.to_string()).expect("decode the config document"),
         origin: Origin::File,
     });
-    let catalog = Catalog::from_entries(std::slice::from_ref(&entry));
+    let catalog = test_catalog(&value, MapEnv::default()).await;
     let agents = test_agents(std::slice::from_ref(&entry), "/home/test").await;
 
     let sessions = Sessions::new(
@@ -165,14 +172,13 @@ async fn prepared_request_matches_the_typescript_body() {
     let setup = setup(None).await;
     instruction_state::prepare(&setup.database, &setup.bus, &setup.list, "ses_1")
         .expect("prepare the builtin instructions");
-    let env = MapEnv::default();
     let loaded = context::load_with(
         &LoadInput {
             database: &setup.database,
             store: &setup.store,
-            catalog: &setup.catalog,
+            models: &setup.catalog.models,
+            resolver: &setup.catalog.resolver,
             agents: &setup.agents.service,
-            env: &env,
             builtins: setup.builtins(),
         },
         "ses_1",
@@ -211,14 +217,13 @@ async fn configured_agent_system_replaces_the_default_prompt() {
     let setup = setup(Some("You are a test agent.")).await;
     instruction_state::prepare(&setup.database, &setup.bus, &setup.list, "ses_1")
         .expect("prepare the builtin instructions");
-    let env = MapEnv::default();
     let loaded = context::load_with(
         &LoadInput {
             database: &setup.database,
             store: &setup.store,
-            catalog: &setup.catalog,
+            models: &setup.catalog.models,
+            resolver: &setup.catalog.resolver,
             agents: &setup.agents.service,
-            env: &env,
             builtins: setup.builtins(),
         },
         "ses_1",
@@ -229,4 +234,29 @@ async fn configured_agent_system_replaces_the_default_prompt() {
     let request = model_request::prepare(&loaded, &app());
     let SystemPart::Text { text, .. } = request.system.first().expect("the request carries a system prompt");
     assert_eq!(text.as_str(), "You are a test agent.");
+}
+
+#[tokio::test]
+async fn unresolved_provider_variables_report_the_resolver_error() {
+    let setup = setup_with(config_with_base_url(None, "https://${MISSING_HOST}/v1")).await;
+    let error = context::load_with(
+        &LoadInput {
+            database: &setup.database,
+            store: &setup.store,
+            models: &setup.catalog.models,
+            resolver: &setup.catalog.resolver,
+            agents: &setup.agents.service,
+            builtins: setup.builtins(),
+        },
+        "ses_1",
+        setup.list,
+    )
+    .await
+    .err()
+    .expect("the model does not resolve");
+    assert!(matches!(error, ContextError::ModelResolution(Error::UnresolvedProviderVariables { .. })));
+    assert_eq!(
+        error.to_string(),
+        "Cannot initialize anthropic-test/test-model: MISSING_HOST is required to resolve the provider endpoint"
+    );
 }

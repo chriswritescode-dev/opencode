@@ -6,9 +6,10 @@ use std::sync::{Arc, Mutex};
 
 use futures_util::FutureExt;
 use futures_util::future::BoxFuture;
-use opencode_ai::{AiError, Env};
+use opencode_ai::AiError;
 use opencode_bus::{Bus, BusError, Definition, PublishOptions};
-use opencode_catalog::legacy::Catalog;
+use opencode_catalog::model::ModelService;
+use opencode_catalog::resolver::Resolver;
 use opencode_contract::codec::{Encode, encode_json};
 use opencode_contract::generated::{
     AbsolutePath, LocationRef, SessionExecutionFailedData, SessionExecutionInterruptedData,
@@ -71,10 +72,10 @@ impl SessionExecution for NoopExecution {
 }
 
 pub trait Placed: Send + Sync {
-    fn catalog(&self) -> &Catalog;
+    fn models(&self) -> &ModelService;
+    fn resolver(&self) -> &Resolver;
     fn agents(&self) -> &AgentService;
     fn builtins(&self) -> &BuiltinsInput;
-    fn env(&self) -> &dyn Env;
     fn location(&self) -> Option<&LocationRef>;
     fn is_closed(&self) -> bool;
 }
