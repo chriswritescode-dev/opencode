@@ -48,6 +48,8 @@ async fn the_host_sees_only_the_allowlisted_environment() {
     config.directory = project.path().to_owned();
     config.vars.push((OsString::from("OPENCODE_PASSWORD"), OsString::from("hunter2")));
     config.vars.push((OsString::from("OPENCODE_SERVER_PASSWORD"), OsString::from("hunter2")));
+    config.vars.push((OsString::from("npm_config_registry"), OsString::from("https://registry.example.invalid/")));
+    config.vars.push((OsString::from("NODE_EXTRA_CA_CERTS"), OsString::from("/tmp/opencode-test-ca.pem")));
     let Some(runtime) = support::runtime(&config).await else { return };
 
     let mut spawned = spawn(&config, &runtime).await.expect("a spawned host");
@@ -55,6 +57,8 @@ async fn the_host_sees_only_the_allowlisted_environment() {
 
     let names = value.as_array().expect("a list").iter().map(|name| name.as_str().expect("a name")).collect::<Vec<_>>();
     assert!(names.contains(&"PATH"), "an allowlisted PATH reaches the host");
+    assert!(names.contains(&"npm_config_registry"), "an npm registry setting reaches the host");
+    assert!(names.contains(&"NODE_EXTRA_CA_CERTS"), "an extra CA bundle reaches the host");
     for forbidden in ["OPENCODE_PASSWORD", "OPENCODE_SERVER_PASSWORD", "SIDECAR_DOTENV"] {
         assert!(!names.contains(&forbidden), "{forbidden} must not reach the host");
     }
@@ -77,6 +81,39 @@ async fn print_output_does_not_break_the_protocol() {
     for marker in ["sidecar-print-marker:stdout", "sidecar-print-marker:stderr"] {
         assert!(wait_for(&spawned, marker).await, "{marker} is kept");
     }
+}
+
+#[cfg(target_os = "linux")]
+#[tokio::test]
+async fn the_plugin_bundle_is_present_but_not_loaded_until_used() {
+    let config = support::config();
+    let Some(runtime) = support::runtime(&config).await else { return };
+
+    let mut spawned = spawn(&config, &runtime).await.expect("a spawned host");
+    for name in ["host.js", "plugins.js", "bunfig.toml"] {
+        let path = spawned.directory().join(name);
+        assert!(std::fs::metadata(&path).expect("the file exists").is_file(), "{name} is a regular file");
+    }
+
+    let echoed = call(&mut spawned, 1, "host.echo", json!({ "warm": true })).await;
+    assert_eq!(echoed, json!({ "warm": true }));
+    tokio::time::sleep(Duration::from_millis(300)).await;
+    let before = rss(spawned.pid);
+
+    let located = call(&mut spawned, 2, "host.location", Value::Null).await;
+    assert_eq!(located, Value::Null);
+
+    tokio::time::sleep(Duration::from_millis(300)).await;
+    let after = rss(spawned.pid);
+    assert!(after.saturating_sub(before) < 5 * 1024 * 1024, "host.location loaded plugins.js");
+}
+
+#[cfg(target_os = "linux")]
+fn rss(pid: u32) -> u64 {
+    let status = std::fs::read_to_string(format!("/proc/{pid}/status")).expect("the process status");
+    let line = status.lines().find(|line| line.starts_with("VmRSS:")).expect("VmRSS");
+    let kib = line.split_whitespace().nth(1).expect("a value").parse::<u64>().expect("kilobytes");
+    kib * 1024
 }
 
 async fn call(spawned: &mut Spawned, id: u64, method: &str, params: Value) -> Value {

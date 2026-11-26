@@ -84,7 +84,7 @@ pub async fn boot_location(
     })
 }
 
-fn normalize_posix(input: &str) -> String {
+pub fn normalize_posix(input: &str) -> String {
     if input.is_empty() {
         return ".".to_string();
     }
@@ -104,7 +104,7 @@ fn normalize_posix(input: &str) -> String {
     normalized
 }
 
-fn normalize_windows(input: &str) -> String {
+pub fn normalize_windows(input: &str) -> String {
     if input.is_empty() {
         return ".".to_string();
     }

@@ -9,6 +9,7 @@ mod credential;
 mod credential_refresh;
 mod integration;
 mod integration_connect;
+mod legacy;
 mod model;
 mod models_dev;
 mod models_dev_service;

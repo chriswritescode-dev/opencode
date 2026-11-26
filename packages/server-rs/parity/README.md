@@ -12,9 +12,27 @@ Runs a scenario against the TypeScript reference server and a candidate server, 
 - `--deviations <dir>` selects the deviation ledger and defaults to `packages/server-rs/parity/deviations`; tests use it to supply a temporary ledger.
 - `--only <parts>` restricts the comparison to a comma list drawn from `steps,events,database,files,logs,model` and defaults to all six; see [Comparison modes](#comparison-modes).
 - `--tables <names>` is a comma list of table names that restricts the database comparison per database file; it requires `database` in `--only`.
+- `--allow-pending` loads deviations whose `Accepted:` line starts with `pending` and matches them like accepted ones, so a candidate can be checked before the owner accepts the deviation; see [Deviations](#deviations).
 - Remaining positional arguments are scenario files. With none, every `parity/scenarios/*.scenario.ts` file runs in sorted order. A scenario name is its path relative to `parity/scenarios` without `.scenario.ts`, falling back to the basename for files outside that directory.
 - Each run writes `parity/out/<scenario>/reference.json`, `candidate.json` and `differences.json`, and, once at least one scenario has been captured, `parity/out/coverage.md` and `parity/out/coverage.json`. Each repetition overwrites the previous files.
 - At startup the harness reads `packages/server-rs/upstream-pin`. When that commit exists in the clone and the TypeScript reference differs from it under the pinned source directories, a warning line names the number of changed files.
+
+## Scenarios
+
+`parity/scenarios` currently holds:
+
+- `agent-model-list`: `GET /api/agent` and `GET /api/model`.
+- `config-routes`: `GET /api/config`, `GET /api/config/shell`, `PATCH /api/experimental/config`, then a re-read.
+- `debug-routes`: `POST /api/debug/heap-dump`.
+- `file-read`: `GET /api/fs/read` for an existing and a missing file, and `GET /api/fs/list`.
+- `info-auth`: `GET /api/info` with basic, query and no credentials.
+- `location`: a location reload and a subdirectory Location load, each waiting for `plugin.updated`.
+- `location-routes`: the location, debug-location list, evict and reload routes, and directory-scoped loads including a missing directory.
+- `project-routes`: project list and update, and archived-query validation.
+- `prompt-text`: a text prompt through the Anthropic route.
+- `prompt-text-only`: a text prompt through the Anthropic route with every tool denied, so the model request has an empty tool list.
+- `prompt-tool`: a scripted `read` tool call.
+- `session-create-list`: session create with and without a title, the `session.created` events, list and get.
 
 ## Steps
 
@@ -189,6 +207,12 @@ Every difference from the TypeScript server must be covered by a file in the dev
 `Accepted:` line has a non-empty owner and date; a value starting with `pending` in any case is not accepted, so the
 current ledger of `Accepted: pending owner` files explains nothing and only produces warnings.
 
+Without `--allow-pending`, a pending file explains nothing and only warns. With `--allow-pending`, pending files are
+loaded and matched like accepted ones, so they can check a candidate against deviations that wait for owner
+acceptance. A pending file with no `parity` block explains nothing, even with `--allow-pending`, and a scenario whose
+differences a pending deviation explains prints `PASS <scenario> (<n> explained by pending <ids>)`. CI never passes
+the flag, so a pending deviation still counts as a difference there.
+
 A scenario passes when every difference matches an accepted deviation. It prints
 `PASS <scenario> (<n> explained by <ids>)`; a difference that matches no accepted deviation still fails the scenario
 as before.
@@ -211,5 +235,6 @@ messages.
 - `2`: a scenario, start, configuration or ledger error, such as a server that did not start, an invalid flag value, an
   unreadable cassette or a missing cassette interaction, unused model replies, an event stream that fails or ends while
   a `waitEvent` waits, a search index that does not settle within 30 s, or an accepted deviation file with no `parity`
-  block. Any unexpected harness error prints `parity: <message>` and exits `2`.
+  block. Any unexpected harness error prints `parity: <message>` and
+  exits `2`.
 - `128 + <signal>`: the harness received `SIGINT`, `SIGTERM` or `SIGHUP`.

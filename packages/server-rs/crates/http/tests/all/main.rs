@@ -1,3 +1,4 @@
+mod agent;
 mod auth;
 mod compression;
 mod config;
@@ -6,16 +7,23 @@ mod coverage;
 mod credential;
 mod debug;
 mod event;
+mod form;
 mod info;
 mod integration;
 mod location;
 mod model;
 mod pairing;
+mod permission;
+mod permission_oracle;
+mod plugin;
 mod project;
 mod provider;
+mod registry;
 mod request_site;
 mod router;
+mod search;
 mod serve;
+mod session;
 mod session_log;
 mod status;
 mod ticket;
@@ -66,12 +74,92 @@ fn services_with_env(start_directory: &Path, home: PathBuf, vars: &[(&str, Strin
     };
     Arc::new(GlobalServices::new(
         database,
-        bus,
         paths,
         start_directory.to_string_lossy().into_owned(),
         Arc::new(environment),
+        bus,
+        global_plugins(),
+        "test-version".to_owned(),
+        "test".to_owned(),
         Arc::new(Vec::new()),
     ))
+}
+
+fn services_with_config(start_directory: &Path, config: &str) -> Arc<GlobalServices> {
+    let (database, _) = Database::open(DatabaseLocation::Memory, &std::env::temp_dir()).expect("open the database");
+    let database = Arc::new(database);
+    let home = temp_directory("services-config-home");
+    let paths =
+        GlobalPaths::from_vars(|name| (name == "HOME").then(|| home.clone().into_os_string())).expect("global paths");
+    let bus = opencode_bus::Bus::new(database.clone(), opencode_bus::BusOptions::default());
+    let config = config.to_owned();
+    Arc::new(GlobalServices::new(
+        database,
+        paths,
+        start_directory.to_string_lossy().into_owned(),
+        Arc::new(move |name: &str| match name {
+            "OPENCODE_CONFIG_CONTENT" => Some(OsString::from(&config)),
+            "OPENCODE_DISABLE_MODELS_FETCH" => Some(OsString::from("1")),
+            _ => None,
+        }),
+        bus,
+        global_plugins(),
+        "test-version".to_owned(),
+        "test".to_owned(),
+        Arc::new(Vec::new()),
+    ))
+}
+
+fn offline_env() -> opencode_http::services::ConfigEnv {
+    Arc::new(|name: &str| (name == "OPENCODE_DISABLE_MODELS_FETCH").then(|| OsString::from("1")))
+}
+
+fn session_app(start_directory: &Path) -> (Arc<App>, Arc<opencode_http::state::ServerState>) {
+    let (state, _) = opencode_http::state::ServerState::open(DatabaseLocation::Memory, &std::env::temp_dir())
+        .expect("open the state");
+    let state = Arc::new(state);
+    let home = temp_directory("session-home");
+    let paths =
+        GlobalPaths::from_vars(|name| (name == "HOME").then(|| home.clone().into_os_string())).expect("global paths");
+    let mut services = GlobalServices::new(
+        state.db.clone(),
+        paths,
+        start_directory.to_string_lossy().into_owned(),
+        offline_env(),
+        state.bus.clone(),
+        global_plugins(),
+        "test-version".to_owned(),
+        "test".to_owned(),
+        Arc::new(Vec::new()),
+    );
+    services.attach_sessions(state.bus.clone(), state.store.clone(), "test-version".to_owned());
+    let app = App::new(Options {
+        password: "pw".to_owned(),
+        version: "test-version".to_owned(),
+        cors: Vec::new(),
+        tmp: PathBuf::from("/tmp/opencode-http-test"),
+        hostname: None,
+        urls: Arc::new(|| vec!["http://127.0.0.1:4096".to_owned()]),
+        state: Some(state.clone()),
+        services: Some(Arc::new(services)),
+    });
+    app.status().ready();
+    (app, state)
+}
+
+fn global_plugins() -> Arc<opencode_plugin::GlobalPlugins> {
+    Arc::new(opencode_plugin::GlobalPlugins {
+        host: None,
+        router: opencode_plugin::PluginRouter::default(),
+        sdk: opencode_plugin::SdkPlugins::default(),
+        updates: opencode_plugin::Updates::new(None, opencode_plugin::NpmPaths::default()),
+        paths: opencode_plugin::NpmPaths::default(),
+        app: opencode_plugin::AppInfo {
+            name: "opencode".to_owned(),
+            version: "test-version".to_owned(),
+            channel: "local".to_owned(),
+        },
+    })
 }
 
 fn ready_app_with_services(services: Arc<GlobalServices>) -> Arc<App> {
