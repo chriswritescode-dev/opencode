@@ -266,7 +266,9 @@ fn fresh_oauth() -> CredentialValue {
 async fn uses_a_public_key_and_disables_paid_models_without_credentials() {
     let mut harness = start(Input::new(Vec::new())).await;
     let _seeded = seed_provider(&harness, opencode_id(), |_| {}, vec![("paid", 1.0, 0.0)]).await;
-    add_plugin(&mut harness, Routes::new()).await;
+    let routes = Routes::new();
+    add_plugin(&mut harness, routes.clone()).await;
+    assert!(routes.requests().is_empty(), "a location without credentials must not contact the console");
 
     let provider = harness.services.provider.get(&opencode_id()).await.unwrap().expect("the opencode provider");
     assert_eq!(api_key(&provider).as_deref(), Some("public"));

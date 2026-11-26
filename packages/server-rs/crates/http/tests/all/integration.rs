@@ -547,6 +547,64 @@ async fn production_boot_registers_the_native_provider_plugins() {
 }
 
 #[tokio::test]
+async fn boots_the_console_plugin_without_credentials() {
+    let (services, app, reference) = boot("integration-console-boot").await;
+    let lease = services.locations.get(&reference).await.expect("boot the location");
+
+    let response = app.handle(authorized("GET", "/api/integration")).await;
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = body_json(response).await;
+    let data = body["data"].as_array().expect("an integration list");
+    let integration = data.iter().find(|entry| entry["id"] == "opencode").expect("the OpenCode integration");
+    assert_eq!(integration["name"], "OpenCode");
+
+    let response = app.handle(authorized("GET", "/api/integration/opencode")).await;
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = body_json(response).await;
+    let methods = body["data"]["methods"].as_array().expect("an integration method list");
+    assert!(methods.iter().any(|method| {
+        method["type"] == "oauth"
+            && method["id"] == "device"
+            && method["form"][0]["default"] == "https://opencode.ai/console"
+    }));
+    assert!(methods.iter().any(|method| { method["type"] == "key" && method["label"] == "API key (service account)" }));
+
+    let response = app.handle(authorized("GET", "/api/provider/opencode")).await;
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = body_json(response).await;
+    assert_eq!(body["data"]["activation"], "enabled");
+    assert_eq!(body["data"]["settings"]["apiKey"], "public");
+
+    let response = app.handle(authorized("GET", "/api/model")).await;
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = body_json(response).await;
+    let models = body["data"].as_array().expect("a model list");
+    let opencode = models.iter().filter(|model| model["providerID"] == "opencode").collect::<Vec<_>>();
+    assert!(!opencode.is_empty());
+    assert!(opencode.iter().all(|model| {
+        model["cost"].as_array().is_some_and(|costs| costs.iter().all(|cost| cost["input"].as_f64() == Some(0.0)))
+    }));
+    assert!(lease.services().console.web_search().is_none());
+}
+
+#[tokio::test]
+async fn the_console_plugin_survives_a_config_removal() {
+    let (services, app, reference) = boot("integration-console-removed").await;
+    std::fs::create_dir_all(&services.paths.config).expect("create the global config directory");
+    std::fs::write(services.paths.config.join("opencode.json"), r#"{"plugins":["-opencode.provider.opencode"]}"#)
+        .expect("write the global config");
+    let _lease = services.locations.get(&reference).await.expect("boot the location");
+
+    let response = app.handle(authorized("GET", "/api/integration/opencode")).await;
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = body_json(response).await;
+    assert_eq!(body["data"]["name"], "OpenCode");
+    let methods = body["data"]["methods"].as_array().expect("an integration method list");
+    assert!(methods.iter().any(|method| method["type"] == "oauth" && method["id"] == "device"));
+    assert!(methods.iter().any(|method| { method["type"] == "key" && method["label"] == "API key (service account)" }));
+}
+
+#[tokio::test]
 async fn invalid_bodies_are_400() {
     let (_services, app, _reference) = boot("integration-invalid").await;
     for (uri, expected) in [
