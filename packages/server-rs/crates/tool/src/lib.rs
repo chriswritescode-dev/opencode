@@ -9,6 +9,7 @@ pub mod policy;
 pub mod registry;
 pub mod runtime;
 pub mod snapshot;
+pub mod tools;
 
 pub use context::{Content, ToolContext, ToolError, ToolOutput, ToolRuntime, invocation};
 pub use definition::{Freeform, ToolDefinition, ToolOptions, ToolSpec};

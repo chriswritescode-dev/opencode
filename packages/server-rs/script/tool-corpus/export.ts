@@ -1,8 +1,12 @@
 import { Cause, Duration, Effect, Exit, Layer, LayerMap, Stream } from "effect"
+import fs from "node:fs/promises"
+import os from "node:os"
+import path from "node:path"
 import { Agent } from "@opencode/core/agent"
 import { App } from "@opencode/core/app"
 import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
 import { ConfigPluginSource } from "@opencode/core/config/plugin/source"
+import { Environment } from "@opencode/core/environment/index"
 import { Flag } from "@opencode/core/flag"
 import { Instance } from "@opencode/core/instance"
 import { Location } from "@opencode/core/location"
@@ -15,21 +19,37 @@ import { Session } from "@opencode/core/session"
 import { SessionMessage } from "@opencode/core/session/message"
 import { Tool } from "@opencode/core/tool"
 import { modelTools } from "@opencode/core/tool/model-policy"
+import { ReadTool } from "@opencode/core/tool/plugin/read"
+import { ReadToolFileSystem } from "@opencode/core/tool/read-filesystem"
 import { definition, execute as executeTool } from "@opencode/core/tool/runtime"
 import { ToolOutput } from "@opencode/core/tool-output"
 import type { Model } from "@opencode/schema/model"
 import type { Info } from "@opencode/schema/tool"
 import { LayerNode } from "@opencode/util/effect/layer-node"
+import { LayerNodePlatform } from "@opencode/util/effect/app-node-platform"
+import { CrossSpawnSpawner } from "@opencode/util/cross-spawn-spawner"
 import { FSUtil } from "@opencode/util/fs-util"
 import { Global } from "@opencode/util/global"
 import { Npm } from "@opencode/util/npm"
+import { ChildProcessSpawner } from "effect/process"
 import { Bus } from "../src/bus"
 import { Database } from "../src/database/database"
 import { tempGlobalLayer } from "./fixture/global"
 import { offlineModels } from "./fixture/models"
 import { tmpdirScoped } from "./fixture/tmpdir"
-import { toolNodeReplacements } from "./lib/tool"
-
+import { Config } from "@opencode/core/config"
+import { FileAccess } from "@opencode/core/file-access"
+import { Image } from "@opencode/core/image"
+import { InstructionDiscovery } from "@opencode/core/instruction-discovery"
+import { Permission } from "@opencode/core/permission"
+import { Skill } from "@opencode/core/skill"
+import { SessionInstructions } from "@opencode/core/session/instructions"
+import { toSessionError } from "@opencode/core/session/to-session-error"
+import { makeLocationNode } from "@opencode/util/effect/app-node"
+import { hostEnvironmentLayer } from "./fixture/environment"
+import { location } from "./fixture/location"
+import { permissionLayer } from "./lib/permission"
+import { registerToolPlugin, toolIdentity, toolNodeReplacements } from "./lib/tool"
 const area = process.argv[2]
 
 const porter = new Set(["read", "write", "edit", "patch", "glob", "grep", "skill"])
@@ -674,10 +694,913 @@ async function exportTruncate() {
   console.log(`__TOOL_CORPUS__${JSON.stringify(exported)}`)
 }
 
+type Part =
+  | { text: string }
+  | { repeat: { text: string; count: number } }
+  | { padded: { count: number; width: number; separator?: string; final?: boolean; prefixAt?: { index: number; text: string } } }
+
+type Fixture =
+  | { path: string; kind?: "file"; parts: Part[] }
+  | { path: string; kind: "binary"; base64: string }
+  | { path: string; kind: "directory" }
+  | { path: string; kind: "symlink"; target: string }
+  | { path: string; kind: "truncate"; headerBase64?: string; size: number }
+
+interface ReadFilesystemSpec {
+  name: string
+  fixtures?: Fixture[]
+  path: string
+  resource: string
+  page?: { offset?: number; limit?: number }
+}
+
+function partText(parts: Part[]): string {
+  return parts
+    .map((part) => {
+      if ("text" in part) return part.text
+      if ("repeat" in part) return part.repeat.text.repeat(part.repeat.count)
+      const padded = part.padded
+      const lines = Array.from({ length: padded.count }, (_, index) => {
+        const prefix = padded.prefixAt?.index === index ? padded.prefixAt.text : ""
+        return prefix + String(index + 1).padEnd(padded.width, "x")
+      })
+      return lines.join(padded.separator ?? "\n") + (padded.final === false ? "" : (padded.separator ?? "\n"))
+    })
+    .join("")
+}
+
+async function materializeFixtures(root: string, outside: string, fixtures: Fixture[]) {
+  for (const fixture of fixtures) {
+    const target = fixture.path.replaceAll("{{root}}", root).replaceAll("{{outside}}", outside)
+    await fs.mkdir(path.dirname(target), { recursive: true })
+    if (fixture.kind === "directory") await fs.mkdir(target, { recursive: true })
+    else if (fixture.kind === "binary") await fs.writeFile(target, Buffer.from(fixture.base64, "base64"))
+    else if (fixture.kind === "symlink")
+      await fs.symlink(fixture.target.replaceAll("{{root}}", root).replaceAll("{{outside}}", outside), target)
+    else if (fixture.kind === "truncate") {
+      await fs.writeFile(target, fixture.headerBase64 ? Buffer.from(fixture.headerBase64, "base64") : "")
+      await fs.truncate(target, fixture.size)
+    } else await fs.writeFile(target, partText(fixture.parts))
+  }
+}
+
+function readFilesystemProgram(spec: ReadFilesystemSpec, root: string) {
+  return Effect.gen(function* () {
+    const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
+    const environment = Environment.makeFiles(Environment.makeLocalDriver(spawner))
+    const target = spec.path.replaceAll("{{root}}", root)
+    const exit = yield* ReadToolFileSystem.read(
+      environment,
+      AbsolutePath.make(target),
+      spec.resource,
+      spec.page ?? {},
+    ).pipe(Effect.exit)
+    if (Exit.isSuccess(exit)) {
+      const result = exit.value
+      const output =
+        result.type === "media"
+          ? {
+              type: "media",
+              uri: result.uri,
+              mime: result.mime,
+              name: result.name,
+              bytesBase64: Buffer.from(result.bytes).toString("base64"),
+            }
+          : result
+      const model = ReadTool.toModelContent(spec.resource, spec.page?.offset, result)
+      return {
+        ok: true,
+        output,
+        model: typeof model === "string" ? [{ type: "text", text: model }] : model,
+      }
+    }
+    const error = Cause.squash(exit.cause)
+    return {
+      ok: false,
+      kind: (error as { _tag?: string })?._tag ?? (error instanceof Error ? error.constructor.name : "unknown"),
+      message: error instanceof Error ? error.message : String(error),
+    }
+  }).pipe(Effect.provide(LayerNode.compile(LayerNode.group([CrossSpawnSpawner.node, LayerNodePlatform.filesystem]))))
+}
+
+const textCase = (name: string, content: string, page: { offset?: number; limit?: number } = {}): ReadFilesystemSpec => ({
+  name,
+  fixtures: [{ path: "{{root}}/lines.txt", parts: [{ text: content }] }],
+  path: "{{root}}/lines.txt",
+  resource: "lines.txt",
+  page,
+})
+
+const gif87 = Buffer.concat([
+  Buffer.from("GIF87a"),
+  Buffer.from("01000100800000000000ffffff2c00000000010001000002024401003b", "hex"),
+]).toString("base64")
+const gif89 = Buffer.from(gif87, "base64").toString("base64")
+
+function readFilesystemSpecs(): ReadFilesystemSpec[] {
+  return [
+    textCase("reads a partial GIF signature as text", "GIF8 is text"),
+    textCase("preserves a selected trailing blank line before continuation", "alpha\n\nomega\n", { offset: 1, limit: 2 }),
+    textCase("preserves multiple selected trailing blank lines at a noninitial offset", "before\nalpha\n\n\nomega\n", {
+      offset: 2,
+      limit: 3,
+    }),
+    textCase("preserves a selected trailing blank line at EOF", "alpha\n\n", { limit: 2 }),
+    textCase("preserves internal blank lines in a page", "alpha\n\nomega\n", { limit: 3 }),
+    textCase("preserves continuation for a nonblank page", "alpha\n\nomega\n", { limit: 1 }),
+    textCase("strips only the terminal file newline in a whole-file read", "alpha\n\n"),
+    textCase("does not add a line for a whole-file terminal newline", "alpha\n"),
+    textCase("preserves a whole-file read without a terminal newline", "alpha"),
+    textCase("preserves empty whole-file output", ""),
+    textCase("preserves empty-file page output", "", { limit: 2 }),
+    textCase("numbers the only blank line in a newline-only file", "\n", { limit: 1 }),
+    textCase("keeps the newline of a whole newline-only file", "\n"),
+    textCase("numbers a single blank line before continuation", "alpha\n\nomega\n", { offset: 2, limit: 1 }),
+    textCase("counts the last blank line when an offset is past EOF", "alpha\n\n", { offset: 9, limit: 1 }),
+    {
+      name: "applies the default line limit at physical line boundaries",
+      fixtures: [
+        {
+          path: "{{root}}/dense.txt",
+          parts: [{ repeat: { text: "x\r\n", count: 1_999 } }, { text: "last" }],
+        },
+      ],
+      path: "{{root}}/dense.txt",
+      resource: "dense.txt",
+    },
+    {
+      name: "reports a continuation after two thousand lines",
+      fixtures: [
+        {
+          path: "{{root}}/dense.txt",
+          parts: [{ repeat: { text: "x\r\n", count: 1_999 } }, { text: "\r\nlast" }],
+        },
+      ],
+      path: "{{root}}/dense.txt",
+      resource: "dense.txt",
+    },
+    {
+      name: "applies the byte limit to the returned content of small files",
+      fixtures: [
+        {
+          path: "{{root}}/bytes.txt",
+          parts: [{ repeat: { text: `${"é".repeat(799)}x\n`, count: 32 } }],
+        },
+      ],
+      path: "{{root}}/bytes.txt",
+      resource: "bytes.txt",
+    },
+    {
+      name: "truncates at the byte limit with continuation",
+      fixtures: [
+        {
+          path: "{{root}}/bytes.txt",
+          parts: [{ repeat: { text: `${"x".repeat(2_001)}\n`, count: 25 } }, { repeat: { text: "é", count: 500 } }],
+        },
+      ],
+      path: "{{root}}/bytes.txt",
+      resource: "bytes.txt",
+    },
+    {
+      name: "reads an extensionless GIF as an image",
+      fixtures: [{ path: "{{root}}/pixel", kind: "binary", base64: gif87 }],
+      path: "{{root}}/pixel",
+      resource: "pixel",
+    },
+    {
+      name: "reads a renamed GIF as an image",
+      fixtures: [{ path: "{{root}}/pixel.txt", kind: "binary", base64: gif89 }],
+      path: "{{root}}/pixel.txt",
+      resource: "pixel.txt",
+    },
+    { name: "preserves the environment not-found error", path: "{{root}}/missing.txt", resource: "missing.txt" },
+    {
+      name: "returns a listing when read reports a directory",
+      fixtures: [
+        { path: "{{root}}/folder", kind: "directory" },
+        { path: "{{root}}/file.txt", parts: [{ text: "hello" }] },
+      ],
+      path: "{{root}}",
+      resource: "folder",
+    },
+    {
+      name: "reads malformed UTF-8 lossily",
+      fixtures: [{ path: "{{root}}/malformed.txt", kind: "binary", base64: Buffer.from([0x68, 0x69, 0x80]).toString("base64") }],
+      path: "{{root}}/malformed.txt",
+      resource: "malformed.txt",
+    },
+    {
+      name: "rejects null-byte binary content",
+      fixtures: [{ path: "{{root}}/archive.dat", kind: "binary", base64: Buffer.from([0, 1, 2, 3]).toString("base64") }],
+      path: "{{root}}/archive.dat",
+      resource: "archive.dat",
+    },
+    {
+      name: "reads text despite a binary-associated extension",
+      fixtures: [{ path: "{{root}}/notes.docx", parts: [{ text: "plain text" }] }],
+      path: "{{root}}/notes.docx",
+      resource: "notes.docx",
+    },
+    {
+      name: "lists unresolved symlinks",
+      fixtures: [
+        { path: "{{root}}/folder", kind: "directory" },
+        { path: "{{root}}/file.txt", parts: [{ text: "hello" }] },
+        { path: "{{root}}/escape", kind: "symlink", target: "{{outside}}/target.txt" },
+        { path: "{{root}}/broken", kind: "symlink", target: "{{root}}/missing.txt" },
+      ],
+      path: "{{root}}",
+      resource: "folder",
+    },
+    {
+      name: "reads a symlinked directory as a listing",
+      fixtures: [
+        { path: "{{root}}/target", kind: "directory" },
+        { path: "{{root}}/target/file.txt", parts: [{ text: "hello" }] },
+        { path: "{{root}}/link", kind: "symlink", target: "{{root}}/target" },
+      ],
+      path: "{{root}}/link",
+      resource: "link",
+    },
+    {
+      name: "returns the last lines when the offset is past the end",
+      fixtures: [{ path: "{{root}}/short.txt", parts: [{ text: "one\ntwo\nthree\nfour\nfive\n" }] }],
+      path: "{{root}}/short.txt",
+      resource: "short.txt",
+      page: { offset: 9, limit: 2 },
+    },
+    {
+      name: "returns no lines for an empty file with a past-end offset",
+      fixtures: [{ path: "{{root}}/empty.txt", parts: [{ text: "" }] }],
+      path: "{{root}}/empty.txt",
+      resource: "empty.txt",
+      page: { offset: 5 },
+    },
+    {
+      name: "caps a past-end tail at the byte limit",
+      fixtures: [
+        { path: "{{root}}/long.txt", parts: [{ padded: { count: 1_800, width: 1_000, final: false } }] },
+      ],
+      path: "{{root}}/long.txt",
+      resource: "long.txt",
+      page: { offset: 2_000, limit: 2_000 },
+    },
+    {
+      name: "returns multi-chunk past-end lines",
+      fixtures: [{ path: "{{root}}/lf.txt", parts: [{ padded: { count: 3_000, width: 100 } }] }],
+      path: "{{root}}/lf.txt",
+      resource: "lf.txt",
+      page: { offset: 5_000 },
+    },
+    {
+      name: "keeps a mid-file byte order mark as line content",
+      fixtures: [
+        {
+          path: "{{root}}/bom.txt",
+          parts: [{ padded: { count: 3_000, width: 100, final: false, prefixAt: { index: 2_900, text: "\uFEFF" } } }],
+        },
+      ],
+      path: "{{root}}/bom.txt",
+      resource: "bom.txt",
+      page: { offset: 3_001 },
+    },
+    {
+      name: "truncates a huge last line in a past-end tail",
+      fixtures: [
+        {
+          path: "{{root}}/huge-last.txt",
+          parts: [
+            { padded: { count: 10, width: 100 } },
+            { repeat: { text: "z", count: 300 * 1024 } },
+          ],
+        },
+      ],
+      path: "{{root}}/huge-last.txt",
+      resource: "huge-last.txt",
+      page: { offset: 12 },
+    },
+    {
+      name: "caps a wide past-end tail at the byte limit",
+      fixtures: [{ path: "{{root}}/wide.txt", parts: [{ padded: { count: 200, width: 3_000 } }] }],
+      path: "{{root}}/wide.txt",
+      resource: "wide.txt",
+      page: { offset: 201 },
+    },
+    {
+      name: "starts a negative offset that many lines before the end",
+      fixtures: [{ path: "{{root}}/small.txt", parts: [{ text: "one\ntwo\nthree\nfour\nfive\n" }] }],
+      path: "{{root}}/small.txt",
+      resource: "small.txt",
+      page: { offset: -3 },
+    },
+    {
+      name: "limits a negative offset with continuation",
+      fixtures: [{ path: "{{root}}/limited.txt", parts: [{ text: "one\ntwo\nthree\nfour\nfive\n" }] }],
+      path: "{{root}}/limited.txt",
+      resource: "limited.txt",
+      page: { offset: -4, limit: 2 },
+    },
+    {
+      name: "starts a negative offset from the end of a multi-chunk file",
+      fixtures: [{ path: "{{root}}/lf.txt", parts: [{ padded: { count: 3_000, width: 100 } }] }],
+      path: "{{root}}/lf.txt",
+      resource: "lf.txt",
+      page: { offset: -50 },
+    },
+    {
+      name: "limits a negative offset window in a multi-chunk file",
+      fixtures: [{ path: "{{root}}/window.txt", parts: [{ padded: { count: 3_000, width: 100 } }] }],
+      path: "{{root}}/window.txt",
+      resource: "window.txt",
+      page: { offset: -50, limit: 10 },
+    },
+    {
+      name: "stops a negative whole read at the byte limit",
+      fixtures: [{ path: "{{root}}/whole.txt", parts: [{ padded: { count: 3_000, width: 100 } }] }],
+      path: "{{root}}/whole.txt",
+      resource: "whole.txt",
+      page: { offset: -5_000 },
+    },
+    {
+      name: "caps a wide negative offset at the byte limit",
+      fixtures: [{ path: "{{root}}/wide.txt", parts: [{ padded: { count: 200, width: 3_000 } }] }],
+      path: "{{root}}/wide.txt",
+      resource: "wide.txt",
+      page: { offset: -100 },
+    },
+    {
+      name: "reads the end of a file many chunks long",
+      fixtures: [{ path: "{{root}}/negative.txt", parts: [{ padded: { count: 60_000, width: 50 } }] }],
+      path: "{{root}}/negative.txt",
+      resource: "negative.txt",
+      page: { offset: -5 },
+    },
+    {
+      name: "reads a deep page of a file many chunks long",
+      fixtures: [{ path: "{{root}}/deep.txt", parts: [{ padded: { count: 60_000, width: 50 } }] }],
+      path: "{{root}}/deep.txt",
+      resource: "deep.txt",
+      page: { offset: 45_000, limit: 2 },
+    },
+    {
+      name: "reads a past-end tail of a file many chunks long",
+      fixtures: [{ path: "{{root}}/past.txt", parts: [{ padded: { count: 60_000, width: 50 } }] }],
+      path: "{{root}}/past.txt",
+      resource: "past.txt",
+      page: { offset: 70_000, limit: 3 },
+    },
+    {
+      name: "rejects a negative offset for a directory",
+      fixtures: [{ path: "{{root}}/a.txt", parts: [{ text: "a\n" }] }],
+      path: "{{root}}",
+      resource: "src",
+      page: { offset: -1 },
+    },
+    {
+      name: "pages text with one-based offsets",
+      fixtures: [{ path: "{{root}}/lines.txt", parts: [{ text: "one\r\ntwo\nthree" }] }],
+      path: "{{root}}/lines.txt",
+      resource: "lines.txt",
+      page: { offset: 2, limit: 1 },
+    },
+    {
+      name: "truncates long lines",
+      fixtures: [{ path: "{{root}}/long.txt", parts: [{ text: `${"a".repeat(1_999)}😀tail` }] }],
+      path: "{{root}}/long.txt",
+      resource: "long.txt",
+      page: { limit: 1 },
+    },
+    {
+      name: "enforces the line budget with a continuation offset",
+      fixtures: [
+        {
+          path: "{{root}}/many-lines.txt",
+          parts: [{ padded: { count: 2_001, width: 0, final: false } }],
+        },
+      ],
+      path: "{{root}}/many-lines.txt",
+      resource: "many-lines.txt",
+      page: { limit: 2_000 },
+    },
+    {
+      name: "enforces the byte budget with a continuation offset",
+      fixtures: [
+        {
+          path: "{{root}}/many-bytes.txt",
+          parts: [{ repeat: { text: `${"a".repeat(2_000)}\n`, count: 199 } }, { text: "a".repeat(2_000) }],
+        },
+      ],
+      path: "{{root}}/many-bytes.txt",
+      resource: "many-bytes.txt",
+    },
+    {
+      name: "sorts and pages directory entries",
+      fixtures: [
+        { path: "{{root}}/z", kind: "directory" },
+        { path: "{{root}}/a", kind: "directory" },
+        { path: "{{root}}/b.txt", parts: [{ text: "" }] },
+      ],
+      path: "{{root}}",
+      resource: "folder",
+      page: { offset: 2, limit: 1 },
+    },
+    {
+      name: "stops checking for null bytes after the requested page",
+      fixtures: [
+        {
+          path: "{{root}}/nul.txt",
+          kind: "binary",
+          base64: Buffer.from([...Buffer.from("one\n"), 0]).toString("base64"),
+        },
+      ],
+      path: "{{root}}/nul.txt",
+      resource: "nul.txt",
+      page: { limit: 1 },
+    },
+    {
+      name: "rejects a null byte before the requested page",
+      fixtures: [
+        {
+          path: "{{root}}/nul-prefix.txt",
+          kind: "binary",
+          base64: Buffer.from([...Buffer.from("one"), 0, 10, 116, 119, 111, 10]).toString("base64"),
+        },
+      ],
+      path: "{{root}}/nul-prefix.txt",
+      resource: "nul-prefix.txt",
+      page: { offset: 2, limit: 1 },
+    },
+    {
+      name: "ignores a null byte after a chunked page but rejects it for a past-end offset",
+      fixtures: [
+        {
+          path: "{{root}}/nul.txt",
+          parts: [{ repeat: { text: "x", count: 256 * 1024 } }, { text: "\nselected\n\0\ntail" }],
+        },
+      ],
+      path: "{{root}}/nul.txt",
+      resource: "nul.txt",
+      page: { offset: 2, limit: 1 },
+    },
+    {
+      name: "rejects a null byte after a chunked past-end offset",
+      fixtures: [
+        {
+          path: "{{root}}/nul.txt",
+          parts: [{ repeat: { text: "x", count: 256 * 1024 } }, { text: "\nselected\n\0\ntail" }],
+        },
+      ],
+      path: "{{root}}/nul.txt",
+      resource: "nul.txt",
+      page: { offset: 5, limit: 1 },
+    },
+    {
+      name: "keeps a split byte order mark in a past-end tail",
+      fixtures: [
+        {
+          path: "{{root}}/marked.txt",
+          parts: [{ repeat: { text: "x", count: 256 * 1024 - 2 } }, { text: "\n\uFEFFselected" }],
+        },
+      ],
+      path: "{{root}}/marked.txt",
+      resource: "marked.txt",
+      page: { offset: 3, limit: 1 },
+    },
+    {
+      name: "strips a split byte order mark at a negative offset",
+      fixtures: [
+        {
+          path: "{{root}}/marked.txt",
+          parts: [{ repeat: { text: "x", count: 256 * 1024 - 2 } }, { text: "\n\uFEFFselected" }],
+        },
+      ],
+      path: "{{root}}/marked.txt",
+      resource: "marked.txt",
+      page: { offset: -1, limit: 1 },
+    },
+    {
+      name: "reads page two after fetching more than the first 256KB range",
+      fixtures: [
+        {
+          path: "{{root}}/large.txt",
+          parts: [{ repeat: { text: "a", count: 300 * 1024 } }, { text: "\nsecond\n" }],
+        },
+      ],
+      path: "{{root}}/large.txt",
+      resource: "large.txt",
+      page: { offset: 2, limit: 1 },
+    },
+    {
+      name: "reads after a newline at the first chunk boundary",
+      fixtures: [
+        {
+          path: "{{root}}/boundary.txt",
+          parts: [{ repeat: { text: "a", count: 256 * 1024 - 1 } }, { text: "\nsecond\n" }],
+        },
+      ],
+      path: "{{root}}/boundary.txt",
+      resource: "boundary.txt",
+      page: { offset: 2, limit: 1 },
+    },
+    {
+      name: "preserves the media ingestion limit message",
+      fixtures: [
+        {
+          path: "{{root}}/oversized.png",
+          kind: "truncate",
+          headerBase64: Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).toString("base64"),
+          size: 20 * 1024 * 1024 + 1,
+        },
+      ],
+      path: "{{root}}/oversized.png",
+      resource: "oversized.png",
+    },
+    {
+      name: "reads PDFs as bounded media",
+      fixtures: [{ path: "{{root}}/document.pdf", parts: [{ text: "%PDF-1.7\ncontent" }] }],
+      path: "{{root}}/document.pdf",
+      resource: "document.pdf",
+    },
+  ]
+}
+
+async function exportReadFilesystem() {
+  const base = await fs.mkdtemp(path.join(os.tmpdir(), "opencode-tool-corpus-"))
+  const exported: Array<Record<string, unknown>> = []
+  try {
+    for (const spec of readFilesystemSpecs()) {
+      const root = path.join(base, spec.name.replace(/[^a-zA-Z0-9]+/g, "-"))
+      const outside = `${root}-outside`
+      await fs.mkdir(root, { recursive: true })
+      await fs.mkdir(outside, { recursive: true })
+      if (process.platform !== "win32") await materializeFixtures(root, outside, spec.fixtures ?? [])
+      const exit = await Effect.runPromiseExit(readFilesystemProgram(spec, root))
+      await fs.rm(root, { recursive: true, force: true })
+      await fs.rm(outside, { recursive: true, force: true })
+      if (Exit.isFailure(exit)) {
+        console.error(`corpus: read_filesystem ${spec.name} failed`)
+        console.error(exit.cause)
+        process.exit(1)
+      }
+      const normalized = JSON.stringify({ ...spec, expected: exit.value })
+        .replaceAll(outside, "{{outside}}")
+        .replaceAll(root, "{{root}}")
+      exported.push(JSON.parse(normalized))
+    }
+  } finally {
+    await fs.rm(base, { recursive: true, force: true })
+  }
+  console.log(`__TOOL_CORPUS__${JSON.stringify(exported)}`)
+}
+
+const readToolNode = makeLocationNode({
+  name: "corpus/read-tool-plugin",
+  layer: Layer.effectDiscard(registerToolPlugin(ReadTool.Plugin)),
+  deps: [
+    Tool.node,
+    FileAccess.node,
+    Image.node,
+    Permission.node,
+    SessionInstructions.node,
+    InstructionDiscovery.node,
+    Skill.node,
+    FSUtil.node,
+    Environment.node,
+    Location.node,
+    Config.node,
+    Flag.node,
+  ],
+})
+const corpusConfig = Config.testLayer()
+const corpusImage = AppNodeBuilder.build(Image.node)
+
+interface SkillFixture {
+  id: string
+  name: string
+  path: string
+  content: string
+  files?: Record<string, string>
+}
+
+interface ReadCase {
+  name: string
+  fixtures?: Fixture[]
+  call: { path: string; offset?: number; limit?: number }
+  permission?: { allow?: boolean; deniedResources?: string[] }
+  skills?: SkillFixture[]
+}
+
+const readCase = (
+  name: string,
+  fixtures: Fixture[],
+  call: ReadCase["call"],
+  extra: Partial<ReadCase> = {},
+): ReadCase => ({ name, fixtures, call, ...extra })
+
+const guideSkill: SkillFixture = {
+  id: "guide",
+  name: "Guide",
+  path: "skill://guide/SKILL.md",
+  content: "# Guide\nRead references/style.md",
+  files: { "references/style.md": "Line 1\nLine 2", "references/guide.pdf": "%PDF-1.7\nguide" },
+}
+
+const skillCases = (): ReadCase[] => [
+  readCase("reads virtual skill files", [], { path: "skill://guide/references/style.md", offset: 2, limit: 1 }, {
+    skills: [guideSkill],
+  }),
+  readCase("lists a virtual skill directory", [], { path: "skill://guide/" }, { skills: [guideSkill] }),
+  readCase("returns a missing virtual skill file", [], { path: "skill://guide/missing.md" }, { skills: [guideSkill] }),
+  readCase("rejects an unsafe virtual skill path", [], { path: "skill://guide/../SKILL.md" }, { skills: [guideSkill] }),
+  readCase("rejects a bare virtual skill URI", [], { path: "skill://" }),
+  readCase("rejects a disk-backed skill path", [], { path: "skill://disk/SKILL.md" }, {
+    skills: [{ id: "disk", name: "Disk", path: "/somewhere/disk/SKILL.md", content: "Disk" }],
+  }),
+  readCase("returns a virtual skill PDF as media", [], { path: "skill://guide/references/guide.pdf" }, {
+    skills: [guideSkill],
+  }),
+  readCase("denies a virtual skill before reading", [], { path: "skill://guide/SKILL.md" }, {
+    skills: [guideSkill],
+    permission: { deniedResources: ["guide"] },
+  }),
+  readCase("denies a virtual skill file after the skill check", [], { path: "skill://guide/SKILL.md" }, {
+    skills: [guideSkill],
+    permission: { deniedResources: ["skill://guide/SKILL.md"] },
+  }),
+  readCase("canonicalizes a trailing slash before the read check", [], { path: "skill://guide/SKILL.md/" }, {
+    skills: [guideSkill],
+    permission: { deniedResources: ["skill://guide/SKILL.md"] },
+  }),
+]
+
+function readSpecs(): ReadCase[] {
+  return [
+    readCase("reads and authorizes through the location filesystem", [
+      { path: "{{root}}/README.md", parts: [{ text: "hello" }] },
+    ], { path: "README.md" }),
+    readCase("rejects a zero limit before reading", [
+      { path: "{{root}}/README.md", parts: [{ text: "hello" }] },
+    ], { path: "README.md", limit: 0 }),
+    readCase("does not read when permission is denied", [
+      { path: "{{root}}/README.md", parts: [{ text: "hello" }] },
+    ], { path: "README.md" }, { permission: { allow: false } }),
+    readCase("asks for external approval before reading an external path", [
+      { path: "{{outside}}/notes.txt", parts: [{ text: "hello" }] },
+    ], { path: "{{outside}}/notes.txt" }),
+    readCase("returns a small PNG as native media", [
+      {
+        path: "{{root}}/pixel.png",
+        kind: "binary",
+        base64: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+      },
+    ], { path: "pixel.png" }),
+    readCase("returns a supported image despite a misleading extension", [
+      {
+        path: "{{root}}/pixel.bin",
+        kind: "binary",
+        base64: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+      },
+    ], { path: "pixel.bin" }),
+    readCase("returns PDFs as native media", [
+      { path: "{{root}}/document.pdf", parts: [{ text: "%PDF-1.7\ncontent" }] },
+    ], { path: "document.pdf" }),
+    readCase("returns filesystem failures to the model", [
+      { path: "{{root}}/archive.dat", kind: "binary", base64: Buffer.from("one\narchive\u0000\n").toString("base64") },
+    ], { path: "archive.dat", offset: 2, limit: 1 }),
+    readCase("returns missing paths with ranked suggestions", [
+      { path: "{{root}}/__missing_read_target__.txt.bak", parts: [{ text: "x\n" }] },
+      { path: "{{root}}/copy___missing_read_target__.txt", parts: [{ text: "x\n" }] },
+      { path: "{{root}}/old___missing_read_target__.txt", parts: [{ text: "x\n" }] },
+      { path: "{{root}}/other___missing_read_target__.txt", parts: [{ text: "x\n" }] },
+      { path: "{{root}}/unrelated.txt", parts: [{ text: "x\n" }] },
+    ], { path: "__missing_read_target__.txt" }),
+    readCase("names the first missing folder", [
+      { path: "{{root}}/__missing_read_folder__-old", kind: "directory" },
+    ], { path: "__missing_read_folder__/src/file.ts" }),
+    readCase("trusts the environment for which folders exist", [
+      { path: "{{root}}/__only_in_workspace__/file.tsx", parts: [{ text: "x\n" }] },
+    ], { path: "{{root}}/__only_in_workspace__/file.ts" }),
+    readCase("ranks same-folder suggestions and shows at most three", [
+      { path: "{{root}}/acnfig.ts", parts: [{ text: "x\n" }] },
+      { path: "{{root}}/cconfig.ts", parts: [{ text: "x\n" }] },
+      { path: "{{root}}/config.json", parts: [{ text: "x\n" }] },
+      { path: "{{root}}/Config.ts", parts: [{ text: "x\n" }] },
+    ], { path: "config.ts" }),
+    readCase("recovers a unique file whose non-breaking spaces differ", [
+      { path: "{{root}}/Screenshot 2026-08-27 3.15\u202fPM.png", parts: [{ text: "hello" }] },
+    ], { path: "Screenshot 2026-08-27 3.15 PM.png" }),
+    readCase("recovers an external filename without repeating directory approval", [
+      { path: "{{outside}}/report\u202ffinal.txt", parts: [{ text: "hello" }] },
+    ], { path: "{{outside}}/report final.txt" }),
+    readCase("does not read a recovered filename denied by its own read rules", [
+      { path: "{{root}}/report\u202ffinal.txt", parts: [{ text: "hello" }] },
+    ], { path: "{{root}}/report final.txt" }, { permission: { deniedResources: ["report\u202ffinal.txt"] } }),
+    readCase("does not recover ambiguous files", [
+      { path: "{{root}}/report\u00a0final.txt", parts: [{ text: "hello" }] },
+      { path: "{{root}}/report\u202ffinal.txt", parts: [{ text: "hello" }] },
+    ], { path: "report final.txt" }),
+    readCase("does not recover a directory", [
+      { path: "{{root}}/report\u00a0final", kind: "directory" },
+    ], { path: "report final" }),
+    readCase("lists a bounded directory page", [
+      { path: "{{root}}/src/assets", kind: "directory" },
+      { path: "{{root}}/src/components", kind: "directory" },
+      { path: "{{root}}/src/index.ts", parts: [{ text: "x\n" }] },
+      { path: "{{root}}/src/z1.ts", parts: [{ text: "x\n" }] },
+      { path: "{{root}}/src/z2.ts", parts: [{ text: "x\n" }] },
+    ], { path: "src", offset: 2, limit: 2 }),
+    readCase("normalizes a zero directory offset", [
+      { path: "{{root}}/src/index.ts", parts: [{ text: "x\n" }] },
+      { path: "{{root}}/src/zzz.ts", parts: [{ text: "x\n" }] },
+    ], { path: "src", offset: 0, limit: 1 }),
+    readCase("forwards pagination and returns a bounded text page", [
+      { path: "{{root}}/large.txt", parts: [{ text: "a\nhello\nc\n" }] },
+    ], { path: "large.txt", offset: 2, limit: 1 }),
+    readCase("forwards a negative offset and shows real line numbers", [
+      {
+        path: "{{root}}/log.txt",
+        parts: [
+          {
+            text: Array.from({ length: 13 }, (_, index) => (index === 8 ? "nine" : index === 9 ? "ten" : `line ${index + 1}`)).join(
+              "\n",
+            ),
+          },
+        ],
+      },
+    ], { path: "log.txt", offset: -5, limit: 2 }),
+    readCase("returns the negative directory offset error", [
+      { path: "{{root}}/src", kind: "directory" },
+    ], { path: "src", offset: -5 }),
+    readCase("discovers nearby instructions up to the location root", [
+      { path: "{{root}}/AGENTS.md", parts: [{ text: "root" }] },
+      { path: "{{root}}/packages/AGENTS.md", parts: [{ text: "packages" }] },
+      { path: "{{root}}/packages/CLAUDE.md", parts: [{ text: "claude" }] },
+      { path: "{{root}}/packages/src/file.ts", parts: [{ text: "hello" }] },
+    ], { path: "packages/src/file.ts" }),
+    readCase("does not load the file being read as nearby instructions", [
+      { path: "{{root}}/packages/AGENTS.md", parts: [{ text: "packages" }] },
+    ], { path: "packages/AGENTS.md" }),
+    ...skillCases(),
+  ]
+}
+
+function readLayerFor(root: string, permission: Layer.Layer<Permission.Service>, sessions: Layer.Layer<SessionInstructions.Service>) {
+  return Layer.mergeAll(
+    AppNodeBuilder.build(LayerNode.group([Tool.node, readToolNode, Skill.node]), [
+      Environment.node.replace(hostEnvironmentLayer),
+      Permission.node.replace(permission),
+      Config.node.replace(corpusConfig),
+      Image.node.replace(corpusImage),
+      Location.node.replace(
+        Layer.succeed(Location.Service, Location.Service.of(location({ directory: AbsolutePath.make(root) }))),
+      ),
+      Global.node.replace(Global.layerWith({ data: Global.Path.data })),
+      SessionInstructions.node.replace(sessions),
+    ]),
+    corpusConfig,
+    corpusImage,
+  ).pipe(Layer.provide(Layer.succeed(Flag.Overrides, undefined)))
+}
+
+interface Assertion {
+  action: string
+  resources: string[]
+  save?: string[]
+}
+
+async function fileTree(root: string, outside: string) {
+  const tree: Record<string, string | null> = {}
+  const walk = async (directory: string, prefix: string) => {
+    for (const entry of await fs.readdir(directory, { withFileTypes: true })) {
+      const absolute = path.join(directory, entry.name)
+      const key = `${prefix}/${entry.name}`
+      if (entry.isDirectory()) {
+        tree[key] = null
+        await walk(absolute, key)
+      } else if (entry.isSymbolicLink()) tree[key] = `symlink:${await fs.readlink(absolute)}`
+      else tree[key] = (await fs.readFile(absolute)).toString("base64")
+    }
+  }
+  await walk(root, "{{root}}")
+  await walk(outside, "{{outside}}")
+  return tree
+}
+
+async function exportRead() {
+  const base = await fs.mkdtemp(path.join(os.tmpdir(), "opencode-tool-corpus-"))
+  const exported: Array<Record<string, unknown>> = []
+  try {
+    for (const [index, spec] of readSpecs().entries()) {
+      const root = path.join(base, `${index}-${spec.name.replace(/[^a-zA-Z0-9]+/g, "-").slice(0, 40)}`)
+      const outside = `${root}-outside`
+      await fs.mkdir(root, { recursive: true })
+      await fs.mkdir(outside, { recursive: true })
+      await materializeFixtures(root, outside, spec.fixtures ?? [])
+      const assertions: Assertion[] = []
+      const loaded: string[][] = []
+      const allow = spec.permission?.allow ?? true
+      const denied = spec.permission?.deniedResources ?? []
+      const allowed = (input: { resources: readonly string[] }) =>
+        allow && !input.resources.some((resource) => denied.includes(resource))
+      const permission = permissionLayer({
+        assert: (input) =>
+          Effect.sync(() => {
+            assertions.push({
+              action: input.action,
+              resources: [...input.resources],
+              ...(input.save === undefined ? {} : { save: [...input.save] }),
+            })
+          }).pipe(
+            Effect.andThen(
+              allowed(input)
+                ? Effect.void
+                : Effect.fail(
+                    new Permission.BlockedError({
+                      rules: [],
+                      permission: input.action,
+                      resources: input.resources,
+                    }),
+                  ),
+            ),
+          ),
+        allows: (input) => Effect.succeed(allowed(input)),
+      })
+      const sessions = Layer.succeed(
+        SessionInstructions.Service,
+        SessionInstructions.Service.of({
+          load: (input) => Effect.sync(() => void loaded.push([...input.paths])),
+        }),
+      )
+      const call = {
+        path: spec.call.path.replaceAll("{{root}}", root).replaceAll("{{outside}}", outside),
+        ...(spec.call.offset === undefined ? {} : { offset: spec.call.offset }),
+        ...(spec.call.limit === undefined ? {} : { limit: spec.call.limit }),
+      }
+      const program = Effect.gen(function* () {
+        const registry = yield* Tool.Service
+        if (spec.skills !== undefined) {
+          const skills = yield* Skill.Service
+          for (const fixture of spec.skills)
+            yield* skills.transform((editor) =>
+              editor.add(
+                Skill.Info.make({
+                  id: Skill.ID.make(fixture.id),
+                  name: Skill.Name.make(fixture.name),
+                  description: fixture.name,
+                  path: AbsolutePath.make(fixture.path),
+                  content: fixture.content,
+                }),
+                fixture.files,
+              ),
+            )
+        }
+        return yield* (yield* registry.snapshot()).execute({
+          sessionID: Session.ID.make("ses_read_tool_test"),
+          ...toolIdentity,
+          call: { type: "tool-call", id: `call-${index}`, name: "read", input: call },
+        }).pipe(
+          Effect.map((result) => ({ status: "completed" as const, ...result })),
+          Effect.catchTag("Tool.Error", (error) =>
+            Effect.succeed({ status: "error" as const, error: toSessionError(error) }),
+          ),
+        )
+      }).pipe(Effect.scoped, Effect.provide(readLayerFor(root, permission, sessions)))
+      const exit = await Effect.runPromiseExit(program)
+      if (Exit.isFailure(exit)) {
+        console.error(`corpus: read ${spec.name} failed`)
+        console.error(exit.cause)
+        process.exit(1)
+      }
+      const execution = exit.value
+      const tree = await fileTree(root, outside)
+      const expected: Record<string, unknown> = { status: execution.status }
+      if (execution.status === "completed") {
+        expected.output = execution.output
+        expected.content = execution.content
+        expected.metadata = execution.metadata
+      } else expected.error = execution.error?.message
+      expected.assertions = assertions
+      expected.loaded = loaded
+      expected.tree = tree
+      const normalized = JSON.stringify({ ...spec, fixtures: spec.fixtures ?? [], call, expected })
+        .replaceAll(outside, "{{outside}}")
+        .replaceAll(root, "{{root}}")
+      exported.push(JSON.parse(normalized))
+      await fs.rm(root, { recursive: true, force: true })
+      await fs.rm(outside, { recursive: true, force: true })
+    }
+  } finally {
+    await fs.rm(base, { recursive: true, force: true })
+  }
+  console.log(`__TOOL_CORPUS__${JSON.stringify(exported)}`)
+}
+
 if (area === "definitions") await exportDefinitions()
 else if (area === "snapshot") await exportSnapshot()
 else if (area === "validation") await exportValidation()
 else if (area === "truncate") await exportTruncate()
+else if (area === "read_filesystem") await exportReadFilesystem()
+else if (area === "read") await exportRead()
 else {
   console.error(`corpus: unknown area ${area ?? ""}`)
   process.exit(1)

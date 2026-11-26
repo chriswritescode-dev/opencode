@@ -97,6 +97,10 @@ pub fn lookup(path: &str) -> &'static str {
     TYPES.binary_search_by_key(&extension.as_str(), |(key, _)| *key).map_or(OCTET_STREAM, |index| TYPES[index].1)
 }
 
+pub fn extname(path: &str) -> &str {
+    extension(path, Flavor::NATIVE)
+}
+
 fn ascii(bytes: &[u8], start: usize, end: usize) -> &[u8] {
     &bytes[start.min(bytes.len())..end.min(bytes.len())]
 }

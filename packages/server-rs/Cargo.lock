@@ -1263,11 +1263,13 @@ dependencies = [
  "opencode-permission",
  "opencode-registry",
  "opencode-storage",
+ "opencode-util",
  "serde",
  "serde_json",
  "thiserror",
  "tokio",
  "unicode-segmentation",
+ "url",
 ]
 
 [[package]]

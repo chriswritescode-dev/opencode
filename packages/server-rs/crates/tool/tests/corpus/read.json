@@ -1,0 +1,1661 @@
+[
+  {
+    "name": "reads and authorizes through the location filesystem",
+    "fixtures": [
+      {
+        "path": "{{root}}/README.md",
+        "parts": [
+          {
+            "text": "hello"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "README.md"
+    },
+    "expected": {
+      "status": "completed",
+      "output": {
+        "type": "text",
+        "content": "hello",
+        "offset": 1,
+        "lineCount": 1
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "Read file README.md, lines 1-1\n1: hello"
+        }
+      ],
+      "metadata": {
+        "truncated": false
+      },
+      "assertions": [
+        {
+          "action": "read",
+          "resources": [
+            "README.md"
+          ],
+          "save": [
+            "*"
+          ]
+        }
+      ],
+      "loaded": [],
+      "tree": {
+        "{{root}}/README.md": "aGVsbG8="
+      }
+    }
+  },
+  {
+    "name": "rejects a zero limit before reading",
+    "fixtures": [
+      {
+        "path": "{{root}}/README.md",
+        "parts": [
+          {
+            "text": "hello"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "README.md",
+      "limit": 0
+    },
+    "expected": {
+      "status": "error",
+      "error": "Limit must be a positive integer",
+      "assertions": [],
+      "loaded": [],
+      "tree": {
+        "{{root}}/README.md": "aGVsbG8="
+      }
+    }
+  },
+  {
+    "name": "does not read when permission is denied",
+    "fixtures": [
+      {
+        "path": "{{root}}/README.md",
+        "parts": [
+          {
+            "text": "hello"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "README.md"
+    },
+    "permission": {
+      "allow": false
+    },
+    "expected": {
+      "status": "error",
+      "error": "Permission denied: read",
+      "assertions": [
+        {
+          "action": "read",
+          "resources": [
+            "README.md"
+          ],
+          "save": [
+            "*"
+          ]
+        }
+      ],
+      "loaded": [],
+      "tree": {
+        "{{root}}/README.md": "aGVsbG8="
+      }
+    }
+  },
+  {
+    "name": "asks for external approval before reading an external path",
+    "fixtures": [
+      {
+        "path": "{{outside}}/notes.txt",
+        "parts": [
+          {
+            "text": "hello"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "{{outside}}/notes.txt"
+    },
+    "expected": {
+      "status": "completed",
+      "output": {
+        "type": "text",
+        "content": "hello",
+        "offset": 1,
+        "lineCount": 1
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "Read file {{outside}}/notes.txt, lines 1-1\n1: hello"
+        }
+      ],
+      "metadata": {
+        "truncated": false
+      },
+      "assertions": [
+        {
+          "action": "external_directory",
+          "resources": [
+            "{{outside}}/*"
+          ],
+          "save": [
+            "{{outside}}/*"
+          ]
+        },
+        {
+          "action": "read",
+          "resources": [
+            "{{outside}}/notes.txt"
+          ],
+          "save": [
+            "*"
+          ]
+        }
+      ],
+      "loaded": [],
+      "tree": {
+        "{{outside}}/notes.txt": "aGVsbG8="
+      }
+    }
+  },
+  {
+    "name": "returns a small PNG as native media",
+    "fixtures": [
+      {
+        "path": "{{root}}/pixel.png",
+        "kind": "binary",
+        "base64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
+      }
+    ],
+    "call": {
+      "path": "pixel.png"
+    },
+    "expected": {
+      "status": "completed",
+      "output": {
+        "type": "media",
+        "uri": "file://{{root}}/pixel.png",
+        "mime": "image/png",
+        "name": "pixel.png"
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "Image read successfully"
+        },
+        {
+          "type": "file",
+          "uri": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+          "mime": "image/png",
+          "name": "pixel.png"
+        }
+      ],
+      "metadata": {
+        "truncated": false
+      },
+      "assertions": [
+        {
+          "action": "read",
+          "resources": [
+            "pixel.png"
+          ],
+          "save": [
+            "*"
+          ]
+        }
+      ],
+      "loaded": [],
+      "tree": {
+        "{{root}}/pixel.png": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
+      }
+    }
+  },
+  {
+    "name": "returns a supported image despite a misleading extension",
+    "fixtures": [
+      {
+        "path": "{{root}}/pixel.bin",
+        "kind": "binary",
+        "base64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
+      }
+    ],
+    "call": {
+      "path": "pixel.bin"
+    },
+    "expected": {
+      "status": "completed",
+      "output": {
+        "type": "media",
+        "uri": "file://{{root}}/pixel.bin",
+        "mime": "image/png",
+        "name": "pixel.bin"
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "Image read successfully"
+        },
+        {
+          "type": "file",
+          "uri": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+          "mime": "image/png",
+          "name": "pixel.bin"
+        }
+      ],
+      "metadata": {
+        "truncated": false
+      },
+      "assertions": [
+        {
+          "action": "read",
+          "resources": [
+            "pixel.bin"
+          ],
+          "save": [
+            "*"
+          ]
+        }
+      ],
+      "loaded": [],
+      "tree": {
+        "{{root}}/pixel.bin": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
+      }
+    }
+  },
+  {
+    "name": "returns PDFs as native media",
+    "fixtures": [
+      {
+        "path": "{{root}}/document.pdf",
+        "parts": [
+          {
+            "text": "%PDF-1.7\ncontent"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "document.pdf"
+    },
+    "expected": {
+      "status": "completed",
+      "output": {
+        "type": "media",
+        "uri": "file://{{root}}/document.pdf",
+        "mime": "application/pdf",
+        "name": "document.pdf"
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "PDF read successfully"
+        },
+        {
+          "type": "file",
+          "uri": "data:application/pdf;base64,JVBERi0xLjcKY29udGVudA==",
+          "mime": "application/pdf",
+          "name": "document.pdf"
+        }
+      ],
+      "metadata": {
+        "truncated": false
+      },
+      "assertions": [
+        {
+          "action": "read",
+          "resources": [
+            "document.pdf"
+          ],
+          "save": [
+            "*"
+          ]
+        }
+      ],
+      "loaded": [],
+      "tree": {
+        "{{root}}/document.pdf": "JVBERi0xLjcKY29udGVudA=="
+      }
+    }
+  },
+  {
+    "name": "returns filesystem failures to the model",
+    "fixtures": [
+      {
+        "path": "{{root}}/archive.dat",
+        "kind": "binary",
+        "base64": "b25lCmFyY2hpdmUACg=="
+      }
+    ],
+    "call": {
+      "path": "archive.dat",
+      "offset": 2,
+      "limit": 1
+    },
+    "expected": {
+      "status": "error",
+      "error": "Cannot read binary file: archive.dat",
+      "assertions": [
+        {
+          "action": "read",
+          "resources": [
+            "archive.dat"
+          ],
+          "save": [
+            "*"
+          ]
+        }
+      ],
+      "loaded": [],
+      "tree": {
+        "{{root}}/archive.dat": "b25lCmFyY2hpdmUACg=="
+      }
+    }
+  },
+  {
+    "name": "returns missing paths with ranked suggestions",
+    "fixtures": [
+      {
+        "path": "{{root}}/__missing_read_target__.txt.bak",
+        "parts": [
+          {
+            "text": "x\n"
+          }
+        ]
+      },
+      {
+        "path": "{{root}}/copy___missing_read_target__.txt",
+        "parts": [
+          {
+            "text": "x\n"
+          }
+        ]
+      },
+      {
+        "path": "{{root}}/old___missing_read_target__.txt",
+        "parts": [
+          {
+            "text": "x\n"
+          }
+        ]
+      },
+      {
+        "path": "{{root}}/other___missing_read_target__.txt",
+        "parts": [
+          {
+            "text": "x\n"
+          }
+        ]
+      },
+      {
+        "path": "{{root}}/unrelated.txt",
+        "parts": [
+          {
+            "text": "x\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "__missing_read_target__.txt"
+    },
+    "expected": {
+      "status": "error",
+      "error": "File not found: __missing_read_target__.txt\n\nDid you mean one of these?\n__missing_read_target__.txt.bak\nold___missing_read_target__.txt\ncopy___missing_read_target__.txt",
+      "assertions": [
+        {
+          "action": "read",
+          "resources": [
+            "__missing_read_target__.txt"
+          ],
+          "save": [
+            "*"
+          ]
+        }
+      ],
+      "loaded": [],
+      "tree": {
+        "{{root}}/unrelated.txt": "eAo=",
+        "{{root}}/__missing_read_target__.txt.bak": "eAo=",
+        "{{root}}/old___missing_read_target__.txt": "eAo=",
+        "{{root}}/copy___missing_read_target__.txt": "eAo=",
+        "{{root}}/other___missing_read_target__.txt": "eAo="
+      }
+    }
+  },
+  {
+    "name": "names the first missing folder",
+    "fixtures": [
+      {
+        "path": "{{root}}/__missing_read_folder__-old",
+        "kind": "directory"
+      }
+    ],
+    "call": {
+      "path": "__missing_read_folder__/src/file.ts"
+    },
+    "expected": {
+      "status": "error",
+      "error": "File not found: __missing_read_folder__/src/file.ts\n\nThe folder {{root}}/__missing_read_folder__ does not exist. The nearest folder that does is {{root}}.\n\nDid you mean one of these?\n{{root}}/__missing_read_folder__-old",
+      "assertions": [
+        {
+          "action": "read",
+          "resources": [
+            "__missing_read_folder__/src/file.ts"
+          ],
+          "save": [
+            "*"
+          ]
+        }
+      ],
+      "loaded": [],
+      "tree": {
+        "{{root}}/__missing_read_folder__-old": null
+      }
+    }
+  },
+  {
+    "name": "trusts the environment for which folders exist",
+    "fixtures": [
+      {
+        "path": "{{root}}/__only_in_workspace__/file.tsx",
+        "parts": [
+          {
+            "text": "x\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "{{root}}/__only_in_workspace__/file.ts"
+    },
+    "expected": {
+      "status": "error",
+      "error": "File not found: {{root}}/__only_in_workspace__/file.ts\n\nDid you mean one of these?\n{{root}}/__only_in_workspace__/file.tsx",
+      "assertions": [
+        {
+          "action": "read",
+          "resources": [
+            "__only_in_workspace__/file.ts"
+          ],
+          "save": [
+            "*"
+          ]
+        }
+      ],
+      "loaded": [],
+      "tree": {
+        "{{root}}/__only_in_workspace__": null,
+        "{{root}}/__only_in_workspace__/file.tsx": "eAo="
+      }
+    }
+  },
+  {
+    "name": "ranks same-folder suggestions and shows at most three",
+    "fixtures": [
+      {
+        "path": "{{root}}/acnfig.ts",
+        "parts": [
+          {
+            "text": "x\n"
+          }
+        ]
+      },
+      {
+        "path": "{{root}}/cconfig.ts",
+        "parts": [
+          {
+            "text": "x\n"
+          }
+        ]
+      },
+      {
+        "path": "{{root}}/config.json",
+        "parts": [
+          {
+            "text": "x\n"
+          }
+        ]
+      },
+      {
+        "path": "{{root}}/Config.ts",
+        "parts": [
+          {
+            "text": "x\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "config.ts"
+    },
+    "expected": {
+      "status": "error",
+      "error": "File not found: config.ts\n\nDid you mean one of these?\nConfig.ts\nconfig.json\ncconfig.ts",
+      "assertions": [
+        {
+          "action": "read",
+          "resources": [
+            "config.ts"
+          ],
+          "save": [
+            "*"
+          ]
+        }
+      ],
+      "loaded": [],
+      "tree": {
+        "{{root}}/cconfig.ts": "eAo=",
+        "{{root}}/acnfig.ts": "eAo=",
+        "{{root}}/config.json": "eAo=",
+        "{{root}}/Config.ts": "eAo="
+      }
+    }
+  },
+  {
+    "name": "recovers a unique file whose non-breaking spaces differ",
+    "fixtures": [
+      {
+        "path": "{{root}}/Screenshot 2026-08-27 3.15 PM.png",
+        "parts": [
+          {
+            "text": "hello"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "Screenshot 2026-08-27 3.15 PM.png"
+    },
+    "expected": {
+      "status": "completed",
+      "output": {
+        "type": "text",
+        "content": "hello",
+        "offset": 1,
+        "lineCount": 1
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "Read file Screenshot 2026-08-27 3.15 PM.png, lines 1-1\n1: hello"
+        }
+      ],
+      "metadata": {
+        "truncated": false
+      },
+      "assertions": [
+        {
+          "action": "read",
+          "resources": [
+            "Screenshot 2026-08-27 3.15 PM.png"
+          ],
+          "save": [
+            "*"
+          ]
+        },
+        {
+          "action": "read",
+          "resources": [
+            "Screenshot 2026-08-27 3.15 PM.png"
+          ],
+          "save": [
+            "*"
+          ]
+        }
+      ],
+      "loaded": [],
+      "tree": {
+        "{{root}}/Screenshot 2026-08-27 3.15 PM.png": "aGVsbG8="
+      }
+    }
+  },
+  {
+    "name": "recovers an external filename without repeating directory approval",
+    "fixtures": [
+      {
+        "path": "{{outside}}/report final.txt",
+        "parts": [
+          {
+            "text": "hello"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "{{outside}}/report final.txt"
+    },
+    "expected": {
+      "status": "completed",
+      "output": {
+        "type": "text",
+        "content": "hello",
+        "offset": 1,
+        "lineCount": 1
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "Read file {{outside}}/report final.txt, lines 1-1\n1: hello"
+        }
+      ],
+      "metadata": {
+        "truncated": false
+      },
+      "assertions": [
+        {
+          "action": "external_directory",
+          "resources": [
+            "{{outside}}/*"
+          ],
+          "save": [
+            "{{outside}}/*"
+          ]
+        },
+        {
+          "action": "read",
+          "resources": [
+            "{{outside}}/report final.txt"
+          ],
+          "save": [
+            "*"
+          ]
+        },
+        {
+          "action": "read",
+          "resources": [
+            "{{outside}}/report final.txt"
+          ],
+          "save": [
+            "*"
+          ]
+        }
+      ],
+      "loaded": [],
+      "tree": {
+        "{{outside}}/report final.txt": "aGVsbG8="
+      }
+    }
+  },
+  {
+    "name": "does not read a recovered filename denied by its own read rules",
+    "fixtures": [
+      {
+        "path": "{{root}}/report final.txt",
+        "parts": [
+          {
+            "text": "hello"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "{{root}}/report final.txt"
+    },
+    "permission": {
+      "deniedResources": [
+        "report final.txt"
+      ]
+    },
+    "expected": {
+      "status": "error",
+      "error": "Permission denied: read",
+      "assertions": [
+        {
+          "action": "read",
+          "resources": [
+            "report final.txt"
+          ],
+          "save": [
+            "*"
+          ]
+        },
+        {
+          "action": "read",
+          "resources": [
+            "report final.txt"
+          ],
+          "save": [
+            "*"
+          ]
+        }
+      ],
+      "loaded": [],
+      "tree": {
+        "{{root}}/report final.txt": "aGVsbG8="
+      }
+    }
+  },
+  {
+    "name": "does not recover ambiguous files",
+    "fixtures": [
+      {
+        "path": "{{root}}/report final.txt",
+        "parts": [
+          {
+            "text": "hello"
+          }
+        ]
+      },
+      {
+        "path": "{{root}}/report final.txt",
+        "parts": [
+          {
+            "text": "hello"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "report final.txt"
+    },
+    "expected": {
+      "status": "error",
+      "error": "File not found: report final.txt",
+      "assertions": [
+        {
+          "action": "read",
+          "resources": [
+            "report final.txt"
+          ],
+          "save": [
+            "*"
+          ]
+        }
+      ],
+      "loaded": [],
+      "tree": {
+        "{{root}}/report final.txt": "aGVsbG8=",
+        "{{root}}/report final.txt": "aGVsbG8="
+      }
+    }
+  },
+  {
+    "name": "does not recover a directory",
+    "fixtures": [
+      {
+        "path": "{{root}}/report final",
+        "kind": "directory"
+      }
+    ],
+    "call": {
+      "path": "report final"
+    },
+    "expected": {
+      "status": "error",
+      "error": "File not found: report final",
+      "assertions": [
+        {
+          "action": "read",
+          "resources": [
+            "report final"
+          ],
+          "save": [
+            "*"
+          ]
+        }
+      ],
+      "loaded": [],
+      "tree": {
+        "{{root}}/report final": null
+      }
+    }
+  },
+  {
+    "name": "lists a bounded directory page",
+    "fixtures": [
+      {
+        "path": "{{root}}/src/assets",
+        "kind": "directory"
+      },
+      {
+        "path": "{{root}}/src/components",
+        "kind": "directory"
+      },
+      {
+        "path": "{{root}}/src/index.ts",
+        "parts": [
+          {
+            "text": "x\n"
+          }
+        ]
+      },
+      {
+        "path": "{{root}}/src/z1.ts",
+        "parts": [
+          {
+            "text": "x\n"
+          }
+        ]
+      },
+      {
+        "path": "{{root}}/src/z2.ts",
+        "parts": [
+          {
+            "text": "x\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "src",
+      "offset": 2,
+      "limit": 2
+    },
+    "expected": {
+      "status": "completed",
+      "output": {
+        "type": "directory",
+        "entries": [
+          "components/",
+          "index.ts"
+        ],
+        "next": 4
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "Read directory src, entries 2-3\ncomponents/\nindex.ts\n[Output truncated. Continue reading with offset: 4]"
+        }
+      ],
+      "metadata": {
+        "truncated": true
+      },
+      "assertions": [
+        {
+          "action": "read",
+          "resources": [
+            "src"
+          ],
+          "save": [
+            "*"
+          ]
+        }
+      ],
+      "loaded": [],
+      "tree": {
+        "{{root}}/src": null,
+        "{{root}}/src/z1.ts": "eAo=",
+        "{{root}}/src/assets": null,
+        "{{root}}/src/components": null,
+        "{{root}}/src/z2.ts": "eAo=",
+        "{{root}}/src/index.ts": "eAo="
+      }
+    }
+  },
+  {
+    "name": "normalizes a zero directory offset",
+    "fixtures": [
+      {
+        "path": "{{root}}/src/index.ts",
+        "parts": [
+          {
+            "text": "x\n"
+          }
+        ]
+      },
+      {
+        "path": "{{root}}/src/zzz.ts",
+        "parts": [
+          {
+            "text": "x\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "src",
+      "offset": 0,
+      "limit": 1
+    },
+    "expected": {
+      "status": "completed",
+      "output": {
+        "type": "directory",
+        "entries": [
+          "index.ts"
+        ],
+        "next": 2
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "Read directory src, entries 1-1\nindex.ts\n[Output truncated. Continue reading with offset: 2]"
+        }
+      ],
+      "metadata": {
+        "truncated": true
+      },
+      "assertions": [
+        {
+          "action": "read",
+          "resources": [
+            "src"
+          ],
+          "save": [
+            "*"
+          ]
+        }
+      ],
+      "loaded": [],
+      "tree": {
+        "{{root}}/src": null,
+        "{{root}}/src/zzz.ts": "eAo=",
+        "{{root}}/src/index.ts": "eAo="
+      }
+    }
+  },
+  {
+    "name": "forwards pagination and returns a bounded text page",
+    "fixtures": [
+      {
+        "path": "{{root}}/large.txt",
+        "parts": [
+          {
+            "text": "a\nhello\nc\n"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "large.txt",
+      "offset": 2,
+      "limit": 1
+    },
+    "expected": {
+      "status": "completed",
+      "output": {
+        "type": "text",
+        "content": "hello",
+        "offset": 2,
+        "lineCount": 1,
+        "next": 3
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "Read file large.txt, lines 2-2\n2: hello\n[Output truncated. Continue reading with offset: 3]"
+        }
+      ],
+      "metadata": {
+        "truncated": true
+      },
+      "assertions": [
+        {
+          "action": "read",
+          "resources": [
+            "large.txt"
+          ],
+          "save": [
+            "*"
+          ]
+        }
+      ],
+      "loaded": [],
+      "tree": {
+        "{{root}}/large.txt": "YQpoZWxsbwpjCg=="
+      }
+    }
+  },
+  {
+    "name": "forwards a negative offset and shows real line numbers",
+    "fixtures": [
+      {
+        "path": "{{root}}/log.txt",
+        "parts": [
+          {
+            "text": "line 1\nline 2\nline 3\nline 4\nline 5\nline 6\nline 7\nline 8\nnine\nten\nline 11\nline 12\nline 13"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "log.txt",
+      "offset": -5,
+      "limit": 2
+    },
+    "expected": {
+      "status": "completed",
+      "output": {
+        "type": "text",
+        "content": "nine\nten",
+        "offset": 9,
+        "lineCount": 2,
+        "next": 11
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "Read file log.txt, lines 9-10\n9: nine\n10: ten\n[Output truncated. Continue reading with offset: 11]"
+        }
+      ],
+      "metadata": {
+        "truncated": true
+      },
+      "assertions": [
+        {
+          "action": "read",
+          "resources": [
+            "log.txt"
+          ],
+          "save": [
+            "*"
+          ]
+        }
+      ],
+      "loaded": [],
+      "tree": {
+        "{{root}}/log.txt": "bGluZSAxCmxpbmUgMgpsaW5lIDMKbGluZSA0CmxpbmUgNQpsaW5lIDYKbGluZSA3CmxpbmUgOApuaW5lCnRlbgpsaW5lIDExCmxpbmUgMTIKbGluZSAxMw=="
+      }
+    }
+  },
+  {
+    "name": "returns the negative directory offset error",
+    "fixtures": [
+      {
+        "path": "{{root}}/src",
+        "kind": "directory"
+      }
+    ],
+    "call": {
+      "path": "src",
+      "offset": -5
+    },
+    "expected": {
+      "status": "error",
+      "error": "A negative offset only works for files, and src is a directory",
+      "assertions": [
+        {
+          "action": "read",
+          "resources": [
+            "src"
+          ],
+          "save": [
+            "*"
+          ]
+        }
+      ],
+      "loaded": [],
+      "tree": {
+        "{{root}}/src": null
+      }
+    }
+  },
+  {
+    "name": "discovers nearby instructions up to the location root",
+    "fixtures": [
+      {
+        "path": "{{root}}/AGENTS.md",
+        "parts": [
+          {
+            "text": "root"
+          }
+        ]
+      },
+      {
+        "path": "{{root}}/packages/AGENTS.md",
+        "parts": [
+          {
+            "text": "packages"
+          }
+        ]
+      },
+      {
+        "path": "{{root}}/packages/CLAUDE.md",
+        "parts": [
+          {
+            "text": "claude"
+          }
+        ]
+      },
+      {
+        "path": "{{root}}/packages/src/file.ts",
+        "parts": [
+          {
+            "text": "hello"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "packages/src/file.ts"
+    },
+    "expected": {
+      "status": "completed",
+      "output": {
+        "type": "text",
+        "content": "hello",
+        "offset": 1,
+        "lineCount": 1
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "Read file packages/src/file.ts, lines 1-1\n1: hello"
+        }
+      ],
+      "metadata": {
+        "truncated": false
+      },
+      "assertions": [
+        {
+          "action": "read",
+          "resources": [
+            "packages/src/file.ts"
+          ],
+          "save": [
+            "*"
+          ]
+        }
+      ],
+      "loaded": [
+        [
+          "{{root}}/packages/AGENTS.md"
+        ]
+      ],
+      "tree": {
+        "{{root}}/packages": null,
+        "{{root}}/packages/CLAUDE.md": "Y2xhdWRl",
+        "{{root}}/packages/AGENTS.md": "cGFja2FnZXM=",
+        "{{root}}/packages/src": null,
+        "{{root}}/packages/src/file.ts": "aGVsbG8=",
+        "{{root}}/AGENTS.md": "cm9vdA=="
+      }
+    }
+  },
+  {
+    "name": "does not load the file being read as nearby instructions",
+    "fixtures": [
+      {
+        "path": "{{root}}/packages/AGENTS.md",
+        "parts": [
+          {
+            "text": "packages"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "packages/AGENTS.md"
+    },
+    "expected": {
+      "status": "completed",
+      "output": {
+        "type": "text",
+        "content": "packages",
+        "offset": 1,
+        "lineCount": 1
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "Read file packages/AGENTS.md, lines 1-1\n1: packages"
+        }
+      ],
+      "metadata": {
+        "truncated": false
+      },
+      "assertions": [
+        {
+          "action": "read",
+          "resources": [
+            "packages/AGENTS.md"
+          ],
+          "save": [
+            "*"
+          ]
+        }
+      ],
+      "loaded": [],
+      "tree": {
+        "{{root}}/packages": null,
+        "{{root}}/packages/AGENTS.md": "cGFja2FnZXM="
+      }
+    }
+  },
+  {
+    "name": "reads virtual skill files",
+    "fixtures": [],
+    "call": {
+      "path": "skill://guide/references/style.md",
+      "offset": 2,
+      "limit": 1
+    },
+    "skills": [
+      {
+        "id": "guide",
+        "name": "Guide",
+        "path": "skill://guide/SKILL.md",
+        "content": "# Guide\nRead references/style.md",
+        "files": {
+          "references/style.md": "Line 1\nLine 2",
+          "references/guide.pdf": "%PDF-1.7\nguide"
+        }
+      }
+    ],
+    "expected": {
+      "status": "completed",
+      "output": {
+        "type": "text",
+        "content": "Line 2",
+        "offset": 2,
+        "lineCount": 1
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "Read file skill://guide/references/style.md, lines 2-2\n2: Line 2"
+        }
+      ],
+      "metadata": {
+        "truncated": false
+      },
+      "assertions": [
+        {
+          "action": "skill",
+          "resources": [
+            "guide"
+          ],
+          "save": [
+            "guide"
+          ]
+        },
+        {
+          "action": "read",
+          "resources": [
+            "skill://guide/references/style.md"
+          ],
+          "save": [
+            "*"
+          ]
+        }
+      ],
+      "loaded": [],
+      "tree": {}
+    }
+  },
+  {
+    "name": "lists a virtual skill directory",
+    "fixtures": [],
+    "call": {
+      "path": "skill://guide/"
+    },
+    "skills": [
+      {
+        "id": "guide",
+        "name": "Guide",
+        "path": "skill://guide/SKILL.md",
+        "content": "# Guide\nRead references/style.md",
+        "files": {
+          "references/style.md": "Line 1\nLine 2",
+          "references/guide.pdf": "%PDF-1.7\nguide"
+        }
+      }
+    ],
+    "expected": {
+      "status": "completed",
+      "output": {
+        "type": "directory",
+        "entries": [
+          "references/",
+          "SKILL.md"
+        ]
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "Read directory skill://guide/, entries 1-2\nreferences/\nSKILL.md"
+        }
+      ],
+      "metadata": {
+        "truncated": false
+      },
+      "assertions": [
+        {
+          "action": "skill",
+          "resources": [
+            "guide"
+          ],
+          "save": [
+            "guide"
+          ]
+        },
+        {
+          "action": "read",
+          "resources": [
+            "skill://guide"
+          ],
+          "save": [
+            "*"
+          ]
+        }
+      ],
+      "loaded": [],
+      "tree": {}
+    }
+  },
+  {
+    "name": "returns a missing virtual skill file",
+    "fixtures": [],
+    "call": {
+      "path": "skill://guide/missing.md"
+    },
+    "skills": [
+      {
+        "id": "guide",
+        "name": "Guide",
+        "path": "skill://guide/SKILL.md",
+        "content": "# Guide\nRead references/style.md",
+        "files": {
+          "references/style.md": "Line 1\nLine 2",
+          "references/guide.pdf": "%PDF-1.7\nguide"
+        }
+      }
+    ],
+    "expected": {
+      "status": "error",
+      "error": "File not found: skill://guide/missing.md",
+      "assertions": [
+        {
+          "action": "skill",
+          "resources": [
+            "guide"
+          ],
+          "save": [
+            "guide"
+          ]
+        },
+        {
+          "action": "read",
+          "resources": [
+            "skill://guide/missing.md"
+          ],
+          "save": [
+            "*"
+          ]
+        }
+      ],
+      "loaded": [],
+      "tree": {}
+    }
+  },
+  {
+    "name": "rejects an unsafe virtual skill path",
+    "fixtures": [],
+    "call": {
+      "path": "skill://guide/../SKILL.md"
+    },
+    "skills": [
+      {
+        "id": "guide",
+        "name": "Guide",
+        "path": "skill://guide/SKILL.md",
+        "content": "# Guide\nRead references/style.md",
+        "files": {
+          "references/style.md": "Line 1\nLine 2",
+          "references/guide.pdf": "%PDF-1.7\nguide"
+        }
+      }
+    ],
+    "expected": {
+      "status": "error",
+      "error": "File not found: skill://guide/../SKILL.md",
+      "assertions": [],
+      "loaded": [],
+      "tree": {}
+    }
+  },
+  {
+    "name": "rejects a bare virtual skill URI",
+    "fixtures": [],
+    "call": {
+      "path": "skill://"
+    },
+    "expected": {
+      "status": "error",
+      "error": "File not found: skill://",
+      "assertions": [],
+      "loaded": [],
+      "tree": {}
+    }
+  },
+  {
+    "name": "rejects a disk-backed skill path",
+    "fixtures": [],
+    "call": {
+      "path": "skill://disk/SKILL.md"
+    },
+    "skills": [
+      {
+        "id": "disk",
+        "name": "Disk",
+        "path": "/somewhere/disk/SKILL.md",
+        "content": "Disk"
+      }
+    ],
+    "expected": {
+      "status": "error",
+      "error": "File not found: skill://disk/SKILL.md",
+      "assertions": [],
+      "loaded": [],
+      "tree": {}
+    }
+  },
+  {
+    "name": "returns a virtual skill PDF as media",
+    "fixtures": [],
+    "call": {
+      "path": "skill://guide/references/guide.pdf"
+    },
+    "skills": [
+      {
+        "id": "guide",
+        "name": "Guide",
+        "path": "skill://guide/SKILL.md",
+        "content": "# Guide\nRead references/style.md",
+        "files": {
+          "references/style.md": "Line 1\nLine 2",
+          "references/guide.pdf": "%PDF-1.7\nguide"
+        }
+      }
+    ],
+    "expected": {
+      "status": "completed",
+      "output": {
+        "type": "media",
+        "uri": "skill://guide/references/guide.pdf",
+        "mime": "application/pdf",
+        "name": "guide.pdf"
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "PDF read successfully"
+        },
+        {
+          "type": "file",
+          "uri": "data:application/pdf;base64,JVBERi0xLjcKZ3VpZGU=",
+          "mime": "application/pdf",
+          "name": "skill://guide/references/guide.pdf"
+        }
+      ],
+      "metadata": {
+        "truncated": false
+      },
+      "assertions": [
+        {
+          "action": "skill",
+          "resources": [
+            "guide"
+          ],
+          "save": [
+            "guide"
+          ]
+        },
+        {
+          "action": "read",
+          "resources": [
+            "skill://guide/references/guide.pdf"
+          ],
+          "save": [
+            "*"
+          ]
+        }
+      ],
+      "loaded": [],
+      "tree": {}
+    }
+  },
+  {
+    "name": "denies a virtual skill before reading",
+    "fixtures": [],
+    "call": {
+      "path": "skill://guide/SKILL.md"
+    },
+    "skills": [
+      {
+        "id": "guide",
+        "name": "Guide",
+        "path": "skill://guide/SKILL.md",
+        "content": "# Guide\nRead references/style.md",
+        "files": {
+          "references/style.md": "Line 1\nLine 2",
+          "references/guide.pdf": "%PDF-1.7\nguide"
+        }
+      }
+    ],
+    "permission": {
+      "deniedResources": [
+        "guide"
+      ]
+    },
+    "expected": {
+      "status": "error",
+      "error": "Permission denied: skill",
+      "assertions": [
+        {
+          "action": "skill",
+          "resources": [
+            "guide"
+          ],
+          "save": [
+            "guide"
+          ]
+        }
+      ],
+      "loaded": [],
+      "tree": {}
+    }
+  },
+  {
+    "name": "denies a virtual skill file after the skill check",
+    "fixtures": [],
+    "call": {
+      "path": "skill://guide/SKILL.md"
+    },
+    "skills": [
+      {
+        "id": "guide",
+        "name": "Guide",
+        "path": "skill://guide/SKILL.md",
+        "content": "# Guide\nRead references/style.md",
+        "files": {
+          "references/style.md": "Line 1\nLine 2",
+          "references/guide.pdf": "%PDF-1.7\nguide"
+        }
+      }
+    ],
+    "permission": {
+      "deniedResources": [
+        "skill://guide/SKILL.md"
+      ]
+    },
+    "expected": {
+      "status": "error",
+      "error": "Permission denied: read",
+      "assertions": [
+        {
+          "action": "skill",
+          "resources": [
+            "guide"
+          ],
+          "save": [
+            "guide"
+          ]
+        },
+        {
+          "action": "read",
+          "resources": [
+            "skill://guide/SKILL.md"
+          ],
+          "save": [
+            "*"
+          ]
+        }
+      ],
+      "loaded": [],
+      "tree": {}
+    }
+  },
+  {
+    "name": "canonicalizes a trailing slash before the read check",
+    "fixtures": [],
+    "call": {
+      "path": "skill://guide/SKILL.md/"
+    },
+    "skills": [
+      {
+        "id": "guide",
+        "name": "Guide",
+        "path": "skill://guide/SKILL.md",
+        "content": "# Guide\nRead references/style.md",
+        "files": {
+          "references/style.md": "Line 1\nLine 2",
+          "references/guide.pdf": "%PDF-1.7\nguide"
+        }
+      }
+    ],
+    "permission": {
+      "deniedResources": [
+        "skill://guide/SKILL.md"
+      ]
+    },
+    "expected": {
+      "status": "error",
+      "error": "Permission denied: read",
+      "assertions": [
+        {
+          "action": "skill",
+          "resources": [
+            "guide"
+          ],
+          "save": [
+            "guide"
+          ]
+        },
+        {
+          "action": "read",
+          "resources": [
+            "skill://guide/SKILL.md"
+          ],
+          "save": [
+            "*"
+          ]
+        }
+      ],
+      "loaded": [],
+      "tree": {}
+    }
+  }
+]

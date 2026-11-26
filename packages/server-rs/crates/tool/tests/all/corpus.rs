@@ -85,7 +85,9 @@ async fn builtin_definitions_match_the_pinned_typescript() {
         serde_json::from_str(include_str!("../corpus/definitions.json")).expect("the definitions corpus is valid JSON");
     for case in cases {
         let registry = ToolRegistry::new();
-        let _builtins = builtin::activate(&registry, &BuiltinDeps { full_codemode: case.full_codemode }).await;
+        let _builtins =
+            builtin::activate(&registry, &BuiltinDeps { full_codemode: case.full_codemode, ..BuiltinDeps::default() })
+                .await;
         let permissions = decode_rules(&case.permissions);
         let options = SnapshotOptions { hidden: case.hidden.into_iter().collect(), ..SnapshotOptions::default() };
         let snapshot = registry.snapshot(&permissions, &options).await.expect("the snapshot builds");

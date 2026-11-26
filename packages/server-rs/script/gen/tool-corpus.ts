@@ -5,9 +5,9 @@ const root = new URL("../..", import.meta.url).pathname
 const source = `${root}script/tool-corpus/export.ts`
 const tree = await upstreamCoreTree()
 
-await Bun.write(`${tree}/packages/core/test/opencode-rs-tool-corpus.ts`, Bun.file(source))
+await Bun.write(`${tree}/packages/core/test/opencode-rs-tool-corpus.ts`, await Bun.file(source).text())
 
-for (const area of ["definitions", "snapshot", "validation", "truncate"]) {
+for (const area of ["definitions", "snapshot", "validation", "truncate", "read_filesystem", "read"]) {
   const result = Bun.spawnSync(["bun", "run", "test/opencode-rs-tool-corpus.ts", area], {
     cwd: `${tree}/packages/core`,
     stdout: "pipe",

@@ -5,19 +5,26 @@ use serde_json::Value;
 
 use crate::definition::{ToolOptions, ToolSpec};
 use crate::registry::{ToolRegistration, ToolRegistry};
+use crate::tools::read;
 use crate::{ToolContext, ToolError, ToolOutput, ToolRuntime};
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Default)]
 pub struct BuiltinDeps {
     pub full_codemode: bool,
+    pub read: Option<read::ReadDeps>,
 }
 
 pub async fn activate(registry: &ToolRegistry, deps: &BuiltinDeps) -> opencode_location::state::Registration {
     let entries = crate::generated::definitions(deps.full_codemode);
+    let reader = deps.read.clone();
     registry
         .transform(move |editor| {
             for entry in entries {
                 let definition = &entry.definition;
+                let runtime: Arc<dyn ToolRuntime> = match (definition.name.as_str(), &reader) {
+                    ("read", Some(deps)) => Arc::new(read::ReadRuntime::new(deps.clone())),
+                    _ => Arc::new(StubRuntime { name: definition.name.clone() }),
+                };
                 editor.add(ToolRegistration {
                     spec: ToolSpec {
                         name: definition.name.clone(),
@@ -33,14 +40,14 @@ pub async fn activate(registry: &ToolRegistry, deps: &BuiltinDeps) -> opencode_l
                         permission: entry.permission.clone(),
                         codemode: entry.codemode.clone(),
                     },
-                    runtime: Arc::new(StubRuntime { name: definition.name.clone() }),
+                    runtime,
                 });
             }
         })
         .await
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 struct StubRuntime {
     name: String,
 }
