@@ -1,4 +1,5 @@
 mod corpus;
+mod edit;
 mod image;
 mod output;
 mod read;
@@ -6,6 +7,7 @@ mod registry;
 mod snapshot;
 mod tools;
 mod validation;
+mod write;
 
 use std::sync::Arc;
 

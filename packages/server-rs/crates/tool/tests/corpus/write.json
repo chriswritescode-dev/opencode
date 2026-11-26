@@ -1,0 +1,385 @@
+[
+  {
+    "name": "creates a relative file through FileMutation once",
+    "call": {
+      "path": "src/new.txt",
+      "content": "created"
+    },
+    "fixtures": [],
+    "expected": {
+      "status": "completed",
+      "output": "Created file successfully: src/new.txt",
+      "content": [
+        {
+          "type": "text",
+          "text": "Created file successfully: src/new.txt"
+        }
+      ],
+      "assertions": [
+        {
+          "action": "edit",
+          "resources": [
+            "src/new.txt"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "files": [
+              {
+                "file": "src/new.txt",
+                "patch": "Index: src/new.txt\n===================================================================\n--- src/new.txt\n+++ src/new.txt\n@@ -0,0 +1,1 @@\n+created\n\\ No newline at end of file\n",
+                "status": "added",
+                "additions": 1,
+                "deletions": 0
+              }
+            ]
+          }
+        }
+      ],
+      "tree": {
+        "{{root}}/src": null,
+        "{{root}}/src/new.txt": "Y3JlYXRlZA=="
+      }
+    }
+  },
+  {
+    "name": "overwrites a relative existing file and reports that it wrote the file",
+    "fixtures": [
+      {
+        "path": "{{root}}/existing.txt",
+        "parts": [
+          {
+            "text": "before"
+          }
+        ]
+      }
+    ],
+    "call": {
+      "path": "existing.txt",
+      "content": "after"
+    },
+    "expected": {
+      "status": "completed",
+      "output": "Wrote file successfully: existing.txt",
+      "content": [
+        {
+          "type": "text",
+          "text": "Wrote file successfully: existing.txt"
+        }
+      ],
+      "assertions": [
+        {
+          "action": "edit",
+          "resources": [
+            "existing.txt"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "files": [
+              {
+                "file": "existing.txt",
+                "patch": "Index: existing.txt\n===================================================================\n--- existing.txt\n+++ existing.txt\n@@ -1,1 +1,1 @@\n-before\n\\ No newline at end of file\n+after\n\\ No newline at end of file\n",
+                "status": "modified",
+                "additions": 1,
+                "deletions": 1
+              }
+            ]
+          }
+        }
+      ],
+      "tree": {
+        "{{root}}/existing.txt": "YWZ0ZXI="
+      }
+    }
+  },
+  {
+    "name": "accepts an absolute file path inside the active Location",
+    "call": {
+      "path": "{{root}}/absolute.txt",
+      "content": "inside"
+    },
+    "fixtures": [],
+    "expected": {
+      "status": "completed",
+      "output": "Created file successfully: absolute.txt",
+      "content": [
+        {
+          "type": "text",
+          "text": "Created file successfully: absolute.txt"
+        }
+      ],
+      "assertions": [
+        {
+          "action": "edit",
+          "resources": [
+            "absolute.txt"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "files": [
+              {
+                "file": "absolute.txt",
+                "patch": "Index: absolute.txt\n===================================================================\n--- absolute.txt\n+++ absolute.txt\n@@ -0,0 +1,1 @@\n+inside\n\\ No newline at end of file\n",
+                "status": "added",
+                "additions": 1,
+                "deletions": 0
+              }
+            ]
+          }
+        }
+      ],
+      "tree": {
+        "{{root}}/absolute.txt": "aW5zaWRl"
+      }
+    }
+  },
+  {
+    "name": "writes an external symlink target with only its in-location permission",
+    "fixtures": [
+      {
+        "path": "{{outside}}/external.txt",
+        "parts": [
+          {
+            "text": "before"
+          }
+        ]
+      },
+      {
+        "path": "{{root}}/link.txt",
+        "kind": "symlink",
+        "target": "{{outside}}/external.txt"
+      }
+    ],
+    "call": {
+      "path": "link.txt",
+      "content": "after"
+    },
+    "expected": {
+      "status": "completed",
+      "output": "Wrote file successfully: link.txt",
+      "content": [
+        {
+          "type": "text",
+          "text": "Wrote file successfully: link.txt"
+        }
+      ],
+      "assertions": [
+        {
+          "action": "edit",
+          "resources": [
+            "link.txt"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "files": [
+              {
+                "file": "link.txt",
+                "patch": "Index: link.txt\n===================================================================\n--- link.txt\n+++ link.txt\n@@ -1,1 +1,1 @@\n-before\n\\ No newline at end of file\n+after\n\\ No newline at end of file\n",
+                "status": "modified",
+                "additions": 1,
+                "deletions": 1
+              }
+            ]
+          }
+        }
+      ],
+      "tree": {
+        "{{root}}/link.txt": "symlink:{{outside}}/external.txt",
+        "{{outside}}/external.txt": "YWZ0ZXI="
+      }
+    }
+  },
+  {
+    "name": "approves an explicit external absolute path before edit",
+    "call": {
+      "path": "{{outside}}/external.txt",
+      "content": "external"
+    },
+    "fixtures": [],
+    "expected": {
+      "status": "completed",
+      "output": "Created file successfully: {{outside}}/external.txt",
+      "content": [
+        {
+          "type": "text",
+          "text": "Created file successfully: {{outside}}/external.txt"
+        }
+      ],
+      "assertions": [
+        {
+          "action": "external_directory",
+          "resources": [
+            "{{outside}}/*"
+          ],
+          "save": [
+            "{{outside}}/*"
+          ]
+        },
+        {
+          "action": "edit",
+          "resources": [
+            "{{outside}}/external.txt"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "files": [
+              {
+                "file": "{{outside}}/external.txt",
+                "patch": "Index: {{outside}}/external.txt\n===================================================================\n--- {{outside}}/external.txt\n+++ {{outside}}/external.txt\n@@ -0,0 +1,1 @@\n+external\n\\ No newline at end of file\n",
+                "status": "added",
+                "additions": 1,
+                "deletions": 0
+              }
+            ]
+          }
+        }
+      ],
+      "tree": {
+        "{{outside}}/external.txt": "ZXh0ZXJuYWw="
+      }
+    }
+  },
+  {
+    "name": "saves external directory approval at the nearest project directory",
+    "fixtures": [
+      {
+        "path": "{{outside}}/repo/.git",
+        "kind": "directory"
+      },
+      {
+        "path": "{{outside}}/repo/packages/app",
+        "kind": "directory"
+      }
+    ],
+    "call": {
+      "path": "{{outside}}/repo/packages/app/external.txt",
+      "content": "external"
+    },
+    "expected": {
+      "status": "completed",
+      "output": "Created file successfully: {{outside}}/repo/packages/app/external.txt",
+      "content": [
+        {
+          "type": "text",
+          "text": "Created file successfully: {{outside}}/repo/packages/app/external.txt"
+        }
+      ],
+      "assertions": [
+        {
+          "action": "external_directory",
+          "resources": [
+            "{{outside}}/repo/packages/app/*"
+          ],
+          "save": [
+            "{{outside}}/repo/*"
+          ]
+        },
+        {
+          "action": "edit",
+          "resources": [
+            "{{outside}}/repo/packages/app/external.txt"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "files": [
+              {
+                "file": "{{outside}}/repo/packages/app/external.txt",
+                "patch": "Index: {{outside}}/repo/packages/app/external.txt\n===================================================================\n--- {{outside}}/repo/packages/app/external.txt\n+++ {{outside}}/repo/packages/app/external.txt\n@@ -0,0 +1,1 @@\n+external\n\\ No newline at end of file\n",
+                "status": "added",
+                "additions": 1,
+                "deletions": 0
+              }
+            ]
+          }
+        }
+      ],
+      "tree": {
+        "{{outside}}/repo": null,
+        "{{outside}}/repo/packages": null,
+        "{{outside}}/repo/packages/app": null,
+        "{{outside}}/repo/packages/app/external.txt": "ZXh0ZXJuYWw=",
+        "{{outside}}/repo/.git": null
+      }
+    }
+  },
+  {
+    "name": "does not write when external_directory approval is denied",
+    "call": {
+      "path": "{{outside}}/denied.txt",
+      "content": "blocked"
+    },
+    "permission": {
+      "deniedActions": [
+        "external_directory"
+      ]
+    },
+    "fixtures": [],
+    "expected": {
+      "status": "error",
+      "error": "Permission denied: external_directory",
+      "assertions": [
+        {
+          "action": "external_directory",
+          "resources": [
+            "{{outside}}/*"
+          ],
+          "save": [
+            "{{outside}}/*"
+          ]
+        }
+      ],
+      "tree": {}
+    }
+  },
+  {
+    "name": "does not write when edit approval is denied",
+    "call": {
+      "path": "denied.txt",
+      "content": "blocked"
+    },
+    "permission": {
+      "deniedActions": [
+        "edit"
+      ]
+    },
+    "fixtures": [],
+    "expected": {
+      "status": "error",
+      "error": "Permission denied: edit",
+      "assertions": [
+        {
+          "action": "edit",
+          "resources": [
+            "denied.txt"
+          ],
+          "save": [
+            "*"
+          ],
+          "metadata": {
+            "files": [
+              {
+                "file": "denied.txt",
+                "patch": "Index: denied.txt\n===================================================================\n--- denied.txt\n+++ denied.txt\n@@ -0,0 +1,1 @@\n+blocked\n\\ No newline at end of file\n",
+                "status": "added",
+                "additions": 1,
+                "deletions": 0
+              }
+            ]
+          }
+        }
+      ],
+      "tree": {}
+    }
+  }
+]

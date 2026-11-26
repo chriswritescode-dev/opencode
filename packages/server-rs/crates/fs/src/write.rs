@@ -6,6 +6,8 @@ use serde_json::Value;
 
 use crate::FsError;
 use crate::access::{Access, AccessError, Authorizer, Invocation, Kind, ResolveInput, Target};
+use crate::bom;
+use crate::diff::{self, FileDiffStatus};
 use crate::mutation::{Mutation, TextWriteResult};
 
 #[derive(Clone, Debug)]
@@ -44,6 +46,7 @@ pub enum WriteError {
     Fs(#[from] FsError),
 }
 
+#[derive(Clone)]
 pub struct FileWriter {
     access: Access,
     mutation: Mutation,
@@ -89,7 +92,16 @@ impl FileWriter {
 
     pub async fn write(&self, input: WriteInput, context: &Invocation) -> Result<Written, WriteError> {
         let target = self.target(&input.path, context).await?;
-        self.authorize(&target, context, None).await?;
+        let current = self.mutation.read_optional_text(&target).await?;
+        let (_, text) = bom::split(&input.content);
+        let preview = diff::file_diff(
+            &target.resource,
+            current.as_ref().map_or("", |current| current.text.as_str()),
+            text,
+            if current.is_some() { FileDiffStatus::Modified } else { FileDiffStatus::Added },
+        );
+        self.authorize(&target, context, Some(serde_json::to_value(preview).expect("the file diff serializes")))
+            .await?;
         self.commit(&target, &input.content).await
     }
 }

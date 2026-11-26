@@ -3,16 +3,14 @@ use std::sync::Arc;
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD as BASE64;
 use futures_util::future::BoxFuture;
-use opencode_contract::generated::{AgentID, SessionID};
-use opencode_fs::access::{Access, AccessError, Invocation, ResolveInput, Target};
+use opencode_fs::access::{Access, AccessError, ResolveInput, Target};
 use opencode_fs::path;
-use opencode_permission::service::AssertInput;
 use opencode_registry::instructions::discovery;
 use opencode_registry::skill::{self, SkillService};
 use opencode_util::path::Flavor;
 use serde_json::{Value, json};
 
-use crate::context::{Content, ToolContext, ToolError, ToolOutput, ToolRuntime, invocation};
+use crate::context::{Content, ToolContext, ToolError, ToolOutput, ToolRuntime, file_invocation, permission_input};
 use crate::tools::read_filesystem::{self, DirEntry, FileKind, PageInput, ReadError, ReadFileError, ReadOutput};
 
 #[derive(Clone)]
@@ -93,12 +91,12 @@ impl ReadRuntime {
         let extra = skills.files(&parsed.id).await.map_err(|_| not_found())?.unwrap_or_default();
         context
             .authorizer
-            .assert(assert_input(context, "skill", vec![skill.id.0.clone()], vec![skill.id.0.clone()]))
+            .assert(permission_input(context, "skill", vec![skill.id.0.clone()], vec![skill.id.0.clone()]))
             .await
             .map_err(|error| ToolError::new(error.to_string()))?;
         context
             .authorizer
-            .assert(assert_input(context, "read", vec![parsed.uri.clone()], vec!["*".to_owned()]))
+            .assert(permission_input(context, "read", vec![parsed.uri.clone()], vec!["*".to_owned()]))
             .await
             .map_err(|error| ToolError::new(error.to_string()))?;
         let files = VirtualFiles::new(&skill.content, &extra);
@@ -117,7 +115,7 @@ impl ReadRuntime {
     ) -> Result<Target, ToolError> {
         self.deps
             .access
-            .authorize_read(file, &invocation_of(context), sibling, context.authorizer.as_ref())
+            .authorize_read(file, &file_invocation(context), sibling, context.authorizer.as_ref())
             .await
             .map_err(|error| access_error(error, file))
     }
@@ -157,7 +155,7 @@ impl ReadRuntime {
         }
         let readable = context
             .authorizer
-            .allows(assert_input(context, "read", vec![target.resource.clone()], vec!["*".to_owned()]))
+            .allows(permission_input(context, "read", vec![target.resource.clone()], vec!["*".to_owned()]))
             .await
             .ok()?;
         if !readable {
@@ -214,29 +212,6 @@ impl ReadRuntime {
 impl ToolRuntime for ReadRuntime {
     fn execute<'a>(&'a self, input: Value, context: &'a ToolContext) -> BoxFuture<'a, Result<ToolOutput, ToolError>> {
         Box::pin(self.execute_inner(input, context))
-    }
-}
-
-fn invocation_of(context: &ToolContext) -> Invocation {
-    Invocation {
-        session_id: context.session_id.clone(),
-        agent: Some(context.agent.clone()).filter(|agent| !agent.is_empty()),
-        message_id: context.message_id.clone(),
-        id: context.call_id.clone(),
-    }
-}
-
-fn assert_input(context: &ToolContext, action: &str, resources: Vec<String>, save: Vec<String>) -> AssertInput {
-    AssertInput {
-        id: None,
-        session_id: SessionID(context.session_id.clone()),
-        agent: Some(AgentID(context.agent.clone())).filter(|agent| !agent.0.is_empty()),
-        action: action.to_owned(),
-        resources,
-        save: Some(save),
-        metadata: None,
-        source: Some(invocation(context)),
-        unattended: None,
     }
 }
 

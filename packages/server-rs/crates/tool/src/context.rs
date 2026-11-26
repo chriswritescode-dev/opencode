@@ -2,8 +2,9 @@ use std::sync::Arc;
 
 use futures_util::future::BoxFuture;
 use opencode_contract::codec::JsonMap;
-use opencode_contract::generated::{PermissionSource, PermissionSource2, PermissionSourceType};
-use opencode_fs::access::Authorizer;
+use opencode_contract::generated::{AgentID, PermissionSource, PermissionSource2, PermissionSourceType, SessionID};
+use opencode_fs::access::{Authorizer, Invocation};
+use opencode_permission::service::AssertInput;
 use serde_json::Value;
 use tokio::sync::watch;
 
@@ -52,6 +53,29 @@ pub fn invocation(context: &ToolContext) -> PermissionSource {
         r#type: PermissionSourceType::Tool,
         message_id: context.message_id.clone(),
         id: context.call_id.clone(),
+    }
+}
+
+pub fn file_invocation(context: &ToolContext) -> Invocation {
+    Invocation {
+        session_id: context.session_id.clone(),
+        agent: Some(context.agent.clone()).filter(|agent| !agent.is_empty()),
+        message_id: context.message_id.clone(),
+        id: context.call_id.clone(),
+    }
+}
+
+pub fn permission_input(context: &ToolContext, action: &str, resources: Vec<String>, save: Vec<String>) -> AssertInput {
+    AssertInput {
+        id: None,
+        session_id: SessionID(context.session_id.clone()),
+        agent: Some(AgentID(context.agent.clone())).filter(|agent| !agent.0.is_empty()),
+        action: action.to_owned(),
+        resources,
+        save: Some(save),
+        metadata: None,
+        source: Some(invocation(context)),
+        unattended: None,
     }
 }
 

@@ -149,25 +149,41 @@ pub struct RecordedAssertion {
     pub resources: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub save: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub metadata: Option<serde_json::Value>,
 }
 
 pub struct RecordingAuthorizer {
     pub allow: bool,
+    pub read_allowed: bool,
     pub denied: Vec<String>,
+    pub denied_actions: Vec<String>,
     pub assertions: std::sync::Mutex<Vec<RecordedAssertion>>,
 }
 
 impl RecordingAuthorizer {
     pub fn new(allow: bool, denied: Vec<String>) -> Self {
-        RecordingAuthorizer { allow, denied, assertions: std::sync::Mutex::new(Vec::new()) }
+        RecordingAuthorizer {
+            allow,
+            read_allowed: true,
+            denied,
+            denied_actions: Vec::new(),
+            assertions: std::sync::Mutex::new(Vec::new()),
+        }
+    }
+
+    pub fn deny_actions(&mut self, denied: Vec<String>) {
+        self.denied_actions = denied;
     }
 
     pub fn assertions(&self) -> Vec<RecordedAssertion> {
         self.assertions.lock().expect("the assertion log is not poisoned").clone()
     }
 
-    fn denies(&self, resources: &[String]) -> bool {
-        !self.allow || resources.iter().any(|resource| self.denied.contains(resource))
+    fn denies(&self, action: &str, resources: &[String]) -> bool {
+        !self.allow
+            || self.denied_actions.iter().any(|denied| denied == action)
+            || resources.iter().any(|resource| self.denied.contains(resource))
     }
 }
 
@@ -181,8 +197,9 @@ impl opencode_fs::access::Authorizer for RecordingAuthorizer {
                 action: input.action.clone(),
                 resources: input.resources.clone(),
                 save: input.save.clone(),
+                metadata: input.metadata.map(|metadata| serde_json::Value::Object(metadata.0.into_iter().collect())),
             });
-            if self.denies(&input.resources) {
+            if self.denies(&input.action, &input.resources) {
                 return Err(opencode_permission::service::PermissionError::Blocked {
                     rules: Vec::new(),
                     permission: input.action,
@@ -198,7 +215,7 @@ impl opencode_fs::access::Authorizer for RecordingAuthorizer {
         &'a self,
         input: opencode_permission::service::AssertInput,
     ) -> futures_util::future::BoxFuture<'a, Result<bool, opencode_permission::service::PermissionError>> {
-        Box::pin(async move { Ok(!self.denies(&input.resources)) })
+        Box::pin(async move { Ok(self.read_allowed && !self.denies(&input.action, &input.resources)) })
     }
 }
 

@@ -19,7 +19,9 @@ import { Session } from "@opencode/core/session"
 import { SessionMessage } from "@opencode/core/session/message"
 import { Tool } from "@opencode/core/tool"
 import { modelTools } from "@opencode/core/tool/model-policy"
+import { EditTool } from "@opencode/core/tool/plugin/edit"
 import { ReadTool } from "@opencode/core/tool/plugin/read"
+import { WriteTool } from "@opencode/core/tool/plugin/write"
 import { ReadToolFileSystem } from "@opencode/core/tool/read-filesystem"
 import { definition, execute as executeTool } from "@opencode/core/tool/runtime"
 import { ToolOutput } from "@opencode/core/tool-output"
@@ -39,6 +41,9 @@ import { offlineModels } from "./fixture/models"
 import { tmpdirScoped } from "./fixture/tmpdir"
 import { Config } from "@opencode/core/config"
 import { FileAccess } from "@opencode/core/file-access"
+import { FileMutation } from "@opencode/core/file-mutation"
+import { FileWrite } from "@opencode/core/file-write"
+import { Formatter } from "@opencode/core/formatter"
 import { Image } from "@opencode/core/image"
 import { InstructionDiscovery } from "@opencode/core/instruction-discovery"
 import { Permission } from "@opencode/core/permission"
@@ -1595,12 +1600,437 @@ async function exportRead() {
   console.log(`__TOOL_CORPUS__${JSON.stringify(exported)}`)
 }
 
+const writeToolNode = makeLocationNode({
+  name: "corpus/write-tool-plugin",
+  layer: Layer.effectDiscard(registerToolPlugin(WriteTool.Plugin)),
+  deps: [Tool.node, FileWrite.node, Config.node, Flag.node],
+})
+
+const editToolNode = makeLocationNode({
+  name: "corpus/edit-tool-plugin",
+  layer: Layer.effectDiscard(registerToolPlugin(EditTool.Plugin)),
+  deps: [
+    Tool.node,
+    FileWrite.node,
+    FileMutation.node,
+    Environment.node,
+    Location.node,
+    Permission.node,
+    Config.node,
+    Flag.node,
+  ],
+})
+
+const corpusFormatter = Layer.mock(Formatter.Service, { file: () => Effect.succeed(false) })
+
+function toolLayerFor(tool: "write" | "edit", root: string, permission: Layer.Layer<Permission.Service>) {
+  return AppNodeBuilder.build(
+    LayerNode.group([
+      Tool.node,
+      FileAccess.node,
+      FileMutation.node,
+      tool === "write" ? writeToolNode : editToolNode,
+    ]),
+    [
+      Environment.node.replace(hostEnvironmentLayer),
+      Permission.node.replace(permission),
+      Config.node.replace(corpusConfig),
+      Formatter.node.replace(corpusFormatter),
+      Location.node.replace(
+        Layer.succeed(Location.Service, Location.Service.of(location({ directory: AbsolutePath.make(root) }))),
+      ),
+    ],
+  ).pipe(Layer.provide(Layer.succeed(Flag.Overrides, undefined)))
+}
+
+interface ToolPermission {
+  allow?: boolean
+  deniedResources?: string[]
+  deniedActions?: string[]
+  readAllowed?: boolean
+}
+
+interface ToolCase {
+  name: string
+  fixtures?: Fixture[]
+  call: Record<string, unknown>
+  permission?: ToolPermission
+}
+
+async function exportToolCases(tool: "write" | "edit", specs: ToolCase[]) {
+  const base = await fs.mkdtemp(path.join(os.tmpdir(), "opencode-tool-corpus-"))
+  const exported: Array<Record<string, unknown>> = []
+  try {
+    for (const [index, spec] of specs.entries()) {
+      const root = path.join(base, `${index}-${spec.name.replace(/[^a-zA-Z0-9]+/g, "-").slice(0, 40)}`)
+      const outside = `${root}-outside`
+      await fs.mkdir(root, { recursive: true })
+      await fs.mkdir(outside, { recursive: true })
+      await materializeFixtures(root, outside, spec.fixtures ?? [])
+      const assertions: Assertion[] = []
+      const allow = spec.permission?.allow ?? true
+      const deniedResources = spec.permission?.deniedResources ?? []
+      const deniedActions = spec.permission?.deniedActions ?? []
+      const readAllowed = spec.permission?.readAllowed ?? true
+      const allowed = (input: { action: string; resources: readonly string[] }) =>
+        allow &&
+        !deniedActions.includes(input.action) &&
+        !input.resources.some((resource) => deniedResources.includes(resource))
+      const permission = permissionLayer({
+        assert: (input) =>
+          Effect.sync(() => {
+            assertions.push({
+              action: input.action,
+              resources: [...input.resources],
+              ...(input.save === undefined ? {} : { save: [...input.save] }),
+              ...(input.metadata === undefined ? {} : { metadata: input.metadata }),
+            })
+          }).pipe(
+            Effect.andThen(
+              allowed(input)
+                ? Effect.void
+                : Effect.fail(
+                    new Permission.BlockedError({
+                      rules: [],
+                      permission: input.action,
+                      resources: input.resources,
+                    }),
+                  ),
+            ),
+          ),
+        allows: (input) => Effect.succeed(input.action === "read" ? readAllowed : allowed(input)),
+      })
+      const call = Object.fromEntries(
+        Object.entries(spec.call).map(([key, value]) => [
+          key,
+          typeof value === "string" ? value.replaceAll("{{root}}", root).replaceAll("{{outside}}", outside) : value,
+        ]),
+      )
+      const program = Effect.gen(function* () {
+        const registry = yield* Tool.Service
+        return yield* (yield* registry.snapshot()).execute({
+          sessionID: Session.ID.make(`ses_${tool}_tool_test`),
+          ...toolIdentity,
+          call: { type: "tool-call", id: `call-${index}`, name: tool, input: call },
+        }).pipe(
+          Effect.map((result) => ({ status: "completed" as const, ...result })),
+          Effect.catchTag("Tool.Error", (error) =>
+            Effect.succeed({ status: "error" as const, error: toSessionError(error) }),
+          ),
+        )
+      }).pipe(Effect.scoped, Effect.provide(toolLayerFor(tool, root, permission)))
+      const exit = await Effect.runPromiseExit(program)
+      if (Exit.isFailure(exit)) {
+        console.error(`corpus: ${tool} ${spec.name} failed`)
+        console.error(exit.cause)
+        process.exit(1)
+      }
+      const execution = exit.value
+      const tree = await fileTree(root, outside)
+      const expected: Record<string, unknown> = { status: execution.status }
+      if (execution.status === "completed") {
+        expected.output = execution.output
+        expected.content = execution.content
+        if (execution.metadata !== undefined) expected.metadata = execution.metadata
+      } else expected.error = execution.error?.message
+      expected.assertions = assertions
+      expected.tree = tree
+      const normalized = JSON.stringify({ ...spec, fixtures: spec.fixtures ?? [], call, expected })
+        .replaceAll(outside, "{{outside}}")
+        .replaceAll(root, "{{root}}")
+      exported.push(JSON.parse(normalized))
+      await fs.rm(root, { recursive: true, force: true })
+      await fs.rm(outside, { recursive: true, force: true })
+    }
+  } finally {
+    await fs.rm(base, { recursive: true, force: true })
+  }
+  console.log(`__TOOL_CORPUS__${JSON.stringify(exported)}`)
+}
+
+const writeSpecs = (): ToolCase[] => [
+  { name: "creates a relative file through FileMutation once", call: { path: "src/new.txt", content: "created" } },
+  {
+    name: "overwrites a relative existing file and reports that it wrote the file",
+    fixtures: [{ path: "{{root}}/existing.txt", parts: [{ text: "before" }] }],
+    call: { path: "existing.txt", content: "after" },
+  },
+  {
+    name: "accepts an absolute file path inside the active Location",
+    call: { path: "{{root}}/absolute.txt", content: "inside" },
+  },
+  {
+    name: "writes an external symlink target with only its in-location permission",
+    fixtures: [
+      { path: "{{outside}}/external.txt", parts: [{ text: "before" }] },
+      { path: "{{root}}/link.txt", kind: "symlink", target: "{{outside}}/external.txt" },
+    ],
+    call: { path: "link.txt", content: "after" },
+  },
+  {
+    name: "approves an explicit external absolute path before edit",
+    call: { path: "{{outside}}/external.txt", content: "external" },
+  },
+  {
+    name: "saves external directory approval at the nearest project directory",
+    fixtures: [
+      { path: "{{outside}}/repo/.git", kind: "directory" },
+      { path: "{{outside}}/repo/packages/app", kind: "directory" },
+    ],
+    call: { path: "{{outside}}/repo/packages/app/external.txt", content: "external" },
+  },
+  {
+    name: "does not write when external_directory approval is denied",
+    call: { path: "{{outside}}/denied.txt", content: "blocked" },
+    permission: { deniedActions: ["external_directory"] },
+  },
+  {
+    name: "does not write when edit approval is denied",
+    call: { path: "denied.txt", content: "blocked" },
+    permission: { deniedActions: ["edit"] },
+  },
+]
+
+const editMissingLines =
+  "import { a } from './a'\n\nexport function run() {\n  const value = a()\n  return value + 1\n}\n"
+
+const editSpecs = (): ToolCase[] => [
+  {
+    name: "replaces relative exact text through FileMutation once",
+    fixtures: [{ path: "{{root}}/hello.txt", parts: [{ text: "before\nrest\n" }] }],
+    call: { path: "hello.txt", oldString: "before", newString: "after" },
+  },
+  {
+    name: "accepts an absolute file path inside the active Location",
+    fixtures: [{ path: "{{root}}/absolute.txt", parts: [{ text: "before" }] }],
+    call: { path: "{{root}}/absolute.txt", oldString: "before", newString: "after" },
+  },
+  {
+    name: "edits an external symlink target with only its in-location permission",
+    fixtures: [
+      { path: "{{outside}}/external.txt", parts: [{ text: "before" }] },
+      { path: "{{root}}/link.txt", kind: "symlink", target: "{{outside}}/external.txt" },
+    ],
+    call: { path: "link.txt", oldString: "before", newString: "after" },
+  },
+  {
+    name: "approves an explicit external absolute path before edit",
+    fixtures: [{ path: "{{outside}}/external.txt", parts: [{ text: "before" }] }],
+    call: { path: "{{outside}}/external.txt", oldString: "before", newString: "after" },
+  },
+  {
+    name: "does not write when external_directory approval is denied",
+    fixtures: [{ path: "{{outside}}/denied.txt", parts: [{ text: "before" }] }],
+    call: { path: "{{outside}}/denied.txt", oldString: "before", newString: "after" },
+    permission: { deniedActions: ["external_directory"] },
+  },
+  {
+    name: "does not write when edit approval is denied",
+    fixtures: [{ path: "{{outside}}/denied.txt", parts: [{ text: "before" }] }],
+    call: { path: "{{outside}}/denied.txt", oldString: "before", newString: "after" },
+    permission: { deniedActions: ["edit"] },
+  },
+  {
+    name: "denied edit does not disclose whether oldString matches",
+    fixtures: [{ path: "{{root}}/secret.txt", parts: [{ text: "secret content" }] }],
+    call: { path: "secret.txt", oldString: "secret content", newString: "replacement" },
+    permission: { deniedActions: ["edit"] },
+  },
+  {
+    name: "denied edit does not disclose whether oldString is missing",
+    fixtures: [{ path: "{{root}}/secret.txt", parts: [{ text: "secret content" }] }],
+    call: { path: "secret.txt", oldString: "not present", newString: "replacement" },
+    permission: { deniedActions: ["edit"] },
+  },
+  {
+    name: "rejects an identical oldString and newString",
+    fixtures: [{ path: "{{root}}/matches.txt", parts: [{ text: "same same" }] }],
+    call: { path: "matches.txt", oldString: "same", newString: "same" },
+  },
+  {
+    name: "rejects an empty oldString",
+    fixtures: [{ path: "{{root}}/matches.txt", parts: [{ text: "same same" }] }],
+    call: { path: "matches.txt", oldString: "", newString: "after" },
+  },
+  {
+    name: "rejects a missing oldString",
+    fixtures: [{ path: "{{root}}/matches.txt", parts: [{ text: "same same" }] }],
+    call: { path: "matches.txt", oldString: "missing", newString: "after" },
+  },
+  {
+    name: "rejects an ambiguous oldString",
+    fixtures: [{ path: "{{root}}/matches.txt", parts: [{ text: "same same" }] }],
+    call: { path: "matches.txt", oldString: "same", newString: "after" },
+  },
+  {
+    name: "points a missed oldString at the closest lines",
+    fixtures: [{ path: "{{root}}/miss.ts", parts: [{ text: editMissingLines }] }],
+    call: {
+      path: "miss.ts",
+      oldString: "export function run() {\n\tconst value = a()\n\treturn value + 2\n}",
+      newString: "x",
+    },
+  },
+  {
+    name: "points a missed oldString at newString already applied",
+    fixtures: [{ path: "{{root}}/miss.ts", parts: [{ text: editMissingLines }] }],
+    call: {
+      path: "miss.ts",
+      oldString: "const value = b()",
+      newString: "  const value = a()\n  return value + 1",
+    },
+  },
+  {
+    name: "does not hint when no line matches",
+    fixtures: [{ path: "{{root}}/miss.ts", parts: [{ text: editMissingLines }] }],
+    call: { path: "miss.ts", oldString: "nothing like it", newString: "anything" },
+  },
+  {
+    name: "does not hint past the matched span",
+    fixtures: [{ path: "{{root}}/miss.ts", parts: [{ text: editMissingLines }] }],
+    call: { path: "miss.ts", oldString: "import { a } from './a'\n\n\n\n\n\n", newString: "x" },
+  },
+  {
+    name: "does not hint when reading the file is not allowed",
+    fixtures: [{ path: "{{root}}/miss.ts", parts: [{ text: editMissingLines }] }],
+    call: {
+      path: "miss.ts",
+      oldString: "export function run() {\n\tconst value = a()\n\treturn value + 2\n}",
+      newString: "x",
+    },
+    permission: { readAllowed: false },
+  },
+  {
+    name: "returns a missing file error",
+    call: { path: "missing.ts", oldString: "before", newString: "after" },
+  },
+  {
+    name: "returns a directory error",
+    fixtures: [{ path: "{{root}}/src", kind: "directory" }],
+    call: { path: "src", oldString: "before", newString: "after" },
+  },
+  {
+    name: "replaces every exact occurrence when replaceAll is true",
+    fixtures: [{ path: "{{root}}/all.txt", parts: [{ text: "same same same" }] }],
+    call: { path: "all.txt", oldString: "same", newString: "after", replaceAll: true },
+  },
+  {
+    name: "normalizes Unicode typography only after exact matching fails",
+    fixtures: [
+      {
+        path: "{{root}}/unicode.txt",
+        parts: [{ text: "exact - match\ncurly “quotes”\nminus − one\nspace\u00A0here\nexact − match\n" }],
+      },
+    ],
+    call: {
+      path: "unicode.txt",
+      oldString: 'curly "quotes"\nminus - one\nspace here',
+      newString: "normalized",
+    },
+  },
+  {
+    name: "ignores trailing whitespace while preserving untouched lines",
+    fixtures: [{ path: "{{root}}/whitespace.txt", parts: [{ text: "before  \nmatch  \nnext\t\nafter  \n" }] }],
+    call: { path: "whitespace.txt", oldString: "match\nnext", newString: "changed" },
+  },
+  {
+    name: "uses non-overlapping trailing-whitespace matches",
+    fixtures: [{ path: "{{root}}/overlap.txt", parts: [{ text: "a  \na  \na  \n" }] }],
+    call: { path: "overlap.txt", oldString: "a\na", newString: "x", replaceAll: true },
+  },
+  {
+    name: "preserves CRLF during a trailing-whitespace match",
+    fixtures: [{ path: "{{root}}/windows.txt", parts: [{ text: "a  \r\nb\t\r\n" }] }],
+    call: { path: "windows.txt", oldString: "a\nb", newString: "x" },
+  },
+  {
+    name: "refuses to rewrite a file that is not valid UTF-8",
+    fixtures: [
+      {
+        path: "{{root}}/Invoice.java",
+        kind: "binary",
+        base64: Buffer.concat([
+          Buffer.from("// Jos\xe9\n", "latin1"),
+          Buffer.from("int MAX = 10;\n"),
+        ]).toString("base64"),
+      },
+    ],
+    call: { path: "Invoice.java", oldString: "MAX = 10", newString: "MAX = 25" },
+  },
+  {
+    name: "matches across mixed line endings and keeps each region's endings",
+    fixtures: [{ path: "{{root}}/mostly-lf.txt", parts: [{ text: "head\r\nAAA OLD BBB\ntail\n" }] }],
+    call: { path: "mostly-lf.txt", oldString: "AAA OLD BBB", newString: "AAA NEW\nLINE2" },
+  },
+  {
+    name: "keeps endings while spanning lines in a mostly LF file",
+    fixtures: [{ path: "{{root}}/mostly-lf.txt", parts: [{ text: "head\r\nAAA NEW\nLINE2\ntail\n" }] }],
+    call: { path: "mostly-lf.txt", oldString: "LINE2\ntail", newString: "LINE2\nTAIL" },
+  },
+  {
+    name: "keeps endings when a match crosses a mixed-ending region",
+    fixtures: [{ path: "{{root}}/mostly-crlf.txt", parts: [{ text: "one\r\ntwo\r\nthree\nfour\r\n" }] }],
+    call: { path: "mostly-crlf.txt", oldString: "o\nthree\nfo", newString: "O\nTHREE\nFO" },
+  },
+  {
+    name: "keeps endings for a single-line match in a mostly CRLF file",
+    fixtures: [{ path: "{{root}}/mostly-crlf.txt", parts: [{ text: "one\r\ntwo\r\nthree\nfour\r\n" }] }],
+    call: { path: "mostly-crlf.txt", oldString: "one", newString: "ONE\nUNO" },
+  },
+  {
+    name: "keeps the endings of unchanged and in-place lines inside a multi-line match",
+    fixtures: [
+      {
+        path: "{{root}}/store.cs",
+        parts: [
+          {
+            text: "All(item.Sku);\r\n\r\nFind(sku);\r\n\r\nvoid Add()\n{\n  _items[item.Sku] = item;\n}\r\n",
+          },
+        ],
+      },
+    ],
+    call: {
+      path: "store.cs",
+      oldString: "All(item.Sku);\n\nFind(sku);\n\nvoid Add()\n{\n  _items[item.Sku] = item;\n}",
+      newString:
+        "All(item.Code);\n\nFind(code);\n\nvoid Add()\n{\n  _items[item.Code] = item;\n}\n\nbool Remove(string code)\n{\n}",
+    },
+  },
+  {
+    name: "strips line endings when oldString and newString differ only in \\r",
+    fixtures: [{ path: "{{root}}/strip.sh", parts: [{ text: "a\r\nb\r\n" }] }],
+    call: { path: "strip.sh", oldString: "\r", newString: "", replaceAll: true },
+  },
+  {
+    name: "converts every line ending to LF",
+    fixtures: [{ path: "{{root}}/whole.sh", parts: [{ text: "x\r\ny\r\n" }] }],
+    call: { path: "whole.sh", oldString: "x\r\ny\r\n", newString: "x\ny\n" },
+  },
+  {
+    name: "adds CR line endings",
+    fixtures: [{ path: "{{root}}/add.bat", parts: [{ text: "p\nq\n" }] }],
+    call: { path: "add.bat", oldString: "p\nq", newString: "p\r\nq" },
+  },
+  {
+    name: "rejects an endings-only edit that is already applied",
+    fixtures: [{ path: "{{root}}/add.bat", parts: [{ text: "p\r\nq\n" }] }],
+    call: { path: "add.bat", oldString: "p\nq", newString: "p\r\nq" },
+  },
+  {
+    name: "fails instead of reporting success when the edit leaves the file unchanged",
+    fixtures: [{ path: "{{root}}/quote.txt", parts: [{ text: "it’s here\n" }] }],
+    call: { path: "quote.txt", oldString: "it's here", newString: "it’s here" },
+  },
+]
+
 if (area === "definitions") await exportDefinitions()
 else if (area === "snapshot") await exportSnapshot()
 else if (area === "validation") await exportValidation()
 else if (area === "truncate") await exportTruncate()
 else if (area === "read_filesystem") await exportReadFilesystem()
 else if (area === "read") await exportRead()
+else if (area === "write") await exportToolCases("write", writeSpecs())
+else if (area === "edit") await exportToolCases("edit", editSpecs())
 else {
   console.error(`corpus: unknown area ${area ?? ""}`)
   process.exit(1)
