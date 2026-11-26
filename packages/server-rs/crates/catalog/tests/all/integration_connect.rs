@@ -1386,6 +1386,155 @@ async fn decodes_command_stderr_across_read_boundaries() {
 
 #[cfg(unix)]
 #[tokio::test(flavor = "multi_thread")]
+async fn preserves_utf8_after_invalid_stderr_bytes() {
+    let (_dir, _database, _bus, credentials, service) = setup();
+    let integration = integration_id("company");
+    let method_id = IntegrationMethodID("login".to_owned());
+    let stderr = "printf '\\377\\303' >&2; sleep 0.1; printf '\\251' >&2; exit 3";
+    let _registration = service
+        .transform({
+            let integration = integration.clone();
+            move |editor| {
+                editor.method_update(Implementation::Method {
+                    integration_id: integration.clone(),
+                    method: command_method("login", &["/bin/sh", "-c", stderr]),
+                });
+                Ok(())
+            }
+        })
+        .await;
+
+    let attempt = service
+        .command()
+        .connect(CommandConnectInput { integration_id: integration.clone(), method_id, label: None })
+        .await
+        .expect("connect the command attempt");
+    let failed = tokio::time::timeout(
+        Duration::from_secs(10),
+        eventually(|| {
+            let service = service.clone();
+            let integration = integration.clone();
+            let attempt_id = attempt.attempt_id.clone();
+            async move {
+                let status = service.command().status(&integration, &attempt_id).await.ok()?;
+                matches!(&status, CommandAttemptStatus::Failed { .. }).then_some(status)
+            }
+        }),
+    )
+    .await
+    .expect("the command fails");
+    match failed {
+        CommandAttemptStatus::Failed { message, .. } => {
+            assert_eq!(message, "\u{FFFD}é");
+        }
+        other => panic!("expected a failed attempt, got {other:?}"),
+    }
+    assert!(credentials.list(&integration).expect("list the credentials").is_empty());
+}
+
+#[cfg(unix)]
+#[tokio::test(flavor = "multi_thread")]
+async fn settles_when_a_background_child_holds_the_pipes_open() {
+    let (_dir, _database, _bus, credentials, service) = setup();
+    let integration = integration_id("company");
+    let method_id = IntegrationMethodID("login".to_owned());
+    let _registration = service
+        .transform({
+            let integration = integration.clone();
+            move |editor| {
+                editor.method_update(Implementation::Method {
+                    integration_id: integration.clone(),
+                    method: command_method("login", &["/bin/sh", "-c", "(sleep 20) & printf 'secret'"]),
+                });
+                Ok(())
+            }
+        })
+        .await;
+
+    let attempt = service
+        .command()
+        .connect(CommandConnectInput { integration_id: integration.clone(), method_id, label: None })
+        .await
+        .expect("connect the command attempt");
+    let complete = tokio::time::timeout(
+        Duration::from_secs(15),
+        eventually(|| {
+            let service = service.clone();
+            let integration = integration.clone();
+            let attempt_id = attempt.attempt_id.clone();
+            async move {
+                let status = service.command().status(&integration, &attempt_id).await.ok()?;
+                matches!(&status, CommandAttemptStatus::Complete { .. }).then_some(status)
+            }
+        }),
+    )
+    .await
+    .expect("the command completes without waiting for the background child");
+    assert_eq!(complete, CommandAttemptStatus::Complete { time: attempt.time });
+
+    let stored = credentials.list(&integration).expect("list the credentials");
+    assert_eq!(stored.len(), 1);
+    assert_eq!(
+        stored[0].value,
+        CredentialValue::Key(CredentialKey {
+            r#type: CredentialKeyType::Key,
+            key: "secret".to_owned(),
+            metadata: None,
+        })
+    );
+}
+
+#[cfg(unix)]
+#[tokio::test(flavor = "multi_thread")]
+async fn caps_long_stderr_at_the_message_limit() {
+    let (_dir, _database, _bus, credentials, service) = setup();
+    let integration = integration_id("company");
+    let method_id = IntegrationMethodID("login".to_owned());
+    let stderr = "yes a | head -c 131072 >&2; printf 'tail' >&2; exit 3";
+    let _registration = service
+        .transform({
+            let integration = integration.clone();
+            move |editor| {
+                editor.method_update(Implementation::Method {
+                    integration_id: integration.clone(),
+                    method: command_method("login", &["/bin/sh", "-c", stderr]),
+                });
+                Ok(())
+            }
+        })
+        .await;
+
+    let attempt = service
+        .command()
+        .connect(CommandConnectInput { integration_id: integration.clone(), method_id, label: None })
+        .await
+        .expect("connect the command attempt");
+    let failed = tokio::time::timeout(
+        Duration::from_secs(10),
+        eventually(|| {
+            let service = service.clone();
+            let integration = integration.clone();
+            let attempt_id = attempt.attempt_id.clone();
+            async move {
+                let status = service.command().status(&integration, &attempt_id).await.ok()?;
+                matches!(&status, CommandAttemptStatus::Failed { .. }).then_some(status)
+            }
+        }),
+    )
+    .await
+    .expect("the command fails");
+    match failed {
+        CommandAttemptStatus::Failed { message, .. } => {
+            assert!(message.len() <= 64 * 1024, "the message kept {} bytes", message.len());
+            assert!(message.ends_with("tail"), "the message lost its tail");
+        }
+        other => panic!("expected a failed attempt, got {other:?}"),
+    }
+    assert!(credentials.list(&integration).expect("list the credentials").is_empty());
+}
+
+#[cfg(unix)]
+#[tokio::test(flavor = "multi_thread")]
 async fn fails_when_the_command_returns_no_credential() {
     let (_dir, _database, _bus, credentials, service) = setup();
     let integration = integration_id("company");

@@ -1,5 +1,5 @@
 use std::process::Stdio;
-use std::sync::{Arc, Weak};
+use std::sync::{Arc, Mutex, Weak};
 use std::time::Duration;
 
 use opencode_contract::generated::{
@@ -18,6 +18,9 @@ use crate::integration::{AuthorizationError, IntegrationService};
 
 const ATTEMPT_LIFETIME_MS: i64 = 10 * 60 * 1000;
 const TERMINAL_RETENTION: Duration = Duration::from_secs(60);
+const MAX_STDERR_BYTES: usize = 64 * 1024;
+const MAX_STDOUT_BYTES: usize = 1024 * 1024;
+const PIPE_DRAIN_TIMEOUT: Duration = Duration::from_secs(2);
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct CommandAttempt {
@@ -270,7 +273,7 @@ async fn execute(
                 && let Ok(mut attempts) = service.command_attempts.lock()
                 && let Some(CommandEntry::Pending(pending)) = attempts.get_mut(&stderr_attempt.0)
             {
-                pending.message.push_str(&chunk);
+                append_stderr(&mut pending.message, &chunk);
             }
         }
         let tail = String::from_utf8_lossy(&pending_bytes).into_owned();
@@ -279,35 +282,58 @@ async fn execute(
             && let Ok(mut attempts) = service.command_attempts.lock()
             && let Some(CommandEntry::Pending(pending)) = attempts.get_mut(&stderr_attempt.0)
         {
-            pending.message.push_str(&tail);
+            append_stderr(&mut pending.message, &tail);
         }
     });
-    let mut stdout_task = tokio::spawn(async move {
-        let mut reader = stdout;
-        let mut bytes = Vec::new();
-        let _ = reader.read_to_end(&mut bytes).await;
-        bytes
+    let stdout_bytes = Arc::new(Mutex::new(Vec::new()));
+    let mut stdout_task = tokio::spawn({
+        let stdout_bytes = stdout_bytes.clone();
+        async move {
+            let mut reader = stdout;
+            let mut buffer = [0u8; 4096];
+            while let Ok(read) = reader.read(&mut buffer).await {
+                if read == 0 {
+                    break;
+                }
+                let mut collected = stdout_bytes.lock().expect("lock command stdout");
+                let capacity = MAX_STDOUT_BYTES.saturating_sub(collected.len());
+                collected.extend_from_slice(&buffer[..read.min(capacity)]);
+            }
+        }
     });
     let status = tokio::select! {
         _ = scope.cancelled() => {
             let _ = child.kill().await;
+            stderr_task.abort();
+            stdout_task.abort();
             return None;
         }
         status = child.wait() => status,
     };
     let status = match status {
         Ok(status) => status,
-        Err(error) => return Some(Err(AuthorizationError::new(error))),
-    };
-    let (_, stdout) = tokio::select! {
-        _ = scope.cancelled() => {
+        Err(error) => {
             stderr_task.abort();
             stdout_task.abort();
-            return None;
+            return Some(Err(AuthorizationError::new(error)));
         }
-        outputs = async { ((&mut stderr_task).await, (&mut stdout_task).await) } => outputs,
     };
-    let stdout = stdout.unwrap_or_default();
+    let drained = tokio::select! {
+        _ = scope.cancelled() => None,
+        drained = tokio::time::timeout(PIPE_DRAIN_TIMEOUT, async {
+            ((&mut stderr_task).await, (&mut stdout_task).await)
+        }) => Some(drained),
+    };
+    let Some(drained) = drained else {
+        stderr_task.abort();
+        stdout_task.abort();
+        return None;
+    };
+    if drained.is_err() {
+        stderr_task.abort();
+        stdout_task.abort();
+    }
+    let stdout = stdout_bytes.lock().expect("lock command stdout").clone();
     if !status.success() {
         let message = service.upgrade().and_then(|service| {
             let attempts = service.command_attempts.lock().ok()?;
@@ -335,24 +361,45 @@ async fn execute(
 }
 
 fn decode_stderr(pending: &mut Vec<u8>) -> String {
-    match std::str::from_utf8(pending) {
-        Ok(text) => {
-            let decoded = text.to_owned();
-            pending.clear();
-            decoded
-        }
-        Err(error) if error.error_len().is_some() => {
-            let decoded = String::from_utf8_lossy(pending).into_owned();
-            pending.clear();
-            decoded
-        }
-        Err(error) => {
-            let valid = error.valid_up_to();
-            let decoded = String::from_utf8_lossy(&pending[..valid]).into_owned();
-            pending.drain(..valid);
-            decoded
+    let mut decoded = String::new();
+    loop {
+        match std::str::from_utf8(pending) {
+            Ok(text) => {
+                decoded.push_str(text);
+                pending.clear();
+                break;
+            }
+            Err(error) => {
+                let valid = error.valid_up_to();
+                if valid > 0 {
+                    decoded.push_str(std::str::from_utf8(&pending[..valid]).expect("valid utf-8 prefix"));
+                }
+                match error.error_len() {
+                    Some(len) => {
+                        decoded.push('\u{FFFD}');
+                        pending.drain(..valid + len);
+                    }
+                    None => {
+                        pending.drain(..valid);
+                        break;
+                    }
+                }
+            }
         }
     }
+    decoded
+}
+
+fn append_stderr(target: &mut String, chunk: &str) {
+    target.push_str(chunk);
+    if target.len() <= MAX_STDERR_BYTES {
+        return;
+    }
+    let mut boundary = target.len() - MAX_STDERR_BYTES;
+    while !target.is_char_boundary(boundary) {
+        boundary += 1;
+    }
+    target.drain(..boundary);
 }
 
 async fn settle_command(
