@@ -4,6 +4,7 @@ use opencode_contract::generated::{ConfigEntryDocumentInfo, ConnectionStatus};
 use tokio::sync::{Mutex, watch};
 
 use super::Snapshot;
+use crate::provider_plugin::hooks::HookRegistration;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Allowed {
@@ -17,6 +18,7 @@ pub struct ConsoleHandle {
     pub(crate) integrated: RwLock<Option<ConfigEntryDocumentInfo>>,
     pub(crate) allowed: RwLock<Allowed>,
     pub(crate) reported: RwLock<Option<ConnectionStatus>>,
+    pub(crate) explainers: std::sync::Mutex<Vec<HookRegistration>>,
     pub(crate) loading: Mutex<()>,
     revision: watch::Sender<u64>,
 }
@@ -28,6 +30,7 @@ impl Default for ConsoleHandle {
             integrated: RwLock::new(None),
             allowed: RwLock::new(Allowed::default()),
             reported: RwLock::new(None),
+            explainers: std::sync::Mutex::new(Vec::new()),
             loading: Mutex::new(()),
             revision: watch::channel(0).0,
         }
@@ -63,8 +66,16 @@ impl ConsoleHandle {
         *self.allowed.write().expect("lock the Console allowed flags") = value;
     }
 
+    pub(crate) fn reported(&self) -> Option<ConnectionStatus> {
+        self.reported.read().expect("lock the Console reported status").clone()
+    }
+
     pub(crate) fn set_reported(&self, value: Option<ConnectionStatus>) {
         *self.reported.write().expect("lock the Console reported status") = value;
+    }
+
+    pub(crate) fn set_explainers(&self, value: Vec<HookRegistration>) {
+        *self.explainers.lock().expect("lock the Console explainer hooks") = value;
     }
 
     pub(crate) fn bump(&self) {

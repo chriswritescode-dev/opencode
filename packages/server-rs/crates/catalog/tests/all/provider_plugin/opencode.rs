@@ -1,6 +1,7 @@
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+use bytes::Bytes;
 use futures_util::StreamExt;
 use opencode_ai::ExecutionContext;
 use opencode_ai::LlmClient;
@@ -8,22 +9,24 @@ use opencode_ai::MapEnv;
 use opencode_ai::clock::FixedClock;
 use opencode_ai::id::SequenceIds;
 use opencode_ai::route::compile::StreamOptions;
-use opencode_ai::route::executor::RequestExecutor;
+use opencode_ai::route::executor::{PreparedHttp, RequestExecutor};
 use opencode_ai::schema::{ContentPart, LlmRequest, Message, TextPart, UserMessage};
 use opencode_catalog::builtin::Builtin;
 use opencode_catalog::credential::CreateInput;
 use opencode_catalog::integration::{Attempt, AttemptError, AttemptStatus, Implementation, OAuthConnectInput};
 use opencode_catalog::provider_plugin::PluginContext;
+use opencode_catalog::provider_plugin::hooks::{HttpResponse, RequestKind};
+use opencode_catalog::provider_plugin::http::BufferedResponse;
 use opencode_catalog::provider_plugin::opencode;
 use opencode_catalog::resolver::{self, Resolver};
 use opencode_config::entry::{Document, Entry, Origin};
 use opencode_contract::codec::JsonMap;
 use opencode_contract::generated::{
-    ConnectionInfo, ConnectionStatus, CredentialKey, CredentialKeyType, CredentialOAuth, CredentialOAuthType,
+    AgentID, ConnectionInfo, ConnectionStatus, CredentialKey, CredentialKeyType, CredentialOAuth, CredentialOAuthType,
     CredentialValue, FormAnswer, FormField1, FormStringField1Format, FormStringField1Type, FormValue,
     IntegrationEnvMethod, IntegrationEnvMethodType, IntegrationID, IntegrationKeyMethodType, IntegrationMethod,
-    IntegrationMethodID, IntegrationOAuthMethodType, ModelCost, ModelCostCache, ModelSettings, ModelVariant,
-    MoneyUSDPerMillionTokens, ProviderID, ProviderInfo, ProviderInfoActivation,
+    IntegrationMethodID, IntegrationOAuthMethodType, ModelCost, ModelCostCache, ModelInfo, ModelRef, ModelSettings,
+    ModelVariant, MoneyUSDPerMillionTokens, ProviderID, ProviderInfo, ProviderInfoActivation, SessionID,
 };
 use serde_json::{Value, json};
 
@@ -353,6 +356,17 @@ async fn ignores_non_opencode_providers_and_models() {
     assert!(model.enabled);
 }
 
+async fn wait_for_opencode_models(harness: &Harness) -> Vec<ModelInfo> {
+    for _ in 0..2000 {
+        let models = harness.services.model.available(None).await.unwrap();
+        if models.iter().any(|model| model.provider_id == opencode_id()) {
+            return models;
+        }
+        tokio::time::sleep(Duration::from_millis(1)).await;
+    }
+    panic!("the Console login makes the OpenCode models available");
+}
+
 async fn disabled_free_models(api_key: Option<&str>) {
     let mut input = Input::new(Vec::new()).environment("OPENCODE_DISABLE_FREE_MODELS", "true");
     if let Some(api_key) = api_key {
@@ -361,7 +375,7 @@ async fn disabled_free_models(api_key: Option<&str>) {
     let mut harness = start(input).await;
     let _method = register_env_method(&harness, &["OPENCODE_API_KEY"]).await;
     let _seeded = seed_provider(&harness, opencode_id(), |_| {}, vec![("free", 0.0, 0.0), ("paid", 1.0, 0.0)]).await;
-    let context = add_plugin(&mut harness, no_remote_config()).await;
+    add_plugin(&mut harness, no_remote_config()).await;
 
     if api_key.is_none() {
         assert!(harness.services.provider.available().await.unwrap().is_empty());
@@ -372,9 +386,7 @@ async fn disabled_free_models(api_key: Option<&str>) {
             harness.services.integration.get(&integration_id()).await.unwrap().expect("the OpenCode integration");
         assert!(!integration.methods.is_empty());
         harness.credential("opencode", fresh_oauth()).await;
-        opencode::refresh(&harness.services, &context, Duration::ZERO).await;
-        harness.services.provider.reload().await;
-        harness.services.model.reload().await.expect("reload the models");
+        wait_for_opencode_models(&harness).await;
     }
 
     let available = harness.services.model.available(None).await.unwrap();
@@ -944,6 +956,317 @@ async fn reports_console_sso_sign_in_keeps_the_last_config_and_clears_once_conso
     assert_eq!(document_policies(&document), json!([sudo]));
 }
 
+fn policy_list(document: &Document) -> Value {
+    match document_policies(document) {
+        Value::Null => json!([]),
+        policies => policies,
+    }
+}
+
+fn console_response(provider_id: &str, status: u16, body: &Value) -> HttpResponse {
+    HttpResponse {
+        session_id: SessionID("ses_console".to_owned()),
+        agent: AgentID("build".to_owned()),
+        model: ModelRef { id: "model".to_owned(), provider_id: ProviderID(provider_id.to_owned()), variant: None },
+        kind: RequestKind::Primary,
+        request: PreparedHttp::new("POST", "https://inference.example/v1/responses", Vec::new(), Bytes::new()),
+        response: BufferedResponse {
+            status,
+            headers: vec![("content-type".to_owned(), "application/json".to_owned())],
+            body: Bytes::from(serde_json::to_vec(body).expect("the response body serializes")),
+        },
+    }
+}
+
+fn response_json(response: &HttpResponse) -> Value {
+    serde_json::from_slice(&response.response.body).expect("the response body is JSON")
+}
+
+async fn advance_tick() {
+    tokio::time::advance(Duration::from_millis(500)).await;
+    for _ in 0..8 {
+        tokio::task::yield_now().await;
+    }
+}
+
+async fn advance_until(mut condition: impl FnMut() -> bool) {
+    for _ in 0..400 {
+        if condition() {
+            return;
+        }
+        advance_tick().await;
+    }
+    panic!("the condition was not reached");
+}
+
+async fn advance_for(duration: Duration) {
+    for _ in 0..duration.as_millis().div_ceil(500) {
+        advance_tick().await;
+    }
+}
+
+fn account_config(organization: &str) -> Value {
+    let providers = serde_json::Map::from_iter([(organization.to_owned(), json!({}))]);
+    let servers = serde_json::Map::from_iter([(
+        organization.to_owned(),
+        json!({ "type": "remote", "url": format!("https://{organization}/mcp") }),
+    )]);
+    json!({
+        "providers": Value::Object(providers),
+        "mcp": { "servers": Value::Object(servers) },
+        "policies": [{ "action": "tool.use", "resource": format!("shell:{organization}"), "effect": "deny" }],
+        "websearch": { "provider": "opencode" },
+    })
+}
+
+fn console_contents(harness: &Harness) -> Option<Value> {
+    let document = console_document(harness)?;
+    let info = document_json(&document);
+    let keys = |value: Option<&Value>| {
+        value.and_then(Value::as_object).map(|map| map.keys().cloned().collect::<Vec<_>>()).unwrap_or_default()
+    };
+    Some(json!({
+        "organization": document_organization(&document),
+        "providers": keys(info.get("providers")),
+        "mcp": keys(info.get("mcp").and_then(|mcp| mcp.get("servers"))),
+        "policies": info
+            .get("policies")
+            .and_then(Value::as_array)
+            .map(|policies| policies.iter().map(|policy| policy["resource"].clone()).collect::<Vec<_>>())
+            .unwrap_or_default(),
+        "websearch": info.get("websearch").and_then(|websearch| websearch.get("provider")).cloned(),
+    }))
+}
+
+fn expected_contents(organization: &str) -> Value {
+    json!({
+        "organization": organization,
+        "providers": [organization],
+        "mcp": [organization],
+        "policies": [format!("shell:{organization}")],
+        "websearch": "opencode",
+    })
+}
+
+async fn eventually_contents(harness: &Harness, expected: &Value) -> Value {
+    for _ in 0..2000 {
+        if let Some(value) = console_contents(harness)
+            && &value == expected
+        {
+            return value;
+        }
+        tokio::time::sleep(Duration::from_millis(1)).await;
+    }
+    panic!("the Console config did not become {expected}");
+}
+
+async fn eventually_console_none(harness: &Harness) {
+    for _ in 0..2000 {
+        if console_document(harness).is_none() {
+            return;
+        }
+        tokio::time::sleep(Duration::from_millis(1)).await;
+    }
+    panic!("the Console config was not cleared");
+}
+
+#[tokio::test(start_paused = true)]
+async fn refreshes_past_future_only_policies_while_retaining_config_on_malformed_statements() {
+    let sudo = json!({ "action": "tool.use", "resource": "shell:sudo *", "effect": "deny" });
+    let env = json!({ "action": "tool.use", "resource": "edit:*.env", "effect": "deny" });
+    let state = Arc::new(Mutex::new(json!({
+        "providers": { "opencode": {} },
+        "policies": [sudo.clone()],
+    })));
+    let routes = Routes::new();
+    routes.route_with("GET", &config_url(ORIGIN), {
+        let state = state.clone();
+        move |_| Reply::json(state.lock().expect("lock the Console config state").clone())
+    });
+    let mut harness = start(Input::new(Vec::new())).await;
+    harness.credential("opencode", console_key(ORIGIN, Some(("org_acme", "Acme")))).await;
+    add_plugin(&mut harness, routes.clone()).await;
+
+    let document = console_document(&harness).expect("the Console document is integrated");
+    assert_eq!(policy_list(&document), json!([sudo.clone()]));
+
+    for malformed in [
+        json!({ "action": "tool.use", "resource": 42, "effect": "deny" }),
+        json!({ "action": "tool.use", "effect": "deny" }),
+        Value::Null,
+        json!({}),
+    ] {
+        *state.lock().expect("lock the Console config state") =
+            json!({ "providers": { "opencode": {} }, "policies": [env.clone(), malformed] });
+        let before = routes.count("GET", &config_url(ORIGIN));
+        advance_until(|| routes.count("GET", &config_url(ORIGIN)) > before).await;
+        advance_tick().await;
+        advance_tick().await;
+        let document = console_document(&harness).expect("the last Console document is kept");
+        assert_eq!(policy_list(&document), json!([sudo.clone()]));
+        assert!(harness.services.provider.get(&opencode_id()).await.unwrap().is_some());
+    }
+
+    *state.lock().expect("lock the Console config state") = json!({
+        "providers": { "opencode": {} },
+        "policies": [env.clone(), { "action": "tool.use", "resource": "shell:*", "effect": "future-effect" }],
+    });
+    let before = routes.count("GET", &config_url(ORIGIN));
+    advance_until(|| routes.count("GET", &config_url(ORIGIN)) > before).await;
+    advance_tick().await;
+    advance_tick().await;
+    let document = console_document(&harness).expect("the Console document is integrated");
+    assert_eq!(policy_list(&document), json!([env.clone()]));
+
+    *state.lock().expect("lock the Console config state") = json!({ "providers": { "opencode": {} }, "policies": [{ "action": "future.use", "future": { "values": [true] } }] });
+    let before = routes.count("GET", &config_url(ORIGIN));
+    advance_until(|| routes.count("GET", &config_url(ORIGIN)) > before).await;
+    advance_tick().await;
+    advance_tick().await;
+    let document = console_document(&harness).expect("the Console document is integrated");
+    assert_eq!(policy_list(&document), json!([]));
+    assert!(harness.services.provider.get(&opencode_id()).await.unwrap().is_some());
+
+    *state.lock().expect("lock the Console config state") = json!({ "providers": { "opencode": {} }, "policies": [{ "action": "future.use", "effect": { "next": true } }, env] });
+    let before = routes.count("GET", &config_url(ORIGIN));
+    advance_until(|| routes.count("GET", &config_url(ORIGIN)) > before).await;
+    advance_tick().await;
+    advance_tick().await;
+    let document = console_document(&harness).expect("the Console document is integrated");
+    assert_eq!(policy_list(&document), json!([env]));
+}
+
+#[tokio::test(start_paused = true)]
+async fn explains_rejected_console_inference_from_at_most_one_config_check_per_30_seconds() {
+    let sso = Arc::new(Mutex::new(false));
+    let routes = Routes::new();
+    routes.route_with("GET", &config_url(ORIGIN), {
+        let sso = sso.clone();
+        move |_| {
+            if *sso.lock().expect("lock the SSO state") {
+                Reply::json_status(
+                    json!({ "_tag": "SsoRequired", "orgId": "org_acme", "connectionId": "ssoconn_1" }),
+                    403,
+                )
+            } else {
+                Reply::json(json!({ "providers": { "remote": { "canonical": "openai" } } }))
+            }
+        }
+    });
+    let mut harness = start(Input::new(Vec::new())).await;
+    harness.credential("opencode", console_key(ORIGIN, Some(("org_acme", "Acme")))).await;
+    let context = add_plugin(&mut harness, routes.clone()).await;
+    assert_eq!(routes.count("GET", &config_url(ORIGIN)), 1);
+
+    let denied = json!({ "error": { "message": "Workspace access denied" } });
+    let explained =
+        json!({ "error": { "type": "authentication_error", "message": "Sign in with SSO again to use Acme." } });
+
+    let event = context.hooks.trigger_http_response(console_response("remote", 403, &denied)).await;
+    assert_eq!(event.response.status, 403);
+    assert_eq!(response_json(&event), denied);
+    assert_eq!(routes.count("GET", &config_url(ORIGIN)), 1);
+
+    *sso.lock().expect("lock the SSO state") = true;
+    tokio::time::advance(Duration::from_secs(30)).await;
+    let events = futures_util::future::join_all(
+        (0..10).map(|_| context.hooks.trigger_http_response(console_response("remote", 403, &denied))),
+    )
+    .await;
+    for event in &events {
+        assert_eq!(event.response.status, 403);
+        assert_eq!(response_json(event), explained);
+    }
+    assert_eq!(routes.count("GET", &config_url(ORIGIN)), 2);
+
+    for _ in 0..20 {
+        tokio::time::advance(Duration::from_secs(1)).await;
+        let event = context.hooks.trigger_http_response(console_response("remote", 403, &denied)).await;
+        assert_eq!(response_json(&event), explained);
+    }
+    let event = context.hooks.trigger_http_response(console_response("opencode", 403, &denied)).await;
+    assert_eq!(response_json(&event), explained);
+    let event = context.hooks.trigger_http_response(console_response("anthropic", 403, &denied)).await;
+    assert_eq!(response_json(&event), denied);
+    assert_eq!(routes.count("GET", &config_url(ORIGIN)), 2);
+}
+
+#[tokio::test(start_paused = true)]
+async fn ignores_403_responses_that_are_not_a_console_sso_error() {
+    type ReplyBody = Arc<Mutex<Option<(u16, Vec<u8>)>>>;
+
+    let sudo = json!({ "action": "tool.use", "resource": "shell:sudo *", "effect": "deny" });
+    let current: ReplyBody = Arc::new(Mutex::new(None));
+    let routes = Routes::new();
+    routes.route_with("GET", &config_url(ORIGIN), {
+        let current = current.clone();
+        let sudo = sudo.clone();
+        move |_| match current.lock().expect("lock the Console response").clone() {
+            Some((status, body)) => Reply { status, body },
+            None => Reply::json(json!({ "providers": {}, "policies": [sudo.clone()] })),
+        }
+    });
+    let mut harness = start(Input::new(Vec::new())).await;
+    harness.credential("opencode", console_key(ORIGIN, None)).await;
+    add_plugin(&mut harness, routes.clone()).await;
+
+    for body in [
+        b"<html>Forbidden</html>".to_vec(),
+        serde_json::to_vec(&json!({ "_tag": "Forbidden", "orgId": "org", "connectionId": "ssoconn" }))
+            .expect("the forbidden body serializes"),
+    ] {
+        *current.lock().expect("lock the Console response") = Some((403, body));
+        let before = routes.count("GET", &config_url(ORIGIN));
+        advance_until(|| routes.count("GET", &config_url(ORIGIN)) > before).await;
+        advance_for(Duration::from_secs(10)).await;
+        assert!(integration_status(&harness).await.is_none());
+        let document = console_document(&harness).expect("the last Console document is kept");
+        assert_eq!(policy_list(&document), json!([sudo.clone()]));
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn replaces_the_console_config_on_an_account_switch_and_clears_it_on_sign_out() {
+    let routes = Routes::new();
+    routes.route_with("GET", &config_url(ORIGIN), |request| {
+        let organization = header(request, "x-org-id").unwrap_or_else(|| "none".to_owned());
+        Reply::json(account_config(&organization))
+    });
+    let mut harness = start(Input::new(Vec::new())).await;
+    let alpha = harness
+        .services
+        .credentials
+        .create(CreateInput {
+            id: None,
+            integration_id: integration_id(),
+            value: console_key(ORIGIN, Some(("alpha", "alpha"))),
+            label: None,
+            activate: None,
+        })
+        .expect("create the alpha Console account");
+    add_plugin(&mut harness, routes).await;
+    assert_eq!(console_contents(&harness), Some(expected_contents("alpha")));
+
+    let beta = harness
+        .services
+        .credentials
+        .create(CreateInput {
+            id: None,
+            integration_id: integration_id(),
+            value: console_key(ORIGIN, Some(("beta", "beta"))),
+            label: None,
+            activate: None,
+        })
+        .expect("create the beta Console account");
+    assert_eq!(eventually_contents(&harness, &expected_contents("beta")).await, expected_contents("beta"));
+
+    harness.services.credentials.remove(&beta.id).expect("remove the beta Console account");
+    assert_eq!(eventually_contents(&harness, &expected_contents("alpha")).await, expected_contents("alpha"));
+
+    harness.services.credentials.remove(&alpha.id).expect("remove the alpha Console account");
+    eventually_console_none(&harness).await;
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn preserves_native_console_openai_variant_bodies_in_inference_requests() {
     let variants = json!([
@@ -1390,7 +1713,7 @@ async fn loads_native_v2_providers_and_models_from_the_connected_opencode_server
         })
         .await;
     harness.credential("opencode", console_key(ORIGIN, None)).await;
-    let context = add_plugin(&mut harness, routes.clone()).await;
+    let _context = add_plugin(&mut harness, routes.clone()).await;
 
     assert_eq!(routes.count("GET", &config_url(ORIGIN)), 1);
     assert_eq!(
@@ -1488,7 +1811,12 @@ async fn loads_native_v2_providers_and_models_from_the_connected_opencode_server
         })
         .expect("create the replacement credential");
     harness.services.integration.connection().activate(&replacement.id).await.expect("activate the replacement");
-    opencode::refresh(&harness.services, &context, Duration::ZERO).await;
+    for _ in 0..2000 {
+        if routes.count("GET", &config_url(ORIGIN)) >= 2 {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(1)).await;
+    }
     let requests = routes.requests();
     let loads: Vec<&opencode_ai::route::executor::PreparedHttp> =
         requests.iter().filter(|request| request.url == config_url(ORIGIN)).collect();

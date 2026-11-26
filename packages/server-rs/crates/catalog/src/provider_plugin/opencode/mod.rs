@@ -5,6 +5,8 @@ pub mod sign_in;
 use std::sync::Arc;
 use std::time::Duration;
 
+use bytes::Bytes;
+use futures_util::FutureExt;
 use opencode_config::entry::{Entry, Origin};
 use opencode_contract::codec::encode_json;
 use opencode_contract::generated::{
@@ -15,6 +17,8 @@ use opencode_contract::generated::{
 use crate::builtin::{Builtin, Services};
 use crate::integration::{Implementation, StatusInput};
 use crate::provider_plugin::PluginContext;
+use crate::provider_plugin::hooks::{HookRegistration, HttpResponse};
+use crate::provider_plugin::http::BufferedResponse;
 
 use super::{env_value, setting};
 
@@ -25,6 +29,10 @@ pub const ID: &str = "opencode.provider.opencode";
 const INTEGRATION_ID: &str = "opencode";
 
 const DEFAULT_MAX_AGE: Duration = Duration::from_secs(60);
+
+const CHECK_MAX_AGE: Duration = Duration::from_secs(30);
+
+const POLL_INTERVAL: Duration = Duration::from_secs(60);
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Snapshot {
@@ -161,12 +169,118 @@ pub async fn register(services: &Services, context: &PluginContext, builtin: &mu
         })
         .await;
     builtin.registrations.push(public_model_registration);
+
+    let switch = super::refresh::on_switch(&services.bus, INTEGRATION_ID, {
+        let services = services.clone();
+        let context = context.clone();
+        move || {
+            let services = services.clone();
+            let context = context.clone();
+            async move { refresh(&services, &context, DEFAULT_MAX_AGE).await }.boxed()
+        }
+    });
+    builtin.tasks.push(switch);
+
+    let poll = {
+        let services = services.clone();
+        let context = context.clone();
+        tokio::spawn(async move {
+            let mut changes = context.console.changes();
+            loop {
+                if context.console.snapshot().connection.is_none() {
+                    if changes.changed().await.is_err() {
+                        break;
+                    }
+                    continue;
+                }
+                tokio::select! {
+                    _ = tokio::time::sleep(POLL_INTERVAL) => {
+                        check(&services, &context, POLL_INTERVAL).await;
+                    }
+                    result = changes.changed() => {
+                        if result.is_err() {
+                            break;
+                        }
+                    }
+                }
+            }
+        })
+    };
+    builtin.tasks.push(poll);
 }
 
 pub async fn refresh(services: &Services, context: &PluginContext, max_age: Duration) {
     let _guard = context.console.loading.lock().await;
     let next = load(services, context, max_age).await;
-    publish(services, context, next).await;
+    apply(services, context, next).await;
+}
+
+async fn check(services: &Services, context: &PluginContext, max_age: Duration) {
+    let _guard = context.console.loading.lock().await;
+    let next = load(services, context, max_age).await;
+    if next != context.console.snapshot() {
+        apply(services, context, next).await;
+    }
+}
+
+async fn apply(services: &Services, context: &PluginContext, next: Snapshot) {
+    context.console.set_snapshot(next.clone());
+    publish(services, context, &next).await;
+    guard(services, context, &next);
+    services.provider.reload().await;
+    context.console.bump();
+}
+
+fn guard(services: &Services, context: &PluginContext, next: &Snapshot) {
+    context.console.set_explainers(Vec::new());
+    if next.connection.is_none() {
+        return;
+    }
+    let mut provider_ids = vec![ProviderID(INTEGRATION_ID.to_owned())];
+    if let Some(providers) = next.remote.as_ref().and_then(|remote| remote.info.providers.as_ref()) {
+        for (id, _) in &providers.0 {
+            let id = ProviderID(id.clone());
+            if !provider_ids.contains(&id) {
+                provider_ids.push(id);
+            }
+        }
+    }
+    let registrations: Vec<HookRegistration> = provider_ids
+        .into_iter()
+        .map(|provider_id| {
+            let services = services.clone();
+            let context = context.clone();
+            let hooks = context.hooks.clone();
+            hooks.on_http_response(Some(provider_id), move |event| {
+                let services = services.clone();
+                let context = context.clone();
+                async move { explain(&services, &context, event).await }.boxed()
+            })
+        })
+        .collect();
+    context.console.set_explainers(registrations);
+}
+
+async fn explain(services: &Services, context: &PluginContext, mut event: HttpResponse) -> HttpResponse {
+    if event.response.status != 401 && event.response.status != 403 {
+        return event;
+    }
+    check(services, context, CHECK_MAX_AGE).await;
+    let Some(status) = context.console.reported() else {
+        return event;
+    };
+    let body = serde_json::json!({
+        "error": {
+            "type": "authentication_error",
+            "message": format!("{}.", status.message),
+        }
+    });
+    event.response = BufferedResponse {
+        status: event.response.status,
+        headers: vec![("content-type".to_owned(), "application/json".to_owned())],
+        body: Bytes::from(serde_json::to_vec(&body).expect("the Console authentication error serializes")),
+    };
+    event
 }
 
 async fn load(services: &Services, context: &PluginContext, max_age: Duration) -> Snapshot {
@@ -178,12 +292,16 @@ async fn load(services: &Services, context: &PluginContext, max_age: Duration) -
     };
     let credential = match connections.resolve(&connection).await {
         Ok(Some(credential)) => credential,
-        Ok(None) => return Snapshot { remote: None, connection: Some(connection), organization: None },
+        Ok(None) => {
+            report_status(services, context, &connection, None);
+            return Snapshot { remote: None, connection: Some(connection), organization: None };
+        }
         Err(error) => {
             return failed(services, context, connection, remote::ConsoleError::Authorization(error)).await;
         }
     };
     if matches!(credential, CredentialValue::External(_)) {
+        report_status(services, context, &connection, None);
         return Snapshot { remote: None, connection: Some(connection), organization: None };
     }
     let organization = remote::organization_name(&credential);
@@ -252,7 +370,7 @@ fn report_status(
     });
 }
 
-async fn publish(services: &Services, context: &PluginContext, next: Snapshot) {
+async fn publish(services: &Services, context: &PluginContext, next: &Snapshot) {
     let document = next.remote.as_ref().zip(next.connection.as_ref()).map(|(remote, connection)| {
         opencode_config::integration::make(connection_json(connection), next.organization.clone(), remote.info.clone())
     });
@@ -275,8 +393,6 @@ async fn publish(services: &Services, context: &PluginContext, next: Snapshot) {
         lists: allowed && remote.is_some_and(|remote| remote.lists),
         artifacts: allowed && remote.is_some_and(|remote| remote.artifacts),
     });
-    context.console.set_snapshot(next);
-    context.console.bump();
 }
 
 fn connection_json(connection: &ConnectionInfo) -> serde_json::Value {

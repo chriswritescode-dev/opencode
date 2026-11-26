@@ -160,6 +160,7 @@ impl SessionAccess for NoSessions {
     }
 }
 
+#[derive(Clone)]
 pub struct PluginContext {
     pub http: Arc<dyn opencode_ai::HttpSender>,
     pub app: AppInfo,
