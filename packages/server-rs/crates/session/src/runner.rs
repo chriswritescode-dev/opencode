@@ -472,7 +472,17 @@ impl Runner {
             match joined {
                 Ok(Ok(result)) => {
                     let result = output.truncate(result).await;
-                    publisher.tool_execution(&run.id, &run.name, result).map_err(bus_error)?;
+                    if result.content.is_empty() {
+                        publisher
+                            .fail_tool(
+                                &run.id,
+                                structured_error("tool.execution", "Tool execution returned no content"),
+                                None,
+                            )
+                            .map_err(bus_error)?;
+                    } else {
+                        publisher.tool_execution(&run.id, &run.name, result).map_err(bus_error)?;
+                    }
                 }
                 Ok(Err(error)) => {
                     let error = match error.kind {

@@ -1247,7 +1247,7 @@ async function exportReadFilesystem() {
       const outside = `${root}-outside`
       await fs.mkdir(root, { recursive: true })
       await fs.mkdir(outside, { recursive: true })
-      if (process.platform !== "win32") await materializeFixtures(root, outside, spec.fixtures ?? [])
+      await materializeFixtures(root, outside, spec.fixtures ?? [])
       const exit = await Effect.runPromiseExit(readFilesystemProgram(spec, root))
       await fs.rm(root, { recursive: true, force: true })
       await fs.rm(outside, { recursive: true, force: true })

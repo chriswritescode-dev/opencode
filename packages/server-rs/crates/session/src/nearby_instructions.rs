@@ -71,7 +71,7 @@ impl NearbyInstructions {
                 session_id: session_id.to_owned(),
                 limit: None,
                 order: Some(Order::Asc),
-                r#type: None,
+                r#type: Some("synthetic".to_owned()),
                 cursor: None,
             })
             .map_err(|error| error.to_string())?;
