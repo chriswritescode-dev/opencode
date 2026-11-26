@@ -353,6 +353,10 @@ async fn execute(
         return None;
     };
     if drained.is_err() {
+        #[cfg(unix)]
+        if let Some(pid) = child_pid {
+            kill_group(pid);
+        }
         stderr_task.abort();
         stdout_task.abort();
     }
