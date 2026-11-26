@@ -651,7 +651,11 @@ fn oauth(server: &str) -> CredentialValue {
 async fn rotates_a_stored_credential(org_id: Option<Value>, expected: (&str, &str), unavailable: bool) {
     let routes = Routes::new();
     routes.route_json("POST", &format!("{ORIGIN}/auth/device/token"), token(org_id));
-    routes.route_json_with_headers("GET", &config_url(ORIGIN), lists_headers(), json!({ "providers": {} }));
+    if expected.0 == "org-missing" {
+        routes.route_with("GET", &config_url(ORIGIN), |_| Reply::status(403));
+    } else {
+        routes.route_json_with_headers("GET", &config_url(ORIGIN), lists_headers(), json!({ "providers": {} }));
+    }
     routes.route_json("GET", &list_url("instructions"), json!({ "instructions": [] }));
     routes.route_json("GET", &list_url("skills"), json!({ "skills": [] }));
     if unavailable {
@@ -709,11 +713,22 @@ async fn rotates_a_stored_credential(org_id: Option<Value>, expected: (&str, &st
     assert_eq!(updated.label, "Custom label");
     assert_eq!(updated.value, resolved);
 
-    let requests = eventually_console_requests(&routes).await;
-    assert_eq!(
-        requests.iter().map(|request| request.url.clone()).collect::<Vec<_>>(),
-        [format!("{ORIGIN}/auth/device/token"), config_url(ORIGIN), list_url("instructions"), list_url("skills"),]
-    );
+    let refused = expected.0 == "org-missing";
+    let requests = eventually_console_requests(&routes, if refused { 5 } else { 4 }).await;
+    let urls: Vec<String> = requests.iter().map(|request| request.url.clone()).collect();
+    if refused {
+        assert_eq!(urls[0], format!("{ORIGIN}/auth/device/token"));
+        assert!(
+            urls[1..].iter().all(|url| url == &config_url(ORIGIN)),
+            "a refused Console config fetches no instruction or skill lists; OR-48-console-retries retries it: {urls:?}"
+        );
+        assert_eq!(urls.len(), 5, "the refused config is retried three times per OR-48-console-retries: {urls:?}");
+    } else {
+        assert_eq!(
+            urls,
+            [format!("{ORIGIN}/auth/device/token"), config_url(ORIGIN), list_url("instructions"), list_url("skills"),]
+        );
+    }
     let agents: Vec<Option<String>> = requests.iter().map(|request| header(request, "user-agent")).collect();
     assert!(agents.iter().all(|agent| agent.as_deref() == Some(USER_AGENT)), "got {agents:?}");
     let config = request(&routes, "GET", &config_url(ORIGIN));
@@ -2396,11 +2411,11 @@ async fn eventually_console_skills(console: &opencode::ConsoleHandle) -> Vec<ope
     .expect("the Console skills did not load")
 }
 
-async fn eventually_console_requests(routes: &Routes) -> Vec<PreparedHttp> {
+async fn eventually_console_requests(routes: &Routes, at_least: usize) -> Vec<PreparedHttp> {
     tokio::time::timeout(Duration::from_secs(10), async {
         loop {
             let requests = routes.requests();
-            if requests.len() >= 4 {
+            if requests.len() >= at_least {
                 return requests;
             }
             tokio::time::sleep(Duration::from_millis(1)).await;
@@ -2409,7 +2424,7 @@ async fn eventually_console_requests(routes: &Routes) -> Vec<PreparedHttp> {
     .await
     .unwrap_or_else(|_| {
         panic!(
-            "the Console config and its lists were not requested: {:?}",
+            "expected at least {at_least} Console requests: {:?}",
             routes.requests().iter().map(|request| request.url.clone()).collect::<Vec<_>>()
         )
     })

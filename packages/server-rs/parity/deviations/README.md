@@ -110,4 +110,17 @@ A deviation that excepts a recorded cassette from the replay gate also has a `Ca
 - `OR-47-deferred-provider-plugins.md`: the SAP AI Core and Claude Agent provider plugins are left to OR-64
 - `OR-47-gitlab-discovery.md`: GitLab workflow models are not discovered until OR-64 supplies the sidecar seam
 - `OR-47-provider-hooks-unwired.md`: the provider-plugin hooks are registered but no Rust session triggers them until OR-54
+- `OR-48-console-artifacts.md`: the Console artifact client normalises the server and uploads in fixed batches
+- `OR-48-console-config-decode.md`: a malformed Console config value is dropped instead of rejecting the whole config
+- `OR-48-console-http-errors.md`: Console request failures carry Rust HTTP and parser text instead of Effect errors
+- `OR-48-console-locale-compare.md`: the default Console organization is ordered without locale collation
+- `OR-48-console-redirects.md`: a redirected Console request keeps its content type when rewritten to a GET
+- `OR-48-console-retries.md`: Console status retries, poll timing and watch recovery differ
+- `OR-48-console-seams-unwired.md`: Console content, watches, search and artifacts are not registered with the Rust services yet
+- `OR-48-console-skill-parse.md`: Console skills keep their `SKILL.md` unparsed
+- `OR-48-console-skills.md`: a Console skill list is cleared synchronously instead of by the download fiber
+- `OR-48-console-user-agent.md`: some Console requests omit the OpenCode user agent
+- `OR-48-console-utf16-cuts.md`: artifact titles and event descriptions count Unicode scalars instead of UTF-16 units
+- `OR-48-console-watches.md`: watch state, session lookup, hooks and tool results use the Rust seams instead of the plugin context
+- `OR-48-watch-socket-proxy.md`: the Console watch socket ignores proxy settings
 - `OR-61-sidecar-environment.md`: plugins run in a sidecar with an allowlisted environment instead of inside the server
