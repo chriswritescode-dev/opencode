@@ -46,6 +46,8 @@ const DEFAULT_INTERVAL_SECONDS: f64 = 5.0;
 
 const DEFAULT_TOKEN_LIFETIME_MS: f64 = 3_600_000.0;
 
+const TOKEN_TIMEOUT: Duration = Duration::from_secs(10);
+
 #[derive(Clone, Debug, Deserialize)]
 struct Token {
     access_token: String,
@@ -219,7 +221,7 @@ async fn poll(http: &dyn HttpSender, user_agent: &str, device: &Device) -> Resul
             headers(user_agent),
             &[("grant_type", DEVICE_GRANT), ("client_id", CLIENT_ID), ("device_code", &device.device_code)],
         );
-        match http::send(http, request, None).await {
+        match http::send(http, request, Some(TOKEN_TIMEOUT)).await {
             Ok(response) => {
                 return serde_json::from_slice::<Token>(&response.body)
                     .map_err(|failure| error(format!("Invalid xAI token response: {failure}")));
@@ -281,7 +283,7 @@ async fn request<T: serde::de::DeserializeOwned>(
     fields: &[(&str, &str)],
 ) -> Result<T, AuthorizationError> {
     let request = http::form(url, headers(user_agent), fields);
-    match http::send(http, request, None).await {
+    match http::send(http, request, Some(TOKEN_TIMEOUT)).await {
         Ok(response) => {
             serde_json::from_slice(&response.body).map_err(|failure| error(format!("Invalid xAI response: {failure}")))
         }

@@ -62,6 +62,8 @@ const CALLBACK_BIND_RETRY_DELAY: Duration = Duration::from_millis(200);
 
 const CANCEL_TIMEOUT: Duration = Duration::from_secs(2);
 
+const TOKEN_TIMEOUT: Duration = Duration::from_secs(10);
+
 const CALLBACK_PATH: &str = "/auth/callback";
 
 const SCOPE: &str = "openid profile email offline_access";
@@ -611,7 +613,7 @@ async fn begin_headless(
                             "user_code": &device.user_code,
                         }),
                     );
-                    match http::send(http.as_ref(), request, None).await {
+                    match http::send(http.as_ref(), request, Some(TOKEN_TIMEOUT)).await {
                         Ok(response) => {
                             let granted: DeviceToken = serde_json::from_slice(&response.body)
                                 .map_err(|failure| error(format!("Request failed: {failure}")))?;
@@ -689,7 +691,7 @@ async fn send_request<T: serde::de::DeserializeOwned>(
     http: &dyn HttpSender,
     request: PreparedHttp,
 ) -> Result<T, AuthorizationError> {
-    match http::send(http, request, None).await {
+    match http::send(http, request, Some(TOKEN_TIMEOUT)).await {
         Ok(response) => {
             serde_json::from_slice(&response.body).map_err(|failure| error(format!("Request failed: {failure}")))
         }

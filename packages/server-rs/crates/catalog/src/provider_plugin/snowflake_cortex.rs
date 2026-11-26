@@ -1,5 +1,6 @@
 use std::io;
 use std::sync::{Arc, LazyLock, Mutex};
+use std::time::Duration;
 
 use base64::Engine;
 use base64::engine::general_purpose::{STANDARD, URL_SAFE_NO_PAD};
@@ -48,6 +49,8 @@ const INSTRUCTIONS: &str = "Complete Snowflake sign-in in your browser.";
 const CALLBACK_HOST: &str = "127.0.0.1";
 
 const DEFAULT_EXPIRY_SECONDS: f64 = 600.0;
+
+const TOKEN_TIMEOUT: Duration = Duration::from_secs(10);
 
 const INVALID_STATE: &str = "Invalid OAuth state";
 
@@ -519,7 +522,7 @@ async fn token(
         ("authorization".to_owned(), format!("Basic {}", basic())),
     ];
     let request = http::form(format!("{}/oauth/token-request", issuer(account)), headers, &form);
-    match http::send(http, request, None).await {
+    match http::send(http, request, Some(TOKEN_TIMEOUT)).await {
         Ok(response) => credential(&response.body, account, request_refresh),
         Err(HttpError::Status(response)) => Err(error(format!(
             "Snowflake token request failed ({}): {}",
