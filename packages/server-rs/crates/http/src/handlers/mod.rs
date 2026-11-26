@@ -23,6 +23,7 @@ pub mod provider;
 pub mod registry;
 pub mod session;
 pub mod session_log;
+pub mod usage;
 pub mod vcs;
 pub mod worktree;
 

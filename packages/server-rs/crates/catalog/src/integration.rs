@@ -62,7 +62,7 @@ impl AuthorizationError {
         Self { cause: Some(cause) }
     }
 
-    pub fn cause(&self) -> Option<&(dyn std::error::Error + Send + Sync)> {
+    pub fn cause(&self) -> Option<&(dyn std::error::Error + Send + Sync + 'static)> {
         self.cause.as_deref()
     }
 

@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -14,7 +13,7 @@ use opencode_catalog::provider_plugin::github_copilot::{
 use opencode_catalog::provider_plugin::hooks::{
     Compaction, HttpRequest, ModelRequest, ModelResolve, ProviderHooks, RequestKind, Title,
 };
-use opencode_catalog::provider_plugin::{AppInfo, ORDER, PluginContext, SessionRef, UserMessage};
+use opencode_catalog::provider_plugin::{AppInfo, ORDER, PluginContext, SessionRef};
 use opencode_contract::codec::{JsonMap, decode_json};
 use opencode_contract::generated::{
     AgentID, ConnectionCredentialInfo, ConnectionCredentialInfoMethod, ConnectionCredentialInfoType, ConnectionInfo,
@@ -121,14 +120,9 @@ fn oauth_with(access: &str, metadata: Option<Value>) -> CredentialValue {
 fn session_fixture() -> (FakeSessions, SessionID, SessionID) {
     let parent = SessionID("ses_parent".to_owned());
     let child = SessionID("ses_child".to_owned());
-    let sessions = FakeSessions {
-        sessions: HashMap::from([
-            (parent.0.clone(), SessionRef { id: parent.clone(), parent_id: None, fork_session_id: None }),
-            (child.0.clone(), SessionRef { id: child.clone(), parent_id: Some(parent.clone()), fork_session_id: None }),
-        ]),
-        messages: HashMap::<String, UserMessage>::new(),
-        agents: HashMap::new(),
-    };
+    let sessions = FakeSessions::default();
+    sessions.insert(SessionRef { id: parent.clone(), parent_id: None, fork_session_id: None });
+    sessions.insert(SessionRef { id: child.clone(), parent_id: Some(parent.clone()), fork_session_id: None });
     (sessions, parent, child)
 }
 

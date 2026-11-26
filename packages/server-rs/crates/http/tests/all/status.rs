@@ -174,6 +174,7 @@ fn sample_request(operation: &str) -> Option<(&'static str, &'static str)> {
         "integration.command.connect" => Some(("POST", "/api/integration/unknown/connect/command")),
         "integration.command.status" => Some(("GET", "/api/integration/unknown/connect/command/con_missing")),
         "integration.command.cancel" => Some(("DELETE", "/api/integration/unknown/connect/command/con_missing")),
+        "experimental.usage.limits" => Some(("GET", "/api/experimental/usage/limits")),
         "agent.list" => Some(("GET", "/api/agent")),
         "agent.get" => Some(("GET", "/api/agent/build")),
         "command.list" => Some(("GET", "/api/command")),
@@ -282,6 +283,7 @@ fn implemented_lists_the_ported_operations() {
     assert!(opencode_http::app::IMPLEMENTED.contains(&"integration.command.connect"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"integration.command.status"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"integration.command.cancel"));
+    assert!(opencode_http::app::IMPLEMENTED.contains(&"experimental.usage.limits"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"agent.list"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"agent.get"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"command.list"));
@@ -321,5 +323,5 @@ fn implemented_lists_the_ported_operations() {
     assert!(opencode_http::app::IMPLEMENTED.contains(&"plugin.gui"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"plugin.check"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"plugin.update"));
-    assert_eq!(opencode_http::app::IMPLEMENTED.len(), 82);
+    assert_eq!(opencode_http::app::IMPLEMENTED.len(), 83);
 }

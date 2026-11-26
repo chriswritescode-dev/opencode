@@ -12,6 +12,7 @@ const integrations = [
   "google-vertex",
   "neon",
   "openai",
+  "opencode",
   "poe",
   "snowflake-cortex",
   "xai",

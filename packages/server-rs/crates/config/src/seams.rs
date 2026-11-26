@@ -47,6 +47,9 @@ pub trait KvStore: Send + Sync {
     fn get<'a>(&'a self, key: &'a str) -> BoxFuture<'a, Option<Value>>;
     fn set<'a>(&'a self, key: &'a str, value: Value) -> BoxFuture<'a, ()>;
     fn remove<'a>(&'a self, key: &'a str) -> BoxFuture<'a, ()>;
+    fn scan<'a>(&'a self, _prefix: &'a str, _limit: usize) -> BoxFuture<'a, Vec<(String, Value)>> {
+        Box::pin(async { Vec::new() })
+    }
 }
 
 impl CredentialLookup for () {

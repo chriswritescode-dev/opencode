@@ -63,6 +63,7 @@ pub const IMPLEMENTED: &[&str] = &[
     "integration.command.connect",
     "integration.command.status",
     "integration.command.cancel",
+    "experimental.usage.limits",
     "agent.list",
     "agent.get",
     "command.list",
@@ -353,6 +354,10 @@ impl App {
             },
             "integration.command.cancel" => match self.location(&raw).await {
                 Ok(lease) => crate::handlers::integration::command_cancel(&raw, lease.services()).await,
+                Err(response) => response,
+            },
+            "experimental.usage.limits" => match self.location(&raw).await {
+                Ok(lease) => crate::handlers::usage::limits(&raw, lease.services()).await,
                 Err(response) => response,
             },
             "session.list" => match self.services() {

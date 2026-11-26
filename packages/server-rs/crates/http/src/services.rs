@@ -16,9 +16,11 @@ use opencode_catalog::models_dev::{ModelsDevService, Options};
 use opencode_catalog::provider::ProviderService;
 use opencode_catalog::provider_plugin::gitlab::NoDiscovery;
 use opencode_catalog::provider_plugin::hooks::ProviderHooks;
+use opencode_catalog::provider_plugin::opencode::ConsoleHandle;
 use opencode_catalog::provider_plugin::{AppInfo, CommandRunner, NoSessions, PluginContext, TokioCommandRunner};
 use opencode_catalog::resolver::{NoBridge, Resolver};
 use opencode_catalog::shared_cache::SharedCache;
+use opencode_catalog::usage_limits::UsageLimits;
 use opencode_config::entry::Entry;
 use opencode_config::flag;
 use opencode_config::observer::{ObserverHandle, observe};
@@ -201,6 +203,8 @@ pub struct LocationServices {
     pub providers: Arc<ProviderService>,
     pub models: Arc<ModelService>,
     pub provider_hooks: Arc<ProviderHooks>,
+    pub usage_limits: Arc<UsageLimits>,
+    pub console: Arc<ConsoleHandle>,
     pub resolver: Arc<Resolver>,
     pub plugins: LocationPlugins,
     registrations: Mutex<Option<Builtin>>,
@@ -257,6 +261,7 @@ impl GlobalServices {
         let build_channel = flag::build_channel().to_owned();
         let flag_overrides = config_env("OPENCODE_FLAGS").map(|value| value.to_string_lossy().into_owned());
         let http: Arc<dyn HttpSender> = Arc::new(ReqwestSender::new());
+        let http_manual_redirects: Arc<dyn HttpSender> = Arc::new(ReqwestSender::manual_redirects());
         let commands: Arc<dyn CommandRunner> = Arc::new(TokioCommandRunner);
         let shared_cache = SharedCache::new();
         let boot_projects = projects.clone();
@@ -268,6 +273,7 @@ impl GlobalServices {
         let boot_models_dev = models_dev.clone();
         let boot_command_env = command_env.clone();
         let boot_http = http.clone();
+        let boot_http_manual_redirects = http_manual_redirects.clone();
         let boot_commands = commands.clone();
         let boot_shared_cache = shared_cache.clone();
         let boot_database = database.clone();
@@ -288,6 +294,7 @@ impl GlobalServices {
             let models_dev = boot_models_dev.clone();
             let command_env = boot_command_env.clone();
             let http = boot_http.clone();
+            let http_manual_redirects = boot_http_manual_redirects.clone();
             let command_runner = boot_commands.clone();
             let shared_cache = boot_shared_cache.clone();
             let database = boot_database.clone();
@@ -417,7 +424,9 @@ impl GlobalServices {
                 );
                 let providers = ProviderService::new(integrations.clone(), bus.clone(), location.clone());
                 let models = ModelService::new(providers.clone(), bus.clone(), location.clone(), config_env.clone());
+                let usage_limits = Arc::new(UsageLimits::new(integrations.clone(), http.clone()));
                 let provider_hooks = Arc::new(ProviderHooks::default());
+                let console = Arc::new(ConsoleHandle::default());
                 let registrations = opencode_catalog::builtin::register(
                     opencode_catalog::builtin::Services {
                         bus: bus.clone(),
@@ -432,6 +441,8 @@ impl GlobalServices {
                     opencode_catalog::builtin::Deps {
                         provider_plugins: Some(PluginContext {
                             http,
+                            http_manual_redirects,
+                            clock: Arc::new(opencode_ai::clock::SystemClock),
                             app,
                             env: config_env.clone(),
                             kv: Arc::new(StorageKv { database }),
@@ -441,6 +452,7 @@ impl GlobalServices {
                             location: location.clone(),
                             shared_cache,
                             gitlab_discovery: Arc::new(NoDiscovery),
+                            console: console.clone(),
                         }),
                         external: None,
                     },
@@ -504,6 +516,8 @@ impl GlobalServices {
                     providers,
                     models,
                     provider_hooks,
+                    usage_limits,
+                    console,
                     resolver,
                     plugins,
                     registrations: Mutex::new(Some(registrations)),
@@ -857,6 +871,20 @@ impl KvStore for StorageKv {
         Box::pin(async move {
             if let Err(error) = self.database.read(|connection| opencode_storage::kv::remove(connection, key)) {
                 log::warn!("kv delete failed for {key}: {error}");
+            }
+        })
+    }
+
+    fn scan<'a>(&'a self, prefix: &'a str, limit: usize) -> BoxFuture<'a, Vec<(String, Value)>> {
+        Box::pin(async move {
+            let options =
+                opencode_storage::kv::ScanOptions { prefix: prefix.to_owned(), after: None, limit: Some(limit as f64) };
+            match self.database.read(|connection| opencode_storage::kv::scan(connection, options)) {
+                Ok(result) => result.entries.into_iter().map(|entry| (entry.key, entry.value)).collect(),
+                Err(error) => {
+                    log::warn!("kv scan failed for {prefix}: {error}");
+                    Vec::new()
+                }
             }
         })
     }

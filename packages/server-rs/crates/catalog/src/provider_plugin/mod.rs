@@ -21,6 +21,7 @@ pub mod nvidia;
 pub mod ollama;
 pub mod openai;
 pub mod openai_context_caps;
+pub mod opencode;
 pub mod openrouter;
 pub mod poe;
 pub mod prompt_cache_key;
@@ -137,10 +138,35 @@ pub struct UserMessage {
     pub has_image: bool,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct SyntheticInput {
+    pub session_id: SessionID,
+    pub id: String,
+    pub text: String,
+    pub description: String,
+    pub metadata: serde_json::Value,
+    pub delivery: &'static str,
+    pub resume: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SyntheticError {
+    Conflict,
+    Unavailable(String),
+}
+
 pub trait SessionAccess: Send + Sync {
     fn session(&self, id: SessionID) -> BoxFuture<Option<SessionRef>>;
     fn last_user_message(&self, session: SessionID) -> BoxFuture<Option<UserMessage>>;
     fn agent_model(&self, agent: AgentID) -> BoxFuture<Option<ModelRef>>;
+
+    fn synthetic(&self, _input: SyntheticInput) -> BoxFuture<Result<(), SyntheticError>> {
+        Box::pin(async { Err(SyntheticError::Unavailable("Sessions are not available".to_owned())) })
+    }
+
+    fn supports_watches(&self) -> bool {
+        true
+    }
 }
 
 pub struct NoSessions;
@@ -157,10 +183,17 @@ impl SessionAccess for NoSessions {
     fn agent_model(&self, _agent: AgentID) -> BoxFuture<Option<ModelRef>> {
         Box::pin(async { None })
     }
+
+    fn supports_watches(&self) -> bool {
+        false
+    }
 }
 
+#[derive(Clone)]
 pub struct PluginContext {
     pub http: Arc<dyn opencode_ai::HttpSender>,
+    pub http_manual_redirects: Arc<dyn opencode_ai::HttpSender>,
+    pub clock: Arc<dyn opencode_ai::clock::Clock>,
     pub app: AppInfo,
     pub env: crate::integration::ConfigEnv,
     pub kv: Arc<dyn opencode_config::seams::KvStore>,
@@ -170,6 +203,7 @@ pub struct PluginContext {
     pub location: LocationRef,
     pub shared_cache: Arc<crate::shared_cache::SharedCache>,
     pub gitlab_discovery: Arc<dyn gitlab::Discovery>,
+    pub console: Arc<opencode::handle::ConsoleHandle>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -206,7 +240,7 @@ pub const ORDER: [Slot; 30] = [
     Slot::Native("opencode.provider.neon"),
     Slot::Native("opencode.provider.nvidia"),
     Slot::Native("opencode.provider.ollama"),
-    Slot::Elsewhere { id: "opencode.provider.opencode", owner: "OR-48" },
+    Slot::Native("opencode.provider.opencode"),
     Slot::Native("opencode.provider.snowflake.cortex"),
     Slot::Native("opencode.provider.openai"),
     Slot::Native("opencode.provider.openai-context-caps"),
@@ -283,6 +317,7 @@ pub async fn register(
             ollama::ID => ollama::register(services, context, builtin).await,
             openai::ID => openai::register(services, context, builtin).await,
             openai_context_caps::ID => openai_context_caps::register(services, context, builtin).await,
+            opencode::ID => opencode::register(services, context, builtin).await,
             openrouter::ID => openrouter::register(services, context, builtin).await,
             poe::ID => poe::register(services, context, builtin).await,
             prompt_cache_key::ID => prompt_cache_key::register(services, context, builtin).await,

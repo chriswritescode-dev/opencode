@@ -1,5 +1,5 @@
 use std::convert::Infallible;
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -47,6 +47,40 @@ impl KvStore for MemoryKv {
             self.values.lock().expect("the test kv lock is never poisoned").remove(key);
         })
     }
+
+    fn scan<'a>(&'a self, prefix: &'a str, limit: usize) -> BoxFuture<'a, Vec<(String, Value)>> {
+        Box::pin(async move {
+            let values = self.values.lock().expect("the test kv lock is never poisoned");
+            let mut entries: Vec<(String, Value)> = values
+                .iter()
+                .filter(|(key, _)| key.starts_with(prefix))
+                .map(|(key, value)| (key.clone(), value.clone()))
+                .collect();
+            entries.sort_by(|left, right| left.0.cmp(&right.0));
+            entries.truncate(limit);
+            entries
+        })
+    }
+}
+
+pub(crate) struct TestClock {
+    now_ms: AtomicU64,
+}
+
+impl TestClock {
+    pub fn new() -> Self {
+        Self { now_ms: AtomicU64::new(1_700_000_000_000) }
+    }
+
+    pub fn advance(&self, duration: Duration) {
+        self.now_ms.fetch_add(duration.as_millis() as u64, Ordering::SeqCst);
+    }
+}
+
+impl opencode_ai::clock::Clock for TestClock {
+    fn now_ms(&self) -> u64 {
+        self.now_ms.load(Ordering::SeqCst)
+    }
 }
 
 fn connection(id: &str) -> ConnectionInfo {
@@ -84,6 +118,15 @@ async fn storage_namespaces_keys_per_plugin() {
     abc.remove("token").await;
     assert_eq!(abc.get("token").await, None);
     assert_eq!(xyz.get("token").await, Some(json!("b")));
+
+    abc.set("watch-deleted:one", json!(1)).await;
+    abc.set("watch-deleted:two", json!(2)).await;
+    assert_eq!(
+        abc.scan("watch-deleted:", 10).await,
+        vec![("watch-deleted:one".to_owned(), json!(1)), ("watch-deleted:two".to_owned(), json!(2))]
+    );
+    assert_eq!(abc.scan("watch-deleted:", 1).await, vec![("watch-deleted:one".to_owned(), json!(1))]);
+    assert_eq!(xyz.scan("watch-deleted:", 10).await, Vec::new());
 }
 
 #[test]

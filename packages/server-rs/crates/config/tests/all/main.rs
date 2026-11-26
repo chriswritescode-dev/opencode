@@ -1,6 +1,7 @@
 mod discover;
 mod flags;
 mod handlers;
+mod integration_document;
 mod load;
 mod normalize;
 mod observer;

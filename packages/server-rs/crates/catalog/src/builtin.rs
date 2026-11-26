@@ -18,6 +18,7 @@ use crate::model::ModelService;
 use crate::models_dev::ModelsDevService;
 use crate::provider::{ProviderRegistry, ProviderService};
 
+#[derive(Clone)]
 pub struct Services {
     pub bus: Arc<Bus>,
     pub config: ConfigService,

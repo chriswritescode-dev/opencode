@@ -4,6 +4,7 @@ pub mod flag;
 pub mod generated;
 pub mod handlers;
 pub mod http;
+pub mod integration;
 pub mod load;
 pub mod normalize;
 pub mod observer;
