@@ -7,7 +7,7 @@ const tree = await upstreamCoreTree()
 
 await Bun.write(`${tree}/packages/core/test/opencode-rs-tool-corpus.ts`, Bun.file(source))
 
-for (const area of ["definitions", "snapshot"]) {
+for (const area of ["definitions", "snapshot", "validation", "truncate"]) {
   const result = Bun.spawnSync(["bun", "run", "test/opencode-rs-tool-corpus.ts", area], {
     cwd: `${tree}/packages/core`,
     stdout: "pipe",

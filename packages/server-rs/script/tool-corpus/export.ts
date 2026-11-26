@@ -15,10 +15,12 @@ import { Session } from "@opencode/core/session"
 import { SessionMessage } from "@opencode/core/session/message"
 import { Tool } from "@opencode/core/tool"
 import { modelTools } from "@opencode/core/tool/model-policy"
-import { definition } from "@opencode/core/tool/runtime"
+import { definition, execute as executeTool } from "@opencode/core/tool/runtime"
+import { ToolOutput } from "@opencode/core/tool-output"
 import type { Model } from "@opencode/schema/model"
 import type { Info } from "@opencode/schema/tool"
 import { LayerNode } from "@opencode/util/effect/layer-node"
+import { FSUtil } from "@opencode/util/fs-util"
 import { Global } from "@opencode/util/global"
 import { Npm } from "@opencode/util/npm"
 import { Bus } from "../src/bus"
@@ -399,8 +401,283 @@ function makeTool(add: Add): Info {
   } as unknown as Info
 }
 
+interface ValidationCase {
+  tool: string
+  input: unknown
+}
+
+const validationCases: ValidationCase[] = [
+  { tool: "read", input: {} },
+  { tool: "read", input: { path: 1 } },
+  { tool: "read", input: { path: "a", offset: "x" } },
+  { tool: "read", input: { path: "a", offset: 1.5 } },
+  { tool: "read", input: { path: "a", limit: -1 } },
+  { tool: "read", input: { offset: "x", limit: "y", extra: true } },
+  { tool: "glob", input: { pattern: "x", limit: 0 } },
+  { tool: "glob", input: { pattern: "x", hidden: "yes" } },
+  { tool: "glob", input: { pattern: 1 } },
+  { tool: "glob", input: { pattern: "x", path: 1 } },
+  { tool: "grep", input: { pattern: "" } },
+  { tool: "grep", input: {} },
+  { tool: "write", input: { path: "a" } },
+  { tool: "write", input: { path: "a", content: 1 } },
+  { tool: "write", input: { path: 1, content: "x" } },
+  { tool: "edit", input: { path: "a", oldString: 1, newString: "b" } },
+  { tool: "edit", input: { path: 1, oldString: "a", newString: "b" } },
+  { tool: "patch", input: {} },
+  { tool: "patch", input: { patchText: 5 } },
+  { tool: "skill", input: {} },
+  { tool: "skill", input: { id: 1 } },
+  { tool: "grep", input: { path: 1, include: 1, literal: 1, caseSensitive: 1 } },
+  { tool: "grep", input: { path: 1, include: 1, literal: 1, caseSensitive: 1, limit: 0 } },
+  {
+    tool: "grep",
+    input: { pattern: "", path: 1, include: 1, literal: 1, caseSensitive: 1, limit: 0 },
+  },
+]
+
+async function exportValidation() {
+  const layer = appLayer("dev")
+  const exported = await Effect.runPromise(
+    Effect.gen(function* () {
+      const directory = yield* tmpdirScoped()
+      const locations = yield* LocationServiceMap.Service
+      return yield* Effect.gen(function* () {
+        const plugins = yield* Plugin.Service
+        yield* plugins.awaitActivation
+        const service = yield* Tool.Service
+        const tools = (yield* service.list()).filter(
+          (tool) => porter.has(tool.name) && tool.options?.namespace === undefined,
+        )
+        const byName = new Map(tools.map((tool) => [tool.name, tool]))
+        const context = {
+          sessionID: Session.ID.make("ses_validation"),
+          agent: Agent.ID.make("build"),
+          messageID: SessionMessage.ID.make("msg_validation"),
+          id: Tool.CallID.make("call_validation"),
+          progress: () => Effect.void,
+        } satisfies Tool.Context
+        const exported = []
+        for (const item of validationCases) {
+          const tool = byName.get(item.tool)
+          if (tool === undefined) throw new Error(`corpus: missing tool ${item.tool}`)
+          const exit = yield* executeTool(tool, item.input, context).pipe(Effect.exit)
+          const failure = Exit.isFailure(exit) ? Cause.squash(exit.cause) : undefined
+          exported.push({
+            tool: item.tool,
+            input: item.input,
+            message: failure === undefined ? null : failure instanceof Error ? failure.message : String(failure),
+          })
+        }
+        return exported
+      }).pipe(
+        Effect.scoped,
+        Effect.provide(locations.get(Location.Ref.make({ directory: AbsolutePath.make(directory.path) }))),
+      )
+    }).pipe(Effect.scoped, Effect.provide(layer), Effect.provideService(Flag.Overrides, "-full_codemode")),
+  )
+  console.log(`__TOOL_CORPUS__${JSON.stringify(exported)}`)
+}
+
+interface TruncateCase {
+  name: string
+  limits: { maxLines: number; maxBytes: number }
+  content: Tool.Content[]
+  metadata?: Tool.Metadata
+  failure?: boolean
+}
+
+const truncateCases: TruncateCase[] = [
+  {
+    name: "line-limit",
+    limits: { maxLines: 2, maxBytes: 1_000 },
+    content: [{ type: "text", text: "one\ntwo\nthree" }],
+  },
+  {
+    name: "byte-limit-inside-line",
+    limits: { maxLines: 100, maxBytes: 5 },
+    content: [{ type: "text", text: "one\ntwo" }],
+  },
+  {
+    name: "single-line-longer-than-byte-limit",
+    limits: { maxLines: 100, maxBytes: 20 },
+    content: [{ type: "text", text: JSON.stringify({ items: Array.from({ length: 50 }, (_, index) => index) }) }],
+  },
+  {
+    name: "multibyte-check",
+    limits: { maxLines: 100, maxBytes: 7 },
+    content: [{ type: "text", text: "ab✓✓✓" }],
+  },
+  {
+    name: "emoji-zwj",
+    limits: { maxLines: 100, maxBytes: 7 },
+    content: [{ type: "text", text: "ab👨‍👩‍👧‍👦cd" }],
+  },
+  {
+    name: "emoji-modifier",
+    limits: { maxLines: 100, maxBytes: 7 },
+    content: [{ type: "text", text: "ab👍🏽cd" }],
+  },
+  {
+    name: "emoji-flag",
+    limits: { maxLines: 100, maxBytes: 7 },
+    content: [{ type: "text", text: "ab🇯🇵cd" }],
+  },
+  {
+    name: "astral-character",
+    limits: { maxLines: 100, maxBytes: 7 },
+    content: [{ type: "text", text: "ab𝒳𝒳" }],
+  },
+  {
+    name: "long-flag-sequence",
+    limits: { maxLines: 100, maxBytes: 165 },
+    content: [{ type: "text", text: "a" + "🇯🇵".repeat(40) }],
+  },
+  {
+    name: "long-grapheme-cluster",
+    limits: { maxLines: 100, maxBytes: 165 },
+    content: [{ type: "text", text: `ab${"👍" + "🏽\u0301".repeat(60)}z` }],
+  },
+  {
+    name: "cut-inside-later-part",
+    limits: { maxLines: 100, maxBytes: 6 },
+    content: [
+      { type: "text", text: "" },
+      { type: "text", text: "abc" },
+      { type: "text", text: "defgh" },
+      { type: "text", text: "" },
+    ],
+  },
+  {
+    name: "cut-between-parts",
+    limits: { maxLines: 100, maxBytes: 6 },
+    content: [
+      { type: "text", text: "abcde" },
+      { type: "text", text: "fgh" },
+    ],
+  },
+  {
+    name: "crlf-line-cut",
+    limits: { maxLines: 1, maxBytes: 1_000 },
+    content: [{ type: "text", text: "one\r\ntwo\r\nthree" }],
+  },
+  {
+    name: "blank-first-line",
+    limits: { maxLines: 1, maxBytes: 1_000 },
+    content: [{ type: "text", text: "\nfoo\nbar" }],
+  },
+  {
+    name: "blank-last-preview-line",
+    limits: { maxLines: 2, maxBytes: 1_000 },
+    content: [{ type: "text", text: "a\n\n\nb" }],
+  },
+  {
+    name: "zero-line-limit",
+    limits: { maxLines: 0, maxBytes: 1_000 },
+    content: [{ type: "text", text: "secret" }],
+  },
+  {
+    name: "join-text-parts",
+    limits: { maxLines: 2, maxBytes: 1_000 },
+    content: [
+      { type: "text", text: "one\n" },
+      { type: "text", text: "two" },
+      { type: "text", text: "three" },
+    ],
+  },
+  {
+    name: "mixed-content",
+    limits: { maxLines: 2, maxBytes: 1_000 },
+    content: [
+      { type: "text", text: "before" },
+      { type: "file", uri: "file:///image.png", mime: "image/png" },
+      { type: "text", text: "after\nomitted" },
+    ],
+  },
+  {
+    name: "skip-reports-truncation",
+    limits: { maxLines: 2_000, maxBytes: 50 * 1024 },
+    content: [{ type: "text", text: "one\ntwo" }],
+    metadata: { truncated: true, source: "tool" },
+  },
+  {
+    name: "skip-reports-retention",
+    limits: { maxLines: 2_000, maxBytes: 50 * 1024 },
+    content: [{ type: "text", text: "one\ntwo" }],
+    metadata: { truncated: false, source: "tool" },
+  },
+  {
+    name: "fits",
+    limits: { maxLines: 2_000, maxBytes: 50 * 1024 },
+    content: [{ type: "text", text: "small" }],
+  },
+  {
+    name: "trailing-newline",
+    limits: { maxLines: 2, maxBytes: 1_000 },
+    content: [{ type: "text", text: "one\ntwo\n" }],
+  },
+  {
+    name: "trailing-newline-byte-limit",
+    limits: { maxLines: 2, maxBytes: 3 },
+    content: [{ type: "text", text: "one\n" }],
+  },
+  {
+    name: "save-failure",
+    limits: { maxLines: 2, maxBytes: 1_000 },
+    content: [{ type: "text", text: "one\ntwo\nthree" }],
+    failure: true,
+  },
+]
+
+async function exportTruncate() {
+  const exported = []
+  for (const item of truncateCases) {
+    const entry = await Effect.runPromise(
+      Effect.gen(function* () {
+        const directory = yield* tmpdirScoped()
+        const layer = AppNodeBuilder.build(LayerNode.group([ToolOutput.node, FSUtil.node]), [
+          Global.node.replace(Global.layerWith({ data: directory.path })),
+        ])
+        return yield* Effect.gen(function* () {
+          const output = yield* ToolOutput.Service
+          const fs = yield* FSUtil.Service
+          yield* output.transform((editor) => editor.configure(item.limits))
+          if (item.failure) yield* fs.writeFileString(`${directory.path}/${ToolOutput.DIRECTORY}`, "not a directory")
+          const result = yield* output.truncate({
+            content: item.content,
+            ...(item.metadata === undefined ? {} : { metadata: item.metadata }),
+          })
+          const outputPath = result.metadata?.outputPath
+          const saved =
+            typeof outputPath === "string" && (yield* fs.exists(outputPath))
+              ? yield* fs.readFileString(outputPath)
+              : undefined
+          const normalized = JSON.stringify(result)
+            .replaceAll(typeof outputPath === "string" ? outputPath : "\u0000", "{{output}}")
+            .replaceAll(directory.path, "{{data}}")
+            .replace(/could not be saved: [^\]]*\]/g, "could not be saved: {{error}}]")
+          return {
+            name: item.name,
+            limits: item.limits,
+            content: item.content,
+            ...(item.metadata === undefined ? {} : { metadata: item.metadata }),
+            expected: {
+              ...(JSON.parse(normalized) as object),
+              ...(saved === undefined ? {} : { saved }),
+            },
+          }
+        }).pipe(Effect.provide(layer))
+      }).pipe(Effect.scoped),
+    )
+    exported.push(entry)
+  }
+  console.log(`__TOOL_CORPUS__${JSON.stringify(exported)}`)
+}
+
 if (area === "definitions") await exportDefinitions()
 else if (area === "snapshot") await exportSnapshot()
+else if (area === "validation") await exportValidation()
+else if (area === "truncate") await exportTruncate()
 else {
   console.error(`corpus: unknown area ${area ?? ""}`)
   process.exit(1)

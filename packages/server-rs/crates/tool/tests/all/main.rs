@@ -1,13 +1,15 @@
 mod corpus;
+mod output;
 mod registry;
 mod snapshot;
+mod validation;
 
 use std::sync::Arc;
 
 use futures_util::future::BoxFuture;
 use serde_json::{Value, json};
 
-use opencode_tool::{ToolContext, ToolError, ToolOutput, ToolRuntime};
+use opencode_tool::{Content, ToolContext, ToolError, ToolOutput, ToolRuntime};
 
 pub struct Echo {
     pub text: String,
@@ -17,11 +19,7 @@ impl ToolRuntime for Echo {
     fn execute<'a>(&'a self, _input: Value, _context: &'a ToolContext) -> BoxFuture<'a, Result<ToolOutput, ToolError>> {
         let text = self.text.clone();
         Box::pin(async move {
-            Ok(ToolOutput {
-                output: json!({ "text": text }),
-                content: vec![json!({ "type": "text", "text": text })],
-                metadata: None,
-            })
+            Ok(ToolOutput { output: json!({ "text": text }), content: vec![Content::text(text)], metadata: None })
         })
     }
 }

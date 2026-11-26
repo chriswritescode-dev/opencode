@@ -183,6 +183,7 @@ pub struct GlobalServices {
     pub file_watch: Arc<FileWatch>,
     pub ripgrep: Arc<Ripgrep>,
     sweep: JoinHandle<()>,
+    tool_output_cleanup: JoinHandle<()>,
 }
 
 pub struct LocationServices {
@@ -508,6 +509,21 @@ impl GlobalServices {
                 }
             }
         });
+        let cleanup_data = paths.data.clone();
+        let mut cleanup_shutdown = locations.shutdown_signal();
+        let tool_output_cleanup = tokio::spawn(async move {
+            if *cleanup_shutdown.borrow() {
+                return;
+            }
+            let directory = opencode_tool::output::directory(&cleanup_data);
+            loop {
+                opencode_tool::output::cleanup(directory.clone()).await;
+                tokio::select! {
+                    _ = tokio::time::sleep(Duration::from_secs(60 * 60)) => {}
+                    _ = cleanup_shutdown.changed() => return,
+                }
+            }
+        });
         GlobalServices {
             database,
             bus,
@@ -529,6 +545,7 @@ impl GlobalServices {
             file_watch,
             ripgrep,
             sweep,
+            tool_output_cleanup,
         }
     }
 
@@ -639,6 +656,7 @@ fn publish_event(bus: &Bus, definition: Definition, data: Value, options: Publis
 impl Drop for GlobalServices {
     fn drop(&mut self) {
         self.sweep.abort();
+        self.tool_output_cleanup.abort();
     }
 }
 
