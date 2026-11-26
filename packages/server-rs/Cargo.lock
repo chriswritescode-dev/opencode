@@ -1145,6 +1145,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "opencode-tool"
+version = "0.1.0"
+dependencies = [
+ "futures-util",
+ "indexmap",
+ "log",
+ "opencode-ai",
+ "opencode-bus",
+ "opencode-config",
+ "opencode-contract",
+ "opencode-fs",
+ "opencode-location",
+ "opencode-permission",
+ "opencode-registry",
+ "opencode-storage",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
 name = "opencode-util"
 version = "0.1.0"
 dependencies = [

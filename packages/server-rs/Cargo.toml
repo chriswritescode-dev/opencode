@@ -37,6 +37,7 @@ opencode-server = { path = "crates/server" }
 opencode-sidecar = { path = "crates/sidecar" }
 opencode-session = { path = "crates/session" }
 opencode-storage = { path = "crates/storage" }
+opencode-tool = { path = "crates/tool" }
 opencode-vcs = { path = "crates/vcs" }
 opencode-api-types = { path = "../cli-rs/crates/api-types" }
 opencode-api = { path = "../cli-rs/crates/api" }
