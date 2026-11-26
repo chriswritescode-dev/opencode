@@ -21,6 +21,7 @@ pub mod nvidia;
 pub mod ollama;
 pub mod openai;
 pub mod openai_context_caps;
+pub mod opencode;
 pub mod openrouter;
 pub mod poe;
 pub mod prompt_cache_key;
@@ -206,7 +207,7 @@ pub const ORDER: [Slot; 30] = [
     Slot::Native("opencode.provider.neon"),
     Slot::Native("opencode.provider.nvidia"),
     Slot::Native("opencode.provider.ollama"),
-    Slot::Elsewhere { id: "opencode.provider.opencode", owner: "OR-48" },
+    Slot::Native("opencode.provider.opencode"),
     Slot::Native("opencode.provider.snowflake.cortex"),
     Slot::Native("opencode.provider.openai"),
     Slot::Native("opencode.provider.openai-context-caps"),
@@ -283,6 +284,7 @@ pub async fn register(
             ollama::ID => ollama::register(services, context, builtin).await,
             openai::ID => openai::register(services, context, builtin).await,
             openai_context_caps::ID => openai_context_caps::register(services, context, builtin).await,
+            opencode::ID => opencode::register(services, context, builtin).await,
             openrouter::ID => openrouter::register(services, context, builtin).await,
             poe::ID => poe::register(services, context, builtin).await,
             prompt_cache_key::ID => prompt_cache_key::register(services, context, builtin).await,

@@ -50,10 +50,8 @@ async fn order_matches_the_pinned_provider_plugin_list() {
             "opencode.provider.claude-agent",
         ]
     );
-    assert_eq!(ORDER.iter().filter(|slot| matches!(slot, Slot::Native(_))).count(), 27);
-    assert!(
-        matches!(ORDER[18], Slot::Elsewhere { id, owner } if id == "opencode.provider.opencode" && owner == "OR-48")
-    );
+    assert_eq!(ORDER.iter().filter(|slot| matches!(slot, Slot::Native(_))).count(), 28);
+    assert!(matches!(ORDER[18], Slot::Native(id) if id == "opencode.provider.opencode"));
     assert!(
         matches!(ORDER[25], Slot::Elsewhere { id, owner } if id == "opencode.provider.sap.ai.core" && owner == "OR-64")
     );
@@ -77,7 +75,7 @@ async fn every_native_slot_is_handled_by_provider_plugin_register() {
         })
         .collect();
     assert_eq!(dispatched, expected);
-    assert_eq!(dispatched.len(), 27);
+    assert_eq!(dispatched.len(), 28);
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
