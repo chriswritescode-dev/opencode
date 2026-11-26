@@ -22,6 +22,8 @@ use opencode_contract::generated::{
 #[cfg(unix)]
 use opencode_contract::generated::{IntegrationCommandMethod, IntegrationCommandMethodType};
 use opencode_util::time::now_ms;
+#[cfg(unix)]
+use rustix::process::{Pid, test_kill_process};
 use serde_json::json;
 use tokio::sync::Semaphore;
 
@@ -1530,6 +1532,115 @@ async fn caps_long_stderr_at_the_message_limit() {
         }
         other => panic!("expected a failed attempt, got {other:?}"),
     }
+    assert!(credentials.list(&integration).expect("list the credentials").is_empty());
+}
+
+#[cfg(unix)]
+#[tokio::test(flavor = "multi_thread")]
+async fn fails_when_the_command_output_exceeds_the_stdout_limit() {
+    let (_dir, _database, _bus, credentials, service) = setup();
+    let integration = integration_id("company");
+    let method_id = IntegrationMethodID("login".to_owned());
+    let _registration = service
+        .transform({
+            let integration = integration.clone();
+            move |editor| {
+                editor.method_update(Implementation::Method {
+                    integration_id: integration.clone(),
+                    method: command_method("login", &["/bin/sh", "-c", "yes a | head -c 1048577"]),
+                });
+                Ok(())
+            }
+        })
+        .await;
+
+    let attempt = service
+        .command()
+        .connect(CommandConnectInput { integration_id: integration.clone(), method_id, label: None })
+        .await
+        .expect("connect the command attempt");
+    let failed = tokio::time::timeout(
+        Duration::from_secs(10),
+        eventually(|| {
+            let service = service.clone();
+            let integration = integration.clone();
+            let attempt_id = attempt.attempt_id.clone();
+            async move {
+                let status = service.command().status(&integration, &attempt_id).await.ok()?;
+                matches!(&status, CommandAttemptStatus::Failed { .. }).then_some(status)
+            }
+        }),
+    )
+    .await
+    .expect("the command fails");
+    match failed {
+        CommandAttemptStatus::Failed { message, .. } => {
+            assert_eq!(message, "Authentication command output exceeded size limit");
+        }
+        other => panic!("expected a failed attempt, got {other:?}"),
+    }
+    assert!(credentials.list(&integration).expect("list the credentials").is_empty());
+}
+
+#[cfg(unix)]
+#[tokio::test(flavor = "multi_thread")]
+async fn cancelling_a_command_attempt_terminates_its_grandchild() {
+    let (dir, _database, _bus, credentials, service) = setup();
+    let integration = integration_id("company");
+    let method_id = IntegrationMethodID("login".to_owned());
+    let grandchild_path = dir.path().join("grandchild");
+    let grandchild_path = grandchild_path.to_str().expect("the grandchild path is utf-8").to_owned();
+    let _registration = service
+        .transform({
+            let integration = integration.clone();
+            let grandchild_path = grandchild_path.clone();
+            move |editor| {
+                editor.method_update(Implementation::Method {
+                    integration_id: integration.clone(),
+                    method: command_method(
+                        "login",
+                        &["/bin/sh", "-c", "sleep 30 & echo $! > \"$1\"; wait", "sh", &grandchild_path],
+                    ),
+                });
+                Ok(())
+            }
+        })
+        .await;
+
+    let attempt = service
+        .command()
+        .connect(CommandConnectInput { integration_id: integration.clone(), method_id, label: None })
+        .await
+        .expect("connect the command attempt");
+
+    let grandchild = tokio::time::timeout(Duration::from_secs(10), async {
+        loop {
+            let reported =
+                std::fs::read_to_string(&grandchild_path).ok().and_then(|text| text.trim().parse::<i32>().ok());
+            if let Some(pid) = reported {
+                break pid;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .expect("the command reports its grandchild");
+    let grandchild = Pid::from_raw(grandchild).expect("the grandchild pid is valid");
+    assert!(test_kill_process(grandchild).is_ok(), "the grandchild runs before the attempt is cancelled");
+
+    service.command().cancel(&integration, &attempt.attempt_id).await;
+    assert!(matches!(
+        service.command().status(&integration, &attempt.attempt_id).await,
+        Err(CommandError::AttemptNotFound { .. })
+    ));
+
+    tokio::time::timeout(Duration::from_secs(10), async {
+        while test_kill_process(grandchild).is_ok() {
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .expect("the grandchild exits after the attempt is cancelled");
     assert!(credentials.list(&integration).expect("list the credentials").is_empty());
 }
 

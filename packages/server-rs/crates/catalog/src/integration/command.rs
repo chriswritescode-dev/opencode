@@ -8,6 +8,8 @@ use opencode_contract::generated::{
 };
 use opencode_storage::id;
 use opencode_util::time::now_ms;
+#[cfg(unix)]
+use rustix::process::{Pid, Signal, kill_process_group};
 use tokio::io::AsyncReadExt;
 use tokio::time::Instant;
 use tokio_util::sync::CancellationToken;
@@ -84,6 +86,11 @@ enum TerminalKind {
     Complete,
     Failed,
     Expired,
+}
+
+struct StdoutBuffer {
+    bytes: Vec<u8>,
+    truncated: bool,
 }
 
 struct Claimed {
@@ -248,10 +255,14 @@ async fn execute(
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .kill_on_drop(true);
+    #[cfg(unix)]
+    std::os::unix::process::CommandExt::process_group(builder.as_std_mut(), 0);
     let mut child = match builder.spawn() {
         Ok(child) => child,
         Err(error) => return Some(Err(AuthorizationError::new(error))),
     };
+    #[cfg(unix)]
+    let child_pid = child.id();
     let stderr = child.stderr.take().expect("the command stderr is piped");
     let stdout = child.stdout.take().expect("the command stdout is piped");
     let stderr_service = service.clone();
@@ -285,7 +296,7 @@ async fn execute(
             append_stderr(&mut pending.message, &tail);
         }
     });
-    let stdout_bytes = Arc::new(Mutex::new(Vec::new()));
+    let stdout_bytes = Arc::new(Mutex::new(StdoutBuffer { bytes: Vec::new(), truncated: false }));
     let mut stdout_task = tokio::spawn({
         let stdout_bytes = stdout_bytes.clone();
         async move {
@@ -296,13 +307,20 @@ async fn execute(
                     break;
                 }
                 let mut collected = stdout_bytes.lock().expect("lock command stdout");
-                let capacity = MAX_STDOUT_BYTES.saturating_sub(collected.len());
-                collected.extend_from_slice(&buffer[..read.min(capacity)]);
+                let capacity = MAX_STDOUT_BYTES.saturating_sub(collected.bytes.len());
+                if read > capacity {
+                    collected.truncated = true;
+                }
+                collected.bytes.extend_from_slice(&buffer[..read.min(capacity)]);
             }
         }
     });
     let status = tokio::select! {
         _ = scope.cancelled() => {
+            #[cfg(unix)]
+            if let Some(pid) = child_pid {
+                kill_group(pid);
+            }
             let _ = child.kill().await;
             stderr_task.abort();
             stdout_task.abort();
@@ -325,6 +343,11 @@ async fn execute(
         }) => Some(drained),
     };
     let Some(drained) = drained else {
+        #[cfg(unix)]
+        if let Some(pid) = child_pid {
+            kill_group(pid);
+        }
+        let _ = child.kill().await;
         stderr_task.abort();
         stdout_task.abort();
         return None;
@@ -333,7 +356,10 @@ async fn execute(
         stderr_task.abort();
         stdout_task.abort();
     }
-    let stdout = stdout_bytes.lock().expect("lock command stdout").clone();
+    let (stdout, truncated) = {
+        let collected = stdout_bytes.lock().expect("lock command stdout");
+        (collected.bytes.clone(), collected.truncated)
+    };
     if !status.success() {
         let message = service.upgrade().and_then(|service| {
             let attempts = service.command_attempts.lock().ok()?;
@@ -351,6 +377,11 @@ async fn execute(
         };
         return Some(Err(AuthorizationError::new(std::io::Error::other(message))));
     }
+    if truncated {
+        return Some(Err(AuthorizationError::new(std::io::Error::other(
+            "Authentication command output exceeded size limit",
+        ))));
+    }
     let stdout = String::from_utf8_lossy(&stdout).trim().to_owned();
     if stdout.is_empty() {
         return Some(Err(AuthorizationError::new(std::io::Error::other(
@@ -358,6 +389,13 @@ async fn execute(
         ))));
     }
     Some(Ok(stdout))
+}
+
+#[cfg(unix)]
+fn kill_group(pid: u32) {
+    if let Some(pid) = i32::try_from(pid).ok().and_then(Pid::from_raw) {
+        let _ = kill_process_group(pid, Signal::KILL);
+    }
 }
 
 fn decode_stderr(pending: &mut Vec<u8>) -> String {

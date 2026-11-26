@@ -41,6 +41,10 @@ pub async fn with_lock<T>(
     let name = key.to_owned();
     let held = spawn_blocking(move || lock::acquire(&directory, &name, &options)).await??;
     let value = future.await;
-    spawn_blocking(move || held.release()).await??;
+    match spawn_blocking(move || held.release()).await {
+        Ok(Ok(())) => {}
+        Ok(Err(error)) => log::warn!("Failed to release the catalog lock: {error}"),
+        Err(error) => log::warn!("Failed to release the catalog lock: {error}"),
+    }
     Ok(value)
 }
