@@ -426,11 +426,11 @@
       ],
       "loaded": [],
       "tree": {
-        "{{root}}/unrelated.txt": "eAo=",
         "{{root}}/__missing_read_target__.txt.bak": "eAo=",
-        "{{root}}/old___missing_read_target__.txt": "eAo=",
         "{{root}}/copy___missing_read_target__.txt": "eAo=",
-        "{{root}}/other___missing_read_target__.txt": "eAo="
+        "{{root}}/old___missing_read_target__.txt": "eAo=",
+        "{{root}}/other___missing_read_target__.txt": "eAo=",
+        "{{root}}/unrelated.txt": "eAo="
       }
     }
   },
@@ -556,10 +556,10 @@
       ],
       "loaded": [],
       "tree": {
-        "{{root}}/cconfig.ts": "eAo=",
+        "{{root}}/Config.ts": "eAo=",
         "{{root}}/acnfig.ts": "eAo=",
-        "{{root}}/config.json": "eAo=",
-        "{{root}}/Config.ts": "eAo="
+        "{{root}}/cconfig.ts": "eAo=",
+        "{{root}}/config.json": "eAo="
       }
     }
   },
@@ -886,11 +886,11 @@
       "loaded": [],
       "tree": {
         "{{root}}/src": null,
-        "{{root}}/src/z1.ts": "eAo=",
         "{{root}}/src/assets": null,
         "{{root}}/src/components": null,
-        "{{root}}/src/z2.ts": "eAo=",
-        "{{root}}/src/index.ts": "eAo="
+        "{{root}}/src/index.ts": "eAo=",
+        "{{root}}/src/z1.ts": "eAo=",
+        "{{root}}/src/z2.ts": "eAo="
       }
     }
   },
@@ -951,8 +951,8 @@
       "loaded": [],
       "tree": {
         "{{root}}/src": null,
-        "{{root}}/src/zzz.ts": "eAo=",
-        "{{root}}/src/index.ts": "eAo="
+        "{{root}}/src/index.ts": "eAo=",
+        "{{root}}/src/zzz.ts": "eAo="
       }
     }
   },
@@ -1165,12 +1165,12 @@
         ]
       ],
       "tree": {
+        "{{root}}/AGENTS.md": "cm9vdA==",
         "{{root}}/packages": null,
-        "{{root}}/packages/CLAUDE.md": "Y2xhdWRl",
         "{{root}}/packages/AGENTS.md": "cGFja2FnZXM=",
+        "{{root}}/packages/CLAUDE.md": "Y2xhdWRl",
         "{{root}}/packages/src": null,
-        "{{root}}/packages/src/file.ts": "aGVsbG8=",
-        "{{root}}/AGENTS.md": "cm9vdA=="
+        "{{root}}/packages/src/file.ts": "aGVsbG8="
       }
     }
   },

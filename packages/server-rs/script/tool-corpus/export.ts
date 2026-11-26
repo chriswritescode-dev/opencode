@@ -1482,7 +1482,9 @@ interface Assertion {
 async function fileTree(root: string, outside: string) {
   const tree: Record<string, string | null> = {}
   const walk = async (directory: string, prefix: string) => {
-    for (const entry of await fs.readdir(directory, { withFileTypes: true })) {
+    const entries = await fs.readdir(directory, { withFileTypes: true })
+    entries.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))
+    for (const entry of entries) {
       const absolute = path.join(directory, entry.name)
       const key = `${prefix}/${entry.name}`
       if (entry.isDirectory()) {
@@ -1495,6 +1497,33 @@ async function fileTree(root: string, outside: string) {
   await walk(root, "{{root}}")
   await walk(outside, "{{outside}}")
   return tree
+}
+
+function sortGlobOrder<T extends { output: unknown; content: ReadonlyArray<Tool.Content> }>(result: T) {
+  const output = Array.isArray(result.output)
+    ? [...result.output].sort((a, b) => compareText(a?.path, b?.path))
+    : result.output
+  const content = result.content.map((part) =>
+    part.type === "text" ? { ...part, text: sortTextLines(part.text) } : part,
+  )
+  return { ...result, output, content }
+}
+
+function compareText(a: unknown, b: unknown) {
+  const left = typeof a === "string" ? a : ""
+  const right = typeof b === "string" ? b : ""
+  return left < right ? -1 : left > right ? 1 : 0
+}
+
+function sortTextLines(text: string) {
+  const lines = text.split("\n")
+  const footer = Math.max(0, lines.length - 2)
+  const truncated =
+    lines.length >= 2 && lines[footer] === "" && lines[footer + 1].startsWith("(Results are truncated")
+  const note = truncated ? lines.splice(footer) : []
+  lines.sort()
+  lines.push(...note)
+  return lines.join("\n")
 }
 
 async function exportRead() {
@@ -2048,12 +2077,13 @@ async function exportSearchCases(tool: "glob" | "grep", specs: SearchCase[]) {
       }
       const execution = exit.value
       const tree = await fileTree(root, outside)
-      const expected: Record<string, unknown> = { status: execution.status }
-      if (execution.status === "completed") {
-        expected.output = execution.output
-        expected.content = execution.content
-        if (execution.metadata !== undefined) expected.metadata = execution.metadata
-      } else expected.error = execution.error?.message
+      const ordered = tool === "glob" && execution.status === "completed" ? sortGlobOrder(execution) : execution
+      const expected: Record<string, unknown> = { status: ordered.status }
+      if (ordered.status === "completed") {
+        expected.output = ordered.output
+        expected.content = ordered.content
+        if (ordered.metadata !== undefined) expected.metadata = ordered.metadata
+      } else expected.error = ordered.error?.message
       expected.assertions = assertions
       expected.tree = tree
       const normalized = JSON.stringify({ ...spec, fixtures: spec.fixtures ?? [], call, expected })

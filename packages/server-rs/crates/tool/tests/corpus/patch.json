@@ -344,8 +344,8 @@
         }
       ],
       "tree": {
-        "{{root}}/moved.txt": "YWZ0ZXIK",
-        "{{root}}/created.txt": "Y3JlYXRlZAo="
+        "{{root}}/created.txt": "Y3JlYXRlZAo=",
+        "{{root}}/moved.txt": "YWZ0ZXIK"
       }
     }
   },
@@ -513,8 +513,8 @@
       "error": "patch verification failed: Failed to read file to update {{root}}/Invoice.java: file is not valid UTF-8. It was left unchanged because rewriting it as text would replace every byte that is not UTF-8 with U+FFFD; change it with a tool that preserves its bytes, or convert it to UTF-8 first",
       "assertions": [],
       "tree": {
-        "{{root}}/a.txt": "YmVmb3JlCg==",
-        "{{root}}/Invoice.java": "Ly8gSm9z6QppbnQgTUFYID0gMTA7Cg=="
+        "{{root}}/Invoice.java": "Ly8gSm9z6QppbnQgTUFYID0gMTA7Cg==",
+        "{{root}}/a.txt": "YmVmb3JlCg=="
       }
     }
   },
@@ -775,8 +775,8 @@
         }
       ],
       "tree": {
-        "{{root}}/target.txt": "YmVmb3JlCg==",
-        "{{root}}/moved.txt": "YWZ0ZXIK"
+        "{{root}}/moved.txt": "YWZ0ZXIK",
+        "{{root}}/target.txt": "YmVmb3JlCg=="
       }
     }
   },
@@ -841,10 +841,10 @@
         }
       ],
       "tree": {
+        "{{root}}/old": null,
         "{{root}}/renamed": null,
         "{{root}}/renamed/dir": null,
-        "{{root}}/renamed/dir/name.txt": "bmV3IGNvbnRlbnQK",
-        "{{root}}/old": null
+        "{{root}}/renamed/dir/name.txt": "bmV3IGNvbnRlbnQK"
       }
     }
   },
@@ -1321,8 +1321,8 @@
         }
       ],
       "tree": {
-        "{{root}}/same.txt": "YWZ0ZXIK",
-        "{{root}}/moved.txt": "QQpCCkMK"
+        "{{root}}/moved.txt": "QQpCCkMK",
+        "{{root}}/same.txt": "YWZ0ZXIK"
       }
     }
   },
@@ -1474,9 +1474,9 @@
       ],
       "tree": {
         "{{outside}}/repository": null,
+        "{{outside}}/repository/.git": null,
         "{{outside}}/repository/nested": null,
-        "{{outside}}/repository/nested/external.txt": "YWZ0ZXIK",
-        "{{outside}}/repository/.git": null
+        "{{outside}}/repository/nested/external.txt": "YWZ0ZXIK"
       }
     }
   },
@@ -1643,8 +1643,8 @@
         }
       ],
       "tree": {
-        "{{root}}/sibling.txt": "YWZ0ZXIK",
-        "{{root}}/active": null
+        "{{root}}/active": null,
+        "{{root}}/sibling.txt": "YWZ0ZXIK"
       }
     }
   },
@@ -1905,8 +1905,8 @@
         }
       ],
       "tree": {
-        "{{outside}}/second.txt": "YWZ0ZXIK",
-        "{{outside}}/first.txt": "YWZ0ZXIK"
+        "{{outside}}/first.txt": "YWZ0ZXIK",
+        "{{outside}}/second.txt": "YWZ0ZXIK"
       }
     }
   },

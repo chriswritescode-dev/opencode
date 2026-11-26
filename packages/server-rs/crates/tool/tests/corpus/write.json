@@ -306,10 +306,10 @@
       ],
       "tree": {
         "{{outside}}/repo": null,
+        "{{outside}}/repo/.git": null,
         "{{outside}}/repo/packages": null,
         "{{outside}}/repo/packages/app": null,
-        "{{outside}}/repo/packages/app/external.txt": "ZXh0ZXJuYWw=",
-        "{{outside}}/repo/.git": null
+        "{{outside}}/repo/packages/app/external.txt": "ZXh0ZXJuYWw="
       }
     }
   },

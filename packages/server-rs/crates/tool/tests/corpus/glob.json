@@ -167,12 +167,12 @@
       "tree": {
         "{{root}}/.git": null,
         "{{root}}/.git/config.ts": "bmVlZGxlCg==",
-        "{{root}}/.hidden.ts": "bmVlZGxlCg==",
         "{{root}}/.hidden": null,
         "{{root}}/.hidden/nested.ts": "bmVlZGxlCg==",
+        "{{root}}/.hidden.ts": "bmVlZGxlCg==",
         "{{root}}/src": null,
-        "{{root}}/src/visible.ts": "bmVlZGxlCg==",
-        "{{root}}/src/.hidden.ts": "bmVlZGxlCg=="
+        "{{root}}/src/.hidden.ts": "bmVlZGxlCg==",
+        "{{root}}/src/visible.ts": "bmVlZGxlCg=="
       }
     }
   },
@@ -229,11 +229,7 @@
       "status": "completed",
       "output": [
         {
-          "path": "src/.hidden.ts",
-          "type": "file"
-        },
-        {
-          "path": "src/visible.ts",
+          "path": ".hidden.ts",
           "type": "file"
         },
         {
@@ -241,14 +237,18 @@
           "type": "file"
         },
         {
-          "path": ".hidden.ts",
+          "path": "src/.hidden.ts",
+          "type": "file"
+        },
+        {
+          "path": "src/visible.ts",
           "type": "file"
         }
       ],
       "content": [
         {
           "type": "text",
-          "text": "{{root}}/src/.hidden.ts\n{{root}}/src/visible.ts\n{{root}}/.hidden/nested.ts\n{{root}}/.hidden.ts"
+          "text": "{{root}}/.hidden.ts\n{{root}}/.hidden/nested.ts\n{{root}}/src/.hidden.ts\n{{root}}/src/visible.ts"
         }
       ],
       "metadata": {
@@ -274,12 +274,12 @@
       "tree": {
         "{{root}}/.git": null,
         "{{root}}/.git/config.ts": "bmVlZGxlCg==",
-        "{{root}}/.hidden.ts": "bmVlZGxlCg==",
         "{{root}}/.hidden": null,
         "{{root}}/.hidden/nested.ts": "bmVlZGxlCg==",
+        "{{root}}/.hidden.ts": "bmVlZGxlCg==",
         "{{root}}/src": null,
-        "{{root}}/src/visible.ts": "bmVlZGxlCg==",
-        "{{root}}/src/.hidden.ts": "bmVlZGxlCg=="
+        "{{root}}/src/.hidden.ts": "bmVlZGxlCg==",
+        "{{root}}/src/visible.ts": "bmVlZGxlCg=="
       }
     }
   },
