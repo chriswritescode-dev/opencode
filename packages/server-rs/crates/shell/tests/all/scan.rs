@@ -1,4 +1,4 @@
-use opencode_shell::scan::{Dialect, ScanResult, scan};
+use opencode_shell::scan::{Dialect, ScanResult, scan, scan_power_shell};
 use serde::Deserialize;
 
 #[derive(Deserialize)]
@@ -8,6 +8,24 @@ struct Case {
     dialect: Dialect,
     input: String,
     expected: ScanResult,
+}
+
+#[derive(Deserialize)]
+struct PowerShellCase {
+    name: String,
+    source: String,
+    input: String,
+    expected: ScanResult,
+}
+
+fn assert_matches(total: usize, mismatches: &[String], label: &str) {
+    assert!(
+        mismatches.is_empty(),
+        "{} of {} {label} cases mismatch:\n{}",
+        mismatches.len(),
+        total,
+        mismatches.join("\n"),
+    );
 }
 
 #[test]
@@ -34,13 +52,33 @@ fn replays_the_scanner_corpus() {
         })
         .take(20)
         .collect();
-    assert!(
-        mismatches.is_empty(),
-        "{} of {} scan cases mismatch:\n{}",
-        cases.iter().filter(|case| scan(&case.input, case.dialect) != case.expected).count(),
-        cases.len(),
-        mismatches.join("\n"),
-    );
+    assert_matches(cases.len(), &mismatches, "scan");
+}
+
+#[test]
+fn replays_the_powershell_scanner_corpus() {
+    let corpus = std::fs::read_to_string(format!("{}/tests/corpus/scan-powershell.json", env!("CARGO_MANIFEST_DIR")))
+        .expect("scan-powershell corpus");
+    let cases: Vec<PowerShellCase> = serde_json::from_str(&corpus).expect("scan-powershell corpus json");
+    let mismatches: Vec<String> = cases
+        .iter()
+        .filter_map(|case| {
+            let actual = scan_power_shell(&case.input);
+            (actual != case.expected).then(|| {
+                let input: String = case.input.chars().take(200).collect();
+                format!(
+                    "{} ({}) input {:?}\n  expected {}\n  actual   {}",
+                    case.name,
+                    case.source,
+                    input,
+                    serde_json::to_string(&case.expected).unwrap_or_default(),
+                    serde_json::to_string(&actual).unwrap_or_default(),
+                )
+            })
+        })
+        .take(20)
+        .collect();
+    assert_matches(cases.len(), &mismatches, "scan-powershell");
 }
 
 #[test]

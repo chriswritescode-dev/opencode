@@ -1,6 +1,9 @@
 mod bash;
 mod bash_grammar;
 mod bash_words;
+mod powershell;
+
+pub use powershell::scan_power_shell;
 
 use regress::Regex;
 use serde::{Deserialize, Serialize};

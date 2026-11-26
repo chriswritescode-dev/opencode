@@ -123,77 +123,114 @@ function executable(file: string) {
   chmodSync(file, 0o755)
 }
 
-function exportScanBash() {
+function recordScan(area: "scan-bash" | "scan-powershell", runs: { names: string[]; extra?: string[] }[]) {
   const root = process.env.OPENCODE_CORPUS_ROOT ?? ""
   const calls = path.join(root, "scan-calls.jsonl")
   rmSync(calls, { force: true })
 
-  const files = [
-    "scan",
-    "bash-syntax",
-    "bash-safety",
-    "adversarial",
-    "arithmetic",
-    "closure",
-    "compound-parity",
-    "generated",
-    "mutation",
-    "parity-regressions",
-    "redirect",
-  ]
-  const run = (names: string[], extra: string[] = []) =>
-    Bun.spawnSync(
+  for (const run of runs) {
+    const result = Bun.spawnSync(
       [
         "bun",
         "test",
-        ...names.map((name) => `test/shell-scan/${name}.test.ts`),
+        ...run.names.map((name) => `test/shell-scan/${name}.test.ts`),
         "--preload",
         "./test/opencode-rs-shell-corpus-record.ts",
-        ...extra,
+        ...(run.extra ?? []),
       ],
-      { env: { ...process.env, OPENCODE_SHELL_CORPUS_OUT: calls }, stdout: "ignore", stderr: "inherit" },
+      {
+        env: {
+          ...process.env,
+          OPENCODE_SHELL_CORPUS_OUT: calls,
+          ...(area === "scan-powershell" ? { OPENCODE_SHELL_CORPUS_POWERSHELL: "1" } : {}),
+        },
+        stdout: "ignore",
+        stderr: "inherit",
+      },
     )
-  const primary = run(files)
-  if (primary.exitCode !== 0) {
-    console.error("corpus: scanning shell fixtures failed")
-    process.exit(1)
-  }
-  const oracle = run(["oracle"], ["-t", "reports or rejects"])
-  if (oracle.exitCode !== 0) {
-    console.error("corpus: scanning the shell oracle fixtures failed")
-    process.exit(1)
+    if (result.exitCode !== 0) {
+      console.error(`corpus: scanning ${area} fixtures failed`)
+      process.exit(1)
+    }
   }
 
   if (!existsSync(calls)) {
     console.error("corpus: scanning recorded no fixtures")
     process.exit(1)
   }
+  return { calls, expected: runs.flatMap((run) => run.names) }
+}
+
+function readScanCalls(calls: string) {
   const contributors = new Set<string>()
-  const cases: Case[] = []
-  let index = 0
-  for (const line of readFileSync(calls, "utf8").split("\n")) {
-    if (!line) continue
-    const call = JSON.parse(line) as { input: string; dialect: ShellScan.Dialect; source: string }
-    contributors.add(call.source.split(":")[0] ?? "")
-    index++
-    cases.push({
-      name: `scan-bash-${index}`,
-      source: call.source,
-      dialect: call.dialect,
-      input: call.input,
-      expected: ShellScan.scan(call.input, call.dialect),
+  const callsList = readFileSync(calls, "utf8")
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => {
+      const call = JSON.parse(line) as { input: string; dialect?: ShellScan.Dialect; source: string }
+      contributors.add(call.source.split(":")[0] ?? "")
+      return call
     })
-  }
-  for (const name of [...files, "oracle"])
+  return { callsList, contributors }
+}
+
+function requireContributors(area: string, expected: string[], contributors: Set<string>) {
+  for (const name of expected)
     if (!contributors.has(`test/shell-scan/${name}.test.ts`)) {
-      console.error(`corpus: ${name}.test.ts contributed no fixtures`)
+      console.error(`corpus: ${area} ${name}.test.ts contributed no fixtures`)
       process.exit(1)
     }
+}
+
+function exportScanBash() {
+  const { calls, expected } = recordScan("scan-bash", [
+    {
+      names: [
+        "scan",
+        "bash-syntax",
+        "bash-safety",
+        "adversarial",
+        "arithmetic",
+        "closure",
+        "compound-parity",
+        "generated",
+        "mutation",
+        "parity-regressions",
+        "redirect",
+      ],
+    },
+    { names: ["oracle"], extra: ["-t", "reports or rejects"] },
+  ])
+  const { callsList, contributors } = readScanCalls(calls)
+  const cases: Case[] = callsList.map((call, index) => ({
+    name: `scan-bash-${index + 1}`,
+    source: call.source,
+    dialect: call.dialect,
+    input: call.input,
+    expected: ShellScan.scan(call.input, call.dialect as ShellScan.Dialect),
+  }))
+  requireContributors("scan-bash", expected, contributors)
+  console.log(`__SHELL_CORPUS__${JSON.stringify(cases)}`)
+}
+
+function exportScanPowerShell() {
+  const { calls, expected } = recordScan("scan-powershell", [
+    { names: ["powershell-syntax", "powershell-safety", "powershell-runtime"] },
+  ])
+  const { callsList, contributors } = readScanCalls(calls)
+  const cases: Case[] = callsList.map((call, index) => ({
+    name: `scan-powershell-${index + 1}`,
+    source: call.source,
+    input: call.input,
+    expected: ShellScan.scanPowerShell(call.input),
+  }))
+  requireContributors("scan-powershell", expected, contributors)
   console.log(`__SHELL_CORPUS__${JSON.stringify(cases)}`)
 }
 
 if (area === "select") exportSelect()
 else if (area === "scan-bash") exportScanBash()
+else if (area === "scan-powershell") exportScanPowerShell()
 else {
   console.error(`corpus: unknown area ${area ?? ""}`)
   process.exit(1)

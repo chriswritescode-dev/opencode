@@ -5,6 +5,7 @@ const root = new URL("../..", import.meta.url).pathname
 const areas = new Map([
   ["select", { crate: "config", file: "shell-select" }],
   ["scan-bash", { crate: "shell", file: "scan-bash" }],
+  ["scan-powershell", { crate: "shell", file: "scan-powershell" }],
 ])
 const requested = process.argv[2]
 const selected = requested === undefined ? [...areas.keys()] : [requested]
