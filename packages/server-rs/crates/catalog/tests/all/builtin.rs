@@ -591,6 +591,28 @@ async fn config_provider_inherits_the_provider_compaction_setting() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn config_provider_strips_the_default_model_variant_suffix() {
+    let mut harness = start(Input::new(vec![serde_json::json!({
+        "model": "custom/old#high",
+        "providers": {
+            "custom": {
+                "package": "aisdk:@ai-sdk/openai-compatible",
+                "models": {
+                    "old": { "releaseDate": "2020-01-01" },
+                    "new": { "releaseDate": "2026-01-01" }
+                }
+            }
+        }
+    })]))
+    .await;
+    harness.register(&["config_provider"]).await;
+
+    let default = harness.services.model.default_model().await.expect("the default model").expect("a default model");
+    assert_eq!(default.provider_id, ProviderID("custom".to_owned()));
+    assert_eq!(default.id, "old");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn config_provider_drops_settings_that_do_not_decode() {
     let mut harness = start(Input::new(vec![serde_json::json!({
         "providers": {

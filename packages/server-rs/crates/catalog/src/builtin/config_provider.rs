@@ -177,13 +177,15 @@ pub async fn register(services: &Services, builtin: &mut Builtin) {
                     (sources.default_model.clone(), sources.definitions.clone())
                 };
                 if let Some(configured) = &default_model {
-                    let (provider_id, model_id) = match configured {
+                    let selection = match configured {
                         ConfigEntryDocumentInfoModel::String(value) => model::parse(&value.0),
                         ConfigEntryDocumentInfoModel::Object(value) => {
-                            (ProviderID(value.provider_id.clone()), value.model.clone())
+                            Some((ProviderID(value.provider_id.clone()), value.model.clone()))
                         }
                     };
-                    editor.set_default_selection(&provider_id, &model_id);
+                    if let Some((provider_id, model_id)) = selection {
+                        editor.set_default_selection(&provider_id, &model_id);
+                    }
                 }
                 for (item, definition) in &definitions {
                     let provider_package =
