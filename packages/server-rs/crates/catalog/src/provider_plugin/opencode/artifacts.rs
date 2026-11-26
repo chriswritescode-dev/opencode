@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
+use std::time::Duration;
 
 use bytes::Bytes;
 use opencode_ai::HttpSender;
@@ -265,7 +266,7 @@ impl ConsoleArtifacts {
             headers.push(("content-type".to_owned(), content_type.to_owned()));
         }
         let request = PreparedHttp::new(method, format!("{server}{path}"), headers, body);
-        match http::send(self.http.as_ref(), request, None).await {
+        match http::send(self.http.as_ref(), request, Some(Duration::from_secs(30))).await {
             Ok(response) => Ok(response),
             Err(HttpError::Status(response)) if method == "DELETE" && response.status == 404 => Ok(response),
             Err(HttpError::Status(response)) => Err(problem(&response, method, slug)),

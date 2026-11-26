@@ -536,6 +536,57 @@ async fn rejects_malformed_device_verification_urls() {
     assert!(error.to_string().contains("Invalid device verification URL"), "got {error}");
 }
 
+#[tokio::test(start_paused = true)]
+async fn polls_device_tokens_no_faster_than_the_minimum_interval_until_the_device_code_expires() {
+    let routes = Routes::new();
+    routes.route_json(
+        "POST",
+        &format!("{ORIGIN}/auth/device/code"),
+        json!({
+            "device_code": "device",
+            "user_code": "user",
+            "verification_uri_complete": "/device?user_code=user",
+            "expires_in": 12,
+            "interval": 0,
+        }),
+    );
+    routes.route_json("POST", &format!("{ORIGIN}/auth/device/token"), json!({ "error": "authorization_pending" }));
+    let mut harness = start(Input::new(Vec::new())).await;
+    add_plugin(&mut harness, routes.clone()).await;
+
+    let attempt =
+        connect(&harness, answer(FormValue::String(ORIGIN.to_owned()))).await.expect("start the device authorization");
+    settle_tasks().await;
+    let polls = || routes.count("POST", &format!("{ORIGIN}/auth/device/token"));
+
+    tokio::time::advance(Duration::from_secs(4)).await;
+    settle_tasks().await;
+    assert_eq!(polls(), 0, "the interval of 0 is raised to the five second minimum");
+
+    tokio::time::advance(Duration::from_secs(1)).await;
+    settle_tasks().await;
+    assert_eq!(polls(), 1);
+
+    tokio::time::advance(Duration::from_secs(4)).await;
+    settle_tasks().await;
+    assert_eq!(polls(), 1);
+
+    tokio::time::advance(Duration::from_secs(1)).await;
+    settle_tasks().await;
+    assert_eq!(polls(), 2);
+
+    let status = wait_for_status(&harness, &attempt).await;
+    let AttemptStatus::Failed { message, .. } = status else { panic!("the attempt expires, got {status:?}") };
+    assert_eq!(message, "Device authorization expired");
+    assert_eq!(polls(), 2);
+}
+
+async fn settle_tasks() {
+    for _ in 0..16 {
+        tokio::task::yield_now().await;
+    }
+}
+
 async fn authorizes_with_organization(org_id: Option<Value>, expected_org: &str, expected_name: &str) {
     let routes = console_routes(ORIGIN, token(org_id));
     routes.route_json_with_headers("GET", &config_url(ORIGIN), lists_headers(), json!({ "providers": {} }));
@@ -2367,6 +2418,23 @@ async fn offers_console_web_search_only_when_the_console_selects_it_and_user_con
         })
         .collect();
     assert_eq!(selected_providers, ["opencode".to_owned(), "mine".to_owned()]);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn hides_hosted_web_search_when_managed_policy_denies_the_opencode_integration() {
+    let routes = Routes::new();
+    routes.route_json("GET", &config_url(ORIGIN), advertised_web_search(true));
+    let managed = json!({
+        "policies": [{ "action": "integration.use", "resource": "opencode", "effect": "deny" }],
+    });
+    let mut harness = start(Input::new(Vec::new()).managed(managed)).await;
+    harness.credential("opencode", console_key(ORIGIN, None)).await;
+    let context = add_plugin(&mut harness, routes.clone()).await;
+
+    assert_eq!(routes.count("GET", &config_url(ORIGIN)), 1);
+    let document = console_document(&harness).expect("the policy-only Console document");
+    assert_eq!(document_json(&document).get("websearch"), None);
+    assert!(context.console.web_search().is_none());
 }
 
 const LISTS_HEADER: &str = "x-opencode-instructions-skills";

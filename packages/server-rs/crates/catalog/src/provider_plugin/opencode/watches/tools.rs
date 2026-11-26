@@ -1,4 +1,5 @@
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use bytes::Bytes;
 use futures_util::FutureExt;
@@ -213,7 +214,7 @@ impl WatchTools {
             Some(body) => http::json(url, headers, body),
             None => http::PreparedHttp::new(method, url, headers, Bytes::new()),
         };
-        match http::send(console.http.as_ref(), request, None).await {
+        match http::send(console.http.as_ref(), request, Some(Duration::from_secs(30))).await {
             Ok(response) => Ok(response),
             Err(HttpError::Status(response)) => Err(problem(&response)),
             Err(error) => Err(ToolFailure::message(error.to_string())),

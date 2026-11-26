@@ -60,11 +60,12 @@ pub struct Input {
     pub models: Option<Value>,
     pub url: Option<String>,
     pub environment: HashMap<String, String>,
+    pub managed: Option<Value>,
 }
 
 impl Input {
     pub fn new(entries: Vec<Value>) -> Self {
-        Self { entries, models: None, url: None, environment: HashMap::new() }
+        Self { entries, models: None, url: None, environment: HashMap::new(), managed: None }
     }
 
     pub fn models(mut self, models: Value) -> Self {
@@ -79,6 +80,11 @@ impl Input {
 
     pub fn environment(mut self, name: &str, value: &str) -> Self {
         self.environment.insert(name.to_owned(), value.to_owned());
+        self
+    }
+
+    pub fn managed(mut self, value: Value) -> Self {
+        self.managed = Some(value);
         self
     }
 }
@@ -102,6 +108,13 @@ impl Harness {
                 .expect("write the project config");
         }
         let content = input.entries.get(2).map(|value| serde_json::to_string(value).expect("json"));
+        let system = input.managed.as_ref().map(|managed| {
+            let directory = root.join("system");
+            std::fs::create_dir_all(&directory).expect("create the managed config directory");
+            std::fs::write(directory.join("opencode.json"), serde_json::to_string(managed).expect("json"))
+                .expect("write the managed config");
+            directory
+        });
         let models_file = input.models.as_ref().map(|models| {
             let path = root.join("models.json");
             std::fs::write(&path, serde_json::to_string(models).expect("json")).expect("write the models catalog");
@@ -129,7 +142,7 @@ impl Harness {
             ConfigOptions {
                 project: Some(true),
                 global: Some(true),
-                system: Some(SystemOption::Disabled),
+                system: Some(system.map_or(SystemOption::Disabled, SystemOption::Path)),
                 claude: Some(false),
                 file: None,
                 content,

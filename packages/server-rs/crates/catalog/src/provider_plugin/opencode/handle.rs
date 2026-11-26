@@ -102,9 +102,9 @@ impl ConsoleHandle {
     }
 
     pub fn web_search(&self) -> Option<ConsoleWebSearch> {
-        let snapshot = self.snapshot();
-        let connection = snapshot.connection?;
-        let selected = match snapshot.remote.as_ref()?.info.websearch.as_ref()? {
+        let connection = self.snapshot().connection?;
+        let integrated = self.integrated()?;
+        let selected = match integrated.websearch.as_ref()? {
             ConfigEntryDocumentInfoWebsearch::Object(websearch) => &websearch.provider,
             ConfigEntryDocumentInfoWebsearch::Bool(_) => return None,
         };
@@ -243,7 +243,7 @@ impl ConsoleHandle {
     }
 
     pub(crate) fn sync_watches(self: &Arc<Self>, target: Option<WatchTarget>) {
-        self.watches.sync(self, target);
+        self.watches.sync(self, target.filter(|target| target.sessions.supports_watches()));
     }
 
     pub(crate) fn watch_leader(&self) -> bool {

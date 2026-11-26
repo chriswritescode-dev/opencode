@@ -30,12 +30,19 @@ const DEVICE_GRANT: &str = "urn:ietf:params:oauth:grant-type:device_code";
 
 const SLOW_DOWN_MILLIS: u64 = 5000;
 
+const MIN_POLL_INTERVAL: Duration = Duration::from_secs(5);
+
+const DEFAULT_EXPIRES_IN: Duration = Duration::from_secs(10 * 60);
+
+const MAX_EXPIRES_IN: Duration = Duration::from_secs(24 * 60 * 60);
+
+const TOKEN_TIMEOUT: Duration = Duration::from_secs(10);
+
 #[derive(Debug, Deserialize)]
 struct Device {
     device_code: String,
     user_code: String,
     verification_uri_complete: String,
-    #[allow(dead_code)]
     expires_in: f64,
     interval: f64,
 }
@@ -167,13 +174,21 @@ async fn begin(
         &serde_json::json!({ "client_id": CLIENT_ID, "supports_org_scope": true }),
     );
     let device: Device = decode(&send(http.as_ref(), request).await?.body)?;
-    let Device { device_code, user_code, verification_uri_complete, interval, .. } = device;
+    let Device { device_code, user_code, verification_uri_complete, expires_in, interval } = device;
     let url = verification_url(&server, &verification_uri_complete)?;
     let instructions = format!("Enter code: {user_code}");
-    let wait = seconds(interval);
-    let callback: AutoCallback =
-        Box::new(move || Box::pin(async move { poll(http.as_ref(), &user_agent, &server, &device_code, wait).await }));
-    Ok(OAuthAuthorization { url, instructions, expires_at: None, mode: OAuthMode::Auto { callback, submit: None } })
+    let wait = seconds(interval).max(MIN_POLL_INTERVAL);
+    let lifetime = if expires_in.is_finite() && expires_in > 0.0 {
+        Duration::try_from_secs_f64(expires_in).unwrap_or(DEFAULT_EXPIRES_IN).min(MAX_EXPIRES_IN)
+    } else {
+        DEFAULT_EXPIRES_IN
+    };
+    let expires_at =
+        Some(opencode_util::time::now_ms().saturating_add(i64::try_from(lifetime.as_millis()).unwrap_or(i64::MAX)));
+    let callback: AutoCallback = Box::new(move || {
+        Box::pin(async move { poll(http.as_ref(), &user_agent, &server, &device_code, wait, lifetime).await })
+    });
+    Ok(OAuthAuthorization { url, instructions, expires_at, mode: OAuthMode::Auto { callback, submit: None } })
 }
 
 fn verification_url(server: &str, complete: &str) -> Result<String, AuthorizationError> {
@@ -192,9 +207,18 @@ async fn poll(
     server: &str,
     device_code: &str,
     mut wait: Duration,
+    lifetime: Duration,
 ) -> Result<CredentialOAuth, AuthorizationError> {
+    let deadline = tokio::time::Instant::now() + lifetime;
     loop {
-        tokio::time::sleep(wait).await;
+        let remaining = deadline.saturating_duration_since(tokio::time::Instant::now());
+        if remaining.is_zero() {
+            return Err(error("Device authorization expired"));
+        }
+        tokio::time::sleep(wait.min(remaining)).await;
+        if tokio::time::Instant::now() >= deadline {
+            return Err(error("Device authorization expired"));
+        }
         let request = http::json(
             format!("{server}/auth/device/token"),
             headers(user_agent),
@@ -204,7 +228,7 @@ async fn poll(
                 "client_id": CLIENT_ID,
             }),
         );
-        let response = match http::send(http, request, None).await {
+        let response = match http::send(http, request, Some(TOKEN_TIMEOUT)).await {
             Ok(response) => response,
             Err(HttpError::Status(response)) => response,
             Err(failure) => return Err(error(format!("OpenCode device token request failed: {failure}"))),
@@ -275,7 +299,7 @@ async fn refresh_credential(
             "client_id": CLIENT_ID,
         }),
     );
-    let response = match http::send(http, request, None).await {
+    let response = match http::send(http, request, Some(TOKEN_TIMEOUT)).await {
         Ok(response) => response,
         Err(HttpError::Status(response)) => response,
         Err(failure) => return Err(error(format!("OpenCode token request failed: {failure}"))),
@@ -346,7 +370,9 @@ async fn send(
     http: &dyn HttpSender,
     request: http::PreparedHttp,
 ) -> Result<http::BufferedResponse, AuthorizationError> {
-    http::send(http, request, None).await.map_err(|failure| error(format!("OpenCode request failed: {failure}")))
+    http::send(http, request, Some(TOKEN_TIMEOUT))
+        .await
+        .map_err(|failure| error(format!("OpenCode request failed: {failure}")))
 }
 
 fn decode<T: DeserializeOwned>(body: &[u8]) -> Result<T, AuthorizationError> {

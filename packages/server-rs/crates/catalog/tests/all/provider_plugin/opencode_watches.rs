@@ -4,6 +4,7 @@ use std::time::Duration;
 
 use opencode_bus::{Definition, PublishOptions};
 use opencode_catalog::builtin::Builtin;
+use opencode_catalog::provider_plugin::NoSessions;
 use opencode_catalog::provider_plugin::hooks::{PromptEvent, ToolExecuteAfter};
 use opencode_catalog::provider_plugin::opencode;
 use opencode_catalog::provider_plugin::opencode::watches::{
@@ -16,7 +17,7 @@ use serde_json::{Value, json};
 
 use crate::builtin::{Harness, Input, start};
 use crate::provider_plugin::console::{FakeConsole, wait_until};
-use crate::provider_plugin::support::{PluginState, Reply, Routes, plugin_context_state};
+use crate::provider_plugin::support::{PluginState, Reply, Routes, plugin_context_state, plugin_context_with};
 
 const PAGE: usize = 200;
 
@@ -174,6 +175,27 @@ async fn stays_dormant_without_the_console_watches_flag_even_when_the_console_ad
 
     assert_eq!(console.opens(), 0);
     assert!(routes.requests().iter().all(|request| !request.url.contains("/api/event-watches")));
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn stays_dormant_without_session_access_even_when_the_console_advertises_event_watches() {
+    let console = FakeConsole::start(true).await;
+    let routes = Routes::new();
+    set_config(&routes, console.origin(), true);
+    let mut harness = start(Input::new(Vec::new())).await;
+    harness.credential("opencode", console_key(console.origin())).await;
+    let mut context = plugin_context_with(&harness, routes.clone());
+    context.sessions = Arc::new(NoSessions);
+    let mut builtin = Builtin::default();
+    opencode::register(&harness.services, &context, &mut builtin).await;
+    harness.record(builtin);
+
+    tokio::time::sleep(Duration::from_millis(100)).await;
+
+    assert!(context.console.allowed().watches);
+    assert_eq!(console.opens(), 0);
+    assert!(routes.requests().iter().all(|request| !request.url.contains("/api/event-watches")));
+    assert!(context.console.watch_tools().is_none());
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

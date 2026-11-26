@@ -163,6 +163,10 @@ pub trait SessionAccess: Send + Sync {
     fn synthetic(&self, _input: SyntheticInput) -> BoxFuture<Result<(), SyntheticError>> {
         Box::pin(async { Err(SyntheticError::Unavailable("Sessions are not available".to_owned())) })
     }
+
+    fn supports_watches(&self) -> bool {
+        true
+    }
 }
 
 pub struct NoSessions;
@@ -178,6 +182,10 @@ impl SessionAccess for NoSessions {
 
     fn agent_model(&self, _agent: AgentID) -> BoxFuture<Option<ModelRef>> {
         Box::pin(async { None })
+    }
+
+    fn supports_watches(&self) -> bool {
+        false
     }
 }
 

@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::time::Duration;
 
 use bytes::Bytes;
 use opencode_ai::HttpSender;
@@ -175,7 +176,7 @@ async fn cancel_session(console: &Console, session_id: &str) -> Result<(), HttpE
         headers,
         Bytes::new(),
     );
-    http::send(console.http.as_ref(), request, None).await.map(|_| ())
+    http::send(console.http.as_ref(), request, Some(Duration::from_secs(10))).await.map(|_| ())
 }
 
 #[derive(Debug)]
