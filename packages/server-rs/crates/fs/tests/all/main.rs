@@ -1,6 +1,7 @@
 mod access;
 mod corpus;
 mod diff;
+mod file_watch;
 mod filesystem;
 mod fixture;
 mod mutation;
@@ -8,4 +9,5 @@ mod mutex;
 mod retention;
 mod ripgrep;
 mod search;
+mod watcher;
 mod write;

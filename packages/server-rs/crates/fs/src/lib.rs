@@ -1,6 +1,7 @@
 pub mod access;
 pub mod bom;
 pub mod diff;
+pub mod file_watch;
 pub mod filesystem;
 pub mod generated;
 pub mod mime;
@@ -11,6 +12,7 @@ pub mod protected;
 pub mod retention;
 pub mod ripgrep;
 pub mod search;
+pub mod watcher;
 pub mod write;
 
 #[derive(Clone, Debug, thiserror::Error)]
