@@ -14,6 +14,7 @@ use opencode_config::options::{ConfigLocation, ConfigOptions};
 use opencode_config::paths::GlobalPaths;
 use opencode_config::seams::KvStore;
 use opencode_config::service::{ConfigService, ServiceDeps};
+use opencode_config::shell::{self, ShellSelect};
 use opencode_config::wellknown::WellKnown;
 use opencode_contract::codec::{Encode, encode_json};
 use opencode_contract::generated::{
@@ -62,6 +63,7 @@ use opencode_session::execution::{Placed, Placement};
 use opencode_session::instructions::BuiltinsInput;
 use opencode_session::search_build::SessionSearchBuild;
 use opencode_storage::Database;
+use opencode_terminal::pty::{self, Pty};
 use opencode_tool::image::Image as ToolImage;
 use opencode_tool::output::OutputStore as ToolOutputStore;
 use opencode_tool::{LocationFilesParts, LocationToolDeps, LocationTools};
@@ -216,6 +218,7 @@ pub struct LocationServices {
     pub plugins: LocationPlugins,
     pub files: LocationFiles,
     pub tools: Arc<LocationTools>,
+    pub pty: Arc<Pty>,
     _config_observer: ObserverHandle,
 }
 
@@ -231,6 +234,7 @@ impl GlobalServices {
         paths: GlobalPaths,
         start_directory: String,
         config_env: ConfigEnv,
+        pty_env: Vec<(String, String)>,
         bus: Arc<Bus>,
         plugins: Arc<GlobalPlugins>,
         version: String,
@@ -277,6 +281,7 @@ impl GlobalServices {
         let boot_store = store.clone();
         let boot_version = version.clone();
         let boot_channel = channel.clone();
+        let boot_pty_env = pty_env.clone();
         let locations = LocationMap::new(move |reference| {
             let projects = boot_projects.clone();
             let environment = boot_environment.clone();
@@ -290,6 +295,7 @@ impl GlobalServices {
             let channel_name = boot_channel.clone();
             let build_channel = build_channel.clone();
             let flag_overrides = flag_overrides.clone();
+            let pty_env = boot_pty_env.clone();
             let boot_git = boot_git.clone();
             let boot_repository_cache = boot_repository_cache.clone();
             let bus = boot_bus.clone();
@@ -325,6 +331,20 @@ impl GlobalServices {
                 .await;
                 snapshot.observe_config(&config).await;
                 worktree_strategies.observe_config(&config, &home).await;
+                let shell = {
+                    let vars = config_env.clone();
+                    let shell = Arc::new(ShellSelect::new(
+                        shell::Search {
+                            bin: bin.clone(),
+                            path: config_env("PATH"),
+                            gitbash: config_env("OPENCODE_GIT_BASH_PATH").map(PathBuf::from),
+                        },
+                        move |name| vars(name),
+                    ));
+                    shell.observe_config(&config);
+                    shell
+                };
+                let pty = Pty::new(bus.clone(), shell, pty::Options { location: location.clone(), env: pty_env });
                 let vcs = Vcs::new(bus.clone(), &info);
                 let is_hg = info.vcs.as_ref().is_some_and(|vcs| vcs.kind() == "hg");
                 let mut vcs_registrations = Vec::new();
@@ -503,6 +523,7 @@ impl GlobalServices {
                     plugins,
                     files,
                     tools,
+                    pty,
                     _config_observer,
                 }))
             })
@@ -702,6 +723,7 @@ impl opencode_location::map::LocationServices for LocationServices {
 
     fn close(&self) -> BoxFuture<'_, ()> {
         Box::pin(async move {
+            self.pty.shutdown();
             self.permissions.close();
             self.forms.close();
             self.plugins.shutdown().await;

@@ -35,6 +35,7 @@ fn services_with_flags(
         paths,
         start_directory.to_string_lossy().into_owned(),
         Arc::new(environment),
+        Vec::new(),
         bus,
         crate::global_plugins(),
         "test-version".to_owned(),

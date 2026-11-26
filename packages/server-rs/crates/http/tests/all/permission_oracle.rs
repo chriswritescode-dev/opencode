@@ -32,6 +32,7 @@ fn services(state: &ServerState, start: &Path, home: &Path) -> Arc<GlobalService
         paths,
         start.to_string_lossy().into_owned(),
         Arc::new(|_: &str| None),
+        Vec::new(),
         state.bus.clone(),
         crate::global_plugins(),
         "test-version".to_owned(),

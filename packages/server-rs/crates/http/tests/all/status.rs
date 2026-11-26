@@ -23,6 +23,7 @@ fn ready_app_with_state() -> Arc<App> {
         paths,
         "/tmp/opencode-http-test".to_owned(),
         Arc::new(|_: &str| None),
+        Vec::new(),
         state.bus.clone(),
         crate::global_plugins(),
         "test-version".to_owned(),
@@ -130,6 +131,13 @@ fn sample_request(operation: &str) -> Option<(&'static str, &'static str)> {
         "server.pair" => Some(("POST", "/api/pair")),
         "server.connect" => Some(("GET", "/auth/connect/x")),
         "event.subscribe" => Some(("GET", "/api/event")),
+        "pty.list" => Some(("GET", "/api/pty")),
+        "pty.create" => Some(("POST", "/api/pty")),
+        "pty.get" => Some(("GET", "/api/pty/pty_unknown")),
+        "pty.update" => Some(("PUT", "/api/pty/pty_unknown")),
+        "pty.remove" => Some(("DELETE", "/api/pty/pty_unknown")),
+        "pty.connect.token" => Some(("POST", "/api/pty/pty_unknown/connect-token")),
+        "pty.connect" => Some(("GET", "/api/pty/pty_unknown/connect")),
         "experimental.session.log" => Some(("GET", "/api/experimental/session/ses_test/log")),
         "location.get" => Some(("GET", "/api/location")),
         "location.reload" => Some(("POST", "/api/location/reload")),
@@ -292,5 +300,5 @@ fn implemented_lists_the_ported_operations() {
     assert!(opencode_http::app::IMPLEMENTED.contains(&"plugin.gui"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"plugin.check"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"plugin.update"));
-    assert_eq!(opencode_http::app::IMPLEMENTED.len(), 68);
+    assert_eq!(opencode_http::app::IMPLEMENTED.len(), 75);
 }

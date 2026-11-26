@@ -436,6 +436,7 @@ fn disabled_services(start: &Path) -> Arc<GlobalServices> {
         paths,
         start.to_string_lossy().into_owned(),
         Arc::new(|name: &str| (name == "OPENCODE_DISABLE_FILEWATCHER").then(|| OsString::from("1"))),
+        Vec::new(),
         bus,
         crate::global_plugins(),
         "test-version".to_owned(),

@@ -1,6 +1,6 @@
 # Operation coverage
 
-Implemented: 68 of 178 operations
+Implemented: 75 of 178 operations
 
 | Operation | Method | Path | Stability | Status |
 | --- | --- | --- | --- | --- |
@@ -117,13 +117,13 @@ Implemented: 68 of 178 operations
 | `skill.list` | GET | `/api/skill` | stable | implemented |
 | `rpc.call` | POST | `/api/rpc/{rpcID}/{method}` | stable | not implemented (501) |
 | `event.subscribe` | GET | `/api/event` | stable | implemented |
-| `pty.list` | GET | `/api/pty` | stable | not implemented (501) |
-| `pty.create` | POST | `/api/pty` | stable | not implemented (501) |
-| `pty.get` | GET | `/api/pty/{ptyID}` | stable | not implemented (501) |
-| `pty.update` | PUT | `/api/pty/{ptyID}` | stable | not implemented (501) |
-| `pty.remove` | DELETE | `/api/pty/{ptyID}` | stable | not implemented (501) |
-| `pty.connect.token` | POST | `/api/pty/{ptyID}/connect-token` | stable | not implemented (501) |
-| `pty.connect` | GET | `/api/pty/{ptyID}/connect` | stable | not implemented (501) |
+| `pty.list` | GET | `/api/pty` | stable | implemented |
+| `pty.create` | POST | `/api/pty` | stable | implemented |
+| `pty.get` | GET | `/api/pty/{ptyID}` | stable | implemented |
+| `pty.update` | PUT | `/api/pty/{ptyID}` | stable | implemented |
+| `pty.remove` | DELETE | `/api/pty/{ptyID}` | stable | implemented |
+| `pty.connect.token` | POST | `/api/pty/{ptyID}/connect-token` | stable | implemented |
+| `pty.connect` | GET | `/api/pty/{ptyID}/connect` | stable | implemented |
 | `experimental.persistentPty.read` | GET | `/api/experimental/session/{sessionID}/terminal/read` | experimental | not implemented (501) |
 | `experimental.persistentPty.list` | GET | `/api/experimental/session/{sessionID}/terminal` | experimental | not implemented (501) |
 | `experimental.persistentPty.create` | POST | `/api/experimental/session/{sessionID}/terminal` | experimental | not implemented (501) |

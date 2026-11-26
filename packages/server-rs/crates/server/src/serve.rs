@@ -152,6 +152,10 @@ pub(crate) async fn start(
                 env.vars().map(|(name, value)| (name.to_os_string(), value.to_os_string())).collect();
             let config_env: opencode_http::services::ConfigEnv =
                 Arc::new(move |name: &str| vars.get(OsStr::new(name)).cloned());
+            let pty_env = env
+                .vars()
+                .map(|(name, value)| (name.to_string_lossy().into_owned(), value.to_string_lossy().into_owned()))
+                .collect();
             let npm_paths = opencode_plugin::NpmPaths::from(&paths);
             let plugins = Arc::new(opencode_plugin::GlobalPlugins {
                 host: host.clone(),
@@ -170,6 +174,7 @@ pub(crate) async fn start(
                 paths,
                 start_directory,
                 config_env,
+                pty_env,
                 state.bus.clone(),
                 plugins,
                 crate::VERSION.to_owned(),

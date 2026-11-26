@@ -273,19 +273,15 @@ impl Pty {
                 }
             }),
             activate: Box::new(move || {
-                let (pending, end, on_data, on_end) = {
-                    let mut subscriber = lock(&activate_subscriber);
-                    if subscriber.active || subscriber.detached {
-                        return;
-                    }
-                    subscriber.active = true;
-                    (
-                        std::mem::take(&mut subscriber.pending),
-                        subscriber.end.take(),
-                        subscriber.on_data.clone(),
-                        subscriber.on_end.clone(),
-                    )
-                };
+                let mut subscriber = lock(&activate_subscriber);
+                if subscriber.active || subscriber.detached {
+                    return;
+                }
+                subscriber.active = true;
+                let pending = std::mem::take(&mut subscriber.pending);
+                let end = subscriber.end.take();
+                let on_data = subscriber.on_data.clone();
+                let on_end = subscriber.on_end.clone();
                 for chunk in pending {
                     on_data(chunk);
                 }

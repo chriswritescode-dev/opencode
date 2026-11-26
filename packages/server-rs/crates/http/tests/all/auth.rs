@@ -3,8 +3,6 @@ use opencode_http::auth::{SESSION_TTL_SECONDS, authorized_cookie, issue_session,
 
 use crate::{UNAUTHORIZED_BODY, app, authorized, basic, encoded, ready_app, request, request_with, text};
 
-const PTY_CONNECT_BODY: &str =
-    r#"{"_tag":"UnknownError","message":"opencode-server does not implement pty.connect yet"}"#;
 const UNEXPIRED_NOW_MS: u64 = 4_000_000_000_000;
 
 #[tokio::test]
@@ -88,8 +86,7 @@ async fn challenge_follows_fetch_mode() {
 async fn ticketed_connects_skip_authentication_when_ready() {
     let app = ready_app();
     let pty = app.handle(request("GET", "/api/pty/an-id/connect?ticket=t")).await;
-    assert_eq!(pty.status(), StatusCode::NOT_IMPLEMENTED);
-    assert_eq!(text(pty).await, PTY_CONNECT_BODY);
+    assert_eq!(pty.status(), StatusCode::BAD_REQUEST);
     let persistent = app.handle(request("GET", "/api/experimental/persistent-pty/an-id/connect?ticket=t")).await;
     assert_eq!(persistent.status(), StatusCode::NOT_IMPLEMENTED);
     let mcp = app.handle(request("GET", "/api/experimental/client-mcp?ticket=t")).await;

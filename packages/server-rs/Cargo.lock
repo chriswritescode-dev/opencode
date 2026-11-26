@@ -1085,6 +1085,7 @@ dependencies = [
  "opencode-registry",
  "opencode-session",
  "opencode-storage",
+ "opencode-terminal",
  "opencode-tool",
  "opencode-vcs",
  "rand",

@@ -439,9 +439,11 @@ impl ShellSelect {
 
     pub fn observe_config(self: &Arc<Self>, config: &ConfigService) {
         self.configure(configured_shell(&config.entries()).as_deref());
-        let select = Arc::clone(self);
+        let select = Arc::downgrade(self);
         let observer = observer::observe(config, move |entries| {
-            select.configure(configured_shell(entries).as_deref());
+            if let Some(select) = select.upgrade() {
+                select.configure(configured_shell(entries).as_deref());
+            }
         });
         *self.observer.lock().expect("the shell observer lock is never poisoned") = Some(observer);
     }

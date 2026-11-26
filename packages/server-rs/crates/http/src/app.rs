@@ -22,6 +22,13 @@ pub const IMPLEMENTED: &[&str] = &[
     "server.pair",
     "server.connect",
     "event.subscribe",
+    "pty.list",
+    "pty.create",
+    "pty.get",
+    "pty.update",
+    "pty.remove",
+    "pty.connect.token",
+    "pty.connect",
     "experimental.session.log",
     "location.get",
     "location.reload",
@@ -119,6 +126,10 @@ impl App {
         &self.tickets
     }
 
+    pub fn cors(&self) -> &[String] {
+        &self.options.cors
+    }
+
     pub async fn handle(&self, request: Request<Bytes>) -> response::Response {
         self.handle_upgrade(request, None).await
     }
@@ -161,7 +172,7 @@ impl App {
         None
     }
 
-    async fn dispatch(&self, request: &Request<Bytes>, _upgrade: Option<OnUpgrade>) -> response::Response {
+    async fn dispatch(&self, request: &Request<Bytes>, upgrade: Option<OnUpgrade>) -> response::Response {
         if let Some(response) = self.gate(request) {
             return response;
         }
@@ -191,6 +202,31 @@ impl App {
                 Some(state) => crate::handlers::event::subscribe(state, &raw),
                 None => not_implemented(found.route.identifier),
             },
+            "pty.list" => match self.location(&raw).await {
+                Ok(lease) => crate::handlers::pty::list(&raw, lease.services()),
+                Err(response) => response,
+            },
+            "pty.create" => match self.location(&raw).await {
+                Ok(lease) => crate::handlers::pty::create(&raw, lease.services()),
+                Err(response) => response,
+            },
+            "pty.get" => match self.location(&raw).await {
+                Ok(lease) => crate::handlers::pty::get(&raw, lease.services()),
+                Err(response) => response,
+            },
+            "pty.update" => match self.location(&raw).await {
+                Ok(lease) => crate::handlers::pty::update(&raw, lease.services()),
+                Err(response) => response,
+            },
+            "pty.remove" => match self.location(&raw).await {
+                Ok(lease) => crate::handlers::pty::remove(&raw, lease.services()),
+                Err(response) => response,
+            },
+            "pty.connect.token" => match self.location(&raw).await {
+                Ok(lease) => crate::handlers::pty::connect_token(&raw, lease.services(), self.tickets(), self.cors()),
+                Err(response) => response,
+            },
+            "pty.connect" => crate::handlers::pty::connect(self, request, &raw, upgrade).await,
             "experimental.session.log" => match &self.options.state {
                 Some(state) => crate::handlers::session_log::log(state, &raw),
                 None => not_implemented(found.route.identifier),

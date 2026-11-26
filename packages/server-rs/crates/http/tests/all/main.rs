@@ -16,6 +16,7 @@ mod permission;
 mod permission_oracle;
 mod plugin;
 mod project;
+mod pty;
 mod reference;
 mod registry;
 mod request_site;
@@ -63,6 +64,7 @@ fn services_with(start_directory: &Path, home: PathBuf) -> Arc<GlobalServices> {
         paths,
         start_directory.to_string_lossy().into_owned(),
         Arc::new(|_: &str| None),
+        Vec::new(),
         bus,
         global_plugins(),
         "test-version".to_owned(),
@@ -83,6 +85,7 @@ fn services_with_config(start_directory: &Path, config: &str) -> Arc<GlobalServi
         paths,
         start_directory.to_string_lossy().into_owned(),
         Arc::new(move |name: &str| (name == "OPENCODE_CONFIG_CONTENT").then(|| OsString::from(&config))),
+        Vec::new(),
         bus,
         global_plugins(),
         "test-version".to_owned(),
@@ -102,6 +105,7 @@ fn session_app(start_directory: &Path) -> (Arc<App>, Arc<opencode_http::state::S
         paths,
         start_directory.to_string_lossy().into_owned(),
         Arc::new(|_: &str| None),
+        Vec::new(),
         state.bus.clone(),
         global_plugins(),
         "test-version".to_owned(),
