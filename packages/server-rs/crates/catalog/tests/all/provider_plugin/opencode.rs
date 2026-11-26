@@ -2462,6 +2462,25 @@ async fn downloads_a_skill_through_a_redirect_without_sending_credentials_to_ano
 }
 
 #[tokio::test(start_paused = true)]
+async fn times_out_a_skill_download_whose_body_never_completes() {
+    let cancelled = Arc::new(AtomicBool::new(false));
+    let routes = Routes::new();
+    routes.route_json_with_headers("GET", &config_url(ORIGIN), lists_headers(), json!({ "providers": {} }));
+    routes.route_json("GET", &list_url("instructions"), json!({ "instructions": [] }));
+    routes.route_json("GET", &list_url("skills"), json!({ "skills": [{ "slug": "deploy", "version": "1" }] }));
+    routes.route_hanging("GET", &skill_url("deploy"), 200, cancelled.clone());
+
+    let mut harness = start(Input::new(Vec::new())).await;
+    harness.credential("opencode", console_key(ORIGIN, Some(("org_test", "Test")))).await;
+    let context = add_plugin(&mut harness, routes.clone()).await;
+
+    advance_until(|| cancelled.load(Ordering::SeqCst)).await;
+
+    assert!(context.console.skills().is_empty());
+    assert_eq!(routes.count("GET", &skill_url("deploy")), 1);
+}
+
+#[tokio::test(start_paused = true)]
 async fn keeps_console_instructions_and_skills_through_an_edit_or_a_console_error_and_clears_them_on_404() {
     let instruction = Arc::new(Mutex::new("Use tabs.".to_owned()));
     let status = Arc::new(Mutex::new(200u16));

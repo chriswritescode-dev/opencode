@@ -11,6 +11,7 @@ use tokio::task::JoinHandle;
 
 use super::Snapshot;
 use super::content::{ConsoleInstruction, ConsoleSkill};
+use super::watches::{WatchEvent, WatchTarget, Watches};
 use super::websearch::ConsoleWebSearch;
 use crate::integration::IntegrationService;
 use crate::provider_plugin::hooks::HookRegistration;
@@ -47,6 +48,7 @@ pub struct ConsoleHandle {
     console_skills: RwLock<ConsoleSkills>,
     skill_download: std::sync::Mutex<Option<JoinHandle<()>>>,
     websearch: RwLock<Option<WebSearchDependencies>>,
+    pub(crate) watches: Watches,
     revision: watch::Sender<u64>,
 }
 
@@ -63,6 +65,7 @@ impl Default for ConsoleHandle {
             console_skills: RwLock::new(ConsoleSkills::default()),
             skill_download: std::sync::Mutex::new(None),
             websearch: RwLock::new(None),
+            watches: Watches::default(),
             revision: watch::channel(0).0,
         }
     }
@@ -175,6 +178,18 @@ impl ConsoleHandle {
 
     pub(crate) fn bump(&self) {
         self.revision.send_modify(|revision| *revision += 1);
+    }
+
+    pub(crate) fn sync_watches(self: &Arc<Self>, target: Option<WatchTarget>) {
+        self.watches.sync(self, target);
+    }
+
+    pub(crate) fn deliver_watched(&self, events: Vec<WatchEvent>) -> Vec<String> {
+        self.watches.record(events)
+    }
+
+    pub fn watched_events(&self) -> Vec<WatchEvent> {
+        self.watches.delivered()
     }
 }
 

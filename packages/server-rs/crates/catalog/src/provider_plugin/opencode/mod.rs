@@ -3,6 +3,7 @@ pub mod follow;
 pub mod handle;
 pub mod remote;
 pub mod sign_in;
+pub mod watches;
 pub mod websearch;
 
 use std::sync::Arc;
@@ -465,6 +466,65 @@ async fn publish(services: &Services, context: &PluginContext, next: &Snapshot) 
         artifacts: allowed && remote.is_some_and(|remote| remote.artifacts),
     });
     sync_instructions_and_skills(services, context, next, allowed);
+    sync_watches(services, context, next, allowed).await;
+}
+
+async fn sync_watches(services: &Services, context: &PluginContext, next: &Snapshot, allowed: bool) {
+    let watching = allowed
+        && next.remote.as_ref().is_some_and(|remote| remote.watches)
+        && services.config.flags().into_iter().any(|(key, state)| key == "console_watches" && state.enabled);
+    let target = match next.connection.clone().filter(|_| watching) {
+        Some(connection) => watch_target(services, context, &connection).await,
+        None => None,
+    };
+    context.console.sync_watches(target);
+}
+
+async fn watch_target(
+    services: &Services,
+    context: &PluginContext,
+    connection: &ConnectionInfo,
+) -> Option<watches::transport::WatchTarget> {
+    let connections = services.integration.connection();
+    let credential = match connections.resolve(connection).await {
+        Ok(Some(credential)) => credential,
+        Ok(None) => return None,
+        Err(error) => {
+            log::warn!("failed to start Console event watches: {}", error.message());
+            return None;
+        }
+    };
+    if matches!(credential, CredentialValue::External(_)) {
+        return None;
+    }
+    let server = match crate::console_access::normalize_server(&crate::console_access::server(&credential)) {
+        Ok(server) => server,
+        Err(error) => {
+            log::warn!("failed to start Console event watches: {error}");
+            return None;
+        }
+    };
+    let key = crate::console_access::workspace_key(connection, &credential);
+    let integration = services.integration.clone();
+    let current = connection.clone();
+    let headers: watches::transport::Headers = Arc::new(move || {
+        let integration = integration.clone();
+        let current = current.clone();
+        async move {
+            let credential = integration
+                .connection()
+                .resolve(&current)
+                .await
+                .map_err(|error| error.message())?
+                .ok_or_else(|| "OpenCode Console is not connected".to_owned())?;
+            if matches!(credential, CredentialValue::External(_)) {
+                return Err("OpenCode Console is not connected".to_owned());
+            }
+            Ok(crate::console_access::headers(&credential))
+        }
+        .boxed()
+    });
+    Some(watches::transport::WatchTarget { key, server, headers, http: context.http.clone() })
 }
 
 fn sync_instructions_and_skills(services: &Services, context: &PluginContext, next: &Snapshot, allowed: bool) {

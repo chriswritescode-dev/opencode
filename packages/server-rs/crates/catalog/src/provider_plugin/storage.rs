@@ -29,6 +29,16 @@ impl Storage {
         self.kv.remove(&key).await
     }
 
+    pub async fn scan(&self, prefix: &str, limit: usize) -> Vec<(String, Value)> {
+        let prefix = self.scoped(prefix);
+        self.kv
+            .scan(&prefix, limit)
+            .await
+            .into_iter()
+            .map(|(key, value)| (key.strip_prefix(&self.namespace).unwrap_or(&key).to_owned(), value))
+            .collect()
+    }
+
     pub fn namespace(&self) -> &str {
         &self.namespace
     }

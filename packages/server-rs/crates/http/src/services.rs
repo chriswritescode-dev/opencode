@@ -342,6 +342,20 @@ impl KvStore for StorageKv {
             }
         })
     }
+
+    fn scan<'a>(&'a self, prefix: &'a str, limit: usize) -> BoxFuture<'a, Vec<(String, Value)>> {
+        Box::pin(async move {
+            let options =
+                opencode_storage::kv::ScanOptions { prefix: prefix.to_owned(), after: None, limit: Some(limit as f64) };
+            match self.database.read(|connection| opencode_storage::kv::scan(connection, options)) {
+                Ok(result) => result.entries.into_iter().map(|entry| (entry.key, entry.value)).collect(),
+                Err(error) => {
+                    log::warn!("kv scan failed for {prefix}: {error}");
+                    Vec::new()
+                }
+            }
+        })
+    }
 }
 
 fn configured_idle_timeout(config: &ConfigService) -> Option<IdleTimeout> {

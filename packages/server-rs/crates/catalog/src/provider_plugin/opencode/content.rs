@@ -187,11 +187,12 @@ pub async fn download_skill(
     headers.push(("user-agent".to_owned(), user_agent.to_owned()));
     let request =
         http::get(format!("{server}/api/v2/skills/{}", utf8_percent_encode(slug, ENCODE_URI_COMPONENT)), headers);
-    let response = tokio::time::timeout(TIMEOUT, follow(http, request, 0))
-        .await
-        .map_err(|_| ConsoleError::Transient(HttpError::Timeout))?
-        .map_err(follow_error)?;
-    let body = read_body(response).await?;
+    let body = tokio::time::timeout(TIMEOUT, async {
+        let response = follow(http, request, 0).await.map_err(follow_error)?;
+        read_body(response).await
+    })
+    .await
+    .map_err(|_| ConsoleError::Transient(HttpError::Timeout))??;
     let bundle: SkillBundle = serde_json::from_slice(&body)
         .map_err(|error| ConsoleError::Invalid(format!("the OpenCode Console skill {slug} is not valid: {error}")))?;
     if bundle.slug != slug {

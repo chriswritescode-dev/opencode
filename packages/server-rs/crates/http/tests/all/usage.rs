@@ -18,7 +18,7 @@ fn signed_in(server: &str) -> CredentialValue {
         method_id: IntegrationMethodID("device".to_owned()),
         refresh: "console-refresh".to_owned(),
         access: "console-access".to_owned(),
-        expires: 1.0,
+        expires: 4_102_444_800_000.0,
         metadata: Some(JsonMap(vec![
             ("server".to_owned(), json!(server)),
             ("orgID".to_owned(), json!("wrk_anomaly")),
