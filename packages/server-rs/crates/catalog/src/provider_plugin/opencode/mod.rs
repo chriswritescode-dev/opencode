@@ -580,7 +580,7 @@ async fn watch_target(
         key,
         server,
         headers,
-        http: context.http.clone(),
+        http: context.http_manual_redirects.clone(),
         sessions: context.sessions.clone(),
         kv: storage(context),
         clock: context.clock.clone(),
