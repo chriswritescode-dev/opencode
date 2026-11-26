@@ -171,6 +171,7 @@ pub struct PluginContext {
     pub location: LocationRef,
     pub shared_cache: Arc<crate::shared_cache::SharedCache>,
     pub gitlab_discovery: Arc<dyn gitlab::Discovery>,
+    pub console: Arc<opencode::handle::ConsoleHandle>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

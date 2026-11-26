@@ -125,6 +125,10 @@ impl OAuthImplementation for DeviceSignIn {
     }
 }
 
+fn locale_order(a: &str, b: &str) -> std::cmp::Ordering {
+    a.to_lowercase().cmp(&b.to_lowercase()).then_with(|| b.cmp(a))
+}
+
 fn method() -> IntegrationOAuthMethod {
     IntegrationOAuthMethod {
         id: IntegrationMethodID(METHOD_ID.to_owned()),
@@ -234,7 +238,7 @@ async fn credential(
                 .find(|org| org.id == id)
                 .ok_or_else(|| error(format!("OpenCode organization not found: {id}")))?,
         ),
-        None => orgs.iter().min_by(|a, b| a.name.cmp(&b.name).then_with(|| a.id.cmp(&b.id))),
+        None => orgs.iter().min_by(|a, b| locale_order(&a.name, &b.name).then_with(|| locale_order(&a.id, &b.id))),
     };
     let mut metadata = vec![
         ("server".to_owned(), Value::String(server.to_owned())),

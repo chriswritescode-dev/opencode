@@ -376,6 +376,7 @@ pub fn plugin_context_with_runner(
         },
         shared_cache: opencode_catalog::shared_cache::SharedCache::new(),
         gitlab_discovery: Arc::new(opencode_catalog::provider_plugin::gitlab::NoDiscovery),
+        console: Arc::new(Default::default()),
     }
 }
 

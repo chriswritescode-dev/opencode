@@ -1,20 +1,35 @@
 use std::sync::Arc;
 use std::time::Duration;
 
+use futures_util::StreamExt;
+use opencode_ai::ExecutionContext;
+use opencode_ai::LlmClient;
+use opencode_ai::MapEnv;
+use opencode_ai::clock::FixedClock;
+use opencode_ai::id::SequenceIds;
+use opencode_ai::route::compile::StreamOptions;
+use opencode_ai::route::executor::RequestExecutor;
+use opencode_ai::schema::{ContentPart, LlmRequest, Message, TextPart, UserMessage};
 use opencode_catalog::builtin::Builtin;
 use opencode_catalog::credential::CreateInput;
 use opencode_catalog::integration::{Attempt, AttemptError, AttemptStatus, OAuthConnectInput};
+use opencode_catalog::provider_plugin::PluginContext;
 use opencode_catalog::provider_plugin::opencode;
+use opencode_catalog::resolver::{self, Resolver};
+use opencode_config::entry::{Document, Entry, Origin};
 use opencode_contract::codec::JsonMap;
 use opencode_contract::generated::{
-    CredentialOAuth, CredentialOAuthType, CredentialValue, FormAnswer, FormField1, FormStringField1Format,
-    FormStringField1Type, FormValue, IntegrationID, IntegrationKeyMethodType, IntegrationMethod, IntegrationMethodID,
-    IntegrationOAuthMethodType,
+    ConnectionInfo, ConnectionStatus, CredentialKey, CredentialKeyType, CredentialOAuth, CredentialOAuthType,
+    CredentialValue, FormAnswer, FormField1, FormStringField1Format, FormStringField1Type, FormValue, IntegrationID,
+    IntegrationKeyMethodType, IntegrationMethod, IntegrationMethodID, IntegrationOAuthMethodType, ModelSettings,
+    ModelVariant, ProviderID,
 };
 use serde_json::{Value, json};
 
 use crate::builtin::{Harness, Input, start};
-use crate::provider_plugin::support::{Reply, Routes, plugin_context_with};
+use crate::provider_plugin::support::{
+    Exchange, RecordedSender, Reply, Routes, headers, plugin_context_with, settings_json,
+};
 
 const ORIGIN: &str = "https://console.example.com";
 
@@ -28,11 +43,52 @@ fn method_id() -> IntegrationMethodID {
     IntegrationMethodID("device".to_owned())
 }
 
-async fn add_plugin(harness: &mut Harness, routes: Arc<Routes>) {
-    let context = plugin_context_with(harness, routes);
+async fn add_plugin(harness: &mut Harness, http: Arc<dyn opencode_ai::HttpSender>) -> PluginContext {
+    let context = plugin_context_with(harness, http);
     let mut builtin = Builtin::default();
     opencode::register(&harness.services, &context, &mut builtin).await;
     harness.record(builtin);
+    context
+}
+
+fn console_document(harness: &Harness) -> Option<Document> {
+    harness.services.config.entries().into_iter().find_map(|entry| match entry {
+        Entry::Document(document) => match &document.origin {
+            Origin::Integration { integration_id, .. } if integration_id == "opencode" => Some(document),
+            _ => None,
+        },
+        Entry::Directory { .. } => None,
+    })
+}
+
+fn connection_status(connection: &ConnectionInfo) -> Option<&ConnectionStatus> {
+    match connection {
+        ConnectionInfo::Credential(connection) => connection.status.as_ref(),
+        ConnectionInfo::Env(connection) => connection.status.as_ref(),
+    }
+}
+
+async fn integration_status(harness: &Harness) -> Option<ConnectionStatus> {
+    harness
+        .services
+        .integration
+        .get(&integration_id())
+        .await
+        .expect("get the OpenCode integration")
+        .and_then(|integration| integration.connections.first().and_then(connection_status).cloned())
+}
+
+fn console_key(server: &str, organization: Option<(&str, &str)>) -> CredentialValue {
+    let mut metadata = vec![("server".to_owned(), json!(server))];
+    if let Some((id, name)) = organization {
+        metadata.push(("orgID".to_owned(), json!(id)));
+        metadata.push(("orgName".to_owned(), json!(name)));
+    }
+    CredentialValue::Key(CredentialKey {
+        r#type: CredentialKeyType::Key,
+        key: "secret".to_owned(),
+        metadata: Some(JsonMap(metadata)),
+    })
 }
 
 fn answer(server: FormValue) -> FormAnswer {
@@ -275,6 +331,45 @@ async fn uses_the_first_organization_by_name_without_a_device_token_organization
 }
 
 #[tokio::test(start_paused = true)]
+async fn picks_the_first_organization_by_locale_name_without_a_device_token_organization() {
+    let routes = Routes::new();
+    routes.route_json(
+        "POST",
+        &format!("{ORIGIN}/auth/device/code"),
+        json!({
+            "device_code": "device",
+            "user_code": "user",
+            "verification_uri_complete": "/device?user_code=user",
+            "expires_in": 60,
+            "interval": 0,
+        }),
+    );
+    routes.route_json(
+        "POST",
+        &format!("{ORIGIN}/auth/device/token"),
+        json!({ "access_token": "access", "refresh_token": "refresh", "expires_in": 600 }),
+    );
+    routes.route_json("GET", &format!("{ORIGIN}/api/user"), json!({ "id": "user", "email": "user@example.com" }));
+    routes.route_json(
+        "GET",
+        &format!("{ORIGIN}/api/orgs"),
+        json!([{ "id": "org-b", "name": "Beta" }, { "id": "org-a", "name": "acme" }]),
+    );
+    let mut harness = start(Input::new(Vec::new())).await;
+    add_plugin(&mut harness, routes).await;
+
+    let attempt =
+        connect(&harness, answer(FormValue::String(ORIGIN.to_owned()))).await.expect("start the device authorization");
+    let status = wait_for_status(&harness, &attempt).await;
+    assert!(matches!(status, AttemptStatus::Complete { .. }), "got {status:?}");
+
+    let credentials = harness.services.credentials.list(&integration_id()).expect("list the OpenCode credentials");
+    let CredentialValue::Oauth(value) = &credentials[0].value else { panic!("the OpenCode credential is OAuth") };
+    assert_eq!(metadata(value, "orgID"), Some(&json!("org-a")));
+    assert_eq!(metadata(value, "orgName"), Some(&json!("acme")));
+}
+
+#[tokio::test(start_paused = true)]
 async fn reports_a_missing_device_token_organization() {
     let routes = console_routes(ORIGIN, token(Some(json!("org-missing"))));
     let mut harness = start(Input::new(Vec::new())).await;
@@ -430,4 +525,896 @@ async fn rejects_non_string_opencode_servers() {
 
     let error = connect(&harness, answer(FormValue::Bool(true))).await.expect_err("the non-string server is rejected");
     assert!(error.to_string().contains("Expected string for form field: server"), "got {error}");
+}
+
+fn config_url(server: &str) -> String {
+    format!("{server}/api/v2/config")
+}
+
+fn encoded(value: &impl opencode_contract::codec::Encode) -> Value {
+    serde_json::from_str(&opencode_contract::codec::encode_json(value)).expect("the value encodes as JSON")
+}
+
+fn document_json(document: &Document) -> Value {
+    encoded(&document.info)
+}
+
+fn document_policies(document: &Document) -> Value {
+    document_json(document).get("policies").cloned().unwrap_or(Value::Null)
+}
+
+fn document_organization(document: &Document) -> Option<&str> {
+    match &document.origin {
+        Origin::Integration { organization, .. } => organization.as_deref(),
+        _ => None,
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn merges_the_console_response_as_config_with_its_policy_named_after_the_organization() {
+    let routes = Routes::new();
+    routes.route_json(
+        "GET",
+        &config_url(ORIGIN),
+        json!({
+            "$schema": "https://opencode.ai/config.json",
+            "providers": { "remote": { "name": "Remote" } },
+            "policies": [{ "action": "tool.use", "resource": "shell:*", "effect": "deny" }],
+        }),
+    );
+    let mut harness = start(Input::new(Vec::new())).await;
+    harness.credential("opencode", console_key(ORIGIN, Some(("org_acme", "Acme")))).await;
+    add_plugin(&mut harness, routes.clone()).await;
+
+    let document = console_document(&harness).expect("the Console document is integrated");
+    assert_eq!(document_json(&document)["providers"]["remote"]["name"], json!("Remote"));
+    assert_eq!(document_organization(&document), Some("Acme"));
+    assert_eq!(
+        document_policies(&document),
+        json!([{ "action": "tool.use", "resource": "shell:*", "effect": "deny" }])
+    );
+
+    let request = request(&routes, "GET", &config_url(ORIGIN));
+    assert_eq!(header(&request, "authorization").as_deref(), Some("Bearer secret"));
+    assert_eq!(header(&request, "x-org-id").as_deref(), Some("org_acme"));
+    assert_eq!(header(&request, "accept").as_deref(), Some("application/json"));
+    assert_eq!(header(&request, "user-agent").as_deref(), Some(USER_AGENT));
+    assert_eq!(routes.count("GET", &config_url(ORIGIN)), 1);
+    assert!(integration_status(&harness).await.is_none());
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn passes_only_providers_remote_mcp_servers_policies_and_web_search_without_credentials() {
+    let routes = Routes::new();
+    routes.route_json(
+        "GET",
+        &config_url(ORIGIN),
+        json!({
+            "$schema": "https://opencode.ai/config.json",
+            "providers": {
+                "remote": {
+                    "env": ["REMOTE_API_KEY"],
+                    "settings": { "apiKey": "key", "authToken": "auth", "accessToken": "access", "baseURL": "https://remote" },
+                    "models": {
+                        "chat": {
+                            "settings": { "apiKey": "key", "temperature": 0.1 },
+                            "variants": [{ "id": "high", "settings": { "accessToken": "access", "temperature": 0.2 } }],
+                        },
+                    },
+                },
+            },
+            "mcp": {
+                "servers": {
+                    "remote": { "type": "remote", "url": "https://remote/mcp" },
+                    "local": { "type": "local", "command": ["/tmp/console-mcp"] },
+                },
+            },
+            "policies": [{ "action": "tool.use", "resource": "shell:*", "effect": "deny" }],
+            "websearch": { "provider": "opencode" },
+            "plugins": ["file:///tmp/console-plugin"],
+            "shell": "/tmp/console-shell",
+            "agents": { "console": { "prompt": "Console agent" } },
+            "commands": { "console": { "template": "Console command" } },
+            "permissions": [{ "action": "shell", "resource": "*", "effect": "allow" }],
+            "formatter": { "console": { "command": ["/tmp/console-formatter"] } },
+            "instructions": ["/tmp/console-instructions.md"],
+        }),
+    );
+    let mut harness = start(Input::new(Vec::new())).await;
+    harness.credential("opencode", console_key(ORIGIN, None)).await;
+    add_plugin(&mut harness, routes).await;
+
+    let document = console_document(&harness).expect("the Console document is integrated");
+    let info = document_json(&document);
+    let mut keys: Vec<&str> = info.as_object().expect("the document is an object").keys().map(String::as_str).collect();
+    keys.sort_unstable();
+    assert_eq!(keys, ["mcp", "policies", "providers", "websearch"]);
+    let servers = info["mcp"]["servers"].as_object().expect("the MCP servers are an object");
+    assert_eq!(servers.keys().map(String::as_str).collect::<Vec<_>>(), ["remote"]);
+    assert_eq!(info["providers"]["remote"].get("env"), None);
+    assert_eq!(info["providers"]["remote"]["settings"], json!({ "baseURL": "https://remote" }));
+    assert_eq!(info["providers"]["remote"]["models"]["chat"]["settings"], json!({ "temperature": 0.1 }));
+    assert_eq!(info["providers"]["remote"]["models"]["chat"]["variants"][0]["settings"], json!({ "temperature": 0.2 }));
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn keeps_a_newer_console_config_loadable_despite_values_this_version_does_not_know() {
+    let routes = Routes::new();
+    routes.route_json(
+        "GET",
+        &config_url(ORIGIN),
+        json!({
+            "$schema": "https://opencode.ai/config.json",
+            "providers": { "remote": { "name": "Remote" } },
+            "policies": [
+                { "action": "future.use", "resource": "anything", "effect": "deny" },
+                { "action": "tool.use", "resource": "shell:*", "effect": "deny" },
+            ],
+            "shell": 123,
+            "future": { "shape": 42 },
+        }),
+    );
+    let mut harness = start(Input::new(Vec::new())).await;
+    harness.credential("opencode", console_key(ORIGIN, None)).await;
+    add_plugin(&mut harness, routes).await;
+
+    let document = console_document(&harness).expect("the Console document is integrated");
+    assert_eq!(document_json(&document)["providers"]["remote"]["name"], json!("Remote"));
+    assert_eq!(
+        document_policies(&document),
+        json!([{ "action": "tool.use", "resource": "shell:*", "effect": "deny" }])
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn sends_credentials_saved_with_the_retired_console_opencode_ai_host_to_the_default_console() {
+    let routes = Routes::new();
+    routes.route_json("GET", &config_url("https://opencode.ai/console"), json!({}));
+    let mut harness = start(Input::new(Vec::new())).await;
+    harness.credential("opencode", console_key("https://console.opencode.ai", None)).await;
+    add_plugin(&mut harness, routes.clone()).await;
+
+    let requests: Vec<String> = routes.requests().into_iter().map(|request| request.url).collect();
+    assert_eq!(requests, [config_url("https://opencode.ai/console")]);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn releases_unread_console_config_responses_when_the_fetch_completes() {
+    let routes = Routes::new();
+    routes.route_with("GET", &config_url("https://console.test"), |_| Reply::json_status(json!(null), 404));
+    let mut harness = start(Input::new(Vec::new())).await;
+    harness.credential("opencode", console_key("https://console.test", None)).await;
+    add_plugin(&mut harness, routes.clone()).await;
+
+    assert_eq!(routes.count("GET", &config_url("https://console.test")), 1);
+    assert!(console_document(&harness).is_none());
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn reports_console_sso_sign_in_keeps_the_last_config_and_clears_once_console_accepts_again() {
+    let routes = Routes::new();
+    let sudo = json!({ "action": "tool.use", "resource": "shell:sudo *", "effect": "deny" });
+    routes.route_json("GET", &config_url(ORIGIN), json!({ "providers": {}, "policies": [sudo.clone()] }));
+    let mut harness = start(Input::new(Vec::new())).await;
+    harness.credential("opencode", console_key(ORIGIN, Some(("org_acme", "Acme")))).await;
+    let context = add_plugin(&mut harness, routes.clone()).await;
+    assert!(integration_status(&harness).await.is_none());
+    assert_eq!(context.console.allowed(), opencode::Allowed::default());
+    let changes = context.console.changes();
+
+    routes.remove("GET", &config_url(ORIGIN));
+    routes.route_with("GET", &config_url(ORIGIN), |_| {
+        Reply::json_status(json!({ "_tag": "SsoRequired", "orgId": "org_acme", "connectionId": "ssoconn/1" }), 403)
+    });
+    opencode::refresh(&harness.services, &context, Duration::ZERO).await;
+    assert!(changes.has_changed().expect("the Console revision"));
+    assert_eq!(
+        integration_status(&harness).await,
+        Some(ConnectionStatus {
+            status: opencode_contract::generated::ConnectionStatusStatus::NeedsAuth,
+            message: "Sign in with SSO again to use Acme".to_owned(),
+            url: Some(format!("{ORIGIN}/auth/sso/ssoconn%2F1/start?redirectTo=%2F")),
+        })
+    );
+    let document = console_document(&harness).expect("the last Console document is kept");
+    assert_eq!(document_policies(&document), json!([sudo.clone()]));
+
+    routes.remove("GET", &config_url(ORIGIN));
+    routes.route_json("GET", &config_url(ORIGIN), json!({ "providers": {}, "policies": [sudo.clone()] }));
+    opencode::refresh(&harness.services, &context, Duration::ZERO).await;
+    assert!(integration_status(&harness).await.is_none());
+    let document = console_document(&harness).expect("the Console document is kept");
+    assert_eq!(document_policies(&document), json!([sudo]));
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn preserves_native_console_openai_variant_bodies_in_inference_requests() {
+    let variants = json!([
+        { "id": "effort-only", "body": { "reasoning": { "effort": "low" } } },
+        { "id": "summary-only", "body": { "reasoning": { "summary": "detailed" } } },
+        { "id": "native", "body": { "reasoning": { "effort": "high", "summary": "auto" } } },
+        { "id": "plain", "body": {} },
+    ]);
+    let models = json!({
+        "astra": {
+            "modelID": "api-astra",
+            "variants": variants.as_array().expect("the variants are an array").iter().map(|variant| {
+                let id = variant["id"].as_str().expect("the variant id");
+                let mut body = serde_json::Map::new();
+                if let Some(reasoning) = variant["body"].get("reasoning") {
+                    body.insert("reasoning".to_owned(), reasoning.clone());
+                }
+                body.insert("include".to_owned(), json!(["reasoning.encrypted_content"]));
+                body.insert("metadata".to_owned(), json!({ "custom": "unchanged" }));
+                json!({
+                    "id": id,
+                    "headers": { "x-variant": id },
+                    "body": Value::Object(body),
+                })
+            }).collect::<Vec<_>>(),
+        },
+    });
+    let config = json!({
+        "providers": {
+            "remote": {
+                "canonical": "openai",
+                "package": "aisdk:@ai-sdk/openai",
+                "settings": { "baseURL": ORIGIN },
+                "models": {
+                    "astra": models["astra"].clone(),
+                    "override": {
+                        "modelID": "api-astra",
+                        "package": "aisdk:@ai-sdk/openai-compatible",
+                        "variants": models["astra"]["variants"].clone(),
+                    },
+                },
+            },
+            "compatible": { "canonical": "openai", "package": "aisdk:@ai-sdk/openai-compatible", "models": models },
+        },
+    });
+    let sse = "data: {\"type\":\"response.completed\",\"response\":{\"id\":\"resp_test\"}}\n\n";
+    let mut exchanges =
+        vec![Exchange::new("GET", &config_url(ORIGIN), 200, serde_json::to_vec(&config).expect("json"))];
+    for _ in 0..4 {
+        let mut response = Exchange::new("POST", &format!("{ORIGIN}/responses"), 200, sse.as_bytes());
+        response.headers.push(("content-type".to_owned(), "text/event-stream".to_owned()));
+        exchanges.push(response);
+    }
+    let sender = Arc::new(RecordedSender::keyed(exchanges));
+    let mut harness = start(Input::new(Vec::new())).await;
+    harness.credential("opencode", console_key(ORIGIN, None)).await;
+    add_plugin(&mut harness, sender.clone()).await;
+
+    let remote = ProviderID("remote".to_owned());
+    let model = harness.services.model.get(&remote, "astra").await.expect("read models").expect("the astra model");
+    assert_eq!(model.canonical, Some(ProviderID("openai".to_owned())));
+    let resolver = Resolver::new(
+        harness.services.provider.clone(),
+        harness.services.model.clone(),
+        harness.services.integration.clone(),
+        Arc::new(MapEnv::default()),
+        Arc::new(resolver::NoBridge),
+    );
+    let clock = Arc::new(FixedClock::new(0));
+    let client = LlmClient::new(
+        RequestExecutor::new(sender.clone(), None, clock.clone()),
+        ExecutionContext::new(clock, Arc::new(SequenceIds::new()), Arc::new(MapEnv::default())),
+    );
+    let request = LlmRequest {
+        messages: vec![Message::User(UserMessage {
+            id: None,
+            content: vec![ContentPart::Text(TextPart {
+                text: "Hello".to_owned(),
+                cache: None,
+                provider_metadata: None,
+            })],
+            provider_metadata: None,
+        })],
+        ..Default::default()
+    };
+    for variant in variants.as_array().expect("the variants are an array") {
+        let id = variant["id"].as_str().expect("the variant id");
+        let projected = model.variants.iter().find(|item| item.id == id).expect("the projected variant");
+        let expected = json!({
+            "reasoning": variant["body"].get("reasoning").cloned().unwrap_or(Value::Null),
+            "include": ["reasoning.encrypted_content"],
+            "metadata": { "custom": "unchanged" },
+        });
+        let expected = match expected.get("reasoning") {
+            Some(Value::Null) => {
+                let mut expected = expected;
+                expected.as_object_mut().expect("the variant body").remove("reasoning");
+                expected
+            }
+            _ => expected,
+        };
+        assert_eq!(encoded(projected.body.as_ref().expect("the variant body")), expected);
+        assert!(projected.settings.is_none());
+
+        let resolved = resolver.resolve_model(&model, Some(id)).await.expect("resolve the variant");
+        let _ = client.stream(&resolved.model, request.clone(), StreamOptions::default()).collect::<Vec<_>>().await;
+        let requests = sender.requests();
+        let sent = requests
+            .iter()
+            .rev()
+            .find(|request| request.method == "POST" && request.url == format!("{ORIGIN}/responses"))
+            .expect("the inference request");
+        assert_eq!(header(sent, "x-variant").as_deref(), Some(id));
+        let body: Value = serde_json::from_slice(&sent.body).expect("the inference request body");
+        assert_eq!(body.get("model"), Some(&json!("api-astra")));
+        assert_eq!(body.get("include"), Some(&json!(["reasoning.encrypted_content"])));
+        assert_eq!(body.get("metadata"), Some(&json!({ "custom": "unchanged" })));
+        match variant["body"].get("reasoning") {
+            Some(reasoning) => assert_eq!(body.get("reasoning"), Some(reasoning)),
+            None => assert!(body.get("reasoning").is_none()),
+        }
+        assert!(body.get("reasoningEffort").is_none());
+        assert!(body.get("reasoningSummary").is_none());
+    }
+    for (provider, model_id) in [("compatible", "astra"), ("remote", "override")] {
+        let current = harness
+            .services
+            .model
+            .get(&ProviderID(provider.to_owned()), model_id)
+            .await
+            .expect("read models")
+            .expect("the model");
+        let native = current.variants.iter().find(|variant| variant.id == "native").expect("the native variant");
+        assert_eq!(
+            encoded(native.body.as_ref().expect("the native body")),
+            json!({
+                "reasoning": { "effort": "high", "summary": "auto" },
+                "include": ["reasoning.encrypted_content"],
+                "metadata": { "custom": "unchanged" },
+            })
+        );
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn layers_console_providers_below_user_config_bound_to_the_console_connection() {
+    let routes = Routes::new();
+    routes.route_json(
+        "GET",
+        &config_url(ORIGIN),
+        json!({
+            "providers": {
+                "remote": {
+                    "name": "Console",
+                    "package": "aisdk:@ai-sdk/openai-compatible",
+                    "settings": { "baseURL": format!("{ORIGIN}/v1"), "apiKey": "console-key", "custom": "console" },
+                    "headers": { "x-org-id": "console", "x-console": "true" },
+                    "models": {
+                        "chat": { "name": "Console Chat", "settings": { "temperature": 0.1 } },
+                        "other": { "name": "Console Other" },
+                    },
+                },
+            },
+        }),
+    );
+    let user = json!({
+        "providers": {
+            "remote": {
+                "name": "Mine",
+                "settings": { "apiKey": "my-key" },
+                "headers": { "x-org-id": "mine" },
+                "models": { "chat": { "name": "My Chat" } },
+            },
+        },
+    });
+    let mut harness = start(Input::new(vec![user])).await;
+    harness.credential("opencode", console_key(ORIGIN, None)).await;
+    add_plugin(&mut harness, routes).await;
+    harness.register(&["config_provider"]).await;
+
+    let remote = ProviderID("remote".to_owned());
+    let provider = harness.services.provider.get(&remote).await.expect("read providers").expect("the remote provider");
+    assert_eq!(provider.name, "Mine");
+    assert_eq!(provider.integration_id, Some(IntegrationID("opencode".to_owned())));
+    assert_eq!(
+        headers(&provider),
+        Some(
+            [("x-org-id".to_owned(), "mine".to_owned()), ("x-console".to_owned(), "true".to_owned())]
+                .into_iter()
+                .collect()
+        )
+    );
+    assert_eq!(
+        settings_json(&provider),
+        Some(json!({
+            "baseURL": format!("{ORIGIN}/v1"),
+            "custom": "console",
+            "apiKey": "my-key",
+            "provider": "remote",
+        }))
+    );
+    let chat = harness.services.model.get(&remote, "chat").await.expect("read models").expect("the chat model");
+    assert_eq!(chat.name, "My Chat");
+    let chat_settings = encoded(chat.settings.as_ref().expect("the chat settings"));
+    assert_eq!(chat_settings.get("temperature"), Some(&json!(0.1)));
+    let other = harness.services.model.get(&remote, "other").await.expect("read models").expect("the other model");
+    assert_eq!(other.name, "Console Other");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn applies_console_providers_before_provider_plugins_tune_their_canonical_provider() {
+    let routes = Routes::new();
+    routes.route_json(
+        "GET",
+        &config_url(ORIGIN),
+        json!({ "providers": { "console-openai": { "canonical": "openai", "name": "Console OpenAI" } } }),
+    );
+    let mut harness = start(Input::new(Vec::new())).await;
+    let _seeded = harness
+        .services
+        .provider
+        .transform(|editor| {
+            editor.update(&ProviderID("openai".to_owned()), |provider| {
+                provider.package = "aisdk:@ai-sdk/openai".to_owned();
+            });
+            Ok(())
+        })
+        .await;
+    harness.credential("opencode", console_key(ORIGIN, None)).await;
+    let context = add_plugin(&mut harness, routes).await;
+    let mut builtin = Builtin::default();
+    opencode_catalog::provider_plugin::openai::register(&harness.services, &context, &mut builtin).await;
+    harness.record(builtin);
+    harness.register(&["config_provider"]).await;
+
+    let openai = harness
+        .services
+        .provider
+        .get(&ProviderID("openai".to_owned()))
+        .await
+        .expect("read providers")
+        .expect("the openai provider");
+    assert_eq!(
+        settings_json(&openai).and_then(|settings| settings.get("transport").cloned()),
+        Some(json!("websocket"))
+    );
+    let console = harness
+        .services
+        .provider
+        .get(&ProviderID("console-openai".to_owned()))
+        .await
+        .expect("read providers")
+        .expect("the console openai provider");
+    assert_eq!(console.name, "Console OpenAI");
+    assert_eq!(console.integration_id, Some(IntegrationID("opencode".to_owned())));
+    assert_eq!(settings_json(&console).and_then(|settings| settings.get("transport").cloned()), None);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn builds_console_reasoning_variants_after_provider_and_model_package_normalization() {
+    let routes = Routes::new();
+    routes.route_json(
+        "GET",
+        &config_url(ORIGIN),
+        json!({
+            "providers": {
+                "remote": {
+                    "name": "Remote",
+                    "package": "aisdk:@ai-sdk/openai",
+                    "models": {
+                        "reasoner": {
+                            "releaseDate": "2026-02-03",
+                            "capabilities": { "reasoning": { "supported": true, "effort": ["default", "low", "high"] } },
+                            "variants": [{ "id": "high", "headers": { "x-tier": "high" } }],
+                        },
+                        "gpt": {
+                            "package": "aisdk:@ai-sdk/openai",
+                            "capabilities": { "reasoning": { "supported": true, "effort": ["low", "high"] } },
+                            "variants": [{ "id": "high", "headers": { "x-tier": "high" } }],
+                        },
+                        "claude-sonnet-4-5": {
+                            "package": "aisdk:@ai-sdk/anthropic",
+                            "capabilities": { "reasoning": { "supported": true, "budget": { "min": 1024 } } },
+                            "limit": { "output": 64000 },
+                        },
+                        "gemini-3.1-pro": {
+                            "package": "aisdk:@ai-sdk/google",
+                            "capabilities": { "reasoning": { "supported": true, "effort": ["low", "high"] } },
+                        },
+                        "magistral-medium": {
+                            "package": "aisdk:@ai-sdk/mistral",
+                            "capabilities": { "reasoning": { "supported": true, "effort": ["low", "high"] } },
+                        },
+                    },
+                },
+            },
+        }),
+    );
+    let mut harness = start(Input::new(Vec::new())).await;
+    harness.credential("opencode", console_key(ORIGIN, None)).await;
+    add_plugin(&mut harness, routes).await;
+
+    let remote = ProviderID("remote".to_owned());
+    let reasoner = harness.services.model.get(&remote, "reasoner").await.expect("read models").expect("the reasoner");
+    assert_eq!(reasoner.time.released, 1_770_076_800_000.0);
+    assert_eq!(
+        encoded(&reasoner.variants),
+        json!([
+            {
+                "id": "low",
+                "settings": { "reasoningEffort": "low", "reasoningSummary": "auto", "include": ["reasoning.encrypted_content"] },
+            },
+            {
+                "id": "high",
+                "settings": { "reasoningEffort": "high", "reasoningSummary": "auto", "include": ["reasoning.encrypted_content"] },
+                "headers": { "x-tier": "high" },
+            },
+        ])
+    );
+    let gpt = harness.services.model.get(&remote, "gpt").await.expect("read models").expect("the gpt model");
+    assert_eq!(gpt.package.as_deref(), Some("@opencode/ai/providers/openai"));
+    assert_eq!(encoded(&gpt.variants), encoded(&reasoner.variants));
+    let claude =
+        harness.services.model.get(&remote, "claude-sonnet-4-5").await.expect("read models").expect("the claude model");
+    assert_eq!(claude.package.as_deref(), Some("@opencode/ai/providers/anthropic"));
+    assert_eq!(
+        encoded(&claude.variants),
+        json!([
+            { "id": "high", "settings": { "thinking": { "type": "enabled", "budgetTokens": 16000 } } },
+            { "id": "max", "settings": { "thinking": { "type": "enabled", "budgetTokens": 31999 } } },
+        ])
+    );
+    let gemini =
+        harness.services.model.get(&remote, "gemini-3.1-pro").await.expect("read models").expect("the gemini model");
+    assert_eq!(gemini.package.as_deref(), Some("@opencode/ai/providers/google"));
+    assert_eq!(
+        encoded(&gemini.variants),
+        json!([
+            { "id": "low", "settings": { "thinkingConfig": { "includeThoughts": true, "thinkingLevel": "low" } } },
+            { "id": "high", "settings": { "thinkingConfig": { "includeThoughts": true, "thinkingLevel": "high" } } },
+        ])
+    );
+    let magistral = harness
+        .services
+        .model
+        .get(&remote, "magistral-medium")
+        .await
+        .expect("read models")
+        .expect("the magistral model");
+    assert_eq!(magistral.package.as_deref(), Some("@opencode/ai/providers/mistral"));
+    assert_eq!(
+        encoded(&magistral.variants),
+        json!([
+            { "id": "low", "settings": { "reasoningEffort": "low" } },
+            { "id": "high", "settings": { "reasoningEffort": "high" } },
+        ])
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn loads_native_v2_providers_and_models_from_the_connected_opencode_server() {
+    let routes = Routes::new();
+    routes.route_json(
+        "GET",
+        &config_url(ORIGIN),
+        json!({
+            "providers": {
+                "remote": {
+                    "canonical": "openai",
+                    "name": "Remote",
+                    "package": "aisdk:@ai-sdk/openai-compatible",
+                    "env": ["REMOTE_API_KEY"],
+                    "settings": {
+                        "baseURL": format!("{ORIGIN}/v1"),
+                        "apiKey": "{env:REMOTE_API_KEY}",
+                        "authToken": "provider-auth",
+                        "accessToken": "provider-access",
+                        "custom": "value",
+                    },
+                    "headers": { "x-org-id": "org" },
+                    "models": {
+                        "model": {
+                            "modelID": "api-model",
+                            "name": "Remote Model",
+                            "family": "remote",
+                            "capabilities": { "tools": true, "input": ["text", "image"], "output": ["text"] },
+                            "settings": {
+                                "apiKey": "model-secret",
+                                "authToken": "model-auth",
+                                "accessToken": "model-access",
+                                "temperature": 0.5,
+                            },
+                            "variants": [{
+                                "id": "high",
+                                "settings": {
+                                    "apiKey": "variant-secret",
+                                    "authToken": "variant-auth",
+                                    "accessToken": "variant-access",
+                                    "temperature": 0.2,
+                                },
+                                "headers": { "x-variant": "high" },
+                            }],
+                            "cost": { "input": 1, "output": 2, "cache": { "read": 0.1 } },
+                            "limit": { "context": 1000, "output": 100 },
+                        },
+                        "override": {
+                            "name": "Override",
+                            "package": "aisdk:@ai-sdk/anthropic",
+                            "settings": { "baseURL": format!("{ORIGIN}/anthropic") },
+                        },
+                        "disabled": { "name": "Disabled", "disabled": true },
+                    },
+                },
+            },
+        }),
+    );
+    let mut harness = start(Input::new(Vec::new())).await;
+    let _seeded = harness
+        .services
+        .provider
+        .transform(|editor| {
+            let openai = ProviderID("openai".to_owned());
+            editor.update(&openai, |provider| {
+                provider.package = "@opencode/ai/providers/openai".to_owned();
+                provider.integration_id = Some(IntegrationID("openai".to_owned()));
+            });
+            editor.models_update(&openai, "api-model", |model| {
+                model.package = Some("@opencode/ai/providers/openai".to_owned());
+                model.settings = Some(
+                    opencode_contract::codec::decode_json::<ModelSettings>(
+                        &json!({ "baseURL": "https://upstream.example/v1" }).to_string(),
+                    )
+                    .expect("the model settings decode"),
+                );
+                model.variants = vec![ModelVariant {
+                    id: "custom".to_owned(),
+                    settings: None,
+                    headers: Some(JsonMap(vec![("x-custom".to_owned(), "true".to_owned())])),
+                    body: Some(JsonMap(vec![("custom".to_owned(), json!(true))])),
+                }];
+            });
+            editor.models_update(&ProviderID("remote".to_owned()), "stale", |_| {});
+            Ok(())
+        })
+        .await;
+    harness.credential("opencode", console_key(ORIGIN, None)).await;
+    let context = add_plugin(&mut harness, routes.clone()).await;
+
+    assert_eq!(routes.count("GET", &config_url(ORIGIN)), 1);
+    assert_eq!(
+        header(&request(&routes, "GET", &config_url(ORIGIN)), "authorization").as_deref(),
+        Some("Bearer secret")
+    );
+
+    let remote = ProviderID("remote".to_owned());
+    let provider = harness.services.provider.get(&remote).await.expect("read providers").expect("the remote provider");
+    assert_eq!(provider.canonical, Some(ProviderID("openai".to_owned())));
+    assert_eq!(provider.name, "Remote");
+    assert_eq!(provider.integration_id, Some(IntegrationID("opencode".to_owned())));
+    assert_eq!(provider.package, "@opencode/ai/providers/openai-compatible");
+    assert_eq!(
+        settings_json(&provider),
+        Some(json!({ "baseURL": format!("{ORIGIN}/v1"), "custom": "value", "provider": "openai" }))
+    );
+    assert_eq!(headers(&provider), Some([("x-org-id".to_owned(), "org".to_owned())].into_iter().collect()));
+    assert!(
+        harness
+            .services
+            .integration
+            .get(&IntegrationID("remote".to_owned()))
+            .await
+            .expect("read integrations")
+            .is_none()
+    );
+
+    let model = harness.services.model.get(&remote, "model").await.expect("read models").expect("the remote model");
+    assert_eq!(model.model_id, "api-model");
+    assert_eq!(model.canonical, Some(ProviderID("openai".to_owned())));
+    assert_eq!(model.name, "Remote Model");
+    assert_eq!(model.family.as_deref(), Some("remote"));
+    assert!(model.capabilities.tools);
+    assert_eq!(model.capabilities.input, ["text", "image"]);
+    assert_eq!(model.capabilities.output, ["text"]);
+    assert_eq!(encoded(&model.cost), json!([{ "input": 1, "output": 2, "cache": { "read": 0.1, "write": 0 } }]));
+    assert_eq!(model.limit.context, 1000.0);
+    assert_eq!(model.limit.output, 100.0);
+    assert_eq!(model.package.as_deref(), Some("@opencode/ai/providers/openai-compatible"));
+    assert_eq!(
+        encoded(model.settings.as_ref().expect("the model settings")),
+        json!({ "baseURL": format!("{ORIGIN}/v1"), "custom": "value", "temperature": 0.5, "provider": "openai" })
+    );
+    assert_eq!(model.headers.as_ref().map(encoded), Some(json!({ "x-org-id": "org" })));
+    assert_eq!(
+        encoded(&model.variants),
+        json!([
+            {
+                "id": "custom",
+                "headers": { "x-custom": "true" },
+                "body": { "custom": true },
+            },
+            {
+                "id": "high",
+                "settings": { "temperature": 0.2 },
+                "headers": { "x-variant": "high" },
+            },
+        ])
+    );
+
+    let override_model =
+        harness.services.model.get(&remote, "override").await.expect("read models").expect("the override model");
+    assert_eq!(override_model.package.as_deref(), Some("@opencode/ai/providers/anthropic"));
+    assert_eq!(
+        encoded(override_model.settings.as_ref().expect("the override settings")).get("baseURL"),
+        Some(&json!(format!("{ORIGIN}/anthropic")))
+    );
+    let disabled = harness.services.model.get(&remote, "disabled").await.expect("read models").expect("the disabled");
+    assert!(!disabled.enabled);
+    assert!(harness.services.model.get(&remote, "stale").await.expect("read models").is_some());
+    let snapshot = harness.services.provider.snapshot().await.expect("read the provider snapshot");
+    let openai = snapshot.records.get("openai").expect("the openai provider");
+    assert_eq!(
+        openai.models.get("api-model").and_then(|model| model.settings.as_ref()).map(encoded),
+        Some(json!({ "baseURL": "https://upstream.example/v1" }))
+    );
+    assert!(
+        harness.services.model.get(&ProviderID("openai".to_owned()), "api-model").await.expect("read models").is_none()
+    );
+
+    let replacement = harness
+        .services
+        .credentials
+        .create(CreateInput {
+            id: None,
+            integration_id: integration_id(),
+            value: CredentialValue::Key(CredentialKey {
+                r#type: CredentialKeyType::Key,
+                key: "replacement".to_owned(),
+                metadata: Some(JsonMap(vec![("server".to_owned(), json!(ORIGIN))])),
+            }),
+            label: None,
+            activate: None,
+        })
+        .expect("create the replacement credential");
+    harness.services.integration.connection().activate(&replacement.id).await.expect("activate the replacement");
+    opencode::refresh(&harness.services, &context, Duration::ZERO).await;
+    let requests = routes.requests();
+    let loads: Vec<&opencode_ai::route::executor::PreparedHttp> =
+        requests.iter().filter(|request| request.url == config_url(ORIGIN)).collect();
+    assert_eq!(loads.len(), 2);
+    assert_eq!(header(loads[1], "authorization").as_deref(), Some("Bearer replacement"));
+    assert_eq!(harness.services.credentials.list(&integration_id()).expect("list the OpenCode credentials").len(), 2);
+}
+
+#[tokio::test(start_paused = true)]
+async fn activates_when_the_console_accepts_the_config_request_but_never_answers() {
+    let routes = Routes::new();
+    let url = config_url("https://console.example");
+    routes.hold("GET", &url);
+    let mut harness = start(Input::new(Vec::new())).await;
+    harness.credential("opencode", console_key("https://console.example", None)).await;
+    let context = plugin_context_with(&harness, routes.clone());
+    let mut builtin = Builtin::default();
+    let mut registration = Box::pin(opencode::register(&harness.services, &context, &mut builtin));
+    let mut completed = false;
+    tokio::select! {
+        _ = routes.arrived() => {}
+        _ = &mut registration => {
+            completed = true;
+        }
+    }
+    for _ in 0..29 {
+        if completed {
+            break;
+        }
+        tokio::select! {
+            _ = &mut registration => {
+                completed = true;
+                break;
+            }
+            _ = tokio::time::advance(Duration::from_secs(1)) => {}
+        }
+    }
+    if !completed {
+        registration.as_mut().await;
+    }
+    drop(registration);
+    harness.record(builtin);
+
+    assert_eq!(routes.count("GET", &url), 4);
+    let integration = harness
+        .services
+        .integration
+        .get(&integration_id())
+        .await
+        .expect("get the OpenCode integration")
+        .expect("the OpenCode integration");
+    assert_eq!(integration.connections.len(), 1);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn reports_a_rejected_console_refresh_token_as_signed_out_without_removing_the_credential() {
+    let routes = Routes::new();
+    routes.route_with("POST", &format!("{ORIGIN}/auth/device/token"), |_| {
+        Reply::json_status(json!({ "error": "invalid_grant", "error_description": "refresh token revoked" }), 400)
+    });
+    let mut harness = start(Input::new(Vec::new())).await;
+    let stored = harness
+        .services
+        .credentials
+        .create(CreateInput {
+            id: None,
+            integration_id: integration_id(),
+            value: oauth(ORIGIN),
+            label: None,
+            activate: None,
+        })
+        .expect("create the OpenCode credential");
+    add_plugin(&mut harness, routes).await;
+
+    assert_eq!(
+        integration_status(&harness).await,
+        Some(ConnectionStatus {
+            status: opencode_contract::generated::ConnectionStatusStatus::NeedsAuth,
+            message: "Reconnect OpenCode Console to continue".to_owned(),
+            url: None,
+        })
+    );
+    let stored = harness.services.credentials.get(&stored.id).expect("get the credential").expect("the credential");
+    assert_eq!(stored.value, oauth(ORIGIN));
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn reports_a_console_session_rejected_before_its_token_expires_as_signed_out() {
+    use std::sync::atomic::{AtomicBool, Ordering};
+
+    let revoked = Arc::new(AtomicBool::new(true));
+    let routes = Routes::new();
+    routes.route_with("GET", &config_url(ORIGIN), {
+        let revoked = revoked.clone();
+        move |_| {
+            if revoked.load(Ordering::SeqCst) {
+                return Reply::json_status(
+                    json!({ "_tag": "Unauthorized", "message": "Invalid or expired session" }),
+                    401,
+                );
+            }
+            Reply::json(json!({ "providers": {} }))
+        }
+    });
+    let mut harness = start(Input::new(Vec::new())).await;
+    let stored = harness
+        .services
+        .credentials
+        .create(CreateInput {
+            id: None,
+            integration_id: integration_id(),
+            value: CredentialValue::Oauth(CredentialOAuth {
+                r#type: CredentialOAuthType::Oauth,
+                method_id: method_id(),
+                access: "revoked".to_owned(),
+                refresh: "refresh".to_owned(),
+                expires: 9_007_199_254_740_991.0,
+                metadata: Some(JsonMap(vec![
+                    ("server".to_owned(), json!(ORIGIN)),
+                    ("orgID".to_owned(), json!("org_acme")),
+                    ("orgName".to_owned(), json!("Acme")),
+                ])),
+            }),
+            label: None,
+            activate: None,
+        })
+        .expect("create the OpenCode credential");
+    let context = add_plugin(&mut harness, routes.clone()).await;
+
+    assert_eq!(
+        integration_status(&harness).await,
+        Some(ConnectionStatus {
+            status: opencode_contract::generated::ConnectionStatusStatus::NeedsAuth,
+            message: "Reconnect OpenCode Console to continue".to_owned(),
+            url: None,
+        })
+    );
+    let current = harness.services.credentials.get(&stored.id).expect("get the credential").expect("the credential");
+    let CredentialValue::Oauth(value) = &current.value else { panic!("the credential is OAuth") };
+    assert_eq!(value.access, "revoked");
+
+    revoked.store(false, Ordering::SeqCst);
+    opencode::refresh(&harness.services, &context, Duration::ZERO).await;
+    assert!(integration_status(&harness).await.is_none());
+    assert_eq!(routes.count("POST", &format!("{ORIGIN}/auth/device/token")), 0);
 }

@@ -198,6 +198,7 @@ impl GlobalServices {
                             location,
                             shared_cache,
                             gitlab_discovery: Arc::new(NoDiscovery),
+                            console: Arc::new(Default::default()),
                         }),
                         external: None,
                     },
