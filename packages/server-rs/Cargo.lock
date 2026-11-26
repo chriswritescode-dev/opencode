@@ -869,7 +869,13 @@ name = "opencode-fs"
 version = "0.1.0"
 dependencies = [
  "base64",
+ "bytes",
+ "flate2",
  "futures-util",
+ "http-body-util",
+ "hyper",
+ "hyper-util",
+ "opencode-config",
  "opencode-contract",
  "opencode-permission",
  "opencode-util",

@@ -6,4 +6,5 @@ mod fixture;
 mod mutation;
 mod mutex;
 mod retention;
+mod ripgrep;
 mod write;
