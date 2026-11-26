@@ -26,6 +26,9 @@ impl NearbyInstructions {
     }
 
     async fn load_paths(&self, session_id: &str, paths: Vec<String>) -> Result<(), String> {
+        if paths.is_empty() {
+            return Ok(());
+        }
         let claimed = {
             let mut claims = self.claims.lock().expect("the instruction claim lock is not poisoned");
             let entry = claims.entry(session_id.to_owned()).or_default();
