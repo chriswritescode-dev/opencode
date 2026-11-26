@@ -7,5 +7,12 @@
     "noUncheckedIndexedAccess": false
   },
   "include": ["script", "test", "host", "parity"],
-  "exclude": ["script/config-corpus", "script/fs-corpus", "script/registry-corpus", "script/vcs-corpus"]
+  "exclude": [
+    "script/config-corpus",
+    "script/fs-corpus",
+    "script/registry-corpus",
+    "script/tool-corpus",
+    "script/tool-definitions",
+    "script/vcs-corpus"
+  ]
 }
