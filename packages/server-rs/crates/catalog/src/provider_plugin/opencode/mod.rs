@@ -1,3 +1,4 @@
+pub mod content;
 pub mod follow;
 pub mod handle;
 pub mod remote;
@@ -24,6 +25,7 @@ use crate::provider_plugin::http::BufferedResponse;
 
 use super::{env_value, setting};
 
+pub use self::content::{ConsoleInstruction, ConsoleSkill};
 pub use self::handle::{Allowed, ConsoleHandle};
 pub use self::websearch::ConsoleWebSearch;
 
@@ -79,6 +81,14 @@ pub async fn register(services: &Services, context: &PluginContext, builtin: &mu
     builtin.registrations.push(registration);
 
     refresh(services, context, DEFAULT_MAX_AGE).await;
+
+    {
+        let console = context.console.clone();
+        builtin.hooks.push(HookRegistration::on_drop(move || {
+            console.set_explainers(Vec::new());
+            console.abort_skill_download();
+        }));
+    }
 
     let provider_registration = services
         .provider
@@ -313,12 +323,13 @@ async fn load(services: &Services, context: &PluginContext, max_age: Duration) -
     let key = format!("opencode-console:{workspace}");
     let http = context.http.clone();
     let user_agent = context.app.useragent();
+    let request_credential = credential.clone();
     let cached = context
         .shared_cache
         .get::<Cached, remote::ConsoleError, _, _>(&key, Some(max_age), false, move || {
             let http = http.clone();
             let user_agent = user_agent.clone();
-            let credential = credential.clone();
+            let credential = request_credential.clone();
             async move {
                 match remote::fetch_config(http.as_ref(), &user_agent, &credential).await {
                     Ok(config) => Ok(Cached::Loaded(config.map(Box::new))),
@@ -331,11 +342,67 @@ async fn load(services: &Services, context: &PluginContext, max_age: Duration) -
     match cached {
         Ok(Cached::Loaded(config)) => {
             report_status(services, context, &connection, None);
-            Snapshot { remote: config.map(|config| *config), connection: Some(connection), organization }
+            let remote = match config.map(|config| *config) {
+                Some(mut remote) if remote.lists => {
+                    let (instructions, skills) = tokio::join!(
+                        load_list(context, &workspace, max_age, "instructions", {
+                            let http = context.http.clone();
+                            let user_agent = context.app.useragent();
+                            let credential = credential.clone();
+                            move || {
+                                let http = http.clone();
+                                let user_agent = user_agent.clone();
+                                let credential = credential.clone();
+                                async move { remote::fetch_instructions(http.as_ref(), &user_agent, &credential).await }
+                            }
+                        }),
+                        load_list(context, &workspace, max_age, "skills", {
+                            let http = context.http.clone();
+                            let user_agent = context.app.useragent();
+                            let credential = credential.clone();
+                            move || {
+                                let http = http.clone();
+                                let user_agent = user_agent.clone();
+                                let credential = credential.clone();
+                                async move { remote::fetch_skills(http.as_ref(), &user_agent, &credential).await }
+                            }
+                        }),
+                    );
+                    remote.instructions = instructions;
+                    remote.skills = skills;
+                    Some(remote)
+                }
+                remote => remote,
+            };
+            Snapshot { remote, connection: Some(connection), organization }
         }
         Ok(Cached::Failed(error)) => failed(services, context, connection, error).await,
         Err(error) => failed(services, context, connection, error).await,
     }
+}
+
+async fn load_list<A, F, Fut>(
+    context: &PluginContext,
+    workspace: &str,
+    max_age: Duration,
+    name: &str,
+    fetch: F,
+) -> Vec<A>
+where
+    A: Clone + Send + Sync + 'static,
+    F: Fn() -> Fut + Send + 'static,
+    Fut: std::future::Future<Output = Result<Vec<A>, remote::ConsoleError>> + Send + 'static,
+{
+    context
+        .shared_cache
+        .get::<Vec<A>, remote::ConsoleError, _, _>(
+            &format!("opencode-console-{name}:{workspace}"),
+            Some(max_age),
+            false,
+            fetch,
+        )
+        .await
+        .unwrap_or_default()
 }
 
 async fn failed(
@@ -396,6 +463,49 @@ async fn publish(services: &Services, context: &PluginContext, next: &Snapshot) 
         watches: allowed && remote.is_some_and(|remote| remote.watches),
         lists: allowed && remote.is_some_and(|remote| remote.lists),
         artifacts: allowed && remote.is_some_and(|remote| remote.artifacts),
+    });
+    sync_instructions_and_skills(services, context, next, allowed);
+}
+
+fn sync_instructions_and_skills(services: &Services, context: &PluginContext, next: &Snapshot, allowed: bool) {
+    let remote = next.remote.as_ref().filter(|_| allowed);
+    context.console.set_instructions(
+        remote
+            .map(|remote| {
+                remote
+                    .instructions
+                    .iter()
+                    .map(|item| content::ConsoleInstruction {
+                        path: format!("OpenCode Console instruction {}", item.id),
+                        content: item.content.clone(),
+                    })
+                    .collect()
+            })
+            .unwrap_or_default(),
+    );
+    let Some(connection) = next.connection.clone().filter(|_| allowed) else {
+        context.console.clear_skills();
+        return;
+    };
+    let listed = remote.map(|remote| remote.skills.clone()).unwrap_or_default();
+    if listed.is_empty() {
+        context.console.clear_skills();
+        return;
+    }
+    let owner = handle::skill_owner(next);
+    let console = Arc::downgrade(&context.console);
+    let integration = services.integration.clone();
+    let http = context.http_manual_redirects.clone();
+    let cache = context.shared_cache.clone();
+    let user_agent = context.app.useragent();
+    context.console.restart_skill_download(async move {
+        let Some(items) = content::load_skills(&integration, &http, &cache, &connection, &user_agent, &listed).await
+        else {
+            return;
+        };
+        if let Some(console) = console.upgrade() {
+            console.set_skills(owner, items);
+        }
     });
 }
 

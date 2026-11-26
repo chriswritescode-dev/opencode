@@ -157,6 +157,17 @@ impl Routes {
         self.route_with(method, url, move |_| Reply::json(value.clone()));
     }
 
+    pub fn route_json_with_headers(&self, method: &str, url: &str, headers: Vec<(String, String)>, value: Value) {
+        self.routes.lock().expect("the routed replies lock is never poisoned").push(Route {
+            method: method.to_owned(),
+            url: url.to_owned(),
+            body_contains: None,
+            respond: Box::new(move |_| Reply::json(value.clone())),
+            headers,
+            hanging: None,
+        });
+    }
+
     pub fn route_json_for(&self, method: &str, url: &str, body_contains: &str, value: Value) {
         self.routes.lock().expect("the routed replies lock is never poisoned").push(Route {
             method: method.to_owned(),

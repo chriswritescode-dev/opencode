@@ -8,13 +8,33 @@ const REDIRECT_STATUSES: [u16; 5] = [301, 302, 303, 307, 308];
 
 const CREDENTIAL_HEADERS: [&str; 4] = ["authorization", "cookie", "proxy-authorization", "x-org-id"];
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum FollowError {
+    Transport(String),
+    Status(u16),
+    Redirect(String),
+}
+
+impl std::fmt::Display for FollowError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Transport(message) => f.write_str(message),
+            Self::Status(status) => write!(f, "HTTP status {status}"),
+            Self::Redirect(message) => f.write_str(message),
+        }
+    }
+}
+
+impl std::error::Error for FollowError {}
+
 pub async fn follow(
     http: &dyn HttpSender,
     mut request: PreparedHttp,
     mut redirects: usize,
-) -> Result<HttpResponse, String> {
+) -> Result<HttpResponse, FollowError> {
     loop {
-        let response = http.send(request.clone()).await.map_err(|error| error.message().to_owned())?;
+        let response =
+            http.send(request.clone()).await.map_err(|error| FollowError::Transport(error.message().to_owned()))?;
         let location = response
             .headers
             .iter()
@@ -22,12 +42,12 @@ pub async fn follow(
             .map(|(_, value)| value.clone());
         let Some(location) = location.filter(|_| REDIRECT_STATUSES.contains(&response.status)) else {
             if !(200..=299).contains(&response.status) {
-                return Err(format!("HTTP status {}", response.status));
+                return Err(FollowError::Status(response.status));
             }
             return Ok(response);
         };
         if redirects >= MAX_REDIRECTS {
-            return Err(format!("Too many redirects (more than {MAX_REDIRECTS})"));
+            return Err(FollowError::Redirect(format!("Too many redirects (more than {MAX_REDIRECTS})")));
         }
         let target = redirect_target(&request.url, &location)?;
         let status = response.status;
@@ -42,11 +62,13 @@ async fn drain(response: HttpResponse) {
     while body.next().await.is_some() {}
 }
 
-fn redirect_target(base: &str, location: &str) -> Result<url::Url, String> {
-    let base = url::Url::parse(base).map_err(|error| format!("Invalid redirect base URL: {error}"))?;
-    let target = base.join(location).map_err(|error| format!("Invalid redirect URL: {error}"))?;
+fn redirect_target(base: &str, location: &str) -> Result<url::Url, FollowError> {
+    let base =
+        url::Url::parse(base).map_err(|error| FollowError::Redirect(format!("Invalid redirect base URL: {error}")))?;
+    let target =
+        base.join(location).map_err(|error| FollowError::Redirect(format!("Invalid redirect URL: {error}")))?;
     if target.scheme() != "http" && target.scheme() != "https" {
-        return Err(format!("redirect to unsupported protocol {}", target.scheme()));
+        return Err(FollowError::Redirect(format!("redirect to unsupported protocol {}", target.scheme())));
     }
     Ok(target)
 }

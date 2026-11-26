@@ -134,6 +134,12 @@ pub struct HookRegistration {
     remove: Option<Box<dyn FnOnce() + Send + Sync>>,
 }
 
+impl HookRegistration {
+    pub(crate) fn on_drop(remove: impl FnOnce() + Send + Sync + 'static) -> Self {
+        Self { remove: Some(Box::new(remove)) }
+    }
+}
+
 impl Drop for HookRegistration {
     fn drop(&mut self) {
         if let Some(remove) = self.remove.take() {

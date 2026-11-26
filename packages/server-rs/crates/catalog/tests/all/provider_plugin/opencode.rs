@@ -536,8 +536,11 @@ async fn rejects_malformed_device_verification_urls() {
 
 async fn authorizes_with_organization(org_id: Option<Value>, expected_org: &str, expected_name: &str) {
     let routes = console_routes(ORIGIN, token(org_id));
+    routes.route_json_with_headers("GET", &config_url(ORIGIN), lists_headers(), json!({ "providers": {} }));
+    routes.route_json("GET", &list_url("instructions"), json!({ "instructions": [] }));
+    routes.route_json("GET", &list_url("skills"), json!({ "skills": [] }));
     let mut harness = start(Input::new(Vec::new())).await;
-    add_plugin(&mut harness, routes).await;
+    add_plugin(&mut harness, routes.clone()).await;
 
     let attempt =
         connect(&harness, answer(FormValue::String(ORIGIN.to_owned()))).await.expect("start the device authorization");
@@ -551,6 +554,13 @@ async fn authorizes_with_organization(org_id: Option<Value>, expected_org: &str,
     let CredentialValue::Oauth(value) = &credentials[0].value else { panic!("the OpenCode credential is OAuth") };
     assert_eq!(metadata(value, "orgID"), Some(&json!(expected_org)));
     assert_eq!(metadata(value, "orgName"), Some(&json!(expected_name)));
+
+    advance_until(|| routes.count("GET", &config_url(ORIGIN)) > 0).await;
+    advance_tick().await;
+    assert_eq!(routes.count("GET", &config_url(ORIGIN)), 1);
+    let config = request(&routes, "GET", &config_url(ORIGIN));
+    assert_eq!(header(&config, "authorization").as_deref(), Some("Bearer access"));
+    assert_eq!(header(&config, "x-org-id").as_deref(), Some(expected_org));
 }
 
 #[tokio::test(start_paused = true)]
@@ -606,8 +616,9 @@ async fn picks_the_first_organization_by_locale_name_without_a_device_token_orga
 #[tokio::test(start_paused = true)]
 async fn reports_a_missing_device_token_organization() {
     let routes = console_routes(ORIGIN, token(Some(json!("org-missing"))));
+    routes.route_json_with_headers("GET", &config_url(ORIGIN), lists_headers(), json!({ "providers": {} }));
     let mut harness = start(Input::new(Vec::new())).await;
-    add_plugin(&mut harness, routes).await;
+    add_plugin(&mut harness, routes.clone()).await;
 
     let attempt =
         connect(&harness, answer(FormValue::String(ORIGIN.to_owned()))).await.expect("start the device authorization");
@@ -615,6 +626,8 @@ async fn reports_a_missing_device_token_organization() {
     let AttemptStatus::Failed { message, .. } = status else { panic!("the attempt fails, got {status:?}") };
     assert_eq!(message, "OpenCode organization not found: org-missing");
     assert!(harness.services.credentials.list(&integration_id()).expect("list the OpenCode credentials").is_empty());
+    advance_tick().await;
+    assert_eq!(routes.count("GET", &config_url(ORIGIN)), 0);
 }
 
 fn oauth(server: &str) -> CredentialValue {
@@ -633,9 +646,16 @@ fn oauth(server: &str) -> CredentialValue {
     })
 }
 
-async fn rotates_a_stored_credential(org_id: Option<Value>, expected: (&str, &str)) {
+async fn rotates_a_stored_credential(org_id: Option<Value>, expected: (&str, &str), unavailable: bool) {
     let routes = Routes::new();
     routes.route_json("POST", &format!("{ORIGIN}/auth/device/token"), token(org_id));
+    routes.route_json_with_headers("GET", &config_url(ORIGIN), lists_headers(), json!({ "providers": {} }));
+    routes.route_json("GET", &list_url("instructions"), json!({ "instructions": [] }));
+    routes.route_json("GET", &list_url("skills"), json!({ "skills": [] }));
+    if unavailable {
+        routes.route_with("GET", &format!("{ORIGIN}/api/user"), |_| Reply::status(503));
+        routes.route_with("GET", &format!("{ORIGIN}/api/orgs"), |_| Reply::status(503));
+    }
     let mut harness = start(Input::new(Vec::new())).await;
     add_plugin(&mut harness, routes.clone()).await;
     let stored = harness
@@ -686,18 +706,30 @@ async fn rotates_a_stored_credential(org_id: Option<Value>, expected: (&str, &st
         harness.services.credentials.get(&stored.id).expect("get the OpenCode credential").expect("the credential");
     assert_eq!(updated.label, "Custom label");
     assert_eq!(updated.value, resolved);
+
+    let requests = eventually_console_requests(&routes).await;
+    assert_eq!(
+        requests.iter().map(|request| request.url.clone()).collect::<Vec<_>>(),
+        [format!("{ORIGIN}/auth/device/token"), config_url(ORIGIN), list_url("instructions"), list_url("skills"),]
+    );
+    let agents: Vec<Option<String>> = requests.iter().map(|request| header(request, "user-agent")).collect();
+    assert!(agents.iter().all(|agent| agent.as_deref() == Some(USER_AGENT)), "got {agents:?}");
+    let config = request(&routes, "GET", &config_url(ORIGIN));
+    assert_eq!(header(&config, "authorization").as_deref(), Some("Bearer access"));
+    assert_eq!(header(&config, "x-org-id").as_deref(), Some(expected.0));
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn persists_rotated_credentials() {
-    for (org_id, expected) in [
-        (Some(json!("org-z")), ("org-z", "org-z")),
-        (None, ("org-a", "Alpha")),
-        (Some(json!(null)), ("org-a", "Alpha")),
-        (Some(json!("org-missing")), ("org-missing", "org-missing")),
-        (Some(json!("org-a")), ("org-a", "Alpha")),
+    for (org_id, expected, unavailable) in [
+        (Some(json!("org-z")), ("org-z", "org-z"), false),
+        (None, ("org-a", "Alpha"), false),
+        (Some(json!(null)), ("org-a", "Alpha"), false),
+        (Some(json!("org-missing")), ("org-missing", "org-missing"), false),
+        (Some(json!("org-z")), ("org-z", "org-z"), true),
+        (Some(json!("org-a")), ("org-a", "Alpha"), true),
     ] {
-        rotates_a_stored_credential(org_id, expected).await;
+        rotates_a_stored_credential(org_id, expected, unavailable).await;
     }
 }
 
@@ -818,7 +850,7 @@ async fn merges_the_console_response_as_config_with_its_policy_named_after_the_o
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn passes_only_providers_remote_mcp_servers_policies_and_web_search_without_credentials() {
+async fn passes_only_providers_remote_mcp_servers_policies_and_the_web_search_selection_without_credentials() {
     let routes = Routes::new();
     routes.route_json(
         "GET",
@@ -2318,4 +2350,313 @@ async fn offers_console_web_search_only_when_the_console_selects_it_and_user_con
         })
         .collect();
     assert_eq!(selected_providers, ["opencode".to_owned(), "mine".to_owned()]);
+}
+
+const LISTS_HEADER: &str = "x-opencode-instructions-skills";
+
+fn lists_headers() -> Vec<(String, String)> {
+    vec![(LISTS_HEADER.to_owned(), "1".to_owned())]
+}
+
+fn list_url(name: &str) -> String {
+    format!("{ORIGIN}/api/v2/{name}")
+}
+
+fn skill_url(slug: &str) -> String {
+    format!("{ORIGIN}/api/v2/skills/{slug}")
+}
+
+fn skill_bundle() -> Value {
+    json!({
+        "slug": "deploy",
+        "files": [{
+            "path": "SKILL.md",
+            "content": "---\nname: Deploy\ndescription: Deploys the service.\n---\n\n# Deploy\n",
+        }],
+    })
+}
+
+fn instructions_of(console: &opencode::ConsoleHandle) -> Vec<String> {
+    console.instructions().into_iter().map(|instruction| instruction.content).collect()
+}
+
+async fn eventually_console_skills(console: &opencode::ConsoleHandle) -> Vec<opencode::ConsoleSkill> {
+    tokio::time::timeout(Duration::from_secs(10), async {
+        loop {
+            let skills = console.skills();
+            if !skills.is_empty() {
+                return skills;
+            }
+            tokio::time::sleep(Duration::from_millis(1)).await;
+        }
+    })
+    .await
+    .expect("the Console skills did not load")
+}
+
+async fn eventually_console_requests(routes: &Routes) -> Vec<PreparedHttp> {
+    tokio::time::timeout(Duration::from_secs(10), async {
+        loop {
+            let requests = routes.requests();
+            if requests.len() >= 4 {
+                return requests;
+            }
+            tokio::time::sleep(Duration::from_millis(1)).await;
+        }
+    })
+    .await
+    .unwrap_or_else(|_| {
+        panic!(
+            "the Console config and its lists were not requested: {:?}",
+            routes.requests().iter().map(|request| request.url.clone()).collect::<Vec<_>>()
+        )
+    })
+}
+
+fn spawn_plugin(
+    harness: &Harness,
+    http: Arc<dyn opencode_ai::HttpSender>,
+) -> (PluginContext, tokio::task::JoinHandle<Builtin>) {
+    let context = plugin_context_with(harness, http);
+    let task = {
+        let services = harness.services.clone();
+        let context = context.clone();
+        tokio::spawn(async move {
+            let mut builtin = Builtin::default();
+            opencode::register(&services, &context, &mut builtin).await;
+            builtin
+        })
+    };
+    (context, task)
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn downloads_a_skill_through_a_redirect_without_sending_credentials_to_another_origin() {
+    let archive = "https://storage.example.com/archive/deploy.json?expires=1&sig=a%20b~c";
+    let routes = Routes::new();
+    routes.route_json_with_headers("GET", &config_url(ORIGIN), lists_headers(), json!({ "providers": {} }));
+    routes.route_json("GET", &list_url("instructions"), json!({ "instructions": [] }));
+    routes.route_json("GET", &list_url("skills"), json!({ "skills": [{ "slug": "deploy", "version": "1" }] }));
+    routes.route_redirect("GET", &skill_url("deploy"), 302, archive);
+    routes.route_json("GET", archive, skill_bundle());
+
+    let mut harness = start(Input::new(Vec::new())).await;
+    harness.credential("opencode", console_key(ORIGIN, Some(("org_test", "Test")))).await;
+    let context = add_plugin(&mut harness, routes.clone()).await;
+
+    let skills = eventually_console_skills(&context.console).await;
+    assert_eq!(skills.len(), 1);
+    assert_eq!(skills[0].slug, "deploy");
+    assert!(skills[0].main.contains("Deploys the service."));
+    assert!(skills[0].files.is_empty());
+
+    let download = request(&routes, "GET", &skill_url("deploy"));
+    assert_eq!(header(&download, "authorization").as_deref(), Some("Bearer secret"));
+    assert_eq!(header(&download, "x-org-id").as_deref(), Some("org_test"));
+
+    let archive_request = request(&routes, "GET", archive);
+    assert_eq!(header(&archive_request, "authorization"), None);
+    assert_eq!(header(&archive_request, "x-org-id"), None);
+}
+
+#[tokio::test(start_paused = true)]
+async fn keeps_console_instructions_and_skills_through_an_edit_or_a_console_error_and_clears_them_on_404() {
+    let instruction = Arc::new(Mutex::new("Use tabs.".to_owned()));
+    let status = Arc::new(Mutex::new(200u16));
+    let routes = Routes::new();
+    routes.route_json_with_headers("GET", &config_url(ORIGIN), lists_headers(), json!({ "providers": {} }));
+    routes.route_with("GET", &list_url("instructions"), {
+        let instruction = instruction.clone();
+        let status = status.clone();
+        move |_| {
+            let status = *status.lock().expect("lock the Console list status");
+            if status != 200 {
+                return Reply::status(status);
+            }
+            Reply::json(json!({
+                "instructions": [{ "id": "style", "content": instruction.lock().expect("lock the instruction").clone() }],
+            }))
+        }
+    });
+    routes.route_with("GET", &list_url("skills"), {
+        let status = status.clone();
+        move |_| {
+            let status = *status.lock().expect("lock the Console list status");
+            if status != 200 {
+                return Reply::status(status);
+            }
+            Reply::json(json!({ "skills": [{ "slug": "deploy", "version": "1" }] }))
+        }
+    });
+    routes.route_json("GET", &skill_url("deploy"), skill_bundle());
+
+    let mut harness = start(Input::new(Vec::new())).await;
+    harness.credential("opencode", console_key(ORIGIN, None)).await;
+    let context = add_plugin(&mut harness, routes.clone()).await;
+
+    advance_until(|| context.console.skills().len() == 1).await;
+    assert_eq!(instructions_of(&context.console), ["Use tabs.".to_owned()]);
+
+    *instruction.lock().expect("lock the instruction") = "Use spaces.".to_owned();
+    advance_until(|| instructions_of(&context.console) == ["Use spaces.".to_owned()]).await;
+    assert_eq!(context.console.skills().len(), 1);
+
+    let before = routes.count("GET", &list_url("instructions"));
+    *status.lock().expect("lock the Console list status") = 503;
+    advance_until(|| routes.count("GET", &list_url("instructions")) > before).await;
+    advance_for(Duration::from_secs(10)).await;
+    assert_eq!(instructions_of(&context.console), ["Use spaces.".to_owned()]);
+    assert_eq!(context.console.skills().len(), 1);
+
+    *status.lock().expect("lock the Console list status") = 404;
+    advance_until(|| context.console.instructions().is_empty()).await;
+    assert!(context.console.skills().is_empty());
+}
+
+#[tokio::test(start_paused = true)]
+async fn applies_console_policies_while_its_instructions_and_skills_fail_and_keeps_a_list_over_a_malformed_one() {
+    let sudo = json!({ "action": "tool.use", "resource": "shell:sudo *", "effect": "deny" });
+    let state = Arc::new(Mutex::new("down".to_owned()));
+    let routes = Routes::new();
+    routes.route_json_with_headers(
+        "GET",
+        &config_url(ORIGIN),
+        lists_headers(),
+        json!({ "providers": {}, "policies": [sudo.clone()] }),
+    );
+    routes.route_with("GET", &list_url("instructions"), {
+        let state = state.clone();
+        move |_| match state.lock().expect("lock the Console list state").as_str() {
+            "down" => Reply::status(503),
+            "malformed" => Reply::json(json!({ "instructions": [{ "id": "style" }] })),
+            _ => Reply::json(json!({ "instructions": [{ "id": "style", "content": "Use tabs." }] })),
+        }
+    });
+    routes.route_with("GET", &list_url("skills"), {
+        let state = state.clone();
+        move |_| match state.lock().expect("lock the Console list state").as_str() {
+            "down" => Reply::status(503),
+            _ => Reply::json(json!({ "skills": [] })),
+        }
+    });
+
+    let mut harness = start(Input::new(Vec::new())).await;
+    harness.credential("opencode", console_key(ORIGIN, None)).await;
+    let (context, plugin) = spawn_plugin(&harness, routes.clone());
+    advance_for(Duration::from_secs(10)).await;
+    let builtin = plugin.await.expect("the OpenCode plugin registers");
+    harness.record(builtin);
+
+    let document = console_document(&harness).expect("the Console document is integrated");
+    assert_eq!(policy_list(&document), json!([sudo.clone()]));
+    assert!(context.console.instructions().is_empty());
+
+    *state.lock().expect("lock the Console list state") = "ok".to_owned();
+    advance_until(|| instructions_of(&context.console) == ["Use tabs.".to_owned()]).await;
+
+    let before = routes.count("GET", &list_url("instructions"));
+    *state.lock().expect("lock the Console list state") = "malformed".to_owned();
+    advance_until(|| routes.count("GET", &list_url("instructions")) > before).await;
+    advance_tick().await;
+    assert_eq!(instructions_of(&context.console), ["Use tabs.".to_owned()]);
+    let document = console_document(&harness).expect("the Console document is integrated");
+    assert_eq!(policy_list(&document), json!([sudo]));
+}
+
+#[tokio::test(start_paused = true)]
+async fn requests_console_instructions_and_skills_together() {
+    let routes = Routes::new();
+    routes.route_json_with_headers("GET", &config_url(ORIGIN), lists_headers(), json!({ "providers": {} }));
+    routes.route_json(
+        "GET",
+        &list_url("instructions"),
+        json!({ "instructions": [{ "id": "style", "content": "Use tabs." }] }),
+    );
+    routes.route_json("GET", &list_url("skills"), json!({ "skills": [] }));
+    routes.hold("GET", &list_url("instructions"));
+
+    let mut harness = start(Input::new(Vec::new())).await;
+    harness.credential("opencode", console_key(ORIGIN, None)).await;
+    let (context, plugin) = spawn_plugin(&harness, routes.clone());
+    routes.arrived().await;
+    assert_eq!(routes.count("GET", &list_url("skills")), 1);
+    let mut requests: Vec<String> = routes.requests().into_iter().map(|request| request.url).collect();
+    requests.sort();
+    assert_eq!(requests, [config_url(ORIGIN), list_url("instructions"), list_url("skills")]);
+
+    routes.release();
+    let builtin = plugin.await.expect("the OpenCode plugin registers");
+    harness.record(builtin);
+    assert_eq!(instructions_of(&context.console), ["Use tabs.".to_owned()]);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn keeps_credentials_on_a_same_origin_skill_redirect() {
+    let asset = format!("{ORIGIN}/assets/deploy.json");
+    let routes = Routes::new();
+    routes.route_json_with_headers("GET", &config_url(ORIGIN), lists_headers(), json!({ "providers": {} }));
+    routes.route_json("GET", &list_url("instructions"), json!({ "instructions": [] }));
+    routes.route_json("GET", &list_url("skills"), json!({ "skills": [{ "slug": "deploy", "version": "1" }] }));
+    routes.route_redirect("GET", &skill_url("deploy"), 302, &asset);
+    routes.route_json("GET", &asset, skill_bundle());
+
+    let mut harness = start(Input::new(Vec::new())).await;
+    harness.credential("opencode", console_key(ORIGIN, Some(("org_test", "Test")))).await;
+    let context = add_plugin(&mut harness, routes.clone()).await;
+
+    let skills = eventually_console_skills(&context.console).await;
+    assert_eq!(skills.len(), 1);
+
+    let download = request(&routes, "GET", &asset);
+    assert_eq!(header(&download, "authorization").as_deref(), Some("Bearer secret"));
+}
+
+#[tokio::test(start_paused = true)]
+async fn does_not_keep_a_skill_download_that_a_later_sync_cleared() {
+    let routes = Routes::new();
+    routes.route_json_with_headers("GET", &config_url(ORIGIN), lists_headers(), json!({ "providers": {} }));
+    routes.route_json("GET", &list_url("instructions"), json!({ "instructions": [] }));
+    routes.route_json("GET", &list_url("skills"), json!({ "skills": [{ "slug": "deploy", "version": "1" }] }));
+    routes.hold("GET", &skill_url("deploy"));
+    routes.route_json("GET", &skill_url("deploy"), skill_bundle());
+
+    let mut harness = start(Input::new(Vec::new())).await;
+    harness.credential("opencode", console_key(ORIGIN, None)).await;
+    let context = add_plugin(&mut harness, routes.clone()).await;
+
+    routes.arrived().await;
+    assert!(context.console.skills().is_empty());
+
+    routes.set_json("GET", &list_url("skills"), json!({ "skills": [] }));
+    opencode::refresh(&harness.services, &context, Duration::ZERO).await;
+
+    routes.release();
+    advance_for(Duration::from_secs(1)).await;
+    assert!(context.console.skills().is_empty());
+}
+
+#[tokio::test(start_paused = true)]
+async fn releases_the_console_explainers_when_the_builtin_is_dropped() {
+    let routes = Routes::new();
+    routes.route_json("GET", &config_url(ORIGIN), json!({ "providers": {} }));
+    let mut harness = start(Input::new(Vec::new())).await;
+    harness.credential("opencode", console_key(ORIGIN, None)).await;
+    let context = add_plugin(&mut harness, routes.clone()).await;
+    assert_eq!(routes.count("GET", &config_url(ORIGIN)), 1);
+
+    drop(std::mem::take(&mut harness.registrations));
+    tokio::time::advance(Duration::from_secs(30)).await;
+
+    let response = context.hooks.trigger_http_response(console_response("opencode", 403, &json!({}))).await;
+    assert_eq!(response.response.status, 403);
+    assert_eq!(routes.count("GET", &config_url(ORIGIN)), 1);
+
+    for _ in 0..100 {
+        if Arc::strong_count(&context.console) == 1 && Arc::strong_count(&context.hooks) == 1 {
+            break;
+        }
+        tokio::task::yield_now().await;
+    }
+    assert_eq!(Arc::strong_count(&context.console), 1);
+    assert_eq!(Arc::strong_count(&context.hooks), 1);
 }

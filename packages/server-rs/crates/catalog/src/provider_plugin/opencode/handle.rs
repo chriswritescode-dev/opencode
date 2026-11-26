@@ -1,3 +1,4 @@
+use std::future::Future;
 use std::sync::{Arc, RwLock};
 
 use opencode_ai::route::executor::HttpSender;
@@ -6,13 +7,21 @@ use opencode_contract::generated::{
     ConnectionStatus, WebSearchID,
 };
 use tokio::sync::{Mutex, watch};
+use tokio::task::JoinHandle;
 
 use super::Snapshot;
+use super::content::{ConsoleInstruction, ConsoleSkill};
 use super::websearch::ConsoleWebSearch;
 use crate::integration::IntegrationService;
 use crate::provider_plugin::hooks::HookRegistration;
 
 const WEB_SEARCH_PROVIDER: &str = "opencode";
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub(crate) struct ConsoleSkills {
+    pub owner: String,
+    pub items: Vec<ConsoleSkill>,
+}
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Allowed {
@@ -34,6 +43,9 @@ pub struct ConsoleHandle {
     pub(crate) reported: RwLock<Option<ConnectionStatus>>,
     pub(crate) explainers: std::sync::Mutex<Vec<HookRegistration>>,
     pub(crate) loading: Mutex<()>,
+    instructions: RwLock<Vec<ConsoleInstruction>>,
+    console_skills: RwLock<ConsoleSkills>,
+    skill_download: std::sync::Mutex<Option<JoinHandle<()>>>,
     websearch: RwLock<Option<WebSearchDependencies>>,
     revision: watch::Sender<u64>,
 }
@@ -47,9 +59,18 @@ impl Default for ConsoleHandle {
             reported: RwLock::new(None),
             explainers: std::sync::Mutex::new(Vec::new()),
             loading: Mutex::new(()),
+            instructions: RwLock::new(Vec::new()),
+            console_skills: RwLock::new(ConsoleSkills::default()),
+            skill_download: std::sync::Mutex::new(None),
             websearch: RwLock::new(None),
             revision: watch::channel(0).0,
         }
+    }
+}
+
+impl Drop for ConsoleHandle {
+    fn drop(&mut self) {
+        self.abort_skill_download();
     }
 }
 
@@ -81,6 +102,43 @@ impl ConsoleHandle {
 
     pub fn allowed(&self) -> Allowed {
         *self.allowed.read().expect("lock the Console allowed flags")
+    }
+
+    pub fn instructions(&self) -> Vec<ConsoleInstruction> {
+        self.instructions.read().expect("lock the Console instructions").clone()
+    }
+
+    pub fn skills(&self) -> Vec<ConsoleSkill> {
+        let owner = skill_owner(&self.snapshot());
+        let skills = self.console_skills.read().expect("lock the Console skills");
+        if skills.owner != owner {
+            return Vec::new();
+        }
+        skills.items.clone()
+    }
+
+    pub(crate) fn set_instructions(&self, value: Vec<ConsoleInstruction>) {
+        *self.instructions.write().expect("lock the Console instructions") = value;
+    }
+
+    pub(crate) fn set_skills(&self, owner: String, items: Vec<ConsoleSkill>) {
+        *self.console_skills.write().expect("lock the Console skills") = ConsoleSkills { owner, items };
+    }
+
+    pub(crate) fn clear_skills(&self) {
+        self.abort_skill_download();
+        *self.console_skills.write().expect("lock the Console skills") = ConsoleSkills::default();
+    }
+
+    pub(crate) fn restart_skill_download(&self, download: impl Future<Output = ()> + Send + 'static) {
+        self.abort_skill_download();
+        *self.skill_download.lock().expect("lock the Console skill download") = Some(tokio::spawn(download));
+    }
+
+    pub(crate) fn abort_skill_download(&self) {
+        if let Some(download) = self.skill_download.lock().expect("lock the Console skill download").take() {
+            download.abort();
+        }
     }
 
     pub(crate) fn snapshot(&self) -> Snapshot {
@@ -118,4 +176,9 @@ impl ConsoleHandle {
     pub(crate) fn bump(&self) {
         self.revision.send_modify(|revision| *revision += 1);
     }
+}
+
+pub(crate) fn skill_owner(snapshot: &Snapshot) -> String {
+    let connection = snapshot.connection.as_ref().map(crate::integration::key).unwrap_or_default();
+    format!("{connection}:{}", snapshot.organization.as_deref().unwrap_or_default())
 }

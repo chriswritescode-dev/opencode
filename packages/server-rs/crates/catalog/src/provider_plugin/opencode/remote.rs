@@ -5,6 +5,7 @@ use opencode_contract::generated::{
 };
 use percent_encoding::{AsciiSet, NON_ALPHANUMERIC, utf8_percent_encode};
 use serde::Deserialize;
+use serde::de::DeserializeOwned;
 use serde_json::Value;
 
 use crate::console_access;
@@ -21,7 +22,7 @@ const ARTIFACTS_HEADER: &str = "x-opencode-artifacts";
 
 const SIGNED_OUT_MESSAGE: &str = "Reconnect OpenCode Console to continue";
 
-const ENCODE_URI_COMPONENT: &AsciiSet = &NON_ALPHANUMERIC
+pub(super) const ENCODE_URI_COMPONENT: &AsciiSet = &NON_ALPHANUMERIC
     .remove(b'-')
     .remove(b'_')
     .remove(b'.')
@@ -38,6 +39,30 @@ pub struct RemoteConfig {
     pub watches: bool,
     pub lists: bool,
     pub artifacts: bool,
+    pub instructions: Vec<ListedInstruction>,
+    pub skills: Vec<ListedSkill>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+pub struct ListedInstruction {
+    pub id: String,
+    pub content: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+pub struct ListedSkill {
+    pub slug: String,
+    pub version: String,
+}
+
+#[derive(Deserialize)]
+struct InstructionsBody {
+    instructions: Vec<ListedInstruction>,
+}
+
+#[derive(Deserialize)]
+struct SkillsBody {
+    skills: Vec<ListedSkill>,
 }
 
 #[derive(Clone, Debug)]
@@ -108,7 +133,57 @@ pub async fn fetch_config(
         watches: has_header(&response.headers, WATCHES_HEADER),
         lists: has_header(&response.headers, LISTS_HEADER),
         artifacts: has_header(&response.headers, ARTIFACTS_HEADER),
+        instructions: Vec::new(),
+        skills: Vec::new(),
     }))
+}
+
+pub async fn fetch_instructions(
+    http: &dyn opencode_ai::HttpSender,
+    user_agent: &str,
+    credential: &CredentialValue,
+) -> Result<Vec<ListedInstruction>, ConsoleError> {
+    Ok(fetch_list::<InstructionsBody>(http, user_agent, credential, "/api/v2/instructions")
+        .await?
+        .map(|body| body.instructions)
+        .unwrap_or_default())
+}
+
+pub async fn fetch_skills(
+    http: &dyn opencode_ai::HttpSender,
+    user_agent: &str,
+    credential: &CredentialValue,
+) -> Result<Vec<ListedSkill>, ConsoleError> {
+    Ok(fetch_list::<SkillsBody>(http, user_agent, credential, "/api/v2/skills")
+        .await?
+        .map(|body| body.skills)
+        .unwrap_or_default())
+}
+
+async fn fetch_list<T: DeserializeOwned>(
+    http: &dyn opencode_ai::HttpSender,
+    user_agent: &str,
+    credential: &CredentialValue,
+    path: &str,
+) -> Result<Option<T>, ConsoleError> {
+    let server = console_access::server(credential);
+    let request = http::get(format!("{server}{path}"), request_headers(user_agent, credential));
+    let response = match http::send(http, request, Some(TIMEOUT)).await {
+        Ok(response) => response,
+        Err(HttpError::Status(response)) => {
+            if response.status == 404 {
+                return Ok(None);
+            }
+            if response.status == 403 && !is_sso_required(&response.body) {
+                return Ok(None);
+            }
+            return Err(ConsoleError::Transient(HttpError::Status(response)));
+        }
+        Err(error) => return Err(ConsoleError::Transient(error)),
+    };
+    serde_json::from_slice(&response.body)
+        .map(Some)
+        .map_err(|error| ConsoleError::Invalid(format!("the OpenCode Console list {path} is not valid: {error}")))
 }
 
 pub fn connection_status(error: &ConsoleError) -> Option<ConnectionStatus> {
@@ -151,6 +226,10 @@ fn sso_connection(body: &[u8]) -> Option<String> {
         .ok()
         .filter(|body| body.tag == "SsoRequired")
         .map(|body| body.connection_id)
+}
+
+fn is_sso_required(body: &[u8]) -> bool {
+    sso_connection(body).is_some()
 }
 
 fn sso_url(server: &str, connection_id: &str) -> String {

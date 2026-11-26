@@ -61,7 +61,7 @@ impl ConsoleWebSearch {
             &serde_json::json!({ "query": query, "providerID": self.provider_id.0 }),
         );
         let body = tokio::time::timeout(TIMEOUT, async {
-            let response = follow(self.http.as_ref(), request, 0).await?;
+            let response = follow(self.http.as_ref(), request, 0).await.map_err(|error| error.to_string())?;
             read_body(response).await
         })
         .await
