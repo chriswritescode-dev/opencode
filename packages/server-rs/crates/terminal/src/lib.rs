@@ -1,4 +1,5 @@
 pub mod daemon;
+pub mod persistent;
 pub mod pty;
 
 pub use pty::protocol;

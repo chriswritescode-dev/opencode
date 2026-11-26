@@ -1,6 +1,6 @@
 # Operation coverage
 
-Implemented: 75 of 178 operations
+Implemented: 86 of 178 operations
 
 | Operation | Method | Path | Stability | Status |
 | --- | --- | --- | --- | --- |
@@ -124,17 +124,17 @@ Implemented: 75 of 178 operations
 | `pty.remove` | DELETE | `/api/pty/{ptyID}` | stable | implemented |
 | `pty.connect.token` | POST | `/api/pty/{ptyID}/connect-token` | stable | implemented |
 | `pty.connect` | GET | `/api/pty/{ptyID}/connect` | stable | implemented |
-| `experimental.persistentPty.read` | GET | `/api/experimental/session/{sessionID}/terminal/read` | experimental | not implemented (501) |
-| `experimental.persistentPty.list` | GET | `/api/experimental/session/{sessionID}/terminal` | experimental | not implemented (501) |
-| `experimental.persistentPty.create` | POST | `/api/experimental/session/{sessionID}/terminal` | experimental | not implemented (501) |
-| `experimental.persistentPty.shutdown` | POST | `/api/experimental/persistent-pty/shutdown` | experimental | not implemented (501) |
-| `experimental.persistentPty.handoff` | POST | `/api/experimental/persistent-pty/handoff` | experimental | not implemented (501) |
-| `experimental.persistentPty.get` | GET | `/api/experimental/persistent-pty/{ptyID}` | experimental | not implemented (501) |
-| `experimental.persistentPty.update` | PUT | `/api/experimental/persistent-pty/{ptyID}` | experimental | not implemented (501) |
-| `experimental.persistentPty.remove` | DELETE | `/api/experimental/persistent-pty/{ptyID}` | experimental | not implemented (501) |
-| `experimental.persistentPty.snapshot` | GET | `/api/experimental/persistent-pty/{ptyID}/snapshot` | experimental | not implemented (501) |
-| `experimental.persistentPty.connectToken` | POST | `/api/experimental/persistent-pty/{ptyID}/connect-token` | experimental | not implemented (501) |
-| `experimental.persistentPty.connect` | GET | `/api/experimental/persistent-pty/{ptyID}/connect` | experimental | not implemented (501) |
+| `experimental.persistentPty.read` | GET | `/api/experimental/session/{sessionID}/terminal/read` | experimental | implemented |
+| `experimental.persistentPty.list` | GET | `/api/experimental/session/{sessionID}/terminal` | experimental | implemented |
+| `experimental.persistentPty.create` | POST | `/api/experimental/session/{sessionID}/terminal` | experimental | implemented |
+| `experimental.persistentPty.shutdown` | POST | `/api/experimental/persistent-pty/shutdown` | experimental | implemented |
+| `experimental.persistentPty.handoff` | POST | `/api/experimental/persistent-pty/handoff` | experimental | implemented |
+| `experimental.persistentPty.get` | GET | `/api/experimental/persistent-pty/{ptyID}` | experimental | implemented |
+| `experimental.persistentPty.update` | PUT | `/api/experimental/persistent-pty/{ptyID}` | experimental | implemented |
+| `experimental.persistentPty.remove` | DELETE | `/api/experimental/persistent-pty/{ptyID}` | experimental | implemented |
+| `experimental.persistentPty.snapshot` | GET | `/api/experimental/persistent-pty/{ptyID}/snapshot` | experimental | implemented |
+| `experimental.persistentPty.connectToken` | POST | `/api/experimental/persistent-pty/{ptyID}/connect-token` | experimental | implemented |
+| `experimental.persistentPty.connect` | GET | `/api/experimental/persistent-pty/{ptyID}/connect` | experimental | implemented |
 | `experimental.media.get` | GET | `/api/experimental/media/{hash}` | experimental | not implemented (501) |
 | `experimental.blob.get` | GET | `/api/experimental/blob/{id}` | experimental | not implemented (501) |
 | `experimental.automation.create` | POST | `/api/experimental/automation` | experimental | not implemented (501) |

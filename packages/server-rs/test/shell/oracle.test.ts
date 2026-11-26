@@ -33,7 +33,6 @@ const commands = [
   ["service", "set", "port", "0"],
   ["service", "get", "port"],
 ]
-const persistentPtyMarker = "OR-39-persistent-pty-capability"
 const cookiePattern =
   /^opencode_session_\d+=(\d+\.[A-Za-z0-9_-]{43}); Max-Age=2592000; Path=\/; HttpOnly; SameSite=Lax$/
 
@@ -188,9 +187,6 @@ function normalizeInfo(body: unknown) {
     normalized.urls = body.urls.map((entry) =>
       typeof entry === "string" ? entry.replace(/^(https?:\/\/[^/]+?):\d+/, "$1:<port>") : entry,
     )
-  }
-  if (isRecord(body.capabilities)) {
-    normalized.capabilities = { ...body.capabilities, persistentPty: persistentPtyMarker }
   }
   return normalized
 }

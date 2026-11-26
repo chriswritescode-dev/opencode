@@ -29,6 +29,17 @@ pub const IMPLEMENTED: &[&str] = &[
     "pty.remove",
     "pty.connect.token",
     "pty.connect",
+    "experimental.persistentPty.read",
+    "experimental.persistentPty.list",
+    "experimental.persistentPty.create",
+    "experimental.persistentPty.shutdown",
+    "experimental.persistentPty.handoff",
+    "experimental.persistentPty.get",
+    "experimental.persistentPty.update",
+    "experimental.persistentPty.remove",
+    "experimental.persistentPty.snapshot",
+    "experimental.persistentPty.connectToken",
+    "experimental.persistentPty.connect",
     "experimental.session.log",
     "location.get",
     "location.reload",
@@ -227,6 +238,49 @@ impl App {
                 Err(response) => response,
             },
             "pty.connect" => crate::handlers::pty::connect(self, request, &raw, upgrade).await,
+            "experimental.persistentPty.read" => match self.services() {
+                Some(services) => crate::handlers::persistent_pty::read(&raw, services).await,
+                None => crate::services::services_unavailable(),
+            },
+            "experimental.persistentPty.list" => match self.services() {
+                Some(services) => crate::handlers::persistent_pty::list(&raw, services).await,
+                None => crate::services::services_unavailable(),
+            },
+            "experimental.persistentPty.create" => match self.services() {
+                Some(services) => crate::handlers::persistent_pty::create(&raw, services).await,
+                None => crate::services::services_unavailable(),
+            },
+            "experimental.persistentPty.shutdown" => match self.services() {
+                Some(services) => crate::handlers::persistent_pty::shutdown(services).await,
+                None => crate::services::services_unavailable(),
+            },
+            "experimental.persistentPty.handoff" => match self.services() {
+                Some(services) => crate::handlers::persistent_pty::handoff(services).await,
+                None => crate::services::services_unavailable(),
+            },
+            "experimental.persistentPty.get" => match self.services() {
+                Some(services) => crate::handlers::persistent_pty::get(&raw, services).await,
+                None => crate::services::services_unavailable(),
+            },
+            "experimental.persistentPty.update" => match self.services() {
+                Some(services) => crate::handlers::persistent_pty::update(&raw, services).await,
+                None => crate::services::services_unavailable(),
+            },
+            "experimental.persistentPty.remove" => match self.services() {
+                Some(services) => crate::handlers::persistent_pty::remove(&raw, services).await,
+                None => crate::services::services_unavailable(),
+            },
+            "experimental.persistentPty.snapshot" => match self.services() {
+                Some(services) => crate::handlers::persistent_pty::snapshot(&raw, services).await,
+                None => crate::services::services_unavailable(),
+            },
+            "experimental.persistentPty.connectToken" => match self.services() {
+                Some(services) => crate::handlers::persistent_pty::connect_token(&raw, services, self).await,
+                None => crate::services::services_unavailable(),
+            },
+            "experimental.persistentPty.connect" => {
+                crate::handlers::persistent_pty::connect(self, request, &raw, upgrade).await
+            }
             "experimental.session.log" => match &self.options.state {
                 Some(state) => crate::handlers::session_log::log(state, &raw),
                 None => not_implemented(found.route.identifier),
@@ -513,6 +567,7 @@ impl App {
         if let Some(services) = &self.options.services {
             services.shutdown_executions().await;
             services.locations.shutdown_all().await;
+            services.shutdown_persistent_pty().await;
         }
     }
 
@@ -657,7 +712,9 @@ fn server_info(options: &Options) -> response::Response {
         hostname: options.hostname.clone().filter(|hostname| !hostname.is_empty()).map(Some),
         urls: (options.urls)(),
         paths: ServerInfoPaths { tmp: options.tmp.to_string_lossy().into_owned() },
-        capabilities: Some(Some(ServerInfoCapabilities { persistent_pty: Some(Some(false)) })),
+        capabilities: Some(Some(ServerInfoCapabilities {
+            persistent_pty: Some(Some(opencode_terminal::persistent::available())),
+        })),
     };
     response::bytes(StatusCode::OK, "application/json", opencode_contract::codec::encode_json(&info))
 }

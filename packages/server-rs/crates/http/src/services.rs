@@ -63,6 +63,7 @@ use opencode_session::execution::{Placed, Placement};
 use opencode_session::instructions::BuiltinsInput;
 use opencode_session::search_build::SessionSearchBuild;
 use opencode_storage::Database;
+use opencode_terminal::persistent::{self, PersistentPty};
 use opencode_terminal::pty::{self, Pty};
 use opencode_tool::image::Image as ToolImage;
 use opencode_tool::output::OutputStore as ToolOutputStore;
@@ -191,6 +192,7 @@ pub struct GlobalServices {
     pub watcher: Arc<Watcher>,
     pub file_watch: Arc<FileWatch>,
     pub ripgrep: Arc<Ripgrep>,
+    pub persistent_pty: Arc<PersistentPty>,
     sweep: JoinHandle<()>,
     tool_output_cleanup: JoinHandle<()>,
 }
@@ -580,6 +582,16 @@ impl GlobalServices {
                 }
             }
         });
+        let persistent_pty = PersistentPty::new(
+            persistent::Options {
+                root: paths.state.join("pty"),
+                id: opencode_local::id::v4(),
+                env: pty_env.clone(),
+                inherited: None,
+                default_command: persistent_shell(&pty_env, &paths.bin),
+            },
+            bus.clone(),
+        );
         GlobalServices {
             database,
             bus,
@@ -600,6 +612,7 @@ impl GlobalServices {
             watcher,
             file_watch,
             ripgrep,
+            persistent_pty,
             sweep,
             tool_output_cleanup,
         }
@@ -633,6 +646,15 @@ impl GlobalServices {
     pub async fn shutdown_executions(&self) {
         if let Some(sessions) = &self.sessions {
             sessions.shutdown().await;
+        }
+    }
+
+    pub async fn shutdown_persistent_pty(&self) {
+        if self.persistent_pty.handoff_prepared().await {
+            return;
+        }
+        if let Err(error) = self.persistent_pty.shutdown().await {
+            log::warn!("failed to shut down the persistent PTY daemon: {error}");
         }
     }
 
@@ -974,5 +996,16 @@ pub fn services_unavailable() -> response::Response {
             message: "Location services are unavailable".to_owned(),
             service: Some(Some("location".to_owned())),
         }),
+    )
+}
+
+fn persistent_shell(env: &[(String, String)], bin: &std::path::Path) -> String {
+    let vars = env.to_vec();
+    let path = vars.iter().find(|(name, _)| name == "PATH").map(|(_, value)| OsString::from(value));
+    shell::environment(
+        &move |name| vars.iter().find(|(key, _)| key == name).map(|(_, value)| OsString::from(value)),
+        false,
+        path.as_deref(),
+        bin,
     )
 }

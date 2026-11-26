@@ -14,6 +14,7 @@ mod model;
 mod pairing;
 mod permission;
 mod permission_oracle;
+mod persistent_pty;
 mod plugin;
 mod project;
 mod pty;

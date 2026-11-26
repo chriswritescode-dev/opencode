@@ -46,7 +46,7 @@ async fn ready_info_has_the_typescript_key_order() {
     assert_eq!(value["hostname"], json!("build-machine"));
     assert_eq!(value["urls"], json!(["http://127.0.0.1:4096"]));
     assert_eq!(value["paths"], json!({ "tmp": "/tmp/opencode-http-test" }));
-    assert_eq!(value["capabilities"], json!({ "persistentPty": false }));
+    assert_eq!(value["capabilities"], json!({ "persistentPty": true }));
 }
 
 #[tokio::test]

@@ -23,7 +23,7 @@ use tokio_tungstenite::tungstenite::Message;
 
 use crate::app::App;
 use crate::cors;
-use crate::handlers::{defect, invalid, location_ref};
+use crate::handlers::{defect, header, invalid, location_ref, query_value};
 use crate::response;
 use crate::services::LocationServices;
 use crate::ticket::{TicketScope, TicketStore};
@@ -342,14 +342,6 @@ fn forbidden(message: &str) -> response::Response {
         "application/json",
         encode_json(&ForbiddenError { tag: ForbiddenErrorTag::ForbiddenError, message: message.to_owned() }),
     )
-}
-
-fn header<'a>(raw: &'a RawRequest, name: &str) -> Option<&'a str> {
-    raw.headers.iter().find(|(key, _)| key.eq_ignore_ascii_case(name)).map(|(_, value)| value.as_str())
-}
-
-fn query_value(query: &str, name: &str) -> Option<String> {
-    url::form_urlencoded::parse(query.as_bytes()).find(|(key, _)| key == name).map(|(_, value)| value.into_owned())
 }
 
 fn cursor(query: &str) -> Option<i64> {

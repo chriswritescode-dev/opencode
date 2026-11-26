@@ -138,6 +138,23 @@ fn sample_request(operation: &str) -> Option<(&'static str, &'static str)> {
         "pty.remove" => Some(("DELETE", "/api/pty/pty_unknown")),
         "pty.connect.token" => Some(("POST", "/api/pty/pty_unknown/connect-token")),
         "pty.connect" => Some(("GET", "/api/pty/pty_unknown/connect")),
+        "experimental.persistentPty.read" => Some(("GET", "/api/experimental/session/ses_test/terminal/read")),
+        "experimental.persistentPty.list" => Some(("GET", "/api/experimental/session/ses_test/terminal")),
+        "experimental.persistentPty.create" => Some(("POST", "/api/experimental/session/ses_test/terminal")),
+        "experimental.persistentPty.shutdown" => Some(("POST", "/api/experimental/persistent-pty/shutdown")),
+        "experimental.persistentPty.handoff" => Some(("POST", "/api/experimental/persistent-pty/handoff")),
+        "experimental.persistentPty.get" => Some(("GET", "/api/experimental/persistent-pty/pty_persistent_1")),
+        "experimental.persistentPty.update" => Some(("PUT", "/api/experimental/persistent-pty/pty_persistent_1")),
+        "experimental.persistentPty.remove" => Some(("DELETE", "/api/experimental/persistent-pty/pty_persistent_1")),
+        "experimental.persistentPty.snapshot" => {
+            Some(("GET", "/api/experimental/persistent-pty/pty_persistent_1/snapshot"))
+        }
+        "experimental.persistentPty.connectToken" => {
+            Some(("POST", "/api/experimental/persistent-pty/pty_persistent_1/connect-token"))
+        }
+        "experimental.persistentPty.connect" => {
+            Some(("GET", "/api/experimental/persistent-pty/pty_persistent_1/connect"))
+        }
         "experimental.session.log" => Some(("GET", "/api/experimental/session/ses_test/log")),
         "location.get" => Some(("GET", "/api/location")),
         "location.reload" => Some(("POST", "/api/location/reload")),
@@ -300,5 +317,5 @@ fn implemented_lists_the_ported_operations() {
     assert!(opencode_http::app::IMPLEMENTED.contains(&"plugin.gui"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"plugin.check"));
     assert!(opencode_http::app::IMPLEMENTED.contains(&"plugin.update"));
-    assert_eq!(opencode_http::app::IMPLEMENTED.len(), 75);
+    assert_eq!(opencode_http::app::IMPLEMENTED.len(), 86);
 }

@@ -20,10 +20,11 @@ use tokio::task::JoinHandle;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream, connect_async};
 
-type Client = WebSocketStream<MaybeTlsStream<TcpStream>>;
+pub(crate) type Client = WebSocketStream<MaybeTlsStream<TcpStream>>;
 
-struct Live {
-    port: u16,
+pub(crate) struct Live {
+    pub(crate) port: u16,
+    pub(crate) persistent_root: std::path::PathBuf,
     shutdown: Option<oneshot::Sender<()>>,
     task: JoinHandle<()>,
 }
@@ -38,19 +39,26 @@ impl Drop for Live {
 }
 
 async fn live(directory: &Path) -> Live {
+    live_with(directory, &crate::temp_directory("pty-home"), environment()).await
+}
+
+pub(crate) async fn live_with(directory: &Path, home: &Path, environment: Vec<(String, String)>) -> Live {
     let (database, _) = Database::open(DatabaseLocation::Memory, &std::env::temp_dir()).expect("open the database");
     let database = Arc::new(database);
-    let home = crate::temp_directory("pty-home");
-    let paths =
-        opencode_config::paths::GlobalPaths::from_vars(|name| (name == "HOME").then(|| home.clone().into_os_string()))
-            .expect("global paths");
+    let paths = opencode_config::paths::GlobalPaths::from_vars(|name| {
+        (name == "HOME").then(|| home.to_owned().into_os_string())
+    })
+    .expect("global paths")
+    .acquire()
+    .expect("acquire global paths");
+    let persistent_root = paths.state.join("pty");
     let bus = opencode_bus::Bus::new(database.clone(), opencode_bus::BusOptions::default());
     let services = Arc::new(GlobalServices::new(
         database,
         paths,
         directory.to_string_lossy().into_owned(),
         Arc::new(|_: &str| None),
-        environment(),
+        environment,
         bus,
         crate::global_plugins(),
         "test-version".to_owned(),
@@ -73,10 +81,10 @@ async fn live(directory: &Path) -> Live {
     let task = tokio::spawn(opencode_http::serve::serve(listener, app, async move {
         let _ = receiver.await;
     }));
-    Live { port, shutdown: Some(shutdown), task }
+    Live { port, persistent_root, shutdown: Some(shutdown), task }
 }
 
-fn environment() -> Vec<(String, String)> {
+pub(crate) fn environment() -> Vec<(String, String)> {
     std::env::vars_os()
         .filter_map(|(name, value)| Some((name.into_string().ok()?, value.into_string().ok()?)))
         .collect()
@@ -87,11 +95,11 @@ fn directory_query(directory: &Path) -> String {
     format!("location%5Bdirectory%5D={encoded}")
 }
 
-fn json(bytes: &Bytes) -> Value {
+pub(crate) fn json(bytes: &Bytes) -> Value {
     serde_json::from_slice(bytes).expect("a JSON body")
 }
 
-async fn send(
+pub(crate) async fn send(
     live: &Live,
     method: &str,
     target: &str,
@@ -172,7 +180,7 @@ async fn open(live: &Live, directory: &Path, id: &str) -> (Connection, SocketSta
     (Connection { sink, events: receiver }, SocketState::default())
 }
 
-async fn read_socket(mut stream: SplitStream<Client>, events: mpsc::UnboundedSender<Event>) {
+pub(crate) async fn read_socket(mut stream: SplitStream<Client>, events: mpsc::UnboundedSender<Event>) {
     while let Some(item) = stream.next().await {
         match item {
             Ok(Message::Text(text)) => {
@@ -201,38 +209,38 @@ async fn read_socket(mut stream: SplitStream<Client>, events: mpsc::UnboundedSen
     let _ = events.send(Event::Closed(0, String::new()));
 }
 
-struct Connection {
-    sink: SplitSink<Client, Message>,
-    events: mpsc::UnboundedReceiver<Event>,
+pub(crate) struct Connection {
+    pub(crate) sink: SplitSink<Client, Message>,
+    pub(crate) events: mpsc::UnboundedReceiver<Event>,
 }
 
 impl Connection {
-    async fn text(&mut self, text: &str) {
+    pub(crate) async fn text(&mut self, text: &str) {
         self.sink.send(Message::Text(text.into())).await.expect("send text");
     }
 
-    async fn binary(&mut self, data: &[u8]) {
+    pub(crate) async fn binary(&mut self, data: &[u8]) {
         self.sink.send(Message::Binary(data.to_vec().into())).await.expect("send binary");
     }
 
-    async fn close(&mut self) {
+    pub(crate) async fn close(&mut self) {
         let _ = self.sink.close().await;
     }
 }
 
-enum Event {
+pub(crate) enum Event {
     Text(String),
     Binary(Vec<u8>),
     Closed(u16, String),
 }
 
 #[derive(Default)]
-struct SocketState {
-    output: String,
-    frames: Vec<&'static str>,
-    closed: bool,
-    code: u16,
-    reason: String,
+pub(crate) struct SocketState {
+    pub(crate) output: String,
+    pub(crate) frames: Vec<&'static str>,
+    pub(crate) closed: bool,
+    pub(crate) code: u16,
+    pub(crate) reason: String,
 }
 
 impl SocketState {
@@ -259,7 +267,11 @@ impl SocketState {
     }
 }
 
-async fn wait(connection: &mut Connection, state: &mut SocketState, predicate: impl Fn(&SocketState) -> bool) {
+pub(crate) async fn wait(
+    connection: &mut Connection,
+    state: &mut SocketState,
+    predicate: impl Fn(&SocketState) -> bool,
+) {
     for _ in 0..500 {
         if predicate(state) {
             return;

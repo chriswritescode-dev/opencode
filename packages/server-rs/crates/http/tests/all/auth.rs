@@ -87,8 +87,8 @@ async fn ticketed_connects_skip_authentication_when_ready() {
     let app = ready_app();
     let pty = app.handle(request("GET", "/api/pty/an-id/connect?ticket=t")).await;
     assert_eq!(pty.status(), StatusCode::BAD_REQUEST);
-    let persistent = app.handle(request("GET", "/api/experimental/persistent-pty/an-id/connect?ticket=t")).await;
-    assert_eq!(persistent.status(), StatusCode::NOT_IMPLEMENTED);
+    let persistent = app.handle(request("GET", "/api/experimental/persistent-pty/pty_unknown/connect?ticket=t")).await;
+    assert_eq!(persistent.status(), StatusCode::FORBIDDEN);
     let mcp = app.handle(request("GET", "/api/experimental/client-mcp?ticket=t")).await;
     assert_eq!(mcp.status(), StatusCode::NOT_IMPLEMENTED);
 }

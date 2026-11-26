@@ -99,6 +99,7 @@ pub struct Handoff {
     pub expires_at: u64,
 }
 
+#[derive(Clone)]
 pub struct DaemonOptions {
     pub root: PathBuf,
     pub id: String,
