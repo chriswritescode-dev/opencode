@@ -5,6 +5,10 @@ pub struct Synced {
     pub bytes: Option<Vec<u8>>,
 }
 
+pub fn has(bytes: &[u8]) -> bool {
+    bytes.starts_with(&[0xef, 0xbb, 0xbf])
+}
+
 /// Splits every leading U+FEFF off `text`, reporting whether any were there.
 pub fn split(text: &str) -> (bool, &str) {
     let stripped = text.trim_start_matches('\u{feff}');

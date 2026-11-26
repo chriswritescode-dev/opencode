@@ -1,12 +1,41 @@
-import { resolvePath } from "@opencode/core/file-access"
+import fs from "node:fs/promises"
+import os from "node:os"
+import path from "node:path"
+import { Cause, Effect, Exit, Layer, Option, Stream } from "effect"
+import { Agent } from "@opencode/core/agent"
+import { FileAccess, resolvePath } from "@opencode/core/file-access"
+import { FileSystem } from "@opencode/core/filesystem"
+import { Location } from "@opencode/core/location"
 import { Mime } from "@opencode/core/mime"
+import { Permission } from "@opencode/core/permission"
+import { AbsolutePath, RelativePath } from "@opencode/core/schema"
+import { Session } from "@opencode/core/session"
+import { SessionMessage } from "@opencode/core/session/message"
+import { Tool } from "@opencode/core/tool"
 import { Bom } from "@opencode/util/bom"
+import { LayerNode } from "@opencode/util/effect/layer-node"
 import { FSUtil } from "@opencode/util/fs-util"
+import { location } from "./fixture/location"
+import { permissionLayer } from "./lib/permission"
+
+const invocation = {
+  agent: Agent.ID.make("build"),
+  messageID: SessionMessage.ID.make("msg_fs_corpus"),
+  sessionID: Session.ID.make("ses_fs_corpus"),
+  id: Tool.CallID.make("call-fs-corpus"),
+}
 
 const area = process.argv[2]
+if (area === "filesystem" || area === "access") {
+  console.log = console.error
+  console.info = console.error
+  console.debug = console.error
+}
 if (area === "paths") exportPaths()
 else if (area === "mime") exportMime()
 else if (area === "bom") exportBom()
+else if (area === "filesystem") await exportFilesystem()
+else if (area === "access") await exportAccess()
 else {
   console.error(`corpus: unknown area ${area ?? ""}`)
   process.exit(1)
@@ -198,6 +227,477 @@ function exportBom() {
       })
   }
   write(cases, "/repo", "/home/agent")
+}
+
+async function exportFilesystem() {
+  const base = await fs.mkdtemp(path.join(os.tmpdir(), "opencode-fs-corpus-"))
+  const specs: Array<Record<string, any>> = [
+    {
+      name: "read-text",
+      kind: "read",
+      location: ".",
+      fixture: { files: [{ path: "text.txt", text: "hello" }] },
+      input: "text.txt",
+    },
+    {
+      name: "read-binary",
+      kind: "read",
+      location: ".",
+      fixture: { files: [{ path: "data.bin", base64: "AAECAwQ=" }] },
+      input: "data.bin",
+    },
+    {
+      name: "read-range",
+      kind: "read",
+      location: ".",
+      fixture: { files: [{ path: "data.bin", base64: "AAECAwQ=" }] },
+      input: "data.bin",
+      range: { offset: 1, bytesToRead: 3 },
+    },
+    {
+      name: "read-lexical-escape",
+      kind: "read",
+      location: "current",
+      fixture: { dirs: ["current"], files: [{ path: "outside.txt", text: "outside" }] },
+      input: "../outside.txt",
+    },
+    {
+      name: "read-nul",
+      kind: "read",
+      location: ".",
+      fixture: { files: [{ path: "text.txt", text: "hello" }] },
+      input: "te\u0000xt",
+    },
+    {
+      name: "read-symlink-escape",
+      kind: "read",
+      location: "current",
+      fixture: {
+        dirs: ["current", "outside"],
+        files: [{ path: "outside/file.txt", text: "outside" }],
+        symlinks: [{ path: "current/link", target: "../outside" }],
+      },
+      input: "link/file.txt",
+    },
+    { name: "read-missing", kind: "read", location: ".", input: "missing.txt" },
+    { name: "read-directory", kind: "read", location: ".", fixture: { dirs: ["src"] }, input: "src" },
+    {
+      name: "list-direct-children",
+      kind: "list",
+      location: ".",
+      fixture: { dirs: ["src"], files: [{ path: "README.md", text: "# Test" }] },
+    },
+    {
+      name: "list-sorted",
+      kind: "list",
+      location: ".",
+      fixture: {
+        dirs: ["z-dir", "a-dir"],
+        files: [
+          { path: "b.txt", text: "b" },
+          { path: "a.txt", text: "a" },
+          { path: "c.json", text: "{}" },
+        ],
+      },
+      input: ".",
+    },
+    {
+      name: "list-parent",
+      kind: "list",
+      location: "current",
+      fixture: { dirs: ["current", "sibling"], files: [{ path: "sibling/file.txt", text: "outside" }] },
+      input: "..",
+    },
+    {
+      name: "list-sibling",
+      kind: "list",
+      location: "current",
+      fixture: { dirs: ["current", "sibling"], files: [{ path: "sibling/file.txt", text: "outside" }] },
+      input: "../sibling",
+    },
+    {
+      name: "list-absolute",
+      kind: "list",
+      location: "current",
+      fixture: { dirs: ["current", "sibling"], files: [{ path: "sibling/file.txt", text: "outside" }] },
+      absoluteInput: "sibling",
+    },
+    {
+      name: "list-symlink",
+      kind: "list",
+      location: "current",
+      fixture: {
+        dirs: ["current", "outside"],
+        files: [{ path: "outside/file.txt", text: "outside" }],
+        symlinks: [{ path: "current/link", target: "../outside" }],
+      },
+      input: "link",
+    },
+    {
+      name: "list-file",
+      kind: "list",
+      location: ".",
+      fixture: { files: [{ path: "text.txt", text: "hello" }] },
+      input: "text.txt",
+    },
+    { name: "list-missing", kind: "list", location: ".", input: "missing" },
+    {
+      name: "write-symlink",
+      kind: "write",
+      location: "current",
+      fixture: { dirs: ["current", "outside"], symlinks: [{ path: "current/link", target: "../outside" }] },
+      input: "link/new.txt",
+      base64: Buffer.from("created").toString("base64"),
+    },
+  ]
+  const cases: Array<Record<string, unknown>> = []
+  for (const spec of specs) {
+    const directory = path.join(base, spec.name)
+    await fs.mkdir(directory, { recursive: true })
+    await materialize(directory, spec.fixture ?? {})
+    const locationDirectory = path.join(directory, spec.location ?? ".")
+    const input = spec.absoluteInput ? path.join(directory, spec.absoluteInput) : spec.input
+    const caseSpec = { ...spec, input }
+    const exit = await Effect.runPromiseExit(
+      filesystemProgram(caseSpec).pipe(Effect.provide(filesystemProvider(locationDirectory))),
+    )
+    cases.push({
+      ...caseSpec,
+      expected: Exit.isSuccess(exit) ? exit.value : { error: errorTag(exit) },
+    })
+  }
+  write(cases, base, os.homedir())
+  await fs.rm(base, { recursive: true, force: true })
+}
+
+function filesystemProvider(directory: string) {
+  return LayerNode.compile(FileSystem.node, {
+    replacements: [
+      Location.node.replace(
+        Layer.succeed(
+          Location.Service,
+          Location.Service.of(location({ directory: AbsolutePath.make(directory) })),
+        ),
+      ),
+    ],
+  })
+}
+
+function filesystemProgram(spec: Record<string, any>) {
+  if (spec.kind === "read") {
+    return Effect.gen(function* () {
+      const service = yield* FileSystem.Service
+      const file = yield* service.read({ path: RelativePath.make(spec.input) })
+      const bytes = yield* Stream.mkUint8Array(file.stream(spec.range))
+      return {
+        mime: file.mime,
+        size: file.size,
+        mtime: Option.isSome(file.mtime),
+        bytes: Buffer.from(bytes).toString("base64"),
+      }
+    })
+  }
+  if (spec.kind === "list") {
+    return Effect.gen(function* () {
+      const service = yield* FileSystem.Service
+      const entries = yield* service.list(spec.input === undefined ? undefined : { path: RelativePath.make(spec.input) })
+      return entries.map((entry) => ({ path: entry.path, type: entry.type }))
+    })
+  }
+  if (spec.kind === "write") {
+    return Effect.gen(function* () {
+      const service = yield* FileSystem.Service
+      const written = yield* service.write({ path: spec.input, data: Buffer.from(spec.base64, "base64") })
+      const bytes = yield* Effect.promise(() => fs.readFile(written.path))
+      return { path: written.path, bytes: Buffer.from(bytes).toString("base64") }
+    })
+  }
+  throw new Error(`corpus: unknown filesystem case ${spec.kind}`)
+}
+
+async function exportAccess() {
+  const base = await fs.mkdtemp(path.join(os.tmpdir(), "opencode-fs-corpus-"))
+  const specs: Array<Record<string, any>> = [
+    {
+      name: "resolve-internal-relative",
+      location: ".",
+      fixture: { files: [{ path: "hello.txt", text: "hello" }] },
+      ops: [{ op: "resolve", path: "hello.txt" }],
+    },
+    {
+      name: "resolve-internal-prospective",
+      location: ".",
+      fixture: { dirs: ["src"] },
+      ops: [{ op: "resolve", path: "src/new.txt" }],
+    },
+    {
+      name: "resolve-relative-escape",
+      location: "current",
+      fixture: { dirs: ["current"] },
+      ops: [{ op: "resolve", path: "../outside.txt" }],
+    },
+    {
+      name: "resolve-project-worktree",
+      location: "packages/opencode",
+      project: ".",
+      fixture: { dirs: ["packages/opencode"] },
+      ops: [{ op: "resolve", path: "../../README.md" }],
+    },
+    {
+      name: "resolve-root-sentinel",
+      location: "current",
+      project: "/",
+      fixture: { dirs: ["current"] },
+      ops: [{ op: "resolve", path: "../outside.txt" }],
+    },
+    {
+      name: "resolve-absolute-internal",
+      location: ".",
+      ops: [{ op: "resolve", absoluteInput: "new.txt" }],
+    },
+    {
+      name: "resolve-absolute-external",
+      location: "current",
+      fixture: { dirs: ["current"] },
+      ops: [{ op: "resolve", absoluteInput: "outside/new.txt" }],
+    },
+    {
+      name: "resolve-existing-external-file",
+      location: "current",
+      fixture: { dirs: ["current", "outside"], files: [{ path: "outside/existing.txt", text: "existing" }] },
+      ops: [{ op: "resolve", absoluteInput: "outside/existing.txt" }],
+    },
+    {
+      name: "resolve-explicit-file-kind",
+      location: "current",
+      fixture: { dirs: ["current", "outside"] },
+      ops: [{ op: "resolve", absoluteInput: "outside", kind: "file" }],
+    },
+    {
+      name: "resolve-external-descendant",
+      location: "current",
+      fixture: { dirs: ["current"] },
+      ops: [{ op: "resolve", absoluteInput: "outside/new/nested/file.txt" }],
+    },
+    {
+      name: "resolve-repo-save",
+      location: "current",
+      fixture: { dirs: ["current", "outside/.git", "outside/src"] },
+      ops: [{ op: "resolve", absoluteInput: "outside/src" }],
+    },
+    {
+      name: "resolve-symlink-lexical",
+      location: "current",
+      fixture: { dirs: ["current", "outside"], symlinks: [{ path: "current/escape", target: "../outside" }] },
+      ops: [{ op: "resolve", path: "escape/new.txt" }],
+    },
+    {
+      name: "resolve-in-location-symlink",
+      location: ".",
+      fixture: { dirs: ["actual"], symlinks: [{ path: "linked", target: "actual" }] },
+      ops: [{ op: "resolve", path: "linked/new.txt" }],
+    },
+    {
+      name: "authorize-read-internal",
+      location: ".",
+      fixture: { files: [{ path: "README.md", text: "# Test" }] },
+      ops: [{ op: "authorizeRead", path: "src/../README.md" }],
+    },
+    {
+      name: "authorize-read-external",
+      location: "current",
+      fixture: { dirs: ["current"] },
+      ops: [{ op: "authorizeRead", path: "../notes.txt" }],
+    },
+    {
+      name: "authorize-read-sibling",
+      location: "current",
+      fixture: { dirs: ["current"] },
+      ops: [
+        { op: "authorizeRead", path: "../report final.txt" },
+        { op: "authorizeRead", path: "../report\u202ffinal.txt", siblingOf: 0 },
+        { op: "authorizeRead", path: "../notes.txt" },
+      ],
+    },
+    {
+      name: "authorize-read-not-sibling",
+      location: ".",
+      fixture: { files: [{ path: "README.md", text: "# Test" }] },
+      ops: [
+        { op: "authorizeRead", path: "README.md" },
+        { op: "authorizeRead", path: "../notes.txt", siblingOf: 0 },
+      ],
+    },
+    {
+      name: "authorize-denied-external",
+      location: "current",
+      fixture: { dirs: ["current"] },
+      deny: "external_directory",
+      ops: [{ op: "authorizeRead", path: "../notes.txt" }],
+    },
+    {
+      name: "authorize-denied-read",
+      location: "current",
+      fixture: { dirs: ["current"] },
+      deny: "read",
+      ops: [{ op: "authorizeRead", path: "../notes.txt" }],
+    },
+    {
+      name: "authorize-external-batch",
+      location: "current",
+      fixture: {
+        dirs: ["current", "git/.git", "git/nested", "hg/.hg", "hg/nested"],
+        files: [{ path: "current/README.md", text: "# Test" }],
+      },
+      metadata: (directory: string) => ({
+        filepath: path.join(directory, "git", "nested", "a.txt"),
+        parentDir: path.join(directory, "git", "nested"),
+      }),
+      ops: [
+        { op: "resolve", absoluteInput: "git/nested/a.txt", kind: "file" },
+        { op: "resolve", absoluteInput: "git/nested/b.txt", kind: "file" },
+        { op: "resolve", absoluteInput: "hg/nested/c.txt", kind: "file" },
+        { op: "resolve", path: "README.md" },
+        { op: "authorizeExternal", targets: [0, 3, 1, 2, 0], metadata: true },
+        { op: "authorizeExternal", targets: [3] },
+        { op: "authorizeExternal", targets: [1] },
+      ],
+    },
+  ]
+  const cases: Array<Record<string, unknown>> = []
+  for (const spec of specs) {
+    const directory = path.join(base, spec.name)
+    await fs.mkdir(directory, { recursive: true })
+    await materialize(directory, spec.fixture ?? {})
+    const locationDirectory = path.join(directory, spec.location ?? ".")
+    const projectDirectory =
+      spec.project === "/" ? "/" : spec.project === undefined ? locationDirectory : path.join(directory, spec.project)
+    const caseMetadata = typeof spec.metadata === "function" ? spec.metadata(directory) : spec.metadata
+    const requests: Array<Record<string, unknown>> = []
+    const targets: Array<FileAccess.Target> = []
+    const results: Array<unknown> = []
+    const program = Effect.gen(function* () {
+      const access = yield* FileAccess.Service
+      for (const op of spec.ops) {
+        const input = op.absoluteInput ? path.join(directory, op.absoluteInput) : op.path
+        if (op.op === "resolve") {
+          const target = yield* access.resolve({ path: input, kind: op.kind })
+          targets.push(target)
+          results.push(targetValue(target))
+        } else if (op.op === "authorizeExternal") {
+          const metadata = op.metadata === true ? caseMetadata : op.metadata
+          yield* access.authorizeExternal(
+            op.targets.map((index: number) => targets[index]),
+            invocation,
+            metadata,
+          )
+          results.push(null)
+        } else if (op.op === "authorizeRead") {
+          const options = op.siblingOf === undefined ? undefined : { siblingOf: targets[op.siblingOf] }
+          const target = yield* access.authorizeRead(input, invocation, options)
+          targets.push(target)
+          results.push(targetValue(target))
+        }
+      }
+    })
+    const exit = await Effect.runPromiseExit(
+      program.pipe(Effect.provide(accessProvider(locationDirectory, projectDirectory, requests, spec.deny))),
+    )
+    const expected: Record<string, unknown> = {
+      targets: results.filter((value) => value !== null),
+      requests,
+    }
+    if (Exit.isFailure(exit)) expected.error = errorTag(exit)
+    cases.push({ ...spec, metadata: caseMetadata, expected })
+  }
+  write(cases, base, os.homedir())
+  await fs.rm(base, { recursive: true, force: true })
+}
+
+function accessProvider(
+  directory: string,
+  projectDirectory: string,
+  requests: Array<Record<string, unknown>>,
+  deny?: string,
+) {
+  return LayerNode.compile(FileAccess.node, {
+    replacements: [
+      Permission.node.replace(
+        permissionLayer({
+          assert: (input) =>
+            Effect.gen(function* () {
+              requests.push(requestValue(input))
+              if (input.action === deny)
+                yield* new Permission.BlockedError({
+                  rules: [],
+                  permission: input.action,
+                  resources: input.resources,
+                })
+            }),
+        }),
+      ),
+      Location.node.replace(
+        Layer.succeed(
+          Location.Service,
+          Location.Service.of(
+            location(
+              { directory: AbsolutePath.make(directory) },
+              { projectDirectory: AbsolutePath.make(projectDirectory) },
+            ),
+          ),
+        ),
+      ),
+    ],
+  })
+}
+
+function requestValue(input: Permission.AssertInput) {
+  return {
+    action: input.action,
+    resources: input.resources,
+    save: input.save,
+    sessionID: input.sessionID,
+    agent: input.agent,
+    source: input.source,
+    ...(input.metadata === undefined ? {} : { metadata: JSON.parse(JSON.stringify(input.metadata)) }),
+  }
+}
+
+function targetValue(target: FileAccess.Target) {
+  return {
+    absolute: target.absolute,
+    resource: target.resource,
+    externalDirectory: target.externalDirectory
+      ? {
+          action: target.externalDirectory.action,
+          directory: target.externalDirectory.directory,
+          resource: target.externalDirectory.resource,
+          save: target.externalDirectory.save,
+        }
+      : null,
+  }
+}
+
+async function materialize(directory: string, fixture: Record<string, any>) {
+  for (const dir of fixture.dirs ?? []) await fs.mkdir(path.join(directory, dir), { recursive: true })
+  for (const file of fixture.files ?? []) {
+    const target = path.join(directory, file.path)
+    await fs.mkdir(path.dirname(target), { recursive: true })
+    await fs.writeFile(target, file.base64 ? Buffer.from(file.base64, "base64") : (file.text ?? ""))
+  }
+  for (const link of fixture.symlinks ?? []) {
+    const target = path.join(directory, link.path)
+    await fs.mkdir(path.dirname(target), { recursive: true })
+    await fs.symlink(link.target, target)
+  }
+}
+
+function errorTag(exit: Exit.Exit<unknown, unknown>) {
+  if (Exit.isSuccess(exit)) return undefined
+  const found = Cause.findErrorOption(exit.cause)
+  if (Option.isSome(found) && typeof found.value === "object" && found.value !== null && "_tag" in found.value)
+    return String((found.value as { _tag: unknown })._tag)
+  return "Die"
 }
 
 function write(cases: Array<Record<string, unknown>>, root: string, home: string) {

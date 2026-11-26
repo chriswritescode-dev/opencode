@@ -1,0 +1,964 @@
+[
+  {
+    "name": "resolve-internal-relative",
+    "location": ".",
+    "fixture": {
+      "files": [
+        {
+          "path": "hello.txt",
+          "text": "hello"
+        }
+      ]
+    },
+    "ops": [
+      {
+        "op": "resolve",
+        "path": "hello.txt"
+      }
+    ],
+    "expected": {
+      "targets": [
+        {
+          "absolute": "{{root}}/resolve-internal-relative/hello.txt",
+          "resource": "hello.txt",
+          "externalDirectory": null
+        }
+      ],
+      "requests": []
+    }
+  },
+  {
+    "name": "resolve-internal-prospective",
+    "location": ".",
+    "fixture": {
+      "dirs": [
+        "src"
+      ]
+    },
+    "ops": [
+      {
+        "op": "resolve",
+        "path": "src/new.txt"
+      }
+    ],
+    "expected": {
+      "targets": [
+        {
+          "absolute": "{{root}}/resolve-internal-prospective/src/new.txt",
+          "resource": "src/new.txt",
+          "externalDirectory": null
+        }
+      ],
+      "requests": []
+    }
+  },
+  {
+    "name": "resolve-relative-escape",
+    "location": "current",
+    "fixture": {
+      "dirs": [
+        "current"
+      ]
+    },
+    "ops": [
+      {
+        "op": "resolve",
+        "path": "../outside.txt"
+      }
+    ],
+    "expected": {
+      "targets": [
+        {
+          "absolute": "{{root}}/resolve-relative-escape/outside.txt",
+          "resource": "{{root}}/resolve-relative-escape/outside.txt",
+          "externalDirectory": {
+            "action": "external_directory",
+            "directory": "{{root}}/resolve-relative-escape",
+            "resource": "{{root}}/resolve-relative-escape/*",
+            "save": "{{root}}/resolve-relative-escape/*"
+          }
+        }
+      ],
+      "requests": []
+    }
+  },
+  {
+    "name": "resolve-project-worktree",
+    "location": "packages/opencode",
+    "project": ".",
+    "fixture": {
+      "dirs": [
+        "packages/opencode"
+      ]
+    },
+    "ops": [
+      {
+        "op": "resolve",
+        "path": "../../README.md"
+      }
+    ],
+    "expected": {
+      "targets": [
+        {
+          "absolute": "{{root}}/resolve-project-worktree/README.md",
+          "resource": "../../README.md",
+          "externalDirectory": null
+        }
+      ],
+      "requests": []
+    }
+  },
+  {
+    "name": "resolve-root-sentinel",
+    "location": "current",
+    "project": "/",
+    "fixture": {
+      "dirs": [
+        "current"
+      ]
+    },
+    "ops": [
+      {
+        "op": "resolve",
+        "path": "../outside.txt"
+      }
+    ],
+    "expected": {
+      "targets": [
+        {
+          "absolute": "{{root}}/resolve-root-sentinel/outside.txt",
+          "resource": "{{root}}/resolve-root-sentinel/outside.txt",
+          "externalDirectory": {
+            "action": "external_directory",
+            "directory": "{{root}}/resolve-root-sentinel",
+            "resource": "{{root}}/resolve-root-sentinel/*",
+            "save": "{{root}}/resolve-root-sentinel/*"
+          }
+        }
+      ],
+      "requests": []
+    }
+  },
+  {
+    "name": "resolve-absolute-internal",
+    "location": ".",
+    "ops": [
+      {
+        "op": "resolve",
+        "absoluteInput": "new.txt"
+      }
+    ],
+    "expected": {
+      "targets": [
+        {
+          "absolute": "{{root}}/resolve-absolute-internal/new.txt",
+          "resource": "new.txt",
+          "externalDirectory": null
+        }
+      ],
+      "requests": []
+    }
+  },
+  {
+    "name": "resolve-absolute-external",
+    "location": "current",
+    "fixture": {
+      "dirs": [
+        "current"
+      ]
+    },
+    "ops": [
+      {
+        "op": "resolve",
+        "absoluteInput": "outside/new.txt"
+      }
+    ],
+    "expected": {
+      "targets": [
+        {
+          "absolute": "{{root}}/resolve-absolute-external/outside/new.txt",
+          "resource": "{{root}}/resolve-absolute-external/outside/new.txt",
+          "externalDirectory": {
+            "action": "external_directory",
+            "directory": "{{root}}/resolve-absolute-external/outside",
+            "resource": "{{root}}/resolve-absolute-external/outside/*",
+            "save": "{{root}}/resolve-absolute-external/outside/*"
+          }
+        }
+      ],
+      "requests": []
+    }
+  },
+  {
+    "name": "resolve-existing-external-file",
+    "location": "current",
+    "fixture": {
+      "dirs": [
+        "current",
+        "outside"
+      ],
+      "files": [
+        {
+          "path": "outside/existing.txt",
+          "text": "existing"
+        }
+      ]
+    },
+    "ops": [
+      {
+        "op": "resolve",
+        "absoluteInput": "outside/existing.txt"
+      }
+    ],
+    "expected": {
+      "targets": [
+        {
+          "absolute": "{{root}}/resolve-existing-external-file/outside/existing.txt",
+          "resource": "{{root}}/resolve-existing-external-file/outside/existing.txt",
+          "externalDirectory": {
+            "action": "external_directory",
+            "directory": "{{root}}/resolve-existing-external-file/outside",
+            "resource": "{{root}}/resolve-existing-external-file/outside/*",
+            "save": "{{root}}/resolve-existing-external-file/outside/*"
+          }
+        }
+      ],
+      "requests": []
+    }
+  },
+  {
+    "name": "resolve-explicit-file-kind",
+    "location": "current",
+    "fixture": {
+      "dirs": [
+        "current",
+        "outside"
+      ]
+    },
+    "ops": [
+      {
+        "op": "resolve",
+        "absoluteInput": "outside",
+        "kind": "file"
+      }
+    ],
+    "expected": {
+      "targets": [
+        {
+          "absolute": "{{root}}/resolve-explicit-file-kind/outside",
+          "resource": "{{root}}/resolve-explicit-file-kind/outside",
+          "externalDirectory": {
+            "action": "external_directory",
+            "directory": "{{root}}/resolve-explicit-file-kind",
+            "resource": "{{root}}/resolve-explicit-file-kind/*",
+            "save": "{{root}}/resolve-explicit-file-kind/*"
+          }
+        }
+      ],
+      "requests": []
+    }
+  },
+  {
+    "name": "resolve-external-descendant",
+    "location": "current",
+    "fixture": {
+      "dirs": [
+        "current"
+      ]
+    },
+    "ops": [
+      {
+        "op": "resolve",
+        "absoluteInput": "outside/new/nested/file.txt"
+      }
+    ],
+    "expected": {
+      "targets": [
+        {
+          "absolute": "{{root}}/resolve-external-descendant/outside/new/nested/file.txt",
+          "resource": "{{root}}/resolve-external-descendant/outside/new/nested/file.txt",
+          "externalDirectory": {
+            "action": "external_directory",
+            "directory": "{{root}}/resolve-external-descendant/outside/new/nested",
+            "resource": "{{root}}/resolve-external-descendant/outside/new/nested/*",
+            "save": "{{root}}/resolve-external-descendant/outside/new/nested/*"
+          }
+        }
+      ],
+      "requests": []
+    }
+  },
+  {
+    "name": "resolve-repo-save",
+    "location": "current",
+    "fixture": {
+      "dirs": [
+        "current",
+        "outside/.git",
+        "outside/src"
+      ]
+    },
+    "ops": [
+      {
+        "op": "resolve",
+        "absoluteInput": "outside/src"
+      }
+    ],
+    "expected": {
+      "targets": [
+        {
+          "absolute": "{{root}}/resolve-repo-save/outside/src",
+          "resource": "{{root}}/resolve-repo-save/outside/src",
+          "externalDirectory": {
+            "action": "external_directory",
+            "directory": "{{root}}/resolve-repo-save/outside/src",
+            "resource": "{{root}}/resolve-repo-save/outside/src/*",
+            "save": "{{root}}/resolve-repo-save/outside/*"
+          }
+        }
+      ],
+      "requests": []
+    }
+  },
+  {
+    "name": "resolve-symlink-lexical",
+    "location": "current",
+    "fixture": {
+      "dirs": [
+        "current",
+        "outside"
+      ],
+      "symlinks": [
+        {
+          "path": "current/escape",
+          "target": "../outside"
+        }
+      ]
+    },
+    "ops": [
+      {
+        "op": "resolve",
+        "path": "escape/new.txt"
+      }
+    ],
+    "expected": {
+      "targets": [
+        {
+          "absolute": "{{root}}/resolve-symlink-lexical/current/escape/new.txt",
+          "resource": "escape/new.txt",
+          "externalDirectory": null
+        }
+      ],
+      "requests": []
+    }
+  },
+  {
+    "name": "resolve-in-location-symlink",
+    "location": ".",
+    "fixture": {
+      "dirs": [
+        "actual"
+      ],
+      "symlinks": [
+        {
+          "path": "linked",
+          "target": "actual"
+        }
+      ]
+    },
+    "ops": [
+      {
+        "op": "resolve",
+        "path": "linked/new.txt"
+      }
+    ],
+    "expected": {
+      "targets": [
+        {
+          "absolute": "{{root}}/resolve-in-location-symlink/linked/new.txt",
+          "resource": "linked/new.txt",
+          "externalDirectory": null
+        }
+      ],
+      "requests": []
+    }
+  },
+  {
+    "name": "authorize-read-internal",
+    "location": ".",
+    "fixture": {
+      "files": [
+        {
+          "path": "README.md",
+          "text": "# Test"
+        }
+      ]
+    },
+    "ops": [
+      {
+        "op": "authorizeRead",
+        "path": "src/../README.md"
+      }
+    ],
+    "expected": {
+      "targets": [
+        {
+          "absolute": "{{root}}/authorize-read-internal/README.md",
+          "resource": "README.md",
+          "externalDirectory": null
+        }
+      ],
+      "requests": [
+        {
+          "action": "read",
+          "resources": [
+            "README.md"
+          ],
+          "save": [
+            "*"
+          ],
+          "sessionID": "ses_fs_corpus",
+          "agent": "build",
+          "source": {
+            "type": "tool",
+            "messageID": "msg_fs_corpus",
+            "id": "call-fs-corpus"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "authorize-read-external",
+    "location": "current",
+    "fixture": {
+      "dirs": [
+        "current"
+      ]
+    },
+    "ops": [
+      {
+        "op": "authorizeRead",
+        "path": "../notes.txt"
+      }
+    ],
+    "expected": {
+      "targets": [
+        {
+          "absolute": "{{root}}/authorize-read-external/notes.txt",
+          "resource": "{{root}}/authorize-read-external/notes.txt",
+          "externalDirectory": {
+            "action": "external_directory",
+            "directory": "{{root}}/authorize-read-external",
+            "resource": "{{root}}/authorize-read-external/*",
+            "save": "{{root}}/authorize-read-external/*"
+          }
+        }
+      ],
+      "requests": [
+        {
+          "action": "external_directory",
+          "resources": [
+            "{{root}}/authorize-read-external/*"
+          ],
+          "save": [
+            "{{root}}/authorize-read-external/*"
+          ],
+          "sessionID": "ses_fs_corpus",
+          "agent": "build",
+          "source": {
+            "type": "tool",
+            "messageID": "msg_fs_corpus",
+            "id": "call-fs-corpus"
+          }
+        },
+        {
+          "action": "read",
+          "resources": [
+            "{{root}}/authorize-read-external/notes.txt"
+          ],
+          "save": [
+            "*"
+          ],
+          "sessionID": "ses_fs_corpus",
+          "agent": "build",
+          "source": {
+            "type": "tool",
+            "messageID": "msg_fs_corpus",
+            "id": "call-fs-corpus"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "authorize-read-sibling",
+    "location": "current",
+    "fixture": {
+      "dirs": [
+        "current"
+      ]
+    },
+    "ops": [
+      {
+        "op": "authorizeRead",
+        "path": "../report final.txt"
+      },
+      {
+        "op": "authorizeRead",
+        "path": "../report final.txt",
+        "siblingOf": 0
+      },
+      {
+        "op": "authorizeRead",
+        "path": "../notes.txt"
+      }
+    ],
+    "expected": {
+      "targets": [
+        {
+          "absolute": "{{root}}/authorize-read-sibling/report final.txt",
+          "resource": "{{root}}/authorize-read-sibling/report final.txt",
+          "externalDirectory": {
+            "action": "external_directory",
+            "directory": "{{root}}/authorize-read-sibling",
+            "resource": "{{root}}/authorize-read-sibling/*",
+            "save": "{{root}}/authorize-read-sibling/*"
+          }
+        },
+        {
+          "absolute": "{{root}}/authorize-read-sibling/report final.txt",
+          "resource": "{{root}}/authorize-read-sibling/report final.txt",
+          "externalDirectory": {
+            "action": "external_directory",
+            "directory": "{{root}}/authorize-read-sibling",
+            "resource": "{{root}}/authorize-read-sibling/*",
+            "save": "{{root}}/authorize-read-sibling/*"
+          }
+        },
+        {
+          "absolute": "{{root}}/authorize-read-sibling/notes.txt",
+          "resource": "{{root}}/authorize-read-sibling/notes.txt",
+          "externalDirectory": {
+            "action": "external_directory",
+            "directory": "{{root}}/authorize-read-sibling",
+            "resource": "{{root}}/authorize-read-sibling/*",
+            "save": "{{root}}/authorize-read-sibling/*"
+          }
+        }
+      ],
+      "requests": [
+        {
+          "action": "external_directory",
+          "resources": [
+            "{{root}}/authorize-read-sibling/*"
+          ],
+          "save": [
+            "{{root}}/authorize-read-sibling/*"
+          ],
+          "sessionID": "ses_fs_corpus",
+          "agent": "build",
+          "source": {
+            "type": "tool",
+            "messageID": "msg_fs_corpus",
+            "id": "call-fs-corpus"
+          }
+        },
+        {
+          "action": "read",
+          "resources": [
+            "{{root}}/authorize-read-sibling/report final.txt"
+          ],
+          "save": [
+            "*"
+          ],
+          "sessionID": "ses_fs_corpus",
+          "agent": "build",
+          "source": {
+            "type": "tool",
+            "messageID": "msg_fs_corpus",
+            "id": "call-fs-corpus"
+          }
+        },
+        {
+          "action": "read",
+          "resources": [
+            "{{root}}/authorize-read-sibling/report final.txt"
+          ],
+          "save": [
+            "*"
+          ],
+          "sessionID": "ses_fs_corpus",
+          "agent": "build",
+          "source": {
+            "type": "tool",
+            "messageID": "msg_fs_corpus",
+            "id": "call-fs-corpus"
+          }
+        },
+        {
+          "action": "external_directory",
+          "resources": [
+            "{{root}}/authorize-read-sibling/*"
+          ],
+          "save": [
+            "{{root}}/authorize-read-sibling/*"
+          ],
+          "sessionID": "ses_fs_corpus",
+          "agent": "build",
+          "source": {
+            "type": "tool",
+            "messageID": "msg_fs_corpus",
+            "id": "call-fs-corpus"
+          }
+        },
+        {
+          "action": "read",
+          "resources": [
+            "{{root}}/authorize-read-sibling/notes.txt"
+          ],
+          "save": [
+            "*"
+          ],
+          "sessionID": "ses_fs_corpus",
+          "agent": "build",
+          "source": {
+            "type": "tool",
+            "messageID": "msg_fs_corpus",
+            "id": "call-fs-corpus"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "authorize-read-not-sibling",
+    "location": ".",
+    "fixture": {
+      "files": [
+        {
+          "path": "README.md",
+          "text": "# Test"
+        }
+      ]
+    },
+    "ops": [
+      {
+        "op": "authorizeRead",
+        "path": "README.md"
+      },
+      {
+        "op": "authorizeRead",
+        "path": "../notes.txt",
+        "siblingOf": 0
+      }
+    ],
+    "expected": {
+      "targets": [
+        {
+          "absolute": "{{root}}/authorize-read-not-sibling/README.md",
+          "resource": "README.md",
+          "externalDirectory": null
+        },
+        {
+          "absolute": "{{root}}/notes.txt",
+          "resource": "{{root}}/notes.txt",
+          "externalDirectory": {
+            "action": "external_directory",
+            "directory": "{{root}}",
+            "resource": "{{root}}/*",
+            "save": "{{root}}/*"
+          }
+        }
+      ],
+      "requests": [
+        {
+          "action": "read",
+          "resources": [
+            "README.md"
+          ],
+          "save": [
+            "*"
+          ],
+          "sessionID": "ses_fs_corpus",
+          "agent": "build",
+          "source": {
+            "type": "tool",
+            "messageID": "msg_fs_corpus",
+            "id": "call-fs-corpus"
+          }
+        },
+        {
+          "action": "external_directory",
+          "resources": [
+            "{{root}}/*"
+          ],
+          "save": [
+            "{{root}}/*"
+          ],
+          "sessionID": "ses_fs_corpus",
+          "agent": "build",
+          "source": {
+            "type": "tool",
+            "messageID": "msg_fs_corpus",
+            "id": "call-fs-corpus"
+          }
+        },
+        {
+          "action": "read",
+          "resources": [
+            "{{root}}/notes.txt"
+          ],
+          "save": [
+            "*"
+          ],
+          "sessionID": "ses_fs_corpus",
+          "agent": "build",
+          "source": {
+            "type": "tool",
+            "messageID": "msg_fs_corpus",
+            "id": "call-fs-corpus"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "authorize-denied-external",
+    "location": "current",
+    "fixture": {
+      "dirs": [
+        "current"
+      ]
+    },
+    "deny": "external_directory",
+    "ops": [
+      {
+        "op": "authorizeRead",
+        "path": "../notes.txt"
+      }
+    ],
+    "expected": {
+      "targets": [],
+      "requests": [
+        {
+          "action": "external_directory",
+          "resources": [
+            "{{root}}/authorize-denied-external/*"
+          ],
+          "save": [
+            "{{root}}/authorize-denied-external/*"
+          ],
+          "sessionID": "ses_fs_corpus",
+          "agent": "build",
+          "source": {
+            "type": "tool",
+            "messageID": "msg_fs_corpus",
+            "id": "call-fs-corpus"
+          }
+        }
+      ],
+      "error": "Permission.BlockedError"
+    }
+  },
+  {
+    "name": "authorize-denied-read",
+    "location": "current",
+    "fixture": {
+      "dirs": [
+        "current"
+      ]
+    },
+    "deny": "read",
+    "ops": [
+      {
+        "op": "authorizeRead",
+        "path": "../notes.txt"
+      }
+    ],
+    "expected": {
+      "targets": [],
+      "requests": [
+        {
+          "action": "external_directory",
+          "resources": [
+            "{{root}}/authorize-denied-read/*"
+          ],
+          "save": [
+            "{{root}}/authorize-denied-read/*"
+          ],
+          "sessionID": "ses_fs_corpus",
+          "agent": "build",
+          "source": {
+            "type": "tool",
+            "messageID": "msg_fs_corpus",
+            "id": "call-fs-corpus"
+          }
+        },
+        {
+          "action": "read",
+          "resources": [
+            "{{root}}/authorize-denied-read/notes.txt"
+          ],
+          "save": [
+            "*"
+          ],
+          "sessionID": "ses_fs_corpus",
+          "agent": "build",
+          "source": {
+            "type": "tool",
+            "messageID": "msg_fs_corpus",
+            "id": "call-fs-corpus"
+          }
+        }
+      ],
+      "error": "Permission.BlockedError"
+    }
+  },
+  {
+    "name": "authorize-external-batch",
+    "location": "current",
+    "fixture": {
+      "dirs": [
+        "current",
+        "git/.git",
+        "git/nested",
+        "hg/.hg",
+        "hg/nested"
+      ],
+      "files": [
+        {
+          "path": "current/README.md",
+          "text": "# Test"
+        }
+      ]
+    },
+    "metadata": {
+      "filepath": "{{root}}/authorize-external-batch/git/nested/a.txt",
+      "parentDir": "{{root}}/authorize-external-batch/git/nested"
+    },
+    "ops": [
+      {
+        "op": "resolve",
+        "absoluteInput": "git/nested/a.txt",
+        "kind": "file"
+      },
+      {
+        "op": "resolve",
+        "absoluteInput": "git/nested/b.txt",
+        "kind": "file"
+      },
+      {
+        "op": "resolve",
+        "absoluteInput": "hg/nested/c.txt",
+        "kind": "file"
+      },
+      {
+        "op": "resolve",
+        "path": "README.md"
+      },
+      {
+        "op": "authorizeExternal",
+        "targets": [
+          0,
+          3,
+          1,
+          2,
+          0
+        ],
+        "metadata": true
+      },
+      {
+        "op": "authorizeExternal",
+        "targets": [
+          3
+        ]
+      },
+      {
+        "op": "authorizeExternal",
+        "targets": [
+          1
+        ]
+      }
+    ],
+    "expected": {
+      "targets": [
+        {
+          "absolute": "{{root}}/authorize-external-batch/git/nested/a.txt",
+          "resource": "{{root}}/authorize-external-batch/git/nested/a.txt",
+          "externalDirectory": {
+            "action": "external_directory",
+            "directory": "{{root}}/authorize-external-batch/git/nested",
+            "resource": "{{root}}/authorize-external-batch/git/nested/*",
+            "save": "{{root}}/authorize-external-batch/git/*"
+          }
+        },
+        {
+          "absolute": "{{root}}/authorize-external-batch/git/nested/b.txt",
+          "resource": "{{root}}/authorize-external-batch/git/nested/b.txt",
+          "externalDirectory": {
+            "action": "external_directory",
+            "directory": "{{root}}/authorize-external-batch/git/nested",
+            "resource": "{{root}}/authorize-external-batch/git/nested/*",
+            "save": "{{root}}/authorize-external-batch/git/*"
+          }
+        },
+        {
+          "absolute": "{{root}}/authorize-external-batch/hg/nested/c.txt",
+          "resource": "{{root}}/authorize-external-batch/hg/nested/c.txt",
+          "externalDirectory": {
+            "action": "external_directory",
+            "directory": "{{root}}/authorize-external-batch/hg/nested",
+            "resource": "{{root}}/authorize-external-batch/hg/nested/*",
+            "save": "{{root}}/authorize-external-batch/hg/*"
+          }
+        },
+        {
+          "absolute": "{{root}}/authorize-external-batch/current/README.md",
+          "resource": "README.md",
+          "externalDirectory": null
+        }
+      ],
+      "requests": [
+        {
+          "action": "external_directory",
+          "resources": [
+            "{{root}}/authorize-external-batch/git/nested/*",
+            "{{root}}/authorize-external-batch/hg/nested/*"
+          ],
+          "save": [
+            "{{root}}/authorize-external-batch/git/*",
+            "{{root}}/authorize-external-batch/hg/*"
+          ],
+          "sessionID": "ses_fs_corpus",
+          "agent": "build",
+          "source": {
+            "type": "tool",
+            "messageID": "msg_fs_corpus",
+            "id": "call-fs-corpus"
+          },
+          "metadata": {
+            "filepath": "{{root}}/authorize-external-batch/git/nested/a.txt",
+            "parentDir": "{{root}}/authorize-external-batch/git/nested"
+          }
+        },
+        {
+          "action": "external_directory",
+          "resources": [
+            "{{root}}/authorize-external-batch/git/nested/*"
+          ],
+          "save": [
+            "{{root}}/authorize-external-batch/git/*"
+          ],
+          "sessionID": "ses_fs_corpus",
+          "agent": "build",
+          "source": {
+            "type": "tool",
+            "messageID": "msg_fs_corpus",
+            "id": "call-fs-corpus"
+          }
+        }
+      ]
+    }
+  }
+]

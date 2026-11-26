@@ -32,6 +32,20 @@ fn resolve_lexical(path: &str) -> String {
     flavor.resolve(&[&cwd, normalized.as_ref()])
 }
 
+pub fn dirname(path: &str) -> String {
+    let flavor = Flavor::NATIVE;
+    let (root, mut parts) = flavor.split(path);
+    if parts.is_empty() {
+        return if root.is_empty() { ".".to_owned() } else { root };
+    }
+    parts.pop();
+    let joined = parts.join(&flavor.sep().to_string());
+    if root.is_empty() {
+        return if joined.is_empty() { ".".to_owned() } else { joined };
+    }
+    if joined.is_empty() { root } else { format!("{root}{joined}") }
+}
+
 /// `FileAccess.resolvePath`: expand a leading `~`, normalize Windows shell paths, then resolve from `directory`.
 pub fn resolve_path(directory: &str, input: &str, home: &str) -> String {
     let flavor = Flavor::NATIVE;

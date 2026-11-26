@@ -869,8 +869,12 @@ name = "opencode-fs"
 version = "0.1.0"
 dependencies = [
  "base64",
+ "futures-util",
+ "opencode-contract",
+ "opencode-permission",
  "opencode-util",
  "serde_json",
+ "thiserror",
  "tokio",
 ]
 
