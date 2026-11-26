@@ -229,11 +229,7 @@ impl GlobalServices {
             database.clone(),
             bus.clone(),
             Options::from_vars(|name| config_env(name)),
-            format!(
-                "opencode/{}/{}/opencode",
-                flag::build_channel(),
-                option_env!("OPENCODE_VERSION").unwrap_or("local")
-            ),
+            format!("opencode/{}/{}/opencode", channel, version),
         );
         let git = Arc::new(opencode_git::Git::new(config_env.clone()));
         let repository_cache = Arc::new(RepositoryCache::new(
