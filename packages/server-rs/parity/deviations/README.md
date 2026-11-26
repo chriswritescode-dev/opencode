@@ -106,6 +106,7 @@ A deviation that excepts a recorded cassette from the replay gate also has a `Ca
 - `OR-50-references.md`: reference parsing, refresh scheduling and ordering differ from the TypeScript registry
 - `OR-50-skill-sources.md`: skill URL caches and files created after a scan are read and watched differently
 - `OR-50-form-pattern.md`: form patterns and date-time parsing use Rust regexes and an ISO date subset
+- `OR-51-formatter.md`: formatter package binaries come from `node_modules/.bin` instead of an npm install
 - `OR-51-fuzzy-find.md`: fuzzy file search always uses the ripgrep index instead of the native fff picker
 - `OR-51-watcher.md`: recursive watcher ignore patterns support `*`, `**` and `?` only, and access events are filtered
 - `OR-53-snapshot-changed-file-retry.md`: a snapshot capture retries when a file changes while Git indexes it

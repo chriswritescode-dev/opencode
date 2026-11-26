@@ -4,6 +4,7 @@ mod diff;
 mod file_watch;
 mod filesystem;
 mod fixture;
+mod formatter;
 mod mutation;
 mod mutex;
 mod retention;

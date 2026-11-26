@@ -277,8 +277,20 @@ async fn run(program: &Path, args: &[&str], cwd: &Path) -> Result<std::process::
         .map_err(|error| failed(format!("failed to run {}: {error}", program.display())))
 }
 
-fn delimiter() -> char {
+pub(crate) fn delimiter() -> char {
     if cfg!(windows) { ';' } else { ':' }
+}
+
+pub(crate) fn which(command: &str, path: &str, extensions: Option<&str>) -> Option<PathBuf> {
+    #[cfg(windows)]
+    {
+        which_in(path, extensions, command)
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = extensions;
+        which_in(path, command)
+    }
 }
 
 #[cfg(windows)]

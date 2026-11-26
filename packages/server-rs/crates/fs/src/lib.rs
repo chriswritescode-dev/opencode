@@ -3,6 +3,7 @@ pub mod bom;
 pub mod diff;
 pub mod file_watch;
 pub mod filesystem;
+pub mod formatter;
 pub mod generated;
 pub mod mime;
 pub mod mutation;
