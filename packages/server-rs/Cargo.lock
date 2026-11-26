@@ -1281,11 +1281,15 @@ name = "opencode-shell"
 version = "0.1.0"
 dependencies = [
  "flate2",
+ "log",
+ "opencode-bus",
  "opencode-config",
  "opencode-contract",
  "opencode-fs",
+ "opencode-storage",
  "opencode-util",
  "regress",
+ "rustix",
  "serde",
  "serde_json",
  "thiserror 2.0.21",

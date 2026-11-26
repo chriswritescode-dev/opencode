@@ -11,19 +11,22 @@ autotests = false
 workspace = true
 
 [dependencies]
+opencode-bus.workspace = true
 opencode-config.workspace = true
 opencode-contract.workspace = true
 opencode-fs.workspace = true
+opencode-storage.workspace = true
 opencode-util.workspace = true
+log.workspace = true
 regress = { workspace = true, features = ["utf16"] }
+rustix.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
+tokio.workspace = true
 
 [dev-dependencies]
 flate2.workspace = true
-serde_json.workspace = true
-tokio = { workspace = true, features = ["macros", "rt"] }
 
 [[test]]
 name = "all"
