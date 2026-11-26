@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
-use opencode_bus::Bus;
 use opencode_config::entry::{Entry, Origin};
 use opencode_config::observer::observe;
 use opencode_config::policy::{self, Action, Effect};
@@ -15,8 +14,8 @@ use crate::provider::ProviderService;
 const SUBSCRIBED: [&str; 2] = ["credential.updated", "credential.switched"];
 
 pub async fn register(services: &Services, builtin: &mut Builtin) {
-    let entries = Arc::new(RwLock::new(services.config.entries()));
-    builtin.observers.push(observe(&services.config, {
+    let entries = Arc::new(RwLock::new(Vec::new()));
+    let handle = observe(&services.config, {
         let entries = entries.clone();
         let provider = services.provider.clone();
         move |fresh| {
@@ -24,13 +23,16 @@ pub async fn register(services: &Services, builtin: &mut Builtin) {
             let provider = provider.clone();
             tokio::spawn(async move { provider.reload().await });
         }
-    }));
+    });
+    *entries.write().expect("the config policy entry lock is never poisoned") = handle.entries();
+    builtin.observers.push(handle);
 
+    let subscription = services.bus.subscribe(&SUBSCRIBED, None);
     let accounts = Arc::new(RwLock::new(read_accounts(&services.credentials)));
     builtin.tasks.push(tokio::spawn(subscribe_credentials(
-        services.bus.clone(),
         services.credentials.clone(),
         services.provider.clone(),
+        subscription,
         accounts.clone(),
     )));
 
@@ -112,12 +114,11 @@ fn account(value: &CredentialValue) -> Option<String> {
 }
 
 async fn subscribe_credentials(
-    bus: Arc<Bus>,
     credentials: Arc<CredentialService>,
     provider: Arc<ProviderService>,
+    mut subscription: opencode_bus::Subscription,
     accounts: Arc<RwLock<HashMap<String, Option<String>>>>,
 ) {
-    let mut subscription = bus.subscribe(&SUBSCRIBED, None);
     while subscription.recv().await.is_some() {
         let next = read_accounts(&credentials);
         let changed = {

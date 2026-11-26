@@ -63,6 +63,7 @@ export async function listFiles(root: string): Promise<Record<string, string>> {
       if (databases.has(relative)) return undefined
       if (databases.has(relative.replace(/-(?:wal|shm|journal)$/, ""))) return undefined
       if (relative === "models.json") return undefined
+      if (relative.split("/").includes(".git")) return undefined
       if (relative.startsWith("home/.local/share/opencode/log/")) return undefined
       const bytes = new Uint8Array(await Bun.file(path.join(root, relative)).arrayBuffer())
       return [relative, decodeText(bytes) ?? hash(bytes)] as const

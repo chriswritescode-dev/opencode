@@ -243,7 +243,7 @@ pub async fn register(services: &Services, context: &PluginContext, builtin: &mu
                     let base = provider.settings.as_ref().map(provider::json_object);
                     let overlay = provider::json_object(&overlay);
                     provider.settings =
-                        aisdk_native::merge_overlay(base.as_ref(), Some(&overlay)).map(provider::decode_object);
+                        aisdk_native::merge_overlay(base.as_ref(), Some(&overlay)).and_then(provider::decode_object);
                     if active.is_none() {
                         return;
                     }

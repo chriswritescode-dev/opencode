@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use http::StatusCode;
-use opencode_catalog::credential::{CreateInput, Info, Update};
+use opencode_catalog::credential::{CreateInput, CredentialError, Info, Update};
 use opencode_contract::codec::encode_json;
 use opencode_contract::generated::operations::{
     credential_activate, credential_create, credential_remove, credential_update,
@@ -46,32 +46,25 @@ pub async fn create(raw: &RawRequest, globals: &GlobalServices) -> response::Res
     {
         return response;
     }
-    let id = body.id.map(|id| CredentialID(id.0));
-    if let Some(id) = &id {
-        match globals.credentials.get(id) {
-            Ok(None) => {}
-            Ok(Some(_)) => {
-                return response::bytes(
-                    StatusCode::CONFLICT,
-                    "application/json",
-                    encode_json(&ConflictError {
-                        tag: ConflictErrorTag::ConflictError,
-                        message: format!("Credential already exists: {}", id.0),
-                        resource: Some(Some(id.0.clone())),
-                    }),
-                );
-            }
-            Err(error) => return service_unavailable("credential", error),
-        }
-    }
     let created = match globals.credentials.create(CreateInput {
-        id,
+        id: body.id.map(|id| CredentialID(id.0)),
         integration_id,
         value: contract_value(body.value),
         label: body.label,
         activate: body.activate,
     }) {
         Ok(created) => created,
+        Err(CredentialError::Conflict(id)) => {
+            return response::bytes(
+                StatusCode::CONFLICT,
+                "application/json",
+                encode_json(&ConflictError {
+                    tag: ConflictErrorTag::ConflictError,
+                    message: format!("Credential already exists: {}", id.0),
+                    resource: Some(Some(id.0)),
+                }),
+            );
+        }
         Err(error) => return service_unavailable("credential", error),
     };
     let entry = match globals.credentials.list(&created.integration_id) {

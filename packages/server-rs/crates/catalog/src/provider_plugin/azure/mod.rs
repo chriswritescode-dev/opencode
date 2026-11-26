@@ -169,7 +169,7 @@ pub async fn register_with(services: &Services, context: &PluginContext, builtin
                             settings
                                 .insert("baseURL".to_owned(), Value::String(expand_resource_name(base_url, resource)));
                         }
-                        provider.settings = Some(provider::decode_object(settings));
+                        provider.settings = provider::decode_object(settings);
                     });
                 }
                 if let Some(item) = editor.get(&provider_id).cloned() {
@@ -221,7 +221,7 @@ pub async fn register_with(services: &Services, context: &PluginContext, builtin
                                 return;
                             }
                             merged.insert("baseURL".to_owned(), Value::String(expanded.clone()));
-                            model.settings = Some(provider::decode_object(merged));
+                            model.settings = provider::decode_object(merged);
                         });
                     }
                 }

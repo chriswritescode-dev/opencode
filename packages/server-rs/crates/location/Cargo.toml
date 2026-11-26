@@ -16,6 +16,7 @@ futures-util.workspace = true
 indexmap.workspace = true
 log.workspace = true
 opencode-contract.workspace = true
+opencode-git.workspace = true
 opencode-storage.workspace = true
 ring.workspace = true
 rusqlite.workspace = true

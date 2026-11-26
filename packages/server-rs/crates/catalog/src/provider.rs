@@ -314,10 +314,11 @@ pub(crate) fn merge_model_settings(
     provider: Option<&ProviderSettings>,
     model: Option<&ModelSettings>,
 ) -> Option<ModelSettings> {
-    let base = model_settings(provider).as_ref().map(json_object);
+    let inherited = model_settings(provider);
+    let base = inherited.as_ref().map(json_object);
     let overlay = model.map(json_object);
     let merged = aisdk_native::merge_overlay(base.as_ref(), overlay.as_ref())?;
-    Some(decode_object(merged))
+    decode_object(merged).or(inherited)
 }
 
 pub fn timeout(value: Option<&ProviderSettingsTimeout>) -> Option<HttpTimeout> {
@@ -386,7 +387,7 @@ pub(crate) fn default_model(provider_id: &ProviderID, model_id: &str) -> ModelIn
 }
 
 fn millis(value: f64) -> Option<HttpTimeout> {
-    (value > 0.0).then_some(HttpTimeout::Millis(value))
+    (value.is_finite() && value > 0.0).then_some(HttpTimeout::Millis(value))
 }
 
 fn index(provider_id: &ProviderID, models: &[ModelInfo]) -> IndexMap<String, ModelInfo> {
@@ -421,7 +422,8 @@ fn rewrite_provider(provider: &mut ProviderInfo) {
     };
     aisdk_native::rewrite(&mut target, &context, builtin_packages());
     provider.package = target.package.unwrap_or_default();
-    provider.settings = target.settings.map(decode_object);
+    let settings = provider.settings.clone();
+    provider.settings = target.settings.and_then(decode_object).or(settings);
     provider.headers = target.headers.map(headers_from_native);
     provider.body = target.body.map(body_from_native);
 }
@@ -448,7 +450,8 @@ pub(crate) fn rewrite_model(model: &mut ModelInfo, provider_id: &ProviderID, pro
     };
     aisdk_native::rewrite(&mut target, &context, builtin_packages());
     model.package = target.package;
-    model.settings = target.settings.map(decode_object);
+    let settings = model.settings.clone();
+    model.settings = target.settings.and_then(decode_object).or(settings);
     model.headers = target.headers.map(headers_from_native);
     model.body = target.body.map(body_from_native);
     if let Some(variants) = target.variants {
@@ -468,7 +471,7 @@ fn native_variant(variant: &ModelVariant) -> aisdk_native::Variant {
 fn contract_variant(variant: aisdk_native::Variant) -> ModelVariant {
     ModelVariant {
         id: variant.id,
-        settings: variant.settings.map(decode_object),
+        settings: variant.settings.and_then(decode_object),
         headers: variant.headers.map(headers_from_native),
         body: variant.body.map(body_from_native),
     }
@@ -503,8 +506,19 @@ pub(crate) fn json_object(value: &impl Encode) -> aisdk_native::JsonMap {
     map
 }
 
-pub(crate) fn decode_object<T: Decode>(map: aisdk_native::JsonMap) -> T {
-    T::decode(&Value::Object(map), &mut codec::Path::new()).expect("catalog settings decode")
+pub(crate) fn decode_object<T: Decode>(mut map: aisdk_native::JsonMap) -> Option<T> {
+    loop {
+        match T::decode(&Value::Object(map.clone()), &mut codec::Path::new()) {
+            Ok(value) => return Some(value),
+            Err(_) => {
+                let invalid = map.iter().find_map(|(key, value)| {
+                    let single = aisdk_native::JsonMap::from_iter([(key.clone(), value.clone())]);
+                    T::decode(&Value::Object(single), &mut codec::Path::new()).is_err().then(|| key.clone())
+                })?;
+                map.remove(&invalid);
+            }
+        }
+    }
 }
 
 pub(crate) fn headers_to_native(headers: &codec::JsonMap<String>) -> aisdk_native::Headers {

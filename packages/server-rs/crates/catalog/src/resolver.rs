@@ -156,7 +156,9 @@ pub fn with_variant(model: &ModelInfo, variant: Option<&str>) -> Result<ModelInf
         }
         json
     });
-    let settings = merge_overlay(base.as_ref(), overlay.as_ref()).map(provider::decode_object::<ModelSettings>);
+    let settings = merge_overlay(base.as_ref(), overlay.as_ref())
+        .and_then(provider::decode_object::<ModelSettings>)
+        .or_else(|| model.settings.clone());
     let headers = merge_headers(
         model.headers.as_ref().map(provider::headers_to_native).as_ref(),
         variant.headers.as_ref().map(provider::headers_to_native).as_ref(),
@@ -183,10 +185,9 @@ pub fn from_catalog_model(
             native_credential_settings(&resolved, resolved.info.package.as_deref().unwrap_or(""), credential);
         let merged = merge_overlay(base.as_ref(), Some(&credential_settings)).unwrap_or_default();
         let mapped = prepare_provider_settings(&resolved, merged, environment)?;
-        let runtime = RuntimeInfo {
-            info: resolved.info.clone(),
-            settings: Some(provider::decode_object::<ProviderSettings>(mapped.clone())),
-        };
+        let settings =
+            provider::decode_object::<ProviderSettings>(mapped.clone()).unwrap_or_else(empty_provider_settings);
+        let runtime = RuntimeInfo { info: resolved.info.clone(), settings: Some(settings) };
         let model = bridge.model(&runtime, &Settings::new(mapped), environment)?;
         let RuntimeModel::Language(model) = model else {
             return Err(unsupported(&resolved.info));
@@ -608,9 +609,9 @@ fn request_overlay(configured: &ProviderSettings) -> RequestOptions {
     let timeouts = provider::timeouts(configured);
     RequestOptions {
         timeout: Some(RequestTimeout::Config(TimeoutOptions {
-            total: timeouts.timeout.map(request_timeout),
-            headers: Some(request_timeout(timeouts.header_timeout)),
-            chunk: Some(request_timeout(timeouts.chunk_timeout)),
+            total: timeouts.timeout.and_then(request_timeout),
+            headers: request_timeout(timeouts.header_timeout),
+            chunk: request_timeout(timeouts.chunk_timeout),
         })),
         http: Some(HttpOptions {
             encoding: provider::encoding(configured).map(request_encoding),
@@ -625,9 +626,9 @@ fn media_overlay(configured: &ProviderSettings) -> RequestOptions {
     let timeouts = provider::timeouts(configured);
     RequestOptions {
         timeout: Some(RequestTimeout::Config(TimeoutOptions {
-            total: timeouts.timeout.map(request_timeout),
-            headers: Some(request_timeout(timeouts.header_timeout)),
-            chunk: Some(request_timeout(timeouts.chunk_timeout)),
+            total: timeouts.timeout.and_then(request_timeout),
+            headers: request_timeout(timeouts.header_timeout),
+            chunk: request_timeout(timeouts.chunk_timeout),
         })),
         http: Some(HttpOptions { tls: provider::tls(configured).map(client_tls), ..HttpOptions::default() }),
         ..RequestOptions::default()
@@ -764,10 +765,14 @@ fn set_setting(settings: &mut ProviderSettings, key: &str, value: Value) {
 }
 
 fn merge_provider_settings(base: Option<&ProviderSettings>, model: Option<&ModelSettings>) -> Option<ProviderSettings> {
-    let base = base.map(provider::json_object);
+    let base_json = base.map(provider::json_object);
     let overlay = model.map(provider::json_object);
-    let merged = merge_overlay(base.as_ref(), overlay.as_ref())?;
-    Some(provider::decode_object::<ProviderSettings>(merged))
+    let merged = merge_overlay(base_json.as_ref(), overlay.as_ref())?;
+    Some(
+        provider::decode_object::<ProviderSettings>(merged)
+            .or_else(|| base.cloned())
+            .unwrap_or_else(empty_provider_settings),
+    )
 }
 
 fn provider_transport(provider: Option<&ProviderInfo>) -> Option<ProviderTransport> {
@@ -807,18 +812,16 @@ fn uses_api_key_auth(package: Option<&str>) -> bool {
 fn chunk_timeout(value: Option<&ProviderSettingsChunkTimeout>) -> Option<provider::HttpTimeout> {
     match value? {
         ProviderSettingsChunkTimeout::Number(number) => {
-            (number.0 > 0.0).then_some(provider::HttpTimeout::Millis(number.0))
+            (number.0.is_finite() && number.0 > 0.0).then_some(provider::HttpTimeout::Millis(number.0))
         }
         ProviderSettingsChunkTimeout::Bool(_) => Some(provider::HttpTimeout::Disabled),
     }
 }
 
-fn request_timeout(value: provider::HttpTimeout) -> HttpTimeout {
+fn request_timeout(value: provider::HttpTimeout) -> Option<HttpTimeout> {
     match value {
-        provider::HttpTimeout::Millis(value) => {
-            HttpTimeout::Millis(serde_json::Number::from_f64(value).expect("a finite timeout in milliseconds"))
-        }
-        provider::HttpTimeout::Disabled => HttpTimeout::Disabled(false),
+        provider::HttpTimeout::Millis(value) => serde_json::Number::from_f64(value).map(HttpTimeout::Millis),
+        provider::HttpTimeout::Disabled => Some(HttpTimeout::Disabled(false)),
     }
 }
 

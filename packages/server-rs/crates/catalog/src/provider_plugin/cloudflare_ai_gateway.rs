@@ -91,7 +91,7 @@ pub async fn register(services: &Services, context: &super::PluginContext, built
                     merged.extend(provider::json_object(current));
                 }
                 merged.extend(login.clone());
-                provider.settings = Some(provider::decode_object(merged));
+                provider.settings = provider::decode_object(merged);
             });
             Ok(())
         })

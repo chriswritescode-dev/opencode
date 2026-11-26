@@ -219,7 +219,7 @@ pub async fn register(services: &Services, context: &PluginContext, builtin: &mu
                     if let Some(token) = settings.get("token").and_then(Value::as_str) {
                         settings.insert("apiKey".to_owned(), Value::String(token.to_owned()));
                     }
-                    provider.settings = Some(provider::decode_object::<ProviderSettings>(settings));
+                    provider.settings = provider::decode_object::<ProviderSettings>(settings);
                 });
                 Ok(())
             }

@@ -142,7 +142,7 @@ pub async fn register(services: &Services, context: &super::PluginContext, built
                         merged.insert("baseURL".to_owned(), serde_json::Value::String(endpoint.to_owned()));
                     }
                     merged.remove("endpoint");
-                    provider.settings = Some(crate::provider::decode_object(merged));
+                    provider.settings = crate::provider::decode_object(merged);
                 });
             }
             Ok(())

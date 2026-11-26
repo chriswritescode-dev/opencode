@@ -293,6 +293,11 @@ pub(crate) fn merge_settings(settings: Option<&ModelSettings>, base_url: &str) -
     let mut overlay = crate::aisdk_native::JsonMap::new();
     overlay.insert("baseURL".to_owned(), Value::String(base_url.to_owned()));
     provider::decode_object(crate::aisdk_native::merge_overlay(base.as_ref(), Some(&overlay)).unwrap_or_default())
+        .unwrap_or_else(empty_settings)
+}
+
+fn empty_settings() -> ModelSettings {
+    ModelSettings { compaction: None, cache: None, encoding: None, rest: Default::default() }
 }
 
 fn build(id: &str, remote: &UsableModel, base_url: &str, previous: Option<&ModelInfo>) -> ModelInfo {

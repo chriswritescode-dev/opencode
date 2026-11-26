@@ -228,7 +228,7 @@ pub async fn register_with(services: &Services, context: &PluginContext, builtin
 
     let login = settings::credential_settings(services, builtin, &integration_id, |value| match value {
         CredentialValue::Oauth(oauth) => settings::metadata_settings(oauth.metadata.as_ref(), &["instanceUrl"]),
-        _ => provider::decode_object(serde_json::Map::new()),
+        _ => settings::empty_settings(),
     })
     .await;
 
@@ -343,7 +343,7 @@ pub async fn register_with(services: &Services, context: &PluginContext, builtin
                         let base = provider.settings.as_ref().map(provider::json_object);
                         let overlay = provider::json_object(&login_settings);
                         provider.settings = crate::aisdk_native::merge_overlay(base.as_ref(), Some(&overlay))
-                            .map(provider::decode_object);
+                            .and_then(provider::decode_object);
                     });
                 }
                 let Some(item) = editor.get(&provider_id).cloned() else {
@@ -361,10 +361,10 @@ pub async fn register_with(services: &Services, context: &PluginContext, builtin
                     let mut info = crate::provider::default_model(&provider_id, &model.id);
                     info.name = format!("Agent Platform ({})", model.name);
                     info.package = Some(GITLAB_PACKAGE.to_owned());
-                    info.settings = Some(provider::decode_object(serde_json::Map::from_iter([(
+                    info.settings = provider::decode_object(serde_json::Map::from_iter([(
                         "workflowRef".to_owned(),
                         Value::String(model.r#ref),
-                    )])));
+                    )]));
                     info.capabilities = ModelCapabilities {
                         tools: true,
                         freeform: None,

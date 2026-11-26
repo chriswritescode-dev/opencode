@@ -150,10 +150,8 @@ pub async fn register(services: &Services, context: &crate::provider_plugin::Plu
             };
             let transport = provider.provider.settings.as_ref().and_then(|settings| settings.transport);
             editor.update(&provider_id, |provider| {
-                let mut settings = provider
-                    .settings
-                    .take()
-                    .unwrap_or_else(|| crate::provider::decode_object(crate::aisdk_native::JsonMap::new()));
+                let mut settings =
+                    provider.settings.take().unwrap_or_else(crate::provider_plugin::settings::empty_settings);
                 settings.transport = Some(transport.unwrap_or(ProviderTransport::Websocket));
                 provider.settings = Some(settings);
             });

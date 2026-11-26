@@ -4,13 +4,14 @@ use std::time::Duration;
 
 use bytes::Bytes;
 use http::{Request, Response, StatusCode};
-use http_body_util::{BodyExt, Empty};
+use http_body_util::{BodyExt, Empty, Full};
 use hyper::body::Incoming;
 use hyper::client::conn::http1;
 use hyper_util::rt::TokioIo;
 use opencode_bus::feed::{EventFeed, SUBSCRIBER_CAPACITY};
 use opencode_bus::{Bus, BusOptions, Definition, PublishOptions};
 use opencode_http::app::{App, Options};
+use opencode_http::services::GlobalServices;
 use opencode_http::state::ServerState;
 use opencode_session::{ProjectionSettings, SessionProjector, SessionStore};
 use opencode_storage::{Database, DatabaseLocation};
@@ -34,6 +35,7 @@ fn state(now: i64, heartbeat: Duration) -> Arc<ServerState> {
 struct Live {
     port: u16,
     state: Arc<ServerState>,
+    services: Arc<GlobalServices>,
     task: JoinHandle<()>,
 }
 
@@ -44,7 +46,12 @@ impl Drop for Live {
 }
 
 async fn live(now: i64, heartbeat: Duration) -> Live {
+    live_with(now, heartbeat, crate::services()).await
+}
+
+async fn live_with(now: i64, heartbeat: Duration, services: Arc<GlobalServices>) -> Live {
     let state = state(now, heartbeat);
+    opencode_http::services::bridge_location_events(&services, state.bus.clone());
     let app = App::new(Options {
         password: "pw".to_owned(),
         version: "test".to_owned(),
@@ -53,13 +60,13 @@ async fn live(now: i64, heartbeat: Duration) -> Live {
         hostname: None,
         urls: Arc::new(Vec::new),
         state: Some(state.clone()),
-        services: Some(crate::services()),
+        services: Some(services.clone()),
     });
     app.status().ready();
     let listener = TcpListener::bind(("127.0.0.1", 0)).await.expect("a listener");
     let port = listener.local_addr().expect("a local address").port();
     let task = tokio::spawn(opencode_http::serve::serve(listener, app, std::future::pending::<()>()));
-    Live { port, state, task }
+    Live { port, state, services, task }
 }
 
 async fn connect(live: &Live, target: &str, authorized: bool) -> (Response<Incoming>, JoinHandle<()>) {
@@ -73,6 +80,24 @@ async fn connect(live: &Live, target: &str, authorized: bool) -> (Response<Incom
         builder = builder.header("authorization", crate::basic("opencode", "pw"));
     }
     let request = builder.body(Empty::<Bytes>::new()).expect("a request");
+    let response = sender.send_request(request).await.expect("a response");
+    (response, task)
+}
+
+async fn send_json(live: &Live, method: &str, target: &str, body: &str) -> (Response<Incoming>, JoinHandle<()>) {
+    let stream = TcpStream::connect(("127.0.0.1", live.port)).await.expect("a connection");
+    let (mut sender, connection) = http1::handshake(TokioIo::new(stream)).await.expect("a handshake");
+    let task = tokio::spawn(async move {
+        let _ = connection.await;
+    });
+    let request = Request::builder()
+        .method(method)
+        .uri(target)
+        .header("host", "127.0.0.1")
+        .header("authorization", crate::basic("opencode", "pw"))
+        .header("content-type", "application/json")
+        .body(Full::new(Bytes::from(body.to_owned())))
+        .expect("a request");
     let response = sender.send_request(request).await.expect("a response");
     (response, task)
 }
@@ -283,4 +308,89 @@ async fn a_slow_consumer_overflows_and_only_its_connection_aborts() {
         String::from_utf8_lossy(&head).contains("server.connected"),
         "the slow connection received no frames before it aborted"
     );
+}
+
+#[tokio::test]
+async fn a_project_patch_publishes_project_updated() {
+    let live = live(1000, Duration::from_secs(60)).await;
+    live.services
+        .database
+        .read(|connection| {
+            connection.execute(
+                "INSERT INTO project (id, worktree, sandboxes, time_created, time_updated) \
+                 VALUES ('prj_events', '/repo', '[]', 1, 2)",
+                [],
+            )?;
+            Ok(())
+        })
+        .expect("seed the project");
+
+    let (response, _connection) = connect(&live, "/api/event", true).await;
+    assert_eq!(response.status(), StatusCode::OK);
+    let mut body = response.into_body();
+    let mut buffer = Vec::new();
+    let connected = next_frame(&mut body, &mut buffer).await;
+    assert!(connected.contains("\"type\":\"server.connected\""), "{connected}");
+    let heartbeat = next_frame(&mut body, &mut buffer).await;
+    assert_eq!(heartbeat, ": heartbeat\n\n");
+
+    let (response, _request) =
+        send_json(&live, "PATCH", "/api/project/prj_events", r##"{"name":"Renamed","icon":{"color":"#00ff00"}}"##)
+            .await;
+    assert_eq!(response.status(), StatusCode::OK);
+    let _ = response.into_body().collect().await.expect("a body");
+
+    let value = loop {
+        let frame =
+            timeout(Duration::from_secs(5), next_frame(&mut body, &mut buffer)).await.expect("a project.updated frame");
+        let value: Value =
+            serde_json::from_str(frame.strip_prefix("data: ").expect("an SSE data frame")).expect("JSON");
+        if value["type"] == "project.updated" && value["data"]["name"] == "Renamed" {
+            break value;
+        }
+    };
+    assert_eq!(value["data"]["id"], "prj_events");
+    assert_eq!(value["data"]["canonical"], "/repo");
+    assert_eq!(value["data"]["name"], "Renamed");
+    assert_eq!(value["data"]["icon"]["color"], "#00ff00");
+    assert!(value.get("location").is_none(), "a global project event must omit location: {value}");
+}
+
+#[tokio::test]
+async fn an_evicted_location_publishes_location_shutdown() {
+    let directory = crate::temp_directory("event-location");
+    let services = crate::services_at(&directory);
+    let live = live_with(1000, Duration::from_secs(60), services).await;
+
+    let (response, _connection) = connect(&live, "/api/event", true).await;
+    assert_eq!(response.status(), StatusCode::OK);
+    let mut body = response.into_body();
+    let mut buffer = Vec::new();
+    let connected = next_frame(&mut body, &mut buffer).await;
+    assert!(connected.contains("\"type\":\"server.connected\""), "{connected}");
+    let heartbeat = next_frame(&mut body, &mut buffer).await;
+    assert_eq!(heartbeat, ": heartbeat\n\n");
+
+    let (response, _boot) = connect(&live, "/api/config", true).await;
+    assert_eq!(response.status(), StatusCode::OK);
+    let _ = response.into_body().collect().await.expect("a body");
+
+    let query = url::form_urlencoded::Serializer::new(String::new())
+        .append_pair("location[directory]", &directory.to_string_lossy())
+        .finish();
+    let (response, _evict) = send_json(&live, "DELETE", &format!("/api/debug/location?{query}"), "").await;
+    assert_eq!(response.status(), StatusCode::NO_CONTENT);
+    let _ = response.into_body().collect().await.expect("a body");
+
+    let shutdown = loop {
+        let frame = timeout(Duration::from_secs(5), next_frame(&mut body, &mut buffer))
+            .await
+            .expect("a location.shutdown frame");
+        if frame.contains("\"type\":\"location.shutdown\"") {
+            break frame;
+        }
+    };
+    let value: Value = serde_json::from_str(shutdown.strip_prefix("data: ").expect("an SSE data frame")).expect("JSON");
+    assert_eq!(value["type"], "location.shutdown");
+    assert_eq!(value["location"]["directory"], directory.to_string_lossy().as_ref());
 }

@@ -444,11 +444,17 @@ pub fn supports_text(model: &ModelInfo) -> bool {
             || model.capabilities.output.iter().any(|item| item.starts_with("text")))
 }
 
-pub fn parse(input: &str) -> (ProviderID, String) {
-    match input.split_once('/') {
-        Some((provider_id, model_id)) => (ProviderID(provider_id.to_owned()), model_id.to_owned()),
-        None => (ProviderID(input.to_owned()), String::new()),
+pub fn parse(input: &str) -> Option<(ProviderID, String)> {
+    let (provider_id, rest) = input.split_once('/')?;
+    let (model_id, variant) = match rest.split_once('#') {
+        Some((model_id, variant)) => (model_id, Some(variant)),
+        None => (rest, None),
+    };
+    if provider_id.is_empty() || provider_id.contains('#') || model_id.is_empty() || variant.is_some_and(str::is_empty)
+    {
+        return None;
     }
+    Some((ProviderID(provider_id.to_owned()), model_id.to_owned()))
 }
 
 fn type_key(model_type: &ModelType) -> &str {

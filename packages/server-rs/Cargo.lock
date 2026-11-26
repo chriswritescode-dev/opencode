@@ -24,6 +24,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "arraydeque"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7d902e3d592a523def97af8f317b08ce16b7ab854c1985a0c671e6f15cebc236"
+
+[[package]]
 name = "atomic-waker"
 version = "1.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -146,6 +152,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "773648b94d0e5d620f64f280777445740e61fe701025087ec8b57f45c791888b"
 
 [[package]]
+name = "core_detect"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7f8f80099a98041a3d1622845c271458a2d73e688351bf3cb999266764b81d48"
+
+[[package]]
 name = "cpufeatures"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -187,6 +199,20 @@ dependencies = [
  "block-buffer",
  "const-oid",
  "crypto-common",
+]
+
+[[package]]
+name = "encoding_rs"
+version = "0.8.44"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "89253175e704ab869b04f9db224d38630e0211a53841a79181deae0889e169f5"
+dependencies = [
+ "cfg-if",
+ "core_detect",
+ "multiversion_no_op",
+ "rustversion",
+ "scopeguard",
+ "simdutf8",
 ]
 
 [[package]]
@@ -662,6 +688,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "multiversion_no_op"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "743fb55ba31b18fb1ecef6bdc9aa2743314978ac084044301a7eee33fb99a20d"
+
+[[package]]
 name = "notify"
 version = "8.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -857,6 +889,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "opencode-git"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
 name = "opencode-http"
 version = "0.1.0"
 dependencies = [
@@ -877,10 +920,15 @@ dependencies = [
  "opencode-catalog",
  "opencode-config",
  "opencode-contract",
+ "opencode-git",
  "opencode-local",
  "opencode-location",
+ "opencode-permission",
+ "opencode-plugin",
+ "opencode-registry",
  "opencode-session",
  "opencode-storage",
+ "opencode-vcs",
  "rand",
  "ring",
  "rustix",
@@ -917,6 +965,7 @@ dependencies = [
  "indexmap",
  "log",
  "opencode-contract",
+ "opencode-git",
  "opencode-storage",
  "ring",
  "rusqlite",
@@ -925,6 +974,74 @@ dependencies = [
  "thiserror",
  "tokio",
  "url",
+]
+
+[[package]]
+name = "opencode-permission"
+version = "0.1.0"
+dependencies = [
+ "futures-util",
+ "indexmap",
+ "opencode-config",
+ "opencode-contract",
+ "opencode-storage",
+ "regex-lite",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "url",
+]
+
+[[package]]
+name = "opencode-plugin"
+version = "0.1.0"
+dependencies = [
+ "futures-util",
+ "indexmap",
+ "log",
+ "notify",
+ "opencode-bus",
+ "opencode-config",
+ "opencode-contract",
+ "opencode-local",
+ "opencode-location",
+ "opencode-sidecar",
+ "rand",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tokio-util",
+ "url",
+]
+
+[[package]]
+name = "opencode-registry"
+version = "0.1.0"
+dependencies = [
+ "futures-util",
+ "http-body-util",
+ "hyper",
+ "hyper-util",
+ "indexmap",
+ "log",
+ "notify",
+ "opencode-api-types",
+ "opencode-config",
+ "opencode-contract",
+ "opencode-location",
+ "opencode-permission",
+ "opencode-util",
+ "opencode-vcs",
+ "rand",
+ "regex-lite",
+ "reqwest",
+ "ring",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "url",
+ "yaml-rust2",
 ]
 
 [[package]]
@@ -942,6 +1059,7 @@ dependencies = [
  "opencode-contract",
  "opencode-http",
  "opencode-local",
+ "opencode-plugin",
  "opencode-service",
  "opencode-sidecar",
  "opencode-storage",
@@ -974,14 +1092,23 @@ dependencies = [
 name = "opencode-session"
 version = "0.1.0"
 dependencies = [
+ "base64",
  "futures-util",
+ "log",
+ "opencode-ai",
  "opencode-bus",
+ "opencode-catalog",
+ "opencode-config",
  "opencode-contract",
+ "opencode-git",
+ "opencode-location",
+ "opencode-registry",
  "opencode-storage",
  "opencode-util",
  "rand",
  "regex-lite",
  "rusqlite",
+ "serde",
  "serde_json",
  "tokio",
 ]
@@ -1020,6 +1147,32 @@ dependencies = [
  "libc",
  "ring",
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "opencode-vcs"
+version = "0.1.0"
+dependencies = [
+ "futures-util",
+ "log",
+ "notify",
+ "opencode-api-types",
+ "opencode-bus",
+ "opencode-config",
+ "opencode-contract",
+ "opencode-git",
+ "opencode-local",
+ "opencode-location",
+ "opencode-storage",
+ "opencode-util",
+ "rand",
+ "ring",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "url",
 ]
 
 [[package]]
@@ -1278,6 +1431,12 @@ checksum = "9cb23c424d8ee841bb4d813677ca237e2a610067d594fec130f87d6093495ab5"
 dependencies = [
  "windows-sys 0.61.2",
 ]
+
+[[package]]
+name = "scopeguard"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
 
 [[package]]
 name = "security-framework"
@@ -1926,6 +2085,17 @@ name = "windows_x86_64_msvc"
 version = "0.52.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "589f6da84c646204747d1270a2a5661ea66ed1cced2631d546fdfb155959f9ec"
+
+[[package]]
+name = "yaml-rust2"
+version = "0.13.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4a8af4469040402b7fe43c26575bab9a3069f0717c4a2931ecf4fb8728ee4cec"
+dependencies = [
+ "arraydeque",
+ "encoding_rs",
+ "hashlink",
+]
 
 [[package]]
 name = "zeroize"

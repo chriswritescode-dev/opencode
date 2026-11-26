@@ -110,7 +110,7 @@ pub async fn register(services: &Services, context: &super::PluginContext, built
                         Value::String(format!("https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/v1")),
                     );
                 }
-                provider.settings = Some(provider::decode_object(next));
+                provider.settings = provider::decode_object(next);
             });
             Ok(())
         })

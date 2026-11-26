@@ -300,14 +300,20 @@ impl OAuthService<'_> {
                 Ok(())
             }
             Action::Code(callback) => {
-                let outcome = (callback.as_ref())(code.unwrap_or_default().to_owned()).await;
-                let error = outcome.as_ref().err().cloned();
                 let service = self.service.clone();
                 let attempt_id = attempt_id.clone();
-                let persistence = tokio::spawn(async move { settle(&service, &attempt_id, outcome).await }).await;
-                match (error, persistence) {
-                    (Some(error), _) | (None, Ok(Err(error))) => Err(error.into()),
-                    _ => Ok(()),
+                let code = code.unwrap_or_default().to_owned();
+                let completion = tokio::spawn(async move {
+                    let outcome = (callback.as_ref())(code).await;
+                    let error = outcome.as_ref().err().cloned();
+                    let persistence = settle(&service, &attempt_id, outcome).await;
+                    (error, persistence)
+                });
+                match completion.await {
+                    Ok((Some(error), _)) => Err(error.into()),
+                    Ok((None, Err(error))) => Err(error.into()),
+                    Ok((None, Ok(()))) => Ok(()),
+                    Err(error) => Err(AuthorizationError::new(std::io::Error::other(error)).into()),
                 }
             }
         }

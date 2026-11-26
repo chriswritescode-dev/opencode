@@ -255,14 +255,17 @@ async fn execute(
     let stderr_attempt = attempt_id.clone();
     let mut stderr_task = tokio::spawn(async move {
         let mut reader = stderr;
-        let mut message = String::new();
         let mut buffer = [0u8; 4096];
+        let mut pending_bytes = Vec::new();
         while let Ok(read) = reader.read(&mut buffer).await {
             if read == 0 {
                 break;
             }
-            let chunk = String::from_utf8_lossy(&buffer[..read]).into_owned();
-            message.push_str(&chunk);
+            pending_bytes.extend_from_slice(&buffer[..read]);
+            let chunk = decode_stderr(&mut pending_bytes);
+            if chunk.is_empty() {
+                continue;
+            }
             if let Some(service) = stderr_service.upgrade()
                 && let Ok(mut attempts) = service.command_attempts.lock()
                 && let Some(CommandEntry::Pending(pending)) = attempts.get_mut(&stderr_attempt.0)
@@ -270,7 +273,14 @@ async fn execute(
                 pending.message.push_str(&chunk);
             }
         }
-        message
+        let tail = String::from_utf8_lossy(&pending_bytes).into_owned();
+        if !tail.is_empty()
+            && let Some(service) = stderr_service.upgrade()
+            && let Ok(mut attempts) = service.command_attempts.lock()
+            && let Some(CommandEntry::Pending(pending)) = attempts.get_mut(&stderr_attempt.0)
+        {
+            pending.message.push_str(&tail);
+        }
     });
     let mut stdout_task = tokio::spawn(async move {
         let mut reader = stdout;
@@ -289,7 +299,7 @@ async fn execute(
         Ok(status) => status,
         Err(error) => return Some(Err(AuthorizationError::new(error))),
     };
-    let (stderr_message, stdout) = tokio::select! {
+    let (_, stdout) = tokio::select! {
         _ = scope.cancelled() => {
             stderr_task.abort();
             stdout_task.abort();
@@ -297,9 +307,16 @@ async fn execute(
         }
         outputs = async { ((&mut stderr_task).await, (&mut stdout_task).await) } => outputs,
     };
-    let stderr_message = stderr_message.unwrap_or_default();
     let stdout = stdout.unwrap_or_default();
     if !status.success() {
+        let message = service.upgrade().and_then(|service| {
+            let attempts = service.command_attempts.lock().ok()?;
+            match attempts.get(&attempt_id.0)? {
+                CommandEntry::Pending(pending) => Some(pending.message.clone()),
+                CommandEntry::Terminal(_) => None,
+            }
+        });
+        let stderr_message = message.unwrap_or_default();
         let stderr_message = stderr_message.trim();
         let message = if stderr_message.is_empty() {
             format!("Authentication command exited {}", status.code().unwrap_or(-1))
@@ -315,6 +332,27 @@ async fn execute(
         ))));
     }
     Some(Ok(stdout))
+}
+
+fn decode_stderr(pending: &mut Vec<u8>) -> String {
+    match std::str::from_utf8(pending) {
+        Ok(text) => {
+            let decoded = text.to_owned();
+            pending.clear();
+            decoded
+        }
+        Err(error) if error.error_len().is_some() => {
+            let decoded = String::from_utf8_lossy(pending).into_owned();
+            pending.clear();
+            decoded
+        }
+        Err(error) => {
+            let valid = error.valid_up_to();
+            let decoded = String::from_utf8_lossy(&pending[..valid]).into_owned();
+            pending.drain(..valid);
+            decoded
+        }
+    }
 }
 
 async fn settle_command(

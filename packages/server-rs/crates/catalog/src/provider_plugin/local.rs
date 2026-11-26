@@ -152,11 +152,11 @@ where
                         provider.name = state.spec.name.to_owned();
                         provider.activation = ProviderInfoActivation::Enabled;
                         provider.package = OPENAI_COMPATIBLE.to_owned();
-                        provider.settings = Some(provider::decode_object(provider::json_object(&serde_json::json!({
+                        provider.settings = provider::decode_object(provider::json_object(&serde_json::json!({
                             "baseURL": base_url,
                             "provider": state.spec.provider_id,
                             "apiKey": api_key.unwrap_or_default(),
-                        }))));
+                        })));
                         if !connected {
                             provider.integration_id = None;
                         }

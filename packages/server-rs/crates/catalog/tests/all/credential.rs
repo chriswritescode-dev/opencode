@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 
 use opencode_bus::{Bus, BusOptions, Event, ListenerHandle};
-use opencode_catalog::credential::{CreateInput, CredentialService, Update, expiring};
+use opencode_catalog::credential::{CreateInput, CredentialError, CredentialService, Update, expiring};
 use opencode_config::seams::CredentialLookup;
 use opencode_contract::codec::JsonMap;
 use opencode_contract::generated::{
@@ -322,6 +322,26 @@ fn creates_with_a_requested_id_without_taking_over_the_current_selection() {
         event(UPDATED, Some(imported.id.0.as_str())),
     ];
     assert_eq!(captured(&events), expected);
+}
+
+#[test]
+fn rejects_a_duplicate_credential_id() {
+    let (_dir, _database, _bus, service) = setup();
+    let id = CredentialID("cred_fixed".to_owned());
+    let input = CreateInput {
+        id: Some(id.clone()),
+        integration_id: IntegrationID("openai".to_owned()),
+        value: key("first"),
+        label: None,
+        activate: None,
+    };
+    service.create(input.clone()).expect("create the requested credential");
+    let input = CreateInput { value: key("second"), ..input };
+
+    assert!(matches!(service.create(input), Err(CredentialError::Conflict(conflict)) if conflict == id));
+    let stored = service.list(&IntegrationID("openai".to_owned())).expect("list the credentials");
+    assert_eq!(stored.len(), 1);
+    assert_eq!(stored[0].value, key("first"));
 }
 
 #[test]

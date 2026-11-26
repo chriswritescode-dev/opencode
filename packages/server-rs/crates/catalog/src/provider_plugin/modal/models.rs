@@ -239,6 +239,11 @@ fn settings_for(previous: Option<&ModelInfo>, base_url: &str) -> ModelSettings {
     overlay.insert("baseURL".to_owned(), Value::String(base_url.to_owned()));
     overlay.insert("provider".to_owned(), Value::String(PROVIDER_ID.to_owned()));
     provider::decode_object(crate::aisdk_native::merge_overlay(base.as_ref(), Some(&overlay)).unwrap_or_default())
+        .unwrap_or_else(empty_settings)
+}
+
+fn empty_settings() -> ModelSettings {
+    ModelSettings { compaction: None, cache: None, encoding: None, rest: Default::default() }
 }
 
 fn price(value: Option<&Price>, fallback: MoneyUSDPerMillionTokens) -> MoneyUSDPerMillionTokens {
