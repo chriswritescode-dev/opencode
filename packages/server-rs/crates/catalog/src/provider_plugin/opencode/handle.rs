@@ -11,7 +11,7 @@ use tokio::task::JoinHandle;
 
 use super::Snapshot;
 use super::content::{ConsoleInstruction, ConsoleSkill};
-use super::watches::{WatchEvent, WatchTarget, Watches};
+use super::watches::{WatchEvent, WatchTarget, WatchTools, Watches};
 use super::websearch::ConsoleWebSearch;
 use crate::integration::IntegrationService;
 use crate::provider_plugin::hooks::HookRegistration;
@@ -186,6 +186,10 @@ impl ConsoleHandle {
 
     pub(crate) fn watch_leader(&self) -> bool {
         self.watches.is_leader()
+    }
+
+    pub fn watch_tools(&self) -> Option<WatchTools> {
+        self.watches.tools()
     }
 
     pub(crate) async fn forget_watched(&self, session_id: &str) {

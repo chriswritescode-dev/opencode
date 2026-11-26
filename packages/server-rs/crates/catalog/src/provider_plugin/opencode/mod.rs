@@ -236,6 +236,9 @@ pub async fn register(services: &Services, context: &PluginContext, builtin: &mu
     });
     builtin.hooks.push(prompt);
 
+    let shell = context.hooks.on_tool_execute_after(watches::tools::shell_hook(context.console.clone()));
+    builtin.hooks.push(shell);
+
     let deletion = {
         let console = context.console.clone();
         let mut subscription = services.bus.subscribe(&["session.deleted"], None);

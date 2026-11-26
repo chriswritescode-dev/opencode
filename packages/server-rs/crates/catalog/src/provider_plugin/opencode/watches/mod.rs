@@ -1,3 +1,4 @@
+pub mod tools;
 pub mod transport;
 pub mod wake;
 
@@ -7,6 +8,7 @@ use futures_util::FutureExt;
 
 use crate::provider_plugin::opencode::handle::ConsoleHandle;
 
+pub use self::tools::{ShellOutput, ToolFailure, WatchTools, shell_target};
 pub use self::transport::{ACK_LIMIT, LEASE_CLOSE_CODE, OVERSIZED_CLOSE_CODE, WatchActor, WatchEvent};
 
 pub(crate) use self::transport::WatchTarget;
@@ -83,6 +85,16 @@ impl Watches {
     pub(crate) fn is_leader(&self) -> bool {
         let current = self.current.lock().expect("lock the Console watch lease");
         current.as_ref().is_some_and(|current| transport::is_leader(&current.key, current.member))
+    }
+
+    pub(crate) fn tools(&self) -> Option<WatchTools> {
+        let current = self.current.lock().expect("lock the Console watch lease");
+        let current = current.as_ref()?;
+        Some(WatchTools::new(
+            current.console.clone(),
+            current.dependencies.kv.clone(),
+            current.dependencies.sessions.clone(),
+        ))
     }
 
     pub(crate) async fn forget(&self, session_id: &str) {

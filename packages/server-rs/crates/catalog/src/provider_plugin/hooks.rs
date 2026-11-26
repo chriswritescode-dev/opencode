@@ -127,6 +127,15 @@ pub struct PromptEvent {
     pub session_id: SessionID,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct ToolExecuteAfter {
+    pub session_id: SessionID,
+    pub tool: String,
+    pub input: serde_json::Value,
+    pub output: Option<serde_json::Value>,
+    pub metadata: serde_json::Value,
+}
+
 type Handler<E> = Arc<dyn Fn(E) -> BoxFuture<E> + Send + Sync>;
 
 struct Entry<E> {
@@ -198,6 +207,7 @@ pub struct ProviderHooks {
     compaction: Registry<Compaction>,
     title: Registry<Title>,
     prompt: Registry<PromptEvent>,
+    tool_execute_after: Registry<ToolExecuteAfter>,
 }
 
 impl ProviderHooks {
@@ -213,6 +223,7 @@ impl ProviderHooks {
             compaction: Registry::new(),
             title: Registry::new(),
             prompt: Registry::new(),
+            tool_execute_after: Registry::new(),
         }
     }
 
@@ -342,6 +353,17 @@ impl ProviderHooks {
 
     pub async fn trigger_prompt(&self, event: PromptEvent) -> PromptEvent {
         self.prompt.trigger(&ProviderID(String::new()), event).await
+    }
+
+    pub fn on_tool_execute_after(
+        &self,
+        handler: impl Fn(ToolExecuteAfter) -> BoxFuture<ToolExecuteAfter> + Send + Sync + 'static,
+    ) -> HookRegistration {
+        self.tool_execute_after.on(None, Arc::new(handler))
+    }
+
+    pub async fn trigger_tool_execute_after(&self, event: ToolExecuteAfter) -> ToolExecuteAfter {
+        self.tool_execute_after.trigger(&ProviderID(String::new()), event).await
     }
 }
 
