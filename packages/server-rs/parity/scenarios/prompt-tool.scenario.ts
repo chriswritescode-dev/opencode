@@ -1,7 +1,9 @@
 import { defineScenario } from "../lib/scenario"
+import { restricted } from "../lib/restricted"
 
 export default defineScenario({
   files: { "hello.txt": "hello parity\n" },
+  config: restricted,
   model: [{ tool: { id: "call_read", name: "read", input: { path: "{{work}}/hello.txt" } } }, { text: "done" }],
   steps: [
     { http: { method: "POST", path: "/api/session", body: {}, as: "s" } },

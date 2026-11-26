@@ -29,10 +29,19 @@ Runs a scenario against the TypeScript reference server and a candidate server, 
 - `location`: a location reload and a subdirectory Location load, each waiting for `plugin.updated`.
 - `location-routes`: the location, debug-location list, evict and reload routes, and directory-scoped loads including a missing directory.
 - `project-routes`: project list and update, and archived-query validation.
+- `prompt-file-tools`: scripted `write`, `edit`, `glob`, `grep` and `read` calls in one session.
+- `prompt-patch`: a scripted `patch` call that adds, updates and deletes files, with a GPT model selected so patch replaces edit and write.
 - `prompt-text`: a text prompt through the Anthropic route.
-- `prompt-text-only`: a text prompt through the Anthropic route with every tool denied, so the model request has an empty tool list.
+- `prompt-text-only`: a text prompt through the Anthropic route with every tool denied.
 - `prompt-tool`: a scripted `read` tool call.
 - `session-create-list`: session create with and without a title, the `session.created` events, list and get.
+
+The `prompt-file-tools`, `prompt-patch` and `prompt-tool` scenarios advertise only the tools the Rust server
+implements. They share `parity/lib/restricted.ts`, which disables the browser, goal, home-memory and internal tool
+plugins whose tools are not ported, and denies `skill` and `execute`. Disabling `execute` also stops Code Mode from
+folding the remaining namespace tools into its catalog; those plugins are disabled in the same list because
+`opencode_worktree_remove` shares the `edit` permission and cannot be denied on its own. The build agent's default
+allow-all rule still authorizes the file tools inside `work`, so the scenarios need no extra allow rules.
 
 ## Steps
 
